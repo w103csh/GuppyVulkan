@@ -13,8 +13,9 @@ set(MAJOR "1")
 string(TOLOWER ${API_NAME} API_LOWERCASE)
 set(VULKAN_HEADERS_INSTALL_DIR "HEADERS-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Headers install directory")
 set(VULKAN_LOADER_INSTALL_DIR "LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
-set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};${VULKAN_HEADERS_INSTALL_DIR};${VULKAN_LOADER_INSTALL_DIR};
-                       $ENV{VULKAN_HEADERS_INSTALL_DIR};$ENV{VULKAN_LOADER_INSTALL_DIR})
+set(GLM_LIB_DIR "GLM-NOTFOUND" CACHE PATH "Absolute path to a GLM library directory")
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};${VULKAN_HEADERS_INSTALL_DIR};${VULKAN_LOADER_INSTALL_DIR};${GLM_INSTALL_DIR};
+                       $ENV{VULKAN_HEADERS_INSTALL_DIR};$ENV{VULKAN_LOADER_INSTALL_DIR};$ENV{GLM_INSTALL_DIR})
   
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PythonInterp 3 REQUIRED)
@@ -230,6 +231,17 @@ if(NOT VULKAN_LOADER_INSTALL_DIR)
     set(VULKAN_LOADER_INSTALL_DIR $ENV{VULKAN_LOADER_INSTALL_DIR})
 endif()
 
+set(GLM_LIB_DIR "GLM-NOTFOUND" CACHE PATH "Absolute path to a GLM install directory")
+if(NOT GLM_LIB_DIR AND NOT DEFINED ENV{GLM_LIB_DIR})
+    message(FATAL_ERROR "Must define location of glm -- see BUILD.md")
+endif()
+
+# Cmake command line option overrides environment variable
+if(NOT GLM_LIB_DIR)
+    set(GLM_LIB_DIR $ENV{GLM_LIB_DIR})
+endif()
+message(STATUS "Using GLM library located at ${GLM_LIB_DIR}")
+
 message(STATUS "Using glslang install located at ${GLSLANG_INSTALL_DIR}")
 set(SPIRV_TOOLS_BINARY_ROOT "${GLSLANG_INSTALL_DIR}/lib"
     CACHE PATH "User defined path to the SPIRV-Tools binaries for this project")
@@ -313,11 +325,10 @@ endif()
 
 set (PYTHON_CMD ${PYTHON_EXECUTABLE})
 
+set (SHARED_NAME shared)
 set (UTILS_NAME vsamputils)
 
-set (GLMINCLUDES "${CMAKE_SOURCE_DIR}/Guppy/utils")
-
-get_filename_component(GLMINC_PREFIX "${GLMINCLUDES}" ABSOLUTE)
+get_filename_component(GLMINC_PREFIX "${GLM_LIB_DIR}" ABSOLUTE)
 if(NOT EXISTS ${GLMINC_PREFIX})
     message(FATAL_ERROR "Necessary glm headers do not exist: " ${GLMINC_PREFIX})
 endif()

@@ -7,13 +7,13 @@
 
 // static void FramebufferSize_callback(GLFWwindow* window, int width, int height)
 //{
-//    auto app = reinterpret_cast<GuppyApp*>(glfwGetWindowUserPointer(window));
+//    auto app = reinterpret_cast<Guppy*>(glfwGetWindowUserPointer(window));
 //    app->m_framebufferResized = true;
 //}
 //
 // static void Key_callback(GLFWwindow* window, int key, int scancode, int action, int mods)
 //{
-//    auto app = reinterpret_cast<GuppyApp*>(glfwGetWindowUserPointer(window));
+//    auto app = reinterpret_cast<Guppy*>(glfwGetWindowUserPointer(window));
 //    InputHandler::get().handleKeyInput(key, action);
 //}
 

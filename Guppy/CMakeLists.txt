@@ -229,8 +229,9 @@ else()
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")
 endif()
 
+set(TARGET_NAME Guppy)
+
 add_subdirectory(src)
-add_subdirectory(utils)
 
 # if (NOT WIN32)
 #     # extra setup for out-of-tree builds
