@@ -43,10 +43,9 @@ void Shell::log(LogPriority priority, const char *msg) const {
 }
 
 void Shell::init_vk() {
-    game_.my_init();
     //vk::init_dispatch_table_top(load_vk());
 
-    //init_instance();
+    init_instance();
     //vk::init_dispatch_table_middle(ctx_.instance, false);
 
     //init_debug_report();
@@ -54,7 +53,6 @@ void Shell::init_vk() {
 }
 
 void Shell::cleanup_vk() {
-    game_.my_cleanup();
     //if (settings_.validate) vk::DestroyDebugReportCallbackEXT(ctx_.instance, ctx_.debug_report, nullptr);
 
     //vk::DestroyInstance(ctx_.instance, nullptr);

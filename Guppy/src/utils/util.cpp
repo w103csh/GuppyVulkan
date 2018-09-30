@@ -110,13 +110,13 @@ std::string get_data_dir(std::string filename) {
     return ddir;
 }
 
-bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex) {
-    auto& memory_properties = info.physical_device_properties[info.physical_device_property_index].memory_properties;
+bool memory_type_from_properties(const VkPhysicalDeviceMemoryProperties &mem_props, uint32_t typeBits, VkFlags requirements_mask,
+                                 uint32_t *typeIndex) {
     // Search memtypes to find first index with those properties
-    for (uint32_t i = 0; i < memory_properties.memoryTypeCount; i++) {
+    for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
         if ((typeBits & 1) == 1) {
             // Type is available, does it match user properties?
-            if ((memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
+            if ((mem_props.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
                 *typeIndex = i;
                 return true;
             }
@@ -127,7 +127,7 @@ bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits, Vk
     return false;
 }
 
-VkDeviceSize create_buffer(struct sample_info &info, const VkDeviceSize &size, const VkBufferUsageFlags &usage,
+VkDeviceSize create_buffer(const VkDevice& dev, const VkPhysicalDeviceMemoryProperties& mem_props, const VkDeviceSize &size, const VkBufferUsageFlags &usage,
                    const VkMemoryPropertyFlags &props, VkBuffer &buf, VkDeviceMemory &buf_mem) {
     VkResult U_ASSERT_ONLY res;
     bool U_ASSERT_ONLY pass;
@@ -144,18 +144,18 @@ VkDeviceSize create_buffer(struct sample_info &info, const VkDeviceSize &size, c
     //buf_info.pQueueFamilyIndices = NULL;
     //buf_info.flags = 0;
 
-    res = vkCreateBuffer(info.device, &buf_info, NULL, &buf);
+    res = vkCreateBuffer(dev, &buf_info, NULL, &buf);
     assert(res == VK_SUCCESS);
 
     // ALLOCATE DEVICE MEMORY
 
     VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(info.device, buf, &mem_reqs);
+    vkGetBufferMemoryRequirements(dev, buf, &mem_reqs);
 
     VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.allocationSize = mem_reqs.size;
-    pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
+    pass = memory_type_from_properties(mem_props, mem_reqs.memoryTypeBits,
                                        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                        &alloc_info.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
@@ -185,28 +185,28 @@ VkDeviceSize create_buffer(struct sample_info &info, const VkDeviceSize &size, c
         Vulkan functions have explicit flags to specify that you want to do this.
     */
 
-    res = vkAllocateMemory(info.device, &alloc_info, NULL, &buf_mem);
+    res = vkAllocateMemory(dev, &alloc_info, NULL, &buf_mem);
     assert(res == VK_SUCCESS);
 
     // BIND MEMORY
 
-    res = vkBindBufferMemory(info.device, buf, buf_mem, 0);
+    res = vkBindBufferMemory(dev, buf, buf_mem, 0);
     assert(res == VK_SUCCESS);
 
     return mem_reqs.size;
 }
 
-VkFormat find_depth_format(struct sample_info &info) {
-    return find_supported_format(info, {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
+VkFormat find_depth_format(const VkPhysicalDevice& physical_dev) {
+    return find_supported_format(physical_dev, { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
                                  VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
-VkFormat find_supported_format(struct sample_info& info, const std::vector<VkFormat>& candidates,
-                                         const VkImageTiling tiling, const VkFormatFeatureFlags features) {
+VkFormat find_supported_format(const VkPhysicalDevice& physical_dev, const std::vector<VkFormat>& candidates,
+                               const VkImageTiling tiling, const VkFormatFeatureFlags features) {
     VkFormat format = {};
     for (VkFormat f : candidates) {
         VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(info.physical_device, f, &props);
+        vkGetPhysicalDeviceFormatProperties(physical_dev, f, &props);
         if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
             format = f;
             break;
@@ -220,7 +220,7 @@ VkFormat find_supported_format(struct sample_info& info, const std::vector<VkFor
     return format;
 }
 
-void create_image(struct sample_info &info, const uint32_t width, uint32_t height, uint32_t mip_levels,
+void create_image(const VkDevice& dev, const VkPhysicalDeviceMemoryProperties& mem_props, const std::vector<uint32_t> &queueFamilyIndices, const uint32_t width, uint32_t height, uint32_t mip_levels,
                   const VkSampleCountFlagBits &num_samples, const VkFormat &format, const VkImageTiling &tiling,
                   const VkImageUsageFlags &usage, const VkFlags &requirements_mask, VkImage &image, VkDeviceMemory &image_memory) {
     VkResult U_ASSERT_ONLY res;
@@ -240,37 +240,29 @@ void create_image(struct sample_info &info, const uint32_t width, uint32_t heigh
     image_info.usage = usage;
     image_info.samples = num_samples;
     image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-    // If the graphics queue, and transfer queue are on different devices
-    if (info.graphics_queue_family_index != info.transfer_queue_family_index) {
-        uint32_t queue_family_indices[] = { (uint32_t)info.graphics_queue_family_index, (uint32_t)info.transfer_queue_family_index };
-        image_info.queueFamilyIndexCount = 2;
-        image_info.pQueueFamilyIndices = queue_family_indices;
-    } else {
-        image_info.queueFamilyIndexCount = 0;   // Optional
-        image_info.pQueueFamilyIndices = NULL;  // Optional
-    }
+    image_info.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
+    image_info.pQueueFamilyIndices = queueFamilyIndices.data();
 
     /* Create image */
-    res = vkCreateImage(info.device, &image_info, NULL, &image);
+    res = vkCreateImage(dev, &image_info, NULL, &image);
     assert(res == VK_SUCCESS);
 
     VkMemoryRequirements mem_reqs;
-    vkGetImageMemoryRequirements(info.device, image, &mem_reqs);
+    vkGetImageMemoryRequirements(dev, image, &mem_reqs);
 
     VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.allocationSize = mem_reqs.size;
     /* Use the memory properties to determine the type of memory required */
     pass =
-        memory_type_from_properties(info, mem_reqs.memoryTypeBits, requirements_mask, &alloc_info.memoryTypeIndex);
+        memory_type_from_properties(mem_props, mem_reqs.memoryTypeBits, requirements_mask, &alloc_info.memoryTypeIndex);
     assert(pass);
 
     /* Allocate memory */
-    res = vkAllocateMemory(info.device, &alloc_info, NULL, &image_memory);
+    res = vkAllocateMemory(dev, &alloc_info, NULL, &image_memory);
     assert(res == VK_SUCCESS);
 
-    res = vkBindImageMemory(info.device, image, image_memory, 0);
+    res = vkBindImageMemory(dev, image, image_memory, 0);
     assert(res == VK_SUCCESS);
 }
 
@@ -952,9 +944,9 @@ void write_ppm(struct sample_info &info, VkCommandBuffer& cmd, const char *basen
     mem_alloc.allocationSize = mem_reqs.size;
 
     /* Find the memory type that is host mappable */
-    bool pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
-                                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                            &mem_alloc.memoryTypeIndex);
+    bool pass = memory_type_from_properties(
+        info.physical_device_properties[info.physical_device_property_index].memory_properties, mem_reqs.memoryTypeBits,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &mem_alloc.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
     /* allocate memory */

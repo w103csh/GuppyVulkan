@@ -50,7 +50,7 @@ class Win32Timer {
 
 }  // namespace
 
-ShellWin32::ShellWin32(Game &game) : Shell(game), hwnd_(nullptr) {
+ShellWin32::ShellWin32(Game &game) : MyShell(game), hwnd_(nullptr) {
     instance_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     init_vk();
 }
@@ -116,16 +116,15 @@ bool ShellWin32::can_present(VkPhysicalDevice phy, uint32_t queue_family) {
 }
 
 VkSurfaceKHR ShellWin32::create_surface(VkInstance instance) {
-    //VkWin32SurfaceCreateInfoKHR surface_info = {};
-    //surface_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    //surface_info.hinstance = hinstance_;
-    //surface_info.hwnd = hwnd_;
+    VkWin32SurfaceCreateInfoKHR surface_info = {};
+    surface_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    surface_info.hinstance = hinstance_;
+    surface_info.hwnd = hwnd_;
 
-    //VkSurfaceKHR surface;
-    //vk::assert_success(vk::CreateWin32SurfaceKHR(instance, &surface_info, nullptr, &surface));
+    VkSurfaceKHR surface;
+    vk::assert_success(vkCreateWin32SurfaceKHR(instance, &surface_info, NULL, &surface));
 
-    //return surface;
-    return nullptr;
+    return surface;
 }
 
 LRESULT ShellWin32::handle_message(UINT msg, WPARAM wparam, LPARAM lparam) {
@@ -182,7 +181,7 @@ void ShellWin32::run() {
     create_window();
 
     create_context();
-    //resize_swapchain(settings_.initial_width, settings_.initial_height);
+    resize_swapchain(settings_.initial_width, settings_.initial_height);
 
     Win32Timer timer;
     double current_time = timer.get();

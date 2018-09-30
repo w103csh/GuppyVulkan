@@ -6,12 +6,12 @@
 #include "Plane.h"
 #include "Vertex.h"
 
-const std::string CHALET_MODEL_PATH = "models/chalet.obj";
-const std::string CHALET_TEXTURE_PATH = "textures/chalet.jpg";
+const std::string CHALET_MODEL_PATH = "..\\..\\..\\data\\chalet.obj";
+const std::string CHALET_TEXTURE_PATH = "..\\..\\..\\images\\chalet.jpg";
 
 class Model {
    public:
-    inline Vertex* getVetexData() { return m_vertices.data(); }
+    inline Vertex* getVertexData() { return m_vertices.data(); }
 
     inline VkDeviceSize getVertexBufferSize() {
         VkDeviceSize p_bufferSize = sizeof(m_vertices[0]) * m_vertices.size();

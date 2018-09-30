@@ -34,13 +34,14 @@ const std::vector<const char*> DEVICE_EXTENSIONS = {
     // VK_KHR_SWAPCHAIN_EXTENSION_NAME, in init_swapchain_extension now
 };
 
-const VkClearColorValue CLEAR_VALUE = {};  // { 1.0f, 1.0f, 1.0f, 1.0f };
+//const VkClearColorValue CLEAR_VALUE = { 0.5f, 0.5f, 0.5f, 0.5f };
+const VkClearColorValue CLEAR_VALUE = {};
 
 // Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)
 typedef uint32_t VB_INDEX_TYPE;
 
 // Application wide up vector
-static glm::vec3 UP_VECTOR = glm::vec3(0.0f, 1.0f, 0.0f);
+static glm::vec3 UP_VECTOR = glm::vec3(0.0f, -1.0f, 0.0f);
 
 const auto ENABLE_SAMPLE_SHADING = VK_TRUE;
 const float MIN_SAMPLE_SHADING = 0.2f;

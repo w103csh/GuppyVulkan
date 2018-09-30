@@ -18,9 +18,9 @@
 #define SHELL_WIN32_H
 
 #include <windows.h>
-#include "Shell.h"
+#include "MyShell.h"
 
-class ShellWin32 : public Shell {
+class ShellWin32 : public MyShell {
    public:
     ShellWin32(Game &game);
     ~ShellWin32();

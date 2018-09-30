@@ -100,29 +100,17 @@ std::string get_data_dir(std::string filename);
 /*
  * structure for comparing vulkan char arrays
  */
-struct less_str {
+struct less_str2 {
     bool operator()(char const *a, char const *b) const { return std::strcmp(a, b) < 0; }
 };
 
 /*
  * structure to track staging buffer data for a command.
  */
-typedef struct _staging_buffer {
-    VkBuffer buf;
-    VkDeviceMemory mem;
-} staging_buffer;
-
-/*
- * structure to track texture data.
- */
 typedef struct {
-    VkSampler sampler;
-    VkImage image;
-    VkDescriptorImageInfo img_desc_info;
-    VkDeviceMemory mem;
-    VkImageView view;
-    uint32_t width, height, channels, mip_levels;
-} tex_data;
+    VkBuffer buffer;
+    VkDeviceMemory memory;
+} StagingBufferData;
 
 /*
  * Keep each of our swap chain buffers' image, command buffer and view in one
@@ -155,7 +143,7 @@ typedef struct {
     VkPhysicalDeviceMemoryProperties memory_properties;
     VkPhysicalDeviceProperties properties;
     std::vector<VkExtensionProperties> extensions;
-    std::map<const char*, std::vector<VkExtensionProperties>, less_str> layer_extension_map = {};
+    std::map<const char *, std::vector<VkExtensionProperties>, less_str2> layer_extension_map = {};
     surface_properties surf_props;
     VkPhysicalDeviceFeatures features;
 } physical_device_properties;
@@ -203,7 +191,7 @@ struct sample_info {
     std::vector<physical_device_properties> physical_device_properties;
     uint32_t physical_device_property_index;
     VkPhysicalDevice physical_device;
-    
+
     VkDevice device;
     std::vector<VkQueue> queues;
     uint32_t graphics_queue_family_index;
@@ -217,7 +205,7 @@ struct sample_info {
     std::vector<VkFramebuffer> framebuffers;
     int width, height;
     VkSurfaceFormatKHR swapchain_format;
-    VkExtent2D swapchain_extent;
+    VkExtent2D swapchainExtent;
     VkPresentModeKHR swapchain_presentMode;
 
     uint32_t swapchainImageCount;
@@ -227,7 +215,7 @@ struct sample_info {
 
     std::vector<VkCommandPool> cmd_pools;
     std::vector<VkCommandBuffer> cmds;  // Buffer for initialization commands
-    std::vector<staging_buffer> staging_buffers;
+    std::vector<StagingBufferData> stagingData;
 
     struct {
         VkFormat format;
@@ -243,8 +231,6 @@ struct sample_info {
         VkImageView view;
     } color;
 
-    std::vector<tex_data> textures;
-
     struct {
         VkBuffer buf;
         VkDeviceMemory mem;
@@ -258,12 +244,21 @@ struct sample_info {
     VkImage stagingImage;
 
     struct {
-        VkBuffer buf;
-        VkDeviceMemory mem;
-        VkDescriptorBufferInfo buffer_info;
-    } vertex_buffer;
+        VkBuffer buffer;
+        VkDeviceMemory memory;
+        VkDescriptorBufferInfo info;
+    } vertexBufferData;
+
+    struct {
+        VkBuffer buffer;
+        VkDeviceMemory memory;
+        VkDescriptorBufferInfo info;
+    } indexBufferData;
+
     VkVertexInputBindingDescription vi_binding;
     VkVertexInputAttributeDescription vi_attribs[2];
+
+    std::vector<VkCommandBuffer> drawCmds;
 
     glm::mat4 Projection;
     glm::mat4 View;
@@ -271,16 +266,16 @@ struct sample_info {
     glm::mat4 Clip;
     glm::mat4 MVP;
 
-    VkPipelineLayout pipeline_layout;
+    VkPipelineLayout pipelineLayout;
     std::vector<VkDescriptorSetLayout> desc_layout;
     VkPipelineCache pipelineCache;
-    VkRenderPass render_pass;
+    VkRenderPass renderPass;
     VkPipeline pipeline;
 
     std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 
     VkDescriptorPool desc_pool;
-    std::vector<VkDescriptorSet> desc_set;
+    std::vector<VkDescriptorSet> descSets;
 
     PFN_vkCreateDebugReportCallbackEXT dbgCreateDebugReportCallback;
     PFN_vkDestroyDebugReportCallbackEXT dbgDestroyDebugReportCallback;
@@ -296,16 +291,19 @@ struct sample_info {
 };
 
 void process_command_line_args(struct sample_info &info, int argc, char *argv[]);
-bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex);
+bool memory_type_from_properties(const VkPhysicalDeviceMemoryProperties &mem_props, uint32_t typeBits, VkFlags requirements_mask,
+                                 uint32_t *typeIndex);
 
-VkFormat find_depth_format(struct sample_info& info);
-VkFormat find_supported_format(struct sample_info& info, const std::vector<VkFormat>& candidates,
-                               const VkImageTiling tiling, const VkFormatFeatureFlags features);
-void copy_buffer_to_image(VkCommandBuffer& cmd, const VkBuffer& src_buf, const VkImage& dst_img, const uint32_t& width,
-                          const uint32_t& height);
-VkDeviceSize create_buffer(struct sample_info &info, const VkDeviceSize &size, const VkBufferUsageFlags &usage,
-                           const VkMemoryPropertyFlags &props, VkBuffer &buf, VkDeviceMemory &buf_mem);
-void create_image(struct sample_info &info, const uint32_t width, uint32_t height, uint32_t mip_levels,
+VkFormat find_depth_format(const VkPhysicalDevice& physical_dev);
+VkFormat find_supported_format(const VkPhysicalDevice& physical_dev, const std::vector<VkFormat> &candidates, const VkImageTiling tiling,
+                               const VkFormatFeatureFlags features);
+void copy_buffer_to_image(VkCommandBuffer &cmd, const VkBuffer &src_buf, const VkImage &dst_img, const uint32_t &width,
+                          const uint32_t &height);
+VkDeviceSize create_buffer(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &mem_props, const VkDeviceSize &size,
+                           const VkBufferUsageFlags &usage, const VkMemoryPropertyFlags &props, VkBuffer &buf,
+                           VkDeviceMemory &buf_mem);
+void create_image(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &mem_props,
+                  const std::vector<uint32_t> &queueFamilyIndices, const uint32_t width, uint32_t height, uint32_t mip_levels,
                   const VkSampleCountFlagBits &num_samples, const VkFormat &format, const VkImageTiling &tiling,
                   const VkImageUsageFlags &usage, const VkFlags &requirements_mask, VkImage &image, VkDeviceMemory &image_memory);
 void create_image_view(const VkDevice &device, const VkImage &image, const uint32_t &mipLevels, const VkFormat &format,
@@ -354,4 +352,4 @@ bool AndroidLoadFile(const char *filePath, std::string *data);
 
 #endif
 
-#endif // UTIL_INIT_H
+#endif  // UTIL_INIT_H

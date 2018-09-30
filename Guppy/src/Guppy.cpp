@@ -14,7 +14,6 @@
 //#include <fstream>
 //#include <iostream>
 //#include <map>
-//#include <set>
 //#include <stdexcept>
 //#include <thread>
 //#include <utility>
@@ -25,241 +24,238 @@
 #include "Extensions.h"
 #include "FileLoader.h"
 #include "Guppy.h"
-//#include "input_handler.h"
-//#include "plane.h"
-#include "Texture.h"
+#include "Helpers.h"
+#include "StagingBufferHandler.h"
 #include "Vertex.h"
 
-Guppy::Guppy(const std::vector<std::string> &args)
+namespace {
+
+// TODO do not rely on compiler to use std140 layout
+// TODO move lower frequency data to another descriptor set
+struct ShaderParamBlock {
+    float light_pos[4];
+    float light_color[4];
+    float model[4 * 4];
+    float view_projection[4 * 4];
+    float alpha;
+};
+
+}  // namespace
+
+Guppy::Guppy(const std::vector<std::string>& args)
     : Game("Guppy", args),
-    //multithread_(true),
-    //use_push_constants_(false),
-    //sim_paused_(false),
-    //sim_fade_(false),
-    //sim_(5000),
-    //camera_(2.5f),
-    //frame_data_(),
-    //render_pass_clear_value_({ {0.0f, 0.1f, 0.2f, 1.0f} }),
-    //render_pass_begin_info_(),
-    //primary_cmd_begin_info_(),
-    //primary_cmd_submit_info_(),
-    info() {
-    //for (auto it = args.begin(); it != args.end(); ++it) {
+      // multithread_(true),
+      // use_push_constants_(false),
+      // sim_paused_(false),
+      // sim_fade_(false),
+      // sim_(5000),
+      // camera_(2.5f),
+      // frame_data_(),
+      render_pass_clear_value_({{0.0f, 0.1f, 0.2f, 1.0f}}),
+      render_pass_begin_info_(),
+      primary_cmd_begin_info_(),
+      primary_cmd_submit_info_(),
+      sample_shading_supported_(false),
+      depth_resource_(),
+      info() {
+    // for (auto it = args.begin(); it != args.end(); ++it) {
     //    if (*it == "-s")
     //        multithread_ = false;
     //    else if (*it == "-p")
     //        use_push_constants_ = true;
     //}
 
-    //init_workers();
+    // init_workers();
 }
 
 Guppy::~Guppy() {}
 
-void Guppy::attach_shell(Shell &sh) {
-    //Game::attach_shell(sh);
+void Guppy::attach_shell(MyShell& sh) {
+    Game::attach_shell(sh);
 
-    //const Shell::Context &ctx = sh.context();
-    //physical_dev_ = ctx.physical_dev;
-    //dev_ = ctx.dev;
-    //queue_ = ctx.game_queue;
-    //queue_family_ = ctx.game_queue_family;
-    //format_ = ctx.format.format;
+    const MyShell::Context& ctx = sh.context();
+    physical_dev_ = ctx.physical_dev;
+    dev_ = ctx.dev;
+    queue_ = ctx.game_queue;
+    queue_family_ = ctx.game_queue_family;
+    format_ = ctx.format.format;
+    // * Data from MyShell
+    swapchain_image_count_ = ctx.image_count;
+    depth_resource_.format = ctx.depth_format;
+    cmd_data_.graphics_queue_family = ctx.graphics_index;
+    cmd_data_.present_queue_family = ctx.present_index;
+    cmd_data_.transfer_queue_family = ctx.transfer_index;
+    cmd_data_.queues = ctx.queues;
+    cmd_data_.mem_props = ctx.physical_dev_props[ctx.physical_dev_index].memory_properties;
+    physical_dev_props_ = ctx.physical_dev_props[ctx.physical_dev_index].properties;
 
-    //vk::GetPhysicalDeviceProperties(physical_dev_, &physical_dev_props_);
+    determine_sample_count(ctx.physical_dev_props[ctx.physical_dev_index]);
 
-    //if (use_push_constants_ && sizeof(ShaderParamBlock) > physical_dev_props_.limits.maxPushConstantsSize) {
-    //    shell_->log(Shell::LOG_WARN, "cannot enable push constants");
-    //    use_push_constants_ = false;
-    //}
+    if (use_push_constants_ && sizeof(ShaderParamBlock) > physical_dev_props_.limits.maxPushConstantsSize) {
+        shell_->log(MyShell::LOG_WARN, "cannot enable push constants");
+        use_push_constants_ = false;
+    }
 
-    //VkPhysicalDeviceMemoryProperties mem_props;
-    //vk::GetPhysicalDeviceMemoryProperties(physical_dev_, &mem_props);
-    //mem_flags_.reserve(mem_props.memoryTypeCount);
-    //for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) mem_flags_.push_back(mem_props.memoryTypes[i].propertyFlags);
+    mem_flags_.reserve(cmd_data_.mem_props.memoryTypeCount);
+    for (uint32_t i = 0; i < cmd_data_.mem_props.memoryTypeCount; i++)
+        mem_flags_.push_back(cmd_data_.mem_props.memoryTypes[i].propertyFlags);
 
-    //meshes_ = new Meshes(dev_, mem_flags_);
+    // meshes_ = new Meshes(dev_, mem_flags_);
 
-    //create_render_pass();
-    //create_shader_modules();
-    //create_descriptor_set_layout();
-    //create_pipeline_layout();
-    //create_pipeline();
+    // Not sure how wise something like this is.
+    create_command_pools_and_buffers();
+    // this was the only way I could think of for init.
+    StagingBufferHandler::get(&sh, dev_, &cmd_data_);
+    // begin recording commands?
+    for (auto& cmd : cmd_data_.cmds) execute_begin_command_buffer(cmd);
 
-    //create_frame_data(2);
+    create_model();
+    create_input_assembly_data();
+    create_uniform_buffer();  // TODO: ugh!
 
-    //render_pass_begin_info_.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    //render_pass_begin_info_.renderPass = render_pass_;
-    //render_pass_begin_info_.clearValueCount = 1;
-    //render_pass_begin_info_.pClearValues = &render_pass_clear_value_;
+    create_render_pass(settings_.include_color, settings_.include_depth);
+    create_shader_modules();
+    create_descriptor_set_layout();
+    create_descriptor_pool();
+    create_descriptor_sets();
+    create_pipeline_layout();
+    create_pipeline_cache();
+    create_pipeline();
 
-    //primary_cmd_begin_info_.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    //primary_cmd_begin_info_.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    // render_pass_begin_info_.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    // render_pass_begin_info_.renderPass = render_pass_;
+    // render_pass_begin_info_.clearValueCount = 1;
+    // render_pass_begin_info_.pClearValues = &render_pass_clear_value_;
+
+    // primary_cmd_begin_info_.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    // primary_cmd_begin_info_.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
     //// we will render to the swapchain images
-    //primary_cmd_submit_wait_stages_ = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    // primary_cmd_submit_wait_stages_ = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-    //primary_cmd_submit_info_.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    //primary_cmd_submit_info_.waitSemaphoreCount = 1;
-    //primary_cmd_submit_info_.pWaitDstStageMask = &primary_cmd_submit_wait_stages_;
-    //primary_cmd_submit_info_.commandBufferCount = 1;
-    //primary_cmd_submit_info_.signalSemaphoreCount = 1;
+    // primary_cmd_submit_info_.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    // primary_cmd_submit_info_.waitSemaphoreCount = 1;
+    // primary_cmd_submit_info_.pWaitDstStageMask = &primary_cmd_submit_wait_stages_;
+    // primary_cmd_submit_info_.commandBufferCount = 1;
+    // primary_cmd_submit_info_.signalSemaphoreCount = 1;
 
-    //if (multithread_) {
-    //    for (auto &worker : workers_) worker->start();
-    //}
+    if (multithread_) {
+        // for (auto &worker : workers_) worker->start();
+    }
 }
 
 void Guppy::detach_shell() {
-    //if (multithread_) {
+    // if (multithread_) {
     //    for (auto &worker : workers_) worker->stop();
     //}
 
-    //destroy_frame_data();
+    // destroy_frame_data();
 
-    //vk::DestroyPipeline(dev_, pipeline_, nullptr);
-    //vk::DestroyPipelineLayout(dev_, pipeline_layout_, nullptr);
-    //if (!use_push_constants_) vk::DestroyDescriptorSetLayout(dev_, desc_set_layout_, nullptr);
-    //vk::DestroyShaderModule(dev_, fs_, nullptr);
-    //vk::DestroyShaderModule(dev_, vs_, nullptr);
-    //vk::DestroyRenderPass(dev_, render_pass_, nullptr);
+    // vk::DestroyPipeline(dev_, pipeline_, nullptr);
+    // vk::DestroyPipelineLayout(dev_, pipelineLayout_, nullptr);
+    // if (!use_push_constants_) vk::DestroyDescriptorSetLayout(dev_, descSets_layout_, nullptr);
+    // vk::DestroyShaderModule(dev_, fs_, nullptr);
+    // vk::DestroyShaderModule(dev_, vs_, nullptr);
+    // vk::DestroyRenderPass(dev_, renderPass_, nullptr);
 
-    //delete meshes_;
+    // delete meshes_;
 
     Game::detach_shell();
 }
 
+void Guppy::attach_swapchain() {
+    const MyShell::Context& ctx = shell_->context();
+    extent_ = ctx.extent;
+
+    // Get the image data from the swapchain
+    get_swapchain_image_data(ctx.swapchain);
+
+    create_frame_data(swapchain_image_count_);
+
+    prepare_viewport();
+    prepare_framebuffers(ctx.swapchain);
+
+    create_draw_cmds();
+}
+
+void Guppy::detach_swapchain() {
+    for (auto fb : framebuffers_) vkDestroyFramebuffer(dev_, fb, nullptr);
+    for (auto view : image_views_) vkDestroyImageView(dev_, view, nullptr);
+
+    framebuffers_.clear();
+    image_views_.clear();
+    images_.clear();
+}
 
 void Guppy::on_key(Key key) {
-    //switch (key) {
-    //case KEY_SHUTDOWN:
-    //case KEY_ESC:
+    // switch (key) {
+    // case KEY_SHUTDOWN:
+    // case KEY_ESC:
     //    shell_->quit();
     //    break;
-    //case KEY_UP:
+    // case KEY_UP:
     //    camera_.eye_pos -= glm::vec3(0.05f);
     //    update_camera();
     //    break;
-    //case KEY_DOWN:
+    // case KEY_DOWN:
     //    camera_.eye_pos += glm::vec3(0.05f);
     //    update_camera();
     //    break;
-    //case KEY_SPACE:
+    // case KEY_SPACE:
     //    sim_paused_ = !sim_paused_;
     //    break;
-    //case KEY_F:
+    // case KEY_F:
     //    sim_fade_ = !sim_fade_;
     //    break;
-    //default:
+    // default:
     //    break;
     //}
 }
 
 void Guppy::on_frame(float frame_pred) {
-    // WAIT FOR FENCES
-    // vkWaitForFences(m_device, 1, &m_inFlightFences[m_currentFrame], VK_TRUE, std::numeric_limits<uint64_t>::max()/*disables
-    // timeout*/);
+    auto& data = frame_data_[frame_data_index_];
 
-    VkResult U_ASSERT_ONLY res;
+    // wait for the last submission since we reuse frame data
+    vk::assert_success(vkWaitForFences(dev_, 1, &data.fence, true, UINT64_MAX));
+    vk::assert_success(vkResetFences(dev_, 1, &data.fence));
 
-    VkClearValue clear_values[2];
-    clear_values[0].color.float32[0] = 0.2f;
-    clear_values[0].color.float32[1] = 0.2f;
-    clear_values[0].color.float32[2] = 0.2f;
-    clear_values[0].color.float32[3] = 0.2f;
-    clear_values[1].depthStencil.depth = 1.0f;
-    clear_values[1].depthStencil.stencil = 0;
+    const MyShell::BackBuffer& back = shell_->context().acquired_back_buffer;
 
-    VkSemaphore imageAcquiredSemaphore;
-    VkSemaphoreCreateInfo imageAcquiredSemaphoreCreateInfo;
-    imageAcquiredSemaphoreCreateInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    imageAcquiredSemaphoreCreateInfo.pNext = NULL;
-    imageAcquiredSemaphoreCreateInfo.flags = 0;
+    update_camera();
 
-    res = vkCreateSemaphore(info.device, &imageAcquiredSemaphoreCreateInfo, NULL, &imageAcquiredSemaphore);
-    assert(res == VK_SUCCESS);
+    VkSubmitInfo submit_info = {};
+    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-    // ACQUIRE NEXT SWAP CHAIN IMAGE
+    VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
+    submit_info.waitSemaphoreCount = 1;
+    submit_info.pWaitDstStageMask = wait_stages;
+    submit_info.pWaitSemaphores = &back.acquire_semaphore;
+    submit_info.commandBufferCount = 1;  // * Just the draw command
+    submit_info.pCommandBuffers = &draw_cmds_[frame_data_index_];
+    submit_info.signalSemaphoreCount = 1;
+    submit_info.pSignalSemaphores = &back.render_semaphore;
 
-    uint32_t imageIndex;
-    VkResult result = vkAcquireNextImageKHR(info.device, info.swap_chain, UINT64_MAX /* disables timeout */, imageAcquiredSemaphore,
-                                            VK_NULL_HANDLE, &info.current_buffer);
+    VkResult res = vkQueueSubmit(graphics_queue(), 1, &submit_info, data.fence);
 
-    if (result == VK_ERROR_OUT_OF_DATE_KHR) {
-        //recreateSwapChain();
-        return;
-    } else if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
-        throw std::runtime_error("failed to acquire swap chain image!");
-    }
+    frame_data_index_ = (frame_data_index_ + 1) % frame_data_.size();
 
-    //// updateUniformBuffer(imageIndex);
-
-    //VkSubmitInfo submitInfo = {};
-    //submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-    //VkSemaphore waitSemaphores[] = {m_imageAvailableSemaphores[m_currentFrame]};
-    //VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    //submitInfo.waitSemaphoreCount = 1;
-    //submitInfo.pWaitSemaphores = waitSemaphores;
-    //submitInfo.pWaitDstStageMask = waitStages;
-
-    //submitInfo.commandBufferCount = 1;
-    //submitInfo.pCommandBuffers = &m_graphicsCommandBuffers[imageIndex];
-
-    //VkSemaphore signalSemaphores[] = {m_renderFinishedSemaphores[m_currentFrame]};
-    //submitInfo.signalSemaphoreCount = 1;
-    //submitInfo.pSignalSemaphores = signalSemaphores;
-
-    //// RESET FENCES (AFTER POTENTIAL RECREATION OF SWAP CHAIN)
-
-    //vkResetFences(m_device, 1, &m_inFlightFences[m_currentFrame]);
-
-    //if (vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, m_inFlightFences[m_currentFrame]) != VK_SUCCESS) {
-    //    throw std::runtime_error("failed to submit draw command buffer!");
-    //}
-    
-    VkPresentInfoKHR presentInfo = {};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = signalSemaphores;
-    
-    VkSwapchainKHR swapChains[] = { m_swapChain };
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = swapChains;
-    presentInfo.pImageIndices = &imageIndex;
-    
-    presentInfo.pResults = nullptr; // Optional
-    
-    result = vkQueuePresentKHR(m_presentQueue, &presentInfo);
-    
-    if (result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR || m_framebufferResized)
-    {
-        m_framebufferResized = false;
-        recreateSwapChain();
-    }
-    else if (result != VK_SUCCESS)
-    {
-        throw std::runtime_error("failed to present swap chain image!");
-    }
-    
-    m_currentFrame = (m_currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
+    (void)res;
 }
 
 void Guppy::on_tick() {
-    //if (sim_paused_) return;
+    // if (sim_paused_) return;
 
-    //for (auto &worker : workers_) worker->update_simulation();
+    // for (auto &worker : workers_) worker->update_simulation();
 }
 
-//void Guppy::run() {
+// void Guppy::run() {
 //    // initWindow();
 //    // initVulkan();
 //    // mainLoop();
 //    // cleanup();
 //}
 
-//void Guppy::init_vulkan() {
+// void Guppy::init_vulkan() {
 //    // createInstance();X
 //    // setupDebugCallback();X
 //    // createSurface();X
@@ -284,92 +280,91 @@ void Guppy::on_tick() {
 //    // createSyncObjects();X
 //}
 
-void Guppy::my_init() {
+void Guppy::my_init_vk() {
     VkResult U_ASSERT_ONLY res = {};
-    const bool depthPresent = true;
+    // const bool depthPresent = true;
 
-    info.enableSampleShading = ENABLE_SAMPLE_SHADING;
-    init_window_size(info, WIDTH, HEIGHT);
+    // info.enableSampleShading = ENABLE_SAMPLE_SHADING;
+    // init_window_size(info, WIDTH, HEIGHT);
 
-    if (ENABLE_VALIDATION_LAYERS) {
-        init_global_layer_properties(info, VALIDATION_LAYERS);
-        init_instance_layer_names(info, VALIDATION_LAYERS);
-        init_instance_extension_names(info, INSTANCE_EXTENSIONS);
-    } else {
-        init_global_layer_properties(info);
-        init_instance_layer_names(info);
-        init_instance_extension_names(info);
-    }
-    init_device_extension_names(info);
-    init_instance(info, APP_SHORT_NAME);
-    init_validation_layers(info, debug_callback, CreateDebugUtilsMessengerEXT);
-    init_surface(info);
-    init_enumerate_devices(info);
-    pick_device(info);
-    init_device(info);
-    init_swapchain_extension(info);
+    // if (ENABLE_VALIDATION_LAYERS) {
+    //    init_global_layer_properties(info, VALIDATION_LAYERS);
+    //    init_instance_layer_names(info, VALIDATION_LAYERS);
+    //    init_instance_extension_names(info, INSTANCE_EXTENSIONS);
+    //} else {
+    //    init_global_layer_properties(info);
+    //    init_instance_layer_names(info);
+    //    init_instance_extension_names(info);
+    //}
+    // init_device_extension_names(info);
+    // init_instance(info, APP_SHORT_NAME);
+    // init_validation_layers(info, debug_callback, CreateDebugUtilsMessengerEXT);
+    // init_surface(info);
+    // init_enumerate_devices(info);
+    // pick_device(info);
+    // init_device(info);
+    // init_swapchain_extension(info);
 
-    init_command_pools(info);
-    init_command_buffers(info);
+    // init_command_pools(info);
+    // init_command_buffers(info);
     for (auto& cmd : info.cmds) {
         execute_begin_command_buffer(cmd);
     }
-    init_device_queues(info);
-    init_swapchain(info);
-    init_depth_buffer(info);
-    init_color_buffer(info);
-    init_uniform_buffer(info);
-    init_descriptor_set_layout(info);
-    init_pipeline_layout(info);
-    init_renderpass(info, depthPresent);
+    // init_device_queues(info);
+    // init_swapchain(info);
+    // init_depth_buffer(info);
+    // init_color_buffer(info);
+    // init_uniform_buffer(info);
+    // init_descriptor_set_layout(info);
+    // init_pipelineLayout(info);
+    // init_renderpass(info, depthPresent);
 
-    // Relative to CMake being run in a "build" directory in the root of the repo like VulkanSamples
-    auto vertShaderText = FileLoader::read_file("..\\..\\..\\Guppy\\src\\shaders\\shader.vert");
-    auto fragShaderText = FileLoader::read_file("..\\..\\..\\Guppy\\src\\shaders\\shader.frag");
-    init_shaders(info, vertShaderText.data(), fragShaderText.data());
+    //// Relative to CMake being run in a "build" directory in the root of the repo like VulkanSamples
+    // auto vertShaderText = FileLoader::read_file("..\\..\\..\\Guppy\\src\\shaders\\shader.vert");
+    // auto fragShaderText = FileLoader::read_file("..\\..\\..\\Guppy\\src\\shaders\\shader.frag");
+    // init_shaders(info, vertShaderText.data(), fragShaderText.data());
 
-    init_framebuffers(info, depthPresent);
+    // init_framebuffers(info, depthPresent);
 
-    create_model(info);
-    create_vertex_buffer(info);
+    // createModel(info);
+    // create_vertex_data(info);
+    // create_ndex_data(info);
 
     init_descriptor_pool(info, true);
     init_descriptor_set(info, true);
-    init_pipeline_cache(info);
-    init_pipeline_2(info, depthPresent);
+    // init_pipeline_cache(info);
+    // create_pipeline();
 
-    //for (auto& cmd : info.cmds) {
+    // for (auto& cmd : info.cmds) {
     //    execute_end_command_buffer(cmd);
     //}
-    //for (size_t i = 0; i < info.cmds.size(); i++) {
+    // for (size_t i = 0; i < info.cmds.size(); i++) {
     //    execute_submit_queue_fenced(info, info.queues[i], info.cmds[i]);
     //}
 
     // submit the queues
-    Texture::submit_queues(info);
+    // Texture::submitQueues(shell_);
 
     // because above is fenced and waited on this should work for now
     destroy_staging_buffers(info);
 }
 
-
-void Guppy::my_cleanup() {
-
-    destroy_pipeline(info);
-    destroy_pipeline_cache(info);
+void Guppy::my_cleanup_vk() {
+    destroy_pipeline();
+    destroy_pipeline_cache();
     destroy_descriptor_pool(info);
-    destroy_vertex_buffer(info);
-    destroy_textures(info);
+    destroy_vertexBuffer(info);
+    destroy_textures();
     destroy_framebuffers(info);
     destroy_shaders(info);
     destroy_renderpass(info);
-    destroy_descriptor_and_pipeline_layouts(info);
+    destroy_descriptor_and_pipelineLayouts();
     destroy_uniform_buffer(info);
     destroy_depth_buffer(info);
     destroy_color_buffer(info);
     destroy_swapchain(info);
-    destroy_command_buffers(info);
-    destroy_command_pools(info);
+    destroy_command_buffers();
+    destroy_command_pools();
     destroy_device(info);
     destroy_window(info);
     destroy_validation_layers(info);
@@ -424,86 +419,97 @@ void Guppy::my_cleanup() {
     // glfwTerminate();
 }
 
-void Guppy::init_pipeline_2(struct sample_info &info, VkBool32 include_depth) {
-    VkResult U_ASSERT_ONLY res;
+void Guppy::create_pipeline_cache() {
+    VkPipelineCacheCreateInfo pipeline_cache_info = {};
+    pipeline_cache_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
+    pipeline_cache_info.initialDataSize = 0;
+    pipeline_cache_info.pInitialData = nullptr;
+    vk::assert_success(vkCreatePipelineCache(dev_, &pipeline_cache_info, nullptr, &pipeline_cache_));
+}
 
+void Guppy::destroy_pipeline_cache() { vkDestroyPipelineCache(dev_, pipeline_cache_, nullptr); }
+
+void Guppy::create_pipeline() {
     // DYNAMIC STATE
 
-    VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
-    VkPipelineDynamicStateCreateInfo dys = {};
-    memset(dynamicStateEnables, 0, sizeof(dynamicStateEnables));
-    dys.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dys.pNext = nullptr;
-    dys.pDynamicStates = dynamicStateEnables;
-    dys.dynamicStateCount = 0;
+    // TODO: this is weird
+    VkPipelineDynamicStateCreateInfo dynamic_info = {};
+    VkDynamicState dynamic_states[VK_DYNAMIC_STATE_RANGE_SIZE];
+    memset(dynamic_states, 0, sizeof(dynamic_states));
+    dynamic_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    dynamic_info.pNext = nullptr;
+    dynamic_info.pDynamicStates = dynamic_states;
+    dynamic_info.dynamicStateCount = 0;
 
     // INPUT ASSEMBLY
 
-    VkPipelineVertexInputStateCreateInfo vi = {};
-    vi.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vi.pNext = nullptr;
-    vi.flags = 0;
+    VkPipelineVertexInputStateCreateInfo vertex_info = {};
+    vertex_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    vertex_info.pNext = nullptr;
+    vertex_info.flags = 0;
     // bindings
     auto bindingDescription = Vertex::getBindingDescription();
-    vi.vertexBindingDescriptionCount = 1;
-    vi.pVertexBindingDescriptions = &bindingDescription;
+    vertex_info.vertexBindingDescriptionCount = 1;
+    vertex_info.pVertexBindingDescriptions = &bindingDescription;
     // attributes
     auto attributeDescriptions = Vertex::getAttributeDescriptions();
-    vi.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-    vi.pVertexAttributeDescriptions = attributeDescriptions.data();
+    vertex_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+    vertex_info.pVertexAttributeDescriptions = attributeDescriptions.data();
 
-    VkPipelineInputAssemblyStateCreateInfo ia;
-    ia.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    ia.pNext = nullptr;
-    ia.flags = 0;
-    ia.primitiveRestartEnable = VK_FALSE;
-    ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    VkPipelineInputAssemblyStateCreateInfo input_info = {};
+    input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    input_info.pNext = nullptr;
+    input_info.flags = 0;
+    input_info.primitiveRestartEnable = VK_FALSE;
+    input_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 
     // RASTERIZER
 
-    VkPipelineRasterizationStateCreateInfo rs = {};
-    rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rs.pNext = nullptr;
-    rs.flags = 0;
-    rs.polygonMode = VK_POLYGON_MODE_FILL;
-    rs.cullMode = VK_CULL_MODE_BACK_BIT;
-    rs.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    VkPipelineRasterizationStateCreateInfo rast_info = {};
+    rast_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    rast_info.polygonMode = VK_POLYGON_MODE_FILL;
+    rast_info.cullMode = VK_CULL_MODE_BACK_BIT;
+    rast_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     /*  If depthClampEnable is set to VK_TRUE, then fragments that are beyond the near and far
         planes are clamped to them as opposed to discarding them. This is useful in some special
         cases like shadow maps. Using this requires enabling a GPU feature.
     */
-    rs.depthClampEnable = VK_FALSE;
-    rs.rasterizerDiscardEnable = VK_FALSE;
-    rs.depthBiasEnable = VK_FALSE;
-    rs.depthBiasConstantFactor = 0;
-    rs.depthBiasClamp = 0;
-    rs.depthBiasSlopeFactor = 0;
+    rast_info.depthClampEnable = VK_FALSE;
+    rast_info.rasterizerDiscardEnable = VK_FALSE;
+    rast_info.depthBiasEnable = VK_FALSE;
+    rast_info.depthBiasConstantFactor = 0;
+    rast_info.depthBiasClamp = 0;
+    rast_info.depthBiasSlopeFactor = 0;
     /*  The lineWidth member is straightforward, it describes the thickness of lines in terms of
         number of fragments. The maximum line width that is supported depends on the hardware and
         any line thicker than 1.0f requires you to enable the wideLines GPU feature.
     */
-    rs.lineWidth = 1.0f;
+    rast_info.lineWidth = 1.0f;
 
-    VkPipelineMultisampleStateCreateInfo mss = {};
-    mss.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    mss.rasterizationSamples = info.num_samples;
-    mss.sampleShadingEnable = ENABLE_SAMPLE_SHADING;  // enable sample shading in the pipeline (sampling for fragment interiors)
-    mss.minSampleShading = MIN_SAMPLE_SHADING;        // min fraction for sample shading; closer to one is smooth
-    mss.pSampleMask = nullptr;                        // Optional
-    mss.alphaToCoverageEnable = VK_FALSE;             // Optional
-    mss.alphaToOneEnable = VK_FALSE;                  // Optional
+    VkPipelineMultisampleStateCreateInfo multisample_info = {};
+    multisample_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    multisample_info.rasterizationSamples = num_samples_;
+    multisample_info.sampleShadingEnable =
+        settings_.enable_sample_shading_;  // enable sample shading in the pipeline (sampling for fragment interiors)
+    multisample_info.minSampleShading =
+        settings_.enable_sample_shading_ ? MIN_SAMPLE_SHADING : 0.0f;  // min fraction for sample shading; closer to one is smooth
+    multisample_info.pSampleMask = nullptr;                            // Optional
+    multisample_info.alphaToCoverageEnable = VK_FALSE;                 // Optional
+    multisample_info.alphaToOneEnable = VK_FALSE;                      // Optional
 
     // BLENDING
 
-    VkPipelineColorBlendAttachmentState cba = {};
-    cba.colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    cba.blendEnable = VK_FALSE;
-    cba.alphaBlendOp = VK_BLEND_OP_ADD;              // Optional
-    cba.colorBlendOp = VK_BLEND_OP_ADD;              // Optional
-    cba.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
-    cba.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
-    cba.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
-    cba.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
+    VkPipelineColorBlendAttachmentState blend_attachment = {};
+    blend_attachment.colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    blend_attachment.blendEnable = VK_FALSE;
+    blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;              // Optional
+    blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;              // Optional
+    blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
+    blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
+    blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
+    blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
+
     // common setup
     // colorBlendAttachment.blendEnable = VK_TRUE;
     // colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
@@ -513,32 +519,28 @@ void Guppy::init_pipeline_2(struct sample_info &info, VkBool32 include_depth) {
     // colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     // colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
-    VkPipelineColorBlendStateCreateInfo cb;
-    cb.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    cb.flags = 0;
-    cb.pNext = nullptr;
-    cb.attachmentCount = 1;
-    cb.pAttachments = &cba;
-    cb.logicOpEnable = VK_FALSE;
-    cb.logicOp = VK_LOGIC_OP_COPY; // What does this do?
-    cb.blendConstants[0] = 0.0f;
-    cb.blendConstants[1] = 0.0f;
-    cb.blendConstants[2] = 0.0f;
-    cb.blendConstants[3] = 0.0f;
+    VkPipelineColorBlendStateCreateInfo blend_info = {};
+    blend_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    blend_info.attachmentCount = 1;
+    blend_info.pAttachments = &blend_attachment;
+    blend_info.logicOpEnable = VK_FALSE;
+    blend_info.logicOp = VK_LOGIC_OP_COPY;  // What does this do?
+    blend_info.blendConstants[0] = 0.0f;
+    blend_info.blendConstants[1] = 0.0f;
+    blend_info.blendConstants[2] = 0.0f;
+    blend_info.blendConstants[3] = 0.0f;
 
     // VIEWPORT & SCISSOR
 
-    VkPipelineViewportStateCreateInfo vp = {};
-    vp.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-    vp.pNext = nullptr;
-    vp.flags = 0;
+    VkPipelineViewportStateCreateInfo viewport_info = {};
+    viewport_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 #ifndef __ANDROID__
-    vp.viewportCount = NUM_VIEWPORTS;
-    dynamicStateEnables[dys.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
-    vp.scissorCount = NUM_SCISSORS;
-    dynamicStateEnables[dys.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
-    vp.pScissors = nullptr;
-    vp.pViewports = nullptr;
+    viewport_info.viewportCount = NUM_VIEWPORTS;
+    dynamic_states[dynamic_info.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
+    viewport_info.scissorCount = NUM_SCISSORS;
+    dynamic_states[dynamic_info.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
+    viewport_info.pScissors = nullptr;
+    viewport_info.pViewports = nullptr;
 #else
     // Temporary disabling dynamic viewport on Android because some of drivers doesn't
     // support the feature.
@@ -562,59 +564,612 @@ void Guppy::init_pipeline_2(struct sample_info &info, VkBool32 include_depth) {
 
     // DEPTH
 
-    VkPipelineDepthStencilStateCreateInfo dss;
-    dss.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    dss.pNext = nullptr;
-    dss.flags = 0;
-    dss.depthTestEnable = include_depth;
-    dss.depthWriteEnable = include_depth;
-    dss.depthCompareOp = VK_COMPARE_OP_LESS;
-    dss.depthBoundsTestEnable = VK_FALSE;
-    dss.minDepthBounds = 0;
-    dss.maxDepthBounds = 1.0f;
-    dss.stencilTestEnable = VK_FALSE;
-    dss.front = {};
-    dss.back = {};
-    //dss.back.failOp = VK_STENCIL_OP_KEEP; // ARE THESE IMPORTANT !!!
-    //dss.back.passOp = VK_STENCIL_OP_KEEP;
-    //dss.back.compareOp = VK_COMPARE_OP_ALWAYS;
-    //dss.back.compareMask = 0;
-    //dss.back.reference = 0;
-    //dss.back.depthFailOp = VK_STENCIL_OP_KEEP;
-    //dss.back.writeMask = 0;
-    //dss.front = ds.back;
+    VkPipelineDepthStencilStateCreateInfo depth_info;
+    depth_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    depth_info.pNext = nullptr;
+    depth_info.flags = 0;
+    depth_info.depthTestEnable = settings_.include_depth;
+    depth_info.depthWriteEnable = settings_.include_depth;
+    depth_info.depthCompareOp = VK_COMPARE_OP_LESS;
+    depth_info.depthBoundsTestEnable = VK_FALSE;
+    depth_info.minDepthBounds = 0;
+    depth_info.maxDepthBounds = 1.0f;
+    depth_info.stencilTestEnable = VK_FALSE;
+    depth_info.front = {};
+    depth_info.back = {};
+    // dss.back.failOp = VK_STENCIL_OP_KEEP; // ARE THESE IMPORTANT !!!
+    // dss.back.passOp = VK_STENCIL_OP_KEEP;
+    // dss.back.compareOp = VK_COMPARE_OP_ALWAYS;
+    // dss.back.compareMask = 0;
+    // dss.back.reference = 0;
+    // dss.back.depthFailOp = VK_STENCIL_OP_KEEP;
+    // dss.back.writeMask = 0;
+    // dss.front = ds.back;
+
+    // SHADER
+
+    // TODO: this is not great
+    std::vector<VkPipelineShaderStageCreateInfo> stage_infos;
+    stage_infos.push_back(vs_.info);
+    stage_infos.push_back(fs_.info);
 
     // PIPELINE
 
-    VkGraphicsPipelineCreateInfo pipeline;
-    pipeline.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pipeline.pNext = nullptr;
-    pipeline.flags = 0;
+    VkGraphicsPipelineCreateInfo pipeline_info = {};
+    pipeline_info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     // shader stages
-    pipeline.stageCount = 2;
-    pipeline.pStages = info.shaderStages.data();
+    pipeline_info.stageCount = static_cast<uint32_t>(stage_infos.size());
+    pipeline_info.pStages = stage_infos.data();
     // fixed function stages
-    pipeline.pColorBlendState = &cb;
-    pipeline.pDepthStencilState = &dss;
-    pipeline.pDynamicState = &dys;
-    pipeline.pInputAssemblyState = &ia;
-    pipeline.pMultisampleState = &mss;
-    pipeline.pRasterizationState = &rs;
-    pipeline.pTessellationState = nullptr;
-    pipeline.pVertexInputState = &vi;
-    pipeline.pViewportState = &vp;
+    pipeline_info.pColorBlendState = &blend_info;
+    pipeline_info.pDepthStencilState = &depth_info;
+    pipeline_info.pDynamicState = &dynamic_info;
+    pipeline_info.pInputAssemblyState = &input_info;
+    pipeline_info.pMultisampleState = &multisample_info;
+    pipeline_info.pRasterizationState = &rast_info;
+    pipeline_info.pTessellationState = nullptr;
+    pipeline_info.pVertexInputState = &vertex_info;
+    pipeline_info.pViewportState = &viewport_info;
     // layout
-    pipeline.layout = info.pipeline_layout;
-    pipeline.basePipelineHandle = VK_NULL_HANDLE;
-    pipeline.basePipelineIndex = 0;
+    pipeline_info.layout = pipeline_layout_;
+    pipeline_info.basePipelineHandle = VK_NULL_HANDLE;
+    pipeline_info.basePipelineIndex = 0;
     // render pass
-    pipeline.renderPass = info.render_pass;
-    pipeline.subpass = 0;
+    pipeline_info.renderPass = render_pass_;
+    pipeline_info.subpass = 0;
 
-    res = vkCreateGraphicsPipelines(info.device, info.pipelineCache, 1, &pipeline, nullptr, &info.pipeline);
-    assert(res == VK_SUCCESS);
+    vk::assert_success(vkCreateGraphicsPipelines(dev_, pipeline_cache_, 1, &pipeline_info, nullptr, &pipeline_));
 }
 
+void Guppy::destroy_pipeline() { vkDestroyPipeline(dev_, pipeline_, nullptr); }
+
+void Guppy::get_swapchain_image_data(const VkSwapchainKHR& swapchain) {
+    uint32_t image_count;
+    vk::assert_success(vkGetSwapchainImagesKHR(dev_, swapchain, &image_count, nullptr));
+    // If this ever fails then you have to change the start up a ton!!!!
+    assert(swapchain_image_count_ == image_count);
+
+    VkImage* images = (VkImage*)malloc(image_count * sizeof(VkImage));
+    vk::assert_success(vkGetSwapchainImagesKHR(dev_, swapchain, &image_count, images));
+
+    for (uint32_t i = 0; i < image_count; i++) {
+        SwapchainImageResource res;
+        res.image = images[i];
+        create_image_view(dev_, res.image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D, res.view);
+        swapchain_image_resources_.push_back(res);
+    }
+    free(images);
+}
+
+void Guppy::prepare_viewport() {
+    viewport_.x = 0.0f;
+    viewport_.y = 0.0f;
+    viewport_.width = static_cast<float>(extent_.width);
+    viewport_.height = static_cast<float>(extent_.height);
+    viewport_.minDepth = 0.0f;
+    viewport_.maxDepth = 1.0f;
+
+    scissor_.offset = {0, 0};
+    scissor_.extent = extent_;
+}
+
+void Guppy::prepare_framebuffers(const VkSwapchainKHR& swapchain) {
+    assert(framebuffers_.empty());
+    framebuffers_.reserve(swapchain_image_count_);
+
+    // There will always be a swapchain buffer
+    std::vector<VkImageView> attachments;
+    attachments.resize(1);
+
+    // multi-sample (optional - needs to be same attachment index as in render pass)
+    if (settings_.include_color) {
+        attachments.resize(attachments.size() + 1);
+        attachments[attachments.size() - 1] = color_resource_.view;
+    }
+
+    // depth
+    if (settings_.include_depth) {
+        attachments.resize(attachments.size() + 1);
+        attachments[attachments.size() - 1] = depth_resource_.view;
+    }
+
+    VkFramebufferCreateInfo fb_info = {};
+    fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    fb_info.pNext = NULL;
+    fb_info.renderPass = render_pass_;
+    fb_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+    fb_info.pAttachments = attachments.data();
+    fb_info.width = extent_.width;
+    fb_info.height = extent_.height;
+    fb_info.layers = 1;
+
+    for (auto& res : swapchain_image_resources_) {
+        VkFramebuffer fb;
+        attachments[0] = res.view;
+        vk::assert_success(vkCreateFramebuffer(dev_, &fb_info, NULL, &fb));
+        framebuffers_.push_back(fb);
+    }
+}
+
+void Guppy::determine_sample_count(const MyShell::PhysicalDeviceProperties& props) {
+    //// TODO: OPTION (FEATURE BASED)
+    VkSampleCountFlags counts =
+        min(props.properties.limits.framebufferColorSampleCounts, props.properties.limits.framebufferDepthSampleCounts);
+    num_samples_ = VK_SAMPLE_COUNT_1_BIT;
+    // return the highest possible one for now
+    if (counts & VK_SAMPLE_COUNT_64_BIT)
+        num_samples_ = VK_SAMPLE_COUNT_64_BIT;
+    else if (counts & VK_SAMPLE_COUNT_32_BIT)
+        num_samples_ = VK_SAMPLE_COUNT_32_BIT;
+    else if (counts & VK_SAMPLE_COUNT_16_BIT)
+        num_samples_ = VK_SAMPLE_COUNT_16_BIT;
+    else if (counts & VK_SAMPLE_COUNT_8_BIT)
+        num_samples_ = VK_SAMPLE_COUNT_8_BIT;
+    else if (counts & VK_SAMPLE_COUNT_4_BIT)
+        num_samples_ = VK_SAMPLE_COUNT_4_BIT;
+    else if (counts & VK_SAMPLE_COUNT_2_BIT)
+        num_samples_ = VK_SAMPLE_COUNT_2_BIT;
+}
+
+void Guppy::create_uniform_buffer() {
+    // TODO: this is wrong also
+    Camera::default_perspective(camera_, static_cast<float>(settings_.initial_width), static_cast<float>(settings_.initial_height));
+
+    auto buffer_size = sizeof(camera_.mvp);
+    camera_.memory_requirements_size = create_buffer(dev_, cmd_data_.mem_props, buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                                     VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                                     ubo_resource_.buffer, ubo_resource_.memory);
+
+    update_camera();  // TODO: yikes!
+}
+
+void Guppy::update_camera() {
+    static auto startTime = std::chrono::high_resolution_clock::now();
+
+    auto currentTime = std::chrono::high_resolution_clock::now();
+    float time = std::chrono::duration<float, std::ratio<3, 1>>(currentTime - startTime).count();
+
+    camera_.model = glm::rotate(glm::mat4(1.0f),             // matrix
+                                time * glm::radians(90.0f),  // angle
+                                glm::vec3(0.0f, 0.0f, 1.0f)  // vector
+    );
+    camera_.mvp = camera_.clip * camera_.proj * camera_.view * camera_.model;
+
+    uint8_t* pData;
+    vk::assert_success(vkMapMemory(dev_, ubo_resource_.memory, 0, camera_.memory_requirements_size, 0, (void**)&pData));
+    memcpy(pData, &camera_.mvp, sizeof(camera_.mvp));
+    vkUnmapMemory(dev_, ubo_resource_.memory);
+
+    ubo_resource_.info.buffer = ubo_resource_.buffer;
+    ubo_resource_.info.offset = 0;
+    ubo_resource_.info.range = sizeof(camera_.mvp);
+}
+
+void Guppy::create_render_pass(bool include_depth, bool include_color, bool clear, VkImageLayout finalLayout) {
+    std::vector<VkAttachmentDescription> attachments;
+
+    // COLOR ATTACHMENT (SWAP-CHAIN)
+    VkAttachmentReference color_reference = {};
+    VkAttachmentDescription attachemnt = {};
+    attachemnt = {};
+    attachemnt.format = format_;
+    attachemnt.samples = VK_SAMPLE_COUNT_1_BIT;
+    attachemnt.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;  // clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    attachemnt.finalLayout = finalLayout;
+    attachemnt.flags = 0;
+    attachments.push_back(attachemnt);
+    // REFERENCE
+    color_reference.attachment = static_cast<uint32_t>(attachments.size() - 1);
+    color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    // COLOR ATTACHMENT RESOLVE (MULTI-SAMPLE)
+    VkAttachmentReference color_resolve_reference = {};
+    if (include_color) {
+        attachemnt = {};
+        attachemnt.format = format_;
+        attachemnt.samples = num_samples_;
+        attachemnt.loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attachemnt.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        attachemnt.flags = 0;
+        // REFERENCE
+        color_resolve_reference.attachment = static_cast<uint32_t>(attachments.size() - 1);  // point to swapchain attachment
+        color_resolve_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        attachments.push_back(attachemnt);
+        color_reference.attachment = static_cast<uint32_t>(attachments.size() - 1);  // point to multi-sample attachment
+    }
+
+    // DEPTH ATTACHMENT
+    VkAttachmentReference depth_reference = {};
+    if (include_depth) {
+        attachemnt = {};
+        attachemnt.format = depth_resource_.format;
+        attachemnt.samples = num_samples_;
+        attachemnt.loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+        // This was "don't care" in the sample and that makes more sense to
+        // me. This obvious is for some kind of stencil operation.
+        attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attachemnt.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachemnt.flags = 0;
+        attachments.push_back(attachemnt);
+        // REFERENCE
+        depth_reference.attachment = static_cast<uint32_t>(attachments.size() - 1);
+        depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    }
+
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.inputAttachmentCount = 0;
+    subpass.pInputAttachments = nullptr;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_reference;
+    subpass.pResolveAttachments = include_color ? &color_resolve_reference : nullptr;
+    subpass.pDepthStencilAttachment = include_depth ? &depth_reference : nullptr;
+    subpass.preserveAttachmentCount = 0;
+    subpass.pPreserveAttachments = nullptr;
+
+    // TODO: used for waiting in draw (figure this out)
+    VkSubpassDependency dependency = {};
+    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    dependency.dstSubpass = 0;
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    VkRenderPassCreateInfo rp_info = {};
+    rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    rp_info.pNext = nullptr;
+    rp_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+    rp_info.pAttachments = attachments.data();
+    rp_info.subpassCount = 1;
+    rp_info.pSubpasses = &subpass;
+    rp_info.dependencyCount = 1;
+    rp_info.pDependencies = &dependency;
+
+    vk::assert_success(vkCreateRenderPass(dev_, &rp_info, nullptr, &render_pass_));
+}
+
+void Guppy::create_shader_modules() {
+    // Relative to CMake being run in a "build" directory in the root of the repo like VulkanSamples
+
+    auto vertShaderText = FileLoader::read_file("..\\..\\..\\Guppy\\src\\shaders\\shader.vert");
+    auto fragShaderText = FileLoader::read_file("..\\..\\..\\Guppy\\src\\shaders\\shader.frag");
+    bool retVal;
+
+    // If no shaders were submitted, just return
+    if (!(vertShaderText.data() || fragShaderText.data())) return;
+
+    init_glslang();
+    VkShaderModuleCreateInfo module_info;
+    VkPipelineShaderStageCreateInfo stage_info;
+
+    if (vertShaderText.data()) {
+        std::vector<unsigned int> vtx_spv;
+        retVal = GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vertShaderText.data(), vtx_spv);
+        assert(retVal);
+
+        module_info = {};
+        module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        module_info.codeSize = vtx_spv.size() * sizeof(unsigned int);
+        module_info.pCode = vtx_spv.data();
+        vk::assert_success(vkCreateShaderModule(dev_, &module_info, nullptr, &vs_.module));
+
+        stage_info = {};
+        stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
+        stage_info.pName = "main";
+        stage_info.module = vs_.module;
+        vs_.info = std::move(stage_info);
+    }
+
+    if (fragShaderText.data()) {
+        std::vector<unsigned int> frag_spv;
+        retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText.data(), frag_spv);
+        assert(retVal);
+
+        module_info = {};
+        module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        module_info.codeSize = frag_spv.size() * sizeof(unsigned int);
+        module_info.pCode = frag_spv.data();
+        vk::assert_success(vkCreateShaderModule(dev_, &module_info, nullptr, &fs_.module));
+
+        stage_info = {};
+        stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+        stage_info.pName = "main";
+        stage_info.module = fs_.module;
+        fs_.info = std::move(stage_info);
+    }
+
+    finalize_glslang();
+}
+
+void Guppy::create_descriptor_set_layout(const VkDescriptorSetLayoutCreateFlags descSetLayoutCreateFlags) {
+    // if (use_push_constants_) return;
+
+    // UNIFORM BUFFER
+    VkDescriptorSetLayoutBinding ubo_binding = {};
+    ubo_binding.binding = 0;
+    ubo_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    ubo_binding.descriptorCount = 1;
+    ubo_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    ubo_binding.pImmutableSamplers = nullptr;  // Optional
+
+    // TODO: move texture things into a texture place
+
+    // TEXTURE
+    VkDescriptorSetLayoutBinding tex_binding = {};
+    tex_binding.binding = 1;
+    tex_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    tex_binding.descriptorCount = 1;
+    tex_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+    tex_binding.pImmutableSamplers = nullptr;  // Optional
+
+    // LAYOUT
+    std::array<VkDescriptorSetLayoutBinding, 2> layout_bindings = {ubo_binding, tex_binding};
+    VkDescriptorSetLayoutCreateInfo layout_info = {};
+    layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+    layout_info.pNext = nullptr;
+    layout_info.flags = descSetLayoutCreateFlags;
+    layout_info.bindingCount = static_cast<uint32_t>(layout_bindings.size());
+    layout_info.pBindings = layout_bindings.data();
+
+    // TODO: are all these layouts necessary?
+    desc_set_layouts_.resize(swapchain_image_count_);
+    for (auto& layout : desc_set_layouts_) {
+        vk::assert_success(vkCreateDescriptorSetLayout(dev_, &layout_info, nullptr, &layout));
+    }
+}
+
+void Guppy::create_pipeline_layout() {
+    VkPushConstantRange push_const_range = {};
+
+    VkPipelineLayoutCreateInfo pipeline_layout_info = {};
+    pipeline_layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+    // if (use_push_constants_) {
+    //    push_const_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    //    push_const_range.offset = 0;
+    //    push_const_range.size = sizeof(ShaderParamBlock);
+
+    //    pipeline_layout_info.pushConstantRangeCount = 1;
+    //    pipeline_layout_info.pPushConstantRanges = &push_const_range;
+    //} else {
+    pipeline_layout_info.setLayoutCount = static_cast<uint32_t>(desc_set_layouts_.size());
+    pipeline_layout_info.pSetLayouts = desc_set_layouts_.data();
+    //}
+
+    vk::assert_success(vkCreatePipelineLayout(dev_, &pipeline_layout_info, nullptr, &pipeline_layout_));
+}
+
+void Guppy::destroy_descriptor_and_pipelineLayouts() {
+    for (auto& layout : desc_set_layouts_) vkDestroyDescriptorSetLayout(dev_, layout, nullptr);
+    vkDestroyPipelineLayout(dev_, pipeline_layout_, nullptr);
+}
+
+void Guppy::create_frame_data(int count) {
+    const MyShell::Context& ctx = shell_->context();
+
+    frame_data_.resize(count);
+
+    create_fences();
+
+    // if (!use_push_constants_) {
+    // create_buffers(); // TODO: this is their ubo implementation. It is worth figuring out !!!!!
+    // create_buffer_memory();
+    create_color_resources();
+    create_depth_resources();
+    update_camera();  // TODO: this should be an update ubo!!!
+    // create_descriptor_pool();
+    // create_descriptor_sets(); // Not sure how to make this work here... pipeline relies on this info
+    //}
+
+    frame_data_index_ = 0;
+}
+
+void Guppy::create_fences() {
+    VkFenceCreateInfo fence_info = {};
+    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+    for (auto& data : frame_data_) vk::assert_success(vkCreateFence(dev_, &fence_info, nullptr, &data.fence));
+}
+
+void Guppy::create_descriptor_pool(bool use_texture) {
+    VkDescriptorPoolSize type_count[2];
+    type_count[0].type =
+        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;  // TODO: look at dynamic ubo's (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+    type_count[0].descriptorCount = 1;
+    if (use_texture) {
+        type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        type_count[1].descriptorCount = 1;
+    }
+
+    VkDescriptorPoolCreateInfo desc_pool_info = {};
+    desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    desc_pool_info.maxSets = swapchain_image_count_;
+    desc_pool_info.poolSizeCount = use_texture ? 2 : 1;
+    desc_pool_info.pPoolSizes = type_count;
+
+    vk::assert_success(vkCreateDescriptorPool(dev_, &desc_pool_info, nullptr, &desc_pool_));
+}
+
+void Guppy::create_descriptor_sets(bool use_texture) {
+    VkDescriptorSetAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    alloc_info.descriptorPool = desc_pool_;
+    alloc_info.descriptorSetCount = static_cast<uint32_t>(swapchain_image_count_);
+    alloc_info.pSetLayouts = desc_set_layouts_.data();
+
+    desc_sets_.resize(swapchain_image_count_);
+    vk::assert_success(vkAllocateDescriptorSets(dev_, &alloc_info, desc_sets_.data()));
+
+    for (size_t i = 0; i < swapchain_image_count_; i++) {
+        std::array<VkWriteDescriptorSet, 2> writes = {};
+
+        writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[0].dstSet = desc_sets_[i];
+        writes[0].dstBinding = 0;
+        writes[0].dstArrayElement = 0;
+        writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        writes[0].descriptorCount = 1;
+        writes[0].pBufferInfo = &ubo_resource_.info;
+
+        writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        writes[1].dstSet = desc_sets_[i];
+        writes[1].dstBinding = 1;
+        writes[1].dstArrayElement = 0;
+        writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        writes[1].descriptorCount = 1;
+        writes[1].pImageInfo = &textures_[0].imgDescInfo;
+
+        vkUpdateDescriptorSets(dev_, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+    }
+}
+
+void Guppy::destroy_frame_data() {
+    destroy_color_resources();
+    destroy_depth_resources();
+
+    destroy_command_buffers();
+    destroy_command_pools();
+
+    // if (!use_push_constants_) {
+    //    vk::DestroyDescriptorPool(dev_, desc_pool_, nullptr);
+
+    //    vk::UnmapMemory(dev_, frame_data_mem_);
+    //    vk::FreeMemory(dev_, frame_data_mem_, nullptr);
+
+    //    for (auto &data : frame_data_) vk::DestroyBuffer(dev_, data.buf, nullptr);
+    //}
+
+    // for (auto cmd_pool : worker_cmd_pools_) vk::DestroyCommandPool(dev_, cmd_pool, nullptr);
+    // worker_cmd_pools_.clear();
+    // vk::DestroyCommandPool(dev_, primary_cmd_pool_, nullptr);
+
+    // for (auto &data : frame_data_) vk::DestroyFence(dev_, data.fence, nullptr);
+
+    // frame_data_.clear();
+}
+
+void Guppy::create_command_pools_and_buffers() {
+    auto uniq = get_unique_queue_families();
+
+    cmd_data_.cmd_pools.resize(uniq.size());
+    cmd_data_.cmds.resize(uniq.size());
+
+    for (const auto& index : uniq) {
+        // POOLS
+        VkCommandPoolCreateInfo cmd_pool_info = {};
+        cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+        cmd_pool_info.queueFamilyIndex = index;
+        cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+        vk::assert_success(vkCreateCommandPool(dev_, &cmd_pool_info, nullptr, &cmd_data_.cmd_pools[index]));
+
+        // BUFFERS
+        VkCommandBufferAllocateInfo cmd = {};
+        cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+        cmd.pNext = nullptr;
+        cmd.commandPool = cmd_data_.cmd_pools[index];
+        cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+        cmd.commandBufferCount = 1;
+
+        vk::assert_success(vkAllocateCommandBuffers(dev_, &cmd, &cmd_data_.cmds[index]));
+    };
+}
+
+void Guppy::destroy_command_pools() {
+    for (auto& cmd_pool : cmd_data_.cmd_pools) vkDestroyCommandPool(dev_, cmd_pool, nullptr);
+    cmd_data_.cmd_pools.clear();
+}
+
+void Guppy::destroy_command_buffers() {
+    for (size_t i = 0; i < info.cmd_pools.size(); i++) vkFreeCommandBuffers(dev_, cmd_data_.cmd_pools[i], 1, &cmd_data_.cmds[i]);
+    cmd_data_.cmd_pools.clear();
+}
+
+void Guppy::create_color_resources() {
+    std::vector<uint32_t> queueFamilyIndices = {cmd_data_.graphics_queue_family};
+    if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
+        queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
+
+    create_image(dev_, cmd_data_.mem_props, queueFamilyIndices, extent_.width, extent_.height, 1, num_samples_, format_,
+                 VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, color_resource_.image, color_resource_.memory);
+
+    create_image_view(dev_, color_resource_.image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D,
+                      color_resource_.view);
+
+    transition_image_layout(graphics_cmd(), color_resource_.image, 1, format_, VK_IMAGE_LAYOUT_UNDEFINED,
+                            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+}
+
+void Guppy::destroy_color_resources() {
+    // TODO: what about the format member?
+    vkDestroyImageView(dev_, color_resource_.view, nullptr);
+    vkDestroyImage(dev_, color_resource_.image, nullptr);
+    vkFreeMemory(dev_, color_resource_.memory, nullptr);
+}
+
+void Guppy::create_depth_resources() {
+    VkFormatProperties props;
+    VkImageTiling tiling;
+    vkGetPhysicalDeviceFormatProperties(physical_dev_, depth_resource_.format, &props);
+    if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        tiling = VK_IMAGE_TILING_LINEAR;
+    } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        tiling = VK_IMAGE_TILING_OPTIMAL;
+    } else {
+        /* Try other depth formats? */
+        throw std::runtime_error(("depth_format Unsupported.\n"));
+    }
+
+    std::vector<uint32_t> queueFamilyIndices = {cmd_data_.graphics_queue_family};
+    if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
+        queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
+
+    create_image(dev_, cmd_data_.mem_props, queueFamilyIndices, extent_.width, extent_.height, 1, num_samples_,
+                 depth_resource_.format, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                 depth_resource_.image, depth_resource_.memory);
+
+    VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
+    if (has_stencil_component(depth_resource_.format)) {
+        aspectFlags |= VK_IMAGE_ASPECT_STENCIL_BIT;
+    }
+
+    create_image_view(dev_, depth_resource_.image, 1, depth_resource_.format, aspectFlags, VK_IMAGE_VIEW_TYPE_2D,
+                      depth_resource_.view);
+
+    transition_image_layout(graphics_cmd(), depth_resource_.image, 1, depth_resource_.format, VK_IMAGE_LAYOUT_UNDEFINED,
+                            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                            VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
+}
+
+void Guppy::destroy_depth_resources() {
+    // TODO: what about the format member?
+    vkDestroyImageView(dev_, depth_resource_.view, nullptr);
+    vkDestroyImage(dev_, depth_resource_.image, nullptr);
+    vkFreeMemory(dev_, depth_resource_.memory, nullptr);
+}
+
+void Guppy::destroy_ubo_resources() {
+    vkDestroyBuffer(dev_, ubo_resource_.buffer, nullptr);
+    vkFreeMemory(dev_, ubo_resource_.memory, nullptr);
+}
 
 // void Guppy::initWindow()
 //{
@@ -892,7 +1447,7 @@ void Guppy::init_pipeline_2(struct sample_info &info, VkBool32 include_depth) {
 //}
 //
 
-//bool checkValidationLayerSupport() {
+// bool checkValidationLayerSupport() {
 //    // uint32_t layerCount;
 //    // vkEnumerateInstanceLayerProperties(&layerCount, nullptr);
 //
@@ -1718,83 +2273,89 @@ void Guppy::init_pipeline_2(struct sample_info &info, VkBool32 include_depth) {
 //        throw std::runtime_error("failed to create transfer command pool!");
 //    }
 //}
-//
-// void Guppy::createGraphicsCommandBuffers()
-//{
-//    m_graphicsCommandBuffers.resize(m_swapChainFramebuffers.size());
-//
-//    VkCommandBufferAllocateInfo allocInfo = {};
-//    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-//    allocInfo.commandPool = m_graphicsCommandPool;
-//    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-//    allocInfo.commandBufferCount = (uint32_t)m_graphicsCommandBuffers.size();
-//
-//    if (vkAllocateCommandBuffers(m_device, &allocInfo, m_graphicsCommandBuffers.data()) != VK_SUCCESS)
-//    {
-//        throw std::runtime_error("failed to allocate command buffers!");
-//    }
-//
-//    for (size_t i = 0; i < m_graphicsCommandBuffers.size(); i++)
-//    {
-//        // RECORD BUFFER
-//
-//        VkCommandBufferBeginInfo beginInfo = {};
-//        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-//        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-//        beginInfo.pInheritanceInfo = nullptr; // Optional
-//
-//        if (vkBeginCommandBuffer(m_graphicsCommandBuffers[i], &beginInfo) != VK_SUCCESS)
-//        {
-//            throw std::runtime_error("failed to begin recording command buffer!");
-//        }
-//
-//        VkRenderPassBeginInfo renderPassInfo = {};
-//        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-//        renderPassInfo.renderPass = m_renderPass;
-//        renderPassInfo.framebuffer = m_swapChainFramebuffers[i];
-//        renderPassInfo.renderArea.offset = { 0, 0 };
-//        renderPassInfo.renderArea.extent = m_swapChainExtent;
-//
-//        std::array<VkClearValue, 2> clearValues = {};
-//        clearValues[0].color = CLEAR_VALUE;
-//        clearValues[1].depthStencil = { 1.0f, 0 };
-//
-//        renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
-//        renderPassInfo.pClearValues = clearValues.data();
-//
-//        // DRAW
-//
-//        vkCmdBeginRenderPass(m_graphicsCommandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-//
-//        vkCmdBindPipeline(m_graphicsCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_graphicsPipeline);
-//
-//        VkBuffer vertexBuffers[] = { m_vertexBuffer };
-//        VkDeviceSize offsets[] = { 0 };
-//        vkCmdBindVertexBuffers(m_graphicsCommandBuffers[i], 0, 1, vertexBuffers, offsets);
-//
-//        vkCmdBindIndexBuffer(m_graphicsCommandBuffers[i], m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
-//
-//        vkCmdBindDescriptorSets(m_graphicsCommandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, m_pipelineLayout, 0, 1,
-//        &m_descriptorSets[i], 0, nullptr);
-//
-//        //vkCmdDraw(
-//        //    m_graphicsCommandBuffers[i],
-//        //    static_cast<uint32_t>(VERTICES.size()), // vertexCount
-//        //    1, // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
-//        //    0, // firstVertex - Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
-//        //    0  // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
-//        //);
-//
-//        vkCmdDrawIndexed(m_graphicsCommandBuffers[i], m_model.getIndexSize(), 1, 0, 0, 0);
-//
-//        vkCmdEndRenderPass(m_graphicsCommandBuffers[i]);
-//
-//        if (vkEndCommandBuffer(m_graphicsCommandBuffers[i]) != VK_SUCCESS)
-//        {
-//            throw std::runtime_error("failed to record command buffer!");
-//        }
-//    }
-//}
+
+void Guppy::create_draw_cmds() {
+    draw_cmds_.resize(swapchain_image_count_);
+
+    VkCommandBufferAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.commandPool = graphics_cmd_pool();
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    alloc_info.commandBufferCount = static_cast<uint32_t>(draw_cmds_.size());
+
+    vk::assert_success(vkAllocateCommandBuffers(dev_, &alloc_info, draw_cmds_.data()));
+
+    for (size_t i = 0; i < draw_cmds_.size(); i++) {
+        // RECORD BUFFER
+
+        VkCommandBufferBeginInfo begin_info = {};
+        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+        begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+        begin_info.pInheritanceInfo = nullptr;  // Optional
+
+        vk::assert_success(vkBeginCommandBuffer(draw_cmds_[i], &begin_info));
+
+        VkRenderPassBeginInfo render_pass_info = {};
+        render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        render_pass_info.renderPass = render_pass_;
+        render_pass_info.framebuffer = framebuffers_[i];
+        render_pass_info.renderArea.offset = {0, 0};
+        render_pass_info.renderArea.extent = extent_;
+
+        /*
+            Need to pad this here because:
+
+            In vkCmdBeginRenderPass() the VkRenderPassBeginInfo struct has a clearValueCount
+            of 2 but there must be at least 3 entries in pClearValues array to account for the
+            highest index attachment in renderPass 0x2f that uses VK_ATTACHMENT_LOAD_OP_CLEAR
+            is 3. Note that the pClearValues array is indexed by attachment number so even if
+            some pClearValues entries between 0 and 2 correspond to attachments that aren't
+            cleared they will be ignored. The spec valid usage text states 'clearValueCount
+            must be greater than the largest attachment index in renderPass that specifies a
+            loadOp (or stencilLoadOp, if the attachment has a depth/stencil format) of
+            VK_ATTACHMENT_LOAD_OP_CLEAR'
+            (https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#VUID-VkRenderPassBeginInfo-clearValueCount-00902)
+        */
+        std::array<VkClearValue, 3> clearValues = {};
+        // clearValuues[0] = final layout is in this spot; // pad this spot
+        clearValues[1].color = CLEAR_VALUE;
+        clearValues[2].depthStencil = {1.0f, 0};
+
+        render_pass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
+        render_pass_info.pClearValues = clearValues.data();
+
+        // DRAW
+
+        vkCmdBeginRenderPass(draw_cmds_[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdBindPipeline(draw_cmds_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
+
+        vkCmdSetViewport(draw_cmds_[i], 0, 1, &viewport_);
+        vkCmdSetScissor(draw_cmds_[i], 0, 1, &scissor_);
+
+        VkBuffer vertex_buffers[] = {vertex_res_.buffer};
+        VkDeviceSize offsets[] = {0};
+        vkCmdBindVertexBuffers(draw_cmds_[i], 0, 1, vertex_buffers, offsets);
+
+        vkCmdBindIndexBuffer(draw_cmds_[i], index_res_.buffer, 0, VK_INDEX_TYPE_UINT32);
+
+        vkCmdBindDescriptorSets(draw_cmds_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_layout_, 0, 1, &desc_sets_[i], 0, nullptr);
+
+        // vkCmdDraw(
+        //    m_graphicsCommandBuffers[i],
+        //    static_cast<uint32_t>(VERTICES.size()), // vertexCount
+        //    1, // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
+        //    0, // firstVertex - Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
+        //    0  // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
+        //);
+
+        vkCmdDrawIndexed(draw_cmds_[i], model_.getIndexSize(), 1, 0, 0, 0);
+
+        vkCmdEndRenderPass(draw_cmds_[i]);
+
+        vk::assert_success(vkEndCommandBuffer(draw_cmds_[i]));
+    }
+}
 
 // void Guppy::drawFrame()
 //{
@@ -1956,23 +2517,44 @@ void Guppy::init_pipeline_2(struct sample_info &info, VkBool32 include_depth) {
 //    createGraphicsCommandBuffers();
 //}
 
-void Guppy::create_vertex_buffer(struct sample_info& info) {
-    VkDeviceSize buf_size = m_model.getVertexBufferSize();
+void Guppy::create_input_assembly_data() {
+    // VkCommandBuffer cmd1, cmd2;
+    // StagingBufferHandler::get().begin_command_recording(cmd);
 
+    std::vector<StagingBufferResource> staging_resources;
+    std::vector<uint32_t> queueFamilyIndices = {cmd_data_.graphics_queue_family};
+    if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
+        queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
+
+    // Vertex buffer
+    StagingBufferResource stg_res;
+    create_vertex_data(stg_res);
+    staging_resources.emplace_back(stg_res);
+
+    // Index buffer
+    stg_res = {};
+    create_index_data(stg_res);
+    staging_resources.emplace_back(stg_res);
+
+    // TODO: this options below are wrong!!!
+
+    VkPipelineStageFlags wait_stages[] = {VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
+    StagingBufferHandler::get().end_recording_and_submit(staging_resources.data(), staging_resources.size(), transfer_cmd(),
+                                                         cmd_data_.graphics_queue_family, &graphics_cmd(), wait_stages,
+                                                         StagingBufferHandler::END_TYPE::RESET);
+}
+
+void Guppy::create_vertex_data(StagingBufferResource& stg_res) {
     // STAGING BUFFER
-    staging_buffer staging_buf;
-    auto mem_reqs_size = create_buffer(
-        info, buf_size,
-        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-        staging_buf.buf,
-        staging_buf.mem
-    );
+    VkDeviceSize bufferSize = model_.getVertexBufferSize();
+
+    auto memReqsSize =
+        create_buffer(dev_, cmd_data_.mem_props, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stg_res.buffer, stg_res.memory);
 
     // FILL STAGING BUFFER ON DEVICE
-
     void* pData;
-    vkMapMemory(info.device, staging_buf.mem, 0, mem_reqs_size, 0, &pData);
+    vkMapMemory(dev_, stg_res.memory, 0, memReqsSize, 0, &pData);
     /*
         You can now simply memcpy the vertex data to the mapped memory and unmap it again using vkUnmapMemory.
         Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
@@ -1985,25 +2567,17 @@ void Guppy::create_vertex_buffer(struct sample_info& info) {
         allocated memory. Do keep in mind that this may lead to slightly worse performance than explicit flushing,
         but we'll see why that doesn't matter in the next chapter.
     */
-    memcpy(pData, m_model.getVetexData(), (size_t)buf_size);
-    vkUnmapMemory(info.device, staging_buf.mem);
+    memcpy(pData, model_.getVertexData(), static_cast<size_t>(bufferSize));
+    vkUnmapMemory(dev_, stg_res.memory);
 
     // FAST VERTEX BUFFER
-
-    create_buffer(
-        info,
-        buf_size, // TODO: probably don't need to check memory requirements again
-        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-        info.vertex_buffer.buf,
-        info.vertex_buffer.mem
-    );
+    create_buffer(dev_, cmd_data_.mem_props,
+                  bufferSize,  // TODO: probably don't need to check memory requirements again
+                  VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                  vertex_res_.buffer, vertex_res_.memory);
 
     // COPY FROM STAGING TO FAST
-
-    copy_buffer(info.cmds[info.transfer_queue_family_index], staging_buf.buf, info.vertex_buffer.buf, mem_reqs_size);
-
-    info.staging_buffers.push_back(staging_buf);
+    copyBuffer(transfer_cmd(), stg_res.buffer, vertex_res_.buffer, memReqsSize);
 }
 
 // void Guppy::createVertexBuffer()
@@ -2062,7 +2636,7 @@ void Guppy::create_vertex_buffer(struct sample_info& info) {
 //    });
 //}
 
-void Guppy::copy_buffer(VkCommandBuffer& cmd, const VkBuffer& src_buf, const VkBuffer& dst_buf, const VkDeviceSize& size) {
+void Guppy::copyBuffer(VkCommandBuffer& cmd, const VkBuffer& src_buf, const VkBuffer& dst_buf, const VkDeviceSize& size) {
     VkBufferCopy copy_region = {};
     copy_region.srcOffset = 0;  // Optional
     copy_region.dstOffset = 0;  // Optional
@@ -2082,41 +2656,24 @@ void Guppy::copy_buffer(VkCommandBuffer& cmd, const VkBuffer& src_buf, const VkB
 //    });
 //}
 
-// void Guppy::createIndexBuffer()
-//{
-//    VkDeviceSize bufferSize = m_model.getIndexBufferSize();
-//
-//    VkBuffer stagingBuffer;
-//    VkDeviceMemory stagingBufferMemory;
-//    createBuffer(
-//        bufferSize,
-//        VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-//        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-//        stagingBuffer, stagingBufferMemory
-//    );
-//
-//    void* data;
-//    vkMapMemory(m_device, stagingBufferMemory, 0, bufferSize, 0, &data);
-//    memcpy(data, m_model.getIndexData(), (size_t)bufferSize);
-//    vkUnmapMemory(m_device, stagingBufferMemory);
-//
-//    createBuffer(
-//        bufferSize,
-//        VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-//        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-//        m_indexBuffer,
-//        m_indexBufferMemory
-//    );
-//
-//    copyBuffer(stagingBuffer, m_indexBuffer, bufferSize);
-//
-//    flushSetupCommandBuffers(m_transferCommandPool, m_transferQueue, [this, stagingBuffer, stagingBufferMemory]()
-//    {
-//        vkDestroyBuffer(m_device, stagingBuffer, nullptr);
-//        vkFreeMemory(m_device, stagingBufferMemory, nullptr);
-//    });
-//}
-//
+void Guppy::create_index_data(StagingBufferResource& stg_res) {
+    VkDeviceSize bufferSize = model_.getIndexBufferSize();
+
+    auto memReqsSize =
+        create_buffer(dev_, cmd_data_.mem_props, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stg_res.buffer, stg_res.memory);
+
+    void* pData;
+    vkMapMemory(dev_, stg_res.memory, 0, memReqsSize, 0, &pData);
+    memcpy(pData, model_.getIndexData(), static_cast<size_t>(bufferSize));
+    vkUnmapMemory(dev_, stg_res.memory);
+
+    create_buffer(dev_, cmd_data_.mem_props, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_res_.buffer, index_res_.memory);
+
+    copyBuffer(transfer_cmd(), stg_res.buffer, index_res_.buffer, memReqsSize);
+}
+
 // void Guppy::createDescriptorSetLayout()
 //{
 //    // UNIFORM BUFFER
@@ -2555,21 +3112,53 @@ void Guppy::copy_buffer(VkCommandBuffer& cmd, const VkBuffer& src_buf, const VkB
 //
 //}
 
-void Guppy::create_model(struct sample_info& info) {
+void Guppy::create_model() {
+    const MyShell::Context& ctx = shell_->context();
+
     bool loadDefault = true;
     std::string tex_path = "..\\..\\..\\images\\texture.jpg";
 
     if (loadDefault) {
-        //m_model.loadAxes();
-        m_model.loadDefault();
+        // m_model.loadAxes();
+        model_.loadDefault();
     } else {
-        UP_VECTOR = glm::vec3(0.0f, 0.0f, 1.0f);
+        // UP_VECTOR = glm::vec3(0.0f, 0.0f, 1.0f);
         tex_path = CHALET_TEXTURE_PATH;
-        m_model.loadChalet();
+        model_.loadChalet();
     }
 
-    Texture::create_texture(info, tex_path);
-    Texture::create_texture(info, "..\\..\\..\\images\\chalet.jpg");
+    // VkCommandBuffer cmd1, cmd2;
+    // StagingBufferHandler::get().begin_command_recording(cmd);
+
+    StagingBufferResource stg_res;
+    std::vector<StagingBufferResource> staging_resources;
+    std::vector<uint32_t> queueFamilyIndices = {cmd_data_.graphics_queue_family};
+    if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
+        queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
+
+    // stg_res = {};
+    // tex_path = "..\\..\\..\\images\\texture.jpg";
+    // textures_.emplace_back(Texture::createTexture(ctx, stg_res, transfer_cmd(), graphics_cmd(), queueFamilyIndices, tex_path));
+    // staging_resources.emplace_back(stg_res);
+
+    stg_res = {};
+    tex_path = "..\\..\\..\\images\\chalet.jpg";
+    textures_.emplace_back(Texture::createTexture(ctx, stg_res, transfer_cmd(), graphics_cmd(), queueFamilyIndices, tex_path));
+    staging_resources.emplace_back(stg_res);
+
+    VkPipelineStageFlags wait_stages[] = {VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
+    StagingBufferHandler::get().end_recording_and_submit(staging_resources.data(), staging_resources.size(), transfer_cmd(),
+                                                         cmd_data_.graphics_queue_family, &graphics_cmd(), wait_stages,
+                                                         StagingBufferHandler::END_TYPE::RESET);
+}
+
+void Guppy::destroy_textures() {
+    for (auto& tex : textures_) {
+        vkDestroySampler(dev_, tex.sampler, nullptr);
+        vkDestroyImageView(dev_, tex.view, nullptr);
+        vkDestroyImage(dev_, tex.image, nullptr);
+        vkFreeMemory(dev_, tex.memory, nullptr);
+    }
 }
 
 // void Guppy::createModel()

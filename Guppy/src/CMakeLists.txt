@@ -19,10 +19,14 @@ set(SOURCE
     Main.cpp
     Model.cpp
     Model.h
+    MyShell.cpp
+    MyShell.h
     Plane.cpp
     Plane.h
     Shell.cpp
     Shell.h
+    StagingBufferResources.cpp
+    StagingBufferResources.h
     Texture.cpp
     Texture.h
     Vertex.cpp

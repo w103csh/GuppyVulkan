@@ -20,7 +20,7 @@
 #include <string>
 #include <vector>
 
-class Shell;
+class MyShell;
 
 class Game {
    public:
@@ -44,13 +44,17 @@ class Game {
         bool no_tick;
         bool no_render;
         bool no_present;
+
+        // *
+        bool try_sampler_anisotropy_; // TODO: Not sure what this does
+        bool try_sample_rate_shading_;
+        bool enable_sample_shading_;
+        bool include_color;
+        bool include_depth;
     };
     const Settings &settings() const { return settings_; }
 
-    virtual void my_init() {}
-    virtual void my_cleanup() {}
-
-    virtual void attach_shell(Shell &shell) { shell_ = &shell; }
+    virtual void attach_shell(MyShell &shell) { shell_ = &shell; }
     virtual void detach_shell() { shell_ = nullptr; }
 
     virtual void attach_swapchain() {}
@@ -90,11 +94,17 @@ class Game {
         settings_.no_render = false;
         settings_.no_present = false;
 
+        // *
+        settings_.try_sampler_anisotropy_ = true;
+        settings_.try_sample_rate_shading_ = true;
+        settings_.include_color = true;
+        settings_.include_depth = true;
+
         parse_args(args);
     }
 
     Settings settings_;
-    Shell *shell_;
+    MyShell *shell_;
 
    private:
     void parse_args(const std::vector<std::string> &args) {
