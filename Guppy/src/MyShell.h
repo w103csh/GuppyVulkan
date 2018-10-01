@@ -83,8 +83,8 @@ class MyShell {
         uint32_t present_queue_family;
 
         VkDevice dev;
-        VkQueue game_queue;
-        VkQueue present_queue;
+        //VkQueue game_queue;
+        //VkQueue present_queue;
 
         std::queue<BackBuffer> back_buffers;
 
@@ -122,7 +122,7 @@ class MyShell {
     void create_context();
     void destroy_context();
 
-    void resize_swapchain(uint32_t width_hint, uint32_t height_hint);
+    void resize_swapchain(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities = true);
 
     void add_game_time(float time);
 
@@ -154,7 +154,7 @@ class MyShell {
     void assert_all_instance_layers() const;
     void assert_all_instance_extensions() const;
 
-    bool has_all_device_layers(VkPhysicalDevice phy) const;  // still commented out
+    bool has_all_device_layers(VkPhysicalDevice phy) const;
     bool has_all_device_extensions(VkPhysicalDevice phy) const;
 
     // called by init_instance
@@ -206,7 +206,7 @@ class MyShell {
     void determine_swapchain_image_count();     // *
 
     // called by resize_swapchain
-    bool MyShell::determine_swapchain_extent(uint32_t width_hint, uint32_t height_hint);  // *
+    bool MyShell::determine_swapchain_extent(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities);  // *
 
     // called by cleanup_vk
     void destroy_instance();  // *

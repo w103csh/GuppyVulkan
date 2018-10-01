@@ -14,6 +14,7 @@ struct Camera {
     glm::mat4 clip;
     glm::mat4 mvp;
     VkDeviceSize memory_requirements_size; // TODO: ugh!
+    float aspect;
 };
 
 void default_orthographic(Camera& camera, float width, float height, float fov = 45.0f);

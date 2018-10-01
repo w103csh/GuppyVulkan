@@ -17,6 +17,8 @@
 #ifndef SHELL_WIN32_H
 #define SHELL_WIN32_H
 
+#include <condition_variable>
+#include <mutex>
 #include <windows.h>
 #include "MyShell.h"
 
@@ -49,6 +51,10 @@ class ShellWin32 : public MyShell {
     HWND hwnd_;
 
     HMODULE hmodule_;
+
+    bool minimized_;
+    //std::mutex mtx_;
+    //std::condition_variable pause_;
 };
 
 #endif  // SHELL_WIN32_H

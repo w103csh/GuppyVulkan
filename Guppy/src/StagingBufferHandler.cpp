@@ -2,7 +2,6 @@
 #include <thread>
 
 #include "StagingBufferHandler.h"
-#include "util_init.hpp"
 
 StagingBufferHandler::StagingBufferHandler(const MyShell* sh, const VkDevice& dev, const CommandData* cmd_data)
     : sh_(sh), dev_(dev), cmd_data_(cmd_data), mutex_() {
@@ -26,7 +25,7 @@ void StagingBufferHandler::begin_command_recording(VkCommandBuffer& cmd, BEGIN_T
             vkResetCommandBuffer(cmd, resetflags);
         } break;
     }
-    execute_begin_command_buffer(cmd);
+    helpers::execute_begin_command_buffer(cmd);
 }
 
 // TODO: This needs work. begin_command_recording should create / reset the wait command that gets submitted here too.
@@ -77,7 +76,7 @@ void StagingBufferHandler::end_recording_and_submit(StagingBufferResource* resou
 
     // move this outside?
     // for (uint32_t i = 0; i < stag_cmd_cnt; i++) execute_end_command_buffer(stag_cmds[i]);
-    execute_end_command_buffer(cmd);
+    helpers::execute_end_command_buffer(cmd);
 
     VkSubmitInfo wait_sub_info = {};
     if (should_wait) {
@@ -98,7 +97,7 @@ void StagingBufferHandler::end_recording_and_submit(StagingBufferResource* resou
 
         // move this outside?
         // for (uint32_t i = 0; i < wait_cmd_cnt; i++) execute_end_command_buffer(wait_cmds[i]);
-        execute_end_command_buffer(*wait_cmd);
+        helpers::execute_end_command_buffer(*wait_cmd);
     }
 
     // SUBMIT ...
@@ -127,6 +126,9 @@ void StagingBufferHandler::wait(CommandResources* cmd_res, END_TYPE type) {
     // FREE FENCES
     for (auto& fence : cmd_res->fences) vkDestroyFence(dev_, fence, nullptr);
 
+    // FREE SEMAPHORE
+    vkDestroySemaphore(dev_, cmd_res->semaphore, nullptr);
+
     //// FREE COMMAND BUFFERS
     switch (type) {
         case END_TYPE::DESTROY: {
@@ -137,10 +139,10 @@ void StagingBufferHandler::wait(CommandResources* cmd_res, END_TYPE type) {
         } break;
         case END_TYPE::RESET: {
             vkResetCommandBuffer(cmd_data_->cmds[cmd_data_->transfer_queue_family], 0);
-            execute_begin_command_buffer(cmd_data_->cmds[cmd_data_->transfer_queue_family]);
+            helpers::execute_begin_command_buffer(cmd_data_->cmds[cmd_data_->transfer_queue_family]);
 
             vkResetCommandBuffer(cmd_data_->cmds[cmd_res->wait_queue_family], 0);
-            execute_begin_command_buffer(cmd_data_->cmds[cmd_res->wait_queue_family]);
+            helpers::execute_begin_command_buffer(cmd_data_->cmds[cmd_res->wait_queue_family]);
         } break;
     }
 

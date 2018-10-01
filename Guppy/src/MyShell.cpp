@@ -109,6 +109,12 @@ void MyShell::assert_all_instance_extensions() const {
     }
 }
 
+bool MyShell::has_all_device_layers(VkPhysicalDevice phy) const {
+    // Something here?
+
+    return true;
+}
+
 bool MyShell::has_all_device_extensions(VkPhysicalDevice phy) const {
     //// enumerate device extensions
     // std::vector<VkExtensionProperties> exts;
@@ -225,8 +231,8 @@ void MyShell::destroy_context() {
 
     destroy_back_buffers();
 
-    ctx_.game_queue = VK_NULL_HANDLE;
-    ctx_.present_queue = VK_NULL_HANDLE;
+    // ctx_.game_queue = VK_NULL_HANDLE;
+    // ctx_.present_queue = VK_NULL_HANDLE;
 
     vkDeviceWaitIdle(ctx_.dev);
     vkDestroyDevice(ctx_.dev, nullptr);
@@ -337,8 +343,8 @@ void MyShell::destroy_swapchain() {
     ctx_.surface = VK_NULL_HANDLE;
 }
 
-void MyShell::resize_swapchain(uint32_t width_hint, uint32_t height_hint) {
-    if (determine_swapchain_extent(width_hint, height_hint)) return;
+void MyShell::resize_swapchain(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities) {
+    if (determine_swapchain_extent(width_hint, height_hint, refresh_capabilities)) return;
 
     auto &caps = ctx_.surface_props.capabilities;
 
@@ -452,25 +458,25 @@ void MyShell::acquire_back_buffer() {
 }
 
 void MyShell::present_back_buffer() {
-     const auto &buf = ctx_.acquired_back_buffer;
+    const auto &buf = ctx_.acquired_back_buffer;
 
-     if (!settings_.no_render) game_.on_frame(game_time_ / game_tick_);
+    if (!settings_.no_render) game_.on_frame(game_time_ / game_tick_);
 
-     if (settings_.no_present) {
+    if (settings_.no_present) {
         fake_present();
         return;
     }
 
-     VkPresentInfoKHR present_info = {};
-     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-     present_info.waitSemaphoreCount = 1;
-     present_info.pWaitSemaphores = (settings_.no_render) ? &buf.acquire_semaphore : &buf.render_semaphore;
-     present_info.swapchainCount = 1;
-     present_info.pSwapchains = &ctx_.swapchain;
-     present_info.pImageIndices = &buf.image_index;
+    VkPresentInfoKHR present_info = {};
+    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    present_info.waitSemaphoreCount = 1;
+    present_info.pWaitSemaphores = (settings_.no_render) ? &buf.acquire_semaphore : &buf.render_semaphore;
+    present_info.swapchainCount = 1;
+    present_info.pSwapchains = &ctx_.swapchain;
+    present_info.pImageIndices = &buf.image_index;
 
-     VkResult res = vkQueuePresentKHR(ctx_.queues[ctx_.present_queue_family], &present_info);
-     if (res == VK_ERROR_OUT_OF_DATE_KHR) {
+    VkResult res = vkQueuePresentKHR(ctx_.queues[ctx_.present_queue_family], &present_info);
+    if (res == VK_ERROR_OUT_OF_DATE_KHR) {
         // Swapchain is out of date (e.g. the window was resized) and
         // must be recreated:
         resize_swapchain(0, 0);  // width and height hints should be ignored
@@ -478,10 +484,11 @@ void MyShell::present_back_buffer() {
         assert(!res);
     }
 
-     vk::assert_success(vkQueueSubmit(ctx_.queues[ctx_.present_queue_family], 0, nullptr, buf.present_fence));
-     ctx_.back_buffers.push(buf);
+    vk::assert_success(vkQueueSubmit(ctx_.queues[ctx_.present_queue_family], 0, nullptr, buf.present_fence));
+    ctx_.back_buffers.push(buf);
 }
 
+// TODO: need this???
 void MyShell::fake_present() {
     // const auto &buf = ctx_.acquired_back_buffer;
 
@@ -783,8 +790,13 @@ void MyShell::determine_device_feature_support(const MyShell::PhysicalDeviceProp
         log(MyShell::LOG_WARN, "cannot enable sample rate shading");
 }
 
-bool MyShell::determine_swapchain_extent(uint32_t width_hint, uint32_t height_hint) {
+bool MyShell::determine_swapchain_extent(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities) {
+    // 0, 0 for hints indicates calling from acquire_back_buffer... TODO: more robust solution???
+    if (refresh_capabilities)
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx_.physical_dev, ctx_.surface, &ctx_.surface_props.capabilities);
+
     auto &caps = ctx_.surface_props.capabilities;
+
     VkExtent2D extent = caps.currentExtent;
 
     // use the hints
@@ -819,7 +831,7 @@ void MyShell::determine_depth_format() {
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
     if (ctx_.depth_format == VK_FORMAT_UNDEFINED) ctx_.depth_format = VK_FORMAT_D32_SFLOAT;
 #else
-    if (ctx_.depth_format == VK_FORMAT_UNDEFINED) ctx_.depth_format = find_depth_format(ctx_.physical_dev);
+    if (ctx_.depth_format == VK_FORMAT_UNDEFINED) ctx_.depth_format = helpers::find_depth_format(ctx_.physical_dev);
 #endif
 }
 

@@ -25,8 +25,8 @@ set(SOURCE
     Plane.h
     Shell.cpp
     Shell.h
-    StagingBufferResources.cpp
-    StagingBufferResources.h
+    StagingBufferHandler.cpp
+    StagingBufferHandler.h
     Texture.cpp
     Texture.h
     Vertex.cpp

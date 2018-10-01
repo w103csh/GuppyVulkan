@@ -23,14 +23,14 @@ VULKAN_SAMPLE_DESCRIPTION
 samples utility functions
 */
 
-#include <assert.h>
-#include <errno.h>
-#include <stdio.h>
-#include <string.h>
-#include <cstdlib>
-#include <iomanip>
-#include <fstream>
-#include <iostream>
+//#include <assert.h>
+//#include <errno.h>
+//#include <stdio.h>
+//#include <string.h>
+//#include <cstdlib>
+//#include <iomanip>
+//#include <fstream>
+//#include <iostream>
 #include "util.hpp"
 
 #ifdef __ANDROID__
@@ -50,527 +50,227 @@ static android_app *Android_application = nullptr;
 #include "SPIRV/GlslangToSpv.h"
 #endif
 
-// For timestamp code (get_milliseconds)
-#ifdef WIN32
-#include <Windows.h>
-#else
-#include <sys/time.h>
-#endif
-
-using namespace std;
-
-#if !(defined(__ANDROID__) || defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-// Android, iOS, and macOS: main() implemented externally to allow access to Objective-C components
+//// For timestamp code (get_milliseconds)
+//#ifdef WIN32
+//#include <Windows.h>
+//#else
+//#include <sys/time.h>
+//#endif
+//
+//using namespace std;
+//
+//#if !(defined(__ANDROID__) || defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+//// Android, iOS, and macOS: main() implemented externally to allow access to Objective-C components
 //int main(int argc, char **argv) { return sample_main(argc, argv); }
-#endif
-
-void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch) {
-    major = version >> 22;
-    minor = (version >> 12) & 0x3ff;
-    patch = version & 0xfff;
-}
-
-string get_file_name(const string &s) {
-    char sep = '/';
-
-#ifdef _WIN32
-    sep = '\\';
-#endif
-
-    // cout << "in get_file_name\n";
-    size_t i = s.rfind(sep, s.length());
-    if (i != string::npos) {
-        return (s.substr(i + 1, s.length() - i));
-    }
-
-    return ("");
-}
-
-#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-// iOS & macOS: get_base_data_dir() implemented externally to allow access to Objective-C components
-std::string get_base_data_dir() {
-#ifdef __ANDROID__
-    return "";
-#else
-    return std::string(GUPPY_BASE_DIR) + "/data/";
-#endif
-}
-#endif
-
-std::string get_data_dir(std::string filename) {
-    std::string basedir = get_base_data_dir();
-    // get the base filename
-    std::string fname = get_file_name(filename);
-
-    // get the prefix of the base filename, i.e. the part before the dash
-    stringstream stream(fname);
-    std::string prefix;
-    getline(stream, prefix, '-');
-    std::string ddir = basedir + prefix;
-    return ddir;
-}
-
-bool memory_type_from_properties(const VkPhysicalDeviceMemoryProperties &mem_props, uint32_t typeBits, VkFlags requirements_mask,
-                                 uint32_t *typeIndex) {
-    // Search memtypes to find first index with those properties
-    for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
-        if ((typeBits & 1) == 1) {
-            // Type is available, does it match user properties?
-            if ((mem_props.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
-                *typeIndex = i;
-                return true;
-            }
-        }
-        typeBits >>= 1;
-    }
-    // No memory types matched, return failure
-    return false;
-}
-
-VkDeviceSize create_buffer(const VkDevice& dev, const VkPhysicalDeviceMemoryProperties& mem_props, const VkDeviceSize &size, const VkBufferUsageFlags &usage,
-                   const VkMemoryPropertyFlags &props, VkBuffer &buf, VkDeviceMemory &buf_mem) {
-    VkResult U_ASSERT_ONLY res;
-    bool U_ASSERT_ONLY pass;
-
-    // CREATE BUFFER
-
-    VkBufferCreateInfo buf_info = {};
-    buf_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-    buf_info.size = size;
-    buf_info.usage = usage;
-    buf_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    // TODO: what should these be ?
-    //buf_info.queueFamilyIndexCount = 0;
-    //buf_info.pQueueFamilyIndices = NULL;
-    //buf_info.flags = 0;
-
-    res = vkCreateBuffer(dev, &buf_info, NULL, &buf);
-    assert(res == VK_SUCCESS);
-
-    // ALLOCATE DEVICE MEMORY
-
-    VkMemoryRequirements mem_reqs;
-    vkGetBufferMemoryRequirements(dev, buf, &mem_reqs);
-
-    VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.allocationSize = mem_reqs.size;
-    pass = memory_type_from_properties(mem_props, mem_reqs.memoryTypeBits,
-                                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                       &alloc_info.memoryTypeIndex);
-    assert(pass && "No mappable, coherent memory");
-
-    /*
-        It should be noted that in a real world application, you're not supposed to actually
-        call vkAllocateMemory for every individual buffer. The maximum number of simultaneous
-        memory allocations is limited by the maxMemoryAllocationCount physical device limit,
-        which may be as low as 4096 even on high end hardware like an NVIDIA GTX 1080. The
-        right way to allocate memory for a large number of objects at the same time is to create
-        a custom allocator that splits up a single allocation among many different objects by
-        using the offset parameters that we've seen in many functions.
-
-        You can either implement such an allocator yourself, or use the VulkanMemoryAllocator
-        library provided by the GPUOpen initiative. However, for this tutorial it's okay to
-        use a separate allocation for every resource, because we won't come close to hitting
-        any of these limits for now.
-
-        The previous chapter already mentioned that you should allocate multiple resources like
-        buffers from a single memory allocation, but in fact you should go a step further.
-        Driver developers recommend that you also store multiple buffers, like the vertex and
-        index buffer, into a single VkBuffer and use offsets in commands like
-        vkCmdBindVertexBuffers. The advantage is that your data is more cache friendly in that
-        case, because it's closer together. It is even possible to reuse the same chunk of
-        memory for multiple resources if they are not used during the same render operations,
-        provided that their data is refreshed, of course. This is known as aliasing and some
-        Vulkan functions have explicit flags to specify that you want to do this.
-    */
-
-    res = vkAllocateMemory(dev, &alloc_info, NULL, &buf_mem);
-    assert(res == VK_SUCCESS);
-
-    // BIND MEMORY
-
-    res = vkBindBufferMemory(dev, buf, buf_mem, 0);
-    assert(res == VK_SUCCESS);
-
-    return mem_reqs.size;
-}
-
-VkFormat find_depth_format(const VkPhysicalDevice& physical_dev) {
-    return find_supported_format(physical_dev, { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
-                                 VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-}
-
-VkFormat find_supported_format(const VkPhysicalDevice& physical_dev, const std::vector<VkFormat>& candidates,
-                               const VkImageTiling tiling, const VkFormatFeatureFlags features) {
-    VkFormat format = {};
-    for (VkFormat f : candidates) {
-        VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(physical_dev, f, &props);
-        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
-            format = f;
-            break;
-        } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
-            format = f;
-            break;
-        } else {
-            throw std::runtime_error("failed to find supported format!");
-        }
-    }
-    return format;
-}
-
-void create_image(const VkDevice& dev, const VkPhysicalDeviceMemoryProperties& mem_props, const std::vector<uint32_t> &queueFamilyIndices, const uint32_t width, uint32_t height, uint32_t mip_levels,
-                  const VkSampleCountFlagBits &num_samples, const VkFormat &format, const VkImageTiling &tiling,
-                  const VkImageUsageFlags &usage, const VkFlags &requirements_mask, VkImage &image, VkDeviceMemory &image_memory) {
-    VkResult U_ASSERT_ONLY res;
-    bool U_ASSERT_ONLY pass;
-
-    VkImageCreateInfo image_info = {};
-    image_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_info.imageType = VK_IMAGE_TYPE_2D;  // param?
-    image_info.extent.width = width;
-    image_info.extent.height = height;
-    image_info.extent.depth = 1;
-    image_info.mipLevels = mip_levels;
-    image_info.arrayLayers = 1;
-    image_info.format = format;
-    image_info.tiling = tiling;
-    image_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    image_info.usage = usage;
-    image_info.samples = num_samples;
-    image_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_info.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
-    image_info.pQueueFamilyIndices = queueFamilyIndices.data();
-
-    /* Create image */
-    res = vkCreateImage(dev, &image_info, NULL, &image);
-    assert(res == VK_SUCCESS);
-
-    VkMemoryRequirements mem_reqs;
-    vkGetImageMemoryRequirements(dev, image, &mem_reqs);
-
-    VkMemoryAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    alloc_info.allocationSize = mem_reqs.size;
-    /* Use the memory properties to determine the type of memory required */
-    pass =
-        memory_type_from_properties(mem_props, mem_reqs.memoryTypeBits, requirements_mask, &alloc_info.memoryTypeIndex);
-    assert(pass);
-
-    /* Allocate memory */
-    res = vkAllocateMemory(dev, &alloc_info, NULL, &image_memory);
-    assert(res == VK_SUCCESS);
-
-    res = vkBindImageMemory(dev, image, image_memory, 0);
-    assert(res == VK_SUCCESS);
-}
-
-void copy_buffer_to_image(VkCommandBuffer& cmd, const VkBuffer& src_buf, const VkImage& dst_img, const uint32_t& width,
-                                    const uint32_t& height) {
-    VkBufferImageCopy region = {};
-    region.bufferOffset = 0;
-    region.bufferRowLength = 0;
-    region.bufferImageHeight = 0;
-
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    region.imageSubresource.mipLevel = 0;
-    region.imageSubresource.baseArrayLayer = 0;
-    region.imageSubresource.layerCount = 1;
-
-    region.imageOffset = { 0, 0, 0 };
-    region.imageExtent = { width, height, 1 };
-
-    vkCmdCopyBufferToImage(cmd, src_buf, dst_img,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,  // VK_IMAGE_USAGE_TRANSFER_DST_BIT
-                           1, &region);
-}
-
-void create_image_view(const VkDevice &device, const VkImage &image, const uint32_t &mip_levels, const VkFormat &format,
-                       const VkImageAspectFlags &aspectFlags, const VkImageViewType &viewType, VkImageView &image_view) {
-    VkResult U_ASSERT_ONLY res;
-
-    VkImageViewCreateInfo viewInfo = {};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    viewInfo.image = image;
-
-    // swap chain is a 2D depth texture
-    viewInfo.viewType = viewType;
-    viewInfo.format = format;
-
-    // defaults
-    viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-
-    viewInfo.subresourceRange.aspectMask = aspectFlags;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = mip_levels;
-    /*
-        If you were working on a stereographic 3D application, then you would create a swap
-        chain with multiple layers. You could then create multiple image views for each image
-        representing the views for the left and right eyes by accessing different layers.
-    */
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = 1;
-
-    res = vkCreateImageView(device, &viewInfo, nullptr, &image_view);
-    assert(res == VK_SUCCESS);
-}
-
-void transition_image_layout(VkCommandBuffer &cmd, VkImage &image, const uint32_t &mip_levels, const VkFormat &format,
-                             const VkImageLayout &old_layout, const VkImageLayout &new_layout, VkPipelineStageFlags src_stages,
-                             VkPipelineStageFlags dst_stages) {
-    VkImageMemoryBarrier barrier = {};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.pNext = nullptr;
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = 0;
-    barrier.oldLayout = old_layout;
-    barrier.newLayout = new_layout;
-    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;  // ignored for now
-    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;  // ignored for now
-    barrier.image = image;
-    barrier.subresourceRange.baseMipLevel = 0;
-    barrier.subresourceRange.levelCount = mip_levels;
-    barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
-
-    // ACCESS MASK
-
-    bool layout_handled = true;
-
-    switch (old_layout) {
-        case VK_IMAGE_LAYOUT_UNDEFINED:
-            barrier.srcAccessMask = 0;
-            break;
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-            barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_PREINITIALIZED:
-            barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-            break;
-        default:
-            layout_handled = false;
-            break;
-    }
-
-    switch (new_layout) {
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;  // | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;  // | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-            break;
-        default:
-            layout_handled = false;
-            break;
-    }
-
-    // if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
-    //    barrier.srcAccessMask = 0;
-    //    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //} else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-    //    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    //    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    //} else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-    //    barrier.srcAccessMask = 0;
-    //    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    //    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    //} else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
-    //    barrier.srcAccessMask = 0;
-    //    barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    //    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    //} else {
-    //    throw std::invalid_argument("unsupported image layout transition!");
-    //}
-
-    if (!layout_handled) throw std::invalid_argument("unsupported image layout transition!");
-
-    // ASPECT MASK
-
-    if (new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        if (has_stencil_component(format)) {
-            barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-        }
-    } else {
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    }
-
-    vkCmdPipelineBarrier(cmd, src_stages, dst_stages, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-}
-
-bool has_stencil_component(VkFormat format) {
-    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT ||
-           format == VK_FORMAT_D32_SFLOAT_S8_UINT;
-}
-
-void set_image_layout(struct sample_info &info, VkCommandBuffer &cmd, VkImage image, VkImageAspectFlags aspectMask,
-                      VkImageLayout old_image_layout, VkImageLayout new_image_layout, VkPipelineStageFlags src_stages,
-                      VkPipelineStageFlags dest_stages) {
-    /* DEPENDS on info.cmd and info.queue initialized */
-
-    assert(cmd != VK_NULL_HANDLE);
-    assert(info.queues[0] != VK_NULL_HANDLE);  // grahics
-
-    VkImageMemoryBarrier image_memory_barrier = {};
-    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    image_memory_barrier.pNext = NULL;
-    image_memory_barrier.srcAccessMask = 0;
-    image_memory_barrier.dstAccessMask = 0;
-    image_memory_barrier.oldLayout = old_image_layout;
-    image_memory_barrier.newLayout = new_image_layout;
-    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    image_memory_barrier.image = image;
-    image_memory_barrier.subresourceRange.aspectMask = aspectMask;
-    image_memory_barrier.subresourceRange.baseMipLevel = 0;
-    image_memory_barrier.subresourceRange.levelCount = 1;
-    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
-    image_memory_barrier.subresourceRange.layerCount = 1;
-
-    switch (old_image_layout) {
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-            image_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            break;
-
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-            image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            break;
-
-        case VK_IMAGE_LAYOUT_PREINITIALIZED:
-            image_memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-            break;
-
-        default:
-            break;
-    }
-
-    switch (new_image_layout) {
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-            image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-            break;
-
-        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-            image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-            break;
-
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-            image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-            break;
-
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-            image_memory_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-            break;
-
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            image_memory_barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-            break;
-
-        default:
-            break;
-    }
-
-    vkCmdPipelineBarrier(cmd, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
-}
-
-bool read_ppm(char const *const filename, int &width, int &height, uint64_t rowPitch, unsigned char *dataPtr) {
-    // PPM format expected from http://netpbm.sourceforge.net/doc/ppm.html
-    //  1. magic number
-    //  2. whitespace
-    //  3. width
-    //  4. whitespace
-    //  5. height
-    //  6. whitespace
-    //  7. max color value
-    //  8. whitespace
-    //  7. data
-
-    // Comments are not supported, but are detected and we kick out
-    // Only 8 bits per channel is supported
-    // If dataPtr is nullptr, only width and height are returned
-
-    // Read in values from the PPM file as characters to check for comments
-    char magicStr[3] = {}, heightStr[6] = {}, widthStr[6] = {}, formatStr[6] = {};
-
-#ifndef __ANDROID__
-    FILE *fPtr = fopen(filename, "rb");
-#else
-    FILE *fPtr = AndroidFopen(filename, "rb");
-#endif
-    if (!fPtr) {
-        printf("Bad filename in read_ppm: %s\n", filename);
-        return false;
-    }
-
-    // Read the four values from file, accounting with any and all whitepace
-    fscanf(fPtr, "%s %s %s %s ", magicStr, widthStr, heightStr, formatStr);
-
-    // Kick out if comments present
-    if (magicStr[0] == '#' || widthStr[0] == '#' || heightStr[0] == '#' || formatStr[0] == '#') {
-        printf("Unhandled comment in PPM file\n");
-        return false;
-    }
-
-    // Only one magic value is valid
-    if (strncmp(magicStr, "P6", sizeof(magicStr))) {
-        printf("Unhandled PPM magic number: %s\n", magicStr);
-        return false;
-    }
-
-    width = atoi(widthStr);
-    height = atoi(heightStr);
-
-    // Ensure we got something sane for width/height
-    static const int saneDimension = 32768;  //??
-    if (width <= 0 || width > saneDimension) {
-        printf("Width seems wrong.  Update read_ppm if not: %u\n", width);
-        return false;
-    }
-    if (height <= 0 || height > saneDimension) {
-        printf("Height seems wrong.  Update read_ppm if not: %u\n", height);
-        return false;
-    }
-
-    if (dataPtr == nullptr) {
-        // If no destination pointer, caller only wanted dimensions
-        return true;
-    }
-
-    // Now read the data
-    for (int y = 0; y < height; y++) {
-        unsigned char *rowPtr = dataPtr;
-        for (int x = 0; x < width; x++) {
-            fread(rowPtr, 3, 1, fPtr);
-            rowPtr[3] = 255; /* Alpha of 1 */
-            rowPtr += 4;
-        }
-        dataPtr += rowPitch;
-    }
-    fclose(fPtr);
-
-    return true;
-}
+//#endif
+//
+//void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch) {
+//    major = version >> 22;
+//    minor = (version >> 12) & 0x3ff;
+//    patch = version & 0xfff;
+//}
+//
+//string get_file_name(const string &s) {
+//    char sep = '/';
+//
+//#ifdef _WIN32
+//    sep = '\\';
+//#endif
+//
+//    // cout << "in get_file_name\n";
+//    size_t i = s.rfind(sep, s.length());
+//    if (i != string::npos) {
+//        return (s.substr(i + 1, s.length() - i));
+//    }
+//
+//    return ("");
+//}
+//
+//#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+//// iOS & macOS: get_base_data_dir() implemented externally to allow access to Objective-C components
+//std::string get_base_data_dir() {
+//#ifdef __ANDROID__
+//    return "";
+//#else
+//    return std::string(VULKAN_SAMPLES_BASE_DIR) + "/API-Samples/data/";
+//#endif
+//}
+//#endif
+//
+//std::string get_data_dir(std::string filename) {
+//    std::string basedir = get_base_data_dir();
+//    // get the base filename
+//    std::string fname = get_file_name(filename);
+//
+//    // get the prefix of the base filename, i.e. the part before the dash
+//    stringstream stream(fname);
+//    std::string prefix;
+//    getline(stream, prefix, '-');
+//    std::string ddir = basedir + prefix;
+//    return ddir;
+//}
+//
+//bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex) {
+//    // Search memtypes to find first index with those properties
+//    for (uint32_t i = 0; i < info.memory_properties.memoryTypeCount; i++) {
+//        if ((typeBits & 1) == 1) {
+//            // Type is available, does it match user properties?
+//            if ((info.memory_properties.memoryTypes[i].propertyFlags & requirements_mask) == requirements_mask) {
+//                *typeIndex = i;
+//                return true;
+//            }
+//        }
+//        typeBits >>= 1;
+//    }
+//    // No memory types matched, return failure
+//    return false;
+//}
+//
+//void set_image_layout(struct sample_info &info, VkImage image, VkImageAspectFlags aspectMask, VkImageLayout old_image_layout,
+//                      VkImageLayout new_image_layout, VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages) {
+//    /* DEPENDS on info.cmd and info.queue initialized */
+//
+//    assert(info.cmd != VK_NULL_HANDLE);
+//    assert(info.graphics_queue != VK_NULL_HANDLE);
+//
+//    VkImageMemoryBarrier image_memory_barrier = {};
+//    image_memory_barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+//    image_memory_barrier.pNext = NULL;
+//    image_memory_barrier.srcAccessMask = 0;
+//    image_memory_barrier.dstAccessMask = 0;
+//    image_memory_barrier.oldLayout = old_image_layout;
+//    image_memory_barrier.newLayout = new_image_layout;
+//    image_memory_barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+//    image_memory_barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+//    image_memory_barrier.image = image;
+//    image_memory_barrier.subresourceRange.aspectMask = aspectMask;
+//    image_memory_barrier.subresourceRange.baseMipLevel = 0;
+//    image_memory_barrier.subresourceRange.levelCount = 1;
+//    image_memory_barrier.subresourceRange.baseArrayLayer = 0;
+//    image_memory_barrier.subresourceRange.layerCount = 1;
+//
+//    switch (old_image_layout) {
+//        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+//            image_memory_barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+//            break;
+//
+//        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+//            image_memory_barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+//            break;
+//
+//        case VK_IMAGE_LAYOUT_PREINITIALIZED:
+//            image_memory_barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+//            break;
+//
+//        default:
+//            break;
+//    }
+//
+//    switch (new_image_layout) {
+//        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+//            image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+//            break;
+//
+//        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+//            image_memory_barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+//            break;
+//
+//        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+//            image_memory_barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+//            break;
+//
+//        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
+//            image_memory_barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+//            break;
+//
+//        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+//            image_memory_barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+//            break;
+//
+//        default:
+//            break;
+//    }
+//
+//    vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
+//}
+//
+//bool read_ppm(char const *const filename, int &width, int &height, uint64_t rowPitch, unsigned char *dataPtr) {
+//    // PPM format expected from http://netpbm.sourceforge.net/doc/ppm.html
+//    //  1. magic number
+//    //  2. whitespace
+//    //  3. width
+//    //  4. whitespace
+//    //  5. height
+//    //  6. whitespace
+//    //  7. max color value
+//    //  8. whitespace
+//    //  7. data
+//
+//    // Comments are not supported, but are detected and we kick out
+//    // Only 8 bits per channel is supported
+//    // If dataPtr is nullptr, only width and height are returned
+//
+//    // Read in values from the PPM file as characters to check for comments
+//    char magicStr[3] = {}, heightStr[6] = {}, widthStr[6] = {}, formatStr[6] = {};
+//
+//#ifndef __ANDROID__
+//    FILE *fPtr = fopen(filename, "rb");
+//#else
+//    FILE *fPtr = AndroidFopen(filename, "rb");
+//#endif
+//    if (!fPtr) {
+//        printf("Bad filename in read_ppm: %s\n", filename);
+//        return false;
+//    }
+//
+//    // Read the four values from file, accounting with any and all whitepace
+//    fscanf(fPtr, "%s %s %s %s ", magicStr, widthStr, heightStr, formatStr);
+//
+//    // Kick out if comments present
+//    if (magicStr[0] == '#' || widthStr[0] == '#' || heightStr[0] == '#' || formatStr[0] == '#') {
+//        printf("Unhandled comment in PPM file\n");
+//        return false;
+//    }
+//
+//    // Only one magic value is valid
+//    if (strncmp(magicStr, "P6", sizeof(magicStr))) {
+//        printf("Unhandled PPM magic number: %s\n", magicStr);
+//        return false;
+//    }
+//
+//    width = atoi(widthStr);
+//    height = atoi(heightStr);
+//
+//    // Ensure we got something sane for width/height
+//    static const int saneDimension = 32768;  //??
+//    if (width <= 0 || width > saneDimension) {
+//        printf("Width seems wrong.  Update read_ppm if not: %u\n", width);
+//        return false;
+//    }
+//    if (height <= 0 || height > saneDimension) {
+//        printf("Height seems wrong.  Update read_ppm if not: %u\n", height);
+//        return false;
+//    }
+//
+//    if (dataPtr == nullptr) {
+//        // If no destination pointer, caller only wanted dimensions
+//        return true;
+//    }
+//
+//    // Now read the data
+//    for (int y = 0; y < height; y++) {
+//        unsigned char *rowPtr = dataPtr;
+//        for (int x = 0; x < width; x++) {
+//            fread(rowPtr, 3, 1, fPtr);
+//            rowPtr[3] = 255; /* Alpha of 1 */
+//            rowPtr += 4;
+//        }
+//        dataPtr += rowPitch;
+//    }
+//    fclose(fPtr);
+//
+//    return true;
+//}
 
 #if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 
@@ -829,455 +529,455 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 
 #endif  // IOS or macOS
 
-void wait_seconds(int seconds) {
-#ifdef WIN32
-    Sleep(seconds * 1000);
-#elif defined(__ANDROID__)
-    sleep(seconds);
-#else
-    sleep(seconds);
-#endif
-}
-
-timestamp_t get_milliseconds() {
-#ifdef WIN32
-    LARGE_INTEGER frequency;
-    BOOL useQPC = QueryPerformanceFrequency(&frequency);
-    if (useQPC) {
-        LARGE_INTEGER now;
-        QueryPerformanceCounter(&now);
-        return (1000LL * now.QuadPart) / frequency.QuadPart;
-    } else {
-        return GetTickCount();
-    }
-#else
-    struct timeval now;
-    gettimeofday(&now, NULL);
-    return (now.tv_usec / 1000) + (timestamp_t)now.tv_sec;
-#endif
-}
-
-void print_UUID(uint8_t *pipelineCacheUUID) {
-    for (int j = 0; j < VK_UUID_SIZE; ++j) {
-        std::cout << std::setw(2) << (uint32_t)pipelineCacheUUID[j];
-        if (j == 3 || j == 5 || j == 7 || j == 9) {
-            std::cout << '-';
-        }
-    }
-}
-static bool optionMatch(const char *option, char *optionLine) {
-    if (strncmp(option, optionLine, strlen(option)) == 0)
-        return true;
-    else
-        return false;
-}
-
-void process_command_line_args(struct sample_info &info, int argc, char *argv[]) {
-    int i, n;
-
-    for (i = 1, n = 1; i < argc; i++) {
-        if (optionMatch("--save-images", argv[i]))
-            info.save_images = true;
-        else if (optionMatch("--help", argv[i]) || optionMatch("-h", argv[i])) {
-            printf("\nOther options:\n");
-            printf(
-                "\t--save-images\n"
-                "\t\tSave tests images as ppm files in current working "
-                "directory.\n");
-            exit(0);
-        } else {
-            printf("\nUnrecognized option: %s\n", argv[i]);
-            printf("\nUse --help or -h for option list.\n");
-            exit(0);
-        }
-
-        /*
-         * Since the above "consume" inputs, update argv
-         * so that it contains the trimmed list of args for glutInit
-         */
-
-        argv[n] = argv[i];
-        n++;
-    }
-}
-
-void write_ppm(struct sample_info &info, VkCommandBuffer& cmd, const char *basename) {
-    string filename;
-    int x, y;
-    VkResult res;
-
-    VkImageCreateInfo image_create_info = {};
-    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    image_create_info.pNext = NULL;
-    image_create_info.imageType = VK_IMAGE_TYPE_2D;
-    image_create_info.format = info.swapchain_format.format;
-    image_create_info.extent.width = info.width;
-    image_create_info.extent.height = info.height;
-    image_create_info.extent.depth = 1;
-    image_create_info.mipLevels = 1;
-    image_create_info.arrayLayers = 1;
-    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
-    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
-    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
-    image_create_info.queueFamilyIndexCount = 0;
-    image_create_info.pQueueFamilyIndices = NULL;
-    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    image_create_info.flags = 0;
-
-    VkMemoryAllocateInfo mem_alloc = {};
-    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    mem_alloc.pNext = NULL;
-    mem_alloc.allocationSize = 0;
-    mem_alloc.memoryTypeIndex = 0;
-
-    VkImage mappableImage;
-    VkDeviceMemory mappableMemory;
-
-    /* Create a mappable image */
-    res = vkCreateImage(info.device, &image_create_info, NULL, &mappableImage);
-    assert(res == VK_SUCCESS);
-
-    VkMemoryRequirements mem_reqs;
-    vkGetImageMemoryRequirements(info.device, mappableImage, &mem_reqs);
-
-    mem_alloc.allocationSize = mem_reqs.size;
-
-    /* Find the memory type that is host mappable */
-    bool pass = memory_type_from_properties(
-        info.physical_device_properties[info.physical_device_property_index].memory_properties, mem_reqs.memoryTypeBits,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, &mem_alloc.memoryTypeIndex);
-    assert(pass && "No mappable, coherent memory");
-
-    /* allocate memory */
-    res = vkAllocateMemory(info.device, &mem_alloc, NULL, &(mappableMemory));
-    assert(res == VK_SUCCESS);
-
-    /* bind memory */
-    res = vkBindImageMemory(info.device, mappableImage, mappableMemory, 0);
-    assert(res == VK_SUCCESS);
-
-    VkCommandBufferBeginInfo cmd_buf_info = {};
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = 0;
-    cmd_buf_info.pInheritanceInfo = NULL;
-
-    res = vkBeginCommandBuffer(cmd, &cmd_buf_info);
-    set_image_layout(info, cmd, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
-                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-
-    set_image_layout(info, cmd, info.buffers[info.current_buffer].image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
-
-    VkImageCopy copy_region;
-    copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    copy_region.srcSubresource.mipLevel = 0;
-    copy_region.srcSubresource.baseArrayLayer = 0;
-    copy_region.srcSubresource.layerCount = 1;
-    copy_region.srcOffset.x = 0;
-    copy_region.srcOffset.y = 0;
-    copy_region.srcOffset.z = 0;
-    copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    copy_region.dstSubresource.mipLevel = 0;
-    copy_region.dstSubresource.baseArrayLayer = 0;
-    copy_region.dstSubresource.layerCount = 1;
-    copy_region.dstOffset.x = 0;
-    copy_region.dstOffset.y = 0;
-    copy_region.dstOffset.z = 0;
-    copy_region.extent.width = info.width;
-    copy_region.extent.height = info.height;
-    copy_region.extent.depth = 1;
-
-    /* Put the copy command into the command buffer */
-    vkCmdCopyImage(cmd, info.buffers[info.current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mappableImage,
-                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
-
-    set_image_layout(info, cmd, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
-                     VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT);
-
-    res = vkEndCommandBuffer(cmd);
-    assert(res == VK_SUCCESS);
-    const VkCommandBuffer cmd_bufs[] = {cmd};
-    VkFenceCreateInfo fenceInfo;
-    VkFence cmdFence;
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.pNext = NULL;
-    fenceInfo.flags = 0;
-    vkCreateFence(info.device, &fenceInfo, NULL, &cmdFence);
-
-    VkSubmitInfo submit_info[1] = {};
-    submit_info[0].pNext = NULL;
-    submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submit_info[0].waitSemaphoreCount = 0;
-    submit_info[0].pWaitSemaphores = NULL;
-    submit_info[0].pWaitDstStageMask = NULL;
-    submit_info[0].commandBufferCount = 1;
-    submit_info[0].pCommandBuffers = cmd_bufs;
-    submit_info[0].signalSemaphoreCount = 0;
-    submit_info[0].pSignalSemaphores = NULL;
-
-    /* Queue the command buffer for execution (graphics) */
-    res = vkQueueSubmit(info.queues[0], 1, submit_info, cmdFence);
-    assert(res == VK_SUCCESS);
-
-    /* Make sure command buffer is finished before mapping */
-    do {
-        res = vkWaitForFences(info.device, 1, &cmdFence, VK_TRUE, FENCE_TIMEOUT);
-    } while (res == VK_TIMEOUT);
-    assert(res == VK_SUCCESS);
-
-    vkDestroyFence(info.device, cmdFence, NULL);
-
-    filename.append(basename);
-    filename.append(".ppm");
-
-    VkImageSubresource subres = {};
-    subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-    subres.mipLevel = 0;
-    subres.arrayLayer = 0;
-    VkSubresourceLayout sr_layout;
-    vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &sr_layout);
-
-    char *ptr;
-    res = vkMapMemory(info.device, mappableMemory, 0, mem_reqs.size, 0, (void **)&ptr);
-    assert(res == VK_SUCCESS);
-
-    ptr += sr_layout.offset;
-    ofstream file(filename.c_str(), ios::binary);
-
-    file << "P6\n";
-    file << info.width << " ";
-    file << info.height << "\n";
-    file << 255 << "\n";
-
-    for (y = 0; y < info.height; y++) {
-        const int *row = (const int *)ptr;
-        int swapped;
-
-        if (info.swapchain_format.format == VK_FORMAT_B8G8R8A8_UNORM || info.swapchain_format.format == VK_FORMAT_B8G8R8A8_SRGB) {
-            for (x = 0; x < info.width; x++) {
-                swapped = (*row & 0xff00ff00) | (*row & 0x000000ff) << 16 | (*row & 0x00ff0000) >> 16;
-                file.write((char *)&swapped, 3);
-                row++;
-            }
-        } else if (info.swapchain_format.format == VK_FORMAT_R8G8B8A8_UNORM) {
-            for (x = 0; x < info.width; x++) {
-                file.write((char *)row, 3);
-                row++;
-            }
-        } else {
-            printf("Unrecognized image format - will not write image files");
-            break;
-        }
-
-        ptr += sr_layout.rowPitch;
-    }
-
-    file.close();
-    vkUnmapMemory(info.device, mappableMemory);
-    vkDestroyImage(info.device, mappableImage, NULL);
-    vkFreeMemory(info.device, mappableMemory, NULL);
-}
-
-std::string get_file_directory() {
-#ifndef __ANDROID__
-    return "";
-#else
-    assert(Android_application != nullptr);
-    return Android_application->activity->externalDataPath;
-#endif
-}
-
-#ifdef __ANDROID__
+//void wait_seconds(int seconds) {
+//#ifdef WIN32
+//    Sleep(seconds * 1000);
+//#elif defined(__ANDROID__)
+//    sleep(seconds);
+//#else
+//    sleep(seconds);
+//#endif
+//}
 //
-// Android specific helper functions.
+//timestamp_t get_milliseconds() {
+//#ifdef WIN32
+//    LARGE_INTEGER frequency;
+//    BOOL useQPC = QueryPerformanceFrequency(&frequency);
+//    if (useQPC) {
+//        LARGE_INTEGER now;
+//        QueryPerformanceCounter(&now);
+//        return (1000LL * now.QuadPart) / frequency.QuadPart;
+//    } else {
+//        return GetTickCount();
+//    }
+//#else
+//    struct timeval now;
+//    gettimeofday(&now, NULL);
+//    return (now.tv_usec / 1000) + (timestamp_t)now.tv_sec;
+//#endif
+//}
 //
-
-// Helpder class to forward the cout/cerr output to logcat derived from:
-// http://stackoverflow.com/questions/8870174/is-stdcout-usable-in-android-ndk
-class AndroidBuffer : public std::streambuf {
-   public:
-    AndroidBuffer(android_LogPriority priority) {
-        priority_ = priority;
-        this->setp(buffer_, buffer_ + kBufferSize - 1);
-    }
-
-   private:
-    static const int32_t kBufferSize = 128;
-    int32_t overflow(int32_t c) {
-        if (c == traits_type::eof()) {
-            *this->pptr() = traits_type::to_char_type(c);
-            this->sbumpc();
-        }
-        return this->sync() ? traits_type::eof() : traits_type::not_eof(c);
-    }
-
-    int32_t sync() {
-        int32_t rc = 0;
-        if (this->pbase() != this->pptr()) {
-            char writebuf[kBufferSize + 1];
-            memcpy(writebuf, this->pbase(), this->pptr() - this->pbase());
-            writebuf[this->pptr() - this->pbase()] = '\0';
-
-            rc = __android_log_write(priority_, "std", writebuf) > 0;
-            this->setp(buffer_, buffer_ + kBufferSize - 1);
-        }
-        return rc;
-    }
-
-    android_LogPriority priority_ = ANDROID_LOG_INFO;
-    char buffer_[kBufferSize];
-};
-
-void Android_handle_cmd(android_app *app, int32_t cmd) {
-    switch (cmd) {
-        case APP_CMD_INIT_WINDOW:
-            // The window is being shown, get it ready.
-            sample_main(0, nullptr);
-            LOGI("\n");
-            LOGI("=================================================");
-            LOGI("          The sample ran successfully!!");
-            LOGI("=================================================");
-            LOGI("\n");
-            break;
-        case APP_CMD_TERM_WINDOW:
-            // The window is being hidden or closed, clean it up.
-            break;
-        default:
-            LOGI("event not handled: %d", cmd);
-    }
-}
-
-bool Android_process_command() {
-    assert(Android_application != nullptr);
-    int events;
-    android_poll_source *source;
-    // Poll all pending events.
-    if (ALooper_pollAll(0, NULL, &events, (void **)&source) >= 0) {
-        // Process each polled events
-        if (source != NULL) source->process(Android_application, source);
-    }
-    return Android_application->destroyRequested;
-}
-
-void android_main(struct android_app *app) {
-    // Set static variables.
-    Android_application = app;
-    // Set the callback to process system events
-    app->onAppCmd = Android_handle_cmd;
-
-    // Forward cout/cerr to logcat.
-    std::cout.rdbuf(new AndroidBuffer(ANDROID_LOG_INFO));
-    std::cerr.rdbuf(new AndroidBuffer(ANDROID_LOG_ERROR));
-
-    // Main loop
-    do {
-        Android_process_command();
-    }  // Check if system requested to quit the application
-    while (app->destroyRequested == 0);
-
-    return;
-}
-
-ANativeWindow *AndroidGetApplicationWindow() {
-    assert(Android_application != nullptr);
-    return Android_application->window;
-}
-
-bool AndroidFillShaderMap(const char *path, std::unordered_map<std::string, std::string> *map_shaders) {
-    assert(Android_application != nullptr);
-    auto directory = AAssetManager_openDir(Android_application->activity->assetManager, path);
-
-    const char *name = nullptr;
-    while (1) {
-        name = AAssetDir_getNextFileName(directory);
-        if (name == nullptr) {
-            break;
-        }
-
-        std::string file_name = name;
-        if (file_name.find(".frag") != std::string::npos || file_name.find(".vert") != std::string::npos) {
-            // Add path to the filename.
-            file_name = std::string(path) + "/" + file_name;
-            std::string shader;
-            if (!AndroidLoadFile(file_name.c_str(), &shader)) {
-                continue;
-            }
-            // Remove \n to make the lookup more robust.
-            while (1) {
-                auto ret_pos = shader.find("\n");
-                if (ret_pos == std::string::npos) {
-                    break;
-                }
-                shader.erase(ret_pos, 1);
-            }
-
-            auto pos = file_name.find_last_of(".");
-            if (pos == std::string::npos) {
-                // Invalid file nmae.
-                continue;
-            }
-            // Generate filename for SPIRV binary.
-            std::string spirv_name = file_name.replace(pos, 1, "-") + ".spirv";
-            // Store the SPIRV file name with GLSL contents as a key.
-            // The file contents can be long, but as we are using unordered map, it wouldn't take
-            // much storage space.
-            // Put the file into the map.
-            (*map_shaders)[shader] = spirv_name;
-        }
-    };
-
-    AAssetDir_close(directory);
-    return true;
-}
-
-bool AndroidLoadFile(const char *filePath, std::string *data) {
-    assert(Android_application != nullptr);
-    AAsset *file = AAssetManager_open(Android_application->activity->assetManager, filePath, AASSET_MODE_BUFFER);
-    size_t fileLength = AAsset_getLength(file);
-    LOGI("Loaded file:%s size:%zu", filePath, fileLength);
-    if (fileLength == 0) {
-        return false;
-    }
-    data->resize(fileLength);
-    AAsset_read(file, &(*data)[0], fileLength);
-    return true;
-}
-
-void AndroidGetWindowSize(int32_t *width, int32_t *height) {
-    // On Android, retrieve the window size from the native window.
-    assert(Android_application != nullptr);
-    *width = ANativeWindow_getWidth(Android_application->window);
-    *height = ANativeWindow_getHeight(Android_application->window);
-}
-
-// Android fopen stub described at
-// http://www.50ply.com/blog/2013/01/19/loading-compressed-android-assets-with-file-pointer/#comment-1850768990
-static int android_read(void *cookie, char *buf, int size) { return AAsset_read((AAsset *)cookie, buf, size); }
-
-static int android_write(void *cookie, const char *buf, int size) {
-    return EACCES;  // can't provide write access to the apk
-}
-
-static fpos_t android_seek(void *cookie, fpos_t offset, int whence) { return AAsset_seek((AAsset *)cookie, offset, whence); }
-
-static int android_close(void *cookie) {
-    AAsset_close((AAsset *)cookie);
-    return 0;
-}
-
-FILE *AndroidFopen(const char *fname, const char *mode) {
-    if (mode[0] == 'w') {
-        return NULL;
-    }
-
-    assert(Android_application != nullptr);
-    AAsset *asset = AAssetManager_open(Android_application->activity->assetManager, fname, 0);
-    if (!asset) {
-        return NULL;
-    }
-
-    return funopen(asset, android_read, android_write, android_seek, android_close);
-}
-#endif
+//void print_UUID(uint8_t *pipelineCacheUUID) {
+//    for (int j = 0; j < VK_UUID_SIZE; ++j) {
+//        std::cout << std::setw(2) << (uint32_t)pipelineCacheUUID[j];
+//        if (j == 3 || j == 5 || j == 7 || j == 9) {
+//            std::cout << '-';
+//        }
+//    }
+//}
+//static bool optionMatch(const char *option, char *optionLine) {
+//    if (strncmp(option, optionLine, strlen(option)) == 0)
+//        return true;
+//    else
+//        return false;
+//}
+//
+//void process_command_line_args(struct sample_info &info, int argc, char *argv[]) {
+//    int i, n;
+//
+//    for (i = 1, n = 1; i < argc; i++) {
+//        if (optionMatch("--save-images", argv[i]))
+//            info.save_images = true;
+//        else if (optionMatch("--help", argv[i]) || optionMatch("-h", argv[i])) {
+//            printf("\nOther options:\n");
+//            printf(
+//                "\t--save-images\n"
+//                "\t\tSave tests images as ppm files in current working "
+//                "directory.\n");
+//            exit(0);
+//        } else {
+//            printf("\nUnrecognized option: %s\n", argv[i]);
+//            printf("\nUse --help or -h for option list.\n");
+//            exit(0);
+//        }
+//
+//        /*
+//         * Since the above "consume" inputs, update argv
+//         * so that it contains the trimmed list of args for glutInit
+//         */
+//
+//        argv[n] = argv[i];
+//        n++;
+//    }
+//}
+//
+//void write_ppm(struct sample_info &info, const char *basename) {
+//    string filename;
+//    int x, y;
+//    VkResult res;
+//
+//    VkImageCreateInfo image_create_info = {};
+//    image_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+//    image_create_info.pNext = NULL;
+//    image_create_info.imageType = VK_IMAGE_TYPE_2D;
+//    image_create_info.format = info.format;
+//    image_create_info.extent.width = info.width;
+//    image_create_info.extent.height = info.height;
+//    image_create_info.extent.depth = 1;
+//    image_create_info.mipLevels = 1;
+//    image_create_info.arrayLayers = 1;
+//    image_create_info.samples = VK_SAMPLE_COUNT_1_BIT;
+//    image_create_info.tiling = VK_IMAGE_TILING_LINEAR;
+//    image_create_info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+//    image_create_info.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+//    image_create_info.queueFamilyIndexCount = 0;
+//    image_create_info.pQueueFamilyIndices = NULL;
+//    image_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+//    image_create_info.flags = 0;
+//
+//    VkMemoryAllocateInfo mem_alloc = {};
+//    mem_alloc.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+//    mem_alloc.pNext = NULL;
+//    mem_alloc.allocationSize = 0;
+//    mem_alloc.memoryTypeIndex = 0;
+//
+//    VkImage mappableImage;
+//    VkDeviceMemory mappableMemory;
+//
+//    /* Create a mappable image */
+//    res = vkCreateImage(info.device, &image_create_info, NULL, &mappableImage);
+//    assert(res == VK_SUCCESS);
+//
+//    VkMemoryRequirements mem_reqs;
+//    vkGetImageMemoryRequirements(info.device, mappableImage, &mem_reqs);
+//
+//    mem_alloc.allocationSize = mem_reqs.size;
+//
+//    /* Find the memory type that is host mappable */
+//    bool pass = memory_type_from_properties(info, mem_reqs.memoryTypeBits,
+//                                            VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+//                                            &mem_alloc.memoryTypeIndex);
+//    assert(pass && "No mappable, coherent memory");
+//
+//    /* allocate memory */
+//    res = vkAllocateMemory(info.device, &mem_alloc, NULL, &(mappableMemory));
+//    assert(res == VK_SUCCESS);
+//
+//    /* bind memory */
+//    res = vkBindImageMemory(info.device, mappableImage, mappableMemory, 0);
+//    assert(res == VK_SUCCESS);
+//
+//    VkCommandBufferBeginInfo cmd_buf_info = {};
+//    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+//    cmd_buf_info.pNext = NULL;
+//    cmd_buf_info.flags = 0;
+//    cmd_buf_info.pInheritanceInfo = NULL;
+//
+//    res = vkBeginCommandBuffer(info.cmd, &cmd_buf_info);
+//    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_UNDEFINED,
+//                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+//
+//    set_image_layout(info, info.buffers[info.current_buffer].image, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+//                     VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+//
+//    VkImageCopy copy_region;
+//    copy_region.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//    copy_region.srcSubresource.mipLevel = 0;
+//    copy_region.srcSubresource.baseArrayLayer = 0;
+//    copy_region.srcSubresource.layerCount = 1;
+//    copy_region.srcOffset.x = 0;
+//    copy_region.srcOffset.y = 0;
+//    copy_region.srcOffset.z = 0;
+//    copy_region.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//    copy_region.dstSubresource.mipLevel = 0;
+//    copy_region.dstSubresource.baseArrayLayer = 0;
+//    copy_region.dstSubresource.layerCount = 1;
+//    copy_region.dstOffset.x = 0;
+//    copy_region.dstOffset.y = 0;
+//    copy_region.dstOffset.z = 0;
+//    copy_region.extent.width = info.width;
+//    copy_region.extent.height = info.height;
+//    copy_region.extent.depth = 1;
+//
+//    /* Put the copy command into the command buffer */
+//    vkCmdCopyImage(info.cmd, info.buffers[info.current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mappableImage,
+//                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
+//
+//    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
+//                     VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT);
+//
+//    res = vkEndCommandBuffer(info.cmd);
+//    assert(res == VK_SUCCESS);
+//    const VkCommandBuffer cmd_bufs[] = {info.cmd};
+//    VkFenceCreateInfo fenceInfo;
+//    VkFence cmdFence;
+//    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+//    fenceInfo.pNext = NULL;
+//    fenceInfo.flags = 0;
+//    vkCreateFence(info.device, &fenceInfo, NULL, &cmdFence);
+//
+//    VkSubmitInfo submit_info[1] = {};
+//    submit_info[0].pNext = NULL;
+//    submit_info[0].sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+//    submit_info[0].waitSemaphoreCount = 0;
+//    submit_info[0].pWaitSemaphores = NULL;
+//    submit_info[0].pWaitDstStageMask = NULL;
+//    submit_info[0].commandBufferCount = 1;
+//    submit_info[0].pCommandBuffers = cmd_bufs;
+//    submit_info[0].signalSemaphoreCount = 0;
+//    submit_info[0].pSignalSemaphores = NULL;
+//
+//    /* Queue the command buffer for execution */
+//    res = vkQueueSubmit(info.graphics_queue, 1, submit_info, cmdFence);
+//    assert(res == VK_SUCCESS);
+//
+//    /* Make sure command buffer is finished before mapping */
+//    do {
+//        res = vkWaitForFences(info.device, 1, &cmdFence, VK_TRUE, FENCE_TIMEOUT);
+//    } while (res == VK_TIMEOUT);
+//    assert(res == VK_SUCCESS);
+//
+//    vkDestroyFence(info.device, cmdFence, NULL);
+//
+//    filename.append(basename);
+//    filename.append(".ppm");
+//
+//    VkImageSubresource subres = {};
+//    subres.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+//    subres.mipLevel = 0;
+//    subres.arrayLayer = 0;
+//    VkSubresourceLayout sr_layout;
+//    vkGetImageSubresourceLayout(info.device, mappableImage, &subres, &sr_layout);
+//
+//    char *ptr;
+//    res = vkMapMemory(info.device, mappableMemory, 0, mem_reqs.size, 0, (void **)&ptr);
+//    assert(res == VK_SUCCESS);
+//
+//    ptr += sr_layout.offset;
+//    ofstream file(filename.c_str(), ios::binary);
+//
+//    file << "P6\n";
+//    file << info.width << " ";
+//    file << info.height << "\n";
+//    file << 255 << "\n";
+//
+//    for (y = 0; y < info.height; y++) {
+//        const int *row = (const int *)ptr;
+//        int swapped;
+//
+//        if (info.format == VK_FORMAT_B8G8R8A8_UNORM || info.format == VK_FORMAT_B8G8R8A8_SRGB) {
+//            for (x = 0; x < info.width; x++) {
+//                swapped = (*row & 0xff00ff00) | (*row & 0x000000ff) << 16 | (*row & 0x00ff0000) >> 16;
+//                file.write((char *)&swapped, 3);
+//                row++;
+//            }
+//        } else if (info.format == VK_FORMAT_R8G8B8A8_UNORM) {
+//            for (x = 0; x < info.width; x++) {
+//                file.write((char *)row, 3);
+//                row++;
+//            }
+//        } else {
+//            printf("Unrecognized image format - will not write image files");
+//            break;
+//        }
+//
+//        ptr += sr_layout.rowPitch;
+//    }
+//
+//    file.close();
+//    vkUnmapMemory(info.device, mappableMemory);
+//    vkDestroyImage(info.device, mappableImage, NULL);
+//    vkFreeMemory(info.device, mappableMemory, NULL);
+//}
+//
+//std::string get_file_directory() {
+//#ifndef __ANDROID__
+//    return "";
+//#else
+//    assert(Android_application != nullptr);
+//    return Android_application->activity->externalDataPath;
+//#endif
+//}
+//
+//#ifdef __ANDROID__
+////
+//// Android specific helper functions.
+////
+//
+//// Helpder class to forward the cout/cerr output to logcat derived from:
+//// http://stackoverflow.com/questions/8870174/is-stdcout-usable-in-android-ndk
+//class AndroidBuffer : public std::streambuf {
+//   public:
+//    AndroidBuffer(android_LogPriority priority) {
+//        priority_ = priority;
+//        this->setp(buffer_, buffer_ + kBufferSize - 1);
+//    }
+//
+//   private:
+//    static const int32_t kBufferSize = 128;
+//    int32_t overflow(int32_t c) {
+//        if (c == traits_type::eof()) {
+//            *this->pptr() = traits_type::to_char_type(c);
+//            this->sbumpc();
+//        }
+//        return this->sync() ? traits_type::eof() : traits_type::not_eof(c);
+//    }
+//
+//    int32_t sync() {
+//        int32_t rc = 0;
+//        if (this->pbase() != this->pptr()) {
+//            char writebuf[kBufferSize + 1];
+//            memcpy(writebuf, this->pbase(), this->pptr() - this->pbase());
+//            writebuf[this->pptr() - this->pbase()] = '\0';
+//
+//            rc = __android_log_write(priority_, "std", writebuf) > 0;
+//            this->setp(buffer_, buffer_ + kBufferSize - 1);
+//        }
+//        return rc;
+//    }
+//
+//    android_LogPriority priority_ = ANDROID_LOG_INFO;
+//    char buffer_[kBufferSize];
+//};
+//
+//void Android_handle_cmd(android_app *app, int32_t cmd) {
+//    switch (cmd) {
+//        case APP_CMD_INIT_WINDOW:
+//            // The window is being shown, get it ready.
+//            sample_main(0, nullptr);
+//            LOGI("\n");
+//            LOGI("=================================================");
+//            LOGI("          The sample ran successfully!!");
+//            LOGI("=================================================");
+//            LOGI("\n");
+//            break;
+//        case APP_CMD_TERM_WINDOW:
+//            // The window is being hidden or closed, clean it up.
+//            break;
+//        default:
+//            LOGI("event not handled: %d", cmd);
+//    }
+//}
+//
+//bool Android_process_command() {
+//    assert(Android_application != nullptr);
+//    int events;
+//    android_poll_source *source;
+//    // Poll all pending events.
+//    if (ALooper_pollAll(0, NULL, &events, (void **)&source) >= 0) {
+//        // Process each polled events
+//        if (source != NULL) source->process(Android_application, source);
+//    }
+//    return Android_application->destroyRequested;
+//}
+//
+//void android_main(struct android_app *app) {
+//    // Set static variables.
+//    Android_application = app;
+//    // Set the callback to process system events
+//    app->onAppCmd = Android_handle_cmd;
+//
+//    // Forward cout/cerr to logcat.
+//    std::cout.rdbuf(new AndroidBuffer(ANDROID_LOG_INFO));
+//    std::cerr.rdbuf(new AndroidBuffer(ANDROID_LOG_ERROR));
+//
+//    // Main loop
+//    do {
+//        Android_process_command();
+//    }  // Check if system requested to quit the application
+//    while (app->destroyRequested == 0);
+//
+//    return;
+//}
+//
+//ANativeWindow *AndroidGetApplicationWindow() {
+//    assert(Android_application != nullptr);
+//    return Android_application->window;
+//}
+//
+//bool AndroidFillShaderMap(const char *path, std::unordered_map<std::string, std::string> *map_shaders) {
+//    assert(Android_application != nullptr);
+//    auto directory = AAssetManager_openDir(Android_application->activity->assetManager, path);
+//
+//    const char *name = nullptr;
+//    while (1) {
+//        name = AAssetDir_getNextFileName(directory);
+//        if (name == nullptr) {
+//            break;
+//        }
+//
+//        std::string file_name = name;
+//        if (file_name.find(".frag") != std::string::npos || file_name.find(".vert") != std::string::npos) {
+//            // Add path to the filename.
+//            file_name = std::string(path) + "/" + file_name;
+//            std::string shader;
+//            if (!AndroidLoadFile(file_name.c_str(), &shader)) {
+//                continue;
+//            }
+//            // Remove \n to make the lookup more robust.
+//            while (1) {
+//                auto ret_pos = shader.find("\n");
+//                if (ret_pos == std::string::npos) {
+//                    break;
+//                }
+//                shader.erase(ret_pos, 1);
+//            }
+//
+//            auto pos = file_name.find_last_of(".");
+//            if (pos == std::string::npos) {
+//                // Invalid file nmae.
+//                continue;
+//            }
+//            // Generate filename for SPIRV binary.
+//            std::string spirv_name = file_name.replace(pos, 1, "-") + ".spirv";
+//            // Store the SPIRV file name with GLSL contents as a key.
+//            // The file contents can be long, but as we are using unordered map, it wouldn't take
+//            // much storage space.
+//            // Put the file into the map.
+//            (*map_shaders)[shader] = spirv_name;
+//        }
+//    };
+//
+//    AAssetDir_close(directory);
+//    return true;
+//}
+//
+//bool AndroidLoadFile(const char *filePath, std::string *data) {
+//    assert(Android_application != nullptr);
+//    AAsset *file = AAssetManager_open(Android_application->activity->assetManager, filePath, AASSET_MODE_BUFFER);
+//    size_t fileLength = AAsset_getLength(file);
+//    LOGI("Loaded file:%s size:%zu", filePath, fileLength);
+//    if (fileLength == 0) {
+//        return false;
+//    }
+//    data->resize(fileLength);
+//    AAsset_read(file, &(*data)[0], fileLength);
+//    return true;
+//}
+//
+//void AndroidGetWindowSize(int32_t *width, int32_t *height) {
+//    // On Android, retrieve the window size from the native window.
+//    assert(Android_application != nullptr);
+//    *width = ANativeWindow_getWidth(Android_application->window);
+//    *height = ANativeWindow_getHeight(Android_application->window);
+//}
+//
+//// Android fopen stub described at
+//// http://www.50ply.com/blog/2013/01/19/loading-compressed-android-assets-with-file-pointer/#comment-1850768990
+//static int android_read(void *cookie, char *buf, int size) { return AAsset_read((AAsset *)cookie, buf, size); }
+//
+//static int android_write(void *cookie, const char *buf, int size) {
+//    return EACCES;  // can't provide write access to the apk
+//}
+//
+//static fpos_t android_seek(void *cookie, fpos_t offset, int whence) { return AAsset_seek((AAsset *)cookie, offset, whence); }
+//
+//static int android_close(void *cookie) {
+//    AAsset_close((AAsset *)cookie);
+//    return 0;
+//}
+//
+//FILE *AndroidFopen(const char *fname, const char *mode) {
+//    if (mode[0] == 'w') {
+//        return NULL;
+//    }
+//
+//    assert(Android_application != nullptr);
+//    AAsset *asset = AAssetManager_open(Android_application->activity->assetManager, fname, 0);
+//    if (!asset) {
+//        return NULL;
+//    }
+//
+//    return funopen(asset, android_read, android_write, android_seek, android_close);
+//}
+//#endif

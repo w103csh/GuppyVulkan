@@ -50,7 +50,7 @@ class Win32Timer {
 
 }  // namespace
 
-ShellWin32::ShellWin32(Game &game) : MyShell(game), hwnd_(nullptr) {
+ShellWin32::ShellWin32(Game &game) : MyShell(game), hwnd_(nullptr), minimized_(false) {
     instance_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     init_vk();
 }
@@ -83,7 +83,7 @@ void ShellWin32::create_window() {
                            win_rect.right - win_rect.left, win_rect.bottom - win_rect.top, nullptr, nullptr, hinstance_, nullptr);
 
     SetForegroundWindow(hwnd_);
-    SetWindowLongPtr(hwnd_, GWLP_USERDATA, (LONG_PTR) this);
+    SetWindowLongPtr(hwnd_, GWLP_USERDATA, (LONG_PTR)this);
 }
 
 PFN_vkGetInstanceProcAddr ShellWin32::load_vk() {
@@ -111,7 +111,7 @@ PFN_vkGetInstanceProcAddr ShellWin32::load_vk() {
 }
 
 bool ShellWin32::can_present(VkPhysicalDevice phy, uint32_t queue_family) {
-    //return vk::GetPhysicalDeviceWin32PresentationSupportKHR(phy, queue_family) == VK_TRUE;
+    // return vk::GetPhysicalDeviceWin32PresentationSupportKHR(phy, queue_family) == VK_TRUE;
     return true;
 }
 
@@ -130,9 +130,20 @@ VkSurfaceKHR ShellWin32::create_surface(VkInstance instance) {
 LRESULT ShellWin32::handle_message(UINT msg, WPARAM wparam, LPARAM lparam) {
     switch (msg) {
         case WM_SIZE: {
-            UINT w = LOWORD(lparam);
-            UINT h = HIWORD(lparam);
-            resize_swapchain(w, h);
+            switch (wparam) {
+                case SIZE_MINIMIZED: {
+                    minimized_ = true;
+                } break;
+                case SIZE_RESTORED:
+                {
+                    minimized_ = false;
+                } break;
+                default: {
+                    UINT w = LOWORD(lparam);
+                    UINT h = HIWORD(lparam);
+                    resize_swapchain(w, h);
+                } break;
+            }
         } break;
         case WM_KEYDOWN: {
             Game::Key key;
@@ -181,7 +192,7 @@ void ShellWin32::run() {
     create_window();
 
     create_context();
-    resize_swapchain(settings_.initial_width, settings_.initial_height);
+    resize_swapchain(settings_.initial_width, settings_.initial_height, false);
 
     Win32Timer timer;
     double current_time = timer.get();
@@ -203,16 +214,22 @@ void ShellWin32::run() {
             DispatchMessage(&msg);
         }
 
-        if (quit) break;
+        if (quit) {
+            break;
+        } else if (minimized_) {
+            // TODO: somehow pause...
+            //std::unique_lock<std::mutex> lock(mtx_);
+            //while (minimized_) pause_.wait(lock);
+        } else {
+            acquire_back_buffer();
 
-        acquire_back_buffer();
+            double t = timer.get();
+            add_game_time(static_cast<float>(t - current_time));
 
-        double t = timer.get();
-        add_game_time(static_cast<float>(t - current_time));
+            present_back_buffer();
 
-        present_back_buffer();
-
-        current_time = t;
+            current_time = t;
+        }
     }
 
     destroy_context();

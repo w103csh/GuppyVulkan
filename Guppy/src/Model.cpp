@@ -31,17 +31,23 @@ void Model::addToModel(const std::vector<Vertex>& vertices, const std::vector<VB
 void Model::addToModel(Plane&& p) { addToModel(p.getVertices(), p.getIndices()); }
 
 void Model::loadAxes() {
-    float max = 2000.0f; // std::numeric_limits<float>::max(); // not sure why this isn't working
-    float min = -2000.0f; // std::numeric_limits<float>::min(); // not sure why this isn't working
-    m_vertices = {
-        {{max, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},                                                         // X (GREEN)
-        {{min, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}}, {{0.0f, max, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},  // Y (BLUE)
-        {{0.0f, min, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}}, {{0.0f, 0.0f, max}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},  // Z (RED)
-        {{0.0f, 0.0f, min}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},
+    float max = (std::numeric_limits<float>::max)();
+    float min = (std::numeric_limits<float>::min)();
+
+    std::vector<Vertex> axes = {
+        {{max, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},  // X (GREEN)
+        {{min, 0.0f, 0.0f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},  // X
+        {{0.0f, max, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},  // Y (BLUE)
+        {{0.0f, min, 0.0f}, {0.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},  // Y
+        {{0.0f, 0.0f, max}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},  // Z (RED)
+        {{0.0f, 0.0f, min}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f}},  // Z
     };
 
     // Obviously this is a bit wonky atm
-    m_linesOffset = sizeof(Vertex) * m_vertices.size();
+    m_linesCount += axes.size();
+    m_linesOffset += sizeof(Vertex) * m_linesCount;
+
+    m_vertices.insert(m_vertices.end(), axes.begin(), axes.end());
 }
 
 void Model::loadDefault() {

@@ -13,6 +13,8 @@ class Model {
    public:
     inline Vertex* getVertexData() { return m_vertices.data(); }
 
+    inline uint32_t getVertexCount() { return m_vertices.size(); }
+
     inline VkDeviceSize getVertexBufferSize() {
         VkDeviceSize p_bufferSize = sizeof(m_vertices[0]) * m_vertices.size();
         return p_bufferSize;
@@ -32,10 +34,11 @@ class Model {
     void loadAxes();
     void loadDefault();
     void loadChalet();
+    uint32_t m_linesCount = 0;
 
    private:
     VB_INDEX_TYPE m_maxIndex = UINT32_MAX;
     std::vector<Vertex> m_vertices;
     std::vector<VB_INDEX_TYPE> m_indices;
-    unsigned long long m_linesOffset;
+    unsigned long long m_linesOffset = 0;
 };

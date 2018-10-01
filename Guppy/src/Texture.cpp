@@ -6,7 +6,6 @@
 #include "Helpers.h"
 #include "MyShell.h"
 #include "Texture.h"
-#include "util_init.hpp"
 
 #define STB_FORMAT VK_FORMAT_R8G8B8A8_UNORM
 
@@ -42,8 +41,9 @@ void Texture::createImage(const VkDevice& dev, const VkFormat& format, const VkP
     tex.channels = static_cast<uint32_t>(channels);
     tex.mipLevels = static_cast<uint32_t>(std::floor(std::log2(max(tex.width, tex.height)))) + 1;
 
+
     auto memReqsSize =
-        create_buffer(dev, mem_props, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        helpers::create_buffer(dev, mem_props, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stg_res.buffer, stg_res.memory);
 
     void* pData;
@@ -53,23 +53,23 @@ void Texture::createImage(const VkDevice& dev, const VkFormat& format, const VkP
 
     stbi_image_free(pixels);
 
-    create_image(dev, mem_props, queueFamilyIndices, static_cast<uint32_t>(tex.width), static_cast<uint32_t>(tex.height),
+    helpers::create_image(dev, mem_props, queueFamilyIndices, static_cast<uint32_t>(tex.width), static_cast<uint32_t>(tex.height),
                  tex.mipLevels, VK_SAMPLE_COUNT_1_BIT, STB_FORMAT, VK_IMAGE_TILING_OPTIMAL,
                  VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                  VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, tex.image, tex.memory);
 
-    transition_image_layout(trans_cmd, tex.image, tex.mipLevels, STB_FORMAT, VK_IMAGE_LAYOUT_UNDEFINED,
+    helpers::transition_image_layout(trans_cmd, tex.image, tex.mipLevels, STB_FORMAT, VK_IMAGE_LAYOUT_UNDEFINED,
                             VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                             VK_PIPELINE_STAGE_TRANSFER_BIT);
 
-    copy_buffer_to_image(graph_cmd, stg_res.buffer, tex.image, tex.width, tex.height);
+    helpers::copy_buffer_to_image(graph_cmd, stg_res.buffer, tex.image, tex.width, tex.height);
 
     // transition to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
     generateMipmaps(graph_cmd, physical_dev, tex.image, format, tex.width, tex.height, tex.mipLevels);
 }
 
 void Texture::createImageView(const VkDevice& dev, TextureData& tex) {
-    create_image_view(dev, tex.image, tex.mipLevels, STB_FORMAT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D, tex.view);
+    helpers::create_image_view(dev, tex.image, tex.mipLevels, STB_FORMAT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D, tex.view);
 }
 
 void Texture::createSampler(const VkDevice& dev, TextureData& tex) {
@@ -115,7 +115,7 @@ void Texture::generateMipmaps(VkCommandBuffer& cmd, const VkPhysicalDevice& phys
         with a library like stb_image_resize. Each mip level can then be loaded into the image in the same way that
         you loaded the original image.
     */
-    find_supported_format(physical_dev, {format}, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT);
+    helpers::find_supported_format(physical_dev, {format}, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT);
 
     // This was the way before mip maps
     // transitionImageLayout(
