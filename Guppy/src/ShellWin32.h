@@ -37,6 +37,8 @@ class ShellWin32 : public MyShell {
     void create_window();
     VkSurfaceKHR create_surface(VkInstance instance);
 
+    Game::Key get_key(WPARAM wParam);
+
     static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         ShellWin32 *shell = reinterpret_cast<ShellWin32 *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
 

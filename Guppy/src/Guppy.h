@@ -111,9 +111,6 @@ class Guppy : public Game {
     // void create_buffer_memory();
     void create_descriptor_sets(bool use_texture = true);  // *
 
-    // called mostly by on_key
-    void update_camera(bool fix_me = true);
-
     // called by attach_swapchain
     void prepare_viewport();
     void prepare_framebuffers(const VkSwapchainKHR& swapchain);
@@ -152,7 +149,7 @@ class Guppy : public Game {
     // drawing
     std::vector<VkCommandBuffer> draw_cmds_;
 
-    Camera::Camera camera_;
+    Camera camera_;
     bool sample_shading_supported_ = false;
     VkSampleCountFlagBits num_samples_;
 
@@ -196,6 +193,8 @@ class Guppy : public Game {
     void destroy_render_pass();
     void destroy_uniform_buffer();
     void destroy_input_assembly_data();
+    void update_ubo();
+    void copy_ubo_to_memory();
 };
 
 #endif  // !GUPPY_H

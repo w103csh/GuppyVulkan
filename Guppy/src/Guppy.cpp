@@ -7,6 +7,7 @@
 #include "FileLoader.h"
 #include "Guppy.h"
 #include "Helpers.h"
+#include "InputHandler.h"
 #include "StagingBufferHandler.h"
 #include "Vertex.h"
 
@@ -38,7 +39,9 @@ Guppy::Guppy(const std::vector<std::string>& args)
       primary_cmd_begin_info_(),
       primary_cmd_submit_info_(),
       sample_shading_supported_(false),
-      depth_resource_() {
+      depth_resource_(),
+      camera_(glm::vec3(2.0f, -4.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+              static_cast<float>(settings_.initial_width) / static_cast<float>(settings_.initial_height)) {
     for (auto it = args.begin(); it != args.end(); ++it) {
         if (*it == "-s")
             multithread_ = false;
@@ -175,8 +178,6 @@ void Guppy::attach_swapchain() {
     prepare_framebuffers(ctx.swapchain);
 
     create_draw_cmds();
-
-    update_camera();
 }
 
 void Guppy::detach_swapchain() {
@@ -200,11 +201,11 @@ void Guppy::on_key(Key key) {
             break;
         case KEY_UP:
             // camera_.eye_pos -= glm::vec3(0.05f);
-            update_camera();
+            //update_ubo();
             break;
         case KEY_DOWN:
             // camera_.eye_pos += glm::vec3(0.05f);
-            update_camera();
+            //update_ubo();
             break;
         case KEY_SPACE:
             // sim_paused_ = !sim_paused_;
@@ -226,7 +227,7 @@ void Guppy::on_frame(float frame_pred) {
 
     const MyShell::BackBuffer& back = shell_->context().acquired_back_buffer;
 
-    update_camera();
+    update_ubo();
 
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -336,22 +337,21 @@ void Guppy::create_pipelines() {
     VkPipelineColorBlendAttachmentState blend_attachment = {};
     blend_attachment.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    blend_attachment.blendEnable = VK_FALSE;
-    blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;              // Optional
-    blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;              // Optional
-    blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
-    blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
-    blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
-    blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
-
+    // blend_attachment.blendEnable = VK_FALSE;
+    // blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;              // Optional
+    // blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;              // Optional
+    // blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
+    // blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
+    // blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
+    // blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
     // common setup
-    // colorBlendAttachment.blendEnable = VK_TRUE;
-    // colorBlendAttachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    // colorBlendAttachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    // colorBlendAttachment.colorBlendOp = VK_BLEND_OP_ADD;
-    // colorBlendAttachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-    // colorBlendAttachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    // colorBlendAttachment.alphaBlendOp = VK_BLEND_OP_ADD;
+    blend_attachment.blendEnable = VK_TRUE;
+    blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+    blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
 
     VkPipelineColorBlendStateCreateInfo blend_info = {};
     blend_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -363,6 +363,10 @@ void Guppy::create_pipelines() {
     blend_info.blendConstants[1] = 0.0f;
     blend_info.blendConstants[2] = 0.0f;
     blend_info.blendConstants[3] = 0.0f;
+    // blend_info.blendConstants[0] = 0.2f;
+    // blend_info.blendConstants[1] = 0.2f;
+    // blend_info.blendConstants[2] = 0.2f;
+    // blend_info.blendConstants[3] = 0.2f;
 
     // VIEWPORT & SCISSOR
 
@@ -540,7 +544,7 @@ void Guppy::prepare_framebuffers(const VkSwapchainKHR& swapchain) {
 void Guppy::determine_sample_count(const MyShell::PhysicalDeviceProperties& props) {
     //// TODO: OPTION (FEATURE BASED)
     VkSampleCountFlags counts = 0;
-        std::min(props.properties.limits.framebufferColorSampleCounts, props.properties.limits.framebufferDepthSampleCounts);
+    std::min(props.properties.limits.framebufferColorSampleCounts, props.properties.limits.framebufferDepthSampleCounts);
     num_samples_ = VK_SAMPLE_COUNT_1_BIT;
     // return the highest possible one for now
     if (counts & VK_SAMPLE_COUNT_64_BIT)
@@ -558,16 +562,15 @@ void Guppy::determine_sample_count(const MyShell::PhysicalDeviceProperties& prop
 }
 
 void Guppy::create_uniform_buffer() {
-    // TODO: this is wrong also
-    camera_.aspect = static_cast<float>(settings_.initial_width) / static_cast<float>(settings_.initial_height);
-    Camera::default_perspective(camera_, static_cast<float>(settings_.initial_width), static_cast<float>(settings_.initial_height));
+    camera_.update(static_cast<float>(settings_.initial_width) / static_cast<float>(settings_.initial_height));
+    auto mvp = camera_.getMVP();
+    auto buffer_size = sizeof(mvp);
 
-    auto buffer_size = sizeof(camera_.mvp);
     camera_.memory_requirements_size = helpers::create_buffer(
         dev_, cmd_data_.mem_props, buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ubo_resource_.buffer, ubo_resource_.memory);
 
-    update_camera(false);  // TODO: yikes!
+    copy_ubo_to_memory();
 }
 
 void Guppy::destroy_uniform_buffer() {
@@ -575,36 +578,31 @@ void Guppy::destroy_uniform_buffer() {
     vkFreeMemory(dev_, ubo_resource_.memory, nullptr);
 }
 
-void Guppy::update_camera(bool fix_me) {
-    static auto startTime = std::chrono::high_resolution_clock::now();
-
-    auto currentTime = std::chrono::high_resolution_clock::now();
-    float time = std::chrono::duration<float, std::ratio<3, 1>>(currentTime - startTime).count();
-
+void Guppy::update_ubo() {
     // Surface changed
-    if (fix_me) {
-        float width = static_cast<float>(extent_.width);
-        float height = static_cast<float>(extent_.height);
-        if (!helpers::almost_equal(camera_.aspect, (width / height), 2)) {
-            camera_.aspect = static_cast<float>(settings_.initial_width) / static_cast<float>(settings_.initial_height);
-            Camera::default_perspective(camera_, width, height);
-        }
-    }
+    auto aspect = static_cast<float>(extent_.width) / static_cast<float>(extent_.height);
+    // Update camera position from input
+    auto pos_dir = InputHandler::get().getPosDir();
+    // Update camera look direction from input
+    //auto look_dir = InputHandler::get().getLookDir();
 
-    camera_.model = glm::rotate(glm::mat4(1.0f),             // matrix
-                                time * glm::radians(90.0f),  // angle
-                                glm::vec3(0.0f, 0.0f, 1.0f)  // vector
-    );
-    camera_.mvp = camera_.clip * camera_.proj * camera_.view * camera_.model;
+    camera_.update(aspect, pos_dir); // , look_dir);
+
+    copy_ubo_to_memory();
+}
+
+void Guppy::copy_ubo_to_memory() {
+    auto mvp = camera_.getMVP();
+    auto buffer_size = sizeof(mvp);
 
     uint8_t* pData;
     vk::assert_success(vkMapMemory(dev_, ubo_resource_.memory, 0, camera_.memory_requirements_size, 0, (void**)&pData));
-    memcpy(pData, &camera_.mvp, sizeof(camera_.mvp));
+    memcpy(pData, &mvp, buffer_size);
     vkUnmapMemory(dev_, ubo_resource_.memory);
 
     ubo_resource_.info.buffer = ubo_resource_.buffer;
     ubo_resource_.info.offset = 0;
-    ubo_resource_.info.range = sizeof(camera_.mvp);
+    ubo_resource_.info.range = buffer_size;
 }
 
 void Guppy::create_render_pass(bool include_depth, bool include_color, bool clear, VkImageLayout finalLayout) {
@@ -861,7 +859,7 @@ void Guppy::create_frame_data(int count) {
         // create_buffer_memory();
         create_color_resources();
         create_depth_resources();
-        update_camera();  // TODO: this should be an update ubo!!!
+        update_ubo();
         // create_descriptor_pool();
         // create_descriptor_sets(); // Not sure how to make this work here... pipeline relies on this info
     }
@@ -1271,10 +1269,10 @@ void Guppy::create_model() {
     if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
         queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
 
-    // stg_res = {};
-    // tex_path = "..\\..\\..\\images\\texture.jpg";
-    // textures_.emplace_back(Texture::createTexture(ctx, stg_res, transfer_cmd(), graphics_cmd(), queueFamilyIndices, tex_path));
-    // staging_resources.emplace_back(stg_res);
+    stg_res = {};
+    tex_path = "..\\..\\..\\images\\texture.jpg";
+    textures_.emplace_back(Texture::createTexture(ctx, stg_res, transfer_cmd(), graphics_cmd(), queueFamilyIndices, tex_path));
+    staging_resources.emplace_back(stg_res);
 
     stg_res = {};
     tex_path = "..\\..\\..\\images\\chalet.jpg";

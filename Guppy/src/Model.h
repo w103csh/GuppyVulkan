@@ -11,21 +11,21 @@ const std::string CHALET_TEXTURE_PATH = "..\\..\\..\\images\\chalet.jpg";
 
 class Model {
    public:
-    inline Vertex* getVertexData() { return m_vertices.data(); }
+    inline Vertex* getVertexData() { return vertices_.data(); }
 
-    inline uint32_t getVertexCount() { return m_vertices.size(); }
+    inline uint32_t getVertexCount() { return vertices_.size(); }
 
     inline VkDeviceSize getVertexBufferSize() {
-        VkDeviceSize p_bufferSize = sizeof(m_vertices[0]) * m_vertices.size();
+        VkDeviceSize p_bufferSize = sizeof(vertices_[0]) * vertices_.size();
         return p_bufferSize;
     }
 
-    inline VB_INDEX_TYPE* getIndexData() { return m_indices.data(); }
+    inline VB_INDEX_TYPE* getIndexData() { return indices_.data(); }
 
-    inline uint32_t getIndexSize() { return static_cast<uint32_t>(m_indices.size()); }
+    inline uint32_t getIndexSize() { return static_cast<uint32_t>(indices_.size()); }
 
     inline VkDeviceSize getIndexBufferSize() {
-        VkDeviceSize p_bufferSize = sizeof(m_indices[0]) * m_indices.size();
+        VkDeviceSize p_bufferSize = sizeof(indices_[0]) * indices_.size();
         return p_bufferSize;
     }
 
@@ -37,8 +37,8 @@ class Model {
     uint32_t m_linesCount = 0;
 
    private:
-    VB_INDEX_TYPE m_maxIndex = UINT32_MAX;
-    std::vector<Vertex> m_vertices;
-    std::vector<VB_INDEX_TYPE> m_indices;
-    unsigned long long m_linesOffset = 0;
+    VB_INDEX_TYPE max_index_ = UINT32_MAX;
+    std::vector<Vertex> vertices_;
+    std::vector<VB_INDEX_TYPE> indices_;
+    unsigned long long lines_offset_ = 0;
 };

@@ -5,24 +5,33 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
-namespace Camera {
+class Camera {
+   public:
+    Camera(const glm::vec3& eye, const glm::vec3& center, float aspect, float fov = glm::radians(45.0f), float n = 0.1f,
+           float f = 1000.0f);
 
-struct Camera {
-    glm::mat4 model;
-    glm::mat4 view;
-    glm::mat4 proj;
-    glm::mat4 clip;
-    glm::mat4 mvp;
-    VkDeviceSize memory_requirements_size; // TODO: ugh!
-    float aspect;
+    glm::vec3 getDirection();
+    glm::vec3 getPosition();
+
+    inline glm::mat4 getMVP() const { return clip_ * proj_ * view_ * model_; }
+
+    void update(float aspect);
+    void update(float aspect, const glm::vec3 &pos_dir);
+
+    VkDeviceSize memory_requirements_size;  // TODO: this ain't great
+
+   private:
+    void updatePosition(const glm::vec3 &dir);
+
+    glm::vec3 position_;
+    float aspect_;
+    float far_;
+    float fov_;
+    float near_;
+    glm::mat4 clip_;
+    glm::mat4 model_;
+    glm::mat4 proj_;
+    glm::mat4 view_;
 };
-
-void default_orthographic(Camera& camera, float width, float height, float fov = 45.0f);
-void default_perspective(Camera& camera, float width, float height, float fov = glm::radians(45.0f));
-glm::vec3 get_direction(const Camera& camera);
-glm::vec3 get_position(const Camera& camera);
-void update_posistion(Camera& camera, const glm::vec3& dir);
-
-}  // namespace Camera
 
 #endif  // !CAMERA_H

@@ -24,6 +24,7 @@
 #include "EventHandlers.h"
 #include "Game.h"
 #include "Helpers.h"
+#include "InputHandler.h"
 #include "MyShell.h"
 #include "util.hpp"
 
@@ -39,6 +40,8 @@ MyShell::MyShell(Game &game)
         instance_extensions_.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
         instance_extensions_.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
+
+    InputHandler::get(this);
 }
 
 void MyShell::log(LogPriority priority, const char *msg) const {
