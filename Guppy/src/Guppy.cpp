@@ -193,26 +193,20 @@ void Guppy::detach_swapchain() {
     destroy_frame_data();
 }
 
-void Guppy::on_key(Key key) {
+void Guppy::on_key(KEY key) {
     switch (key) {
-        case KEY_SHUTDOWN:
-        case KEY_ESC:
+        case KEY::KEY_SHUTDOWN:
+        case KEY::KEY_ESC:
             shell_->quit();
             break;
-        case KEY_UP:
-            // camera_.eye_pos -= glm::vec3(0.05f);
-            //update_ubo();
-            break;
-        case KEY_DOWN:
-            // camera_.eye_pos += glm::vec3(0.05f);
-            //update_ubo();
-            break;
-        case KEY_SPACE:
+        case KEY::KEY_SPACE:
             // sim_paused_ = !sim_paused_;
             break;
-        case KEY_F:
+        case KEY::KEY_F:
             // sim_fade_ = !sim_fade_;
             break;
+        case KEY::KEY_UP:
+        case KEY::KEY_DOWN:
         default:
             break;
     }
@@ -581,12 +575,11 @@ void Guppy::destroy_uniform_buffer() {
 void Guppy::update_ubo() {
     // Surface changed
     auto aspect = static_cast<float>(extent_.width) / static_cast<float>(extent_.height);
-    // Update camera position from input
-    auto pos_dir = InputHandler::get().getPosDir();
-    // Update camera look direction from input
-    //auto look_dir = InputHandler::get().getLookDir();
 
-    camera_.update(aspect, pos_dir); // , look_dir);
+    // Update the camera
+    auto pos_dir = InputHandler::get().getPosDir();
+    auto look_dir = InputHandler::get().getLookDir();
+    camera_.update(aspect, pos_dir, look_dir);
 
     copy_ubo_to_memory();
 }
@@ -1248,7 +1241,7 @@ void Guppy::create_index_data(StagingBufferResource& stg_res) {
 void Guppy::create_model() {
     const MyShell::Context& ctx = shell_->context();
 
-    bool loadDefault = true;
+    bool loadDefault = false;
     std::string tex_path = "..\\..\\..\\images\\texture.jpg";
 
     if (loadDefault) {
@@ -1269,10 +1262,10 @@ void Guppy::create_model() {
     if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
         queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
 
-    stg_res = {};
-    tex_path = "..\\..\\..\\images\\texture.jpg";
-    textures_.emplace_back(Texture::createTexture(ctx, stg_res, transfer_cmd(), graphics_cmd(), queueFamilyIndices, tex_path));
-    staging_resources.emplace_back(stg_res);
+    //stg_res = {};
+    //tex_path = "..\\..\\..\\images\\texture.jpg";
+    //textures_.emplace_back(Texture::createTexture(ctx, stg_res, transfer_cmd(), graphics_cmd(), queueFamilyIndices, tex_path));
+    //staging_resources.emplace_back(stg_res);
 
     stg_res = {};
     tex_path = "..\\..\\..\\images\\chalet.jpg";

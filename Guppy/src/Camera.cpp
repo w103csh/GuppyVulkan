@@ -5,9 +5,10 @@
 #include "Camera.h"
 #include "Constants.h"
 #include "Helpers.h"
+#include "InputHandler.h"
 
 Camera::Camera(const glm::vec3 &eye, const glm::vec3 &center, float aspect, float fov, float n, float f)
-    : position_(eye), aspect_(aspect), far_(f), fov_(fov), near_(n), model_(1.0f) {
+    : aspect_(aspect), center_(center), eye_(eye), far_(f), fov_(fov), near_(n), model_(1.0f) {
     view_ = glm::lookAt(eye, center, UP_VECTOR);
     proj_ = glm::perspective(fov, aspect, near_, far_);
     // Vulkan clip space has inverted Y and half Z.
@@ -23,38 +24,48 @@ glm::vec3 Camera::getDirection() {
 }
 
 glm::vec3 Camera::getPosition() {
-    //// TODO: never looked at or thought about this. got it off the web
-    //{
-    //    glm::mat3 mat3(camera.model);
-    //    glm::vec3 d(camera.model[3]);
-
-    //    glm::vec3 retVec = -d * mat3;
-    //    return retVec;
-    //}
-    return glm::vec3();
+    // I believe this is the "w" homogenous factor from the book.
+    // Still not 100% sure.
+    auto w = view_[3];
+    glm::vec3 pos = -w * view_;
+    return pos;
 }
 
-void Camera::update(float aspect) {
+void Camera::update(float aspect, const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
+    // ASPECT
     if (!helpers::almost_equal(aspect, aspect_, 2)) {
         proj_ = glm::perspective(fov_, aspect, near_, far_);
     }
+    // VIEW
+    updateView(pos_dir, look_dir);
 }
 
-void Camera::update(float aspect,const  glm::vec3 &pos_dir) {
-    update(aspect);
-    if (!glm::all(glm::equal(pos_dir, glm::vec3()))) {
-        updatePosition(pos_dir);
+void Camera::updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
+    bool update_pos = !glm::all(glm::equal(pos_dir, glm::vec3()));
+    bool update_look = !glm::all(glm::equal(look_dir, glm::vec3()));
+    // If there is nothing to update then return ...
+    if (!update_pos && !update_look) return;
+
+    // Get othonormal basis for camera view ...
+    auto w = getDirection();
+    auto u = glm::normalize(glm::cross(w, UP_VECTOR));  // TODO: handle looking straight up
+    auto v = glm::normalize(glm::cross(u, w));
+
+    // MOVEMENT
+    if (update_pos) {
+        auto pos = w * pos_dir.z;
+        pos += u * pos_dir.x;
+        pos += v * pos_dir.y;
+        // update both eye_ & center_ so that movement doesn't affect look
+        eye_ += pos;
+        center_ += pos;
     }
-}
+    // LOOK
+    if (update_look) {
+        auto look = u * look_dir.x;
+        look += v * look_dir.y;
+        center_ += look;
+    }
 
-void Camera::updatePosition(const glm::vec3 & pos_dir) {
-    auto forward = getDirection();
-    auto right = glm::normalize(glm::cross(forward, UP_VECTOR));  // TODO: handle looking straight up
-    auto up = glm::normalize(glm::cross(right, forward));
-
-    auto movement = forward * pos_dir.z;
-    movement += right * pos_dir.x;
-    movement += up * pos_dir.y;
-
-    model_ = glm::translate(model_, movement);
+    view_ = glm::lookAt(eye_, center_, UP_VECTOR);
 }

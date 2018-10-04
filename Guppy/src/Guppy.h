@@ -23,7 +23,7 @@ class Guppy : public Game {
     void attach_swapchain();
     void detach_swapchain();
 
-    void on_key(Key key);
+    void on_key(KEY key);
     void on_tick();
 
     void on_frame(float frame_pred);

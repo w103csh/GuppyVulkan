@@ -51,6 +51,7 @@ class Game {
         bool enable_sample_shading_;
         bool include_color;
         bool include_depth;
+        bool enable_double_clicks_;
     };
     const Settings &settings() const { return settings_; }
 
@@ -60,7 +61,7 @@ class Game {
     virtual void attach_swapchain() {}
     virtual void detach_swapchain() {}
 
-    enum Key {
+    enum class KEY {
         // virtual keys
         KEY_SHUTDOWN,
         // physical keys
@@ -99,7 +100,15 @@ class Game {
         KEY_CTRL,
         KEY_SHFT,
     };
-    virtual void on_key(Key key) {}
+
+    enum class MOUSE {
+        LEFT,
+        RIGHT,
+        MIDDLE,
+        X,
+    };
+
+    virtual void on_key(KEY key) {}
     virtual void on_tick() {}
 
     virtual void on_frame(float frame_pred) {}
@@ -127,6 +136,7 @@ class Game {
         settings_.try_sample_rate_shading_ = true;
         settings_.include_color = true;
         settings_.include_depth = true;
+        settings_.enable_double_clicks_ = false;
 
         parse_args(args);
     }

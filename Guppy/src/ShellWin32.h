@@ -20,6 +20,8 @@
 #include <condition_variable>
 #include <mutex>
 #include <windows.h>
+
+#include "InputHandler.h"
 #include "MyShell.h"
 
 class ShellWin32 : public MyShell {
@@ -32,12 +34,14 @@ class ShellWin32 : public MyShell {
 
    private:
     PFN_vkGetInstanceProcAddr load_vk();
-    bool can_present(VkPhysicalDevice phy, uint32_t queue_family);
+    VkBool32 can_present(VkPhysicalDevice phy, uint32_t queue_family);
 
     void create_window();
     VkSurfaceKHR create_surface(VkInstance instance);
 
-    Game::Key get_key(WPARAM wParam);
+    Game::KEY get_key(WPARAM wParam, InputHandler::INPUT_TYPE type);
+    void get_mouse(Game::MOUSE mouse, UINT uMsg, LPARAM lParam);
+    void get_mouse_mod(WPARAM wParam, LPARAM lParam);
 
     static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         ShellWin32 *shell = reinterpret_cast<ShellWin32 *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));

@@ -319,7 +319,9 @@ void MyShell::create_swapchain() {
     VkBool32 supported;
     vk::assert_success(
         vkGetPhysicalDeviceSurfaceSupportKHR(ctx_.physical_dev, ctx_.present_queue_family, ctx_.surface, &supported));
+    assert(supported);
     // this should be guaranteed by the platform-specific can_present call
+    supported = can_present(ctx_.physical_dev, ctx_.present_index);
     assert(supported);
 
     enumerate_surface_properties();

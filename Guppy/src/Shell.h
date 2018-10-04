@@ -119,7 +119,7 @@ class Shell {
 
     // called by init_vk
     virtual PFN_vkGetInstanceProcAddr load_vk() = 0;
-    virtual bool can_present(VkPhysicalDevice phy, uint32_t queue_family) = 0;
+    virtual VkBool32 can_present(VkPhysicalDevice phy, uint32_t queue_family) = 0;
     void init_instance();
     void init_debug_report();
     void init_physical_dev();
