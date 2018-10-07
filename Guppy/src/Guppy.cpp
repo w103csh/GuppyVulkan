@@ -8,8 +8,7 @@
 #include "Guppy.h"
 #include "Helpers.h"
 #include "InputHandler.h"
-#include "StagingBufferHandler.h"
-#include "Vertex.h"
+#include "Plane.h"
 
 namespace {
 
@@ -38,8 +37,8 @@ Guppy::Guppy(const std::vector<std::string>& args)
       render_pass_begin_info_(),
       primary_cmd_begin_info_(),
       primary_cmd_submit_info_(),
-      sample_shading_supported_(false),
       depth_resource_(),
+      active_scene_index_(-1),
       camera_(glm::vec3(2.0f, -4.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
               static_cast<float>(settings_.initial_width) / static_cast<float>(settings_.initial_height)) {
     for (auto it = args.begin(); it != args.end(); ++it) {
@@ -62,7 +61,7 @@ void Guppy::attach_shell(MyShell& sh) {
     dev_ = ctx.dev;
     // queue_ = ctx.game_queue;
     queue_family_ = ctx.game_queue_family;
-    format_ = ctx.format.format;
+    format_ = ctx.surface_format.format;
     // * Data from MyShell
     swapchain_image_count_ = ctx.image_count;
     depth_resource_.format = ctx.depth_format;
@@ -72,8 +71,6 @@ void Guppy::attach_shell(MyShell& sh) {
     cmd_data_.queues = ctx.queues;
     cmd_data_.mem_props = ctx.physical_dev_props[ctx.physical_dev_index].memory_properties;
     physical_dev_props_ = ctx.physical_dev_props[ctx.physical_dev_index].properties;
-
-    determine_sample_count(ctx.physical_dev_props[ctx.physical_dev_index]);
 
     if (use_push_constants_ && sizeof(ShaderParamBlock) > physical_dev_props_.limits.maxPushConstantsSize) {
         shell_->log(MyShell::LOG_WARN, "cannot enable push constants");
@@ -88,23 +85,22 @@ void Guppy::attach_shell(MyShell& sh) {
 
     // Not sure how wise something like this is.
     create_command_pools_and_buffers();
-    // this was the only way I could think of for init.
-    StagingBufferHandler::get(&sh, dev_, &cmd_data_);
     // begin recording commands?
     for (auto& cmd : cmd_data_.cmds) helpers::execute_begin_command_buffer(cmd);
 
-    create_model();
-    create_input_assembly_data();
-    create_uniform_buffer();  // TODO: ugh!
-
-    create_render_pass(settings_.include_color, settings_.include_depth);
+    create_uniform_buffer();
     create_shader_modules();
-    create_descriptor_set_layout();
-    create_descriptor_pool();
-    create_descriptor_sets();
-    create_pipeline_layout();
     create_pipeline_cache();
-    create_pipelines();
+
+    create_scenes();
+    // create_input_assembly_data();
+
+    // create_render_pass(settings_.include_color, settings_.include_depth);
+    // create_descriptor_set_layout();
+    // create_descriptor_pool();
+    // create_descriptor_sets();
+    // create_pipeline_layout();
+    // create_pipelines();
 
     // render_pass_begin_info_.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     // render_pass_begin_info_.renderPass = render_pass_;
@@ -144,17 +140,19 @@ void Guppy::detach_shell() {
 
     // *** NEW
 
-    destroy_pipelines();
+    for (auto& scene : scenes_) scene->destroy(dev_, cmd_data_);
+
+    // destroy_pipelines();
     destroy_pipeline_cache();
-    destroy_descriptor_and_pipeline_layouts();
+    // destroy_descriptor_and_pipeline_layouts();
     // destroy_descriptor_sets();
-    destroy_descriptor_pool();
+    // destroy_descriptor_pool();
     destroy_shader_modules();
-    destroy_render_pass();
+    // destroy_render_pass();
 
     destroy_uniform_buffer();  // TODO: ugh!
-    destroy_input_assembly_data();
-    destroy_textures();
+    // destroy_input_assembly_data();
+    // destroy_textures();
 
     destroy_command_pools();
     destroy_command_buffers();
@@ -177,7 +175,7 @@ void Guppy::attach_swapchain() {
     prepare_viewport();
     prepare_framebuffers(ctx.swapchain);
 
-    create_draw_cmds();
+    active_scene()->recordDrawCmds(ctx, framebuffers_, viewport_, scissor_);
 }
 
 void Guppy::detach_swapchain() {
@@ -205,6 +203,15 @@ void Guppy::on_key(KEY key) {
         case KEY::KEY_F:
             // sim_fade_ = !sim_fade_;
             break;
+        case KEY::KEY_F1: {
+            std::unique_ptr<ColorMesh> p1 = std::unique_ptr<ColorPlane>();
+            active_scene()->addMesh(shell_->context(), cmd_data_, ubo_resource_.info, std::move(p1));
+        } break;
+        case KEY::KEY_F3: {
+            //std::unique_ptr<Mesh<ColorVertex>> p2 =
+            //    std::make_unique<Plane<ColorVertex>>(2.0f, 2.0f, false, glm::vec3(0.0f, 0.0f, 1.0f));
+            //active_scene()->addMesh<ColorVertex>(shell_->context(), cmd_data_, ubo_resource_.info, std::move(p2));
+        } break;
         case KEY::KEY_UP:
         case KEY::KEY_DOWN:
         default:
@@ -223,6 +230,9 @@ void Guppy::on_frame(float frame_pred) {
 
     update_ubo();
 
+    uint32_t commandBufferCount = 1;
+    auto draw_cmds = active_scene()->getDrawCmds(frame_data_index_);
+
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
@@ -230,8 +240,8 @@ void Guppy::on_frame(float frame_pred) {
     submit_info.waitSemaphoreCount = 1;
     submit_info.pWaitDstStageMask = wait_stages;
     submit_info.pWaitSemaphores = &back.acquire_semaphore;
-    submit_info.commandBufferCount = 1;  // * Just the draw command
-    submit_info.pCommandBuffers = &draw_cmds_[frame_data_index_];
+    submit_info.commandBufferCount = commandBufferCount;
+    submit_info.pCommandBuffers = &draw_cmds;
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = &back.render_semaphore;
 
@@ -244,6 +254,16 @@ void Guppy::on_frame(float frame_pred) {
 
 void Guppy::on_tick() {
     if (sim_paused_) return;
+
+    auto ctx = shell_->context();
+
+    // TODO: should this be "on_frame", here, every other frame, async ... I have no clue yet.
+    for (auto& scene : scenes_) {
+        // TODO: im really not into this...
+        if (scene->update(ctx, settings(), ubo_resource_.info, vs_, fs_, pipeline_cache_)) {
+            scene->recordDrawCmds(ctx, framebuffers_, viewport_, scissor_);
+        }
+    }
 
     // for (auto &worker : workers_) worker->update_simulation();
 }
@@ -260,206 +280,207 @@ void Guppy::destroy_pipeline_cache() { vkDestroyPipelineCache(dev_, pipeline_cac
 
 void Guppy::create_pipelines() {
     // DYNAMIC STATE
-
-    // TODO: this is weird
-    VkPipelineDynamicStateCreateInfo dynamic_info = {};
-    VkDynamicState dynamic_states[VK_DYNAMIC_STATE_RANGE_SIZE];
-    memset(dynamic_states, 0, sizeof(dynamic_states));
-    dynamic_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamic_info.pNext = nullptr;
-    dynamic_info.pDynamicStates = dynamic_states;
-    dynamic_info.dynamicStateCount = 0;
-
-    // INPUT ASSEMBLY
-
-    VkPipelineVertexInputStateCreateInfo vertex_info = {};
-    vertex_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-    vertex_info.pNext = nullptr;
-    vertex_info.flags = 0;
-    // bindings
-    auto bindingDescription = Vertex::getBindingDescription();
-    vertex_info.vertexBindingDescriptionCount = 1;
-    vertex_info.pVertexBindingDescriptions = &bindingDescription;
-    // attributes
-    auto attributeDescriptions = Vertex::getAttributeDescriptions();
-    vertex_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
-    vertex_info.pVertexAttributeDescriptions = attributeDescriptions.data();
-
-    VkPipelineInputAssemblyStateCreateInfo input_info = {};
-    input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    input_info.pNext = nullptr;
-    input_info.flags = 0;
-    input_info.primitiveRestartEnable = VK_FALSE;
-    input_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-
-    // RASTERIZER
-
-    VkPipelineRasterizationStateCreateInfo rast_info = {};
-    rast_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    rast_info.polygonMode = VK_POLYGON_MODE_FILL;
-    rast_info.cullMode = VK_CULL_MODE_BACK_BIT;
-    rast_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    /*  If depthClampEnable is set to VK_TRUE, then fragments that are beyond the near and far
-        planes are clamped to them as opposed to discarding them. This is useful in some special
-        cases like shadow maps. Using this requires enabling a GPU feature.
-    */
-    rast_info.depthClampEnable = VK_FALSE;
-    rast_info.rasterizerDiscardEnable = VK_FALSE;
-    rast_info.depthBiasEnable = VK_FALSE;
-    rast_info.depthBiasConstantFactor = 0;
-    rast_info.depthBiasClamp = 0;
-    rast_info.depthBiasSlopeFactor = 0;
-    /*  The lineWidth member is straightforward, it describes the thickness of lines in terms of
-        number of fragments. The maximum line width that is supported depends on the hardware and
-        any line thicker than 1.0f requires you to enable the wideLines GPU feature.
-    */
-    rast_info.lineWidth = 1.0f;
-
-    VkPipelineMultisampleStateCreateInfo multisample_info = {};
-    multisample_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    multisample_info.rasterizationSamples = num_samples_;
-    multisample_info.sampleShadingEnable =
-        settings_.enable_sample_shading_;  // enable sample shading in the pipeline (sampling for fragment interiors)
-    multisample_info.minSampleShading =
-        settings_.enable_sample_shading_ ? MIN_SAMPLE_SHADING : 0.0f;  // min fraction for sample shading; closer to one is smooth
-    multisample_info.pSampleMask = nullptr;                            // Optional
-    multisample_info.alphaToCoverageEnable = VK_FALSE;                 // Optional
-    multisample_info.alphaToOneEnable = VK_FALSE;                      // Optional
-
-    // BLENDING
-
-    VkPipelineColorBlendAttachmentState blend_attachment = {};
-    blend_attachment.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    // blend_attachment.blendEnable = VK_FALSE;
-    // blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;              // Optional
-    // blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;              // Optional
-    // blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
-    // blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
-    // blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
-    // blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
-    // common setup
-    blend_attachment.blendEnable = VK_TRUE;
-    blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
-    blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-    blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
-
-    VkPipelineColorBlendStateCreateInfo blend_info = {};
-    blend_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    blend_info.attachmentCount = 1;
-    blend_info.pAttachments = &blend_attachment;
-    blend_info.logicOpEnable = VK_FALSE;
-    blend_info.logicOp = VK_LOGIC_OP_COPY;  // What does this do?
-    blend_info.blendConstants[0] = 0.0f;
-    blend_info.blendConstants[1] = 0.0f;
-    blend_info.blendConstants[2] = 0.0f;
-    blend_info.blendConstants[3] = 0.0f;
-    // blend_info.blendConstants[0] = 0.2f;
-    // blend_info.blendConstants[1] = 0.2f;
-    // blend_info.blendConstants[2] = 0.2f;
-    // blend_info.blendConstants[3] = 0.2f;
-
-    // VIEWPORT & SCISSOR
-
-    VkPipelineViewportStateCreateInfo viewport_info = {};
-    viewport_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
-#ifndef __ANDROID__
-    viewport_info.viewportCount = NUM_VIEWPORTS;
-    dynamic_states[dynamic_info.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
-    viewport_info.scissorCount = NUM_SCISSORS;
-    dynamic_states[dynamic_info.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
-    viewport_info.pScissors = nullptr;
-    viewport_info.pViewports = nullptr;
-#else
-    // Temporary disabling dynamic viewport on Android because some of drivers doesn't
-    // support the feature.
-    VkViewport viewports;
-    viewports.minDepth = 0.0f;
-    viewports.maxDepth = 1.0f;
-    viewports.x = 0;
-    viewports.y = 0;
-    viewports.width = info.width;
-    viewports.height = info.height;
-    VkRect2D scissor;
-    scissor.extent.width = info.width;
-    scissor.extent.height = info.height;
-    scissor.offset.x = 0;
-    scissor.offset.y = 0;
-    vp.viewportCount = NUM_VIEWPORTS;
-    vp.scissorCount = NUM_SCISSORS;
-    vp.pScissors = &scissor;
-    vp.pViewports = &viewports;
-#endif
-
-    // DEPTH
-
-    VkPipelineDepthStencilStateCreateInfo depth_info;
-    depth_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    depth_info.pNext = nullptr;
-    depth_info.flags = 0;
-    depth_info.depthTestEnable = settings_.include_depth;
-    depth_info.depthWriteEnable = settings_.include_depth;
-    depth_info.depthCompareOp = VK_COMPARE_OP_LESS;
-    depth_info.depthBoundsTestEnable = VK_FALSE;
-    depth_info.minDepthBounds = 0;
-    depth_info.maxDepthBounds = 1.0f;
-    depth_info.stencilTestEnable = VK_FALSE;
-    depth_info.front = {};
-    depth_info.back = {};
-    // dss.back.failOp = VK_STENCIL_OP_KEEP; // ARE THESE IMPORTANT !!!
-    // dss.back.passOp = VK_STENCIL_OP_KEEP;
-    // dss.back.compareOp = VK_COMPARE_OP_ALWAYS;
-    // dss.back.compareMask = 0;
-    // dss.back.reference = 0;
-    // dss.back.depthFailOp = VK_STENCIL_OP_KEEP;
-    // dss.back.writeMask = 0;
-    // dss.front = ds.back;
-
-    // SHADER
-
-    // TODO: this is not great
-    std::vector<VkPipelineShaderStageCreateInfo> stage_infos;
-    stage_infos.push_back(vs_.info);
-    stage_infos.push_back(fs_.info);
-
-    // PIPELINE
-
-    VkGraphicsPipelineCreateInfo pipeline_info_ = {};
-    pipeline_info_.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    // shader stages
-    pipeline_info_.stageCount = static_cast<uint32_t>(stage_infos.size());
-    pipeline_info_.pStages = stage_infos.data();
-    // fixed function stages
-    pipeline_info_.pColorBlendState = &blend_info;
-    pipeline_info_.pDepthStencilState = &depth_info;
-    pipeline_info_.pDynamicState = &dynamic_info;
-    pipeline_info_.pInputAssemblyState = &input_info;
-    pipeline_info_.pMultisampleState = &multisample_info;
-    pipeline_info_.pRasterizationState = &rast_info;
-    pipeline_info_.pTessellationState = nullptr;
-    pipeline_info_.pVertexInputState = &vertex_info;
-    pipeline_info_.pViewportState = &viewport_info;
-    // layout
-    pipeline_info_.layout = pipeline_layout_;
-    pipeline_info_.basePipelineHandle = VK_NULL_HANDLE;
-    pipeline_info_.basePipelineIndex = 0;
-    // render pass
-    pipeline_info_.renderPass = render_pass_;
-    pipeline_info_.subpass = 0;
-
-    vk::assert_success(vkCreateGraphicsPipelines(dev_, pipeline_cache_, 1, &pipeline_info_, nullptr, &pipeline_));
-
-    // *** LINE PIPELINE ***
-
-    // INPUT ASSEMBLY IS THE ONLY DIFFERENCE ????
-
-    pipeline_info_.subpass = 1;
-    input_info.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-
-    vk::assert_success(vkCreateGraphicsPipelines(dev_, pipeline_cache_, 1, &pipeline_info_, nullptr, &pipeline_line_));
+    //
+    //    // TODO: this is weird
+    //    VkPipelineDynamicStateCreateInfo dynamic_info = {};
+    //    VkDynamicState dynamic_states[VK_DYNAMIC_STATE_RANGE_SIZE];
+    //    memset(dynamic_states, 0, sizeof(dynamic_states));
+    //    dynamic_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
+    //    dynamic_info.pNext = nullptr;
+    //    dynamic_info.pDynamicStates = dynamic_states;
+    //    dynamic_info.dynamicStateCount = 0;
+    //
+    //    // INPUT ASSEMBLY
+    //
+    //    VkPipelineVertexInputStateCreateInfo vertex_info = {};
+    //    vertex_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    //    vertex_info.pNext = nullptr;
+    //    vertex_info.flags = 0;
+    //    // bindings
+    //    auto bindingDescription = Vertex::getBindingDescription();
+    //    vertex_info.vertexBindingDescriptionCount = 1;
+    //    vertex_info.pVertexBindingDescriptions = &bindingDescription;
+    //    // attributes
+    //    auto attributeDescriptions = Vertex::getAttributeDescriptions();
+    //    vertex_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
+    //    vertex_info.pVertexAttributeDescriptions = attributeDescriptions.data();
+    //
+    //    VkPipelineInputAssemblyStateCreateInfo input_info = {};
+    //    input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    //    input_info.pNext = nullptr;
+    //    input_info.flags = 0;
+    //    input_info.primitiveRestartEnable = VK_FALSE;
+    //    input_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    //
+    //    // RASTERIZER
+    //
+    //    VkPipelineRasterizationStateCreateInfo rast_info = {};
+    //    rast_info.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    //    rast_info.polygonMode = VK_POLYGON_MODE_FILL;
+    //    rast_info.cullMode = VK_CULL_MODE_BACK_BIT;
+    //    rast_info.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    //    /*  If depthClampEnable is set to VK_TRUE, then fragments that are beyond the near and far
+    //        planes are clamped to them as opposed to discarding them. This is useful in some special
+    //        cases like shadow maps. Using this requires enabling a GPU feature.
+    //    */
+    //    rast_info.depthClampEnable = VK_FALSE;
+    //    rast_info.rasterizerDiscardEnable = VK_FALSE;
+    //    rast_info.depthBiasEnable = VK_FALSE;
+    //    rast_info.depthBiasConstantFactor = 0;
+    //    rast_info.depthBiasClamp = 0;
+    //    rast_info.depthBiasSlopeFactor = 0;
+    //    /*  The lineWidth member is straightforward, it describes the thickness of lines in terms of
+    //        number of fragments. The maximum line width that is supported depends on the hardware and
+    //        any line thicker than 1.0f requires you to enable the wideLines GPU feature.
+    //    */
+    //    rast_info.lineWidth = 1.0f;
+    //
+    //    VkPipelineMultisampleStateCreateInfo multisample_info = {};
+    //    multisample_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    //    multisample_info.rasterizationSamples = num_samples_;
+    //    multisample_info.sampleShadingEnable =
+    //        settings_.enable_sample_shading;  // enable sample shading in the pipeline (sampling for fragment interiors)
+    //    multisample_info.minSampleShading =
+    //        settings_.enable_sample_shading ? MIN_SAMPLE_SHADING : 0.0f;  // min fraction for sample shading; closer to one is
+    //        smooth
+    //    multisample_info.pSampleMask = nullptr;                           // Optional
+    //    multisample_info.alphaToCoverageEnable = VK_FALSE;                // Optional
+    //    multisample_info.alphaToOneEnable = VK_FALSE;                     // Optional
+    //
+    //    // BLENDING
+    //
+    //    VkPipelineColorBlendAttachmentState blend_attachment = {};
+    //    blend_attachment.colorWriteMask =
+    //        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    //    // blend_attachment.blendEnable = VK_FALSE;
+    //    // blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;              // Optional
+    //    // blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;              // Optional
+    //    // blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
+    //    // blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
+    //    // blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
+    //    // blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
+    //    // common setup
+    //    blend_attachment.blendEnable = VK_TRUE;
+    //    blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    //    blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    //    blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;
+    //    blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    //    blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    //    blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;
+    //
+    //    VkPipelineColorBlendStateCreateInfo blend_info = {};
+    //    blend_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    //    blend_info.attachmentCount = 1;
+    //    blend_info.pAttachments = &blend_attachment;
+    //    blend_info.logicOpEnable = VK_FALSE;
+    //    blend_info.logicOp = VK_LOGIC_OP_COPY;  // What does this do?
+    //    blend_info.blendConstants[0] = 0.0f;
+    //    blend_info.blendConstants[1] = 0.0f;
+    //    blend_info.blendConstants[2] = 0.0f;
+    //    blend_info.blendConstants[3] = 0.0f;
+    //    // blend_info.blendConstants[0] = 0.2f;
+    //    // blend_info.blendConstants[1] = 0.2f;
+    //    // blend_info.blendConstants[2] = 0.2f;
+    //    // blend_info.blendConstants[3] = 0.2f;
+    //
+    //    // VIEWPORT & SCISSOR
+    //
+    //    VkPipelineViewportStateCreateInfo viewport_info = {};
+    //    viewport_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    //#ifndef __ANDROID__
+    //    viewport_info.viewportCount = NUM_VIEWPORTS;
+    //    dynamic_states[dynamic_info.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
+    //    viewport_info.scissorCount = NUM_SCISSORS;
+    //    dynamic_states[dynamic_info.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
+    //    viewport_info.pScissors = nullptr;
+    //    viewport_info.pViewports = nullptr;
+    //#else
+    //    // Temporary disabling dynamic viewport on Android because some of drivers doesn't
+    //    // support the feature.
+    //    VkViewport viewports;
+    //    viewports.minDepth = 0.0f;
+    //    viewports.maxDepth = 1.0f;
+    //    viewports.x = 0;
+    //    viewports.y = 0;
+    //    viewports.width = info.width;
+    //    viewports.height = info.height;
+    //    VkRect2D scissor;
+    //    scissor.extent.width = info.width;
+    //    scissor.extent.height = info.height;
+    //    scissor.offset.x = 0;
+    //    scissor.offset.y = 0;
+    //    vp.viewportCount = NUM_VIEWPORTS;
+    //    vp.scissorCount = NUM_SCISSORS;
+    //    vp.pScissors = &scissor;
+    //    vp.pViewports = &viewports;
+    //#endif
+    //
+    //    // DEPTH
+    //
+    //    VkPipelineDepthStencilStateCreateInfo depth_info;
+    //    depth_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+    //    depth_info.pNext = nullptr;
+    //    depth_info.flags = 0;
+    //    depth_info.depthTestEnable = settings_.include_depth;
+    //    depth_info.depthWriteEnable = settings_.include_depth;
+    //    depth_info.depthCompareOp = VK_COMPARE_OP_LESS;
+    //    depth_info.depthBoundsTestEnable = VK_FALSE;
+    //    depth_info.minDepthBounds = 0;
+    //    depth_info.maxDepthBounds = 1.0f;
+    //    depth_info.stencilTestEnable = VK_FALSE;
+    //    depth_info.front = {};
+    //    depth_info.back = {};
+    //    // dss.back.failOp = VK_STENCIL_OP_KEEP; // ARE THESE IMPORTANT !!!
+    //    // dss.back.passOp = VK_STENCIL_OP_KEEP;
+    //    // dss.back.compareOp = VK_COMPARE_OP_ALWAYS;
+    //    // dss.back.compareMask = 0;
+    //    // dss.back.reference = 0;
+    //    // dss.back.depthFailOp = VK_STENCIL_OP_KEEP;
+    //    // dss.back.writeMask = 0;
+    //    // dss.front = ds.back;
+    //
+    //    // SHADER
+    //
+    //    // TODO: this is not great
+    //    std::vector<VkPipelineShaderStageCreateInfo> stage_infos;
+    //    stage_infos.push_back(vs_.info);
+    //    stage_infos.push_back(fs_.info);
+    //
+    //    // PIPELINE
+    //
+    //    VkGraphicsPipelineCreateInfo pipeline_info_ = {};
+    //    pipeline_info_.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+    //    // shader stages
+    //    pipeline_info_.stageCount = static_cast<uint32_t>(stage_infos.size());
+    //    pipeline_info_.pStages = stage_infos.data();
+    //    // fixed function stages
+    //    pipeline_info_.pColorBlendState = &blend_info;
+    //    pipeline_info_.pDepthStencilState = &depth_info;
+    //    pipeline_info_.pDynamicState = &dynamic_info;
+    //    pipeline_info_.pInputAssemblyState = &input_info;
+    //    pipeline_info_.pMultisampleState = &multisample_info;
+    //    pipeline_info_.pRasterizationState = &rast_info;
+    //    pipeline_info_.pTessellationState = nullptr;
+    //    pipeline_info_.pVertexInputState = &vertex_info;
+    //    pipeline_info_.pViewportState = &viewport_info;
+    //    // layout
+    //    pipeline_info_.layout = pipeline_layout_;
+    //    pipeline_info_.basePipelineHandle = VK_NULL_HANDLE;
+    //    pipeline_info_.basePipelineIndex = 0;
+    //    // render pass
+    //    pipeline_info_.renderPass = render_pass_;
+    //    pipeline_info_.subpass = 0;
+    //
+    //    vk::assert_success(vkCreateGraphicsPipelines(dev_, pipeline_cache_, 1, &pipeline_info_, nullptr, &pipeline_));
+    //
+    //    // *** LINE PIPELINE ***
+    //
+    //    // INPUT ASSEMBLY IS THE ONLY DIFFERENCE ????
+    //
+    //    pipeline_info_.subpass = 1;
+    //    input_info.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    //
+    //    vk::assert_success(vkCreateGraphicsPipelines(dev_, pipeline_cache_, 1, &pipeline_info_, nullptr, &pipeline_line_));
 }
 
 void Guppy::destroy_pipelines() {
@@ -497,6 +518,15 @@ void Guppy::prepare_viewport() {
     scissor_.extent = extent_;
 }
 
+// Depends on:
+//      swapchain_image_count_
+//      The attachment descriptions created by create_render_pass in Scene...
+//      active_scene() - render pass
+//      extent_
+//      swapchain_image_resources_ - view -> are an attachment
+// Can change:
+//      Tightly couple the attachment desriptions and the image views here...
+//      Possibly move the framebuffers to the scene...
 void Guppy::prepare_framebuffers(const VkSwapchainKHR& swapchain) {
     assert(framebuffers_.empty());
     framebuffers_.reserve(swapchain_image_count_);
@@ -520,39 +550,19 @@ void Guppy::prepare_framebuffers(const VkSwapchainKHR& swapchain) {
     VkFramebufferCreateInfo fb_info = {};
     fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     fb_info.pNext = NULL;
-    fb_info.renderPass = render_pass_;
+    fb_info.renderPass = active_scene()->activeRenderPass();
     fb_info.attachmentCount = static_cast<uint32_t>(attachments.size());
     fb_info.pAttachments = attachments.data();
     fb_info.width = extent_.width;
     fb_info.height = extent_.height;
     fb_info.layers = 1;
 
-    for (auto& res : swapchain_image_resources_) {
+    for (auto& swapchain_img_res : swapchain_image_resources_) {
         VkFramebuffer fb;
-        attachments[0] = res.view;
+        attachments[0] = swapchain_img_res.view;
         vk::assert_success(vkCreateFramebuffer(dev_, &fb_info, NULL, &fb));
         framebuffers_.push_back(fb);
     }
-}
-
-void Guppy::determine_sample_count(const MyShell::PhysicalDeviceProperties& props) {
-    //// TODO: OPTION (FEATURE BASED)
-    VkSampleCountFlags counts = 0;
-    std::min(props.properties.limits.framebufferColorSampleCounts, props.properties.limits.framebufferDepthSampleCounts);
-    num_samples_ = VK_SAMPLE_COUNT_1_BIT;
-    // return the highest possible one for now
-    if (counts & VK_SAMPLE_COUNT_64_BIT)
-        num_samples_ = VK_SAMPLE_COUNT_64_BIT;
-    else if (counts & VK_SAMPLE_COUNT_32_BIT)
-        num_samples_ = VK_SAMPLE_COUNT_32_BIT;
-    else if (counts & VK_SAMPLE_COUNT_16_BIT)
-        num_samples_ = VK_SAMPLE_COUNT_16_BIT;
-    else if (counts & VK_SAMPLE_COUNT_8_BIT)
-        num_samples_ = VK_SAMPLE_COUNT_8_BIT;
-    else if (counts & VK_SAMPLE_COUNT_4_BIT)
-        num_samples_ = VK_SAMPLE_COUNT_4_BIT;
-    else if (counts & VK_SAMPLE_COUNT_2_BIT)
-        num_samples_ = VK_SAMPLE_COUNT_2_BIT;
 }
 
 void Guppy::create_uniform_buffer() {
@@ -599,119 +609,119 @@ void Guppy::copy_ubo_to_memory() {
 }
 
 void Guppy::create_render_pass(bool include_depth, bool include_color, bool clear, VkImageLayout finalLayout) {
-    std::vector<VkAttachmentDescription> attachments;
+    // std::vector<VkAttachmentDescription> attachments;
 
-    // COLOR ATTACHMENT (SWAP-CHAIN)
-    VkAttachmentReference color_reference = {};
-    VkAttachmentDescription attachemnt = {};
-    attachemnt = {};
-    attachemnt.format = format_;
-    attachemnt.samples = VK_SAMPLE_COUNT_1_BIT;
-    attachemnt.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;  // clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-    attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachemnt.finalLayout = finalLayout;
-    attachemnt.flags = 0;
-    attachments.push_back(attachemnt);
-    // REFERENCE
-    color_reference.attachment = static_cast<uint32_t>(attachments.size() - 1);
-    color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    //// COLOR ATTACHMENT (SWAP-CHAIN)
+    // VkAttachmentReference color_reference = {};
+    // VkAttachmentDescription attachemnt = {};
+    // attachemnt = {};
+    // attachemnt.format = format_;
+    // attachemnt.samples = VK_SAMPLE_COUNT_1_BIT;
+    // attachemnt.loadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;  // clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    // attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    // attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    // attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    // attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    // attachemnt.finalLayout = finalLayout;
+    // attachemnt.flags = 0;
+    // attachments.push_back(attachemnt);
+    //// REFERENCE
+    // color_reference.attachment = static_cast<uint32_t>(attachments.size() - 1);
+    // color_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-    // COLOR ATTACHMENT RESOLVE (MULTI-SAMPLE)
-    VkAttachmentReference color_resolve_reference = {};
-    if (include_color) {
-        attachemnt = {};
-        attachemnt.format = format_;
-        attachemnt.samples = num_samples_;
-        attachemnt.loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-        attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachemnt.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        attachemnt.flags = 0;
-        // REFERENCE
-        color_resolve_reference.attachment = static_cast<uint32_t>(attachments.size() - 1);  // point to swapchain attachment
-        color_resolve_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    //// COLOR ATTACHMENT RESOLVE (MULTI-SAMPLE)
+    // VkAttachmentReference color_resolve_reference = {};
+    // if (include_color) {
+    //    attachemnt = {};
+    //    attachemnt.format = format_;
+    //    attachemnt.samples = num_samples_;
+    //    attachemnt.loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    //    attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    //    attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    //    attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    //    attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    //    attachemnt.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    //    attachemnt.flags = 0;
+    //    // REFERENCE
+    //    color_resolve_reference.attachment = static_cast<uint32_t>(attachments.size() - 1);  // point to swapchain attachment
+    //    color_resolve_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
-        attachments.push_back(attachemnt);
-        color_reference.attachment = static_cast<uint32_t>(attachments.size() - 1);  // point to multi-sample attachment
-    }
+    //    attachments.push_back(attachemnt);
+    //    color_reference.attachment = static_cast<uint32_t>(attachments.size() - 1);  // point to multi-sample attachment
+    //}
 
-    // DEPTH ATTACHMENT
-    VkAttachmentReference depth_reference = {};
-    if (include_depth) {
-        attachemnt = {};
-        attachemnt.format = depth_resource_.format;
-        attachemnt.samples = num_samples_;
-        attachemnt.loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-        // This was "don't care" in the sample and that makes more sense to
-        // me. This obvious is for some kind of stencil operation.
-        attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachemnt.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        attachemnt.flags = 0;
-        attachments.push_back(attachemnt);
-        // REFERENCE
-        depth_reference.attachment = static_cast<uint32_t>(attachments.size() - 1);
-        depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    }
+    //// DEPTH ATTACHMENT
+    // VkAttachmentReference depth_reference = {};
+    // if (include_depth) {
+    //    attachemnt = {};
+    //    attachemnt.format = depth_resource_.format;
+    //    attachemnt.samples = num_samples_;
+    //    attachemnt.loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    //    // This was "don't care" in the sample and that makes more sense to
+    //    // me. This obvious is for some kind of stencil operation.
+    //    attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    //    attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+    //    attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+    //    attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    //    attachemnt.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    //    attachemnt.flags = 0;
+    //    attachments.push_back(attachemnt);
+    //    // REFERENCE
+    //    depth_reference.attachment = static_cast<uint32_t>(attachments.size() - 1);
+    //    depth_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    //}
 
-    VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    subpass.inputAttachmentCount = 0;
-    subpass.pInputAttachments = nullptr;
-    subpass.colorAttachmentCount = 1;
-    subpass.pColorAttachments = &color_reference;
-    subpass.pResolveAttachments = include_color ? &color_resolve_reference : nullptr;
-    subpass.pDepthStencilAttachment = include_depth ? &depth_reference : nullptr;
-    subpass.preserveAttachmentCount = 0;
-    subpass.pPreserveAttachments = nullptr;
+    // VkSubpassDescription subpass = {};
+    // subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    // subpass.inputAttachmentCount = 0;
+    // subpass.pInputAttachments = nullptr;
+    // subpass.colorAttachmentCount = 1;
+    // subpass.pColorAttachments = &color_reference;
+    // subpass.pResolveAttachments = include_color ? &color_resolve_reference : nullptr;
+    // subpass.pDepthStencilAttachment = include_depth ? &depth_reference : nullptr;
+    // subpass.preserveAttachmentCount = 0;
+    // subpass.pPreserveAttachments = nullptr;
 
-    std::vector<VkSubpassDescription> subpasses;
-    subpasses.push_back(subpass);
+    // std::vector<VkSubpassDescription> subpasses;
+    // subpasses.push_back(subpass);
 
-    // Line drawing subpass (just need an identical subpass for now)
-    subpasses.push_back(subpass);
+    //// Line drawing subpass (just need an identical subpass for now)
+    // subpasses.push_back(subpass);
 
-    //// TODO: used for waiting in draw (figure this out... what is the VK_SUBPASS_EXTERNAL one?)
+    ////// TODO: used for waiting in draw (figure this out... what is the VK_SUBPASS_EXTERNAL one?)
+    //// VkSubpassDependency dependency = {};
+    //// dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    //// dependency.dstSubpass = 0;
+    //// dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    //// dependency.srcAccessMask = 0;
+    //// dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    //// dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+    //// std::vector<VkSubpassDependency> dependencies;
+    //// dependencies.push_back(dependency);
+
+    ////// From poly to line
     // VkSubpassDependency dependency = {};
-    // dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    // dependency.dstSubpass = 0;
-    // dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    // dependency.srcSubpass = 0;
+    // dependency.dstSubpass = 1;
+    // dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     // dependency.srcAccessMask = 0;
-    // dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    // dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    // dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    // dependency.dstAccessMask = 0;
 
-    // std::vector<VkSubpassDependency> dependencies;
-    // dependencies.push_back(dependency);
+    // VkRenderPassCreateInfo rp_info = {};
+    // rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    // rp_info.pNext = nullptr;
+    // rp_info.attachmentCount = static_cast<uint32_t>(attachments.size());
+    // rp_info.pAttachments = attachments.data();
+    // rp_info.subpassCount = static_cast<uint32_t>(subpasses.size());
+    // rp_info.pSubpasses = subpasses.data();
+    // rp_info.dependencyCount = 1;
+    // rp_info.pDependencies = &dependency;
+    //// rp_info.dependencyCount = 0;
+    //// rp_info.pDependencies = nullptr;
 
-    //// From poly to line
-    VkSubpassDependency dependency = {};
-    dependency.srcSubpass = 0;
-    dependency.dstSubpass = 1;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-    dependency.dstAccessMask = 0;
-
-    VkRenderPassCreateInfo rp_info = {};
-    rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    rp_info.pNext = nullptr;
-    rp_info.attachmentCount = static_cast<uint32_t>(attachments.size());
-    rp_info.pAttachments = attachments.data();
-    rp_info.subpassCount = static_cast<uint32_t>(subpasses.size());
-    rp_info.pSubpasses = subpasses.data();
-    rp_info.dependencyCount = 1;
-    rp_info.pDependencies = &dependency;
-    // rp_info.dependencyCount = 0;
-    // rp_info.pDependencies = nullptr;
-
-    vk::assert_success(vkCreateRenderPass(dev_, &rp_info, nullptr, &render_pass_));
+    // vk::assert_success(vkCreateRenderPass(dev_, &rp_info, nullptr, &render_pass_));
 }
 
 void Guppy::destroy_render_pass() { vkDestroyRenderPass(dev_, render_pass_, nullptr); }
@@ -915,8 +925,13 @@ void Guppy::create_descriptor_sets(bool use_texture) {
         writes[1].dstBinding = 1;
         writes[1].dstArrayElement = 0;
         writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        writes[1].descriptorCount = 1;
-        writes[1].pImageInfo = &textures_[0].imgDescInfo;
+        writes[1].descriptorCount = static_cast<uint32_t>(textures_.size());  // 1;
+
+        // TODO: fix this
+        std::vector<VkDescriptorImageInfo> imgDescInfos;
+        for (auto& texture : textures_) imgDescInfos.push_back(texture.imgDescInfo);
+
+        writes[1].pImageInfo = imgDescInfos.data();
 
         vkUpdateDescriptorSets(dev_, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
     }
@@ -984,13 +999,15 @@ void Guppy::destroy_command_buffers() {
     cmd_data_.cmd_pools.clear();
 }
 
+// TODO: See if using context directly simplifies the signatures here...
 void Guppy::create_color_resources() {
     std::vector<uint32_t> queueFamilyIndices = {cmd_data_.graphics_queue_family};
     if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
         queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
 
-    helpers::create_image(dev_, cmd_data_.mem_props, queueFamilyIndices, extent_.width, extent_.height, 1, num_samples_, format_,
-                          VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+    helpers::create_image(dev_, cmd_data_.mem_props, queueFamilyIndices, extent_.width, extent_.height, 1,
+                          shell_->context().num_samples, format_, VK_IMAGE_TILING_OPTIMAL,
+                          VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, color_resource_.image, color_resource_.memory);
 
     helpers::create_image_view(dev_, color_resource_.image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D,
@@ -1008,6 +1025,7 @@ void Guppy::destroy_color_resources() {
     vkFreeMemory(dev_, color_resource_.memory, nullptr);
 }
 
+// TODO: See if using context directly simplifies the signatures here...
 void Guppy::create_depth_resources() {
     VkFormatProperties props;
     VkImageTiling tiling;
@@ -1025,9 +1043,10 @@ void Guppy::create_depth_resources() {
     if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
         queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
 
-    helpers::create_image(dev_, cmd_data_.mem_props, queueFamilyIndices, extent_.width, extent_.height, 1, num_samples_,
-                          depth_resource_.format, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depth_resource_.image, depth_resource_.memory);
+    helpers::create_image(dev_, cmd_data_.mem_props, queueFamilyIndices, extent_.width, extent_.height, 1,
+                          shell_->context().num_samples, depth_resource_.format, tiling,
+                          VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depth_resource_.image,
+                          depth_resource_.memory);
 
     VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
     if (helpers::has_stencil_component(depth_resource_.format)) {
@@ -1120,23 +1139,23 @@ void Guppy::create_draw_cmds() {
         // SUBPASS 0
         // ** POLYS **
 
-        vkCmdBindPipeline(draw_cmds_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
-        vkCmdBindVertexBuffers(draw_cmds_[i], 0, 1, vertex_buffers, offsets);
-        vkCmdBindIndexBuffer(draw_cmds_[i], index_res_.buffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(draw_cmds_[i], model_.getIndexSize(), 1, 0, model_.m_linesCount, 0);
+        // vkCmdBindPipeline(draw_cmds_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_);
+        // vkCmdBindVertexBuffers(draw_cmds_[i], 0, 1, vertex_buffers, offsets);
+        // vkCmdBindIndexBuffer(draw_cmds_[i], index_res_.buffer, 0, VK_INDEX_TYPE_UINT32);
+        // vkCmdDrawIndexed(draw_cmds_[i], model_.getIndexSize(), 1, 0, model_.m_linesCount, 0);
 
-        vkCmdNextSubpass(draw_cmds_[i], VK_SUBPASS_CONTENTS_INLINE);
-        // SUBPASS 1
-        // ** LINES **
+        // vkCmdNextSubpass(draw_cmds_[i], VK_SUBPASS_CONTENTS_INLINE);
+        //// SUBPASS 1
+        //// ** LINES **
 
-        vkCmdBindPipeline(draw_cmds_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_line_);
-        vkCmdBindVertexBuffers(draw_cmds_[i], 0, 1, vertex_buffers, offsets);
-        vkCmdDraw(draw_cmds_[i],
-                  model_.m_linesCount,  // vertexCount
-                  1,                    // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
-                  0,  // firstVertex - Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
-                  0   // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
-        );
+        // vkCmdBindPipeline(draw_cmds_[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline_line_);
+        // vkCmdBindVertexBuffers(draw_cmds_[i], 0, 1, vertex_buffers, offsets);
+        // vkCmdDraw(draw_cmds_[i],
+        //          model_.m_linesCount,  // vertexCount
+        //          1,                    // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
+        //          0,  // firstVertex - Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
+        //          0   // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
+        //);
 
         vkCmdEndRenderPass(draw_cmds_[i]);
 
@@ -1148,27 +1167,27 @@ void Guppy::create_input_assembly_data() {
     // VkCommandBuffer cmd1, cmd2;
     // StagingBufferHandler::get().begin_command_recording(cmd);
 
-    std::vector<StagingBufferResource> staging_resources;
-    std::vector<uint32_t> queueFamilyIndices = {cmd_data_.graphics_queue_family};
-    if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
-        queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
+    // std::vector<StagingBufferResource> staging_resources;
+    // std::vector<uint32_t> queueFamilyIndices = {cmd_data_.graphics_queue_family};
+    // if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
+    //    queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
 
-    // Vertex buffer
-    StagingBufferResource stg_res;
-    create_vertex_data(stg_res);
-    staging_resources.emplace_back(stg_res);
+    //// Vertex buffer
+    // StagingBufferResource stg_res;
+    // create_vertex_data(stg_res);
+    // staging_resources.emplace_back(stg_res);
 
-    // Index buffer
-    stg_res = {};
-    create_index_data(stg_res);
-    staging_resources.emplace_back(stg_res);
+    //// Index buffer
+    // stg_res = {};
+    // create_index_data(stg_res);
+    // staging_resources.emplace_back(stg_res);
 
-    // TODO: this options below are wrong!!!
+    //// TODO: this options below are wrong!!!
 
-    VkPipelineStageFlags wait_stages[] = {VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
-    StagingBufferHandler::get().end_recording_and_submit(staging_resources.data(), staging_resources.size(), transfer_cmd(),
-                                                         cmd_data_.graphics_queue_family, &graphics_cmd(), wait_stages,
-                                                         StagingBufferHandler::END_TYPE::RESET);
+    // VkPipelineStageFlags wait_stages[] = {VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
+    // StagingBufferHandler::get().end_recording_and_submit(staging_resources.data(), staging_resources.size(), transfer_cmd(),
+    //                                                     cmd_data_.graphics_queue_family, &graphics_cmd(), wait_stages,
+    //                                                     StagingBufferHandler::END_TYPE::RESET);
 }
 
 void Guppy::destroy_input_assembly_data() {
@@ -1181,101 +1200,110 @@ void Guppy::destroy_input_assembly_data() {
 }
 
 void Guppy::create_vertex_data(StagingBufferResource& stg_res) {
-    // STAGING BUFFER
-    VkDeviceSize bufferSize = model_.getVertexBufferSize();
+    //// STAGING BUFFER
+    // VkDeviceSize bufferSize = model_.getVertexBufferSize();
 
-    auto memReqsSize = helpers::create_buffer(dev_, cmd_data_.mem_props, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                              stg_res.buffer, stg_res.memory);
+    // auto memReqsSize = helpers::create_buffer(dev_, cmd_data_.mem_props, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    //                                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    //                                          stg_res.buffer, stg_res.memory);
 
-    // FILL STAGING BUFFER ON DEVICE
-    void* pData;
-    vkMapMemory(dev_, stg_res.memory, 0, memReqsSize, 0, &pData);
-    /*
-        You can now simply memcpy the vertex data to the mapped memory and unmap it again using vkUnmapMemory.
-        Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
-        of caching. It is also possible that writes to the buffer are not visible in the mapped memory yet. There
-        are two ways to deal with that problem:
-            - Use a memory heap that is host coherent, indicated with VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-            - Call vkFlushMappedMemoryRanges to after writing to the mapped memory, and call
-              vkInvalidateMappedMemoryRanges before reading from the mapped memory
-        We went for the first approach, which ensures that the mapped memory always matches the contents of the
-        allocated memory. Do keep in mind that this may lead to slightly worse performance than explicit flushing,
-        but we'll see why that doesn't matter in the next chapter.
-    */
-    memcpy(pData, model_.getVertexData(), static_cast<size_t>(bufferSize));
-    vkUnmapMemory(dev_, stg_res.memory);
+    //// FILL STAGING BUFFER ON DEVICE
+    // void* pData;
+    // vkMapMemory(dev_, stg_res.memory, 0, memReqsSize, 0, &pData);
+    ///*
+    //    You can now simply memcpy the vertex data to the mapped memory and unmap it again using vkUnmapMemory.
+    //    Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
+    //    of caching. It is also possible that writes to the buffer are not visible in the mapped memory yet. There
+    //    are two ways to deal with that problem:
+    //        - Use a memory heap that is host coherent, indicated with VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+    //        - Call vkFlushMappedMemoryRanges to after writing to the mapped memory, and call
+    //          vkInvalidateMappedMemoryRanges before reading from the mapped memory
+    //    We went for the first approach, which ensures that the mapped memory always matches the contents of the
+    //    allocated memory. Do keep in mind that this may lead to slightly worse performance than explicit flushing,
+    //    but we'll see why that doesn't matter in the next chapter.
+    //*/
+    // memcpy(pData, model_.getVertexData(), static_cast<size_t>(bufferSize));
+    // vkUnmapMemory(dev_, stg_res.memory);
 
-    // FAST VERTEX BUFFER
-    helpers::create_buffer(dev_, cmd_data_.mem_props,
-                           bufferSize,  // TODO: probably don't need to check memory requirements again
-                           VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_res_.buffer, vertex_res_.memory);
+    //// FAST VERTEX BUFFER
+    // helpers::create_buffer(dev_, cmd_data_.mem_props,
+    //                       bufferSize,  // TODO: probably don't need to check memory requirements again
+    //                       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+    //                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_res_.buffer, vertex_res_.memory);
 
-    // COPY FROM STAGING TO FAST
-    helpers::copy_buffer(transfer_cmd(), stg_res.buffer, vertex_res_.buffer, memReqsSize);
+    //// COPY FROM STAGING TO FAST
+    // helpers::copy_buffer(transfer_cmd(), stg_res.buffer, vertex_res_.buffer, memReqsSize);
 }
 
 void Guppy::create_index_data(StagingBufferResource& stg_res) {
-    VkDeviceSize bufferSize = model_.getIndexBufferSize();
+    // VkDeviceSize bufferSize = model_.getIndexBufferSize();
 
-    // TODO: more checking around this scenario...
-    if (bufferSize) {
-        auto memReqsSize = helpers::create_buffer(dev_, cmd_data_.mem_props, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                                  stg_res.buffer, stg_res.memory);
+    //// TODO: more checking around this scenario...
+    // if (bufferSize) {
+    //    auto memReqsSize = helpers::create_buffer(dev_, cmd_data_.mem_props, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    //                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+    //                                              stg_res.buffer, stg_res.memory);
 
-        void* pData;
-        vkMapMemory(dev_, stg_res.memory, 0, memReqsSize, 0, &pData);
-        memcpy(pData, model_.getIndexData(), static_cast<size_t>(bufferSize));
-        vkUnmapMemory(dev_, stg_res.memory);
+    //    void* pData;
+    //    vkMapMemory(dev_, stg_res.memory, 0, memReqsSize, 0, &pData);
+    //    memcpy(pData, model_.getIndexData(), static_cast<size_t>(bufferSize));
+    //    vkUnmapMemory(dev_, stg_res.memory);
 
-        helpers::create_buffer(dev_, cmd_data_.mem_props, bufferSize,
-                               VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_res_.buffer, index_res_.memory);
+    //    helpers::create_buffer(dev_, cmd_data_.mem_props, bufferSize,
+    //                           VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+    //                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_res_.buffer, index_res_.memory);
 
-        helpers::copy_buffer(transfer_cmd(), stg_res.buffer, index_res_.buffer, memReqsSize);
-    }
+    //    helpers::copy_buffer(transfer_cmd(), stg_res.buffer, index_res_.buffer, memReqsSize);
+    //}
 }
 
-void Guppy::create_model() {
-    const MyShell::Context& ctx = shell_->context();
+void Guppy::create_scenes() {
+    auto ctx = shell_->context();
 
-    bool loadDefault = false;
-    std::string tex_path = "..\\..\\..\\images\\texture.jpg";
+    auto scene1 = std::make_unique<Scene>(ctx, settings(), cmd_data_, ubo_resource_.info, vs_, fs_, pipeline_cache_);
 
-    if (loadDefault) {
-        model_.loadAxes();
-        model_.loadDefault();
-    } else {
-        // UP_VECTOR = glm::vec3(0.0f, 0.0f, 1.0f);
-        tex_path = CHALET_TEXTURE_PATH;
-        model_.loadChalet();
-    }
+    // meshes
+    // Plane p("..\\..\\..\\images\\texture.jpg");
+    // std::unique_ptr<Mesh> p1 = std::make_unique<Plane>();
+    // scene1->addMesh(ctx, cmd_data_, ubo_resource_.info, std::move(p1)); // add mesh tries to load it...
+
+    scenes_.push_back(std::move(scene1));
+    active_scene_index_ = 0;
+
+    // if (loadDefault) {
+    // model_.loadAxes();
+    // model_.loadDefault();
+    //} else {
+    //    // UP_VECTOR = glm::vec3(0.0f, 0.0f, 1.0f);
+    //    tex_path = CHALET_TEXTURE_PATH;
+    //    model_.loadChalet();
+    //}
 
     // VkCommandBuffer cmd1, cmd2;
     // StagingBufferHandler::get().begin_command_recording(cmd);
 
-    StagingBufferResource stg_res;
-    std::vector<StagingBufferResource> staging_resources;
-    std::vector<uint32_t> queueFamilyIndices = {cmd_data_.graphics_queue_family};
-    if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
-        queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
+    // StagingBufferResource stg_res;
+    // std::vector<StagingBufferResource> staging_resources;
+    // std::vector<uint32_t> queueFamilyIndices = {cmd_data_.graphics_queue_family};
+    // if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
+    //    queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
 
-    //stg_res = {};
-    //tex_path = "..\\..\\..\\images\\texture.jpg";
-    //textures_.emplace_back(Texture::createTexture(ctx, stg_res, transfer_cmd(), graphics_cmd(), queueFamilyIndices, tex_path));
-    //staging_resources.emplace_back(stg_res);
+    // stg_res = {};
+    // tex_path = "..\\..\\..\\images\\chalet.jpg";
+    // textures_.emplace_back(Texture::createTexture(ctx, stg_res, transfer_cmd(), graphics_cmd(), queueFamilyIndices, tex_path));
+    // staging_resources.emplace_back(stg_res);
 
-    stg_res = {};
-    tex_path = "..\\..\\..\\images\\chalet.jpg";
-    textures_.emplace_back(Texture::createTexture(ctx, stg_res, transfer_cmd(), graphics_cmd(), queueFamilyIndices, tex_path));
-    staging_resources.emplace_back(stg_res);
+    // stg_res = {};
+    // tex_path = "..\\..\\..\\images\\texture.jpg";
+    // textures_.emplace_back(Texture::createTexture(ctx, stg_res, transfer_cmd(), graphics_cmd(), queueFamilyIndices, tex_path));
+    // staging_resources.emplace_back(stg_res);
 
-    VkPipelineStageFlags wait_stages[] = {VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
-    StagingBufferHandler::get().end_recording_and_submit(staging_resources.data(), staging_resources.size(), transfer_cmd(),
-                                                         cmd_data_.graphics_queue_family, &graphics_cmd(), wait_stages,
-                                                         StagingBufferHandler::END_TYPE::RESET);
+    // VkPipelineStageFlags wait_stages[] = {VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
+    // StagingBufferHandler::get().end_recording_and_submit(staging_resources.data(), staging_resources.size(), transfer_cmd(),
+    //                                                     cmd_data_.graphics_queue_family, &graphics_cmd(), wait_stages,
+    //                                                     StagingBufferHandler::END_TYPE::RESET);
+
+    assert(active_scene_index_ >= 0);
 }
 
 void Guppy::destroy_textures() {

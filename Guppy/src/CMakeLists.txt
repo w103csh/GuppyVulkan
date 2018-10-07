@@ -17,12 +17,16 @@ set(SOURCE
     InputHandler.cpp
     InputHandler.h
     Main.cpp
+	Mesh.cpp
+	Mesh.h
     Model.cpp
     Model.h
     MyShell.cpp
     MyShell.h
     Plane.cpp
     Plane.h
+	Scene.cpp
+	Scene.h
     Shell.cpp
     Shell.h
     StagingBufferHandler.cpp

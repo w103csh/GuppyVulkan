@@ -71,6 +71,7 @@ class MyShell {
 
         bool sampler_anisotropy_enabled_;   // *
         bool sample_rate_shading_enabled_;  // *
+        bool linear_blitting_supported_;    // *
 
         VkPhysicalDevice physical_dev;
         std::vector<PhysicalDeviceProperties> physical_dev_props;  // *
@@ -83,17 +84,18 @@ class MyShell {
         uint32_t present_queue_family;
 
         VkDevice dev;
-        //VkQueue game_queue;
-        //VkQueue present_queue;
+        // VkQueue game_queue;
+        // VkQueue present_queue;
 
         std::queue<BackBuffer> back_buffers;
 
         SurfaceProperties surface_props;  // *
         VkSurfaceKHR surface;
-        VkSurfaceFormatKHR format;
-        VkPresentModeKHR mode;   // *
-        uint32_t image_count;  // *
-        VkFormat depth_format;   // *
+        VkSurfaceFormatKHR surface_format;
+        VkPresentModeKHR mode;              // *
+        uint32_t image_count;               // *
+        VkFormat depth_format;              // *
+        VkSampleCountFlagBits num_samples;  // *
 
         VkSwapchainKHR swapchain;
         VkExtent2D extent;
@@ -183,11 +185,12 @@ class MyShell {
                          uint32_t &transfer_queue_index);  // *
 
     // called by is_dev_suitable
-    bool MyShell::determine_queue_families_support(const PhysicalDeviceProperties &props, uint32_t &graphics_queue_family_index,
-                                                   uint32_t &present_queue_family_index,
-                                                   uint32_t &transfer_queue_family_index);    // *
-    bool MyShell::determine_device_extension_support(const PhysicalDeviceProperties &props);  // *
-    void MyShell::determine_device_feature_support(const PhysicalDeviceProperties &props);    // *
+    bool determine_queue_families_support(const PhysicalDeviceProperties &props, uint32_t &graphics_queue_family_index,
+                                          uint32_t &present_queue_family_index,
+                                          uint32_t &transfer_queue_family_index);    // *
+    bool determine_device_extension_support(const PhysicalDeviceProperties &props);  // *
+    void determine_device_feature_support(const PhysicalDeviceProperties &props);    // *
+    void determine_sample_count(const PhysicalDeviceProperties &props);              // *
 
     // called by create_context
     void init_dev_queues();  // *

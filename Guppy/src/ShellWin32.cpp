@@ -74,7 +74,7 @@ void ShellWin32::create_window() {
     win_class.hInstance = hinstance_;
     win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
     win_class.lpszClassName = class_name.c_str();
-    if (settings_.enable_double_clicks_) win_class.style = CS_DBLCLKS;
+    if (settings_.enable_double_clicks) win_class.style = CS_DBLCLKS;
     RegisterClassEx(&win_class);
 
     const DWORD win_style = WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VISIBLE | WS_OVERLAPPEDWINDOW;
@@ -250,11 +250,11 @@ Game::KEY ShellWin32::get_key(WPARAM wParam, InputHandler::INPUT_TYPE type) {
             break;
         case '_':
         case '-':
-            key = Game::KEY::KEY_PLUS;
+            key = Game::KEY::KEY_MINUS;
             break;
         case '+':
         case '=':
-            key = Game::KEY::KEY_F1;
+            key = Game::KEY::KEY_PLUS;
             break;
         case VK_F1:
             key = Game::KEY::KEY_F1;

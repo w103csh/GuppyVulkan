@@ -5,25 +5,51 @@
 #include <vulkan/vulkan.h>
 
 #include "Constants.h"
-#include "Vertex.h"
 
 constexpr auto PLANE_VERTEX_SIZE = 4;
 constexpr auto PLANE_INDEX_SIZE = 6;
 
-// TODO: deal with color
+// **********************
+// Plane
+// **********************
 
 class Plane {
    public:
-    Plane();
-    Plane(float width, float height, bool doubleSided = false, glm::vec3 pos = glm::vec3(), glm::mat4 rot = glm::mat4(1.0f));
-
-    inline const std::vector<Vertex>& getVertices() const { return vertices_; }
-
-    inline const std::vector<VB_INDEX_TYPE>& getIndices() const { return indices_; }
+    static void createIndices(std::vector<VB_INDEX_TYPE> &indices, bool doubleSided = false);
 
    private:
-    void createVertices(float width = 2.0f, float height = 2.0f);
-    void createIndices(bool doubleSided = false);
-    std::vector<Vertex> vertices_;
-    std::vector<VB_INDEX_TYPE> indices_;
+    virtual void createVertices(float width = 2.0f, float height = 2.0f) = 0;
 };
+
+// **********************
+// ColorPlane
+// **********************
+
+class ColorPlane : public Plane, public ColorMesh {
+    ColorPlane();
+
+   private:
+    void createVertices(float width = 2.0f, float height = 2.0f) override;
+};
+
+// **********************
+// TexturePlane
+// **********************
+
+class TexturePlane : public Plane, public TextureMesh {
+    TexturePlane();
+
+   private:
+    void createVertices(float width = 2.0f, float height = 2.0f) override;
+};
+
+// class TexturePlane : public Plane, public TextureMesh {
+//   public:
+//    TexturePlane();
+//    TexturePlane(std::string texturePath);
+//    TexturePlane(float width, float height, bool doubleSided = false, glm::vec3 pos = glm::vec3(), glm::mat4 rot =
+//    glm::mat4(1.0f));
+//
+//   private:
+//    void createVertices(float width = 2.0f, float height = 2.0f) override;
+//};

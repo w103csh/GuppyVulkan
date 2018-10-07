@@ -9,24 +9,21 @@
 
 #define STB_FORMAT VK_FORMAT_R8G8B8A8_UNORM
 
-Texture::TextureData Texture::createTexture(const MyShell::Context& ctx, StagingBufferResource& stg_res, VkCommandBuffer& trans_cmd,
-                                            VkCommandBuffer& graph_cmd, const std::vector<uint32_t>& queueFamilyIndices,
-                                            std::string tex_path) {
+Texture::TextureData Texture::createTexture(const VkDevice& dev, const VkPhysicalDeviceMemoryProperties& mem_props,
+                                            const std::vector<uint32_t>& queueFamilyIndices, const VkCommandBuffer& graph_cmd,
+                                            const VkCommandBuffer& trans_cmd, const std::string tex_path, bool generate_mipmaps,
+                                            StagingBufferResource& stg_res) {
     TextureData tex = {};
-    const auto& mem_props = ctx.physical_dev_props[ctx.physical_dev_index].memory_properties;
-
-    createImage(ctx.dev, ctx.format.format, ctx.physical_dev, mem_props, stg_res, trans_cmd, graph_cmd, queueFamilyIndices,
-                tex_path, tex);
-    createImageView(ctx.dev, tex);
-    createSampler(ctx.dev, tex);
+    createImage(dev, mem_props, trans_cmd, graph_cmd, queueFamilyIndices, tex_path, generate_mipmaps, tex, stg_res);
+    createImageView(dev, tex);
+    createSampler(dev, tex);
     createDescInfo(tex);
     return tex;
 }
 
-void Texture::createImage(const VkDevice& dev, const VkFormat& format, const VkPhysicalDevice& physical_dev,
-                          const VkPhysicalDeviceMemoryProperties& mem_props, StagingBufferResource& stg_res,
-                          VkCommandBuffer& trans_cmd, VkCommandBuffer& graph_cmd, const std::vector<uint32_t>& queueFamilyIndices,
-                          std::string texturePath, TextureData& tex) {
+void Texture::createImage(const VkDevice& dev, const VkPhysicalDeviceMemoryProperties& mem_props, const VkCommandBuffer& trans_cmd,
+                          const VkCommandBuffer& graph_cmd, const std::vector<uint32_t>& queueFamilyIndices,
+                          const std::string texturePath, bool generate_mipmaps, TextureData& tex, StagingBufferResource& stg_res) {
     int width, height, channels;
     stbi_uc* pixels = stbi_load(texturePath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
 
@@ -41,10 +38,9 @@ void Texture::createImage(const VkDevice& dev, const VkFormat& format, const VkP
     tex.channels = static_cast<uint32_t>(channels);
     tex.mipLevels = static_cast<uint32_t>(std::floor(std::log2(max(tex.width, tex.height)))) + 1;
 
-
-    auto memReqsSize =
-        helpers::create_buffer(dev, mem_props, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stg_res.buffer, stg_res.memory);
+    auto memReqsSize = helpers::create_buffer(dev, mem_props, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                              stg_res.buffer, stg_res.memory);
 
     void* pData;
     vkMapMemory(dev, stg_res.memory, 0, memReqsSize, 0, &pData);
@@ -54,22 +50,27 @@ void Texture::createImage(const VkDevice& dev, const VkFormat& format, const VkP
     stbi_image_free(pixels);
 
     helpers::create_image(dev, mem_props, queueFamilyIndices, static_cast<uint32_t>(tex.width), static_cast<uint32_t>(tex.height),
-                 tex.mipLevels, VK_SAMPLE_COUNT_1_BIT, STB_FORMAT, VK_IMAGE_TILING_OPTIMAL,
-                 VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                 VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, tex.image, tex.memory);
+                          tex.mipLevels, VK_SAMPLE_COUNT_1_BIT, STB_FORMAT, VK_IMAGE_TILING_OPTIMAL,
+                          VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, tex.image, tex.memory);
 
     helpers::transition_image_layout(trans_cmd, tex.image, tex.mipLevels, STB_FORMAT, VK_IMAGE_LAYOUT_UNDEFINED,
-                            VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                            VK_PIPELINE_STAGE_TRANSFER_BIT);
+                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                     VK_PIPELINE_STAGE_TRANSFER_BIT);
 
     helpers::copy_buffer_to_image(graph_cmd, stg_res.buffer, tex.image, tex.width, tex.height);
 
     // transition to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
-    generateMipmaps(graph_cmd, physical_dev, tex.image, format, tex.width, tex.height, tex.mipLevels);
+    if (generate_mipmaps) {
+        generateMipmaps(graph_cmd, tex.image, tex.width, tex.height, tex.mipLevels);
+    } else {
+        // TODO: DO SOMETHING .. this was not tested
+    }
 }
 
 void Texture::createImageView(const VkDevice& dev, TextureData& tex) {
-    helpers::create_image_view(dev, tex.image, tex.mipLevels, STB_FORMAT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D, tex.view);
+    helpers::create_image_view(dev, tex.image, tex.mipLevels, STB_FORMAT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D,
+                               tex.view);
 }
 
 void Texture::createSampler(const VkDevice& dev, TextureData& tex) {
@@ -104,19 +105,8 @@ void Texture::createDescInfo(TextureData& tex) {
     tex.imgDescInfo.sampler = tex.sampler;
 }
 
-void Texture::generateMipmaps(VkCommandBuffer& cmd, const VkPhysicalDevice& physical_dev, const VkImage& image,
-                              const VkFormat& format, const int32_t& width, const int32_t& height, const uint32_t& mip_levels) {
-    /*  Throw if the format we want doesn't support linear blitting!
-
-        TODO: Clean up what happens if the GPU doesn't handle linear blitting
-
-        There are two alternatives in this case. You could implement a function that searches common texture image
-        formats for one that does support linear blitting, or you could implement the mipmap generation in software
-        with a library like stb_image_resize. Each mip level can then be loaded into the image in the same way that
-        you loaded the original image.
-    */
-    helpers::find_supported_format(physical_dev, {format}, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT);
-
+void Texture::generateMipmaps(const VkCommandBuffer& cmd, const VkImage& image, const int32_t& width, const int32_t& height,
+                              const uint32_t& mip_levels) {
     // This was the way before mip maps
     // transitionImageLayout(
     //    srcQueueFamilyIndexFinal,
@@ -198,4 +188,3 @@ void Texture::generateMipmaps(VkCommandBuffer& cmd, const VkPhysicalDevice& phys
     vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1,
                          &barrier);
 }
-

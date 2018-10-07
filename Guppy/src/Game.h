@@ -46,12 +46,12 @@ class Game {
         bool no_present;
 
         // *
-        bool try_sampler_anisotropy_; // TODO: Not sure what this does
-        bool try_sample_rate_shading_;
-        bool enable_sample_shading_;
+        bool try_sampler_anisotropy; // TODO: Not sure what this does
+        bool try_sample_rate_shading;
+        bool enable_sample_shading;
         bool include_color;
         bool include_depth;
-        bool enable_double_clicks_;
+        bool enable_double_clicks;
     };
     const Settings &settings() const { return settings_; }
 
@@ -119,7 +119,7 @@ class Game {
         settings_.initial_width = 1280;
         settings_.initial_height = 1024;
         settings_.queue_count = 1;
-        settings_.back_buffer_count = 1;
+        settings_.back_buffer_count = 3;
         settings_.ticks_per_second = 30;
         settings_.vsync = true;
         settings_.animate = true;
@@ -132,11 +132,11 @@ class Game {
         settings_.no_present = false;
 
         // *
-        settings_.try_sampler_anisotropy_ = true;
-        settings_.try_sample_rate_shading_ = true;
+        settings_.try_sampler_anisotropy = true;
+        settings_.try_sample_rate_shading = true;
         settings_.include_color = true;
         settings_.include_depth = true;
-        settings_.enable_double_clicks_ = false;
+        settings_.enable_double_clicks = false;
 
         parse_args(args);
     }

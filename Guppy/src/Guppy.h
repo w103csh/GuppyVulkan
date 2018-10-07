@@ -8,8 +8,8 @@
 #include "Camera.h"
 #include "Game.h"
 #include "Helpers.h"
-#include "Model.h"
 #include "MyShell.h"
+#include "Scene.h"
 #include "Texture.h"
 
 class Guppy : public Game {
@@ -58,14 +58,12 @@ class Guppy : public Game {
     VkPhysicalDeviceProperties physical_dev_props_;
     std::vector<VkMemoryPropertyFlags> mem_flags_;
 
-    Model model_;
-
     VkRenderPass render_pass_;
     ShaderResources vs_;
     ShaderResources fs_;
+    VkPipelineCache pipeline_cache_;
     std::vector<VkDescriptorSetLayout> desc_set_layouts_;
     VkPipelineLayout pipeline_layout_;
-    VkPipelineCache pipeline_cache_;
     VkPipeline pipeline_;
 
     VkCommandPool primary_cmd_pool_;
@@ -117,6 +115,8 @@ class Guppy : public Game {
 
     // *********************************************
 
+    std::vector<std::unique_ptr<Scene>> scenes_;
+
     ImageResource color_resource_;
     ImageResource depth_resource_;
     UniformBufferResources ubo_resource_;
@@ -144,27 +144,29 @@ class Guppy : public Game {
         };
     }
 
+    // Scene
+    int active_scene_index_;
+    inline const std::unique_ptr<Scene>& active_scene() const { return scenes_[active_scene_index_]; }
+    void create_scenes();
+
     VkPipeline pipeline_line_;
 
     // drawing
     std::vector<VkCommandBuffer> draw_cmds_;
 
     Camera camera_;
-    bool sample_shading_supported_ = false;
-    VkSampleCountFlagBits num_samples_;
 
     BufferResource vertex_res_;
     BufferResource index_res_;
     std::vector<VkDescriptorSet> desc_sets_;
     std::vector<Texture::TextureData> textures_;
 
-    void copyBuffer(VkCommandBuffer& cmd, const VkBuffer& src_buf, const VkBuffer& dst_buf, const VkDeviceSize& size);
+    //void copyBuffer(VkCommandBuffer& cmd, const VkBuffer& src_buf, const VkBuffer& dst_buf, const VkDeviceSize& size);
     void create_input_assembly_data();
     void create_vertex_data(StagingBufferResource& stg_res);
     void create_index_data(StagingBufferResource& stg_res);
 
     void create_draw_cmds();
-    void create_model();
     void determine_sample_count(const MyShell::PhysicalDeviceProperties& props);
     void destroy_textures();
     void destroy_descriptor_and_pipeline_layouts();

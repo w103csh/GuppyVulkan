@@ -2,25 +2,12 @@
 #ifndef HELPERS_H
 #define HELPERS_H
 
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/hash.hpp>
+#include <assert.h>
 #include <limits>
 #include <sstream>
 #include <type_traits>
 #include <vector>
-
-#include "Vertex.h"
-
-namespace std {
-// Hash function for Vertex class
-template <>
-struct hash<Vertex> {
-    size_t operator()(Vertex const &vertex) const {
-        return ((hash<glm::vec3>()(vertex.pos) ^ (hash<glm::vec3>()(vertex.color) << 1)) >> 1) ^
-               (hash<glm::vec2>()(vertex.texCoord) << 1);
-    }
-};
-}  // namespace std
+#include <vulkan/vulkan.h>
 
 namespace vk {
 inline VkResult assert_success(VkResult res) {
@@ -41,8 +28,8 @@ typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type almost_
     // the machine epsilon has to be scaled to the magnitude of the values used
     // and multiplied by the desired precision in ULPs (units in the last place)
     return std::abs(x - y) <= std::numeric_limits<T>::epsilon() * std::abs(x + y) * ulp
-        // unless the result is subnormal
-        || std::abs(x - y) < (std::numeric_limits<T>::min)();
+           // unless the result is subnormal
+           || std::abs(x - y) < (std::numeric_limits<T>::min)();
 }
 
 static bool has_stencil_component(VkFormat format) {
@@ -51,8 +38,8 @@ static bool has_stencil_component(VkFormat format) {
 }
 
 static VkFormat find_supported_format(const VkPhysicalDevice &physical_dev, const std::vector<VkFormat> &candidates,
-                               const VkImageTiling tiling, const VkFormatFeatureFlags features) {
-    VkFormat format = {};
+                                      const VkImageTiling tiling, const VkFormatFeatureFlags features) {
+    VkFormat format = VK_FORMAT_UNDEFINED;
     for (VkFormat f : candidates) {
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(physical_dev, f, &props);
@@ -62,20 +49,18 @@ static VkFormat find_supported_format(const VkPhysicalDevice &physical_dev, cons
         } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
             format = f;
             break;
-        } else {
-            throw std::runtime_error("failed to find supported format!");
         }
     }
     return format;
 }
 
 static VkFormat find_depth_format(const VkPhysicalDevice &physical_dev) {
-    return find_supported_format(physical_dev, { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
+    return find_supported_format(physical_dev, {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
                                  VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
-static bool memory_type_from_properties(const VkPhysicalDeviceMemoryProperties &mem_props, uint32_t typeBits, VkFlags requirements_mask,
-                                 uint32_t *typeIndex) {
+static bool memory_type_from_properties(const VkPhysicalDeviceMemoryProperties &mem_props, uint32_t typeBits,
+                                        VkFlags requirements_mask, uint32_t *typeIndex) {
     // Search memtypes to find first index with those properties
     for (uint32_t i = 0; i < mem_props.memoryTypeCount; i++) {
         if ((typeBits & 1) == 1) {
@@ -101,13 +86,11 @@ static void execute_begin_command_buffer(const VkCommandBuffer &cmd) {
     vk::assert_success(vkBeginCommandBuffer(cmd, &cmd_buf_info));
 }
 
-static void execute_end_command_buffer(VkCommandBuffer &cmd) {
-    vk::assert_success(vkEndCommandBuffer(cmd));
-}
+static void execute_end_command_buffer(const VkCommandBuffer &cmd) { vk::assert_success(vkEndCommandBuffer(cmd)); }
 
 static VkDeviceSize create_buffer(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &mem_props, const VkDeviceSize &size,
-                           const VkBufferUsageFlags &usage, const VkMemoryPropertyFlags &props, VkBuffer &buf,
-                           VkDeviceMemory &buf_mem) {
+                                  const VkBufferUsageFlags &usage, const VkMemoryPropertyFlags &props, VkBuffer &buf,
+                                  VkDeviceMemory &buf_mem) {
     bool pass;
 
     // CREATE BUFFER
@@ -171,7 +154,7 @@ static VkDeviceSize create_buffer(const VkDevice &dev, const VkPhysicalDeviceMem
     return mem_reqs.size;
 }
 
-static void copy_buffer(VkCommandBuffer &cmd, const VkBuffer &src_buf, const VkBuffer &dst_buf, const VkDeviceSize &size) {
+static void copy_buffer(const VkCommandBuffer &cmd, const VkBuffer &src_buf, const VkBuffer &dst_buf, const VkDeviceSize &size) {
     VkBufferCopy copy_region = {};
     copy_region.srcOffset = 0;  // Optional
     copy_region.dstOffset = 0;  // Optional
@@ -180,9 +163,10 @@ static void copy_buffer(VkCommandBuffer &cmd, const VkBuffer &src_buf, const VkB
 }
 
 static void create_image(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &mem_props,
-                  const std::vector<uint32_t> &queueFamilyIndices, const uint32_t width, uint32_t height, uint32_t mip_levels,
-                  const VkSampleCountFlagBits &num_samples, const VkFormat &format, const VkImageTiling &tiling,
-                  const VkImageUsageFlags &usage, const VkFlags &requirements_mask, VkImage &image, VkDeviceMemory &image_memory) {
+                         const std::vector<uint32_t> &queueFamilyIndices, const uint32_t width, uint32_t height,
+                         uint32_t mip_levels, const VkSampleCountFlagBits &num_samples, const VkFormat &format,
+                         const VkImageTiling &tiling, const VkImageUsageFlags &usage, const VkFlags &requirements_mask,
+                         VkImage &image, VkDeviceMemory &image_memory) {
     bool pass;
 
     VkImageCreateInfo image_info = {};
@@ -221,8 +205,8 @@ static void create_image(const VkDevice &dev, const VkPhysicalDeviceMemoryProper
     vk::assert_success(vkBindImageMemory(dev, image, image_memory, 0));
 }
 
-static void copy_buffer_to_image(VkCommandBuffer &cmd, const VkBuffer &src_buf, const VkImage &dst_img, const uint32_t &width,
-                          const uint32_t &height) {
+static void copy_buffer_to_image(const VkCommandBuffer &cmd, const VkBuffer &src_buf, const VkImage &dst_img, const uint32_t &width,
+                                 const uint32_t &height) {
     VkBufferImageCopy region = {};
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
@@ -242,7 +226,7 @@ static void copy_buffer_to_image(VkCommandBuffer &cmd, const VkBuffer &src_buf, 
 }
 
 static void create_image_view(const VkDevice &device, const VkImage &image, const uint32_t &mip_levels, const VkFormat &format,
-                       const VkImageAspectFlags &aspectFlags, const VkImageViewType &viewType, VkImageView &image_view) {
+                              const VkImageAspectFlags &aspectFlags, const VkImageViewType &viewType, VkImageView &image_view) {
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
@@ -271,9 +255,9 @@ static void create_image_view(const VkDevice &device, const VkImage &image, cons
     vk::assert_success(vkCreateImageView(device, &viewInfo, nullptr, &image_view));
 }
 
-static void transition_image_layout(VkCommandBuffer &cmd, VkImage &image, const uint32_t &mip_levels, const VkFormat &format,
-                             const VkImageLayout &old_layout, const VkImageLayout &new_layout, VkPipelineStageFlags src_stages,
-                             VkPipelineStageFlags dst_stages) {
+static void transition_image_layout(const VkCommandBuffer &cmd, VkImage &image, const uint32_t &mip_levels, const VkFormat &format,
+                                    const VkImageLayout &old_layout, const VkImageLayout &new_layout,
+                                    VkPipelineStageFlags src_stages, VkPipelineStageFlags dst_stages) {
     VkImageMemoryBarrier barrier = {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     barrier.pNext = nullptr;

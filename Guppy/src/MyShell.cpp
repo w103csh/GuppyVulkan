@@ -214,11 +214,12 @@ void MyShell::create_context() {
 
     init_dev_queues();
 
-    create_back_buffers();
-
     // TODO: should this do this?
     // initialize ctx_.{surface,format} before attach_shell
     create_swapchain();
+
+    // need image count
+    create_back_buffers();
 
     game_.attach_shell(*this);
 }
@@ -289,7 +290,7 @@ void MyShell::create_back_buffers() {
     // sync primitives are busy.  Having more BackBuffer's than swapchain
     // images may allow us to replace CPU wait on present_fence by GPU wait
     // on acquire_semaphore.
-    const int count = settings_.back_buffer_count + 1;
+    const int count = ctx_.image_count + 1;
     for (int i = 0; i < count; i++) {
         BackBuffer buf = {};
         vk::assert_success(vkCreateSemaphore(ctx_.dev, &sem_info, nullptr, &buf.acquire_semaphore));
@@ -329,6 +330,19 @@ void MyShell::create_swapchain() {
     determine_swapchain_present_mode();
     determine_swapchain_image_count();
     determine_depth_format();
+
+    // suface dependent flags
+    /*  TODO: Clean up what happens if the GPU doesn't handle linear blitting.
+        Right now this flag just turns it off.
+
+        There are two alternatives in this case. You could implement a function that searches common texture image
+        formats for one that does support linear blitting, or you could implement the mipmap generation in software
+        with a library like stb_image_resize. Each mip level can then be loaded into the image in the same way that
+        you loaded the original image.
+    */
+    ctx_.linear_blitting_supported_ =
+        helpers::find_supported_format(ctx_.physical_dev, {ctx_.surface_format.format}, VK_IMAGE_TILING_OPTIMAL,
+                                       VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != VK_FORMAT_UNDEFINED;
 
     // defer to resize_swapchain()
     ctx_.swapchain = VK_NULL_HANDLE;
@@ -379,8 +393,8 @@ void MyShell::resize_swapchain(uint32_t width_hint, uint32_t height_hint, bool r
     swapchain_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
     swapchain_info.surface = ctx_.surface;
     swapchain_info.minImageCount = ctx_.image_count;
-    swapchain_info.imageFormat = ctx_.format.format;
-    swapchain_info.imageColorSpace = ctx_.format.colorSpace;
+    swapchain_info.imageFormat = ctx_.surface_format.format;
+    swapchain_info.imageColorSpace = ctx_.surface_format.colorSpace;
     swapchain_info.imageExtent = ctx_.extent;
     swapchain_info.imageArrayLayers = 1;
     swapchain_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
@@ -712,6 +726,8 @@ bool MyShell::is_dev_suitable(const PhysicalDeviceProperties &props, uint32_t &g
     if (!determine_device_extension_support(props)) return false;
     // optional (warn but dont throw)
     determine_device_feature_support(props);
+    // depends on above...
+    determine_sample_count(props);
     return true;
 }
 
@@ -786,13 +802,35 @@ bool MyShell::determine_device_extension_support(const PhysicalDeviceProperties 
 
 void MyShell::determine_device_feature_support(const MyShell::PhysicalDeviceProperties &props) {
     // sampler anisotropy
-    ctx_.sampler_anisotropy_enabled_ = props.features.samplerAnisotropy && settings_.try_sampler_anisotropy_;
-    if (settings_.try_sampler_anisotropy_ && !ctx_.sampler_anisotropy_enabled_)
+    ctx_.sampler_anisotropy_enabled_ = props.features.samplerAnisotropy && settings_.try_sampler_anisotropy;
+    if (settings_.try_sampler_anisotropy && !ctx_.sampler_anisotropy_enabled_)
         log(MyShell::LOG_WARN, "cannot enable sampler anisotropy");
     // sample rate shading
-    ctx_.sample_rate_shading_enabled_ = props.features.sampleRateShading && settings_.try_sample_rate_shading_;
-    if (settings_.try_sample_rate_shading_ && !ctx_.sample_rate_shading_enabled_)
+    ctx_.sample_rate_shading_enabled_ = props.features.sampleRateShading && settings_.try_sample_rate_shading;
+    if (settings_.try_sample_rate_shading && !ctx_.sample_rate_shading_enabled_)
         log(MyShell::LOG_WARN, "cannot enable sample rate shading");
+}
+
+void MyShell::determine_sample_count(const MyShell::PhysicalDeviceProperties &props) {
+    /* DEPENDS on determine_device_feature_support */
+    ctx_.num_samples = VK_SAMPLE_COUNT_1_BIT;
+    if (ctx_.sample_rate_shading_enabled_) {
+        VkSampleCountFlags counts =
+            std::min(props.properties.limits.framebufferColorSampleCounts, props.properties.limits.framebufferDepthSampleCounts);
+        // return the highest possible one for now
+        if (counts & VK_SAMPLE_COUNT_64_BIT)
+            ctx_.num_samples = VK_SAMPLE_COUNT_64_BIT;
+        else if (counts & VK_SAMPLE_COUNT_32_BIT)
+            ctx_.num_samples = VK_SAMPLE_COUNT_32_BIT;
+        else if (counts & VK_SAMPLE_COUNT_16_BIT)
+            ctx_.num_samples = VK_SAMPLE_COUNT_16_BIT;
+        else if (counts & VK_SAMPLE_COUNT_8_BIT)
+            ctx_.num_samples = VK_SAMPLE_COUNT_8_BIT;
+        else if (counts & VK_SAMPLE_COUNT_4_BIT)
+            ctx_.num_samples = VK_SAMPLE_COUNT_4_BIT;
+        else if (counts & VK_SAMPLE_COUNT_2_BIT)
+            ctx_.num_samples = VK_SAMPLE_COUNT_2_BIT;
+    }
 }
 
 bool MyShell::determine_swapchain_extent(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities) {
@@ -837,24 +875,25 @@ void MyShell::determine_depth_format() {
     if (ctx_.depth_format == VK_FORMAT_UNDEFINED) ctx_.depth_format = VK_FORMAT_D32_SFLOAT;
 #else
     if (ctx_.depth_format == VK_FORMAT_UNDEFINED) ctx_.depth_format = helpers::find_depth_format(ctx_.physical_dev);
+    // TODO: turn off depth if undefined still...
 #endif
 }
 
 void MyShell::determine_swapchain_surface_format() {
     // no preferred type
     if (ctx_.surface_props.surf_formats.size() == 1 && ctx_.surface_props.surf_formats[0].format == VK_FORMAT_UNDEFINED) {
-        ctx_.format = {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+        ctx_.surface_format = {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
         return;
     } else {
         for (const auto &surfFormat : ctx_.surface_props.surf_formats) {
             if (surfFormat.format == VK_FORMAT_B8G8R8A8_UNORM && surfFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-                ctx_.format = surfFormat;
+                ctx_.surface_format = surfFormat;
                 return;
             }
         }
     }
     log(MyShell::LOG_INFO, "choosing first available swap surface format!");
-    ctx_.format = ctx_.surface_props.surf_formats[0];
+    ctx_.surface_format = ctx_.surface_props.surf_formats[0];
 }
 
 void MyShell::determine_swapchain_present_mode() {
@@ -877,10 +916,11 @@ void MyShell::determine_swapchain_image_count() {
     // Asking for minImageCount images ensures that we can acquire
     // 1 presentable image as long as we present it before attempting
     // to acquire another.
-    ctx_.image_count = caps.minImageCount + 1;  // TODO: this "+ 1" is extremely arbitrary
-    if (caps.maxImageCount > 0 && ctx_.image_count > caps.maxImageCount) {
+    ctx_.image_count = settings_.back_buffer_count;
+    if (ctx_.image_count < caps.minImageCount)
+        ctx_.image_count = caps.minImageCount;
+    else if (ctx_.image_count > caps.maxImageCount)
         ctx_.image_count = caps.maxImageCount;
-    }
 }
 
 void MyShell::determine_api_version(uint32_t &version) {
