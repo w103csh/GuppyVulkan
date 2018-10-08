@@ -22,6 +22,10 @@ struct ShaderParamBlock {
     float alpha;
 };
 
+struct DemoTag {
+    const char name[17] = "debug marker tag";
+} demoTag;
+
 }  // namespace
 
 Guppy::Guppy(const std::vector<std::string>& args)
@@ -175,7 +179,7 @@ void Guppy::attach_swapchain() {
     prepare_viewport();
     prepare_framebuffers(ctx.swapchain);
 
-    active_scene()->recordDrawCmds(ctx, framebuffers_, viewport_, scissor_);
+    active_scene()->recordDrawCmds(ctx, frameData(), framebuffers_, viewport_, scissor_);
 }
 
 void Guppy::detach_swapchain() {
@@ -204,13 +208,12 @@ void Guppy::on_key(KEY key) {
             // sim_fade_ = !sim_fade_;
             break;
         case KEY::KEY_F1: {
-            std::unique_ptr<ColorMesh> p1 = std::unique_ptr<ColorPlane>();
+            auto p1 = std::make_unique<ColorPlane>();
             active_scene()->addMesh(shell_->context(), cmd_data_, ubo_resource_.info, std::move(p1));
         } break;
         case KEY::KEY_F3: {
-            //std::unique_ptr<Mesh<ColorVertex>> p2 =
-            //    std::make_unique<Plane<ColorVertex>>(2.0f, 2.0f, false, glm::vec3(0.0f, 0.0f, 1.0f));
-            //active_scene()->addMesh<ColorVertex>(shell_->context(), cmd_data_, ubo_resource_.info, std::move(p2));
+            auto p1 = std::make_unique<TexturePlane>();
+            active_scene()->addMesh(shell_->context(), cmd_data_, ubo_resource_.info, std::move(p1));
         } break;
         case KEY::KEY_UP:
         case KEY::KEY_DOWN:
@@ -261,7 +264,7 @@ void Guppy::on_tick() {
     for (auto& scene : scenes_) {
         // TODO: im really not into this...
         if (scene->update(ctx, settings(), ubo_resource_.info, vs_, fs_, pipeline_cache_)) {
-            scene->recordDrawCmds(ctx, framebuffers_, viewport_, scissor_);
+            scene->recordDrawCmds(ctx, frameData(), framebuffers_, viewport_, scissor_);
         }
     }
 
@@ -573,6 +576,11 @@ void Guppy::create_uniform_buffer() {
     camera_.memory_requirements_size = helpers::create_buffer(
         dev_, cmd_data_.mem_props, buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ubo_resource_.buffer, ubo_resource_.memory);
+
+    ext::DebugMarkerSetObjectName(dev_, (uint64_t)ubo_resource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "Scene uniform buffer block");
+    // Add some random tag
+    ext::DebugMarkerSetObjectTag(dev_, (uint64_t)ubo_resource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag), &demoTag);
+
 
     copy_ubo_to_memory();
 }
@@ -1016,6 +1024,10 @@ void Guppy::create_color_resources() {
     helpers::transition_image_layout(graphics_cmd(), color_resource_.image, 1, format_, VK_IMAGE_LAYOUT_UNDEFINED,
                                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+
+
+    // Name some objects for debugging
+    ext::DebugMarkerSetObjectName(dev_, (uint64_t)color_resource_.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "Guppy color framebuffer");
 }
 
 void Guppy::destroy_color_resources() {
@@ -1059,6 +1071,9 @@ void Guppy::create_depth_resources() {
     helpers::transition_image_layout(graphics_cmd(), depth_resource_.image, 1, depth_resource_.format, VK_IMAGE_LAYOUT_UNDEFINED,
                                      VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
+
+    // Name some objects for debugging
+    ext::DebugMarkerSetObjectName(dev_, (uint64_t)depth_resource_.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "Guppy depth framebuffer");
 }
 
 void Guppy::destroy_depth_resources() {

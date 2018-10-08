@@ -23,8 +23,8 @@
 #include <stdexcept>
 #include <vulkan/vulkan.h>
 
-#include "Extensions.h"
 #include "Game.h"
+#include "Helpers.h"
 
 class Game;
 

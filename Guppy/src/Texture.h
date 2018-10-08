@@ -19,6 +19,7 @@ class Texture {
         VkDescriptorImageInfo imgDescInfo;
         VkImageView view;
         uint32_t width, height, channels, mipLevels;
+        std::string path, name;
     };
     static TextureData createTexture(const VkDevice& dev, const VkPhysicalDeviceMemoryProperties& mem_props,
                                      const std::vector<uint32_t>& queueFamilyIndices, const VkCommandBuffer& graph_cmd,

@@ -59,8 +59,8 @@ void MyShell::init_vk() {
 }
 
 void MyShell::cleanup_vk() {
-    if (settings_.validate) DestoryDebugReportCallbackEXT(ctx_.instance, ctx_.debug_report, nullptr);
-    if (settings_.validate) DestroyDebugUtilsMessengerEXT(ctx_.instance, ctx_.debug_utils_messenger, nullptr);
+    if (settings_.validate) ext::DestoryDebugReportCallbackEXT(ctx_.instance, ctx_.debug_report, nullptr);
+    if (settings_.validate) ext::DestroyDebugUtilsMessengerEXT(ctx_.instance, ctx_.debug_utils_messenger, nullptr);
 
     destroy_instance();
 }
@@ -182,7 +182,7 @@ void MyShell::init_debug_report() {
     debug_report_info.pfnCallback = debug_report_callback;
     debug_report_info.pUserData = reinterpret_cast<void *>(this);
 
-    vk::assert_success(CreateDebugReportCallbackEXT(ctx_.instance, &debug_report_info, nullptr, &ctx_.debug_report));
+    vk::assert_success(ext::CreateDebugReportCallbackEXT(ctx_.instance, &debug_report_info, nullptr, &ctx_.debug_report));
 }
 
 void MyShell::init_validation_messenger() {
@@ -197,7 +197,7 @@ void MyShell::init_validation_messenger() {
     debugInfo.pfnUserCallback = debug_callback;
     debugInfo.pUserData = nullptr;  // Optional
 
-    vk::assert_success(CreateDebugUtilsMessengerEXT(ctx_.instance, &debugInfo, nullptr, &ctx_.debug_utils_messenger));
+    vk::assert_success(ext::CreateDebugUtilsMessengerEXT(ctx_.instance, &debugInfo, nullptr, &ctx_.debug_utils_messenger));
 }
 
 void MyShell::init_physical_dev() {
@@ -211,6 +211,10 @@ void MyShell::init_physical_dev() {
 
 void MyShell::create_context() {
     create_dev();
+
+    if (settings_.enable_debug_markers) {
+        ext::CreateDebugMarkerEXTs(ctx_.dev, ctx_.physical_dev);
+    }
 
     init_dev_queues();
 
@@ -271,8 +275,15 @@ void MyShell::create_dev() {
     dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     dev_info.queueCreateInfoCount = static_cast<uint32_t>(queue_infos.size());
     dev_info.pQueueCreateInfos = queue_infos.data();
-    dev_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions_.size());
-    dev_info.ppEnabledExtensionNames = device_extensions_.data();
+    if (true) {
+        device_extensions_.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        dev_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions_.size());
+        dev_info.ppEnabledExtensionNames = device_extensions_.data();
+        instance_extensions_.pop_back();
+    } else {
+        dev_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions_.size());
+        dev_info.ppEnabledExtensionNames = device_extensions_.data();
+    }
     dev_info.pEnabledFeatures = &deviceFeatures;
 
     vk::assert_success(vkCreateDevice(ctx_.physical_dev, &dev_info, nullptr, &ctx_.dev));
@@ -800,7 +811,7 @@ bool MyShell::determine_device_extension_support(const PhysicalDeviceProperties 
     return false;
 }
 
-void MyShell::determine_device_feature_support(const MyShell::PhysicalDeviceProperties &props) {
+void MyShell::determine_device_feature_support(const PhysicalDeviceProperties &props) {
     // sampler anisotropy
     ctx_.sampler_anisotropy_enabled_ = props.features.samplerAnisotropy && settings_.try_sampler_anisotropy;
     if (settings_.try_sampler_anisotropy && !ctx_.sampler_anisotropy_enabled_)
@@ -811,7 +822,7 @@ void MyShell::determine_device_feature_support(const MyShell::PhysicalDeviceProp
         log(MyShell::LOG_WARN, "cannot enable sample rate shading");
 }
 
-void MyShell::determine_sample_count(const MyShell::PhysicalDeviceProperties &props) {
+void MyShell::determine_sample_count(const PhysicalDeviceProperties &props) {
     /* DEPENDS on determine_device_feature_support */
     ctx_.num_samples = VK_SAMPLE_COUNT_1_BIT;
     if (ctx_.sample_rate_shading_enabled_) {
@@ -875,7 +886,7 @@ void MyShell::determine_depth_format() {
     if (ctx_.depth_format == VK_FORMAT_UNDEFINED) ctx_.depth_format = VK_FORMAT_D32_SFLOAT;
 #else
     if (ctx_.depth_format == VK_FORMAT_UNDEFINED) ctx_.depth_format = helpers::find_depth_format(ctx_.physical_dev);
-    // TODO: turn off depth if undefined still...
+        // TODO: turn off depth if undefined still...
 #endif
 }
 
@@ -925,6 +936,7 @@ void MyShell::determine_swapchain_image_count() {
 
 void MyShell::determine_api_version(uint32_t &version) {
     version = VK_API_VERSION_1_0;
+    return;
     // Android build not at 1.1 yet
 #ifndef ANDROID
     // Keep track of the major/minor version we can actually use

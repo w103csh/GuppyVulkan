@@ -3,6 +3,7 @@
 #define SCENE_H
 
 #include <algorithm>
+#include <atomic>
 #include <array>
 #include <future>
 #include <vector>
@@ -26,8 +27,8 @@ class Scene {
 
     inline const VkRenderPass activeRenderPass() const { return render_passes_[0]; }
 
-    void recordDrawCmds(const MyShell::Context &ctx, std::vector<VkFramebuffer> &framebuffers, const VkViewport &viewport,
-                        const VkRect2D &scissor);
+    void recordDrawCmds(const MyShell::Context &ctx, const std::vector<FrameData> &frame_data,
+                        const std::vector<VkFramebuffer> &framebuffers, const VkViewport &viewport, const VkRect2D &scissor);
 
     bool update(const MyShell::Context &ctx, const Game::Settings &settings, const VkDescriptorBufferInfo &ubo_info,
                 const ShaderResources &vs, const ShaderResources &fs, const VkPipelineCache &cache);
@@ -52,12 +53,12 @@ class Scene {
     inline VkPipeline &base_pipeline() { return pipelines_[static_cast<int>(PIPELINE_TYPE::BASE)]; }
 
     // Descriptor
-    void create_descriptor_set_layouts(const MyShell::Context &ctx);
+    void create_descriptor_set_layout(const MyShell::Context &ctx);
     void destroy_descriptor_set_layouts(const VkDevice &dev);
     void create_descriptor_pool(const MyShell::Context &ctx);
     void destroy_descriptor_pool(const VkDevice &dev);
 
-    std::vector<VkDescriptorSetLayout> desc_set_layouts_;
+    VkDescriptorSetLayout desc_set_layout_;
     VkDescriptorPool desc_pool_;
 
     // Pipeline
@@ -83,7 +84,22 @@ class Scene {
     // Draw commands
     void create_draw_cmds(const MyShell::Context &ctx, const CommandData &cmd_data);
     void destroy_cmds(const VkDevice &dev, const CommandData &cmd_data);
-    std::vector<VkCommandBuffer> draw_cmds_;
+    void record(const MyShell::Context &ctx, const VkCommandBuffer &cmd, const VkFramebuffer &framebuffer, const VkFence &fence,
+                const VkViewport &viewport, const VkRect2D &scissor, size_t index);
+    struct DrawResources {
+        std::thread thread;
+        VkCommandBuffer cmd;
+    };
+    std::vector<DrawResources> draw_resources_;
+
+    void test(const MyShell::Context &ctx
+              ,const VkCommandBuffer &cmd
+              ,const VkFramebuffer &framebuffer
+              ,const VkFence &fence
+              ,const VkViewport &viewport
+              ,const VkRect2D &scissor
+              , size_t index
+    );
 
     uint32_t tex_count_;
     std::vector<std::future<Mesh *>> loading_futures_;

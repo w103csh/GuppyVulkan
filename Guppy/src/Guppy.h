@@ -29,24 +29,12 @@ class Guppy : public Game {
     void on_frame(float frame_pred);
 
    private:
-    struct FrameData {
-        // signaled when this struct is ready for reuse
-        VkFence fence;
-
-        VkCommandBuffer primary_cmd;
-        std::vector<VkCommandBuffer> worker_cmds;
-
-        VkBuffer buf;
-        uint8_t* base;
-        VkDescriptorSet desc_set;
-    };
-
     bool multithread_;
     bool use_push_constants_;
 
     bool sim_paused_;
     bool sim_fade_;
-    //Simulation sim_;
+    // Simulation sim_;
 
     VkPhysicalDevice physical_dev_;
     VkDevice dev_;
@@ -72,6 +60,7 @@ class Guppy : public Game {
     VkDeviceMemory frame_data_mem_;
     std::vector<FrameData> frame_data_;
     int frame_data_index_;
+    const auto& frameData() const { return frame_data_; }
 
     VkClearValue render_pass_clear_value_;
     VkRenderPassBeginInfo render_pass_begin_info_;
@@ -90,8 +79,8 @@ class Guppy : public Game {
     };
     uint32_t swapchain_image_count_;
     std::vector<SwapchainImageResource> swapchain_image_resources_;
-    //std::vector<VkImage> images_; // replaced by above
-    //std::vector<VkImageView> image_views_; // replaced by above
+    // std::vector<VkImage> images_; // replaced by above
+    // std::vector<VkImageView> image_views_; // replaced by above
     std::vector<VkFramebuffer> framebuffers_;
 
     // called by attach_shell
@@ -161,13 +150,12 @@ class Guppy : public Game {
     std::vector<VkDescriptorSet> desc_sets_;
     std::vector<Texture::TextureData> textures_;
 
-    //void copyBuffer(VkCommandBuffer& cmd, const VkBuffer& src_buf, const VkBuffer& dst_buf, const VkDeviceSize& size);
+    // void copyBuffer(VkCommandBuffer& cmd, const VkBuffer& src_buf, const VkBuffer& dst_buf, const VkDeviceSize& size);
     void create_input_assembly_data();
     void create_vertex_data(StagingBufferResource& stg_res);
     void create_index_data(StagingBufferResource& stg_res);
 
     void create_draw_cmds();
-    void determine_sample_count(const MyShell::PhysicalDeviceProperties& props);
     void destroy_textures();
     void destroy_descriptor_and_pipeline_layouts();
     void create_pipeline_cache();

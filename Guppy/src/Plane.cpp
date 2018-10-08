@@ -20,10 +20,9 @@ void Plane::createIndices(std::vector<VB_INDEX_TYPE> &indices, bool doubleSided)
 // ColorPlane
 // **********************
 
-ColorPlane::ColorPlane(): ColorMesh() {
+ColorPlane::ColorPlane() : Plane(), ColorMesh() {
     createVertices();
     Plane::createIndices(indices_);
-    ready_ = true;
 }
 
 // ColorPlane::ColorPlane(float width, float height, bool doubleSided = false, glm::vec3 pos = glm::vec3(),
@@ -38,10 +37,9 @@ ColorPlane::ColorPlane(): ColorMesh() {
 //}
 
 void ColorPlane::createVertices(float width, float height) {
-    vertices_.resize(PLANE_VERTEX_SIZE);
     float l = (width / 2 * -1), r = (width / 2);
     float b = (height / 2 * -1), t = (height / 2);
-    addVertices({
+    vertices_ = {
         {
             // geom - bottom left
             {l, b, 0.0f},              //
@@ -66,17 +64,16 @@ void ColorPlane::createVertices(float width, float height) {
             {0.0f, 0.0f, 1.0f},        //
             {1.0f, 1.0f, 0.0f, 1.0f},  // yellow
         },                             //
-    });
+    };
 }
 
 // **********************
 // TexturePlane
 // **********************
 
-TexturePlane::TexturePlane(): TextureMesh("") {
+TexturePlane::TexturePlane() : TextureMesh("..\\..\\..\\images\\texture.jpg") {
     createVertices();
     Plane::createIndices(indices_);
-    ready_ = true;
 }
 
 // TexturePlane::TexturePlane(std::string texturePath) : TextureMesh(texturePath, "") {
@@ -96,10 +93,9 @@ TexturePlane::TexturePlane(): TextureMesh("") {
 //}
 
 void TexturePlane::createVertices(float width, float height) {
-    vertices_.resize(PLANE_VERTEX_SIZE);
     float l = (width / 2 * -1), r = (width / 2);
     float b = (height / 2 * -1), t = (height / 2);
-    addVertices({
+    vertices_ = {
         {
             // geom - bottom left
             {l, b, 0.0f},        //
@@ -124,5 +120,5 @@ void TexturePlane::createVertices(float width, float height) {
             {0.0f, 0.0f, 1.0f},  //
             {1.0f, 0.0f}         // tex - top right
         },                       //
-    });
+    };
 }

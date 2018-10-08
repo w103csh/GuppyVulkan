@@ -52,6 +52,7 @@ class Game {
         bool include_color;
         bool include_depth;
         bool enable_double_clicks;
+        bool enable_debug_markers;
     };
     const Settings &settings() const { return settings_; }
 
@@ -137,6 +138,7 @@ class Game {
         settings_.include_color = true;
         settings_.include_depth = true;
         settings_.enable_double_clicks = false;
+        settings_.enable_debug_markers = false;
 
         parse_args(args);
     }
@@ -166,6 +168,8 @@ class Game {
                 settings_.no_render = true;
             } else if (*it == "-np") {
                 settings_.no_present = true;
+            } else if (*it == "-dbgm") {
+                settings_.enable_debug_markers = true;
             }
         }
     }

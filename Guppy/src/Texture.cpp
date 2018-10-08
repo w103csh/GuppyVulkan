@@ -14,10 +14,14 @@ Texture::TextureData Texture::createTexture(const VkDevice& dev, const VkPhysica
                                             const VkCommandBuffer& trans_cmd, const std::string tex_path, bool generate_mipmaps,
                                             StagingBufferResource& stg_res) {
     TextureData tex = {};
+    tex.path = tex_path;
+    tex.name = helpers::getFileName(tex_path);
+
     createImage(dev, mem_props, trans_cmd, graph_cmd, queueFamilyIndices, tex_path, generate_mipmaps, tex, stg_res);
     createImageView(dev, tex);
     createSampler(dev, tex);
     createDescInfo(tex);
+
     return tex;
 }
 
@@ -36,7 +40,7 @@ void Texture::createImage(const VkDevice& dev, const VkPhysicalDeviceMemoryPrope
     tex.width = static_cast<uint32_t>(width);
     tex.height = static_cast<uint32_t>(height);
     tex.channels = static_cast<uint32_t>(channels);
-    tex.mipLevels = static_cast<uint32_t>(std::floor(std::log2(max(tex.width, tex.height)))) + 1;
+    tex.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(tex.width, tex.height)))) + 1;
 
     auto memReqsSize = helpers::create_buffer(dev, mem_props, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -97,6 +101,10 @@ void Texture::createSampler(const VkDevice& dev, TextureData& tex) {
     if (vkCreateSampler(dev, &samplerInfo, nullptr, &tex.sampler) != VK_SUCCESS) {
         throw std::runtime_error("failed to create texture sampler!");
     }
+
+    // Name some objects for debugging
+    ext::DebugMarkerSetObjectName(dev, (uint64_t)tex.sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT,
+                                  (tex.name + " sampler").c_str());
 }
 
 void Texture::createDescInfo(TextureData& tex) {

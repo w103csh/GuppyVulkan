@@ -16,10 +16,15 @@ Mesh::Mesh() : modelPath_(""), ready_(false) {}
 
 Mesh::Mesh(std::string modelPath) : modelPath_(modelPath), ready_(false) {}
 
-void Mesh::addVertex(ColorVertex&& v) { vertices_.push_back(v); }
-void Mesh::addVertex(TextureVertex&& v) { vertices_.push_back(v); }
-void Mesh::addVertices(std::vector<ColorVertex>&& vs) { vertices_.insert(vertices_.end(), vs.begin(), vs.end()); }
-void Mesh::addVertices(std::vector<TextureVertex>&& vs) { vertices_.insert(vertices_.end(), vs.begin(), vs.end()); }
+//void Mesh::addVertex(ColorVertex&& v) { vertices_.push_back(v); }
+//void Mesh::addVertex(TextureVertex&& v) { vertices_.push_back(v); }
+//void Mesh::addVertices(std::vector<ColorVertex>&& vs) {
+//    for (ColorVertex& v : vs)
+//        vertices_.push_back(v);
+//}
+//void Mesh::addVertices(std::vector<TextureVertex>&& vs) {
+//    for (TextureVertex& v : vs) vertices_.push_back(v);
+//}
 
 std::future<Mesh*> Mesh::load(const MyShell::Context& ctx, const CommandData& cmd_data) {
     const auto& mem_props = ctx.physical_dev_props[ctx.physical_dev_index].memory_properties;
@@ -96,7 +101,7 @@ void Mesh::loadModel(const VkDevice& dev, const VkPhysicalDeviceMemoryProperties
         // The vertex information was created elsewhere...
     }
 
-    assert(vertices_.size());
+    assert(getVertexCount());
 
     // Vertex buffer
     StagingBufferResource vertexStgRes = {};
@@ -189,14 +194,15 @@ void Mesh::loadSubmit(const MyShell::Context& ctx, const CommandData& cmd_data, 
     // Cleanup
     // **************************
 
+    // Wait for fences
+    vk::assert_success(vkWaitForFences(ctx.dev, static_cast<uint32_t>(fences.size()), fences.data(), VK_TRUE, UINT64_MAX));
+
     // Free stating resources
     for (auto& res : stgResources) {
         vkDestroyBuffer(ctx.dev, res.buffer, nullptr);
         vkFreeMemory(ctx.dev, res.memory, nullptr);
     }
-
-    // Wait for fences
-    vk::assert_success(vkWaitForFences(ctx.dev, static_cast<uint32_t>(fences.size()), fences.data(), VK_TRUE, UINT64_MAX));
+    stgResources.clear();
 
     // Free fences
     for (auto& fence : fences) vkDestroyFence(ctx.dev, fence, nullptr);
@@ -257,6 +263,10 @@ void Mesh::createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cm
 
     // COPY FROM STAGING TO FAST
     helpers::copy_buffer(cmd, stg_res.buffer, vertex_res_.buffer, memReqsSize);
+
+    // Name the buffers for debugging
+    ext::DebugMarkerSetObjectName(dev, (uint64_t)vertex_res_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                                     "Mesh vertex buffer");
 }
 
 void Mesh::createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, const VkPhysicalDeviceMemoryProperties& mem_props,
@@ -278,6 +288,10 @@ void Mesh::createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd
                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_res_.buffer, index_res_.memory);
 
         helpers::copy_buffer(cmd, stg_res.buffer, index_res_.buffer, memReqsSize);
+
+        // Name the buffers for debugging
+        ext::DebugMarkerSetObjectName(dev, (uint64_t)index_res_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                                         "Mesh index buffer");
     }
 }
 
@@ -317,8 +331,15 @@ void ColorMesh::draw(const VkCommandBuffer& cmd, const VkPipelineLayout& layout,
             vkCmdBindIndexBuffer(cmd, index_res_.buffer, 0,
                                  VK_INDEX_TYPE_UINT32  // TODO: Figure out how to make the type dynamic
             );
+
+            // Add debug marker for mesh name
+            ext::DebugMarkerInsert(cmd, "Draw (insert name here)", glm::vec4(0.0f));
+
             vkCmdDrawIndexed(cmd, getIndexSize(), 1, 0, 0, 0);
         } else {
+            // Add debug marker for mesh name
+            ext::DebugMarkerInsert(cmd, "Draw (insert name here)", glm::vec4(0.0f));
+
             vkCmdDraw(cmd,
                       getVertexCount(),  // vertexCount
                       1,                 // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
@@ -329,9 +350,9 @@ void ColorMesh::draw(const VkCommandBuffer& cmd, const VkPipelineLayout& layout,
     }
 }
 
-void ColorMesh::prepare(const MyShell::Context& ctx, const std::vector<VkDescriptorSetLayout>& layouts,
-                        const VkDescriptorPool& desc_pool, const VkDescriptorBufferInfo& ubo_info) {
-    update_descriptor_set(ctx, layouts, desc_pool, ubo_info);
+void ColorMesh::prepare(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout, const VkDescriptorPool& desc_pool,
+                        const VkDescriptorBufferInfo& ubo_info) {
+    update_descriptor_set(ctx, layout, desc_pool, ubo_info);
     ready_ = true;
 }
 
@@ -345,11 +366,11 @@ void ColorMesh::loadObj() {
         throw std::runtime_error(err);
     }
 
-    std::unordered_map<ColorVertex, uint32_t> uniqueVertices = {};
+    std::unordered_map<Vertex::Color, uint32_t> uniqueVertices = {};
 
     for (const auto& shape : shapes) {
         for (const auto& index : shape.mesh.indices) {
-            ColorVertex vertex = {};
+            Vertex::Color vertex = {};
 
             vertex.pos = {attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1],
                           attrib.vertices[3 * index.vertex_index + 2]};
@@ -359,7 +380,7 @@ void ColorMesh::loadObj() {
             if (uniqueVertices.count(vertex) == 0) {
                 uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
 
-                vertices_.push_back(vertex);
+                vertices_.push_back(std::move(vertex));
             }
 
             indices_.push_back(uniqueVertices[vertex]);
@@ -367,8 +388,10 @@ void ColorMesh::loadObj() {
     }
 }
 
-void ColorMesh::update_descriptor_set(const MyShell::Context& ctx, const std::vector<VkDescriptorSetLayout>& layouts,
+void ColorMesh::update_descriptor_set(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout,
                                       const VkDescriptorPool& desc_pool, const VkDescriptorBufferInfo& ubo_info) {
+    std::vector<VkDescriptorSetLayout> layouts(ctx.image_count, layout);
+
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.descriptorPool = desc_pool;
@@ -429,9 +452,9 @@ void TextureMesh::draw(const VkCommandBuffer& cmd, const VkPipelineLayout& layou
     }
 }
 
-void TextureMesh::prepare(const MyShell::Context& ctx, const std::vector<VkDescriptorSetLayout>& layouts,
-                          const VkDescriptorPool& desc_pool, const VkDescriptorBufferInfo& ubo_info) {
-    update_descriptor_set(ctx, layouts, desc_pool, ubo_info);
+void TextureMesh::prepare(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout, const VkDescriptorPool& desc_pool,
+                          const VkDescriptorBufferInfo& ubo_info) {
+    update_descriptor_set(ctx, layout, desc_pool, ubo_info);
     ready_ = true;
 }
 
@@ -445,11 +468,11 @@ void TextureMesh::loadObj() {
         throw std::runtime_error(err);
     }
 
-    std::unordered_map<TextureVertex, uint32_t> uniqueVertices = {};
+    std::unordered_map<Vertex::Texture, uint32_t> uniqueVertices = {};
 
     for (const auto& shape : shapes) {
         for (const auto& index : shape.mesh.indices) {
-            TextureVertex vertex = {};
+            Vertex::Texture vertex = {};
 
             vertex.pos = {attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1],
                           attrib.vertices[3 * index.vertex_index + 2]};
@@ -460,7 +483,7 @@ void TextureMesh::loadObj() {
             if (uniqueVertices.count(vertex) == 0) {
                 uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
 
-                vertices_.push_back(vertex);
+                vertices_.push_back(std::move(vertex));
             }
 
             indices_.push_back(uniqueVertices[vertex]);
@@ -468,8 +491,10 @@ void TextureMesh::loadObj() {
     }
 }
 
-void TextureMesh::update_descriptor_set(const MyShell::Context& ctx, const std::vector<VkDescriptorSetLayout>& layouts,
+void TextureMesh::update_descriptor_set(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout,
                                         const VkDescriptorPool& desc_pool, const VkDescriptorBufferInfo& ubo_info) {
+    std::vector<VkDescriptorSetLayout> layouts(ctx.image_count, layout);
+
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
     alloc_info.descriptorPool = desc_pool;

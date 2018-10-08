@@ -26,6 +26,7 @@ class Plane {
 // **********************
 
 class ColorPlane : public Plane, public ColorMesh {
+   public:
     ColorPlane();
 
    private:
@@ -37,6 +38,7 @@ class ColorPlane : public Plane, public ColorMesh {
 // **********************
 
 class TexturePlane : public Plane, public TextureMesh {
+   public:
     TexturePlane();
 
    private:

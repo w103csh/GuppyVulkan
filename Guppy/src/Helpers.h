@@ -3,11 +3,15 @@
 #define HELPERS_H
 
 #include <assert.h>
+#include <cstring>
 #include <limits>
 #include <sstream>
 #include <type_traits>
 #include <vector>
 #include <vulkan/vulkan.h>
+
+// This is here for convenience
+#include "Extensions.h"
 
 namespace vk {
 inline VkResult assert_success(VkResult res) {
@@ -20,6 +24,13 @@ inline VkResult assert_success(VkResult res) {
 }
 }  // namespace vk
 
+/*
+ * structure for comparing vulkan char arrays
+ */
+struct less_str {
+    bool operator()(char const *a, char const *b) const { return std::strcmp(a, b) < 0; }
+};
+
 namespace helpers {
 
 // Epsilon compare for floating point. Taken from here https://en.cppreference.com/w/cpp/types/numeric_limits/epsilon
@@ -30,6 +41,18 @@ typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type almost_
     return std::abs(x - y) <= std::numeric_limits<T>::epsilon() * std::abs(x + y) * ulp
            // unless the result is subnormal
            || std::abs(x - y) < (std::numeric_limits<T>::min)();
+}
+
+static std::string getFileName(std::string s) {
+    char sep = '/';
+#ifdef _WIN32
+    sep = '\\';
+#endif
+    size_t i = s.rfind(sep, s.length());
+    if (i != std::string::npos) {
+        return (s.substr(i + 1, s.length() - i));
+    }
+    return ("");
 }
 
 static bool has_stencil_component(VkFormat format) {
@@ -399,6 +422,18 @@ struct CommandData {
     std::vector<VkQueue> queues;
     std::vector<VkCommandPool> cmd_pools;
     std::vector<VkCommandBuffer> cmds;
+};
+
+struct FrameData {
+    // signaled when this struct is ready for reuse
+    VkFence fence;
+
+    VkCommandBuffer primary_cmd;
+    std::vector<VkCommandBuffer> worker_cmds;
+
+    VkBuffer buf;
+    uint8_t *base;
+    VkDescriptorSet desc_set;
 };
 
 #endif  // !HELPERS_H

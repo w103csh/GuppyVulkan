@@ -8,7 +8,7 @@ Scene::Scene(const MyShell::Context& ctx, const Game::Settings& settings, const 
              const VkDescriptorBufferInfo& ubo_info, const ShaderResources& vs, const ShaderResources& fs,
              const VkPipelineCache& cache)
     : desc_pool_(nullptr), pipeline_info_({}), layout_(nullptr), tex_count_(0) {
-    create_descriptor_set_layouts(ctx);
+    create_descriptor_set_layout(ctx);
     create_descriptor_pool(ctx);
     create_render_pass(ctx, settings);
     create_base_pipeline(ctx, settings, vs, fs, cache);
@@ -20,7 +20,7 @@ void Scene::addMesh(const MyShell::Context& ctx, const CommandData& cmd_data, co
     if (!pMesh->isReady()) {
         loading_futures_.emplace_back(pMesh->load(ctx, cmd_data));
     } else {
-        pMesh->prepare(ctx, desc_set_layouts_, desc_pool_, ubo_info);
+        pMesh->prepare(ctx, desc_set_layout_, desc_pool_, ubo_info);
     }
     meshes_.push_back(std::move(pMesh));
 }
@@ -41,19 +41,19 @@ bool Scene::update(const MyShell::Context& ctx, const Game::Settings& settings, 
         auto status = fut.wait_for(std::chrono::seconds(0));
         if (status == std::future_status::ready) {
             auto pMesh = fut.get();
-            pMesh->prepare(ctx, desc_set_layouts_, desc_pool_, ubo_info);
+            pMesh->prepare(ctx, desc_set_layout_, desc_pool_, ubo_info);
             it = loading_futures_.erase(it);
         } else
             ++it;
     }
 
     //// Check if texture count has changed... This results in having to recreate the descriptors/pipelines.
-    //uint32_t tex_count = 0;
-    //for (auto& pMesh : meshes_)
+    // uint32_t tex_count = 0;
+    // for (auto& pMesh : meshes_)
     //    if (pMesh->hasTexture()) tex_count++;
 
     //// Create or re-create descriptor layout/pool, and pipelines
-    //if (tex_count != tex_count) {
+    // if (tex_count != tex_count) {
     //    bool destroy = desc_set_layouts_.size() > 0;
 
     //    // Descriptors
@@ -75,91 +75,119 @@ bool Scene::update(const MyShell::Context& ctx, const Game::Settings& settings, 
 }
 
 // TODO: make cmd amount dynamic
-const VkCommandBuffer& Scene::getDrawCmds(const uint32_t& frame_data_index) { return draw_cmds_[frame_data_index]; }
-
-void Scene::recordDrawCmds(const MyShell::Context& ctx, std::vector<VkFramebuffer>& framebuffers, const VkViewport& viewport,
-                           const VkRect2D& scissor) {
-    for (size_t i = 0; i < draw_cmds_.size(); i++) {
-        // RESET BUFFER
-        vkResetCommandBuffer(draw_cmds_[i], 0);
-
-        // RECORD BUFFER
-        VkCommandBufferBeginInfo begin_info = {};
-        begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-        begin_info.pInheritanceInfo = nullptr;  // Optional
-
-        vk::assert_success(vkBeginCommandBuffer(draw_cmds_[i], &begin_info));
-
-        for (auto& render_pass : render_passes_) {
-            VkRenderPassBeginInfo render_pass_info = {};
-            render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            render_pass_info.renderPass = render_pass;
-            render_pass_info.framebuffer = framebuffers[i];
-            render_pass_info.renderArea.offset = {0, 0};
-            render_pass_info.renderArea.extent = ctx.extent;
-
-            /*  Need to pad this here because:
-
-                In vkCmdBeginRenderPass() the VkRenderPassBeginInfo struct has a clearValueCount
-                of 2 but there must be at least 3 entries in pClearValues array to account for the
-                highest index attachment in renderPass 0x2f that uses VK_ATTACHMENT_LOAD_OP_CLEAR
-                is 3. Note that the pClearValues array is indexed by attachment number so even if
-                some pClearValues entries between 0 and 2 correspond to attachments that aren't
-                cleared they will be ignored. The spec valid usage text states 'clearValueCount
-                must be greater than the largest attachment index in renderPass that specifies a
-                loadOp (or stencilLoadOp, if the attachment has a depth/stencil format) of
-                VK_ATTACHMENT_LOAD_OP_CLEAR'
-                (https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#VUID-VkRenderPassBeginInfo-clearValueCount-00902)
-            */
-            std::array<VkClearValue, 3> clearValues = {};
-            // clearValuues[0] = final layout is in this spot; // pad this spot
-            clearValues[1].color = CLEAR_VALUE;
-            clearValues[2].depthStencil = {1.0f, 0};
-
-            render_pass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
-            render_pass_info.pClearValues = clearValues.data();
-
-            vkCmdBeginRenderPass(draw_cmds_[i], &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
-
-            vkCmdSetViewport(draw_cmds_[i], 0, 1, &viewport);
-            vkCmdSetScissor(draw_cmds_[i], 0, 1, &scissor);
-
-            for (auto& pMesh : meshes_) {
-                auto& pipeline = pipelines_[static_cast<int>(PIPELINE_TYPE::BASE)];
-                pMesh->draw(draw_cmds_[i], layout_, pipeline, i);
-                // switch (pMesh->vertexType()) {
-                //    case VERTEX_TYPE::COLOR: {
-                //        // pipeline = &pipelines_[static_cast<int>(PIPELINE_TYPE::POLY)];
-                //        pipeline = &pipelines_[static_cast<int>(PIPELINE_TYPE::BASE)];
-                //        auto& pCMesh = reinterpret_cast<std::unique_ptr<Mesh<ColorVertex>>&>(pMesh);
-                //        pCMesh->draw(draw_cmds_[i], layout_, *pipeline, i);
-                //    } break;
-                //    case VERTEX_TYPE::TEXTURE: {
-                //        pipeline = &pipelines_[static_cast<int>(PIPELINE_TYPE::LINE)];
-                //        auto& pTMesh = reinterpret_cast<std::unique_ptr<Mesh<TextureVertex>>&>(pMesh);
-                //        pTMesh->draw(draw_cmds_[i], layout_, *pipeline, i);
-                //    } break;
-                //}
-            }
-
-            vkCmdEndRenderPass(draw_cmds_[i]);
-        }
-
-        vk::assert_success(vkEndCommandBuffer(draw_cmds_[i]));
-    }
+const VkCommandBuffer& Scene::getDrawCmds(const uint32_t& frame_data_index) {
+    auto& res = draw_resources_[frame_data_index];
+    if (res.thread.joinable()) res.thread.join();
+    return res.cmd;
 }
 
 void Scene::create_draw_cmds(const MyShell::Context& ctx, const CommandData& cmd_data) {
-    draw_cmds_.resize(ctx.image_count);
+    draw_resources_.resize(ctx.image_count);
 
     VkCommandBufferAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     alloc_info.commandPool = cmd_data.cmd_pools[cmd_data.graphics_queue_family];
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    alloc_info.commandBufferCount = static_cast<uint32_t>(draw_cmds_.size());
+    alloc_info.commandBufferCount = 1;
 
-    vk::assert_success(vkAllocateCommandBuffers(ctx.dev, &alloc_info, draw_cmds_.data()));
+    for (auto& res : draw_resources_) {
+        vk::assert_success(vkAllocateCommandBuffers(ctx.dev, &alloc_info, &res.cmd));
+    }
+}
+
+void Scene::recordDrawCmds(const MyShell::Context& ctx, const std::vector<FrameData>& frame_data,
+                           const std::vector<VkFramebuffer>& framebuffers, const VkViewport& viewport, const VkRect2D& scissor) {
+    for (size_t i = 0; i < draw_resources_.size(); i++) {
+        if (vkGetFenceStatus(ctx.dev, frame_data[i].fence) == VK_SUCCESS) {
+            // sync
+            record(ctx, draw_resources_[i].cmd, framebuffers[i], frame_data[i].fence, viewport, scissor, i);
+        } else {
+            // asnyc TODO: Can't update current draw until its done.. This isn't great. It can be revisted later.
+            draw_resources_[i].thread = std::thread(&Scene::record, this, ctx, draw_resources_[i].cmd, framebuffers[i],
+                                                    frame_data[i].fence, viewport, scissor, i);
+        }
+    }
+}
+
+void Scene::record(const MyShell::Context& ctx, const VkCommandBuffer& cmd, const VkFramebuffer& framebuffer, const VkFence& fence,
+                   const VkViewport& viewport, const VkRect2D& scissor, size_t index) {
+    // Wait for fences
+    vk::assert_success(vkWaitForFences(ctx.dev, 1, &fence, VK_TRUE, UINT64_MAX));
+
+    // Reset buffer
+    vkResetCommandBuffer(cmd, 0);
+
+    // Record
+    VkCommandBufferBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    begin_info.pInheritanceInfo = nullptr;  // Optional
+
+    vk::assert_success(vkBeginCommandBuffer(cmd, &begin_info));
+
+    for (auto& render_pass : render_passes_) {
+        VkRenderPassBeginInfo render_pass_info = {};
+        render_pass_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+        render_pass_info.renderPass = render_pass;
+        render_pass_info.framebuffer = framebuffer;
+        render_pass_info.renderArea.offset = {0, 0};
+        render_pass_info.renderArea.extent = ctx.extent;
+
+        /*  Need to pad this here because:
+
+            In vkCmdBeginRenderPass() the VkRenderPassBeginInfo struct has a clearValueCount
+            of 2 but there must be at least 3 entries in pClearValues array to account for the
+            highest index attachment in renderPass 0x2f that uses VK_ATTACHMENT_LOAD_OP_CLEAR
+            is 3. Note that the pClearValues array is indexed by attachment number so even if
+            some pClearValues entries between 0 and 2 correspond to attachments that aren't
+            cleared they will be ignored. The spec valid usage text states 'clearValueCount
+            must be greater than the largest attachment index in renderPass that specifies a
+            loadOp (or stencilLoadOp, if the attachment has a depth/stencil format) of
+            VK_ATTACHMENT_LOAD_OP_CLEAR'
+            (https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#VUID-VkRenderPassBeginInfo-clearValueCount-00902)
+        */
+        std::array<VkClearValue, 3> clearValues = {};
+        // clearValuues[0] = final layout is in this spot; // pad this spot
+        clearValues[1].color = CLEAR_VALUE;
+        clearValues[2].depthStencil = {1.0f, 0};
+
+        render_pass_info.clearValueCount = static_cast<uint32_t>(clearValues.size());
+        render_pass_info.pClearValues = clearValues.data();
+
+        // Start a new debug marker region
+        ext::DebugMarkerBegin(cmd, "Render x scene", glm::vec4(0.5f, 0.76f, 0.34f, 1.0f));
+
+        vkCmdBeginRenderPass(cmd, &render_pass_info, VK_SUBPASS_CONTENTS_INLINE);
+
+        vkCmdSetViewport(cmd, 0, 1, &viewport);
+        vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+        for (auto& pMesh : meshes_) {
+            auto& pipeline = pipelines_[static_cast<int>(PIPELINE_TYPE::BASE)];
+            pMesh->draw(cmd, layout_, pipeline, index);
+            // switch (pMesh->vertexType()) {
+            //    case VERTEX_TYPE::COLOR: {
+            //        // pipeline = &pipelines_[static_cast<int>(PIPELINE_TYPE::POLY)];
+            //        pipeline = &pipelines_[static_cast<int>(PIPELINE_TYPE::BASE)];
+            //        auto& pCMesh = reinterpret_cast<std::unique_ptr<Mesh<ColorVertex>>&>(pMesh);
+            //        pCMesh->draw(cmd, layout_, *pipeline, i);
+            //    } break;
+            //    case VERTEX_TYPE::TEXTURE: {
+            //        pipeline = &pipelines_[static_cast<int>(PIPELINE_TYPE::LINE)];
+            //        auto& pTMesh = reinterpret_cast<std::unique_ptr<Mesh<TextureVertex>>&>(pMesh);
+            //        pTMesh->draw(cmd, layout_, *pipeline, i);
+            //    } break;
+            //}
+        }
+
+        vkCmdEndRenderPass(cmd);
+
+        // End current debug marker region
+        ext::DebugMarkerEnd(cmd);
+
+    }
+
+    vk::assert_success(vkEndCommandBuffer(cmd));
 }
 
 // Depends on:
@@ -169,7 +197,7 @@ void Scene::create_draw_cmds(const MyShell::Context& ctx, const CommandData& cmd
 //      Possibly make the set layout creation optional based on state of scene
 //      Shader bindings
 //      Make binding count dynamic
-void Scene::create_descriptor_set_layouts(const MyShell::Context& ctx) {
+void Scene::create_descriptor_set_layout(const MyShell::Context& ctx) {
     // if (use_push_constants_) return;
 
     // UNIFORM BUFFER
@@ -193,17 +221,18 @@ void Scene::create_descriptor_set_layouts(const MyShell::Context& ctx) {
     // LAYOUT
     VkDescriptorSetLayoutCreateInfo layout_info = {};
     layout_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-    layout_info.pNext = nullptr;
-    layout_info.flags = 0;
     uint32_t bindingCount = static_cast<uint32_t>(layout_bindings.size());
     layout_info.bindingCount = bindingCount;
     layout_info.pBindings = bindingCount > 0 ? layout_bindings.data() : nullptr;
 
-    // TODO: are all these layouts necessary?
-    desc_set_layouts_.resize(ctx.image_count);
-    for (auto& layout : desc_set_layouts_) {
-        vk::assert_success(vkCreateDescriptorSetLayout(ctx.dev, &layout_info, nullptr, &layout));
-    }
+    //// TODO: are all these layouts necessary?
+    //desc_set_layouts_.resize(ctx.image_count);
+    //for (auto& layout : desc_set_layouts_) {
+        vk::assert_success(vkCreateDescriptorSetLayout(ctx.dev, &layout_info, nullptr, &desc_set_layout_));
+    //}
+
+    // Name for debugging
+    ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)desc_set_layout_, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, "base descriptor set layout");
 }
 
 // Depends on:
@@ -213,26 +242,34 @@ void Scene::create_descriptor_set_layouts(const MyShell::Context& ctx) {
 //      Possibly make the pool creation optional based on state of scene
 //      Make uniform buffer optional
 void Scene::create_descriptor_pool(const MyShell::Context& ctx) {
-    // 1 for uniform buffer
-    uint32_t descCount = 1 + tex_count_;
-    std::vector<VkDescriptorPoolSize> pool_sizes(descCount);
+    //// 1 for uniform buffer
+    //uint32_t descCount = 1 + tex_count_;
+    //std::vector<VkDescriptorPoolSize> pool_sizes(descCount);
 
-    // Uniform buffer
-    // TODO: look at dynamic ubo's (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
-    pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    pool_sizes[0].descriptorCount = 1;
+    //// Uniform buffer
+    //// TODO: look at dynamic ubo's (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
+    //pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    //pool_sizes[0].descriptorCount = 1;
 
-    // Texture samplers
-    for (uint32_t i = 1; i < tex_count_; i++) {
-        pool_sizes[i].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        pool_sizes[i].descriptorCount = 1;
-    }
+    //// Texture samplers
+    //for (uint32_t i = 1; i < tex_count_; i++) {
+    //    pool_sizes[i].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    //    pool_sizes[i].descriptorCount = 1;
+    //}
+
+    std::array<VkDescriptorPoolSize, 2> poolSizes = {};
+    poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSizes[0].descriptorCount = ctx.image_count;
+    poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSizes[1].descriptorCount = ctx.image_count;
 
     VkDescriptorPoolCreateInfo desc_pool_info = {};
     desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     desc_pool_info.maxSets = ctx.image_count;
-    desc_pool_info.poolSizeCount = descCount;
-    desc_pool_info.pPoolSizes = descCount > 0 ? pool_sizes.data() : nullptr;
+    desc_pool_info.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    //desc_pool_info.poolSizeCount = descCount;
+    desc_pool_info.pPoolSizes = poolSizes.data();
+    //desc_pool_info.pPoolSizes = descCount > 0 ? pool_sizes.data() : nullptr;
 
     vk::assert_success(vkCreateDescriptorPool(ctx.dev, &desc_pool_info, nullptr, &desc_pool_));
 }
@@ -333,25 +370,25 @@ void Scene::create_render_pass(const MyShell::Context& ctx, const Game::Settings
     std::vector<VkSubpassDependency> dependencies;
     VkSubpassDependency dependency = {};
 
-    // TODO: used for waiting in draw (figure this out... what is the VK_SUBPASS_EXTERNAL one?)
-    dependency = {};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependencies.push_back(dependency);
+    //// TODO: used for waiting in draw (figure this out... what is the VK_SUBPASS_EXTERNAL one?)
+    //dependency = {};
+    //dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    //dependency.dstSubpass = 0;
+    //dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    //dependency.srcAccessMask = 0;
+    //dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    //dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    //dependencies.push_back(dependency);
 
-    //// TODO: fix this...
-    // dependency = {};
-    // dependency.srcSubpass = 0;
-    // dependency.dstSubpass = 1;
-    // dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-    // dependency.srcAccessMask = 0;
-    // dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-    // dependency.dstAccessMask = 0;
-    // dependencies.push_back(dependency);
+    // TODO: fix this...
+     //dependency = {};
+     //dependency.srcSubpass = 0;
+     //dependency.dstSubpass = 1;
+     //dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+     //dependency.srcAccessMask = 0;
+     //dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+     //dependency.dstAccessMask = 0;
+     //dependencies.push_back(dependency);
 
     VkRenderPassCreateInfo rp_info = {};
     rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -393,12 +430,17 @@ void Scene::create_pipeline_layout(const VkDevice& dev, VkPipelineLayout& layout
     //    pipeline_layout_info.pushConstantRangeCount = 1;
     //    pipeline_layout_info.pPushConstantRanges = &push_const_range;
     //} else {
-    uint32_t setLayoutCount = static_cast<uint32_t>(desc_set_layouts_.size());
-    pipeline_layout_info.setLayoutCount = setLayoutCount;
-    pipeline_layout_info.pSetLayouts = setLayoutCount > 0 ? desc_set_layouts_.data() : nullptr;
+    //uint32_t setLayoutCount = static_cast<uint32_t>(desc_set_layout_.size());
+    //pipeline_layout_info.setLayoutCount = setLayoutCount;
+    //pipeline_layout_info.pSetLayouts = setLayoutCount > 0 ? desc_set_layout_.data() : nullptr;
+    pipeline_layout_info.setLayoutCount = 1;
+    pipeline_layout_info.pSetLayouts = &desc_set_layout_;
     //}
 
     vk::assert_success(vkCreatePipelineLayout(dev, &pipeline_layout_info, nullptr, &layout));
+
+    // Name for debugging
+    ext::DebugMarkerSetObjectName(dev, (uint64_t)layout, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, "Base pipeline layout");
 }
 
 void Scene::destroy_pipeline_layouts(const VkDevice& dev) { vkDestroyPipelineLayout(dev, layout_, nullptr); }
@@ -441,11 +483,11 @@ void Scene::create_base_pipeline(const MyShell::Context& ctx, const Game::Settin
     vertex_info.pNext = nullptr;
     vertex_info.flags = 0;
     // bindings
-    auto bindingDescription = ColorVertex::getBindingDescription();
+    auto bindingDescription = Vertex::getTextureBindingDescription();
     vertex_info.vertexBindingDescriptionCount = 1;
     vertex_info.pVertexBindingDescriptions = &bindingDescription;
     // attributes
-    auto attributeDescriptions = ColorVertex::getAttributeDescriptions();
+    auto attributeDescriptions = Vertex::getTextureAttributeDescriptions();
     vertex_info.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
     vertex_info.pVertexAttributeDescriptions = attributeDescriptions.data();
 
@@ -616,6 +658,16 @@ void Scene::create_base_pipeline(const MyShell::Context& ctx, const Game::Settin
     pipeline_info_.subpass = 0;
 
     vk::assert_success(vkCreateGraphicsPipelines(ctx.dev, cache, 1, &pipeline_info_, nullptr, &base_pipeline()));
+
+    // Name shader moduels for debugging
+    // Shader module count starts at 2 when UI overlay in base class is enabled
+    //uint32_t moduleIndex = settings.overlay ? 2 : 0;
+    uint32_t moduleIndex = false ? 2 : 0;
+    ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)vs.module, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, "vs_");
+    ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)fs.module, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, "fs_");
+
+    // Name pipelines for debugging
+    ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)base_pipeline(), VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, "Base pipeline");
 }
 
 void Scene::create_pipelines(const VkDevice& dev, const Game::Settings& settings, const ShaderResources& vs,
@@ -657,8 +709,9 @@ void Scene::create_pipelines(const VkDevice& dev, const Game::Settings& settings
 }
 
 void Scene::destroy_descriptor_set_layouts(const VkDevice& dev) {
-    for (auto& layout : desc_set_layouts_) vkDestroyDescriptorSetLayout(dev, layout, nullptr);
-    desc_set_layouts_.clear();
+    //for (auto& layout : desc_set_layout_) vkDestroyDescriptorSetLayout(dev, layout, nullptr);
+    //desc_set_layout_.clear();
+    vkDestroyDescriptorSetLayout(dev, desc_set_layout_, nullptr);
 }
 
 void Scene::destroy_descriptor_pool(const VkDevice& dev) { vkDestroyDescriptorPool(dev, desc_pool_, nullptr); }
@@ -680,8 +733,11 @@ void Scene::destroy_render_passes(const VkDevice& dev) {
 }
 
 void Scene::destroy_cmds(const VkDevice& dev, const CommandData& cmd_data) {
-    vkFreeCommandBuffers(dev, cmd_data.cmd_pools[cmd_data.graphics_queue_family], static_cast<uint32_t>(draw_cmds_.size()),
-                         draw_cmds_.data());
+    for (auto& res : draw_resources_) {
+        if (res.thread.joinable()) res.thread.join();
+        vkFreeCommandBuffers(dev, cmd_data.cmd_pools[cmd_data.graphics_queue_family], 1, &res.cmd);
+    }
+    draw_resources_.clear();
 }
 
 void Scene::destroy(const VkDevice& dev, const CommandData& cmd_data) {
