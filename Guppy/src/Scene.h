@@ -16,11 +16,11 @@
 class Scene {
    public:
     Scene() = delete;
-    Scene(const MyShell::Context &ctx, const Game::Settings &settings, const CommandData &cmd_data,
+    Scene(const MyShell::Context &ctx, const Game::Settings &settings,
           const VkDescriptorBufferInfo &ubo_info, const ShaderResources &vs, const ShaderResources &fs,
           const VkPipelineCache &cache);
 
-    void addMesh(const MyShell::Context &ctx, const CommandData &cmd_data, const VkDescriptorBufferInfo &ubo_info,
+    void addMesh(const MyShell::Context &ctx, const VkDescriptorBufferInfo &ubo_info,
                  std::unique_ptr<Mesh> pMesh);
 
     void removeMesh(Mesh *mesh);
@@ -44,7 +44,7 @@ class Scene {
         // return std::count_if(meshes_.begin(), meshes_.end(), [](auto &mesh) { return mesh->isReady(); });
     }
 
-    void destroy(const VkDevice &dev, const CommandData &cmd_data);
+    void destroy(const VkDevice &dev);
 
    private:
     // Just the two types for now...
@@ -82,8 +82,8 @@ class Scene {
     std::vector<VkRenderPass> render_passes_;
 
     // Draw commands
-    void create_draw_cmds(const MyShell::Context &ctx, const CommandData &cmd_data);
-    void destroy_cmds(const VkDevice &dev, const CommandData &cmd_data);
+    void create_draw_cmds(const MyShell::Context &ctx);
+    void destroy_cmds(const VkDevice &dev);
     void record(const MyShell::Context &ctx, const VkCommandBuffer &cmd, const VkFramebuffer &framebuffer, const VkFence &fence,
                 const VkViewport &viewport, const VkRect2D &scissor, size_t index);
     struct DrawResources {
@@ -91,15 +91,6 @@ class Scene {
         VkCommandBuffer cmd;
     };
     std::vector<DrawResources> draw_resources_;
-
-    void test(const MyShell::Context &ctx
-              ,const VkCommandBuffer &cmd
-              ,const VkFramebuffer &framebuffer
-              ,const VkFence &fence
-              ,const VkViewport &viewport
-              ,const VkRect2D &scissor
-              , size_t index
-    );
 
     uint32_t tex_count_;
     std::vector<std::future<Mesh *>> loading_futures_;

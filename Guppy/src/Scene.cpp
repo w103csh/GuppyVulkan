@@ -1,24 +1,23 @@
 
 #include <type_traits>
 
+#include "CmdBufResources.h"
 #include "Scene.h"
 #include "Vertex.h"
 
-Scene::Scene(const MyShell::Context& ctx, const Game::Settings& settings, const CommandData& cmd_data,
-             const VkDescriptorBufferInfo& ubo_info, const ShaderResources& vs, const ShaderResources& fs,
-             const VkPipelineCache& cache)
+Scene::Scene(const MyShell::Context& ctx, const Game::Settings& settings, const VkDescriptorBufferInfo& ubo_info,
+             const ShaderResources& vs, const ShaderResources& fs, const VkPipelineCache& cache)
     : desc_pool_(nullptr), pipeline_info_({}), layout_(nullptr), tex_count_(0) {
     create_descriptor_set_layout(ctx);
     create_descriptor_pool(ctx);
     create_render_pass(ctx, settings);
     create_base_pipeline(ctx, settings, vs, fs, cache);
-    create_draw_cmds(ctx, cmd_data);
+    create_draw_cmds(ctx);
 }
 
-void Scene::addMesh(const MyShell::Context& ctx, const CommandData& cmd_data, const VkDescriptorBufferInfo& ubo_info,
-                    std::unique_ptr<Mesh> pMesh) {
+void Scene::addMesh(const MyShell::Context& ctx, const VkDescriptorBufferInfo& ubo_info, std::unique_ptr<Mesh> pMesh) {
     if (!pMesh->isReady()) {
-        loading_futures_.emplace_back(pMesh->load(ctx, cmd_data));
+        loading_futures_.emplace_back(pMesh->load(ctx));
     } else {
         pMesh->prepare(ctx, desc_set_layout_, desc_pool_, ubo_info);
     }
@@ -81,12 +80,12 @@ const VkCommandBuffer& Scene::getDrawCmds(const uint32_t& frame_data_index) {
     return res.cmd;
 }
 
-void Scene::create_draw_cmds(const MyShell::Context& ctx, const CommandData& cmd_data) {
+void Scene::create_draw_cmds(const MyShell::Context& ctx) {
     draw_resources_.resize(ctx.image_count);
 
     VkCommandBufferAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.commandPool = cmd_data.cmd_pools[cmd_data.graphics_queue_family];
+    alloc_info.commandPool = CmdBufResources::graphics_cmd_pool();
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     alloc_info.commandBufferCount = 1;
 
@@ -184,7 +183,6 @@ void Scene::record(const MyShell::Context& ctx, const VkCommandBuffer& cmd, cons
 
         // End current debug marker region
         ext::DebugMarkerEnd(cmd);
-
     }
 
     vk::assert_success(vkEndCommandBuffer(cmd));
@@ -226,13 +224,14 @@ void Scene::create_descriptor_set_layout(const MyShell::Context& ctx) {
     layout_info.pBindings = bindingCount > 0 ? layout_bindings.data() : nullptr;
 
     //// TODO: are all these layouts necessary?
-    //desc_set_layouts_.resize(ctx.image_count);
-    //for (auto& layout : desc_set_layouts_) {
-        vk::assert_success(vkCreateDescriptorSetLayout(ctx.dev, &layout_info, nullptr, &desc_set_layout_));
+    // desc_set_layouts_.resize(ctx.image_count);
+    // for (auto& layout : desc_set_layouts_) {
+    vk::assert_success(vkCreateDescriptorSetLayout(ctx.dev, &layout_info, nullptr, &desc_set_layout_));
     //}
 
     // Name for debugging
-    ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)desc_set_layout_, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, "base descriptor set layout");
+    ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)desc_set_layout_, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
+                                  "base descriptor set layout");
 }
 
 // Depends on:
@@ -243,16 +242,16 @@ void Scene::create_descriptor_set_layout(const MyShell::Context& ctx) {
 //      Make uniform buffer optional
 void Scene::create_descriptor_pool(const MyShell::Context& ctx) {
     //// 1 for uniform buffer
-    //uint32_t descCount = 1 + tex_count_;
-    //std::vector<VkDescriptorPoolSize> pool_sizes(descCount);
+    // uint32_t descCount = 1 + tex_count_;
+    // std::vector<VkDescriptorPoolSize> pool_sizes(descCount);
 
     //// Uniform buffer
     //// TODO: look at dynamic ubo's (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
-    //pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    //pool_sizes[0].descriptorCount = 1;
+    // pool_sizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    // pool_sizes[0].descriptorCount = 1;
 
     //// Texture samplers
-    //for (uint32_t i = 1; i < tex_count_; i++) {
+    // for (uint32_t i = 1; i < tex_count_; i++) {
     //    pool_sizes[i].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     //    pool_sizes[i].descriptorCount = 1;
     //}
@@ -267,9 +266,9 @@ void Scene::create_descriptor_pool(const MyShell::Context& ctx) {
     desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     desc_pool_info.maxSets = ctx.image_count;
     desc_pool_info.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    //desc_pool_info.poolSizeCount = descCount;
+    // desc_pool_info.poolSizeCount = descCount;
     desc_pool_info.pPoolSizes = poolSizes.data();
-    //desc_pool_info.pPoolSizes = descCount > 0 ? pool_sizes.data() : nullptr;
+    // desc_pool_info.pPoolSizes = descCount > 0 ? pool_sizes.data() : nullptr;
 
     vk::assert_success(vkCreateDescriptorPool(ctx.dev, &desc_pool_info, nullptr, &desc_pool_));
 }
@@ -371,24 +370,24 @@ void Scene::create_render_pass(const MyShell::Context& ctx, const Game::Settings
     VkSubpassDependency dependency = {};
 
     //// TODO: used for waiting in draw (figure this out... what is the VK_SUBPASS_EXTERNAL one?)
-    //dependency = {};
-    //dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    //dependency.dstSubpass = 0;
-    //dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    //dependency.srcAccessMask = 0;
-    //dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    //dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    //dependencies.push_back(dependency);
+    // dependency = {};
+    // dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+    // dependency.dstSubpass = 0;
+    // dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    // dependency.srcAccessMask = 0;
+    // dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    // dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    // dependencies.push_back(dependency);
 
     // TODO: fix this...
-     //dependency = {};
-     //dependency.srcSubpass = 0;
-     //dependency.dstSubpass = 1;
-     //dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-     //dependency.srcAccessMask = 0;
-     //dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-     //dependency.dstAccessMask = 0;
-     //dependencies.push_back(dependency);
+    // dependency = {};
+    // dependency.srcSubpass = 0;
+    // dependency.dstSubpass = 1;
+    // dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    // dependency.srcAccessMask = 0;
+    // dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    // dependency.dstAccessMask = 0;
+    // dependencies.push_back(dependency);
 
     VkRenderPassCreateInfo rp_info = {};
     rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -430,9 +429,9 @@ void Scene::create_pipeline_layout(const VkDevice& dev, VkPipelineLayout& layout
     //    pipeline_layout_info.pushConstantRangeCount = 1;
     //    pipeline_layout_info.pPushConstantRanges = &push_const_range;
     //} else {
-    //uint32_t setLayoutCount = static_cast<uint32_t>(desc_set_layout_.size());
-    //pipeline_layout_info.setLayoutCount = setLayoutCount;
-    //pipeline_layout_info.pSetLayouts = setLayoutCount > 0 ? desc_set_layout_.data() : nullptr;
+    // uint32_t setLayoutCount = static_cast<uint32_t>(desc_set_layout_.size());
+    // pipeline_layout_info.setLayoutCount = setLayoutCount;
+    // pipeline_layout_info.pSetLayouts = setLayoutCount > 0 ? desc_set_layout_.data() : nullptr;
     pipeline_layout_info.setLayoutCount = 1;
     pipeline_layout_info.pSetLayouts = &desc_set_layout_;
     //}
@@ -661,7 +660,7 @@ void Scene::create_base_pipeline(const MyShell::Context& ctx, const Game::Settin
 
     // Name shader moduels for debugging
     // Shader module count starts at 2 when UI overlay in base class is enabled
-    //uint32_t moduleIndex = settings.overlay ? 2 : 0;
+    // uint32_t moduleIndex = settings.overlay ? 2 : 0;
     uint32_t moduleIndex = false ? 2 : 0;
     ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)vs.module, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, "vs_");
     ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)fs.module, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, "fs_");
@@ -709,8 +708,8 @@ void Scene::create_pipelines(const VkDevice& dev, const Game::Settings& settings
 }
 
 void Scene::destroy_descriptor_set_layouts(const VkDevice& dev) {
-    //for (auto& layout : desc_set_layout_) vkDestroyDescriptorSetLayout(dev, layout, nullptr);
-    //desc_set_layout_.clear();
+    // for (auto& layout : desc_set_layout_) vkDestroyDescriptorSetLayout(dev, layout, nullptr);
+    // desc_set_layout_.clear();
     vkDestroyDescriptorSetLayout(dev, desc_set_layout_, nullptr);
 }
 
@@ -732,15 +731,15 @@ void Scene::destroy_render_passes(const VkDevice& dev) {
     for (auto& pass : render_passes_) vkDestroyRenderPass(dev, pass, nullptr);
 }
 
-void Scene::destroy_cmds(const VkDevice& dev, const CommandData& cmd_data) {
+void Scene::destroy_cmds(const VkDevice& dev) {
     for (auto& res : draw_resources_) {
         if (res.thread.joinable()) res.thread.join();
-        vkFreeCommandBuffers(dev, cmd_data.cmd_pools[cmd_data.graphics_queue_family], 1, &res.cmd);
+        vkFreeCommandBuffers(dev, CmdBufResources::graphics_cmd_pool(), 1, &res.cmd);
     }
     draw_resources_.clear();
 }
 
-void Scene::destroy(const VkDevice& dev, const CommandData& cmd_data) {
+void Scene::destroy(const VkDevice& dev) {
     // mesh
     for (auto& pMesh : meshes_) pMesh->destroy(dev);
     // descriptor
@@ -752,5 +751,5 @@ void Scene::destroy(const VkDevice& dev, const CommandData& cmd_data) {
     // render pass
     destroy_render_passes(dev);
     // commands
-    destroy_cmds(dev, cmd_data);
+    destroy_cmds(dev);
 }

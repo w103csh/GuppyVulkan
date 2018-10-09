@@ -4,6 +4,8 @@ set(SOURCE
     Box.h
     Camera.cpp
     Camera.h
+	CmdBufResources.cpp
+	CmdBufResources.h
     CMakeLists.txt
     Constants.h
     EventHandlers.h

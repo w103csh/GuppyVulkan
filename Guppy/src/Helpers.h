@@ -6,12 +6,17 @@
 #include <cstring>
 #include <limits>
 #include <sstream>
+#define TINYOBJLOADER_IMPLEMENTATION
+#include <tiny_obj_loader.h>
 #include <type_traits>
 #include <vector>
 #include <vulkan/vulkan.h>
 
 // This is here for convenience
 #include "Extensions.h"
+#include "Vertex.h"
+
+enum class MODEL_FILE_TYPE { UNKNOWN = 0, OBJ };
 
 namespace vk {
 inline VkResult assert_success(VkResult res) {
@@ -53,6 +58,25 @@ static std::string getFileName(std::string s) {
         return (s.substr(i + 1, s.length() - i));
     }
     return ("");
+}
+
+static std::string getFileExt(std::string s) {
+    char sep = '.';
+    s = getFileName(s);
+    size_t i = s.rfind(sep, s.length());
+    if (i != std::string::npos) {
+        return (s.substr(i + 1, s.length() - i));
+    }
+    return ("");
+}
+
+static MODEL_FILE_TYPE getModelFileType(std::string s) {
+    s = getFileName(s);
+    s = getFileExt(s);
+    if (s == "obj" || s == "OBJ") {
+        return MODEL_FILE_TYPE::OBJ;
+    }
+    return MODEL_FILE_TYPE::UNKNOWN;
 }
 
 static bool has_stencil_component(VkFormat format) {
@@ -98,18 +122,6 @@ static bool memory_type_from_properties(const VkPhysicalDeviceMemoryProperties &
     // No memory types matched, return failure
     return false;
 }
-
-static void execute_begin_command_buffer(const VkCommandBuffer &cmd) {
-    VkCommandBufferBeginInfo cmd_buf_info = {};
-    cmd_buf_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cmd_buf_info.pNext = NULL;
-    cmd_buf_info.flags = 0;
-    cmd_buf_info.pInheritanceInfo = NULL;
-
-    vk::assert_success(vkBeginCommandBuffer(cmd, &cmd_buf_info));
-}
-
-static void execute_end_command_buffer(const VkCommandBuffer &cmd) { vk::assert_success(vkEndCommandBuffer(cmd)); }
 
 static VkDeviceSize create_buffer(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &mem_props, const VkDeviceSize &size,
                                   const VkBufferUsageFlags &usage, const VkMemoryPropertyFlags &props, VkBuffer &buf,
@@ -402,26 +414,6 @@ struct UniformBufferResources {
 struct BufferResource {
     VkBuffer buffer;
     VkDeviceMemory memory;
-};
-
-// struct VertexResource {
-//    VkBuffer buffer;
-//    VkDeviceMemory memory;
-//};
-//
-// struct IndexResource {
-//    VkBuffer buffer;
-//    VkDeviceMemory memory;
-//};
-
-struct CommandData {
-    VkPhysicalDeviceMemoryProperties mem_props;
-    uint32_t graphics_queue_family;
-    uint32_t present_queue_family;
-    uint32_t transfer_queue_family;
-    std::vector<VkQueue> queues;
-    std::vector<VkCommandPool> cmd_pools;
-    std::vector<VkCommandBuffer> cmds;
 };
 
 struct FrameData {

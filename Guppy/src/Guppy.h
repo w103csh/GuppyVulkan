@@ -3,7 +3,6 @@
 #define GUPPY_H
 
 #include <vector>
-#include <set>
 
 #include "Camera.h"
 #include "Game.h"
@@ -110,29 +109,6 @@ class Guppy : public Game {
     ImageResource depth_resource_;
     UniformBufferResources ubo_resource_;
 
-    CommandData cmd_data_;
-    // cmd_data_ accessors
-    // queues
-    inline VkQueue& graphics_queue() { return cmd_data_.queues[cmd_data_.graphics_queue_family]; }
-    inline VkQueue& present_queue() { return cmd_data_.queues[cmd_data_.present_queue_family]; }
-    inline VkQueue& transfer_queue() { return cmd_data_.queues[cmd_data_.transfer_queue_family]; }
-    // cmd_pool
-    inline VkCommandPool& graphics_cmd_pool() { return cmd_data_.cmd_pools[cmd_data_.graphics_queue_family]; }
-    inline VkCommandPool& present_cmd_pool() { return cmd_data_.cmd_pools[cmd_data_.present_queue_family]; }
-    inline VkCommandPool& transfer_cmd_pool() { return cmd_data_.cmd_pools[cmd_data_.transfer_queue_family]; }
-    // cmd
-    inline VkCommandBuffer& graphics_cmd() { return cmd_data_.cmds[cmd_data_.graphics_queue_family]; }
-    inline VkCommandBuffer& present_cmd() { return cmd_data_.cmds[cmd_data_.present_queue_family]; }
-    inline VkCommandBuffer& transfer_cmd() { return cmd_data_.cmds[cmd_data_.transfer_queue_family]; }
-    // unique
-    inline std::set<uint32_t> get_unique_queue_families() {
-        return std::set<uint32_t>{
-            cmd_data_.graphics_queue_family,
-            cmd_data_.present_queue_family,
-            cmd_data_.transfer_queue_family,
-        };
-    }
-
     // Scene
     int active_scene_index_;
     inline const std::unique_ptr<Scene>& active_scene() const { return scenes_[active_scene_index_]; }
@@ -163,7 +139,6 @@ class Guppy : public Game {
     void destroy_pipelines();
 
     // called by attach_shell
-    void create_command_pools_and_buffers();
     void create_descriptor_pool(bool use_texture = true);
     void create_uniform_buffer();
 
@@ -173,8 +148,6 @@ class Guppy : public Game {
     void create_depth_resources();
 
     // nothing
-    void destroy_command_pools();
-    void destroy_command_buffers();
     void destroy_color_resources();
     void destroy_depth_resources();
     void destroy_ubo_resources();

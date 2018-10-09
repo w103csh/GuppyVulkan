@@ -1,6 +1,7 @@
 
 #include <algorithm>
 
+#include "CmdBufResources.h"
 #include "Constants.h"
 #include "EventHandlers.h"
 #include "Extensions.h"
@@ -69,42 +70,25 @@ void Guppy::attach_shell(MyShell& sh) {
     // * Data from MyShell
     swapchain_image_count_ = ctx.image_count;
     depth_resource_.format = ctx.depth_format;
-    cmd_data_.graphics_queue_family = ctx.graphics_index;
-    cmd_data_.present_queue_family = ctx.present_index;
-    cmd_data_.transfer_queue_family = ctx.transfer_index;
-    cmd_data_.queues = ctx.queues;
-    cmd_data_.mem_props = ctx.physical_dev_props[ctx.physical_dev_index].memory_properties;
     physical_dev_props_ = ctx.physical_dev_props[ctx.physical_dev_index].properties;
+    CmdBufResources::init(ctx);
 
     if (use_push_constants_ && sizeof(ShaderParamBlock) > physical_dev_props_.limits.maxPushConstantsSize) {
         shell_->log(MyShell::LOG_WARN, "cannot enable push constants");
         use_push_constants_ = false;
     }
 
-    mem_flags_.reserve(cmd_data_.mem_props.memoryTypeCount);
-    for (uint32_t i = 0; i < cmd_data_.mem_props.memoryTypeCount; i++)
-        mem_flags_.push_back(cmd_data_.mem_props.memoryTypes[i].propertyFlags);
+    mem_flags_.reserve(CmdBufResources::mem_props().memoryTypeCount);
+    for (uint32_t i = 0; i < CmdBufResources::mem_props().memoryTypeCount; i++)
+        mem_flags_.push_back(CmdBufResources::mem_props().memoryTypes[i].propertyFlags);
 
     // meshes_ = new Meshes(dev_, mem_flags_);
-
-    // Not sure how wise something like this is.
-    create_command_pools_and_buffers();
-    // begin recording commands?
-    for (auto& cmd : cmd_data_.cmds) helpers::execute_begin_command_buffer(cmd);
 
     create_uniform_buffer();
     create_shader_modules();
     create_pipeline_cache();
 
     create_scenes();
-    // create_input_assembly_data();
-
-    // create_render_pass(settings_.include_color, settings_.include_depth);
-    // create_descriptor_set_layout();
-    // create_descriptor_pool();
-    // create_descriptor_sets();
-    // create_pipeline_layout();
-    // create_pipelines();
 
     // render_pass_begin_info_.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     // render_pass_begin_info_.renderPass = render_pass_;
@@ -144,7 +128,7 @@ void Guppy::detach_shell() {
 
     // *** NEW
 
-    for (auto& scene : scenes_) scene->destroy(dev_, cmd_data_);
+    for (auto& scene : scenes_) scene->destroy(dev_);
 
     // destroy_pipelines();
     destroy_pipeline_cache();
@@ -158,8 +142,7 @@ void Guppy::detach_shell() {
     // destroy_input_assembly_data();
     // destroy_textures();
 
-    destroy_command_pools();
-    destroy_command_buffers();
+    CmdBufResources::destroy();
 
     // TODO: these singletons should use shared_ptr???
     // StagingBufferHandler::get().cleanup();
@@ -577,10 +560,11 @@ void Guppy::create_uniform_buffer() {
         dev_, cmd_data_.mem_props, buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ubo_resource_.buffer, ubo_resource_.memory);
 
-    ext::DebugMarkerSetObjectName(dev_, (uint64_t)ubo_resource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "Scene uniform buffer block");
+    ext::DebugMarkerSetObjectName(dev_, (uint64_t)ubo_resource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                                  "Scene uniform buffer block");
     // Add some random tag
-    ext::DebugMarkerSetObjectTag(dev_, (uint64_t)ubo_resource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag), &demoTag);
-
+    ext::DebugMarkerSetObjectTag(dev_, (uint64_t)ubo_resource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag),
+                                 &demoTag);
 
     copy_ubo_to_memory();
 }
@@ -969,44 +953,6 @@ void Guppy::destroy_frame_data() {
     destroy_depth_resources();
 }
 
-void Guppy::create_command_pools_and_buffers() {
-    auto uniq = get_unique_queue_families();
-
-    cmd_data_.cmd_pools.resize(uniq.size());
-    cmd_data_.cmds.resize(uniq.size());
-
-    for (const auto& index : uniq) {
-        // POOLS
-        VkCommandPoolCreateInfo cmd_pool_info = {};
-        cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        cmd_pool_info.queueFamilyIndex = index;
-        cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-        vk::assert_success(vkCreateCommandPool(dev_, &cmd_pool_info, nullptr, &cmd_data_.cmd_pools[index]));
-
-        // BUFFERS
-        VkCommandBufferAllocateInfo cmd = {};
-        cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        cmd.pNext = nullptr;
-        cmd.commandPool = cmd_data_.cmd_pools[index];
-        cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        cmd.commandBufferCount = 1;
-
-        vk::assert_success(vkAllocateCommandBuffers(dev_, &cmd, &cmd_data_.cmds[index]));
-    };
-}
-
-void Guppy::destroy_command_pools() {
-    for (auto& cmd_pool : cmd_data_.cmd_pools) vkDestroyCommandPool(dev_, cmd_pool, nullptr);
-    cmd_data_.cmd_pools.clear();
-}
-
-void Guppy::destroy_command_buffers() {
-    for (size_t i = 0; i < cmd_data_.cmd_pools.size(); i++)
-        vkFreeCommandBuffers(dev_, cmd_data_.cmd_pools[i], 1, &cmd_data_.cmds[i]);
-    cmd_data_.cmd_pools.clear();
-}
-
 // TODO: See if using context directly simplifies the signatures here...
 void Guppy::create_color_resources() {
     std::vector<uint32_t> queueFamilyIndices = {cmd_data_.graphics_queue_family};
@@ -1025,9 +971,9 @@ void Guppy::create_color_resources() {
                                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
-
     // Name some objects for debugging
-    ext::DebugMarkerSetObjectName(dev_, (uint64_t)color_resource_.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "Guppy color framebuffer");
+    ext::DebugMarkerSetObjectName(dev_, (uint64_t)color_resource_.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                  "Guppy color framebuffer");
 }
 
 void Guppy::destroy_color_resources() {
@@ -1073,7 +1019,8 @@ void Guppy::create_depth_resources() {
                                      VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
 
     // Name some objects for debugging
-    ext::DebugMarkerSetObjectName(dev_, (uint64_t)depth_resource_.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT, "Guppy depth framebuffer");
+    ext::DebugMarkerSetObjectName(dev_, (uint64_t)depth_resource_.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                  "Guppy depth framebuffer");
 }
 
 void Guppy::destroy_depth_resources() {
