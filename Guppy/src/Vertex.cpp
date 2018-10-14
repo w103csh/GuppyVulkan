@@ -1,17 +1,19 @@
 
+#include <vector>
+
 #include "Vertex.h"
 
-VkVertexInputBindingDescription Vertex::getColorBindingDescription() {
+VkVertexInputBindingDescription Vertex::getColorBindDesc() {
     VkVertexInputBindingDescription bindingDescription = {};
     bindingDescription.binding = 0;
     bindingDescription.stride = sizeof(Vertex::Color);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    return bindingDescription;
+    return std::move(bindingDescription);
 }
 
-std::array<VkVertexInputAttributeDescription, 3> Vertex::getColorAttributeDescriptions() {
-    std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
+std::vector<VkVertexInputAttributeDescription> Vertex::getColorAttrDesc() {
+    std::vector<VkVertexInputAttributeDescription> attributeDescriptions(3);
 
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
@@ -31,7 +33,7 @@ std::array<VkVertexInputAttributeDescription, 3> Vertex::getColorAttributeDescri
     return attributeDescriptions;
 }
 
-VkVertexInputBindingDescription Vertex::getTextureBindingDescription() {
+VkVertexInputBindingDescription Vertex::getTexBindDesc() {
     VkVertexInputBindingDescription bindingDescription = {};
     bindingDescription.binding = 0;
     bindingDescription.stride = sizeof(Vertex::Texture);
@@ -40,8 +42,8 @@ VkVertexInputBindingDescription Vertex::getTextureBindingDescription() {
     return bindingDescription;
 }
 
-std::array<VkVertexInputAttributeDescription, 3> Vertex::getTextureAttributeDescriptions() {
-    std::array<VkVertexInputAttributeDescription, 3> attributeDescriptions = {};
+std::vector<VkVertexInputAttributeDescription> Vertex::getTexAttrDesc() {
+    std::vector<VkVertexInputAttributeDescription> attributeDescriptions(3);
 
     attributeDescriptions[0].binding = 0;
     attributeDescriptions[0].location = 0;
@@ -59,4 +61,17 @@ std::array<VkVertexInputAttributeDescription, 3> Vertex::getTextureAttributeDesc
     attributeDescriptions[2].offset = offsetof(Vertex::Texture, texCoord);
 
     return attributeDescriptions;
+}
+
+std::string Vertex::getTypeName(TYPE type) {
+    std::string name;
+    switch (type) {
+        case Vertex::TYPE::COLOR:
+            name = "COLOR";
+            break;
+        case Vertex::TYPE::TEXTURE:
+            name = "TEXTURE";
+            break;
+    }
+    return name;
 }

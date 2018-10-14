@@ -28,6 +28,11 @@
 
 class Game;
 
+// structure for comparing vulkan char arrays
+struct less_str {
+    bool operator()(char const *a, char const *b) const { return std::strcmp(a, b) < 0; }
+};
+
 class MyShell {
    public:
     MyShell(const MyShell &sh) = delete;
@@ -76,6 +81,7 @@ class MyShell {
         VkPhysicalDevice physical_dev;
         std::vector<PhysicalDeviceProperties> physical_dev_props;  // *
         uint32_t physical_dev_index;                               // *
+        VkPhysicalDeviceMemoryProperties mem_props;                // *
         std::vector<VkQueue> queues;                               // *
         uint32_t graphics_index;                                   // *
         uint32_t present_index;                                    // *

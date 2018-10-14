@@ -85,7 +85,6 @@ class Guppy : public Game {
     // called by attach_shell
     void create_render_pass(bool include_depth, bool include_color, bool clear = true,
                             VkImageLayout finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    void create_shader_modules();
     void create_descriptor_set_layout(const VkDescriptorSetLayoutCreateFlags descSetLayoutCreateFlags = 0);
     void create_pipeline_layout();
     void create_pipelines();
@@ -126,20 +125,13 @@ class Guppy : public Game {
     std::vector<VkDescriptorSet> desc_sets_;
     std::vector<Texture::TextureData> textures_;
 
-    // void copyBuffer(VkCommandBuffer& cmd, const VkBuffer& src_buf, const VkBuffer& dst_buf, const VkDeviceSize& size);
-    void create_input_assembly_data();
-    void create_vertex_data(StagingBufferResource& stg_res);
-    void create_index_data(StagingBufferResource& stg_res);
-
     void create_draw_cmds();
     void destroy_textures();
     void destroy_descriptor_and_pipeline_layouts();
-    void create_pipeline_cache();
     void destroy_pipeline_cache();
     void destroy_pipelines();
 
     // called by attach_shell
-    void create_descriptor_pool(bool use_texture = true);
     void create_uniform_buffer();
 
     // called by attach_swapchain
@@ -151,11 +143,9 @@ class Guppy : public Game {
     void destroy_color_resources();
     void destroy_depth_resources();
     void destroy_ubo_resources();
-    void destroy_descriptor_pool();
     void destroy_shader_modules();
     void destroy_render_pass();
     void destroy_uniform_buffer();
-    void destroy_input_assembly_data();
     void update_ubo();
     void copy_ubo_to_memory();
 };

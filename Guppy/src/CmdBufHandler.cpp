@@ -68,12 +68,14 @@ std::vector<uint32_t> CmdBufHandler::getUniqueQueueFamilies(bool graphics, bool 
     return fams;
 }
 
-void CmdBufHandler::beginCmd(const VkCommandBuffer& cmd) {
+void CmdBufHandler::beginCmd(const VkCommandBuffer& cmd, const VkCommandBufferInheritanceInfo* inheritanceInfo) {
     VkCommandBufferBeginInfo cmd_info = {};
     cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     cmd_info.pNext = nullptr;
-    cmd_info.flags = 0;
-    cmd_info.pInheritanceInfo = nullptr;
+    cmd_info.flags = inheritanceInfo == nullptr
+                         ? 0
+                         : VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+    cmd_info.pInheritanceInfo = inheritanceInfo;
     vk::assert_success(vkBeginCommandBuffer(cmd, &cmd_info));
 }
 

@@ -17,6 +17,7 @@
 #ifndef GAME_H
 #define GAME_H
 
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -28,7 +29,7 @@ class Game {
     Game &operator=(const Game &game) = delete;
     virtual ~Game() {}
 
-    struct Settings {
+    struct Settings : std::enable_shared_from_this<Settings> {
         std::string name;
         int initial_width;
         int initial_height;
@@ -46,13 +47,14 @@ class Game {
         bool no_present;
 
         // *
-        bool try_sampler_anisotropy; // TODO: Not sure what this does
+        bool try_sampler_anisotropy;  // TODO: Not sure what this does
         bool try_sample_rate_shading;
         bool enable_sample_shading;
         bool include_color;
         bool include_depth;
         bool enable_double_clicks;
         bool enable_debug_markers;
+        const std::shared_ptr<const Settings> getPtr() const { return shared_from_this(); }
     };
     const Settings &settings() const { return settings_; }
 

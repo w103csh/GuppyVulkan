@@ -275,11 +275,11 @@ void MyShell::create_dev() {
     dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     dev_info.queueCreateInfoCount = static_cast<uint32_t>(queue_infos.size());
     dev_info.pQueueCreateInfos = queue_infos.data();
-    if (true) {
+    if (settings_.enable_debug_markers) {
         device_extensions_.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
         dev_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions_.size());
         dev_info.ppEnabledExtensionNames = device_extensions_.data();
-        instance_extensions_.pop_back();
+        device_extensions_.pop_back();  // TODO: add this to assert check instead of removing
     } else {
         dev_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions_.size());
         dev_info.ppEnabledExtensionNames = device_extensions_.data();
@@ -726,6 +726,10 @@ void MyShell::pick_physical_dev() {
             // We found a suitable physical device so set relevant data.
             ctx_.physical_dev_index = i;
             ctx_.physical_dev = props.device;
+
+            // convenience variables ...
+            ctx_.mem_props = ctx_.physical_dev_props[ctx_.physical_dev_index].memory_properties;
+
             break;
         }
     }
@@ -936,7 +940,6 @@ void MyShell::determine_swapchain_image_count() {
 
 void MyShell::determine_api_version(uint32_t &version) {
     version = VK_API_VERSION_1_0;
-    return;
     // Android build not at 1.1 yet
 #ifndef ANDROID
     // Keep track of the major/minor version we can actually use

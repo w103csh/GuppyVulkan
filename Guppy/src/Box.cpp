@@ -5,9 +5,9 @@
 //
 //#include "Vertex.h"
 //
-//class Box
+// class Box
 //{
-//public:
+// public:
 //    static VkVertexInputBindingDescription getBindingDescription();
 //    static std::array<VkVertexInputAttributeDescription, 3> getAttributeDescriptions();
 //

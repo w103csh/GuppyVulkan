@@ -9,7 +9,7 @@
 #include "Constants.h"
 #include "MyShell.h"
 #include "Helpers.h"
-#include "StagingBufferHandler.h"
+#include "PipelineHandler.h"
 #include "Texture.h"
 
 // **********************
@@ -20,13 +20,22 @@ class Mesh {
    public:
     Mesh();
     Mesh(std::string modelPath);
+    /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTR OF THIS CLASS.
+        IF THIS IS REMOVED THE DESCTRUCTOR HERE WILL BE CALLED INSTEAD OF THE DERIVED DESCTRUCTOR.
+        IT MIGHT JUST BE EASIER/SMARTER TO GET RID OF POLYMORPHISM AND DROP THE POINTERS. */
+    virtual ~Mesh() = default;
 
-    inline bool isReady() { return status_ == STATUS::READY;  }
+    inline Vertex::TYPE getVertexType() { return vertexType_; }
+    inline PipelineHandler::TOPOLOGY getTopologyType() { return topoType_; }
+    inline std::string getMarkerName() { return markerName_; }
+    inline bool isReady() { return status_ == STATUS::READY; }
+
+    void setSceneData(const MyShell::Context& ctx, size_t offset);
     virtual std::future<Mesh*> load(const MyShell::Context& ctx);
-    virtual void prepare(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout, const VkDescriptorPool& desc_pool,
-                         const VkDescriptorBufferInfo& ubo_info) = 0;
-    virtual void draw(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                      uint32_t index) const = 0;
+    virtual void prepare(const MyShell::Context& ctx, const VkDescriptorBufferInfo& ubo_info, DescriptorResources& desc_res);
+    virtual const VkCommandBuffer& draw(const VkDevice& dev, const VkPipelineLayout& layout, const VkPipeline& pipeline,
+                                        const VkDescriptorSet& descSet, size_t frameIndex,
+                                        const VkCommandBufferInheritanceInfo& inheritanceInfo) const = 0;
     virtual void destroy(const VkDevice& dev);
 
    protected:
@@ -34,9 +43,9 @@ class Mesh {
 
     virtual void loadObj() = 0;
     virtual Mesh* async_load(const MyShell::Context& ctx, VkCommandBuffer graphicsCmd, VkCommandBuffer transferCmd) = 0;
-    void loadModel(const VkDevice& dev, const VkCommandBuffer& transferCmd, std::vector<StagingBufferResource>& stgResources);
+    void loadModel(const VkDevice& dev, const VkCommandBuffer& transferCmd, std::vector<BufferResource>& stgResources);
     void loadSubmit(const MyShell::Context& ctx, const VkCommandBuffer& graphicsCmd, const VkCommandBuffer& transferCmd,
-                    std::vector<StagingBufferResource>& stgResources);
+                    std::vector<BufferResource>& stgResources);
 
     virtual inline const void* getVertexData() const = 0;
     virtual inline uint32_t getVertexCount() const = 0;
@@ -49,19 +58,21 @@ class Mesh {
         return p_bufferSize;
     }
 
+    Vertex::TYPE vertexType_;
+    PipelineHandler::TOPOLOGY topoType_;
     STATUS status_;
     std::string modelPath_;
+    std::string markerName_;
     std::vector<VB_INDEX_TYPE> indices_;
     std::vector<VkDescriptorSet> desc_sets_;
     BufferResource vertex_res_;
     BufferResource index_res_;
+    size_t offset_;
+    std::vector<VkCommandBuffer> cmds_;
 
    private:
-    void createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, StagingBufferResource& stg_res);
-    void createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, StagingBufferResource& stg_res);
-
-    virtual void Mesh::update_descriptor_set(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout,
-                                             const VkDescriptorPool& desc_pool, const VkDescriptorBufferInfo& ubo_info) = 0;
+    void createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res);
+    void createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res);
 };
 
 // **********************
@@ -70,12 +81,11 @@ class Mesh {
 
 class ColorMesh : public Mesh {
    public:
-    ColorMesh() : Mesh(){};
+    ColorMesh();
 
-    void draw(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-              uint32_t index) const override;
-    void prepare(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout, const VkDescriptorPool& desc_pool,
-                 const VkDescriptorBufferInfo& ubo_info) override;
+    const VkCommandBuffer& draw(const VkDevice& dev, const VkPipelineLayout& layout, const VkPipeline& pipeline,
+                                const VkDescriptorSet& descSet, size_t frameIndex,
+                                const VkCommandBufferInheritanceInfo& inheritanceInfo) const override;
 
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
     inline uint32_t getVertexCount() const { return vertices_.size(); }
@@ -85,10 +95,8 @@ class ColorMesh : public Mesh {
     }
 
    protected:
-    void loadObj() override;
-    void update_descriptor_set(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout, const VkDescriptorPool& desc_pool,
-                               const VkDescriptorBufferInfo& ubo_info) override;
     Mesh* async_load(const MyShell::Context& ctx, VkCommandBuffer graphicsCmd, VkCommandBuffer transferCmd) override;
+    void loadObj() override;
 
     std::vector<Vertex::Color> vertices_;
 
@@ -103,10 +111,10 @@ class TextureMesh : public Mesh {
    public:
     TextureMesh(std::string texturePath);
 
-    void draw(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-              uint32_t index) const override;
-    void prepare(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout, const VkDescriptorPool& desc_pool,
-                 const VkDescriptorBufferInfo& ubo_info) override;
+    void prepare(const MyShell::Context& ctx, const VkDescriptorBufferInfo& ubo_info, DescriptorResources& desc_res);
+    const VkCommandBuffer& draw(const VkDevice& dev, const VkPipelineLayout& layout, const VkPipeline& pipeline,
+                                const VkDescriptorSet& descSet, size_t frameIndex,
+                                const VkCommandBufferInheritanceInfo& inheritanceInfo) const override;
     void destroy(const VkDevice& dev) override;
 
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
@@ -116,20 +124,24 @@ class TextureMesh : public Mesh {
         return p_bufferSize;
     }
 
+    void draw2(const VkDevice& dev, const VkCommandBuffer& pCmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
+               size_t frameIndex, const VkCommandBufferInheritanceInfo& inheritanceInfo,
+               const VkViewport& viewport, const VkRect2D& scissor) const;
+
    protected:
     Mesh* async_load(const MyShell::Context& ctx, VkCommandBuffer graphicsCmd, VkCommandBuffer transferCmd) override;
+    void createDescriptorSets(const MyShell::Context& ctx, const VkDescriptorBufferInfo& ubo_info,
+                                DescriptorResources& desc_res);
     void loadObj() override;
     void loadTexture(const MyShell::Context& ctx, const VkCommandBuffer& graphicsCmd, const VkCommandBuffer& transferCmd,
-                     std::vector<StagingBufferResource>& stgResources);
-
-    void update_descriptor_set(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout, const VkDescriptorPool& desc_pool,
-                               const VkDescriptorBufferInfo& ubo_info) override;
+                     std::vector<BufferResource>& stgResources);
 
     std::vector<Vertex::Texture> vertices_;
 
    private:
     std::string texturePath_;
     Texture::TextureData texture_;
+    std::vector<VkDescriptorSet> descSets_;  // these cannot be shared unfortunately... at least I can't see how
 };
 
 #endif  // !MESH_H

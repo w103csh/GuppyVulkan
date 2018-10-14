@@ -59,8 +59,8 @@ class ShellWin32 : public MyShell {
     HMODULE hmodule_;
 
     bool minimized_;
-    //std::mutex mtx_;
-    //std::condition_variable pause_;
+    // std::mutex mtx_;
+    // std::condition_variable pause_;
 };
 
 #endif  // SHELL_WIN32_H

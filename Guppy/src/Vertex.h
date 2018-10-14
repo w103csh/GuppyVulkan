@@ -6,37 +6,43 @@
 #include <glm/glm.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
+#include <vector>
 #include <vulkan/vulkan.h>
 
 namespace Vertex {
 
+enum class TYPE { COLOR = 0, TEXTURE };
+
 struct Base {
-    Base() : pos({}), normal({}) {};
-    Base(glm::vec3 p, glm::vec3 n) : pos(p), normal(n) {};
+    Base() : pos({}), normal({}){};
+    Base(glm::vec3 p, glm::vec3 n) : pos(p), normal(n){};
     bool operator==(const Base& other) const { return pos == other.pos && normal == other.normal; }
     glm::vec3 pos;
     glm::vec3 normal;
 };
 
 struct Color : Base {
-    Color() : Base(), color({}) {};
-    Color(glm::vec3 p, glm::vec3 n, glm::vec4 c) : Base(p, n), color(c) {};
+    Color() : Base(), color({}){};
+    Color(glm::vec3 p, glm::vec3 n, glm::vec4 c) : Base(p, n), color(c){};
     bool operator==(const Color& other) const { return pos == other.pos && normal == other.normal && color == other.color; }
     glm::vec4 color;
 };
 
 struct Texture : Base {
-    Texture() : Base(), texCoord({}) {};
-    Texture(glm::vec3 p, glm::vec3 n, glm::vec2 t) : Base(p, n), texCoord(t) {};
+    Texture() : Base(), texCoord({}){};
+    Texture(glm::vec3 p, glm::vec3 n, glm::vec2 t) : Base(p, n), texCoord(t){};
     bool operator==(const Texture& other) const { return pos == other.pos && normal == other.normal && texCoord == other.texCoord; }
     glm::vec2 texCoord;
 };
 
-VkVertexInputBindingDescription getColorBindingDescription();
-std::array<VkVertexInputAttributeDescription, 3> getColorAttributeDescriptions();
+// color
+VkVertexInputBindingDescription getColorBindDesc();
+std::vector<VkVertexInputAttributeDescription> getColorAttrDesc();
+// texture
+VkVertexInputBindingDescription getTexBindDesc();
+std::vector<VkVertexInputAttributeDescription> getTexAttrDesc();
 
-VkVertexInputBindingDescription getTextureBindingDescription();
-std::array<VkVertexInputAttributeDescription, 3> getTextureAttributeDescriptions();
+std::string getTypeName(TYPE type);
 
 }  // namespace Vertex
 

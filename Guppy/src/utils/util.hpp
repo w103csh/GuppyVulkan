@@ -98,13 +98,13 @@
 //#define U_ASSERT_ONLY
 //#endif
 //
-//std::string get_base_data_dir();
-//std::string get_data_dir(std::string filename);
+// std::string get_base_data_dir();
+// std::string get_data_dir(std::string filename);
 //
 ///*
 // * structure to track all objects related to a texture.
 // */
-//struct texture_object {
+// struct texture_object {
 //    VkSampler sampler;
 //
 //    VkImage image;
@@ -119,7 +119,7 @@
 // * Keep each of our swap chain buffers' image, command buffer and view in one
 // * spot
 // */
-//typedef struct _swap_chain_buffers {
+// typedef struct _swap_chain_buffers {
 //    VkImage image;
 //    VkImageView view;
 //} swap_chain_buffer;
@@ -128,7 +128,7 @@
 // * A layer can expose extensions, keep track of those
 // * extensions here.
 // */
-//typedef struct {
+// typedef struct {
 //    VkLayerProperties properties;
 //    std::vector<VkExtensionProperties> instance_extensions;
 //    std::vector<VkExtensionProperties> device_extensions;
@@ -138,7 +138,7 @@
 // * Structure for tracking information used / created / modified
 // * by utility functions.
 // */
-//struct sample_info {
+// struct sample_info {
 //#ifdef _WIN32
 //#define APP_NAME_STR_LEN 80
 //    HINSTANCE connection;         // hInstance - Windows Instance
@@ -254,27 +254,27 @@
 //    VkViewport viewport;
 //    VkRect2D scissor;
 //};
-//void process_command_line_args(struct sample_info &info, int argc, char *argv[]);
-//bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex);
+// void process_command_line_args(struct sample_info &info, int argc, char *argv[]);
+// bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex);
 //
-//void set_image_layout(struct sample_info &demo, VkImage image, VkImageAspectFlags aspectMask, VkImageLayout old_image_layout,
+// void set_image_layout(struct sample_info &demo, VkImage image, VkImageAspectFlags aspectMask, VkImageLayout old_image_layout,
 //                      VkImageLayout new_image_layout, VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages);
 //
-//bool read_ppm(char const *const filename, int &width, int &height, uint64_t rowPitch, unsigned char *dataPtr);
-//void write_ppm(struct sample_info &info, const char *basename);
-//void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch);
+// bool read_ppm(char const *const filename, int &width, int &height, uint64_t rowPitch, unsigned char *dataPtr);
+// void write_ppm(struct sample_info &info, const char *basename);
+// void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch);
 bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spirv);
 void init_glslang();
 void finalize_glslang();
-//void wait_seconds(int seconds);
-//void print_UUID(uint8_t *pipelineCacheUUID);
-//std::string get_file_directory();
+// void wait_seconds(int seconds);
+// void print_UUID(uint8_t *pipelineCacheUUID);
+// std::string get_file_directory();
 //
-//typedef unsigned long long timestamp_t;
-//timestamp_t get_milliseconds();
+// typedef unsigned long long timestamp_t;
+// timestamp_t get_milliseconds();
 //
 //// Main entry point of samples
-//int sample_main(int argc, char *argv[]);
+// int sample_main(int argc, char *argv[]);
 //
 //#ifdef __ANDROID__
 //// Android specific definitions & helpers.
@@ -283,11 +283,11 @@ void finalize_glslang();
 //// Replace printf to logcat output.
 //#define printf(...) __android_log_print(ANDROID_LOG_DEBUG, "VK-SAMPLE", __VA_ARGS__);
 //
-//bool Android_process_command();
-//ANativeWindow *AndroidGetApplicationWindow();
-//FILE *AndroidFopen(const char *fname, const char *mode);
-//void AndroidGetWindowSize(int32_t *width, int32_t *height);
-//bool AndroidLoadFile(const char *filePath, std::string *data);
+// bool Android_process_command();
+// ANativeWindow *AndroidGetApplicationWindow();
+// FILE *AndroidFopen(const char *fname, const char *mode);
+// void AndroidGetWindowSize(int32_t *width, int32_t *height);
+// bool AndroidLoadFile(const char *filePath, std::string *data);
 //
 //#ifndef VK_API_VERSION_1_0
 //// On Android, NDK would include slightly older version of headers that is missing the definition.
@@ -296,4 +296,4 @@ void finalize_glslang();
 //
 //#endif
 
-#endif // !UTIL_H
+#endif  // !UTIL_H

@@ -1,7 +1,7 @@
 
 #include <algorithm>
 
-#include "CmdBufResources.h"
+#include "CmdBufHandler.h"
 #include "Constants.h"
 #include "EventHandlers.h"
 #include "Extensions.h"
@@ -9,6 +9,7 @@
 #include "Guppy.h"
 #include "Helpers.h"
 #include "InputHandler.h"
+#include "PipelineHandler.h"
 #include "Plane.h"
 
 namespace {
@@ -71,22 +72,21 @@ void Guppy::attach_shell(MyShell& sh) {
     swapchain_image_count_ = ctx.image_count;
     depth_resource_.format = ctx.depth_format;
     physical_dev_props_ = ctx.physical_dev_props[ctx.physical_dev_index].properties;
-    CmdBufResources::init(ctx);
+    CmdBufHandler::init(ctx);
 
     if (use_push_constants_ && sizeof(ShaderParamBlock) > physical_dev_props_.limits.maxPushConstantsSize) {
         shell_->log(MyShell::LOG_WARN, "cannot enable push constants");
         use_push_constants_ = false;
     }
 
-    mem_flags_.reserve(CmdBufResources::mem_props().memoryTypeCount);
-    for (uint32_t i = 0; i < CmdBufResources::mem_props().memoryTypeCount; i++)
-        mem_flags_.push_back(CmdBufResources::mem_props().memoryTypes[i].propertyFlags);
+    mem_flags_.reserve(CmdBufHandler::mem_props().memoryTypeCount);
+    for (uint32_t i = 0; i < CmdBufHandler::mem_props().memoryTypeCount; i++)
+        mem_flags_.push_back(CmdBufHandler::mem_props().memoryTypes[i].propertyFlags);
 
     // meshes_ = new Meshes(dev_, mem_flags_);
 
     create_uniform_buffer();
-    create_shader_modules();
-    create_pipeline_cache();
+    PipelineHandler::init(ctx, settings());
 
     create_scenes();
 
@@ -142,10 +142,8 @@ void Guppy::detach_shell() {
     // destroy_input_assembly_data();
     // destroy_textures();
 
-    CmdBufResources::destroy();
-
-    // TODO: these singletons should use shared_ptr???
-    // StagingBufferHandler::get().cleanup();
+    CmdBufHandler::destroy();
+    PipelineHandler::destroy();
 
     Game::detach_shell();
 }
@@ -192,14 +190,17 @@ void Guppy::on_key(KEY key) {
             break;
         case KEY::KEY_F1: {
             auto p1 = std::make_unique<ColorPlane>();
-            active_scene()->addMesh(shell_->context(), cmd_data_, ubo_resource_.info, std::move(p1));
+            active_scene()->addMesh(shell_->context(), ubo_resource_.info, std::move(p1));
         } break;
         case KEY::KEY_F3: {
             auto p1 = std::make_unique<TexturePlane>();
-            active_scene()->addMesh(shell_->context(), cmd_data_, ubo_resource_.info, std::move(p1));
+            active_scene()->addMesh(shell_->context(), ubo_resource_.info, std::move(p1));
         } break;
-        case KEY::KEY_UP:
-        case KEY::KEY_DOWN:
+        case KEY::KEY_F5: {
+            auto p1 = std::make_unique<ColorPlane>(1.0f, 1.0f, true, glm::vec3(),
+                                                   glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+            active_scene()->addMesh(shell_->context(), ubo_resource_.info, std::move(p1));
+        } break;
         default:
             break;
     }
@@ -231,7 +232,7 @@ void Guppy::on_frame(float frame_pred) {
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = &back.render_semaphore;
 
-    VkResult res = vkQueueSubmit(graphics_queue(), 1, &submit_info, data.fence);
+    VkResult res = vkQueueSubmit(CmdBufHandler::graphics_queue(), 1, &submit_info, data.fence);
 
     frame_data_index_ = (frame_data_index_ + 1) % frame_data_.size();
 
@@ -246,20 +247,12 @@ void Guppy::on_tick() {
     // TODO: should this be "on_frame", here, every other frame, async ... I have no clue yet.
     for (auto& scene : scenes_) {
         // TODO: im really not into this...
-        if (scene->update(ctx, settings(), ubo_resource_.info, vs_, fs_, pipeline_cache_)) {
+        if (scene->update(ctx, ubo_resource_.info)) {
             scene->recordDrawCmds(ctx, frameData(), framebuffers_, viewport_, scissor_);
         }
     }
 
     // for (auto &worker : workers_) worker->update_simulation();
-}
-
-void Guppy::create_pipeline_cache() {
-    VkPipelineCacheCreateInfo pipeline_cache_info = {};
-    pipeline_cache_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-    pipeline_cache_info.initialDataSize = 0;
-    pipeline_cache_info.pInitialData = nullptr;
-    vk::assert_success(vkCreatePipelineCache(dev_, &pipeline_cache_info, nullptr, &pipeline_cache_));
 }
 
 void Guppy::destroy_pipeline_cache() { vkDestroyPipelineCache(dev_, pipeline_cache_, nullptr); }
@@ -556,8 +549,10 @@ void Guppy::create_uniform_buffer() {
     auto mvp = camera_.getMVP();
     auto buffer_size = sizeof(mvp);
 
+    ubo_resource_.count = 1;
+
     camera_.memory_requirements_size = helpers::create_buffer(
-        dev_, cmd_data_.mem_props, buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        dev_, buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
         VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ubo_resource_.buffer, ubo_resource_.memory);
 
     ext::DebugMarkerSetObjectName(dev_, (uint64_t)ubo_resource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
@@ -718,61 +713,6 @@ void Guppy::create_render_pass(bool include_depth, bool include_color, bool clea
 
 void Guppy::destroy_render_pass() { vkDestroyRenderPass(dev_, render_pass_, nullptr); }
 
-void Guppy::create_shader_modules() {
-    // Relative to CMake being run in a "build" directory in the root of the repo like VulkanSamples
-
-    auto vertShaderText = FileLoader::read_file("..\\..\\..\\Guppy\\src\\shaders\\shader.vert");
-    auto fragShaderText = FileLoader::read_file("..\\..\\..\\Guppy\\src\\shaders\\shader.frag");
-    bool retVal;
-
-    // If no shaders were submitted, just return
-    if (!(vertShaderText.data() || fragShaderText.data())) return;
-
-    init_glslang();
-    VkShaderModuleCreateInfo module_info;
-    VkPipelineShaderStageCreateInfo stage_info;
-
-    if (vertShaderText.data()) {
-        std::vector<unsigned int> vtx_spv;
-        retVal = GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vertShaderText.data(), vtx_spv);
-        assert(retVal);
-
-        module_info = {};
-        module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        module_info.codeSize = vtx_spv.size() * sizeof(unsigned int);
-        module_info.pCode = vtx_spv.data();
-        vk::assert_success(vkCreateShaderModule(dev_, &module_info, nullptr, &vs_.module));
-
-        stage_info = {};
-        stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-        stage_info.pName = "main";
-        stage_info.module = vs_.module;
-        vs_.info = std::move(stage_info);
-    }
-
-    if (fragShaderText.data()) {
-        std::vector<unsigned int> frag_spv;
-        retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText.data(), frag_spv);
-        assert(retVal);
-
-        module_info = {};
-        module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        module_info.codeSize = frag_spv.size() * sizeof(unsigned int);
-        module_info.pCode = frag_spv.data();
-        vk::assert_success(vkCreateShaderModule(dev_, &module_info, nullptr, &fs_.module));
-
-        stage_info = {};
-        stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-        stage_info.pName = "main";
-        stage_info.module = fs_.module;
-        fs_.info = std::move(stage_info);
-    }
-
-    finalize_glslang();
-}
-
 void Guppy::destroy_shader_modules() {
     vkDestroyShaderModule(dev_, fs_.module, nullptr);
     vkDestroyShaderModule(dev_, vs_.module, nullptr);
@@ -870,27 +810,6 @@ void Guppy::create_fences() {
     for (auto& data : frame_data_) vk::assert_success(vkCreateFence(dev_, &fence_info, nullptr, &data.fence));
 }
 
-void Guppy::create_descriptor_pool(bool use_texture) {
-    VkDescriptorPoolSize type_count[2];
-    type_count[0].type =
-        VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;  // TODO: look at dynamic ubo's (VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC)
-    type_count[0].descriptorCount = 1;
-    if (use_texture) {
-        type_count[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        type_count[1].descriptorCount = 1;
-    }
-
-    VkDescriptorPoolCreateInfo desc_pool_info = {};
-    desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    desc_pool_info.maxSets = swapchain_image_count_;
-    desc_pool_info.poolSizeCount = use_texture ? 2 : 1;
-    desc_pool_info.pPoolSizes = type_count;
-
-    vk::assert_success(vkCreateDescriptorPool(dev_, &desc_pool_info, nullptr, &desc_pool_));
-}
-
-void Guppy::destroy_descriptor_pool() { vkDestroyDescriptorPool(dev_, desc_pool_, nullptr); }
-
 void Guppy::create_descriptor_sets(bool use_texture) {
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -955,11 +874,7 @@ void Guppy::destroy_frame_data() {
 
 // TODO: See if using context directly simplifies the signatures here...
 void Guppy::create_color_resources() {
-    std::vector<uint32_t> queueFamilyIndices = {cmd_data_.graphics_queue_family};
-    if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
-        queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
-
-    helpers::create_image(dev_, cmd_data_.mem_props, queueFamilyIndices, extent_.width, extent_.height, 1,
+    helpers::create_image(dev_, CmdBufHandler::getUniqueQueueFamilies(true, false, true), extent_.width, extent_.height, 1,
                           shell_->context().num_samples, format_, VK_IMAGE_TILING_OPTIMAL,
                           VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, color_resource_.image, color_resource_.memory);
@@ -967,7 +882,7 @@ void Guppy::create_color_resources() {
     helpers::create_image_view(dev_, color_resource_.image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D,
                                color_resource_.view);
 
-    helpers::transition_image_layout(graphics_cmd(), color_resource_.image, 1, format_, VK_IMAGE_LAYOUT_UNDEFINED,
+    helpers::transition_image_layout(CmdBufHandler::graphics_cmd(), color_resource_.image, 1, format_, VK_IMAGE_LAYOUT_UNDEFINED,
                                      VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                      VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
 
@@ -997,11 +912,7 @@ void Guppy::create_depth_resources() {
         throw std::runtime_error(("depth_format Unsupported.\n"));
     }
 
-    std::vector<uint32_t> queueFamilyIndices = {cmd_data_.graphics_queue_family};
-    if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
-        queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
-
-    helpers::create_image(dev_, cmd_data_.mem_props, queueFamilyIndices, extent_.width, extent_.height, 1,
+    helpers::create_image(dev_, CmdBufHandler::getUniqueQueueFamilies(true, false, true), extent_.width, extent_.height, 1,
                           shell_->context().num_samples, depth_resource_.format, tiling,
                           VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depth_resource_.image,
                           depth_resource_.memory);
@@ -1014,9 +925,9 @@ void Guppy::create_depth_resources() {
     helpers::create_image_view(dev_, depth_resource_.image, 1, depth_resource_.format, aspectFlags, VK_IMAGE_VIEW_TYPE_2D,
                                depth_resource_.view);
 
-    helpers::transition_image_layout(graphics_cmd(), depth_resource_.image, 1, depth_resource_.format, VK_IMAGE_LAYOUT_UNDEFINED,
-                                     VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                     VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
+    helpers::transition_image_layout(CmdBufHandler::graphics_cmd(), depth_resource_.image, 1, depth_resource_.format,
+                                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                                     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
 
     // Name some objects for debugging
     ext::DebugMarkerSetObjectName(dev_, (uint64_t)depth_resource_.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
@@ -1040,7 +951,7 @@ void Guppy::create_draw_cmds() {
 
     VkCommandBufferAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.commandPool = graphics_cmd_pool();
+    alloc_info.commandPool = CmdBufHandler::graphics_cmd_pool();
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     alloc_info.commandBufferCount = static_cast<uint32_t>(draw_cmds_.size());
 
@@ -1125,104 +1036,10 @@ void Guppy::create_draw_cmds() {
     }
 }
 
-void Guppy::create_input_assembly_data() {
-    // VkCommandBuffer cmd1, cmd2;
-    // StagingBufferHandler::get().begin_command_recording(cmd);
-
-    // std::vector<StagingBufferResource> staging_resources;
-    // std::vector<uint32_t> queueFamilyIndices = {cmd_data_.graphics_queue_family};
-    // if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
-    //    queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
-
-    //// Vertex buffer
-    // StagingBufferResource stg_res;
-    // create_vertex_data(stg_res);
-    // staging_resources.emplace_back(stg_res);
-
-    //// Index buffer
-    // stg_res = {};
-    // create_index_data(stg_res);
-    // staging_resources.emplace_back(stg_res);
-
-    //// TODO: this options below are wrong!!!
-
-    // VkPipelineStageFlags wait_stages[] = {VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
-    // StagingBufferHandler::get().end_recording_and_submit(staging_resources.data(), staging_resources.size(), transfer_cmd(),
-    //                                                     cmd_data_.graphics_queue_family, &graphics_cmd(), wait_stages,
-    //                                                     StagingBufferHandler::END_TYPE::RESET);
-}
-
-void Guppy::destroy_input_assembly_data() {
-    // vertex
-    vkDestroyBuffer(dev_, index_res_.buffer, nullptr);
-    vkFreeMemory(dev_, index_res_.memory, nullptr);
-    // index
-    vkDestroyBuffer(dev_, vertex_res_.buffer, nullptr);
-    vkFreeMemory(dev_, vertex_res_.memory, nullptr);
-}
-
-void Guppy::create_vertex_data(StagingBufferResource& stg_res) {
-    //// STAGING BUFFER
-    // VkDeviceSize bufferSize = model_.getVertexBufferSize();
-
-    // auto memReqsSize = helpers::create_buffer(dev_, cmd_data_.mem_props, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-    //                                          VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-    //                                          stg_res.buffer, stg_res.memory);
-
-    //// FILL STAGING BUFFER ON DEVICE
-    // void* pData;
-    // vkMapMemory(dev_, stg_res.memory, 0, memReqsSize, 0, &pData);
-    ///*
-    //    You can now simply memcpy the vertex data to the mapped memory and unmap it again using vkUnmapMemory.
-    //    Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
-    //    of caching. It is also possible that writes to the buffer are not visible in the mapped memory yet. There
-    //    are two ways to deal with that problem:
-    //        - Use a memory heap that is host coherent, indicated with VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-    //        - Call vkFlushMappedMemoryRanges to after writing to the mapped memory, and call
-    //          vkInvalidateMappedMemoryRanges before reading from the mapped memory
-    //    We went for the first approach, which ensures that the mapped memory always matches the contents of the
-    //    allocated memory. Do keep in mind that this may lead to slightly worse performance than explicit flushing,
-    //    but we'll see why that doesn't matter in the next chapter.
-    //*/
-    // memcpy(pData, model_.getVertexData(), static_cast<size_t>(bufferSize));
-    // vkUnmapMemory(dev_, stg_res.memory);
-
-    //// FAST VERTEX BUFFER
-    // helpers::create_buffer(dev_, cmd_data_.mem_props,
-    //                       bufferSize,  // TODO: probably don't need to check memory requirements again
-    //                       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-    //                       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_res_.buffer, vertex_res_.memory);
-
-    //// COPY FROM STAGING TO FAST
-    // helpers::copy_buffer(transfer_cmd(), stg_res.buffer, vertex_res_.buffer, memReqsSize);
-}
-
-void Guppy::create_index_data(StagingBufferResource& stg_res) {
-    // VkDeviceSize bufferSize = model_.getIndexBufferSize();
-
-    //// TODO: more checking around this scenario...
-    // if (bufferSize) {
-    //    auto memReqsSize = helpers::create_buffer(dev_, cmd_data_.mem_props, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-    //                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-    //                                              stg_res.buffer, stg_res.memory);
-
-    //    void* pData;
-    //    vkMapMemory(dev_, stg_res.memory, 0, memReqsSize, 0, &pData);
-    //    memcpy(pData, model_.getIndexData(), static_cast<size_t>(bufferSize));
-    //    vkUnmapMemory(dev_, stg_res.memory);
-
-    //    helpers::create_buffer(dev_, cmd_data_.mem_props, bufferSize,
-    //                           VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-    //                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_res_.buffer, index_res_.memory);
-
-    //    helpers::copy_buffer(transfer_cmd(), stg_res.buffer, index_res_.buffer, memReqsSize);
-    //}
-}
-
 void Guppy::create_scenes() {
     auto ctx = shell_->context();
 
-    auto scene1 = std::make_unique<Scene>(ctx, settings(), cmd_data_, ubo_resource_.info, vs_, fs_, pipeline_cache_);
+    auto scene1 = std::make_unique<Scene>(ctx, settings(), ubo_resource_);
 
     // meshes
     // Plane p("..\\..\\..\\images\\texture.jpg");

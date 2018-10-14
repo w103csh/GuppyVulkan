@@ -1,6 +1,6 @@
 //
-#ifndef STAG_BUFF_HANDLER_H
-#define STAG_BUFF_HANDLER_H
+//#ifndef STAG_BUFF_HANDLER_H
+//#define STAG_BUFF_HANDLER_H
 //
 //#include <mutex>
 //#include <vector>
@@ -9,14 +9,14 @@
 //#include "Helpers.h"
 //#include "MyShell.h"
 //
-//constexpr auto NUM_STAG_BUFF_FENCES = 2;
+// constexpr auto NUM_STAG_BUFF_FENCES = 2;
 //
-struct StagingBufferResource {
-    VkBuffer buffer;
-    VkDeviceMemory memory;
-};
+// struct StagingBufferResource {
+//    VkBuffer buffer;
+//    VkDeviceMemory memory;
+//};
 //
-//class StagingBufferHandler {
+// class StagingBufferHandler {
 //   public:
 //    static StagingBufferHandler &get(const MyShell *sh = nullptr, const VkDevice &dev = nullptr,
 //                                     const CommandData *cmd_data = nullptr) {
@@ -60,4 +60,4 @@ struct StagingBufferResource {
 //    std::mutex mutex_;
 //};
 //
-#endif  // !STAG_BUFF_HANDLER_H
+//#endif  // !STAG_BUFF_HANDLER_H

@@ -11,7 +11,7 @@
 //#include "Helpers.h"
 //#include "Model.h"
 //
-//void Model::addToModel(const std::vector<Vertex>& vertices, const std::vector<VB_INDEX_TYPE>& indices) {
+// void Model::addToModel(const std::vector<Vertex>& vertices, const std::vector<VB_INDEX_TYPE>& indices) {
 //    // TODO: add data validation
 //
 //    // vertices
@@ -28,9 +28,9 @@
 //    max_index_ += (maxIndex + 1);
 //}
 //
-//void Model::addToModel(Plane&& p) { addToModel(p.getVertices(), p.getIndices()); }
+// void Model::addToModel(Plane&& p) { addToModel(p.getVertices(), p.getIndices()); }
 //
-//void Model::loadAxes() {
+// void Model::loadAxes() {
 //    float max_ = 2000.f;
 //    float min_ = max_ * -1;
 //
@@ -60,7 +60,7 @@
 //    vertices_.insert(vertices_.end(), axes.begin(), axes.end());
 //}
 //
-//void Model::loadDefault() {
+// void Model::loadDefault() {
 //    addToModel(Plane(2.0f, 2.0f, true));
 //    //addToModel(Plane(2.0f, 2.0f,                      // size
 //    //                 false,                           // double-sided
@@ -78,7 +78,7 @@
 //     //addToModel(Plane(2.0f, 2.0f, false, glm::vec3(0.0f, 0.5f, 0.0f)));
 //}
 //
-//void Model::loadChalet() {
+// void Model::loadChalet() {
 //    tinyobj::attrib_t attrib;
 //    std::vector<tinyobj::shape_t> shapes;
 //    std::vector<tinyobj::material_t> materials;

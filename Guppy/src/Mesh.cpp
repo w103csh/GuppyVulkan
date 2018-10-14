@@ -6,18 +6,30 @@
 #include <type_traits>
 #include <unordered_map>
 
-#include "CmdBufResources.h"
+#include "CmdBufHandler.h"
 #include "Mesh.h"
+#include "PipelineHandler.h"
 
 // **********************
 // Mesh
 // **********************
 
-Mesh::Mesh() : modelPath_(""), status_(STATUS::PENDING) {
-    // Every mesh constructor needs to get here somehow ... for now.
-}
+Mesh::Mesh() : modelPath_(""), status_(STATUS::PENDING), markerName_("") {}
 
-Mesh::Mesh(std::string modelPath) : Mesh(modelPath) {}
+Mesh::Mesh(std::string modelPath) : modelPath_(modelPath), status_(STATUS::PENDING), markerName_("") {}
+
+void Mesh::setSceneData(const MyShell::Context& ctx, size_t offset) {
+    offset_ = offset;
+
+    VkCommandBufferAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.commandPool = CmdBufHandler::graphics_cmd_pool();
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+    alloc_info.commandBufferCount = ctx.image_count;
+
+    cmds_.resize(ctx.image_count);
+    vk::assert_success(vkAllocateCommandBuffers(ctx.dev, &alloc_info, cmds_.data()));
+}
 
 std::future<Mesh*> Mesh::load(const MyShell::Context& ctx) {
     if (!modelPath_.empty()) {
@@ -32,55 +44,57 @@ std::future<Mesh*> Mesh::load(const MyShell::Context& ctx) {
         assert(getVertexCount());
     }
 
-    const auto& mem_props = ctx.physical_dev_props[ctx.physical_dev_index].memory_properties;
-
     VkCommandBuffer graphicsCmd = nullptr, transferCmd = nullptr;
 
     // There should always be at least a graphics queue...
     VkCommandBufferAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     alloc_info.pNext = nullptr;
-    alloc_info.commandPool = CmdBufResources::graphics_cmd_pool();
+    alloc_info.commandPool = CmdBufHandler::graphics_cmd_pool();
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     alloc_info.commandBufferCount = 1;
     vk::assert_success(vkAllocateCommandBuffers(ctx.dev, &alloc_info, &graphicsCmd));
     // being recording
-    CmdBufResources::beginCmd(graphicsCmd);
+    CmdBufHandler::beginCmd(graphicsCmd);
 
     // There might not be a dedicated transfer queue...
-    if (CmdBufResources::graphics_index() != CmdBufResources::transfer_index()) {
-        alloc_info.commandPool = CmdBufResources::transfer_cmd_pool();
+    if (CmdBufHandler::graphics_index() != CmdBufHandler::transfer_index()) {
+        alloc_info.commandPool = CmdBufHandler::transfer_cmd_pool();
         vk::assert_success(vkAllocateCommandBuffers(ctx.dev, &alloc_info, &transferCmd));
         // being recording
-        CmdBufResources::beginCmd(transferCmd);
+        CmdBufHandler::beginCmd(transferCmd);
     }
 
     return std::async(std::launch::async, &Mesh::async_load, this, ctx, std::move(graphicsCmd), std::move(transferCmd));
 }
 
-void Mesh::loadModel(const VkDevice& dev, const VkCommandBuffer& transferCmd, std::vector<StagingBufferResource>& stgResources) {
+void Mesh::prepare(const MyShell::Context& ctx, const VkDescriptorBufferInfo& ubo_info, DescriptorResources& desc_res) {
+    status_ = STATUS::READY;
+}
+
+void Mesh::loadModel(const VkDevice& dev, const VkCommandBuffer& transferCmd, std::vector<BufferResource>& stgResources) {
     assert(getVertexCount());
 
     // Vertex buffer
-    StagingBufferResource vertexStgRes = {};
+    BufferResource vertexStgRes = {};
     createVertexBufferData(dev, transferCmd, vertexStgRes);
     stgResources.push_back(std::move(vertexStgRes));
 
     // Index buffer
-    StagingBufferResource indexStgRes = {};
+    BufferResource indexStgRes = {};
     createIndexBufferData(dev, transferCmd, indexStgRes);
     stgResources.push_back(std::move(indexStgRes));
 }
 
 void Mesh::loadSubmit(const MyShell::Context& ctx, const VkCommandBuffer& graphicsCmd, const VkCommandBuffer& transferCmd,
-                      std::vector<StagingBufferResource>& stgResources) {
-    auto queueFamilyIndices = CmdBufResources::getUniqueQueueFamilies(true, false, true);
+                      std::vector<BufferResource>& stgResources) {
+    auto queueFamilyIndices = CmdBufHandler::getUniqueQueueFamilies(true, false, true);
 
     bool should_wait = queueFamilyIndices.size() > 1;
 
     // End buffer recording
-    CmdBufResources::endCmd(graphicsCmd);
-    if (should_wait) CmdBufResources::endCmd(transferCmd);
+    CmdBufHandler::endCmd(graphicsCmd);
+    if (should_wait) CmdBufHandler::endCmd(transferCmd);
 
     // Fences for cleanup ...
     std::vector<VkFence> fences;
@@ -136,9 +150,9 @@ void Mesh::loadSubmit(const MyShell::Context& ctx, const VkCommandBuffer& graphi
 
     // Sumbit ...
     if (should_wait) {
-        vk::assert_success(vkQueueSubmit(CmdBufResources::transfer_queue(), 1, &stag_sub_info, fences[0]));
+        vk::assert_success(vkQueueSubmit(CmdBufHandler::transfer_queue(), 1, &stag_sub_info, fences[0]));
     }
-    vk::assert_success(vkQueueSubmit(CmdBufResources::graphics_queue(), 1, &wait_sub_info, fences[1]));
+    vk::assert_success(vkQueueSubmit(CmdBufHandler::graphics_queue(), 1, &wait_sub_info, fences[1]));
 
     // **************************
     // Cleanup
@@ -163,9 +177,9 @@ void Mesh::loadSubmit(const MyShell::Context& ctx, const VkCommandBuffer& graphi
     // Free command buffers
     // switch (type) {
     //    case END_TYPE::DESTROY: {
-    vkFreeCommandBuffers(ctx.dev, CmdBufResources::graphics_cmd_pool(), 1, &graphicsCmd);
+    vkFreeCommandBuffers(ctx.dev, CmdBufHandler::graphics_cmd_pool(), 1, &graphicsCmd);
     if (should_wait) {
-        vkFreeCommandBuffers(ctx.dev, CmdBufResources::transfer_cmd_pool(), 1, &transferCmd);
+        vkFreeCommandBuffers(ctx.dev, CmdBufHandler::transfer_cmd_pool(), 1, &transferCmd);
     }
     //    } break;
     //    case END_TYPE::RESET: {
@@ -178,11 +192,11 @@ void Mesh::loadSubmit(const MyShell::Context& ctx, const VkCommandBuffer& graphi
     //}
 }
 
-void Mesh::createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, StagingBufferResource& stg_res) {
+void Mesh::createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res) {
     // STAGING BUFFER
     VkDeviceSize bufferSize = getVertexBufferSize();
 
-    auto memReqsSize = helpers::create_buffer(dev, CmdBufResources::mem_props(), bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    auto memReqsSize = helpers::create_buffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                               stg_res.buffer, stg_res.memory);
 
@@ -205,7 +219,7 @@ void Mesh::createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cm
     vkUnmapMemory(dev, stg_res.memory);
 
     // FAST VERTEX BUFFER
-    helpers::create_buffer(dev, CmdBufResources::mem_props(),
+    helpers::create_buffer(dev,
                            bufferSize,  // TODO: probably don't need to check memory requirements again
                            VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
                            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_res_.buffer, vertex_res_.memory);
@@ -217,12 +231,12 @@ void Mesh::createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cm
     ext::DebugMarkerSetObjectName(dev, (uint64_t)vertex_res_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "Mesh vertex buffer");
 }
 
-void Mesh::createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, StagingBufferResource& stg_res) {
+void Mesh::createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res) {
     VkDeviceSize bufferSize = getIndexBufferSize();
 
     // TODO: more checking around this scenario...
     if (bufferSize) {
-        auto memReqsSize = helpers::create_buffer(dev, CmdBufResources::mem_props(), bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        auto memReqsSize = helpers::create_buffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                                   stg_res.buffer, stg_res.memory);
 
@@ -231,8 +245,7 @@ void Mesh::createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd
         memcpy(pData, getIndexData(), static_cast<size_t>(bufferSize));
         vkUnmapMemory(dev, stg_res.memory);
 
-        helpers::create_buffer(dev, CmdBufResources::mem_props(), bufferSize,
-                               VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+        helpers::create_buffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
                                VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_res_.buffer, index_res_.memory);
 
         helpers::copy_buffer(cmd, stg_res.buffer, index_res_.buffer, memReqsSize);
@@ -256,50 +269,57 @@ void Mesh::destroy(const VkDevice& dev) {
 // ColorMesh
 // **********************
 
+ColorMesh::ColorMesh() {
+    vertexType_ = Vertex::TYPE::COLOR;
+    topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_COLOR;
+}
+
 Mesh* ColorMesh::async_load(const MyShell::Context& ctx, VkCommandBuffer graphicsCmd, VkCommandBuffer transferCmd) {
-    std::vector<StagingBufferResource> stgResources;
+    std::vector<BufferResource> stgResources;
     loadModel(ctx.dev, transferCmd, stgResources);
     loadSubmit(ctx, graphicsCmd, transferCmd, stgResources);
     return this;
 }
 
-void ColorMesh::draw(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline, uint32_t index) const {
-    if (status_ == STATUS::READY) {
-        VkBuffer vertex_buffers[] = {vertex_res_.buffer};
-        VkDeviceSize offsets[] = {0};
+const VkCommandBuffer& ColorMesh::draw(const VkDevice& dev, const VkPipelineLayout& layout, const VkPipeline& pipeline,
+                                       const VkDescriptorSet& descSet, size_t frameIndex,
+                                       const VkCommandBufferInheritanceInfo& inheritanceInfo) const {
+    assert(status_ == STATUS::READY);
 
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &desc_sets_[index], 0, nullptr);
-        vkCmdBindVertexBuffers(cmd, 0, 1, vertex_buffers, offsets);
+    auto& cmd = cmds_[frameIndex];
+    CmdBufHandler::beginCmd(cmd);
 
-        // TODO: clean these up!!
-        if (indices_.size()) {
-            vkCmdBindIndexBuffer(cmd, index_res_.buffer, 0,
-                                 VK_INDEX_TYPE_UINT32  // TODO: Figure out how to make the type dynamic
-            );
+    VkBuffer vertex_buffers[] = {vertex_res_.buffer};
+    VkDeviceSize offsets[] = {0};
 
-            // Add debug marker for mesh name
-            ext::DebugMarkerInsert(cmd, "Draw (insert name here)", glm::vec4(0.0f));
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet, 0, nullptr);
+    vkCmdBindVertexBuffers(cmd, 0, 1, vertex_buffers, offsets);
 
-            vkCmdDrawIndexed(cmd, getIndexSize(), 1, 0, 0, 0);
-        } else {
-            // Add debug marker for mesh name
-            ext::DebugMarkerInsert(cmd, "Draw (insert name here)", glm::vec4(0.0f));
+    // TODO: clean these up!!
+    if (indices_.size()) {
+        vkCmdBindIndexBuffer(cmd, index_res_.buffer, 0,
+                             VK_INDEX_TYPE_UINT32  // TODO: Figure out how to make the type dynamic
+        );
 
-            vkCmdDraw(cmd,
-                      getVertexCount(),  // vertexCount
-                      1,                 // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
-                      0,  // firstVertex - Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
-                      0  // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
-            );
-        }
+        // Add debug marker for mesh name
+        ext::DebugMarkerInsert(cmd, "Draw (insert name here)", glm::vec4(0.0f));
+
+        vkCmdDrawIndexed(cmd, getIndexSize(), 1, 0, 0, 0);
+    } else {
+        // Add debug marker for mesh name
+        ext::DebugMarkerInsert(cmd, "Draw (insert name here)", glm::vec4(0.0f));
+
+        vkCmdDraw(cmd,
+                  getVertexCount(),  // vertexCount
+                  1,                 // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
+                  0,  // firstVertex - Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
+                  0   // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
+        );
     }
-}
 
-void ColorMesh::prepare(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout, const VkDescriptorPool& desc_pool,
-                        const VkDescriptorBufferInfo& ubo_info) {
-    update_descriptor_set(ctx, layout, desc_pool, ubo_info);
-    status_ = STATUS::READY;
+    CmdBufHandler::endCmd(cmd);
+    return cmd;
 }
 
 void ColorMesh::loadObj() {
@@ -333,45 +353,48 @@ void ColorMesh::loadObj() {
     }
 }
 
-void ColorMesh::update_descriptor_set(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout,
-                                      const VkDescriptorPool& desc_pool, const VkDescriptorBufferInfo& ubo_info) {
-    std::vector<VkDescriptorSetLayout> layouts(ctx.image_count, layout);
-
-    VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.descriptorPool = desc_pool;
-    alloc_info.descriptorSetCount = static_cast<uint32_t>(ctx.image_count);
-    alloc_info.pSetLayouts = layouts.data();
-
-    desc_sets_.resize(ctx.image_count);
-    vk::assert_success(vkAllocateDescriptorSets(ctx.dev, &alloc_info, desc_sets_.data()));
-
-    // TODO: hardcoded ubo 1 here...
-    uint32_t descriptorWriteCount = 1;
-
-    for (size_t i = 0; i < ctx.image_count; i++) {
-        std::vector<VkWriteDescriptorSet> writes(descriptorWriteCount);
-
-        writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writes[0].dstSet = desc_sets_[i];
-        writes[0].dstBinding = 0;
-        writes[0].dstArrayElement = 0;
-        writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        writes[0].descriptorCount = 1;
-        writes[0].pBufferInfo = &ubo_info;
-
-        vkUpdateDescriptorSets(ctx.dev, descriptorWriteCount, writes.data(), 0, nullptr);
-    }
-}
+// void ColorMesh::update_descriptor_set(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout,
+//                                      const VkDescriptorPool& desc_pool, const VkDescriptorBufferInfo& ubo_info) {
+//    std::vector<VkDescriptorSetLayout> layouts(ctx.image_count, layout);
+//
+//    VkDescriptorSetAllocateInfo alloc_info = {};
+//    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+//    alloc_info.descriptorPool = desc_pool;
+//    alloc_info.descriptorSetCount = static_cast<uint32_t>(ctx.image_count);
+//    alloc_info.pSetLayouts = layouts.data();
+//
+//    desc_sets_.resize(ctx.image_count);
+//    vk::assert_success(vkAllocateDescriptorSets(ctx.dev, &alloc_info, desc_sets_.data()));
+//
+//    // TODO: hardcoded ubo 1 here...
+//    uint32_t descriptorWriteCount = 1;
+//
+//    for (size_t i = 0; i < ctx.image_count; i++) {
+//        std::vector<VkWriteDescriptorSet> writes(descriptorWriteCount);
+//
+//        writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+//        writes[0].dstSet = desc_sets_[i];
+//        writes[0].dstBinding = 0;
+//        writes[0].dstArrayElement = 0;
+//        writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+//        writes[0].descriptorCount = 1;
+//        writes[0].pBufferInfo = &ubo_info;
+//
+//        vkUpdateDescriptorSets(ctx.dev, descriptorWriteCount, writes.data(), 0, nullptr);
+//    }
+//}
 
 // **********************
 // TextureMesh
 // **********************
 
-TextureMesh::TextureMesh(std::string texturePath) : Mesh(), texturePath_(texturePath){};
+TextureMesh::TextureMesh(std::string texturePath) : Mesh(), texturePath_(texturePath) {
+    vertexType_ = Vertex::TYPE::TEXTURE;
+    topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_TEX;
+};
 
 Mesh* TextureMesh::async_load(const MyShell::Context& ctx, VkCommandBuffer graphicsCmd, VkCommandBuffer transferCmd) {
-    std::vector<StagingBufferResource> stgResources;
+    std::vector<BufferResource> stgResources;
     loadModel(ctx.dev, transferCmd, stgResources);
     loadTexture(ctx, graphicsCmd, transferCmd, stgResources);
     loadSubmit(ctx, graphicsCmd, transferCmd, stgResources);
@@ -411,89 +434,162 @@ void TextureMesh::loadObj() {
 }
 
 void TextureMesh::loadTexture(const MyShell::Context& ctx, const VkCommandBuffer& graphicsCmd, const VkCommandBuffer& transferCmd,
-                              std::vector<StagingBufferResource>& stgResources) {
-    StagingBufferResource textureStgRes = {};
+                              std::vector<BufferResource>& stgResources) {
+    BufferResource textureStgRes = {};
     texture_ =
         Texture::createTexture(ctx.dev, graphicsCmd, transferCmd, texturePath_, ctx.linear_blitting_supported_, textureStgRes);
     stgResources.push_back(std::move(textureStgRes));
 }
 
-void TextureMesh::draw(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                       uint32_t index) const {
-    if (status_ == STATUS::READY) {
-        VkBuffer vertex_buffers[] = {vertex_res_.buffer};
-        VkDeviceSize offsets[] = {0};
-
-        vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-        vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &desc_sets_[index], 0, nullptr);
-        vkCmdBindVertexBuffers(cmd, 0, 1, vertex_buffers, offsets);
-
-        // TODO: clean these up!!
-        if (indices_.size()) {
-            vkCmdBindIndexBuffer(cmd, index_res_.buffer, 0,
-                                 VK_INDEX_TYPE_UINT32  // TODO: Figure out how to make the type dynamic
-            );
-            vkCmdDrawIndexed(cmd, getIndexSize(), 1, 0, 0, 0);
-        } else {
-            vkCmdDraw(cmd,
-                      getVertexCount(),  // vertexCount
-                      1,                 // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
-                      0,  // firstVertex - Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
-                      0  // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
-            );
-        }
-    }
-}
-
-void TextureMesh::prepare(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout, const VkDescriptorPool& desc_pool,
-                          const VkDescriptorBufferInfo& ubo_info) {
-    update_descriptor_set(ctx, layout, desc_pool, ubo_info);
+void TextureMesh::prepare(const MyShell::Context& ctx, const VkDescriptorBufferInfo& ubo_info, DescriptorResources& desc_res) {
+    createDescriptorSets(ctx, ubo_info, desc_res);
     status_ = STATUS::READY;
 }
 
-void TextureMesh::update_descriptor_set(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout,
-                                        const VkDescriptorPool& desc_pool, const VkDescriptorBufferInfo& ubo_info) {
-    std::vector<VkDescriptorSetLayout> layouts(ctx.image_count, layout);
+const VkCommandBuffer& TextureMesh::draw(const VkDevice& dev, const VkPipelineLayout& layout, const VkPipeline& pipeline,
+                                         const VkDescriptorSet& descSet, size_t frameIndex,
+                                         const VkCommandBufferInheritanceInfo& inheritanceInfo) const {
+    assert(status_ == STATUS::READY);
+
+    auto& cmd = cmds_[frameIndex];
+    CmdBufHandler::beginCmd(cmd, &inheritanceInfo);
+
+    VkBuffer vertex_buffers[] = {vertex_res_.buffer};
+    VkDeviceSize offsets[] = {0};
+
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet, 0, nullptr);
+    vkCmdBindVertexBuffers(cmd, 0, 1, vertex_buffers, offsets);
+
+    // TODO: clean these up!!
+    if (indices_.size()) {
+        vkCmdBindIndexBuffer(cmd, index_res_.buffer, 0,
+                             VK_INDEX_TYPE_UINT32  // TODO: Figure out how to make the type dynamic
+        );
+        // vkCmdDrawIndexed(cmd, getIndexSize(), 1, 0, 0, 0);
+    } else {
+        vkCmdDraw(cmd,
+                  getVertexCount(),  // vertexCount
+                  1,                 // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
+                  0,  // firstVertex - Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
+                  0   // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
+        );
+    }
+
+    CmdBufHandler::endCmd(cmd);
+    return cmd;
+}
+
+void TextureMesh::draw2(const VkDevice& dev, const VkCommandBuffer& priCmd, const VkPipelineLayout& layout,
+                        const VkPipeline& pipeline, size_t frameIndex, const VkCommandBufferInheritanceInfo& inheritanceInfo,
+                        const VkViewport& viewport, const VkRect2D& scissor) const {
+    assert(status_ == STATUS::READY);
+    auto& secCmd = cmds_[frameIndex];
+
+    CmdBufHandler::beginCmd(secCmd, &inheritanceInfo);
+
+    vkCmdSetViewport(secCmd, 0, 1, &viewport);
+    vkCmdSetScissor(secCmd, 0, 1, &scissor);
+
+    VkBuffer vertex_buffers[] = {vertex_res_.buffer};
+    VkDeviceSize offsets[] = {0};
+
+    vkCmdBindPipeline(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindDescriptorSets(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSets_[frameIndex], 0, nullptr);
+    vkCmdBindVertexBuffers(secCmd, 0, 1, vertex_buffers, offsets);
+
+    vkCmdBindIndexBuffer(secCmd, index_res_.buffer, 0,
+                         VK_INDEX_TYPE_UINT32  // TODO: Figure out how to make the type dynamic
+    );
+    vkCmdDrawIndexed(secCmd, getIndexSize(), 1, 0, 0, 0);
+
+    CmdBufHandler::endCmd(secCmd);
+    vkCmdExecuteCommands(priCmd, 1, &secCmd);
+}
+
+void TextureMesh::createDescriptorSets(const MyShell::Context& ctx, const VkDescriptorBufferInfo& ubo_info,
+                                       DescriptorResources& desc_res) {
+    std::vector<VkDescriptorSetLayout> layouts;
+    PipelineHandler::getDescriptorLayouts(ctx.image_count, Vertex::TYPE::TEXTURE, layouts);
+    auto setCount = static_cast<uint32_t>(layouts.size());
 
     VkDescriptorSetAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.descriptorPool = desc_pool;
-    alloc_info.descriptorSetCount = static_cast<uint32_t>(ctx.image_count);
+    alloc_info.descriptorPool = desc_res.pool;
+    alloc_info.descriptorSetCount = setCount;
     alloc_info.pSetLayouts = layouts.data();
 
-    desc_sets_.resize(ctx.image_count);
-    vk::assert_success(vkAllocateDescriptorSets(ctx.dev, &alloc_info, desc_sets_.data()));
+    descSets_.resize(ctx.image_count);
+    vk::assert_success(vkAllocateDescriptorSets(ctx.dev, &alloc_info, descSets_.data()));
 
-    // TODO: hardcoded ubo 1 here...
-    uint32_t descriptorWriteCount = 2;
-
+    std::vector<VkWriteDescriptorSet> writes;
     for (size_t i = 0; i < ctx.image_count; i++) {
-        std::vector<VkWriteDescriptorSet> writes(descriptorWriteCount);
+        VkWriteDescriptorSet write = {};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet = descSets_[i];
+        write.dstBinding = 0;
+        write.dstArrayElement = 0;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+        write.descriptorCount = 1;
+        write.pBufferInfo = &ubo_info;
+        writes.push_back(write);
 
-        writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writes[0].dstSet = desc_sets_[i];
-        writes[0].dstBinding = 0;
-        writes[0].dstArrayElement = 0;
-        writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        writes[0].descriptorCount = 1;
-        writes[0].pBufferInfo = &ubo_info;
-
-        writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        writes[1].dstSet = desc_sets_[i];
-        writes[1].dstBinding = 1;
-        writes[1].dstArrayElement = 0;
-        writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        writes[1].descriptorCount = 1;
-        writes[1].pImageInfo = &texture_.imgDescInfo;
-
-        // writes[1].descriptorCount = static_cast<uint32_t>(textures_.size());
-        // std::vector<VkDescriptorImageInfo> imgDescInfos;
-        // for (auto& texture : textures_) imgDescInfos.push_back(texture.imgDescInfo);
-        // writes[1].pImageInfo = imgDescInfos.data();
-
-        vkUpdateDescriptorSets(ctx.dev, descriptorWriteCount, writes.data(), 0, nullptr);
+        write = {};
+        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+        write.dstSet = descSets_[i];
+        write.dstBinding = 1;
+        write.dstArrayElement = 0;
+        write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        write.descriptorCount = 1;
+        write.pImageInfo = &texture_.imgDescInfo;
+        writes.push_back(write);
     }
+    vkUpdateDescriptorSets(ctx.dev, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
 }
+
+// void TextureMesh::update_descriptor_set(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout,
+//                                        const VkDescriptorPool& desc_pool, const VkDescriptorBufferInfo& ubo_info) {
+//    std::vector<VkDescriptorSetLayout> layouts(ctx.image_count, layout);
+//
+//    VkDescriptorSetAllocateInfo alloc_info = {};
+//    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+//    alloc_info.descriptorPool = desc_pool;
+//    alloc_info.descriptorSetCount = static_cast<uint32_t>(ctx.image_count);
+//    alloc_info.pSetLayouts = layouts.data();
+//
+//    desc_sets_.resize(ctx.image_count);
+//    vk::assert_success(vkAllocateDescriptorSets(ctx.dev, &alloc_info, desc_sets_.data()));
+//
+//    // TODO: hardcoded ubo 1 here...
+//    uint32_t descriptorWriteCount = 2;
+//
+//    for (size_t i = 0; i < ctx.image_count; i++) {
+//        std::vector<VkWriteDescriptorSet> writes(descriptorWriteCount);
+//
+//        writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+//        writes[0].dstSet = desc_sets_[i];
+//        writes[0].dstBinding = 0;
+//        writes[0].dstArrayElement = 0;
+//        writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+//        writes[0].descriptorCount = 1;
+//        writes[0].pBufferInfo = &ubo_info;
+//
+//        writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+//        writes[1].dstSet = desc_sets_[i];
+//        writes[1].dstBinding = 1;
+//        writes[1].dstArrayElement = 0;
+//        writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+//        writes[1].descriptorCount = 1;
+//        writes[1].pImageInfo = &texture_.imgDescInfo;
+//
+//        // writes[1].descriptorCount = static_cast<uint32_t>(textures_.size());
+//        // std::vector<VkDescriptorImageInfo> imgDescInfos;
+//        // for (auto& texture : textures_) imgDescInfos.push_back(texture.imgDescInfo);
+//        // writes[1].pImageInfo = imgDescInfos.data();
+//
+//        vkUpdateDescriptorSets(ctx.dev, descriptorWriteCount, writes.data(), 0, nullptr);
+//    }
+//}
 
 void TextureMesh::destroy(const VkDevice& dev) {
     Mesh::destroy(dev);

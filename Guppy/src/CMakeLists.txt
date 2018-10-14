@@ -4,8 +4,8 @@ set(SOURCE
     Box.h
     Camera.cpp
     Camera.h
-	CmdBufResources.cpp
-	CmdBufResources.h
+	CmdBufHandler.cpp
+	CmdBufHandler.h
     CMakeLists.txt
     Constants.h
     EventHandlers.h
@@ -15,6 +15,7 @@ set(SOURCE
     Game.h
     Guppy.cpp
     Guppy.h
+	Helpers.cpp
     Helpers.h
     InputHandler.cpp
     InputHandler.h
@@ -25,6 +26,8 @@ set(SOURCE
     Model.h
     MyShell.cpp
     MyShell.h
+	PipelineHandler.cpp
+	PipelineHandler.h
     Plane.cpp
     Plane.h
 	Scene.cpp

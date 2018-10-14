@@ -57,20 +57,20 @@ static android_app *Android_application = nullptr;
 //#include <sys/time.h>
 //#endif
 //
-//using namespace std;
+// using namespace std;
 //
 //#if !(defined(__ANDROID__) || defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 //// Android, iOS, and macOS: main() implemented externally to allow access to Objective-C components
-//int main(int argc, char **argv) { return sample_main(argc, argv); }
+// int main(int argc, char **argv) { return sample_main(argc, argv); }
 //#endif
 //
-//void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch) {
+// void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch) {
 //    major = version >> 22;
 //    minor = (version >> 12) & 0x3ff;
 //    patch = version & 0xfff;
 //}
 //
-//string get_file_name(const string &s) {
+// string get_file_name(const string &s) {
 //    char sep = '/';
 //
 //#ifdef _WIN32
@@ -88,7 +88,7 @@ static android_app *Android_application = nullptr;
 //
 //#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 //// iOS & macOS: get_base_data_dir() implemented externally to allow access to Objective-C components
-//std::string get_base_data_dir() {
+// std::string get_base_data_dir() {
 //#ifdef __ANDROID__
 //    return "";
 //#else
@@ -97,7 +97,7 @@ static android_app *Android_application = nullptr;
 //}
 //#endif
 //
-//std::string get_data_dir(std::string filename) {
+// std::string get_data_dir(std::string filename) {
 //    std::string basedir = get_base_data_dir();
 //    // get the base filename
 //    std::string fname = get_file_name(filename);
@@ -110,7 +110,7 @@ static android_app *Android_application = nullptr;
 //    return ddir;
 //}
 //
-//bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex) {
+// bool memory_type_from_properties(struct sample_info &info, uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex) {
 //    // Search memtypes to find first index with those properties
 //    for (uint32_t i = 0; i < info.memory_properties.memoryTypeCount; i++) {
 //        if ((typeBits & 1) == 1) {
@@ -126,7 +126,7 @@ static android_app *Android_application = nullptr;
 //    return false;
 //}
 //
-//void set_image_layout(struct sample_info &info, VkImage image, VkImageAspectFlags aspectMask, VkImageLayout old_image_layout,
+// void set_image_layout(struct sample_info &info, VkImage image, VkImageAspectFlags aspectMask, VkImageLayout old_image_layout,
 //                      VkImageLayout new_image_layout, VkPipelineStageFlags src_stages, VkPipelineStageFlags dest_stages) {
 //    /* DEPENDS on info.cmd and info.queue initialized */
 //
@@ -194,7 +194,7 @@ static android_app *Android_application = nullptr;
 //    vkCmdPipelineBarrier(info.cmd, src_stages, dest_stages, 0, 0, NULL, 0, NULL, 1, &image_memory_barrier);
 //}
 //
-//bool read_ppm(char const *const filename, int &width, int &height, uint64_t rowPitch, unsigned char *dataPtr) {
+// bool read_ppm(char const *const filename, int &width, int &height, uint64_t rowPitch, unsigned char *dataPtr) {
 //    // PPM format expected from http://netpbm.sourceforge.net/doc/ppm.html
 //    //  1. magic number
 //    //  2. whitespace
@@ -529,7 +529,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 
 #endif  // IOS or macOS
 
-//void wait_seconds(int seconds) {
+// void wait_seconds(int seconds) {
 //#ifdef WIN32
 //    Sleep(seconds * 1000);
 //#elif defined(__ANDROID__)
@@ -539,7 +539,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 //#endif
 //}
 //
-//timestamp_t get_milliseconds() {
+// timestamp_t get_milliseconds() {
 //#ifdef WIN32
 //    LARGE_INTEGER frequency;
 //    BOOL useQPC = QueryPerformanceFrequency(&frequency);
@@ -557,7 +557,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 //#endif
 //}
 //
-//void print_UUID(uint8_t *pipelineCacheUUID) {
+// void print_UUID(uint8_t *pipelineCacheUUID) {
 //    for (int j = 0; j < VK_UUID_SIZE; ++j) {
 //        std::cout << std::setw(2) << (uint32_t)pipelineCacheUUID[j];
 //        if (j == 3 || j == 5 || j == 7 || j == 9) {
@@ -565,14 +565,14 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 //        }
 //    }
 //}
-//static bool optionMatch(const char *option, char *optionLine) {
+// static bool optionMatch(const char *option, char *optionLine) {
 //    if (strncmp(option, optionLine, strlen(option)) == 0)
 //        return true;
 //    else
 //        return false;
 //}
 //
-//void process_command_line_args(struct sample_info &info, int argc, char *argv[]) {
+// void process_command_line_args(struct sample_info &info, int argc, char *argv[]) {
 //    int i, n;
 //
 //    for (i = 1, n = 1; i < argc; i++) {
@@ -601,7 +601,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 //    }
 //}
 //
-//void write_ppm(struct sample_info &info, const char *basename) {
+// void write_ppm(struct sample_info &info, const char *basename) {
 //    string filename;
 //    int x, y;
 //    VkResult res;
@@ -693,7 +693,8 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 //    vkCmdCopyImage(info.cmd, info.buffers[info.current_buffer].image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, mappableImage,
 //                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &copy_region);
 //
-//    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL,
+//    set_image_layout(info, mappableImage, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+//    VK_IMAGE_LAYOUT_GENERAL,
 //                     VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_HOST_BIT);
 //
 //    res = vkEndCommandBuffer(info.cmd);
@@ -780,7 +781,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 //    vkFreeMemory(info.device, mappableMemory, NULL);
 //}
 //
-//std::string get_file_directory() {
+// std::string get_file_directory() {
 //#ifndef __ANDROID__
 //    return "";
 //#else
@@ -796,7 +797,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 //
 //// Helpder class to forward the cout/cerr output to logcat derived from:
 //// http://stackoverflow.com/questions/8870174/is-stdcout-usable-in-android-ndk
-//class AndroidBuffer : public std::streambuf {
+// class AndroidBuffer : public std::streambuf {
 //   public:
 //    AndroidBuffer(android_LogPriority priority) {
 //        priority_ = priority;
@@ -830,7 +831,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 //    char buffer_[kBufferSize];
 //};
 //
-//void Android_handle_cmd(android_app *app, int32_t cmd) {
+// void Android_handle_cmd(android_app *app, int32_t cmd) {
 //    switch (cmd) {
 //        case APP_CMD_INIT_WINDOW:
 //            // The window is being shown, get it ready.
@@ -849,7 +850,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 //    }
 //}
 //
-//bool Android_process_command() {
+// bool Android_process_command() {
 //    assert(Android_application != nullptr);
 //    int events;
 //    android_poll_source *source;
@@ -861,7 +862,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 //    return Android_application->destroyRequested;
 //}
 //
-//void android_main(struct android_app *app) {
+// void android_main(struct android_app *app) {
 //    // Set static variables.
 //    Android_application = app;
 //    // Set the callback to process system events
@@ -880,12 +881,12 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 //    return;
 //}
 //
-//ANativeWindow *AndroidGetApplicationWindow() {
+// ANativeWindow *AndroidGetApplicationWindow() {
 //    assert(Android_application != nullptr);
 //    return Android_application->window;
 //}
 //
-//bool AndroidFillShaderMap(const char *path, std::unordered_map<std::string, std::string> *map_shaders) {
+// bool AndroidFillShaderMap(const char *path, std::unordered_map<std::string, std::string> *map_shaders) {
 //    assert(Android_application != nullptr);
 //    auto directory = AAssetManager_openDir(Android_application->activity->assetManager, path);
 //
@@ -932,7 +933,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 //    return true;
 //}
 //
-//bool AndroidLoadFile(const char *filePath, std::string *data) {
+// bool AndroidLoadFile(const char *filePath, std::string *data) {
 //    assert(Android_application != nullptr);
 //    AAsset *file = AAssetManager_open(Android_application->activity->assetManager, filePath, AASSET_MODE_BUFFER);
 //    size_t fileLength = AAsset_getLength(file);
@@ -945,7 +946,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 //    return true;
 //}
 //
-//void AndroidGetWindowSize(int32_t *width, int32_t *height) {
+// void AndroidGetWindowSize(int32_t *width, int32_t *height) {
 //    // On Android, retrieve the window size from the native window.
 //    assert(Android_application != nullptr);
 //    *width = ANativeWindow_getWidth(Android_application->window);
@@ -954,20 +955,20 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
 //
 //// Android fopen stub described at
 //// http://www.50ply.com/blog/2013/01/19/loading-compressed-android-assets-with-file-pointer/#comment-1850768990
-//static int android_read(void *cookie, char *buf, int size) { return AAsset_read((AAsset *)cookie, buf, size); }
+// static int android_read(void *cookie, char *buf, int size) { return AAsset_read((AAsset *)cookie, buf, size); }
 //
-//static int android_write(void *cookie, const char *buf, int size) {
+// static int android_write(void *cookie, const char *buf, int size) {
 //    return EACCES;  // can't provide write access to the apk
 //}
 //
-//static fpos_t android_seek(void *cookie, fpos_t offset, int whence) { return AAsset_seek((AAsset *)cookie, offset, whence); }
+// static fpos_t android_seek(void *cookie, fpos_t offset, int whence) { return AAsset_seek((AAsset *)cookie, offset, whence); }
 //
-//static int android_close(void *cookie) {
+// static int android_close(void *cookie) {
 //    AAsset_close((AAsset *)cookie);
 //    return 0;
 //}
 //
-//FILE *AndroidFopen(const char *fname, const char *mode) {
+// FILE *AndroidFopen(const char *fname, const char *mode) {
 //    if (mode[0] == 'w') {
 //        return NULL;
 //    }

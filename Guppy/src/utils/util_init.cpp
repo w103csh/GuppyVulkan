@@ -33,12 +33,12 @@ samples "init" utility functions
 //#include <linux/input.h>
 //#endif
 //
-//using namespace std;
+// using namespace std;
 //
 ///*
 // * TODO: function description here
 // */
-//VkResult init_global_extension_properties(layer_properties &layer_props) {
+// VkResult init_global_extension_properties(layer_properties &layer_props) {
 //    VkExtensionProperties *instance_extensions;
 //    uint32_t instance_extension_count;
 //    VkResult res;
@@ -65,7 +65,7 @@ samples "init" utility functions
 ///*
 // * TODO: function description here
 // */
-//VkResult init_global_layer_properties(struct sample_info &info) {
+// VkResult init_global_layer_properties(struct sample_info &info) {
 //    uint32_t instance_layer_count;
 //    VkLayerProperties *vk_props = NULL;
 //    VkResult res;
@@ -120,7 +120,7 @@ samples "init" utility functions
 //    return res;
 //}
 //
-//VkResult init_device_extension_properties(struct sample_info &info, layer_properties &layer_props) {
+// VkResult init_device_extension_properties(struct sample_info &info, layer_properties &layer_props) {
 //    VkExtensionProperties *device_extensions;
 //    uint32_t device_extension_count;
 //    VkResult res;
@@ -148,7 +148,7 @@ samples "init" utility functions
 // * Return 1 (true) if all layer names specified in check_names
 // * can be found in given layer properties.
 // */
-//VkBool32 demo_check_layers(const std::vector<layer_properties> &layer_props, const std::vector<const char *> &layer_names) {
+// VkBool32 demo_check_layers(const std::vector<layer_properties> &layer_props, const std::vector<const char *> &layer_names) {
 //    uint32_t check_count = layer_names.size();
 //    uint32_t layer_count = layer_props.size();
 //    for (uint32_t i = 0; i < check_count; i++) {
@@ -166,7 +166,7 @@ samples "init" utility functions
 //    return 1;
 //}
 //
-//void init_instance_extension_names(struct sample_info &info) {
+// void init_instance_extension_names(struct sample_info &info) {
 //    info.instance_extension_names.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 //#ifdef __ANDROID__
 //    info.instance_extension_names.push_back(VK_KHR_ANDROID_SURFACE_EXTENSION_NAME);
@@ -183,7 +183,7 @@ samples "init" utility functions
 //#endif
 //}
 //
-//VkResult init_instance(struct sample_info &info, char const *const app_short_name) {
+// VkResult init_instance(struct sample_info &info, char const *const app_short_name) {
 //    VkApplicationInfo app_info = {};
 //    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
 //    app_info.pNext = NULL;
@@ -209,11 +209,11 @@ samples "init" utility functions
 //    return res;
 //}
 //
-//void init_device_extension_names(struct sample_info &info) {
+// void init_device_extension_names(struct sample_info &info) {
 //    info.device_extension_names.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 //}
 //
-//VkResult init_device(struct sample_info &info) {
+// VkResult init_device(struct sample_info &info) {
 //    VkResult res;
 //    VkDeviceQueueCreateInfo queue_info = {};
 //
@@ -239,7 +239,7 @@ samples "init" utility functions
 //    return res;
 //}
 //
-//VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count) {
+// VkResult init_enumerate_device(struct sample_info &info, uint32_t gpu_count) {
 //    uint32_t const U_ASSERT_ONLY req_count = gpu_count;
 //    VkResult res = vkEnumeratePhysicalDevices(info.inst, &gpu_count, NULL);
 //    assert(gpu_count);
@@ -266,7 +266,7 @@ samples "init" utility functions
 //    return res;
 //}
 //
-//void init_queue_family_index(struct sample_info &info) {
+// void init_queue_family_index(struct sample_info &info) {
 //    /* This routine simply finds a graphics queue for a later vkCreateDevice,
 //     * without consideration for which queue family can present an image.
 //     * Do not use this if your intent is to present later in your sample,
@@ -293,7 +293,7 @@ samples "init" utility functions
 //    assert(found);
 //}
 //
-//VkResult init_debug_report_callback(struct sample_info &info, PFN_vkDebugReportCallbackEXT dbgFunc) {
+// VkResult init_debug_report_callback(struct sample_info &info, PFN_vkDebugReportCallbackEXT dbgFunc) {
 //    VkResult res;
 //    VkDebugReportCallbackEXT debug_report_callback;
 //
@@ -342,7 +342,7 @@ samples "init" utility functions
 //    return res;
 //}
 //
-//void destroy_debug_report_callback(struct sample_info &info) {
+// void destroy_debug_report_callback(struct sample_info &info) {
 //    while (info.debug_report_callbacks.size() > 0) {
 //        info.dbgDestroyDebugReportCallback(info.inst, info.debug_report_callbacks.back(), NULL);
 //        info.debug_report_callbacks.pop_back();
@@ -351,17 +351,17 @@ samples "init" utility functions
 //
 //#if defined(VK_USE_PLATFORM_WAYLAND_KHR)
 //
-//static void handle_ping(void *data, wl_shell_surface *shell_surface, uint32_t serial) {
+// static void handle_ping(void *data, wl_shell_surface *shell_surface, uint32_t serial) {
 //    wl_shell_surface_pong(shell_surface, serial);
 //}
 //
-//static void handle_configure(void *data, wl_shell_surface *shell_surface, uint32_t edges, int32_t width, int32_t height) {}
+// static void handle_configure(void *data, wl_shell_surface *shell_surface, uint32_t edges, int32_t width, int32_t height) {}
 //
-//static void handle_popup_done(void *data, wl_shell_surface *shell_surface) {}
+// static void handle_popup_done(void *data, wl_shell_surface *shell_surface) {}
 //
-//static const wl_shell_surface_listener shell_surface_listener = {handle_ping, handle_configure, handle_popup_done};
+// static const wl_shell_surface_listener shell_surface_listener = {handle_ping, handle_configure, handle_popup_done};
 //
-//static void registry_handle_global(void *data, wl_registry *registry, uint32_t id, const char *interface, uint32_t version) {
+// static void registry_handle_global(void *data, wl_registry *registry, uint32_t id, const char *interface, uint32_t version) {
 //    sample_info *info = (sample_info *)data;
 //    // pickup wayland objects when they appear
 //    if (strcmp(interface, "wl_compositor") == 0) {
@@ -371,13 +371,13 @@ samples "init" utility functions
 //    }
 //}
 //
-//static void registry_handle_global_remove(void *data, wl_registry *registry, uint32_t name) {}
+// static void registry_handle_global_remove(void *data, wl_registry *registry, uint32_t name) {}
 //
-//static const wl_registry_listener registry_listener = {registry_handle_global, registry_handle_global_remove};
+// static const wl_registry_listener registry_listener = {registry_handle_global, registry_handle_global_remove};
 //
 //#endif
 //
-//void init_connection(struct sample_info &info) {
+// void init_connection(struct sample_info &info) {
 //#if defined(VK_USE_PLATFORM_XCB_KHR)
 //    const xcb_setup_t *setup;
 //    xcb_screen_iterator_t iter;
@@ -411,11 +411,11 @@ samples "init" utility functions
 //#endif
 //}
 //#ifdef _WIN32
-//static void run(struct sample_info *info) { /* Placeholder for samples that want to show dynamic content */
+// static void run(struct sample_info *info) { /* Placeholder for samples that want to show dynamic content */
 //}
 //
 //// MS-Windows event handling function:
-//LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+// LRESULT CALLBACK WndProc(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 //    struct sample_info *info = reinterpret_cast<struct sample_info *>(GetWindowLongPtr(hWnd, GWLP_USERDATA));
 //
 //    switch (uMsg) {
@@ -431,7 +431,7 @@ samples "init" utility functions
 //    return (DefWindowProc(hWnd, uMsg, wParam, lParam));
 //}
 //
-//void init_window(struct sample_info &info) {
+// void init_window(struct sample_info &info) {
 //    WNDCLASSEX win_class;
 //    assert(info.width > 0);
 //    assert(info.height > 0);
@@ -483,7 +483,7 @@ samples "init" utility functions
 //    SetWindowLongPtr(info.window, GWLP_USERDATA, (LONG_PTR)&info);
 //}
 //
-//void destroy_window(struct sample_info &info) {
+// void destroy_window(struct sample_info &info) {
 //    vkDestroySurfaceKHR(info.inst, info.surface, NULL);
 //    DestroyWindow(info.window);
 //}
@@ -492,17 +492,17 @@ samples "init" utility functions
 //
 //// iOS & macOS: init_window() implemented externally to allow access to Objective-C components
 //
-//void destroy_window(struct sample_info &info) { info.window = NULL; }
+// void destroy_window(struct sample_info &info) { info.window = NULL; }
 //
 //#elif defined(__ANDROID__)
 //// Android implementation.
-//void init_window(struct sample_info &info) {}
+// void init_window(struct sample_info &info) {}
 //
-//void destroy_window(struct sample_info &info) {}
+// void destroy_window(struct sample_info &info) {}
 //
 //#elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
 //
-//void init_window(struct sample_info &info) {
+// void init_window(struct sample_info &info) {
 //    assert(info.width > 0);
 //    assert(info.height > 0);
 //
@@ -524,7 +524,7 @@ samples "init" utility functions
 //    wl_shell_surface_set_toplevel(info.shell_surface);
 //}
 //
-//void destroy_window(struct sample_info &info) {
+// void destroy_window(struct sample_info &info) {
 //    wl_shell_surface_destroy(info.shell_surface);
 //    wl_surface_destroy(info.window);
 //    wl_shell_destroy(info.shell);
@@ -535,7 +535,7 @@ samples "init" utility functions
 //
 //#else
 //
-//void init_window(struct sample_info &info) {
+// void init_window(struct sample_info &info) {
 //    assert(info.width > 0);
 //    assert(info.height > 0);
 //
@@ -575,7 +575,7 @@ samples "init" utility functions
 //    }
 //}
 //
-//void destroy_window(struct sample_info &info) {
+// void destroy_window(struct sample_info &info) {
 //    vkDestroySurfaceKHR(info.inst, info.surface, NULL);
 //    xcb_destroy_window(info.connection, info.window);
 //    xcb_disconnect(info.connection);
@@ -583,7 +583,7 @@ samples "init" utility functions
 //
 //#endif  // _WIN32
 //
-//void init_window_size(struct sample_info &info, int32_t default_width, int32_t default_height) {
+// void init_window_size(struct sample_info &info, int32_t default_width, int32_t default_height) {
 //#ifdef __ANDROID__
 //    AndroidGetWindowSize(&info.width, &info.height);
 //#else
@@ -592,7 +592,7 @@ samples "init" utility functions
 //#endif
 //}
 //
-//void init_depth_buffer(struct sample_info &info) {
+// void init_depth_buffer(struct sample_info &info) {
 //    VkResult U_ASSERT_ONLY res;
 //    bool U_ASSERT_ONLY pass;
 //    VkImageCreateInfo image_info = {};
@@ -676,7 +676,8 @@ samples "init" utility functions
 //    mem_alloc.allocationSize = mem_reqs.size;
 //    /* Use the memory properties to determine the type of memory required */
 //    pass =
-//        memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, &mem_alloc.memoryTypeIndex);
+//        memory_type_from_properties(info, mem_reqs.memoryTypeBits, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+//        &mem_alloc.memoryTypeIndex);
 //    assert(pass);
 //
 //    /* Allocate memory */
@@ -693,7 +694,7 @@ samples "init" utility functions
 //    assert(res == VK_SUCCESS);
 //}
 //
-//void init_swapchain_extension(struct sample_info &info) {
+// void init_swapchain_extension(struct sample_info &info) {
 //    /* DEPENDS on init_connection() and init_window() */
 //
 //    VkResult U_ASSERT_ONLY res;
@@ -805,7 +806,7 @@ samples "init" utility functions
 //    free(surfFormats);
 //}
 //
-//void init_presentable_image(struct sample_info &info) {
+// void init_presentable_image(struct sample_info &info) {
 //    /* DEPENDS on init_swap_chain() */
 //
 //    VkResult U_ASSERT_ONLY res;
@@ -825,7 +826,7 @@ samples "init" utility functions
 //    assert(!res);
 //}
 //
-//void execute_queue_cmdbuf(struct sample_info &info, const VkCommandBuffer *cmd_bufs, VkFence &fence) {
+// void execute_queue_cmdbuf(struct sample_info &info, const VkCommandBuffer *cmd_bufs, VkFence &fence) {
 //    VkResult U_ASSERT_ONLY res;
 //
 //    VkPipelineStageFlags pipe_stage_flags = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -845,7 +846,7 @@ samples "init" utility functions
 //    res = vkQueueSubmit(info.graphics_queue, 1, submit_info, fence);
 //    assert(!res);
 //}
-//void execute_pre_present_barrier(struct sample_info &info) {
+// void execute_pre_present_barrier(struct sample_info &info) {
 //    /* DEPENDS on init_swap_chain() */
 //    /* Add mem barrier to change layout to present */
 //
@@ -864,10 +865,11 @@ samples "init" utility functions
 //    prePresentBarrier.subresourceRange.baseArrayLayer = 0;
 //    prePresentBarrier.subresourceRange.layerCount = 1;
 //    prePresentBarrier.image = info.buffers[info.current_buffer].image;
-//    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL,
+//    vkCmdPipelineBarrier(info.cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0,
+//    NULL,
 //                         0, NULL, 1, &prePresentBarrier);
 //}
-//void execute_present_image(struct sample_info &info) {
+// void execute_present_image(struct sample_info &info) {
 //    /* DEPENDS on init_presentable_image() and init_swap_chain()*/
 //    /* Present the image in the window */
 //
@@ -888,7 +890,7 @@ samples "init" utility functions
 //    assert(!res);
 //}
 //
-//void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
+// void init_swap_chain(struct sample_info &info, VkImageUsageFlags usageFlags) {
 //    /* DEPENDS on info.cmd and info.queue initialized */
 //
 //    VkResult U_ASSERT_ONLY res;
@@ -1041,7 +1043,7 @@ samples "init" utility functions
 //    }
 //}
 //
-//void init_uniform_buffer(struct sample_info &info) {
+// void init_uniform_buffer(struct sample_info &info) {
 //    VkResult U_ASSERT_ONLY res;
 //    bool U_ASSERT_ONLY pass;
 //    float fov = glm::radians(45.0f);
@@ -1105,7 +1107,7 @@ samples "init" utility functions
 //    info.uniform_data.buffer_info.range = sizeof(info.MVP);
 //}
 //
-//void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_texture,
+// void init_descriptor_and_pipeline_layouts(struct sample_info &info, bool use_texture,
 //                                          VkDescriptorSetLayoutCreateFlags descSetLayoutCreateFlags) {
 //    VkDescriptorSetLayoutBinding layout_bindings[2];
 //    layout_bindings[0].binding = 0;
@@ -1150,7 +1152,7 @@ samples "init" utility functions
 //    assert(res == VK_SUCCESS);
 //}
 //
-//void init_renderpass(struct sample_info &info, bool include_depth, bool clear, VkImageLayout finalLayout) {
+// void init_renderpass(struct sample_info &info, bool include_depth, bool clear, VkImageLayout finalLayout) {
 //    /* DEPENDS on init_swap_chain() and init_depth_buffer() */
 //
 //    VkResult U_ASSERT_ONLY res;
@@ -1170,7 +1172,8 @@ samples "init" utility functions
 //        attachments[1].format = info.depth.format;
 //        attachments[1].samples = NUM_SAMPLES;
 //        attachments[1].loadOp = clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-//        attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;  // This was "don't care" in the sample and that makes more sense to
+//        attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_STORE;  // This was "don't care" in the sample and that makes more sense
+//        to
 //                                                                // me. This obvious is for some kind of stencil operation.
 //        attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
 //        attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -1213,7 +1216,7 @@ samples "init" utility functions
 //    assert(res == VK_SUCCESS);
 //}
 //
-//void init_framebuffers(struct sample_info &info, bool include_depth) {
+// void init_framebuffers(struct sample_info &info, bool include_depth) {
 //    /* DEPENDS on init_depth_buffer(), init_renderpass() and
 //     * init_swapchain_extension() */
 //
@@ -1241,7 +1244,7 @@ samples "init" utility functions
 //        assert(res == VK_SUCCESS);
 //    }
 //}
-//void init_command_pool(struct sample_info &info) {
+// void init_command_pool(struct sample_info &info) {
 //    /* DEPENDS on init_swapchain_extension() */
 //    VkResult U_ASSERT_ONLY res;
 //
@@ -1255,7 +1258,7 @@ samples "init" utility functions
 //    assert(res == VK_SUCCESS);
 //}
 //
-//void init_command_buffer(struct sample_info &info) {
+// void init_command_buffer(struct sample_info &info) {
 //    /* DEPENDS on init_swapchain_extension() and init_command_pool() */
 //    VkResult U_ASSERT_ONLY res;
 //
@@ -1270,7 +1273,7 @@ samples "init" utility functions
 //    assert(res == VK_SUCCESS);
 //}
 //
-//void execute_begin_command_buffer(struct sample_info &info) {
+// void execute_begin_command_buffer(struct sample_info &info) {
 //    /* DEPENDS on init_command_buffer() */
 //    VkResult U_ASSERT_ONLY res;
 //
@@ -1284,14 +1287,14 @@ samples "init" utility functions
 //    assert(res == VK_SUCCESS);
 //}
 //
-//void execute_end_command_buffer(struct sample_info &info) {
+// void execute_end_command_buffer(struct sample_info &info) {
 //    VkResult U_ASSERT_ONLY res;
 //
 //    res = vkEndCommandBuffer(info.cmd);
 //    assert(res == VK_SUCCESS);
 //}
 //
-//void execute_queue_command_buffer(struct sample_info &info) {
+// void execute_queue_command_buffer(struct sample_info &info) {
 //    VkResult U_ASSERT_ONLY res;
 //
 //    /* Queue the command buffer for execution */
@@ -1326,7 +1329,7 @@ samples "init" utility functions
 //    vkDestroyFence(info.device, drawFence, NULL);
 //}
 //
-//void init_device_queue(struct sample_info &info) {
+// void init_device_queue(struct sample_info &info) {
 //    /* DEPENDS on init_swapchain_extension() */
 //
 //    vkGetDeviceQueue(info.device, info.graphics_queue_family_index, 0, &info.graphics_queue);
@@ -1337,7 +1340,7 @@ samples "init" utility functions
 //    }
 //}
 //
-//void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32_t dataSize, uint32_t dataStride,
+// void init_vertex_buffer(struct sample_info &info, const void *vertexData, uint32_t dataSize, uint32_t dataStride,
 //                        bool use_texture) {
 //    VkResult U_ASSERT_ONLY res;
 //    bool U_ASSERT_ONLY pass;
@@ -1398,7 +1401,7 @@ samples "init" utility functions
 //    info.vi_attribs[1].offset = 16;
 //}
 //
-//void init_descriptor_pool(struct sample_info &info, bool use_texture) {
+// void init_descriptor_pool(struct sample_info &info, bool use_texture) {
 //    /* DEPENDS on init_uniform_buffer() and
 //     * init_descriptor_and_pipeline_layouts() */
 //
@@ -1422,7 +1425,7 @@ samples "init" utility functions
 //    assert(res == VK_SUCCESS);
 //}
 //
-//void init_descriptor_set(struct sample_info &info, bool use_texture) {
+// void init_descriptor_set(struct sample_info &info, bool use_texture) {
 //    /* DEPENDS on init_descriptor_pool() */
 //
 //    VkResult U_ASSERT_ONLY res;
@@ -1464,7 +1467,7 @@ samples "init" utility functions
 //    vkUpdateDescriptorSets(info.device, use_texture ? 2 : 1, writes, 0, NULL);
 //}
 //
-//void init_shaders(struct sample_info &info, const char *vertShaderText, const char *fragShaderText) {
+// void init_shaders(struct sample_info &info, const char *vertShaderText, const char *fragShaderText) {
 //    VkResult U_ASSERT_ONLY res;
 //    bool U_ASSERT_ONLY retVal;
 //
@@ -1519,7 +1522,7 @@ samples "init" utility functions
 //    finalize_glslang();
 //}
 //
-//void init_pipeline_cache(struct sample_info &info) {
+// void init_pipeline_cache(struct sample_info &info) {
 //    VkResult U_ASSERT_ONLY res;
 //
 //    VkPipelineCacheCreateInfo pipelineCache;
@@ -1532,7 +1535,7 @@ samples "init" utility functions
 //    assert(res == VK_SUCCESS);
 //}
 //
-//void init_pipeline(struct sample_info &info, VkBool32 include_depth, VkBool32 include_vi) {
+// void init_pipeline(struct sample_info &info, VkBool32 include_depth, VkBool32 include_vi) {
 //    VkResult U_ASSERT_ONLY res;
 //
 //    VkDynamicState dynamicStateEnables[VK_DYNAMIC_STATE_RANGE_SIZE];
@@ -1686,7 +1689,7 @@ samples "init" utility functions
 //    assert(res == VK_SUCCESS);
 //}
 //
-//void init_sampler(struct sample_info &info, VkSampler &sampler) {
+// void init_sampler(struct sample_info &info, VkSampler &sampler) {
 //    VkResult U_ASSERT_ONLY res;
 //
 //    VkSamplerCreateInfo samplerCreateInfo = {};
@@ -1711,7 +1714,7 @@ samples "init" utility functions
 //    assert(res == VK_SUCCESS);
 //}
 //
-//void init_image(struct sample_info &info, texture_object &texObj, const char *textureName, VkImageUsageFlags extraUsages,
+// void init_image(struct sample_info &info, texture_object &texObj, const char *textureName, VkImageUsageFlags extraUsages,
 //                VkFormatFeatureFlags extraFeatures) {
 //    VkResult U_ASSERT_ONLY res;
 //    bool U_ASSERT_ONLY pass;
@@ -1970,7 +1973,7 @@ samples "init" utility functions
 //    assert(res == VK_SUCCESS);
 //}
 //
-//void init_texture(struct sample_info &info, const char *textureName, VkImageUsageFlags extraUsages,
+// void init_texture(struct sample_info &info, const char *textureName, VkImageUsageFlags extraUsages,
 //                  VkFormatFeatureFlags extraFeatures) {
 //    struct texture_object texObj;
 //
@@ -1988,7 +1991,7 @@ samples "init" utility functions
 //    info.texture_data.image_info.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 //}
 //
-//void init_viewports(struct sample_info &info) {
+// void init_viewports(struct sample_info &info) {
 //#ifdef __ANDROID__
 //    // Disable dynamic viewport on Android. Some drive has an issue with the dynamic viewport
 //    // feature.
@@ -2003,7 +2006,7 @@ samples "init" utility functions
 //#endif
 //}
 //
-//void init_scissors(struct sample_info &info) {
+// void init_scissors(struct sample_info &info) {
 //#ifdef __ANDROID__
 //    // Disable dynamic viewport on Android. Some drive has an issue with the dynamic scissors
 //    // feature.
@@ -2016,7 +2019,7 @@ samples "init" utility functions
 //#endif
 //}
 //
-//void init_fence(struct sample_info &info, VkFence &fence) {
+// void init_fence(struct sample_info &info, VkFence &fence) {
 //    VkFenceCreateInfo fenceInfo;
 //    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 //    fenceInfo.pNext = NULL;
@@ -2024,7 +2027,7 @@ samples "init" utility functions
 //    vkCreateFence(info.device, &fenceInfo, NULL, &fence);
 //}
 //
-//void init_submit_info(struct sample_info &info, VkSubmitInfo &submit_info, VkPipelineStageFlags &pipe_stage_flags) {
+// void init_submit_info(struct sample_info &info, VkSubmitInfo &submit_info, VkPipelineStageFlags &pipe_stage_flags) {
 //    submit_info.pNext = NULL;
 //    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 //    submit_info.waitSemaphoreCount = 1;
@@ -2036,7 +2039,7 @@ samples "init" utility functions
 //    submit_info.pSignalSemaphores = NULL;
 //}
 //
-//void init_present_info(struct sample_info &info, VkPresentInfoKHR &present) {
+// void init_present_info(struct sample_info &info, VkPresentInfoKHR &present) {
 //    present.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 //    present.pNext = NULL;
 //    present.swapchainCount = 1;
@@ -2047,7 +2050,7 @@ samples "init" utility functions
 //    present.pResults = NULL;
 //}
 //
-//void init_clear_color_and_depth(struct sample_info &info, VkClearValue *clear_values) {
+// void init_clear_color_and_depth(struct sample_info &info, VkClearValue *clear_values) {
 //    clear_values[0].color.float32[0] = 0.2f;
 //    clear_values[0].color.float32[1] = 0.2f;
 //    clear_values[0].color.float32[2] = 0.2f;
@@ -2056,7 +2059,7 @@ samples "init" utility functions
 //    clear_values[1].depthStencil.stencil = 0;
 //}
 //
-//void init_render_pass_begin_info(struct sample_info &info, VkRenderPassBeginInfo &rp_begin) {
+// void init_render_pass_begin_info(struct sample_info &info, VkRenderPassBeginInfo &rp_begin) {
 //    rp_begin.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 //    rp_begin.pNext = NULL;
 //    rp_begin.renderPass = info.render_pass;
@@ -2069,69 +2072,69 @@ samples "init" utility functions
 //    rp_begin.pClearValues = nullptr;
 //}
 //
-//void destroy_pipeline(struct sample_info &info) { vkDestroyPipeline(info.device, info.pipeline, NULL); }
+// void destroy_pipeline(struct sample_info &info) { vkDestroyPipeline(info.device, info.pipeline, NULL); }
 //
-//void destroy_pipeline_cache(struct sample_info &info) { vkDestroyPipelineCache(info.device, info.pipelineCache, NULL); }
+// void destroy_pipeline_cache(struct sample_info &info) { vkDestroyPipelineCache(info.device, info.pipelineCache, NULL); }
 //
-//void destroy_uniform_buffer(struct sample_info &info) {
+// void destroy_uniform_buffer(struct sample_info &info) {
 //    vkDestroyBuffer(info.device, info.uniform_data.buf, NULL);
 //    vkFreeMemory(info.device, info.uniform_data.mem, NULL);
 //}
 //
-//void destroy_descriptor_and_pipeline_layouts(struct sample_info &info) {
+// void destroy_descriptor_and_pipeline_layouts(struct sample_info &info) {
 //    for (int i = 0; i < NUM_DESCRIPTOR_SETS; i++) vkDestroyDescriptorSetLayout(info.device, info.desc_layout[i], NULL);
 //    vkDestroyPipelineLayout(info.device, info.pipeline_layout, NULL);
 //}
 //
-//void destroy_descriptor_pool(struct sample_info &info) { vkDestroyDescriptorPool(info.device, info.desc_pool, NULL); }
+// void destroy_descriptor_pool(struct sample_info &info) { vkDestroyDescriptorPool(info.device, info.desc_pool, NULL); }
 //
-//void destroy_shaders(struct sample_info &info) {
+// void destroy_shaders(struct sample_info &info) {
 //    vkDestroyShaderModule(info.device, info.shaderStages[0].module, NULL);
 //    vkDestroyShaderModule(info.device, info.shaderStages[1].module, NULL);
 //}
 //
-//void destroy_command_buffer(struct sample_info &info) {
+// void destroy_command_buffer(struct sample_info &info) {
 //    VkCommandBuffer cmd_bufs[1] = {info.cmd};
 //    vkFreeCommandBuffers(info.device, info.cmd_pool, 1, cmd_bufs);
 //}
 //
-//void destroy_command_pool(struct sample_info &info) { vkDestroyCommandPool(info.device, info.cmd_pool, NULL); }
+// void destroy_command_pool(struct sample_info &info) { vkDestroyCommandPool(info.device, info.cmd_pool, NULL); }
 //
-//void destroy_depth_buffer(struct sample_info &info) {
+// void destroy_depth_buffer(struct sample_info &info) {
 //    vkDestroyImageView(info.device, info.depth.view, NULL);
 //    vkDestroyImage(info.device, info.depth.image, NULL);
 //    vkFreeMemory(info.device, info.depth.mem, NULL);
 //}
 //
-//void destroy_vertex_buffer(struct sample_info &info) {
+// void destroy_vertex_buffer(struct sample_info &info) {
 //    vkDestroyBuffer(info.device, info.vertex_buffer.buf, NULL);
 //    vkFreeMemory(info.device, info.vertex_buffer.mem, NULL);
 //}
 //
-//void destroy_swap_chain(struct sample_info &info) {
+// void destroy_swap_chain(struct sample_info &info) {
 //    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
 //        vkDestroyImageView(info.device, info.buffers[i].view, NULL);
 //    }
 //    vkDestroySwapchainKHR(info.device, info.swap_chain, NULL);
 //}
 //
-//void destroy_framebuffers(struct sample_info &info) {
+// void destroy_framebuffers(struct sample_info &info) {
 //    for (uint32_t i = 0; i < info.swapchainImageCount; i++) {
 //        vkDestroyFramebuffer(info.device, info.framebuffers[i], NULL);
 //    }
 //    free(info.framebuffers);
 //}
 //
-//void destroy_renderpass(struct sample_info &info) { vkDestroyRenderPass(info.device, info.render_pass, NULL); }
+// void destroy_renderpass(struct sample_info &info) { vkDestroyRenderPass(info.device, info.render_pass, NULL); }
 //
-//void destroy_device(struct sample_info &info) {
+// void destroy_device(struct sample_info &info) {
 //    vkDeviceWaitIdle(info.device);
 //    vkDestroyDevice(info.device, NULL);
 //}
 //
-//void destroy_instance(struct sample_info &info) { vkDestroyInstance(info.inst, NULL); }
+// void destroy_instance(struct sample_info &info) { vkDestroyInstance(info.inst, NULL); }
 //
-//void destroy_textures(struct sample_info &info) {
+// void destroy_textures(struct sample_info &info) {
 //    for (size_t i = 0; i < info.textures.size(); i++) {
 //        vkDestroySampler(info.device, info.textures[i].sampler, NULL);
 //        vkDestroyImageView(info.device, info.textures[i].view, NULL);

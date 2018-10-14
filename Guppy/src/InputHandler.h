@@ -20,7 +20,7 @@
 //} GLFWDirectionKeyMap;
 
 #include "Helpers.h"
-const bool MY_DEBUG = true;
+const bool MY_DEBUG = false;
 
 class InputHandler {
    public:

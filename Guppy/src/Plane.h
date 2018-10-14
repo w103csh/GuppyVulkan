@@ -28,6 +28,7 @@ class Plane {
 class ColorPlane : public Plane, public ColorMesh {
    public:
     ColorPlane();
+    ColorPlane(float width, float height, bool doubleSided = false, glm::vec3 pos = glm::vec3(), glm::mat4 rot = glm::mat4(1.0f));
 
    private:
     void createVertices(float width = 2.0f, float height = 2.0f) override;

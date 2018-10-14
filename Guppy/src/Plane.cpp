@@ -21,20 +21,20 @@ void Plane::createIndices(std::vector<VB_INDEX_TYPE> &indices, bool doubleSided)
 // **********************
 
 ColorPlane::ColorPlane() : Plane(), ColorMesh() {
+    markerName_ = "ColorPlane";
     createVertices();
     Plane::createIndices(indices_);
 }
 
-// ColorPlane::ColorPlane(float width, float height, bool doubleSided = false, glm::vec3 pos = glm::vec3(),
-//                       glm::mat4 rot = glm::mat4(1.0f)) {
-//    createVertices(width, height);
-//    for (auto& vertex : vertices_) {
-//        // TODO: determine when to use 1 or 0 as the homogeneous coord
-//        vertex.pos = glm::vec4(vertex.pos, 1.0) * rot;
-//        vertex.pos += pos;
-//    }
-//    createIndices(doubleSided);
-//}
+ ColorPlane::ColorPlane(float width, float height, bool doubleSided, glm::vec3 pos,
+                       glm::mat4 rot) {
+    createVertices(width, height);
+    for (auto& vertex : vertices_) {
+        vertex.pos = glm::vec4(vertex.pos, 0.0) * rot;
+        vertex.pos += pos;
+    }
+    Plane::createIndices(indices_, doubleSided);
+ }
 
 void ColorPlane::createVertices(float width, float height) {
     float l = (width / 2 * -1), r = (width / 2);
@@ -72,6 +72,7 @@ void ColorPlane::createVertices(float width, float height) {
 // **********************
 
 TexturePlane::TexturePlane() : TextureMesh("..\\..\\..\\images\\texture.jpg") {
+    markerName_ = "TexturePlane";
     createVertices();
     Plane::createIndices(indices_);
 }

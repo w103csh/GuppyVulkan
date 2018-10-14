@@ -3,21 +3,20 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
+#include "CmdBufHandler.h"
 #include "Helpers.h"
 #include "MyShell.h"
 #include "Texture.h"
 
 #define STB_FORMAT VK_FORMAT_R8G8B8A8_UNORM
 
-Texture::TextureData Texture::createTexture(const VkDevice& dev, const VkPhysicalDeviceMemoryProperties& mem_props,
-                                            const std::vector<uint32_t>& queueFamilyIndices, const VkCommandBuffer& graph_cmd,
-                                            const VkCommandBuffer& trans_cmd, const std::string tex_path, bool generate_mipmaps,
-                                            StagingBufferResource& stg_res) {
+Texture::TextureData Texture::createTexture(const VkDevice& dev, const VkCommandBuffer& graph_cmd, const VkCommandBuffer& trans_cmd,
+                                            const std::string tex_path, bool generate_mipmaps, BufferResource& stg_res) {
     TextureData tex = {};
     tex.path = tex_path;
     tex.name = helpers::getFileName(tex_path);
 
-    createImage(dev, mem_props, trans_cmd, graph_cmd, queueFamilyIndices, tex_path, generate_mipmaps, tex, stg_res);
+    createImage(dev, trans_cmd, graph_cmd, tex_path, generate_mipmaps, tex, stg_res);
     createImageView(dev, tex);
     createSampler(dev, tex);
     createDescInfo(tex);
@@ -25,9 +24,8 @@ Texture::TextureData Texture::createTexture(const VkDevice& dev, const VkPhysica
     return tex;
 }
 
-void Texture::createImage(const VkDevice& dev, const VkPhysicalDeviceMemoryProperties& mem_props, const VkCommandBuffer& trans_cmd,
-                          const VkCommandBuffer& graph_cmd, const std::vector<uint32_t>& queueFamilyIndices,
-                          const std::string texturePath, bool generate_mipmaps, TextureData& tex, StagingBufferResource& stg_res) {
+void Texture::createImage(const VkDevice& dev, const VkCommandBuffer& trans_cmd, const VkCommandBuffer& graph_cmd,
+                          const std::string texturePath, bool generate_mipmaps, TextureData& tex, BufferResource& stg_res) {
     int width, height, channels;
     stbi_uc* pixels = stbi_load(texturePath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
 
@@ -42,7 +40,7 @@ void Texture::createImage(const VkDevice& dev, const VkPhysicalDeviceMemoryPrope
     tex.channels = static_cast<uint32_t>(channels);
     tex.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(tex.width, tex.height)))) + 1;
 
-    auto memReqsSize = helpers::create_buffer(dev, mem_props, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    auto memReqsSize = helpers::create_buffer(dev, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                               stg_res.buffer, stg_res.memory);
 
@@ -53,8 +51,11 @@ void Texture::createImage(const VkDevice& dev, const VkPhysicalDeviceMemoryPrope
 
     stbi_image_free(pixels);
 
-    helpers::create_image(dev, mem_props, queueFamilyIndices, static_cast<uint32_t>(tex.width), static_cast<uint32_t>(tex.height),
-                          tex.mipLevels, VK_SAMPLE_COUNT_1_BIT, STB_FORMAT, VK_IMAGE_TILING_OPTIMAL,
+    // Using CmdBufHandler::getUniqueQueueFamilies(true, false, true) here might not be wise... To work
+    // right it relies on the the two command buffers being created with the same data.
+    helpers::create_image(dev, CmdBufHandler::getUniqueQueueFamilies(true, false, true), static_cast<uint32_t>(tex.width),
+                          static_cast<uint32_t>(tex.height), tex.mipLevels, VK_SAMPLE_COUNT_1_BIT, STB_FORMAT,
+                          VK_IMAGE_TILING_OPTIMAL,
                           VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, tex.image, tex.memory);
 

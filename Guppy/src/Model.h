@@ -6,10 +6,10 @@
 //#include "Plane.h"
 //#include "Vertex.h"
 //
-//const std::string CHALET_MODEL_PATH = "..\\..\\..\\data\\chalet.obj";
-//const std::string CHALET_TEXTURE_PATH = "..\\..\\..\\images\\chalet.jpg";
+// const std::string CHALET_MODEL_PATH = "..\\..\\..\\data\\chalet.obj";
+// const std::string CHALET_TEXTURE_PATH = "..\\..\\..\\images\\chalet.jpg";
 //
-//class Model {
+// class Model {
 //   public:
 //    inline Vertex* getVertexData() { return vertices_.data(); }
 //

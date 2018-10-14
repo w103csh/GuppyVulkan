@@ -1,9 +1,11 @@
 
-#pragma once
+#ifndef FILELOADER_H
+#define FILELOADER_H
 
 #include <vector>
 
-class FileLoader {
-   public:
-    static const std::string FileLoader::read_file(const std::string& filename);
+namespace FileLoader {
+std::string read_file(std::string filepath);
 };
+
+#endif  // !FILELOADER_H

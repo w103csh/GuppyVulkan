@@ -59,7 +59,7 @@ static void CreateDebugMarkerEXTs(VkDevice device, VkPhysicalDevice physicalDevi
     }
 }
 
-//static void DestoryDebugMarkerEXTs(VkDevice device, VkPhysicalDevice physicalDevice) {
+// static void DestoryDebugMarkerEXTs(VkDevice device, VkPhysicalDevice physicalDevice) {
 //    if (active) {
 //        if (vkDebugMarkerSetObjectTag != VK_NULL_HANDLE) {
 //            auto func = (PFN_vkDebugMarkerSetObjectTagEXT)vkGetDeviceProcAddr(device, "vkDebugMarkerSetObjectTagEXT");

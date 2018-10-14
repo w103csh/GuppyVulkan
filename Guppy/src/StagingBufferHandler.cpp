@@ -3,13 +3,13 @@
 //
 //#include "StagingBufferHandler.h"
 //
-//StagingBufferHandler::StagingBufferHandler(const MyShell* sh, const VkDevice& dev, const CommandData* cmd_data)
+// StagingBufferHandler::StagingBufferHandler(const MyShell* sh, const VkDevice& dev, const CommandData* cmd_data)
 //    : sh_(sh), dev_(dev), cmd_data_(cmd_data), mutex_() {
 //    assert(sh != nullptr && dev != nullptr && cmd_data != nullptr);
 //}
 //
 //// TODO: This should create / reset the wait command that gets submitted in end_recording_and_submit.
-//void StagingBufferHandler::begin_command_recording(VkCommandBuffer& cmd, BEGIN_TYPE type, VkCommandBufferResetFlags resetflags) {
+// void StagingBufferHandler::begin_command_recording(VkCommandBuffer& cmd, BEGIN_TYPE type, VkCommandBufferResetFlags resetflags) {
 //    switch (type) {
 //        case BEGIN_TYPE::ALLOC: {
 //            VkCommandBufferAllocateInfo cmd_info = {};
@@ -29,7 +29,7 @@
 //}
 //
 //// TODO: This needs work. begin_command_recording should create / reset the wait command that gets submitted here too.
-//void StagingBufferHandler::end_recording_and_submit(StagingBufferResource* resources, size_t num_resources, VkCommandBuffer& cmd,
+// void StagingBufferHandler::end_recording_and_submit(StagingBufferResource* resources, size_t num_resources, VkCommandBuffer& cmd,
 //                                                    uint32_t wait_queue_family, VkCommandBuffer* wait_cmd,
 //                                                    VkPipelineStageFlags* wait_stages, END_TYPE type) {
 //    if (wait_queue_family == cmd_data_->transfer_queue_family) {
@@ -111,7 +111,7 @@
 //    wait(cmd_res, END_TYPE::RESET);
 //}
 //
-//void StagingBufferHandler::wait(CommandResources* cmd_res, END_TYPE type) {
+// void StagingBufferHandler::wait(CommandResources* cmd_res, END_TYPE type) {
 //    // WAIT FOR FENCES
 //    vk::assert_success(vkWaitForFences(dev_, NUM_STAG_BUFF_FENCES, cmd_res->fences.data(), VK_TRUE, UINT64_MAX));
 //

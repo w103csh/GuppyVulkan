@@ -1,20 +1,18 @@
-#version 450
-#extension GL_ARB_separate_shader_objects : enable
-layout(binding = 0) uniform UniformBufferObject {
-    mat4 model;
-    mat4 view;
-    mat4 proj;
-} ubo;
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inColor;
-layout(location = 2) in vec2 inTexCoord;
-layout(location = 0) out vec3 fragColor;
-layout(location = 1) out vec2 fragTexCoord;
-out gl_PerVertex {
-    vec4 gl_Position;
-};
-void main() {
-    gl_Position = ubo.proj * ubo.view * ubo.model * vec4(inPosition, 1.0);
-    fragColor = inColor;
-    fragTexCoord = inTexCoord;
-}
+    if (fragShaderText.data()) {
+        std::vector<unsigned int> frag_spv;
+        retVal = GLSLtoSPV(VK_SHADER_STAGE_FRAGMENT_BIT, fragShaderText.data(), frag_spv);
+        assert(retVal);
+
+        module_info = {};
+        module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+        module_info.codeSize = frag_spv.size() * sizeof(unsigned int);
+        module_info.pCode = frag_spv.data();
+        vk::assert_success(vkCreateShaderModule(dev_, &module_info, nullptr, &fs_.module));
+
+        stage_info = {};
+        stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+        stage_info.stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+        stage_info.pName = "main";
+        stage_info.module = fs_.module;
+        fs_.info = std::move(stage_info);
+    }
