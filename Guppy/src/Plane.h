@@ -40,19 +40,10 @@ class ColorPlane : public Plane, public ColorMesh {
 
 class TexturePlane : public Plane, public TextureMesh {
    public:
-    TexturePlane();
+    TexturePlane(std::shared_ptr<Texture::TextureData> pTex);
+    TexturePlane(std::shared_ptr<Texture::TextureData> pTex, float width, float height, bool doubleSided = false,
+                 glm::vec3 pos = glm::vec3(), glm::mat4 rot = glm::mat4(1.0f));
 
    private:
     void createVertices(float width = 2.0f, float height = 2.0f) override;
 };
-
-// class TexturePlane : public Plane, public TextureMesh {
-//   public:
-//    TexturePlane();
-//    TexturePlane(std::string texturePath);
-//    TexturePlane(float width, float height, bool doubleSided = false, glm::vec3 pos = glm::vec3(), glm::mat4 rot =
-//    glm::mat4(1.0f));
-//
-//   private:
-//    void createVertices(float width = 2.0f, float height = 2.0f) override;
-//};

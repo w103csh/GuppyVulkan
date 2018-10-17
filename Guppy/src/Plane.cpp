@@ -6,7 +6,7 @@
 // Plane
 // **********************
 
-void Plane::createIndices(std::vector<VB_INDEX_TYPE> &indices, bool doubleSided) {
+void Plane::createIndices(std::vector<VB_INDEX_TYPE>& indices, bool doubleSided) {
     int indexSize = doubleSided ? (PLANE_INDEX_SIZE * 2) : PLANE_INDEX_SIZE;
     indices.resize(indexSize);
     indices = {0, 1, 2, 2, 1, 3};
@@ -26,15 +26,15 @@ ColorPlane::ColorPlane() : Plane(), ColorMesh() {
     Plane::createIndices(indices_);
 }
 
- ColorPlane::ColorPlane(float width, float height, bool doubleSided, glm::vec3 pos,
-                       glm::mat4 rot) {
+ColorPlane::ColorPlane(float width, float height, bool doubleSided, glm::vec3 pos, glm::mat4 rot) {
+    markerName_ = "ColorPlane";
     createVertices(width, height);
     for (auto& vertex : vertices_) {
         vertex.pos = glm::vec4(vertex.pos, 0.0) * rot;
         vertex.pos += pos;
     }
     Plane::createIndices(indices_, doubleSided);
- }
+}
 
 void ColorPlane::createVertices(float width, float height) {
     float l = (width / 2 * -1), r = (width / 2);
@@ -71,27 +71,23 @@ void ColorPlane::createVertices(float width, float height) {
 // TexturePlane
 // **********************
 
-TexturePlane::TexturePlane() : TextureMesh("..\\..\\..\\images\\texture.jpg") {
+TexturePlane::TexturePlane(std::shared_ptr<Texture::TextureData> pTex) : TextureMesh(pTex) {
     markerName_ = "TexturePlane";
     createVertices();
     Plane::createIndices(indices_);
 }
 
-// TexturePlane::TexturePlane(std::string texturePath) : TextureMesh(texturePath, "") {
-//    createVertices();
-//    createIndices();
-//}
-//
-// TexturePlane::TexturePlane(float width, float height, bool doubleSided = false, glm::vec3 pos = glm::vec3(),
-//                           glm::mat4 rot = glm::mat4(1.0f)) {
-//    createVertices(width, height);
-//    for (auto& vertex : vertices_) {
-//        // TODO: determine when to use 1 or 0 as the homogeneous coord
-//        vertex.pos = glm::vec4(vertex.pos, 1.0) * rot;
-//        vertex.pos += pos;
-//    }
-//    createIndices(doubleSided);
-//}
+TexturePlane::TexturePlane(std::shared_ptr<Texture::TextureData> pTex, float width, float height, bool doubleSided, glm::vec3 pos,
+                           glm::mat4 rot)
+    : TextureMesh(pTex) {
+    markerName_ = "TexturePlane";
+    createVertices(width, height);
+    for (auto& vertex : vertices_) {
+        vertex.pos = glm::vec4(vertex.pos, 0.0) * rot;
+        vertex.pos += pos;
+    }
+    Plane::createIndices(indices_, doubleSided);
+}
 
 void TexturePlane::createVertices(float width, float height) {
     float l = (width / 2 * -1), r = (width / 2);

@@ -13,7 +13,6 @@
 
 // This is here for convenience
 #include "Extensions.h"
-#include "Vertex.h"
 
 enum class MODEL_FILE_TYPE { UNKNOWN = 0, OBJ };
 
@@ -59,8 +58,8 @@ static std::string getFileName(std::string s) {
 }
 
 static std::string getFileExt(std::string s) {
-    char sep = '.';
     s = getFileName(s);
+    char sep = '.';
     size_t i = s.rfind(sep, s.length());
     if (i != std::string::npos) {
         return (s.substr(i + 1, s.length() - i));
@@ -69,7 +68,6 @@ static std::string getFileExt(std::string s) {
 }
 
 static MODEL_FILE_TYPE getModelFileType(std::string s) {
-    s = getFileName(s);
     s = getFileExt(s);
     if (s == "obj" || s == "OBJ") {
         return MODEL_FILE_TYPE::OBJ;

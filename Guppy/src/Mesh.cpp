@@ -1,37 +1,27 @@
 
-
-#include <future>
 #define TINYOBJLOADER_IMPLEMENTATION
 #include <tiny_obj_loader.h>
-#include <type_traits>
 #include <unordered_map>
 
 #include "CmdBufHandler.h"
 #include "Mesh.h"
-#include "PipelineHandler.h"
 
 // **********************
 // Mesh
 // **********************
 
-Mesh::Mesh() : modelPath_(""), status_(STATUS::PENDING), markerName_("") {}
+Mesh::Mesh() : modelPath_(""), status_(STATUS::PENDING), markerName_(""), pLdgRes_(nullptr) {}
 
-Mesh::Mesh(std::string modelPath) : modelPath_(modelPath), status_(STATUS::PENDING), markerName_("") {}
+Mesh::Mesh(std::string modelPath) : modelPath_(modelPath), status_(STATUS::PENDING), markerName_(""), pLdgRes_(nullptr) {}
 
-void Mesh::setSceneData(const MyShell::Context& ctx, size_t offset) {
-    offset_ = offset;
-
-    VkCommandBufferAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.commandPool = CmdBufHandler::graphics_cmd_pool();
-    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-    alloc_info.commandBufferCount = ctx.image_count;
-
-    cmds_.resize(ctx.image_count);
-    vk::assert_success(vkAllocateCommandBuffers(ctx.dev, &alloc_info, cmds_.data()));
-}
+void Mesh::setSceneData(const MyShell::Context& ctx, size_t offset) { offset_ = offset; }
 
 std::future<Mesh*> Mesh::load(const MyShell::Context& ctx) {
+    pLdgRes_ = LoadingResourceHandler::createLoadingResources();
+    return std::async(std::launch::async, &Mesh::async_load, this, ctx);
+}
+
+Mesh* Mesh::async_load(const MyShell::Context& ctx) {
     if (!modelPath_.empty()) {
         switch (helpers::getModelFileType(modelPath_)) {
             case MODEL_FILE_TYPE::OBJ: {
@@ -43,153 +33,28 @@ std::future<Mesh*> Mesh::load(const MyShell::Context& ctx) {
         // Vertices should have been created elsewhere then ...
         assert(getVertexCount());
     }
-
-    VkCommandBuffer graphicsCmd = nullptr, transferCmd = nullptr;
-
-    // There should always be at least a graphics queue...
-    VkCommandBufferAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.pNext = nullptr;
-    alloc_info.commandPool = CmdBufHandler::graphics_cmd_pool();
-    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    alloc_info.commandBufferCount = 1;
-    vk::assert_success(vkAllocateCommandBuffers(ctx.dev, &alloc_info, &graphicsCmd));
-    // being recording
-    CmdBufHandler::beginCmd(graphicsCmd);
-
-    // There might not be a dedicated transfer queue...
-    if (CmdBufHandler::graphics_index() != CmdBufHandler::transfer_index()) {
-        alloc_info.commandPool = CmdBufHandler::transfer_cmd_pool();
-        vk::assert_success(vkAllocateCommandBuffers(ctx.dev, &alloc_info, &transferCmd));
-        // being recording
-        CmdBufHandler::beginCmd(transferCmd);
-    }
-
-    return std::async(std::launch::async, &Mesh::async_load, this, ctx, std::move(graphicsCmd), std::move(transferCmd));
+    status_ = STATUS::VERTICES_LOADED;
+    return this;
 }
 
-void Mesh::prepare(const MyShell::Context& ctx, const VkDescriptorBufferInfo& ubo_info, DescriptorResources& desc_res) {
+void Mesh::prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) {
+    loadVertexBuffers(dev);
+    LoadingResourceHandler::loadSubmit(std::move(pLdgRes_));
     status_ = STATUS::READY;
 }
 
-void Mesh::loadModel(const VkDevice& dev, const VkCommandBuffer& transferCmd, std::vector<BufferResource>& stgResources) {
+void Mesh::loadVertexBuffers(const VkDevice& dev) {
     assert(getVertexCount());
 
     // Vertex buffer
     BufferResource vertexStgRes = {};
-    createVertexBufferData(dev, transferCmd, vertexStgRes);
-    stgResources.push_back(std::move(vertexStgRes));
+    createVertexBufferData(dev, pLdgRes_->transferCmd, vertexStgRes);
+    pLdgRes_->stgResources.push_back(std::move(vertexStgRes));
 
     // Index buffer
     BufferResource indexStgRes = {};
-    createIndexBufferData(dev, transferCmd, indexStgRes);
-    stgResources.push_back(std::move(indexStgRes));
-}
-
-void Mesh::loadSubmit(const MyShell::Context& ctx, const VkCommandBuffer& graphicsCmd, const VkCommandBuffer& transferCmd,
-                      std::vector<BufferResource>& stgResources) {
-    auto queueFamilyIndices = CmdBufHandler::getUniqueQueueFamilies(true, false, true);
-
-    bool should_wait = queueFamilyIndices.size() > 1;
-
-    // End buffer recording
-    CmdBufHandler::endCmd(graphicsCmd);
-    if (should_wait) CmdBufHandler::endCmd(transferCmd);
-
-    // Fences for cleanup ...
-    std::vector<VkFence> fences;
-    for (int i = 0; i < queueFamilyIndices.size(); i++) {
-        VkFence fence;
-        VkFenceCreateInfo fence_info = {};
-        fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        vk::assert_success(vkCreateFence(ctx.dev, &fence_info, nullptr, &fence));
-        fences.push_back(fence);
-    }
-
-    // Semaphore
-    VkSemaphore semaphore;
-    VkSemaphoreCreateInfo semaphore_info = {};
-    semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    vk::assert_success(vkCreateSemaphore(ctx.dev, &semaphore_info, nullptr, &semaphore));
-
-    // Wait stages
-    VkPipelineStageFlags wait_stages[] = {VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
-
-    // Staging submit info
-    VkSubmitInfo stag_sub_info = {};
-    stag_sub_info.pNext = nullptr;
-    stag_sub_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    // Wait
-    stag_sub_info.waitSemaphoreCount = 0;
-    stag_sub_info.pWaitSemaphores = nullptr;
-    stag_sub_info.pWaitDstStageMask = 0;
-    // Command buffers
-    stag_sub_info.commandBufferCount = 1;
-    stag_sub_info.pCommandBuffers = &transferCmd;
-    // Signal
-    stag_sub_info.signalSemaphoreCount = 1;
-    stag_sub_info.pSignalSemaphores = &semaphore;
-
-    VkSubmitInfo wait_sub_info = {};
-    if (should_wait) {
-        // Wait submit info
-        wait_sub_info = {};
-        wait_sub_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        wait_sub_info.pNext = nullptr;
-        // Wait
-        wait_sub_info.waitSemaphoreCount = 1;
-        wait_sub_info.pWaitSemaphores = &semaphore;
-        wait_sub_info.pWaitDstStageMask = wait_stages;
-        // Command buffers
-        wait_sub_info.commandBufferCount = 1;
-        wait_sub_info.pCommandBuffers = &graphicsCmd;
-        // Signal
-        wait_sub_info.signalSemaphoreCount = 0;
-        wait_sub_info.pSignalSemaphores = nullptr;
-    }
-
-    // Sumbit ...
-    if (should_wait) {
-        vk::assert_success(vkQueueSubmit(CmdBufHandler::transfer_queue(), 1, &stag_sub_info, fences[0]));
-    }
-    vk::assert_success(vkQueueSubmit(CmdBufHandler::graphics_queue(), 1, &wait_sub_info, fences[1]));
-
-    // **************************
-    // Cleanup
-    // **************************
-
-    // Wait for fences
-    vk::assert_success(vkWaitForFences(ctx.dev, static_cast<uint32_t>(fences.size()), fences.data(), VK_TRUE, UINT64_MAX));
-
-    // Free stating resources
-    for (auto& res : stgResources) {
-        vkDestroyBuffer(ctx.dev, res.buffer, nullptr);
-        vkFreeMemory(ctx.dev, res.memory, nullptr);
-    }
-    stgResources.clear();
-
-    // Free fences
-    for (auto& fence : fences) vkDestroyFence(ctx.dev, fence, nullptr);
-
-    // Free semaphores
-    vkDestroySemaphore(ctx.dev, semaphore, nullptr);
-
-    // Free command buffers
-    // switch (type) {
-    //    case END_TYPE::DESTROY: {
-    vkFreeCommandBuffers(ctx.dev, CmdBufHandler::graphics_cmd_pool(), 1, &graphicsCmd);
-    if (should_wait) {
-        vkFreeCommandBuffers(ctx.dev, CmdBufHandler::transfer_cmd_pool(), 1, &transferCmd);
-    }
-    //    } break;
-    //    case END_TYPE::RESET: {
-    //        vkResetCommandBuffer(cmd_data_->cmds[cmd_data_->transfer_queue_family], 0);
-    //        helpers::execute_begin_command_buffer(cmd_data_->cmds[cmd_data_->transfer_queue_family]);
-
-    //        vkResetCommandBuffer(cmd_data_->cmds[cmd_res->wait_queue_family], 0);
-    //        helpers::execute_begin_command_buffer(cmd_data_->cmds[cmd_res->wait_queue_family]);
-    //    } break;
-    //}
+    createIndexBufferData(dev, pLdgRes_->transferCmd, indexStgRes);
+    pLdgRes_->stgResources.push_back(std::move(indexStgRes));
 }
 
 void Mesh::createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res) {
@@ -256,6 +121,63 @@ void Mesh::createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd
     }
 }
 
+void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
+                      const VkDescriptorSet& descSet) const {
+    assert(status_ == STATUS::READY);
+
+    VkBuffer vertex_buffers[] = {vertex_res_.buffer};
+    VkDeviceSize offsets[] = {0};
+
+    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet, 0, nullptr);
+    vkCmdBindVertexBuffers(cmd, 0, 1, vertex_buffers, offsets);
+
+    // TODO: clean these up!!
+    if (indices_.size()) {
+        vkCmdBindIndexBuffer(cmd, index_res_.buffer, 0,
+                             VK_INDEX_TYPE_UINT32  // TODO: Figure out how to make the type dynamic
+        );
+        vkCmdDrawIndexed(cmd, getIndexSize(), 1, 0, 0, 0);
+    } else {
+        vkCmdDraw(cmd,
+                  getVertexCount(),  // vertexCount
+                  1,                 // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
+                  0,  // firstVertex - Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
+                  0   // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
+        );
+    }
+}
+
+void TextureMesh::drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
+                                const VkDescriptorSet& descSet, size_t frameIndex,
+                                const VkCommandBufferInheritanceInfo& inheritanceInfo, const VkViewport& viewport,
+                                const VkRect2D& scissor) const {
+    assert(status_ == STATUS::READY);
+    auto& secCmd = secCmds_[frameIndex];
+
+    CmdBufHandler::beginCmd(secCmd, &inheritanceInfo);
+
+    vkCmdSetViewport(secCmd, 0, 1, &viewport);
+    vkCmdSetScissor(secCmd, 0, 1, &scissor);
+
+    VkBuffer vertex_buffers[] = {vertex_res_.buffer};
+    VkDeviceSize offsets[] = {0};
+
+    vkCmdBindPipeline(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindDescriptorSets(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet, 0, nullptr);
+    vkCmdBindVertexBuffers(secCmd, 0, 1, vertex_buffers, offsets);
+
+    if (indices_.size()) {
+        vkCmdBindIndexBuffer(secCmd, index_res_.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(secCmd, getIndexSize(), 1, 0, 0, 0);
+    } else {
+        vkCmdDraw(secCmd, getVertexCount(), 1, 0, 0);
+    }
+
+    CmdBufHandler::endCmd(secCmd);
+    vkCmdExecuteCommands(cmd, 1, &secCmd);
+}
+
 void Mesh::destroy(const VkDevice& dev) {
     // vertex
     vkDestroyBuffer(dev, vertex_res_.buffer, nullptr);
@@ -272,54 +194,6 @@ void Mesh::destroy(const VkDevice& dev) {
 ColorMesh::ColorMesh() {
     vertexType_ = Vertex::TYPE::COLOR;
     topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_COLOR;
-}
-
-Mesh* ColorMesh::async_load(const MyShell::Context& ctx, VkCommandBuffer graphicsCmd, VkCommandBuffer transferCmd) {
-    std::vector<BufferResource> stgResources;
-    loadModel(ctx.dev, transferCmd, stgResources);
-    loadSubmit(ctx, graphicsCmd, transferCmd, stgResources);
-    return this;
-}
-
-const VkCommandBuffer& ColorMesh::draw(const VkDevice& dev, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                                       const VkDescriptorSet& descSet, size_t frameIndex,
-                                       const VkCommandBufferInheritanceInfo& inheritanceInfo) const {
-    assert(status_ == STATUS::READY);
-
-    auto& cmd = cmds_[frameIndex];
-    CmdBufHandler::beginCmd(cmd);
-
-    VkBuffer vertex_buffers[] = {vertex_res_.buffer};
-    VkDeviceSize offsets[] = {0};
-
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet, 0, nullptr);
-    vkCmdBindVertexBuffers(cmd, 0, 1, vertex_buffers, offsets);
-
-    // TODO: clean these up!!
-    if (indices_.size()) {
-        vkCmdBindIndexBuffer(cmd, index_res_.buffer, 0,
-                             VK_INDEX_TYPE_UINT32  // TODO: Figure out how to make the type dynamic
-        );
-
-        // Add debug marker for mesh name
-        ext::DebugMarkerInsert(cmd, "Draw (insert name here)", glm::vec4(0.0f));
-
-        vkCmdDrawIndexed(cmd, getIndexSize(), 1, 0, 0, 0);
-    } else {
-        // Add debug marker for mesh name
-        ext::DebugMarkerInsert(cmd, "Draw (insert name here)", glm::vec4(0.0f));
-
-        vkCmdDraw(cmd,
-                  getVertexCount(),  // vertexCount
-                  1,                 // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
-                  0,  // firstVertex - Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
-                  0   // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
-        );
-    }
-
-    CmdBufHandler::endCmd(cmd);
-    return cmd;
 }
 
 void ColorMesh::loadObj() {
@@ -353,52 +227,35 @@ void ColorMesh::loadObj() {
     }
 }
 
-// void ColorMesh::update_descriptor_set(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout,
-//                                      const VkDescriptorPool& desc_pool, const VkDescriptorBufferInfo& ubo_info) {
-//    std::vector<VkDescriptorSetLayout> layouts(ctx.image_count, layout);
-//
-//    VkDescriptorSetAllocateInfo alloc_info = {};
-//    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-//    alloc_info.descriptorPool = desc_pool;
-//    alloc_info.descriptorSetCount = static_cast<uint32_t>(ctx.image_count);
-//    alloc_info.pSetLayouts = layouts.data();
-//
-//    desc_sets_.resize(ctx.image_count);
-//    vk::assert_success(vkAllocateDescriptorSets(ctx.dev, &alloc_info, desc_sets_.data()));
-//
-//    // TODO: hardcoded ubo 1 here...
-//    uint32_t descriptorWriteCount = 1;
-//
-//    for (size_t i = 0; i < ctx.image_count; i++) {
-//        std::vector<VkWriteDescriptorSet> writes(descriptorWriteCount);
-//
-//        writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-//        writes[0].dstSet = desc_sets_[i];
-//        writes[0].dstBinding = 0;
-//        writes[0].dstArrayElement = 0;
-//        writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-//        writes[0].descriptorCount = 1;
-//        writes[0].pBufferInfo = &ubo_info;
-//
-//        vkUpdateDescriptorSets(ctx.dev, descriptorWriteCount, writes.data(), 0, nullptr);
-//    }
-//}
-
 // **********************
 // TextureMesh
 // **********************
 
-TextureMesh::TextureMesh(std::string texturePath) : Mesh(), texturePath_(texturePath) {
+TextureMesh::TextureMesh(std::shared_ptr<Texture::TextureData> pTex) : pTex_(pTex) {
+    assert(pTex);
     vertexType_ = Vertex::TYPE::TEXTURE;
     topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_TEX;
 };
 
-Mesh* TextureMesh::async_load(const MyShell::Context& ctx, VkCommandBuffer graphicsCmd, VkCommandBuffer transferCmd) {
-    std::vector<BufferResource> stgResources;
-    loadModel(ctx.dev, transferCmd, stgResources);
-    loadTexture(ctx, graphicsCmd, transferCmd, stgResources);
-    loadSubmit(ctx, graphicsCmd, transferCmd, stgResources);
-    return this;
+TextureMesh::TextureMesh(std::shared_ptr<Texture::TextureData> pTex, std::string modelPath) : Mesh(modelPath), pTex_(pTex) {
+    assert(pTex);
+    vertexType_ = Vertex::TYPE::TEXTURE;
+    topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_TEX;
+};
+
+void TextureMesh::setSceneData(const MyShell::Context& ctx, size_t offset) {
+    // Only texture meshes are draw on a secondary command buffer atm...
+    VkCommandBufferAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.commandPool = CmdBufHandler::graphics_cmd_pool();
+    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
+    alloc_info.commandBufferCount = ctx.image_count;
+
+    secCmds_.resize(ctx.image_count);
+    vk::assert_success(vkAllocateCommandBuffers(ctx.dev, &alloc_info, secCmds_.data()));
+
+    // call override
+    Mesh::setSceneData(ctx, offset);
 }
 
 void TextureMesh::loadObj() {
@@ -433,169 +290,18 @@ void TextureMesh::loadObj() {
     }
 }
 
-void TextureMesh::loadTexture(const MyShell::Context& ctx, const VkCommandBuffer& graphicsCmd, const VkCommandBuffer& transferCmd,
-                              std::vector<BufferResource>& stgResources) {
-    BufferResource textureStgRes = {};
-    texture_ =
-        Texture::createTexture(ctx.dev, graphicsCmd, transferCmd, texturePath_, ctx.linear_blitting_supported_, textureStgRes);
-    stgResources.push_back(std::move(textureStgRes));
-}
-
-void TextureMesh::prepare(const MyShell::Context& ctx, const VkDescriptorBufferInfo& ubo_info, DescriptorResources& desc_res) {
-    createDescriptorSets(ctx, ubo_info, desc_res);
-    status_ = STATUS::READY;
-}
-
-const VkCommandBuffer& TextureMesh::draw(const VkDevice& dev, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                                         const VkDescriptorSet& descSet, size_t frameIndex,
-                                         const VkCommandBufferInheritanceInfo& inheritanceInfo) const {
-    assert(status_ == STATUS::READY);
-
-    auto& cmd = cmds_[frameIndex];
-    CmdBufHandler::beginCmd(cmd, &inheritanceInfo);
-
-    VkBuffer vertex_buffers[] = {vertex_res_.buffer};
-    VkDeviceSize offsets[] = {0};
-
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet, 0, nullptr);
-    vkCmdBindVertexBuffers(cmd, 0, 1, vertex_buffers, offsets);
-
-    // TODO: clean these up!!
-    if (indices_.size()) {
-        vkCmdBindIndexBuffer(cmd, index_res_.buffer, 0,
-                             VK_INDEX_TYPE_UINT32  // TODO: Figure out how to make the type dynamic
-        );
-        // vkCmdDrawIndexed(cmd, getIndexSize(), 1, 0, 0, 0);
+void TextureMesh::prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) {
+    loadVertexBuffers(dev);
+    LoadingResourceHandler::loadSubmit(std::move(pLdgRes_));
+    if (pTex_->status == Texture::STATUS::READY) {
+        PipelineHandler::createTextureDescriptorSets(pTex_->imgDescInfo, pTex_->offset, pRes);
+        status_ = STATUS::READY;
     } else {
-        vkCmdDraw(cmd,
-                  getVertexCount(),  // vertexCount
-                  1,                 // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
-                  0,  // firstVertex - Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
-                  0   // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
-        );
+        status_ = STATUS::PENDING_TEXTURE;
     }
-
-    CmdBufHandler::endCmd(cmd);
-    return cmd;
 }
-
-void TextureMesh::draw2(const VkDevice& dev, const VkCommandBuffer& priCmd, const VkPipelineLayout& layout,
-                        const VkPipeline& pipeline, size_t frameIndex, const VkCommandBufferInheritanceInfo& inheritanceInfo,
-                        const VkViewport& viewport, const VkRect2D& scissor) const {
-    assert(status_ == STATUS::READY);
-    auto& secCmd = cmds_[frameIndex];
-
-    CmdBufHandler::beginCmd(secCmd, &inheritanceInfo);
-
-    vkCmdSetViewport(secCmd, 0, 1, &viewport);
-    vkCmdSetScissor(secCmd, 0, 1, &scissor);
-
-    VkBuffer vertex_buffers[] = {vertex_res_.buffer};
-    VkDeviceSize offsets[] = {0};
-
-    vkCmdBindPipeline(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-    vkCmdBindDescriptorSets(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSets_[frameIndex], 0, nullptr);
-    vkCmdBindVertexBuffers(secCmd, 0, 1, vertex_buffers, offsets);
-
-    vkCmdBindIndexBuffer(secCmd, index_res_.buffer, 0,
-                         VK_INDEX_TYPE_UINT32  // TODO: Figure out how to make the type dynamic
-    );
-    vkCmdDrawIndexed(secCmd, getIndexSize(), 1, 0, 0, 0);
-
-    CmdBufHandler::endCmd(secCmd);
-    vkCmdExecuteCommands(priCmd, 1, &secCmd);
-}
-
-void TextureMesh::createDescriptorSets(const MyShell::Context& ctx, const VkDescriptorBufferInfo& ubo_info,
-                                       DescriptorResources& desc_res) {
-    std::vector<VkDescriptorSetLayout> layouts;
-    PipelineHandler::getDescriptorLayouts(ctx.image_count, Vertex::TYPE::TEXTURE, layouts);
-    auto setCount = static_cast<uint32_t>(layouts.size());
-
-    VkDescriptorSetAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    alloc_info.descriptorPool = desc_res.pool;
-    alloc_info.descriptorSetCount = setCount;
-    alloc_info.pSetLayouts = layouts.data();
-
-    descSets_.resize(ctx.image_count);
-    vk::assert_success(vkAllocateDescriptorSets(ctx.dev, &alloc_info, descSets_.data()));
-
-    std::vector<VkWriteDescriptorSet> writes;
-    for (size_t i = 0; i < ctx.image_count; i++) {
-        VkWriteDescriptorSet write = {};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.dstSet = descSets_[i];
-        write.dstBinding = 0;
-        write.dstArrayElement = 0;
-        write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        write.descriptorCount = 1;
-        write.pBufferInfo = &ubo_info;
-        writes.push_back(write);
-
-        write = {};
-        write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write.dstSet = descSets_[i];
-        write.dstBinding = 1;
-        write.dstArrayElement = 0;
-        write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        write.descriptorCount = 1;
-        write.pImageInfo = &texture_.imgDescInfo;
-        writes.push_back(write);
-    }
-    vkUpdateDescriptorSets(ctx.dev, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
-}
-
-// void TextureMesh::update_descriptor_set(const MyShell::Context& ctx, const VkDescriptorSetLayout& layout,
-//                                        const VkDescriptorPool& desc_pool, const VkDescriptorBufferInfo& ubo_info) {
-//    std::vector<VkDescriptorSetLayout> layouts(ctx.image_count, layout);
-//
-//    VkDescriptorSetAllocateInfo alloc_info = {};
-//    alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-//    alloc_info.descriptorPool = desc_pool;
-//    alloc_info.descriptorSetCount = static_cast<uint32_t>(ctx.image_count);
-//    alloc_info.pSetLayouts = layouts.data();
-//
-//    desc_sets_.resize(ctx.image_count);
-//    vk::assert_success(vkAllocateDescriptorSets(ctx.dev, &alloc_info, desc_sets_.data()));
-//
-//    // TODO: hardcoded ubo 1 here...
-//    uint32_t descriptorWriteCount = 2;
-//
-//    for (size_t i = 0; i < ctx.image_count; i++) {
-//        std::vector<VkWriteDescriptorSet> writes(descriptorWriteCount);
-//
-//        writes[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-//        writes[0].dstSet = desc_sets_[i];
-//        writes[0].dstBinding = 0;
-//        writes[0].dstArrayElement = 0;
-//        writes[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-//        writes[0].descriptorCount = 1;
-//        writes[0].pBufferInfo = &ubo_info;
-//
-//        writes[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-//        writes[1].dstSet = desc_sets_[i];
-//        writes[1].dstBinding = 1;
-//        writes[1].dstArrayElement = 0;
-//        writes[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-//        writes[1].descriptorCount = 1;
-//        writes[1].pImageInfo = &texture_.imgDescInfo;
-//
-//        // writes[1].descriptorCount = static_cast<uint32_t>(textures_.size());
-//        // std::vector<VkDescriptorImageInfo> imgDescInfos;
-//        // for (auto& texture : textures_) imgDescInfos.push_back(texture.imgDescInfo);
-//        // writes[1].pImageInfo = imgDescInfos.data();
-//
-//        vkUpdateDescriptorSets(ctx.dev, descriptorWriteCount, writes.data(), 0, nullptr);
-//    }
-//}
 
 void TextureMesh::destroy(const VkDevice& dev) {
+    vkFreeCommandBuffers(dev, CmdBufHandler::graphics_cmd_pool(), static_cast<uint32_t>(secCmds_.size()), secCmds_.data());
     Mesh::destroy(dev);
-    // texture
-    vkDestroySampler(dev, texture_.sampler, nullptr);
-    vkDestroyImageView(dev, texture_.view, nullptr);
-    vkDestroyImage(dev, texture_.image, nullptr);
-    vkFreeMemory(dev, texture_.memory, nullptr);
 }

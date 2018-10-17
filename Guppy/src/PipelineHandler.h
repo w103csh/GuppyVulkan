@@ -8,11 +8,13 @@
 #include "Vertex.h"
 
 struct DescriptorResources {
-    uint32_t colorCount;
-    uint32_t texCount;
-    bool updatePool;
+    DescriptorResources(std::vector<VkDescriptorBufferInfo> uboInfos, size_t colorCount, size_t texCount)
+        : pool(nullptr), uboInfos(uboInfos), colorCount(colorCount), texCount(texCount) {}
     VkDescriptorPool pool;
-    std::vector<VkDescriptorSet> sharedSets;
+    size_t colorCount, texCount;
+    std::vector<VkDescriptorBufferInfo> uboInfos;
+    std::vector<VkDescriptorSet> colorSets;
+    std::vector<std::vector<VkDescriptorSet>> texSets;
 };
 
 struct PipelineCreateInfoResources {
@@ -50,7 +52,10 @@ struct PipelineResources {
 class PipelineHandler {
    public:
     static void init(const MyShell::Context &ctx, const Game::Settings &settings);
-    static inline void destroy() { inst_.reset(); }
+    static inline void destroy() {
+        inst_.reset();
+        inst_.cleanupOldResources();
+    }
 
     PipelineHandler(const PipelineHandler &) = delete;             // Prevent construction by copying
     PipelineHandler &operator=(const PipelineHandler &) = delete;  // Prevent assignment
@@ -65,10 +70,15 @@ class PipelineHandler {
 
     static void create_shader_module(const std::string &shaderText, VkShaderStageFlagBits stage, ShaderResources &shaderResources,
                                      bool initGlslang = true, std::string markerName = "");
-    static void create_descriptor_pool(DescriptorResources &descResources);
+
+    static std::unique_ptr<DescriptorResources> createDescriptorResources(std::vector<VkDescriptorBufferInfo> uboInfos,
+                                                                          size_t colorCount, size_t texCount);
+    static void createTextureDescriptorSets(const VkDescriptorImageInfo &info, int offset,
+                                            std::unique_ptr<DescriptorResources> &pRes);
+
     static void create_pipeline_cache(VkPipelineCache &cache);
     // static VkSubpassDescription PipelineHandler::create_default_subpass();
-    static void create_pipeline_resources(PipelineResources &resources);
+    static void createPipelineResources(PipelineResources &resources);
     static void create_render_pass(PipelineResources &resources);
 
     static inline const DefaultAttachementReferences &get_def_attach_refs() { return inst_.defAttachRefs_; }
@@ -80,6 +90,11 @@ class PipelineHandler {
     }
 
     static void destroy_pipeline_resources(PipelineResources &resources);
+    static void destroy_descriptor_resources(std::unique_ptr<DescriptorResources> &resources);
+
+    // old resources
+    static inline void takeOldResources(std::unique_ptr<DescriptorResources> pRes) { inst_.oldDescRes_.push_back(std::move(pRes)); }
+    static void cleanupOldResources();
 
    private:
     PipelineHandler();  // Prevent construction
@@ -88,6 +103,7 @@ class PipelineHandler {
 
     void reset();
     void create_shader_modules();
+    void createDescriptorPool(std::unique_ptr<DescriptorResources> &pDescResources);
     void create_descriptor_set_layout(Vertex::TYPE type, VkDescriptorSetLayout &setLayout);
     void create_default_attachments(bool clear = true, VkImageLayout finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
     void create_subpasses(PipelineResources &resources);
@@ -116,6 +132,8 @@ class PipelineHandler {
     ShaderResources texFS_;
     // create info
     PipelineCreateInfoResources createResources;
+    // global storage for clean up
+    std::vector<std::unique_ptr<DescriptorResources>> oldDescRes_;
 };
 
 #endif  // !PIPELINE_RESOURCES_H

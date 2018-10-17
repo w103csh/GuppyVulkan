@@ -19,6 +19,8 @@ set(SOURCE
     Helpers.h
     InputHandler.cpp
     InputHandler.h
+    LoadingResourceHandler.cpp
+    LoadingResourceHandler.h
     Main.cpp
 	Mesh.cpp
 	Mesh.h
@@ -34,8 +36,6 @@ set(SOURCE
 	Scene.h
     Shell.cpp
     Shell.h
-    StagingBufferHandler.cpp
-    StagingBufferHandler.h
     Texture.cpp
     Texture.h
     Vertex.cpp

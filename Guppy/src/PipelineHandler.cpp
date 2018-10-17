@@ -177,21 +177,20 @@ void PipelineHandler::getDescriptorLayouts(uint32_t image_count, Vertex::TYPE ty
 // Can change:
 //      Possibly make the pool creation optional based on state of scene
 //      Make uniform buffer optional
-void PipelineHandler::create_descriptor_pool(DescriptorResources& descResources) {
-    uint32_t poolSizeCount = descResources.colorCount + (descResources.texCount * 2);
-    uint32_t maxSets =
-        (descResources.colorCount * inst_.ctx_.image_count) + ((descResources.texCount * 2) * inst_.ctx_.image_count);
+void PipelineHandler::createDescriptorPool(std::unique_ptr<DescriptorResources>& pRes) {
+    uint32_t poolSizeCount = pRes->colorCount + (pRes->texCount * 2);
+    uint32_t maxSets = (pRes->colorCount * inst_.ctx_.image_count) + ((pRes->texCount * 2) * inst_.ctx_.image_count);
     std::vector<VkDescriptorPoolSize> pool_sizes(poolSizeCount);
 
     // Uniform buffer
     // TODO: look at dynamic ubo's (VK_DESCRIPTOR_SHADER_UNIFORM_BUFFER_DYNAMIC)
-    for (uint32_t i = 0; i < descResources.colorCount; i++) {
+    for (uint32_t i = 0; i < pRes->colorCount; i++) {
         pool_sizes[i].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         pool_sizes[i].descriptorCount = 1;
     }
 
     // Texture samplers
-    for (uint32_t i = descResources.colorCount; i < poolSizeCount; i += 2) {
+    for (uint32_t i = pRes->colorCount; i < poolSizeCount; i += 2) {
         pool_sizes[i].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         pool_sizes[i].descriptorCount = 1;
         pool_sizes[i + 1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -204,7 +203,98 @@ void PipelineHandler::create_descriptor_pool(DescriptorResources& descResources)
     desc_pool_info.poolSizeCount = poolSizeCount;
     desc_pool_info.pPoolSizes = pool_sizes.data();
 
-    vk::assert_success(vkCreateDescriptorPool(inst_.ctx_.dev, &desc_pool_info, nullptr, &descResources.pool));
+    vk::assert_success(vkCreateDescriptorPool(inst_.ctx_.dev, &desc_pool_info, nullptr, &pRes->pool));
+}
+
+std::unique_ptr<DescriptorResources> PipelineHandler::createDescriptorResources(std::vector<VkDescriptorBufferInfo> uboInfos,
+                                                                                size_t colorCount, size_t texCount) {
+    auto pRes = std::make_unique<DescriptorResources>(uboInfos, colorCount, texCount);
+
+    // POOL
+    inst_.createDescriptorPool(pRes);
+
+    // As of now these don't change dynamically so just create them after the pool is created.
+    // COLOR
+    auto setCount = static_cast<uint32_t>(colorCount * inst_.ctx_.image_count);
+    if (setCount) {
+        std::vector<VkDescriptorSetLayout> layouts;
+        PipelineHandler::getDescriptorLayouts(setCount, Vertex::TYPE::COLOR, layouts);
+
+        VkDescriptorSetAllocateInfo alloc_info = {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorPool = pRes->pool;
+        alloc_info.descriptorSetCount = setCount;
+        alloc_info.pSetLayouts = layouts.data();
+
+        pRes->colorSets.resize(setCount);
+        vk::assert_success(vkAllocateDescriptorSets(inst_.ctx_.dev, &alloc_info, pRes->colorSets.data()));
+
+        std::vector<VkWriteDescriptorSet> writes;
+        VkWriteDescriptorSet write;
+        for (size_t i = 0; i < setCount; i++) {
+            write = {};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = pRes->colorSets[i];
+            write.dstBinding = 0;  // !!!!
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &pRes->uboInfos[0];  // !!! hardcode
+            writes.push_back(write);
+        }
+        vkUpdateDescriptorSets(inst_.ctx_.dev, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+    }
+
+    // TEXTURE
+    pRes->texSets.resize(texCount);
+
+    return std::move(pRes);
+}
+
+void PipelineHandler::createTextureDescriptorSets(const VkDescriptorImageInfo& info, int offset,
+                                                  std::unique_ptr<DescriptorResources>& pRes) {
+    auto& sets = pRes->texSets[offset];
+    // If sets are not empty then they already exist so don't re-allocate them.
+    if (sets.empty()) {
+        sets.resize(inst_.ctx_.image_count);
+
+        std::vector<VkDescriptorSetLayout> layouts;
+        PipelineHandler::getDescriptorLayouts(inst_.ctx_.image_count, Vertex::TYPE::TEXTURE, layouts);
+
+        VkDescriptorSetAllocateInfo alloc_info;
+        alloc_info = {};
+        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+        alloc_info.descriptorPool = pRes->pool;
+        alloc_info.descriptorSetCount = inst_.ctx_.image_count;
+        alloc_info.pSetLayouts = layouts.data();
+
+        vk::assert_success(vkAllocateDescriptorSets(inst_.ctx_.dev, &alloc_info, sets.data()));
+
+        std::vector<VkWriteDescriptorSet> writes;
+        VkWriteDescriptorSet write;
+        for (size_t i = 0; i < sets.size(); i++) {
+            write = {};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = sets[i];
+            write.dstBinding = 0;  // !!!!
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &pRes->uboInfos[0];  // !!! hardcode
+            writes.push_back(write);
+
+            write = {};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = sets[i];
+            write.dstBinding = 1;  // !!!!
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+            write.descriptorCount = 1;
+            write.pImageInfo = &info;
+            writes.push_back(write);
+        }
+        vkUpdateDescriptorSets(inst_.ctx_.dev, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+    }
 }
 
 void PipelineHandler::create_pipeline_cache(VkPipelineCache& cache) {
@@ -351,7 +441,7 @@ void PipelineHandler::create_default_attachments(bool clear, VkImageLayout final
 //    return subpass;
 //}
 
-void PipelineHandler::create_pipeline_resources(PipelineResources& resources) {
+void PipelineHandler::createPipelineResources(PipelineResources& resources) {
     // SUBPASSES
     inst_.create_subpasses(resources);
     // DEPENDENCIES
@@ -704,4 +794,13 @@ void PipelineHandler::create_base_pipeline(Vertex::TYPE vertexType, TOPOLOGY pip
 void PipelineHandler::destroy_pipeline_resources(PipelineResources& resources) {
     vkDestroyRenderPass(inst_.ctx_.dev, resources.renderPass, nullptr);
     for (auto& pipeline : resources.pipelines) vkDestroyPipeline(inst_.ctx_.dev, pipeline, nullptr);
+}
+
+void PipelineHandler::destroy_descriptor_resources(std::unique_ptr<DescriptorResources>& pRes) {
+    vkDestroyDescriptorPool(inst_.ctx_.dev, pRes->pool, nullptr);
+}
+
+void PipelineHandler::cleanupOldResources() {
+    for (auto& pRes : inst_.oldDescRes_) inst_.destroy_descriptor_resources(pRes);
+    inst_.oldDescRes_.clear();
 }

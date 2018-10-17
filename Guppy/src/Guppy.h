@@ -78,23 +78,13 @@ class Guppy : public Game {
     };
     uint32_t swapchain_image_count_;
     std::vector<SwapchainImageResource> swapchain_image_resources_;
-    // std::vector<VkImage> images_; // replaced by above
-    // std::vector<VkImageView> image_views_; // replaced by above
     std::vector<VkFramebuffer> framebuffers_;
-
-    // called by attach_shell
-    void create_render_pass(bool include_depth, bool include_color, bool clear = true,
-                            VkImageLayout finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    void create_descriptor_set_layout(const VkDescriptorSetLayoutCreateFlags descSetLayoutCreateFlags = 0);
-    void create_pipeline_layout();
-    void create_pipelines();
 
     void create_frame_data(int count);
     void destroy_frame_data();
     void create_fences();
-    // void create_buffers();
-    // void create_buffer_memory();
-    void create_descriptor_sets(bool use_texture = true);  // *
+
+    // called by attach_shell
 
     // called by attach_swapchain
     void prepare_viewport();
@@ -102,52 +92,49 @@ class Guppy : public Game {
 
     // *********************************************
 
-    std::vector<std::unique_ptr<Scene>> scenes_;
+    // called by attach_shell
+    void create_uniform_buffer();
+    void createTextures();
+    void createScenes();
+
+    // called by detach_shell
+    void destroy_ubo_resources();
+    void destroyTextures();
+
+    // called by attach_swapchain
+    void get_swapchain_image_data(const VkSwapchainKHR& swapchain);
+
+    // called by detach_swapchain
+
+    // called by create_frame_data
+    void create_color_resources();
+    void create_depth_resources();
+
+    // called by destroy_frame_data
+    void destroy_color_resources();
+    void destroy_depth_resources();
+
+    // Scene
+    inline const std::unique_ptr<Scene>& active_scene() const { return scenes_[active_scene_index_]; }
+
+    // textures
+    void addTexture(const VkDevice& dev, std::string tex_path);
+    std::shared_ptr<Texture::TextureData> getTextureByPath(std::string path);
+    void updateTextures(const VkDevice& dev);
+    float test = 1.0;
+
+    // uniform buffer
+    void update_ubo();
+    void copy_ubo_to_memory();
 
     ImageResource color_resource_;
     ImageResource depth_resource_;
     UniformBufferResources ubo_resource_;
-
-    // Scene
-    int active_scene_index_;
-    inline const std::unique_ptr<Scene>& active_scene() const { return scenes_[active_scene_index_]; }
-    void create_scenes();
-
-    VkPipeline pipeline_line_;
-
-    // drawing
-    std::vector<VkCommandBuffer> draw_cmds_;
-
     Camera camera_;
-
-    BufferResource vertex_res_;
-    BufferResource index_res_;
-    std::vector<VkDescriptorSet> desc_sets_;
-    std::vector<Texture::TextureData> textures_;
-
-    void create_draw_cmds();
-    void destroy_textures();
-    void destroy_descriptor_and_pipeline_layouts();
-    void destroy_pipeline_cache();
-    void destroy_pipelines();
-
-    // called by attach_shell
-    void create_uniform_buffer();
-
-    // called by attach_swapchain
-    void get_swapchain_image_data(const VkSwapchainKHR& swapchain);
-    void create_color_resources();
-    void create_depth_resources();
-
-    // nothing
-    void destroy_color_resources();
-    void destroy_depth_resources();
-    void destroy_ubo_resources();
-    void destroy_shader_modules();
-    void destroy_render_pass();
-    void destroy_uniform_buffer();
-    void update_ubo();
-    void copy_ubo_to_memory();
+    int active_scene_index_;
+    std::vector<std::unique_ptr<Scene>> scenes_;
+    std::vector<std::shared_ptr<Texture::TextureData>> pTextures_;
+    std::vector<std::future<std::shared_ptr<Texture::TextureData>>> texFutures_;
 };
 
 #endif  // !GUPPY_H

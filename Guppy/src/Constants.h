@@ -53,3 +53,10 @@ static glm::vec3 UP_VECTOR = glm::vec3(0.0f, 0.0f, 1.0f);
 
 const auto ENABLE_SAMPLE_SHADING = VK_TRUE;
 const float MIN_SAMPLE_SHADING = 0.2f;
+
+// objs
+const std::string CHALET_MODEL_PATH = ROOT_PATH + "data\\chalet.obj";
+// jpgs
+const std::string CHALET_TEXTURE_PATH = ROOT_PATH + "images\\chalet.jpg";
+const std::string STATUE_TEXTURE_PATH = ROOT_PATH + "images\\texture.jpg";
+const std::string VULKAN_TEXTURE_PATH = ROOT_PATH + "images\\vulkan.png";

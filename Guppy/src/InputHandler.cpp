@@ -75,7 +75,7 @@ void InputHandler::updateMouseInput() {
         look_dir_.x = (curr_mouse_input_.xPos - prev_mouse_input_.xPos) * M_X_LOOK_FACT;
         look_dir_.y = (curr_mouse_input_.yPos - prev_mouse_input_.yPos) * M_Y_LOOK_FACT;
 
-        if (!helpers::almost_equal(look_dir_.x, 0.0f, 1) || !helpers::almost_equal(look_dir_.y, 0.0f, 1)) {
+        if (MY_DEBUG && (!helpers::almost_equal(look_dir_.x, 0.0f, 1) || !helpers::almost_equal(look_dir_.y, 0.0f, 1))) {
             ss << "( " << look_dir_.x << ", " << look_dir_.y << ")";
             auto str = ss.str();
             sh_->log(MyShell::LOG_INFO, str.c_str());
