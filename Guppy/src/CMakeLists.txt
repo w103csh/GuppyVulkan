@@ -8,6 +8,8 @@ set(SOURCE
 	CmdBufHandler.h
     CMakeLists.txt
     Constants.h
+    DirectionalLight.cpp
+    DirectionalLight.h
     EventHandlers.h
     Extensions.h
     FileLoader.cpp

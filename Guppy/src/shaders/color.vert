@@ -10,8 +10,9 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec4 inColor;
 
-layout(location = 0) out vec3 fragNormal;
-layout(location = 1) out vec4 fragColor;
+layout(location = 0) out vec3 fragPos;
+layout(location = 1) out vec3 fragNormal;
+layout(location = 2) out vec4 fragColor;
 
 out gl_PerVertex {
     vec4 gl_Position;
@@ -19,6 +20,7 @@ out gl_PerVertex {
 
 void main() {
 	gl_Position = ubo.mvp * vec4(inPosition, 1.0);
-    fragNormal = inNormal;
+    fragPos = vec3(gl_Position);
+    fragNormal = normalize(vec3(ubo.mvp * vec4(inNormal, 0.0)));
     fragColor = inColor;
 }

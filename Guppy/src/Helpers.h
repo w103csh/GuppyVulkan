@@ -120,6 +120,7 @@ struct ShaderResources {
 
 struct UniformBufferResources {
     uint32_t count;
+    VkDeviceSize size; 
     VkDescriptorBufferInfo info;
     VkBuffer buffer;
     VkDeviceMemory memory;

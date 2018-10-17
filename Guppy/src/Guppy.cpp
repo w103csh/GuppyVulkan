@@ -21,9 +21,14 @@ struct ShaderParamBlock {
     float alpha;
 };
 
-struct DemoTag {
-    const char name[17] = "debug marker tag";
-} demoTag;
+struct DefaultUBO {
+    glm::mat4 mvp;
+    DirectionalLight::Base dirLight;
+};
+
+struct UBOTag {
+    const char name[17] = "ubo tag";
+} uboTag;
 
 }  // namespace
 
@@ -84,7 +89,7 @@ void Guppy::attach_shell(MyShell& sh) {
     CmdBufHandler::init(ctx);
     LoadingResourceHandler::init(ctx);
 
-    create_uniform_buffer();
+    createUniformBuffer();
 
     PipelineHandler::init(ctx, settings());
 
@@ -117,17 +122,16 @@ void Guppy::detach_shell() {
     if (multithread_) {
         // for (auto &worker : workers_) worker->stop();
     }
-
     // delete meshes_;
 
     // *
     for (auto& scene : scenes_) scene->destroy(dev_);
-    void destroy_ubo_resources();
 
     CmdBufHandler::destroy();
     PipelineHandler::destroy();
     LoadingResourceHandler::cleanupResources();
 
+    destroyUniformBuffer();
     destroyTextures();
 
     Game::detach_shell();
@@ -183,14 +187,19 @@ void Guppy::on_key(KEY key) {
             active_scene()->addMesh(shell_->context(), std::move(tm1));
         } break;
         case KEY::KEY_F5: {
-            if (test < 3) {
-                addTexture(dev_, STATUE_TEXTURE_PATH);
+            if ((dirLight_.flags & DirectionalLight::FLAGS::SHOW) > 0) {
+                dirLight_.flags = DirectionalLight::FLAGS::HIDE | DirectionalLight::FLAGS::MODE_BLINN;
+            } else {
+                dirLight_.flags = DirectionalLight::FLAGS::SHOW | DirectionalLight::FLAGS::MODE_BLINN;
             }
-            auto p1 = std::make_unique<TexturePlane>(
-                getTextureByPath(STATUE_TEXTURE_PATH), 1.0f, 1.0f, true, glm::vec3(0.0f, -test, 0.0f),
-                glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+            //if (test < 3) {
+            //    addTexture(dev_, STATUE_TEXTURE_PATH);
+            //}
+            //auto p1 = std::make_unique<TexturePlane>(
+            //    getTextureByPath(STATUE_TEXTURE_PATH), 1.0f, 1.0f, true, glm::vec3(0.0f, -test, 0.0f),
+            //    glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
 
-            active_scene()->addMesh(shell_->context(), std::move(p1));
+            //active_scene()->addMesh(shell_->context(), std::move(p1));
             // auto p1 = std::make_unique<ColorPlane>(1.0f, 1.0f, true, glm::vec3(),
             //                                       glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f,
             //                                       0.0f)));
@@ -225,7 +234,7 @@ void Guppy::on_frame(float frame_pred) {
     //  Frame specfic tasks
     // **********************
 
-    update_ubo();
+    updateUniformBuffer();
 
     // **********************
 
@@ -349,27 +358,31 @@ void Guppy::prepare_framebuffers(const VkSwapchainKHR& swapchain) {
     }
 }
 
-void Guppy::create_uniform_buffer() {
+void Guppy::createUniformBuffer(std::string markerName) {
     camera_.update(static_cast<float>(settings_.initial_width) / static_cast<float>(settings_.initial_height));
     auto mvp = camera_.getMVP();
-    auto buffer_size = sizeof(mvp);
 
-    ubo_resource_.count = 1;
+    uboResource_.count = 1;
+    uboResource_.info.offset = 0;
+    uboResource_.info.range = sizeof(mvp) + sizeof(dirLight_);
 
-    camera_.memory_requirements_size = helpers::create_buffer(
-        dev_, buffer_size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ubo_resource_.buffer, ubo_resource_.memory);
+    uboResource_.size = helpers::create_buffer(dev_, uboResource_.info.range, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                               uboResource_.buffer, uboResource_.memory);
 
-    ext::DebugMarkerSetObjectName(dev_, (uint64_t)ubo_resource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                  "Scene uniform buffer block");
-    // Add some random tag
-    ext::DebugMarkerSetObjectTag(dev_, (uint64_t)ubo_resource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(demoTag),
-                                 &demoTag);
+    copyUniformBufferMemory();
 
-    copy_ubo_to_memory();
+    if (settings_.enable_debug_markers) {
+        if (markerName.empty()) markerName += "Default";
+        markerName += " uniform buffer block";
+        ext::DebugMarkerSetObjectName(dev_, (uint64_t)uboResource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                                      markerName.c_str());
+        ext::DebugMarkerSetObjectTag(dev_, (uint64_t)uboResource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(uboTag),
+                                     &uboTag);
+    }
 }
 
-void Guppy::update_ubo() {
+void Guppy::updateUniformBuffer() {
     // Surface changed
     auto aspect = static_cast<float>(extent_.width) / static_cast<float>(extent_.height);
 
@@ -378,21 +391,34 @@ void Guppy::update_ubo() {
     auto look_dir = InputHandler::get().getLookDir();
     camera_.update(aspect, pos_dir, look_dir);
 
-    copy_ubo_to_memory();
+    // Update the directional light
+
+    // If these change update them here...
+    //uboResource_.info.offset = 0;
+    //uboResource_.info.range = sizeof(mvp) + sizeof(dirLight_);
+
+    copyUniformBufferMemory();
 }
 
-void Guppy::copy_ubo_to_memory() {
+void Guppy::copyUniformBufferMemory() {
     auto mvp = camera_.getMVP();
-    auto buffer_size = sizeof(mvp);
 
     uint8_t* pData;
-    vk::assert_success(vkMapMemory(dev_, ubo_resource_.memory, 0, camera_.memory_requirements_size, 0, (void**)&pData));
-    memcpy(pData, &mvp, buffer_size);
-    vkUnmapMemory(dev_, ubo_resource_.memory);
+    vk::assert_success(vkMapMemory(dev_, uboResource_.memory, 0, uboResource_.size, 0, (void**)&pData));
 
-    ubo_resource_.info.buffer = ubo_resource_.buffer;
-    ubo_resource_.info.offset = 0;
-    ubo_resource_.info.range = buffer_size;
+    // Camera
+    memcpy(pData, &mvp, sizeof(mvp));
+    // Directional light
+    memcpy(pData + sizeof(mvp), &dirLight_, sizeof(dirLight_));
+
+    vkUnmapMemory(dev_, uboResource_.memory);
+
+    uboResource_.info.buffer = uboResource_.buffer;
+}
+
+void Guppy::destroyUniformBuffer() {
+    vkDestroyBuffer(dev_, uboResource_.buffer, nullptr);
+    vkFreeMemory(dev_, uboResource_.memory, nullptr);
 }
 
 void Guppy::create_frame_data(int count) {
@@ -407,7 +433,7 @@ void Guppy::create_frame_data(int count) {
         // create_buffer_memory();
         create_color_resources();
         create_depth_resources();
-        update_ubo();
+        updateUniformBuffer();
         // create_descriptor_pool();
         // create_descriptor_sets(); // Not sure how to make this work here... pipeline relies on this info
     }
@@ -514,20 +540,15 @@ void Guppy::destroy_depth_resources() {
     vkFreeMemory(dev_, depth_resource_.memory, nullptr);
 }
 
-void Guppy::destroy_ubo_resources() {
-    vkDestroyBuffer(dev_, ubo_resource_.buffer, nullptr);
-    vkFreeMemory(dev_, ubo_resource_.memory, nullptr);
-}
-
 void Guppy::createScenes() {
     auto ctx = shell_->context();
 
-    auto scene1 = std::make_unique<Scene>(ctx, ubo_resource_, pTextures_.size());
+    auto scene1 = std::make_unique<Scene>(ctx, uboResource_, pTextures_.size());
 
     // meshes
     // Plane p("..\\..\\..\\images\\texture.jpg");
     // std::unique_ptr<Mesh> p1 = std::make_unique<Plane>();
-    // scene1->addMesh(ctx, cmd_data_, ubo_resource_.info, std::move(p1)); // add mesh tries to load it...
+    // scene1->addMesh(ctx, cmd_data_, uboResource_.info, std::move(p1)); // add mesh tries to load it...
 
     scenes_.push_back(std::move(scene1));
     active_scene_index_ = 0;

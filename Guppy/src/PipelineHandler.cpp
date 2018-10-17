@@ -43,18 +43,18 @@ void PipelineHandler::init(const MyShell::Context& ctx, const Game::Settings& se
     inst_.settings_ = settings;
 
     // TODO: Just create all shaders right away for now...
-    inst_.create_shader_modules();
+    inst_.createShaderModules();
 
-    inst_.create_descriptor_set_layout(Vertex::TYPE::COLOR, inst_.setLayouts_[static_cast<int>(Vertex::TYPE::COLOR)]);
-    inst_.create_descriptor_set_layout(Vertex::TYPE::TEXTURE, inst_.setLayouts_[static_cast<int>(Vertex::TYPE::TEXTURE)]);
+    inst_.createDescriptorSetLayout(Vertex::TYPE::COLOR, inst_.setLayouts_[static_cast<int>(Vertex::TYPE::COLOR)]);
+    inst_.createDescriptorSetLayout(Vertex::TYPE::TEXTURE, inst_.setLayouts_[static_cast<int>(Vertex::TYPE::TEXTURE)]);
 
-    PipelineHandler::create_pipeline_cache(inst_.cache_);
-    // PipelineHandler::create_pipeline_layout(inst_.setLayouts_, inst_.layout_, "DEFAULT");
+    PipelineHandler::createPipelineCache(inst_.cache_);
+    // PipelineHandler::createPipelineLayout(inst_.setLayouts_, inst_.layout_, "DEFAULT");
 
-    inst_.create_default_attachments();
+    inst_.createDefaultAttachments();
 }
 
-void PipelineHandler::create_shader_modules() {
+void PipelineHandler::createShaderModules() {
     // Relative to CMake being run in a "build" directory in the root of the repo like VulkanSamples
     // color
     auto colorVSText = FileLoader::read_file("Guppy\\src\\shaders\\color.vert");
@@ -70,25 +70,25 @@ void PipelineHandler::create_shader_modules() {
 
     // color vertex shader
     if (colorVSText.data()) {
-        create_shader_module(colorVSText, VK_SHADER_STAGE_VERTEX_BIT, colorVS_, false, "COLOR VERT");
+        createShaderModule(colorVSText, VK_SHADER_STAGE_VERTEX_BIT, colorVS_, false, "COLOR VERT");
     }
     // color fragment shader
     if (colorFSText.data()) {
-        create_shader_module(colorFSText, VK_SHADER_STAGE_FRAGMENT_BIT, colorFS_, false, "COLOR FRAG");
+        createShaderModule(colorFSText, VK_SHADER_STAGE_FRAGMENT_BIT, colorFS_, false, "COLOR FRAG");
     }
     // texture vertex shader
     if (textureVSText.data()) {
-        create_shader_module(textureVSText, VK_SHADER_STAGE_VERTEX_BIT, texVS_, false, "TEXTURE VERT");
+        createShaderModule(textureVSText, VK_SHADER_STAGE_VERTEX_BIT, texVS_, false, "TEXTURE VERT");
     }
     // texture fragment shader
     if (textureFSText.data()) {
-        create_shader_module(textureFSText, VK_SHADER_STAGE_FRAGMENT_BIT, texFS_, false, "TEXTURE FRAG");
+        createShaderModule(textureFSText, VK_SHADER_STAGE_FRAGMENT_BIT, texFS_, false, "TEXTURE FRAG");
     }
 
     finalize_glslang();
 }
 
-void PipelineHandler::create_shader_module(const std::string& shaderText, VkShaderStageFlagBits stage,
+void PipelineHandler::createShaderModule(const std::string& shaderText, VkShaderStageFlagBits stage,
                                            ShaderResources& shaderResources, bool initGlslang, std::string markerName) {
     if (initGlslang) init_glslang();  // init glslang based on caller needs ...
 
@@ -123,7 +123,7 @@ void PipelineHandler::create_shader_module(const std::string& shaderText, VkShad
 //      Possibly make the set layout creation optional based on state of scene
 //      Shader bindings
 //      Make binding count dynamic
-void PipelineHandler::create_descriptor_set_layout(Vertex::TYPE type, VkDescriptorSetLayout& setLayout) {
+void PipelineHandler::createDescriptorSetLayout(Vertex::TYPE type, VkDescriptorSetLayout& setLayout) {
     std::vector<VkDescriptorSetLayoutBinding> bindings;
 
     // UNIFORM BUFFER
@@ -131,7 +131,7 @@ void PipelineHandler::create_descriptor_set_layout(Vertex::TYPE type, VkDescript
     ubo_binding.binding = 0;
     ubo_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     ubo_binding.descriptorCount = 1;
-    ubo_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+    ubo_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT; // TODO: make a frag specific ubo...
     ubo_binding.pImmutableSamplers = nullptr;  // Optional
     bindings.push_back(ubo_binding);
 
@@ -162,7 +162,7 @@ void PipelineHandler::create_descriptor_set_layout(Vertex::TYPE type, VkDescript
     ext::DebugMarkerSetObjectName(inst_.ctx_.dev, (uint64_t)setLayout, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
                                   (Vertex::getTypeName(type) + " descriptor set layout").c_str());
 
-    create_pipeline_layout(type, setLayout, Vertex::getTypeName(type));
+    createPipelineLayout(type, setLayout, Vertex::getTypeName(type));
 }
 
 void PipelineHandler::getDescriptorLayouts(uint32_t image_count, Vertex::TYPE type, std::vector<VkDescriptorSetLayout>& layouts) {
@@ -297,7 +297,7 @@ void PipelineHandler::createTextureDescriptorSets(const VkDescriptorImageInfo& i
     }
 }
 
-void PipelineHandler::create_pipeline_cache(VkPipelineCache& cache) {
+void PipelineHandler::createPipelineCache(VkPipelineCache& cache) {
     VkPipelineCacheCreateInfo pipeline_cache_info = {};
     pipeline_cache_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
     pipeline_cache_info.initialDataSize = 0;
@@ -310,7 +310,7 @@ void PipelineHandler::create_pipeline_cache(VkPipelineCache& cache) {
 // Can change:
 //      Hook up push constants
 // template <typename T>
-void PipelineHandler::create_pipeline_layout(Vertex::TYPE type, const VkDescriptorSetLayout& setLayout, std::string markerName) {
+void PipelineHandler::createPipelineLayout(Vertex::TYPE type, const VkDescriptorSetLayout& setLayout, std::string markerName) {
     VkPipelineLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
@@ -338,7 +338,7 @@ void PipelineHandler::create_pipeline_layout(Vertex::TYPE type, const VkDescript
     }
 }
 
-void PipelineHandler::create_input_state_create_info(Vertex::TYPE type, PipelineCreateInfoResources& resources) {
+void PipelineHandler::createInputStateCreateInfo(Vertex::TYPE type, PipelineCreateInfoResources& resources) {
     resources.vertexInputStateInfo = {};
     resources.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
@@ -363,7 +363,7 @@ void PipelineHandler::create_input_state_create_info(Vertex::TYPE type, Pipeline
 }
 
 // These are settings based ... TODO: I think there might be a more space efficient order.
-void PipelineHandler::create_default_attachments(bool clear, VkImageLayout finalLayout) {
+void PipelineHandler::createDefaultAttachments(bool clear, VkImageLayout finalLayout) {
     VkAttachmentDescription attachemnt = {};
 
     // COLOR ATTACHMENT (SWAP-CHAIN)
@@ -443,17 +443,17 @@ void PipelineHandler::create_default_attachments(bool clear, VkImageLayout final
 
 void PipelineHandler::createPipelineResources(PipelineResources& resources) {
     // SUBPASSES
-    inst_.create_subpasses(resources);
+    inst_.createSubpasses(resources);
     // DEPENDENCIES
-    inst_.create_dependencies(resources);
+    inst_.createDependencies(resources);
     // RENDER PASS
-    inst_.create_render_pass(resources);
+    inst_.createRenderPass(resources);
 
     // PIPELINES
 
     // BASE
     // TRI_LIST_COLOR
-    inst_.create_base_pipeline(Vertex::TYPE::COLOR, TOPOLOGY::TRI_LIST_COLOR, inst_.colorVS_, inst_.colorFS_, inst_.createResources,
+    inst_.createBasePipeline(Vertex::TYPE::COLOR, TOPOLOGY::TRI_LIST_COLOR, inst_.colorVS_, inst_.colorFS_, inst_.createResources,
                                resources);
 
     // DERIVATIVES
@@ -479,7 +479,7 @@ void PipelineHandler::createPipelineResources(PipelineResources& resources) {
     // layout
     resources.pipelineInfo.layout = inst_.pipelineLayouts_[static_cast<int>(Vertex::TYPE::TEXTURE)];
     // vertex input
-    inst_.create_input_state_create_info(Vertex::TYPE::TEXTURE, inst_.createResources);
+    inst_.createInputStateCreateInfo(Vertex::TYPE::TEXTURE, inst_.createResources);
     resources.pipelineInfo.pVertexInputState = &inst_.createResources.vertexInputStateInfo;
     // shader stages
     inst_.createResources.stagesInfo[0] = inst_.texVS_.info;
@@ -495,7 +495,7 @@ void PipelineHandler::createPipelineResources(PipelineResources& resources) {
                                                  &resources.pipelines[static_cast<int>(TOPOLOGY::TRI_LIST_TEX)]));
 }
 
-void PipelineHandler::create_subpasses(PipelineResources& resources) {
+void PipelineHandler::createSubpasses(PipelineResources& resources) {
     VkSubpassDescription subpass = {};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.inputAttachmentCount = 0;
@@ -511,7 +511,7 @@ void PipelineHandler::create_subpasses(PipelineResources& resources) {
     resources.subpasses.push_back(subpass);  // TRI_LIST_TEX
 }
 
-void PipelineHandler::create_dependencies(PipelineResources& resources) {
+void PipelineHandler::createDependencies(PipelineResources& resources) {
     // TODO: used for waiting in draw (figure this out... what is the VK_SUBPASS_EXTERNAL one?)
     VkSubpassDependency dependency = {};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -554,7 +554,7 @@ void PipelineHandler::create_dependencies(PipelineResources& resources) {
 //      Make subpasses dynamic
 //      Make dependencies dynamic
 //      Make attachments more dynamic
-void PipelineHandler::create_render_pass(PipelineResources& resources) {
+void PipelineHandler::createRenderPass(PipelineResources& resources) {
     VkRenderPassCreateInfo rp_info = {};
     rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     rp_info.pNext = nullptr;
@@ -595,7 +595,7 @@ void PipelineHandler::create_render_pass(PipelineResources& resources) {
 //      Just need an array of shader info
 //      Make layout_ dynamic
 //      Make render_pass_ dynamic
-void PipelineHandler::create_base_pipeline(Vertex::TYPE vertexType, TOPOLOGY pipelineType, const ShaderResources& vs,
+void PipelineHandler::createBasePipeline(Vertex::TYPE vertexType, TOPOLOGY pipelineType, const ShaderResources& vs,
                                            const ShaderResources& fs, PipelineCreateInfoResources& createRes,
                                            PipelineResources& pipelineRes) {
     // DYNAMIC STATE
@@ -608,7 +608,7 @@ void PipelineHandler::create_base_pipeline(Vertex::TYPE vertexType, TOPOLOGY pip
     createRes.dynamicStateInfo.dynamicStateCount = 0;
 
     // INPUT ASSEMBLY
-    create_input_state_create_info(vertexType, createRes);
+    createInputStateCreateInfo(vertexType, createRes);
 
     createRes.inputAssemblyStateInfo = {};
     createRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -791,16 +791,16 @@ void PipelineHandler::create_base_pipeline(Vertex::TYPE vertexType, TOPOLOGY pip
     }
 }
 
-void PipelineHandler::destroy_pipeline_resources(PipelineResources& resources) {
+void PipelineHandler::destroyPipelineResources(PipelineResources& resources) {
     vkDestroyRenderPass(inst_.ctx_.dev, resources.renderPass, nullptr);
     for (auto& pipeline : resources.pipelines) vkDestroyPipeline(inst_.ctx_.dev, pipeline, nullptr);
 }
 
-void PipelineHandler::destroy_descriptor_resources(std::unique_ptr<DescriptorResources>& pRes) {
+void PipelineHandler::destroyDescriptorResources(std::unique_ptr<DescriptorResources>& pRes) {
     vkDestroyDescriptorPool(inst_.ctx_.dev, pRes->pool, nullptr);
 }
 
 void PipelineHandler::cleanupOldResources() {
-    for (auto& pRes : inst_.oldDescRes_) inst_.destroy_descriptor_resources(pRes);
+    for (auto& pRes : inst_.oldDescRes_) inst_.destroyDescriptorResources(pRes);
     inst_.oldDescRes_.clear();
 }

@@ -9,6 +9,8 @@
 
 #include "Vertex.h"
 
+typedef uint32_t Flags;
+
 constexpr auto APP_SHORT_NAME = "Guppy Application";
 constexpr auto DEPTH_PRESENT = true;
 const std::string ROOT_PATH = "..\\..\\..\\";  // TODO: this should come from something meaningful ...
@@ -16,6 +18,7 @@ const std::string ROOT_PATH = "..\\..\\..\\";  // TODO: this should come from so
 const int WIDTH = 800;
 const int HEIGHT = 600;
 const int MAX_FRAMES_IN_FLIGHT = 2;
+
 
 #ifdef NDEBUG
 const bool ENABLE_VALIDATION_LAYERS = false;

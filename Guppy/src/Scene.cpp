@@ -302,9 +302,9 @@ void Scene::destroy(const VkDevice& dev) {
     for (auto& pMesh : texMeshes_) pMesh->destroy(dev);
     texMeshes_.clear();
     // descriptor
-    PipelineHandler::destroy_descriptor_resources(pDescResources_);
+    PipelineHandler::destroyDescriptorResources(pDescResources_);
     // pipeline
-    PipelineHandler::destroy_pipeline_resources(plResources_);
+    PipelineHandler::destroyPipelineResources(plResources_);
     // commands
     destroy_cmds(dev);
 }

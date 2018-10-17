@@ -17,8 +17,6 @@ class Camera {
 
     void update(float aspect, const glm::vec3 &pos_dir = {}, const glm::vec3 &look_dir = {});
 
-    VkDeviceSize memory_requirements_size;  // TODO: this ain't great
-
    private:
     void updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir);
 

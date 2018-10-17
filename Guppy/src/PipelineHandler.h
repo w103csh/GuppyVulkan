@@ -68,7 +68,7 @@ class PipelineHandler {
         VkAttachmentReference depth;
     };
 
-    static void create_shader_module(const std::string &shaderText, VkShaderStageFlagBits stage, ShaderResources &shaderResources,
+    static void createShaderModule(const std::string &shaderText, VkShaderStageFlagBits stage, ShaderResources &shaderResources,
                                      bool initGlslang = true, std::string markerName = "");
 
     static std::unique_ptr<DescriptorResources> createDescriptorResources(std::vector<VkDescriptorBufferInfo> uboInfos,
@@ -76,10 +76,10 @@ class PipelineHandler {
     static void createTextureDescriptorSets(const VkDescriptorImageInfo &info, int offset,
                                             std::unique_ptr<DescriptorResources> &pRes);
 
-    static void create_pipeline_cache(VkPipelineCache &cache);
+    static void createPipelineCache(VkPipelineCache &cache);
     // static VkSubpassDescription PipelineHandler::create_default_subpass();
     static void createPipelineResources(PipelineResources &resources);
-    static void create_render_pass(PipelineResources &resources);
+    static void createRenderPass(PipelineResources &resources);
 
     static inline const DefaultAttachementReferences &get_def_attach_refs() { return inst_.defAttachRefs_; }
     static void PipelineHandler::getDescriptorLayouts(uint32_t image_count, Vertex::TYPE type,
@@ -89,8 +89,8 @@ class PipelineHandler {
         return inst_.pipelineLayouts_[static_cast<int>(type)];
     }
 
-    static void destroy_pipeline_resources(PipelineResources &resources);
-    static void destroy_descriptor_resources(std::unique_ptr<DescriptorResources> &resources);
+    static void destroyPipelineResources(PipelineResources &resources);
+    static void destroyDescriptorResources(std::unique_ptr<DescriptorResources> &resources);
 
     // old resources
     static inline void takeOldResources(std::unique_ptr<DescriptorResources> pRes) { inst_.oldDescRes_.push_back(std::move(pRes)); }
@@ -102,16 +102,16 @@ class PipelineHandler {
     static PipelineHandler inst_;
 
     void reset();
-    void create_shader_modules();
+    void createShaderModules();
     void createDescriptorPool(std::unique_ptr<DescriptorResources> &pDescResources);
-    void create_descriptor_set_layout(Vertex::TYPE type, VkDescriptorSetLayout &setLayout);
-    void create_default_attachments(bool clear = true, VkImageLayout finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    void create_subpasses(PipelineResources &resources);
-    void create_dependencies(PipelineResources &resources);
-    void create_pipeline_layout(Vertex::TYPE type, const VkDescriptorSetLayout &setLayout, std::string markerName = "");
+    void createDescriptorSetLayout(Vertex::TYPE type, VkDescriptorSetLayout &setLayout);
+    void createDefaultAttachments(bool clear = true, VkImageLayout finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+    void createSubpasses(PipelineResources &resources);
+    void createDependencies(PipelineResources &resources);
+    void createPipelineLayout(Vertex::TYPE type, const VkDescriptorSetLayout &setLayout, std::string markerName = "");
     // maybe make something like below public ...
-    void create_input_state_create_info(Vertex::TYPE type, PipelineCreateInfoResources &resources);
-    void create_base_pipeline(Vertex::TYPE vertexType, TOPOLOGY pipelineType, const ShaderResources &vs, const ShaderResources &fs,
+    void createInputStateCreateInfo(Vertex::TYPE type, PipelineCreateInfoResources &resources);
+    void createBasePipeline(Vertex::TYPE vertexType, TOPOLOGY pipelineType, const ShaderResources &vs, const ShaderResources &fs,
                               PipelineCreateInfoResources &createRes, PipelineResources &pipelineRes);
 
     MyShell::Context ctx_;     // TODO: shared_ptr

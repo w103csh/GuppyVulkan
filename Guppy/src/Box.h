@@ -1,4 +1,5 @@
-//#pragma once
+//#ifndef FILELOADER_H
+//#define FILELOADER_H
 //
 //#include <array>
 //#include <vulkan/vulkan.h>
@@ -13,3 +14,5 @@
 //
 //    //std::array<Vertex, 6
 //};
+//
+//#endif  // !FILELOADER_H

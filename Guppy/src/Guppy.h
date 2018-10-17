@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Camera.h"
+#include "DirectionalLight.h"
 #include "Game.h"
 #include "Helpers.h"
 #include "MyShell.h"
@@ -93,12 +94,12 @@ class Guppy : public Game {
     // *********************************************
 
     // called by attach_shell
-    void create_uniform_buffer();
+    void createUniformBuffer(std::string markName = "");
     void createTextures();
     void createScenes();
 
     // called by detach_shell
-    void destroy_ubo_resources();
+    void destroyUniformBuffer();
     void destroyTextures();
 
     // called by attach_swapchain
@@ -118,21 +119,26 @@ class Guppy : public Game {
     inline const std::unique_ptr<Scene>& active_scene() const { return scenes_[active_scene_index_]; }
 
     // textures
-    void addTexture(const VkDevice& dev, std::string tex_path);
+    void addTexture(const VkDevice& dev, std::string texPath);
     std::shared_ptr<Texture::TextureData> getTextureByPath(std::string path);
     void updateTextures(const VkDevice& dev);
     float test = 1.0;
 
     // uniform buffer
-    void update_ubo();
-    void copy_ubo_to_memory();
+    void updateUniformBuffer();
+    void copyUniformBufferMemory();
 
+    // frame buffer
     ImageResource color_resource_;
     ImageResource depth_resource_;
-    UniformBufferResources ubo_resource_;
+    // uniform buffer
     Camera camera_;
+    DirectionalLight::Base dirLight_;
+    UniformBufferResources uboResource_;
+    // scene
     int active_scene_index_;
     std::vector<std::unique_ptr<Scene>> scenes_;
+    // textures
     std::vector<std::shared_ptr<Texture::TextureData>> pTextures_;
     std::vector<std::future<std::shared_ptr<Texture::TextureData>>> texFutures_;
 };
