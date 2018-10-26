@@ -1,5 +1,6 @@
 
 #include <algorithm>
+#include <sstream>
 #define STB_IMAGE_IMPLEMENTATION
 
 #include "CmdBufHandler.h"
@@ -9,16 +10,18 @@
 #define STB_FORMAT VK_FORMAT_R8G8B8A8_UNORM
 
 std::future<std::shared_ptr<Texture::TextureData>> Texture::loadTexture(const VkDevice& dev, const bool makeMipmaps,
-                                                                      std::shared_ptr<TextureData> pTex) {
-    pTex->name = helpers::getFileName(pTex->path);
+                                                                        std::shared_ptr<TextureData> pTex) {
     pTex->pLdgRes = LoadingResourceHandler::createLoadingResources();
 
     return std::async(std::launch::async, [&dev, &makeMipmaps, pTex]() {
         int width, height, channels;
+
+        // Diffuse map (default)
+        // TODO: make this dynamic like the others...
         pTex->pixels = stbi_load(pTex->path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
 
         if (!pTex->pixels) {
-            throw std::runtime_error("failed to load texture image!");
+            throw std::runtime_error("failed to load texture map!");
         }
 
         pTex->width = static_cast<uint32_t>(width);
@@ -26,13 +29,49 @@ std::future<std::shared_ptr<Texture::TextureData>> Texture::loadTexture(const Vk
         pTex->channels = static_cast<uint32_t>(channels);
         pTex->mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(pTex->width, pTex->height)))) + 1;
 
+        // Normal map
+        if (!pTex->normPath.empty()) {
+            pTex->normPixels = stbi_load(pTex->normPath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+
+            if (!pTex->normPixels) {
+                throw std::runtime_error("failed to load normal map!");
+            }
+
+            std::stringstream ss;
+            if (width != pTex->width) ss << "invalid normal map (width)! ";
+            if (height != pTex->height) ss << "invalid normal map (height)! ";
+            if (channels != pTex->channels) ss << "invalid normal map (channels)! ";  // TODO: not sure about this
+            if (!ss.str().empty()) {
+                throw std::runtime_error(ss.str());
+            }
+        }
+
+        // Spectral map
+        if (!pTex->specPath.empty()) {
+            pTex->specPixels = stbi_load(pTex->specPath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+
+            if (!pTex->specPixels) {
+                throw std::runtime_error("failed to load spectral map!");
+            }
+
+            std::stringstream ss;
+            if (width != pTex->width) ss << "invalid spectral map (width)! ";
+            if (height != pTex->height) ss << "invalid spectral map (height)! ";
+            if (channels != pTex->channels) ss << "invalid spectral map (channels)! ";  // TODO: not sure about this
+            if (!ss.str().empty()) {
+                throw std::runtime_error(ss.str());
+            }
+        }
+
         return std::move(pTex);
     });
 }
 
 void Texture::createTexture(const VkDevice& dev, const bool makeMipmaps, std::shared_ptr<TextureData> pTex) {
     auto& tex = (*pTex);
+
     createImage(dev, tex);
+
     if (makeMipmaps) {
         generateMipmaps(tex);
     } else {
@@ -48,33 +87,50 @@ void Texture::createTexture(const VkDevice& dev, const bool makeMipmaps, std::sh
 }
 
 void Texture::createImage(const VkDevice& dev, TextureData& tex) {
-    BufferResource stgRes = {};
-    VkDeviceSize imageSize = tex.width * tex.height * 4;  // TODO: where does this 4 come from?
+    VkDeviceSize imageSize = tex.width * tex.height * 4;  // TODO: where does this 4 come from?!!!!!!!!!!!!!!
+    auto layerCount = getArrayLayerCount(tex);
 
-    auto memReqsSize = helpers::create_buffer(dev, imageSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                              stgRes.buffer, stgRes.memory);
+    BufferResource stgRes = {};
+    auto memReqsSize = helpers::createBuffer(dev, (imageSize * layerCount), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                             stgRes.buffer, stgRes.memory);
 
     void* pData;
+    size_t offset = 0;
     vkMapMemory(dev, stgRes.memory, 0, memReqsSize, 0, &pData);
-    memcpy(pData, tex.pixels, static_cast<size_t>(imageSize));
+
+    if (tex.flags & FLAGS::DIFFUSE) {
+        memcpy(static_cast<char*>(pData) + offset, tex.pixels, static_cast<size_t>(imageSize));
+        offset += static_cast<size_t>(imageSize);
+    }
+    if (tex.flags & FLAGS::NORMAL) {
+        memcpy(static_cast<char*>(pData) + offset, tex.pixels, static_cast<size_t>(imageSize));
+        offset += static_cast<size_t>(imageSize);  // TODO: same size for all?
+    }
+    if (tex.flags & FLAGS::SPECULAR) {
+        memcpy(static_cast<char*>(pData) + offset, tex.pixels, static_cast<size_t>(imageSize));
+        offset += static_cast<size_t>(imageSize);  // TODO: same size for all?
+    }
+
     vkUnmapMemory(dev, stgRes.memory);
 
     stbi_image_free(tex.pixels);
+    stbi_image_free(tex.normPixels);
+    stbi_image_free(tex.specPixels);
 
     // Using CmdBufHandler::getUniqueQueueFamilies(true, false, true) here might not be wise... To work
     // right it relies on the the two command buffers being created with the same data.
-    helpers::create_image(dev, CmdBufHandler::getUniqueQueueFamilies(true, false, true), static_cast<uint32_t>(tex.width),
-                          static_cast<uint32_t>(tex.height), tex.mipLevels, VK_SAMPLE_COUNT_1_BIT, STB_FORMAT,
-                          VK_IMAGE_TILING_OPTIMAL,
-                          VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, tex.image, tex.memory);
+    helpers::createImage(dev, CmdBufHandler::getUniqueQueueFamilies(true, false, true), VK_SAMPLE_COUNT_1_BIT, STB_FORMAT,
+                         VK_IMAGE_TILING_OPTIMAL,
+                         VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, static_cast<uint32_t>(tex.width), static_cast<uint32_t>(tex.height),
+                         tex.mipLevels, layerCount, tex.image, tex.memory);
 
-    helpers::transition_image_layout(tex.pLdgRes->transferCmd, tex.image, tex.mipLevels, STB_FORMAT, VK_IMAGE_LAYOUT_UNDEFINED,
-                                     VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                     VK_PIPELINE_STAGE_TRANSFER_BIT);
+    helpers::transitionImageLayout(tex.pLdgRes->transferCmd, tex.image, STB_FORMAT, VK_IMAGE_LAYOUT_UNDEFINED,
+                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                   VK_PIPELINE_STAGE_TRANSFER_BIT, tex.mipLevels, layerCount);
 
-    helpers::copy_buffer_to_image(tex.pLdgRes->graphicsCmd, stgRes.buffer, tex.image, tex.width, tex.height);
+    helpers::copyBufferToImage(tex.pLdgRes->graphicsCmd, tex.width, tex.height, layerCount, stgRes.buffer, tex.image);
 
     tex.pLdgRes->stgResources.push_back(stgRes);
 }
@@ -116,8 +172,8 @@ void Texture::generateMipmaps(const TextureData& tex) {
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
-        vkCmdPipelineBarrier(tex.pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr, 1,
-                             &barrier);
+        vkCmdPipelineBarrier(tex.pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0,
+                             nullptr, 0, nullptr, 1, &barrier);
 
         VkImageBlit blit = {};
         blit.srcOffsets[0] = {0, 0, 0};
@@ -134,8 +190,7 @@ void Texture::generateMipmaps(const TextureData& tex) {
         blit.dstSubresource.layerCount = 1;
 
         vkCmdBlitImage(tex.pLdgRes->graphicsCmd, tex.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, tex.image,
-                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1,
-                       &blit, VK_FILTER_LINEAR);
+                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
         // TRANSITION TO SHADER READY
 
@@ -145,8 +200,7 @@ void Texture::generateMipmaps(const TextureData& tex) {
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
         vkCmdPipelineBarrier(tex.pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
-                             nullptr, 0, nullptr,
-                             1, &barrier);
+                             nullptr, 0, nullptr, 1, &barrier);
 
         // This is a bit wonky methinks (non-sqaure is the case for this)
         if (mipWidth > 1) mipWidth /= 2;
@@ -163,13 +217,12 @@ void Texture::generateMipmaps(const TextureData& tex) {
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
     vkCmdPipelineBarrier(tex.pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1,
-                         &barrier);
+                         nullptr, 0, nullptr, 1, &barrier);
 }
 
 void Texture::createImageView(const VkDevice& dev, TextureData& tex) {
-    helpers::create_image_view(dev, tex.image, tex.mipLevels, STB_FORMAT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D,
-                               tex.view);
+    helpers::createImageView(dev, tex.image, tex.mipLevels, STB_FORMAT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+                             getArrayLayerCount(tex), tex.view);
 }
 
 void Texture::createSampler(const VkDevice& dev, TextureData& tex) {
@@ -204,4 +257,12 @@ void Texture::createDescInfo(TextureData& tex) {
     tex.imgDescInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     tex.imgDescInfo.imageView = tex.view;
     tex.imgDescInfo.sampler = tex.sampler;
+}
+
+uint32_t Texture::getArrayLayerCount(const TextureData& tex) {
+    uint32_t count = 0;
+    if (tex.flags & FLAGS::DIFFUSE) count++;
+    if (tex.flags & FLAGS::NORMAL) count++;
+    if (tex.flags & FLAGS::SPECULAR) count++;
+    return count;
 }

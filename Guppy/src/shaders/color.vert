@@ -21,6 +21,6 @@ out gl_PerVertex {
 void main() {
 	gl_Position = ubo.mvp * vec4(inPosition, 1.0);
     fragPos = vec3(gl_Position);
-    fragNormal = normalize(vec3(ubo.mvp * vec4(inNormal, 0.0)));
+    fragNormal = inNormal;
     fragColor = inColor;
 }

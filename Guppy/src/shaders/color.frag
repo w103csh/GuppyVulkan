@@ -59,6 +59,7 @@ void main() {
                 specular = pow(specAngle, ubo.dirLight1.shininess/4.0);
             }
         }
+
         vec3 colorLinear = vec3(outColor) +
                             ubo.dirLight1.diff * lambertian * ubo.dirLight1.color * ubo.dirLight1.power / distance +
                             ubo.dirLight1.spec * specular * ubo.dirLight1.color * ubo.dirLight1.power / distance;

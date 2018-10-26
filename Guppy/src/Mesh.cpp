@@ -10,9 +10,16 @@
 // Mesh
 // **********************
 
-Mesh::Mesh() : modelPath_(""), status_(STATUS::PENDING), markerName_(""), pLdgRes_(nullptr) {}
+Mesh::Mesh()
+    : modelPath_(""),
+      status_(STATUS::PENDING),
+      markerName_(""),
+      pLdgRes_(nullptr),
+      transform_(glm::identity<glm::mat4>()),
+      scale_(1.0f) {}
 
-Mesh::Mesh(std::string modelPath) : modelPath_(modelPath), status_(STATUS::PENDING), markerName_(""), pLdgRes_(nullptr) {}
+Mesh::Mesh(std::string modelPath, glm::mat4 transform, float scale)
+    : modelPath_(modelPath), status_(STATUS::PENDING), markerName_(""), pLdgRes_(nullptr), transform_(transform), scale_(scale) {}
 
 void Mesh::setSceneData(const MyShell::Context& ctx, size_t offset) { offset_ = offset; }
 
@@ -61,9 +68,9 @@ void Mesh::createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cm
     // STAGING BUFFER
     VkDeviceSize bufferSize = getVertexBufferSize();
 
-    auto memReqsSize = helpers::create_buffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                              stg_res.buffer, stg_res.memory);
+    auto memReqsSize = helpers::createBuffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                             stg_res.buffer, stg_res.memory);
 
     // FILL STAGING BUFFER ON DEVICE
     void* pData;
@@ -84,13 +91,13 @@ void Mesh::createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cm
     vkUnmapMemory(dev, stg_res.memory);
 
     // FAST VERTEX BUFFER
-    helpers::create_buffer(dev,
-                           bufferSize,  // TODO: probably don't need to check memory requirements again
-                           VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                           VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_res_.buffer, vertex_res_.memory);
+    helpers::createBuffer(dev,
+                          bufferSize,  // TODO: probably don't need to check memory requirements again
+                          VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                          vertex_res_.buffer, vertex_res_.memory);
 
     // COPY FROM STAGING TO FAST
-    helpers::copy_buffer(cmd, stg_res.buffer, vertex_res_.buffer, memReqsSize);
+    helpers::copyBuffer(cmd, stg_res.buffer, vertex_res_.buffer, memReqsSize);
 
     // Name the buffers for debugging
     ext::DebugMarkerSetObjectName(dev, (uint64_t)vertex_res_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "Mesh vertex buffer");
@@ -101,19 +108,19 @@ void Mesh::createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd
 
     // TODO: more checking around this scenario...
     if (bufferSize) {
-        auto memReqsSize = helpers::create_buffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                                  VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                                  stg_res.buffer, stg_res.memory);
+        auto memReqsSize = helpers::createBuffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                                 stg_res.buffer, stg_res.memory);
 
         void* pData;
         vkMapMemory(dev, stg_res.memory, 0, memReqsSize, 0, &pData);
         memcpy(pData, getIndexData(), static_cast<size_t>(bufferSize));
         vkUnmapMemory(dev, stg_res.memory);
 
-        helpers::create_buffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                               VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_res_.buffer, index_res_.memory);
+        helpers::createBuffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_res_.buffer, index_res_.memory);
 
-        helpers::copy_buffer(cmd, stg_res.buffer, index_res_.buffer, memReqsSize);
+        helpers::copyBuffer(cmd, stg_res.buffer, index_res_.buffer, memReqsSize);
 
         // Name the buffers for debugging
         ext::DebugMarkerSetObjectName(dev, (uint64_t)index_res_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
@@ -149,7 +156,7 @@ void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout
 }
 
 void TextureMesh::drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                                const VkDescriptorSet& descSet, size_t frameIndex,
+                                const VkDescriptorSet& descSet, const std::array<uint32_t, 1>& dynUboOffsets, size_t frameIndex,
                                 const VkCommandBufferInheritanceInfo& inheritanceInfo, const VkViewport& viewport,
                                 const VkRect2D& scissor) const {
     assert(status_ == STATUS::READY);
@@ -160,12 +167,14 @@ void TextureMesh::drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayo
     vkCmdSetViewport(secCmd, 0, 1, &viewport);
     vkCmdSetScissor(secCmd, 0, 1, &scissor);
 
-    VkBuffer vertex_buffers[] = {vertex_res_.buffer};
-    VkDeviceSize offsets[] = {0};
-
     vkCmdBindPipeline(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-    vkCmdBindDescriptorSets(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet, 0, nullptr);
-    vkCmdBindVertexBuffers(secCmd, 0, 1, vertex_buffers, offsets);
+
+    vkCmdBindDescriptorSets(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet,
+                            static_cast<uint32_t>(dynUboOffsets.size()), dynUboOffsets.data());
+
+    VkBuffer vertexBuffs[] = {vertex_res_.buffer};
+    VkDeviceSize vertexOffs[] = {0};
+    vkCmdBindVertexBuffers(secCmd, 0, 1, vertexBuffs, vertexOffs);
 
     if (indices_.size()) {
         vkCmdBindIndexBuffer(secCmd, index_res_.buffer, 0, VK_INDEX_TYPE_UINT32);
@@ -196,6 +205,11 @@ ColorMesh::ColorMesh() {
     topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_COLOR;
 }
 
+ColorMesh::ColorMesh(std::string modelPath, glm::mat4 transform, float scale) : Mesh(modelPath, transform, scale) {
+    vertexType_ = Vertex::TYPE::COLOR;
+    topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_COLOR;
+}
+
 void ColorMesh::loadObj() {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
@@ -208,13 +222,33 @@ void ColorMesh::loadObj() {
 
     std::unordered_map<Vertex::Color, uint32_t> uniqueVertices = {};
 
+    bool useNormals = (!attrib.normals.empty() && attrib.vertices.size() == attrib.normals.size());
+    bool useColors = (!attrib.colors.empty() && attrib.vertices.size() == attrib.colors.size());
+
     for (const auto& shape : shapes) {
         for (const auto& index : shape.mesh.indices) {
             // Create the vertex ...
             Vertex::Color vertex = {};
+
+            // position
             vertex.pos = {attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1],
                           attrib.vertices[3 * index.vertex_index + 2]};
-            vertex.color = {1.0f, 1.0f, 1.0f, 1.0f};
+
+            // normal
+            if (useNormals) {
+                vertex.normal = {attrib.normals[3 * index.vertex_index + 0], attrib.normals[3 * index.vertex_index + 1],
+                                 attrib.normals[3 * index.vertex_index + 2]};
+            }
+
+            // color
+            if (useColors) {
+                vertex.color = {attrib.colors[3 * index.vertex_index + 0], attrib.colors[3 * index.vertex_index + 1],
+                                attrib.colors[3 * index.vertex_index + 2], 1.0f};
+                vertex.color = {0.0f, 1.0f, 0.0f, 1.0f};
+            }
+
+            vertex.pos = transform_ * glm::vec4(vertex.pos, 1.0f);
+            vertex.pos *= scale_;
 
             if (uniqueVertices.count(vertex) == 0) {
                 uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
@@ -237,7 +271,8 @@ TextureMesh::TextureMesh(std::shared_ptr<Texture::TextureData> pTex) : pTex_(pTe
     topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_TEX;
 };
 
-TextureMesh::TextureMesh(std::shared_ptr<Texture::TextureData> pTex, std::string modelPath) : Mesh(modelPath), pTex_(pTex) {
+TextureMesh::TextureMesh(std::shared_ptr<Texture::TextureData> pTex, std::string modelPath, glm::mat4 transform, float scale)
+    : Mesh(modelPath, transform, scale), pTex_(pTex) {
     assert(pTex);
     vertexType_ = Vertex::TYPE::TEXTURE;
     topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_TEX;
@@ -276,6 +311,10 @@ void TextureMesh::loadObj() {
             Vertex::Texture vertex = {};
             vertex.pos = {attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1],
                           attrib.vertices[3 * index.vertex_index + 2]};
+
+            vertex.pos = transform_ * glm::vec4(vertex.pos, 1.0f);
+            vertex.pos *= scale_;
+
             vertex.texCoord = {attrib.texcoords[2 * index.texcoord_index + 0],
                                1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
 

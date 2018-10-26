@@ -8,11 +8,13 @@
 #include "Vertex.h"
 
 struct DescriptorResources {
-    DescriptorResources(std::vector<VkDescriptorBufferInfo> uboInfos, size_t colorCount, size_t texCount)
-        : pool(nullptr), uboInfos(uboInfos), colorCount(colorCount), texCount(texCount) {}
+    DescriptorResources(std::vector<VkDescriptorBufferInfo> uboInfos, std::vector<VkDescriptorBufferInfo> dynUboInfos,
+                        size_t colorCount, size_t texCount)
+        : pool(nullptr), uboInfos(uboInfos), dynUboInfos(dynUboInfos), colorCount(colorCount), texCount(texCount) {}
     VkDescriptorPool pool;
     size_t colorCount, texCount;
     std::vector<VkDescriptorBufferInfo> uboInfos;
+    std::vector<VkDescriptorBufferInfo> dynUboInfos;
     std::vector<VkDescriptorSet> colorSets;
     std::vector<std::vector<VkDescriptorSet>> texSets;
 };
@@ -69,9 +71,10 @@ class PipelineHandler {
     };
 
     static void createShaderModule(const std::string &shaderText, VkShaderStageFlagBits stage, ShaderResources &shaderResources,
-                                     bool initGlslang = true, std::string markerName = "");
+                                   bool initGlslang = true, std::string markerName = "");
 
     static std::unique_ptr<DescriptorResources> createDescriptorResources(std::vector<VkDescriptorBufferInfo> uboInfos,
+                                                                          std::vector<VkDescriptorBufferInfo> dynUboInfos,
                                                                           size_t colorCount, size_t texCount);
     static void createTextureDescriptorSets(const VkDescriptorImageInfo &info, int offset,
                                             std::unique_ptr<DescriptorResources> &pRes);
@@ -112,7 +115,7 @@ class PipelineHandler {
     // maybe make something like below public ...
     void createInputStateCreateInfo(Vertex::TYPE type, PipelineCreateInfoResources &resources);
     void createBasePipeline(Vertex::TYPE vertexType, TOPOLOGY pipelineType, const ShaderResources &vs, const ShaderResources &fs,
-                              PipelineCreateInfoResources &createRes, PipelineResources &pipelineRes);
+                            PipelineCreateInfoResources &createRes, PipelineResources &pipelineRes);
 
     MyShell::Context ctx_;     // TODO: shared_ptr
     Game::Settings settings_;  // TODO: shared_ptr

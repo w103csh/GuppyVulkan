@@ -352,7 +352,7 @@ void MyShell::create_swapchain() {
         you loaded the original image.
     */
     ctx_.linear_blitting_supported_ =
-        helpers::find_supported_format(ctx_.physical_dev, {ctx_.surface_format.format}, VK_IMAGE_TILING_OPTIMAL,
+        helpers::findSupportedFormat(ctx_.physical_dev, {ctx_.surface_format.format}, VK_IMAGE_TILING_OPTIMAL,
                                        VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != VK_FORMAT_UNDEFINED;
 
     // defer to resize_swapchain()
@@ -889,7 +889,7 @@ void MyShell::determine_depth_format() {
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
     if (ctx_.depth_format == VK_FORMAT_UNDEFINED) ctx_.depth_format = VK_FORMAT_D32_SFLOAT;
 #else
-    if (ctx_.depth_format == VK_FORMAT_UNDEFINED) ctx_.depth_format = helpers::find_depth_format(ctx_.physical_dev);
+    if (ctx_.depth_format == VK_FORMAT_UNDEFINED) ctx_.depth_format = helpers::findDepthFormat(ctx_.physical_dev);
         // TODO: turn off depth if undefined still...
 #endif
 }

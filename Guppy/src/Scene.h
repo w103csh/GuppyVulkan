@@ -14,7 +14,8 @@
 class Scene {
    public:
     Scene() = delete;
-    Scene(const MyShell::Context &ctx, const UniformBufferResources &uboResource, size_t texCount = 0);
+    Scene(const MyShell::Context &ctx, const Game::Settings &settings, const UniformBufferResources &uboResource,
+          std::vector<std::shared_ptr<Texture::TextureData>> &pTextures);
 
     void addMesh(const MyShell::Context &ctx, std::unique_ptr<ColorMesh> pMesh);
     // void addMesh(const MyShell::Context &ctx, const VkDescriptorBufferInfo &ubo_info, std::unique_ptr<LineMesh> pMesh);
@@ -82,6 +83,11 @@ class Scene {
     // Loading
     std::vector<std::future<Mesh *>> ldgFutures_;
     std::vector<std::unique_ptr<LoadingResources>> ldgResources_;
+
+    // Uniform buffer
+    void createDynamicTexUniformBuffer(const MyShell::Context &ctx, const Game::Settings &settings,
+                                       std::vector<std::shared_ptr<Texture::TextureData>> &textures, std::string markerName = "");
+    std::shared_ptr<UniformBufferResources> pDynUboResource_;
 };
 
 #endif  // !SCENE_H

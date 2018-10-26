@@ -182,35 +182,48 @@ void Guppy::on_key(KEY key) {
             active_scene()->addMesh(shell_->context(), std::move(p1));
         } break;
         case KEY::KEY_F3: {
-            addTexture(dev_, CHALET_TEXTURE_PATH);
-            auto tm1 = std::make_unique<TextureMesh>(pTextures_.back(), CHALET_MODEL_PATH);
-            active_scene()->addMesh(shell_->context(), std::move(tm1));
+            if (false) {
+                auto tm1 = std::make_unique<TextureMesh>(textures_.back(), CHALET_MODEL_PATH);
+                active_scene()->addMesh(shell_->context(), std::move(tm1));
+            } else if (true) {
+                auto tm1 = std::make_unique<TextureMesh>(
+                    getTextureByPath(MED_H_DIFF_TEX_PATH), MED_H_MODEL_PATH,
+                    glm::rotate(glm::identity<glm::mat4>(), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), 0.01f);
+                active_scene()->addMesh(shell_->context(), std::move(tm1));
+            } else if (false) {
+                auto sphereBot = std::make_unique<ColorMesh>(SPHERE_MODEL_PATH);
+                active_scene()->addMesh(shell_->context(), std::move(sphereBot));
+                auto sphereTop = std::make_unique<ColorMesh>(
+                    SPHERE_MODEL_PATH, glm::rotate(glm::identity<glm::mat4>(), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+                active_scene()->addMesh(shell_->context(), std::move(sphereTop));
+            }
         } break;
         case KEY::KEY_F5: {
             if ((dirLight_.flags & DirectionalLight::FLAGS::SHOW) > 0) {
-                dirLight_.flags = DirectionalLight::FLAGS::HIDE | DirectionalLight::FLAGS::MODE_BLINN;
+                dirLight_.flags = DirectionalLight::FLAGS::HIDE | DirectionalLight::FLAGS::MODE_LAMERTIAN;
             } else {
-                dirLight_.flags = DirectionalLight::FLAGS::SHOW | DirectionalLight::FLAGS::MODE_BLINN;
+                dirLight_.flags = DirectionalLight::FLAGS::SHOW | DirectionalLight::FLAGS::MODE_LAMERTIAN;
             }
-            //if (test < 3) {
+            // if (test < 3) {
             //    addTexture(dev_, STATUE_TEXTURE_PATH);
             //}
-            //auto p1 = std::make_unique<TexturePlane>(
+            // auto p1 = std::make_unique<TexturePlane>(
             //    getTextureByPath(STATUE_TEXTURE_PATH), 1.0f, 1.0f, true, glm::vec3(0.0f, -test, 0.0f),
             //    glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
 
-            //active_scene()->addMesh(shell_->context(), std::move(p1));
+            // active_scene()->addMesh(shell_->context(), std::move(p1));
             // auto p1 = std::make_unique<ColorPlane>(1.0f, 1.0f, true, glm::vec3(),
             //                                       glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f,
             //                                       0.0f)));
             // active_scene()->addMesh(shell_->context(), std::move(p1), frame_data_index_);
         } break;
         case KEY::KEY_F6: {
-            auto p1 = std::make_unique<TexturePlane>(
-                getTextureByPath(VULKAN_TEXTURE_PATH), 1.0f, 1.0f, true, glm::vec3(0.0f, ++test, 0.0f),
-                glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
-
+            auto p1 =
+                std::make_unique<TexturePlane>(getTextureByPath(VULKAN_TEX_PATH), 1.0f, 1.0f, true, glm::vec3(0.0f, ++test, 0.0f),
+                                               glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
             active_scene()->addMesh(shell_->context(), std::move(p1));
+            auto p2 = std::make_unique<TexturePlane>(getTextureByPath(STATUE_TEX_PATH));
+            active_scene()->addMesh(shell_->context(), std::move(p2));
             // auto p1 = std::make_unique<ColorPlane>(1.0f, 1.0f, true, glm::vec3(),
             //                                       glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f,
             //                                       0.0f)));
@@ -293,7 +306,7 @@ void Guppy::get_swapchain_image_data(const VkSwapchainKHR& swapchain) {
     for (uint32_t i = 0; i < image_count; i++) {
         SwapchainImageResource res;
         res.image = images[i];
-        helpers::create_image_view(dev_, res.image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D, res.view);
+        helpers::createImageView(dev_, res.image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D, 1, res.view);
         swapchain_image_resources_.push_back(res);
     }
     free(images);
@@ -359,6 +372,8 @@ void Guppy::prepare_framebuffers(const VkSwapchainKHR& swapchain) {
 }
 
 void Guppy::createUniformBuffer(std::string markerName) {
+    const MyShell::Context& ctx = shell_->context();
+
     camera_.update(static_cast<float>(settings_.initial_width) / static_cast<float>(settings_.initial_height));
     auto mvp = camera_.getMVP();
 
@@ -366,9 +381,9 @@ void Guppy::createUniformBuffer(std::string markerName) {
     uboResource_.info.offset = 0;
     uboResource_.info.range = sizeof(mvp) + sizeof(dirLight_);
 
-    uboResource_.size = helpers::create_buffer(dev_, uboResource_.info.range, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                               uboResource_.buffer, uboResource_.memory);
+    uboResource_.size = helpers::createBuffer(dev_, uboResource_.info.range, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                              uboResource_.buffer, uboResource_.memory);
 
     copyUniformBufferMemory();
 
@@ -392,10 +407,11 @@ void Guppy::updateUniformBuffer() {
     camera_.update(aspect, pos_dir, look_dir);
 
     // Update the directional light
+    dirLight_.diff = camera_.getPosition();
 
     // If these change update them here...
-    //uboResource_.info.offset = 0;
-    //uboResource_.info.range = sizeof(mvp) + sizeof(dirLight_);
+    // uboResource_.info.offset = 0;
+    // uboResource_.info.range = sizeof(mvp) + sizeof(dirLight_);
 
     copyUniformBufferMemory();
 }
@@ -474,17 +490,17 @@ void Guppy::destroy_frame_data() {
 }
 
 void Guppy::create_color_resources() {
-    helpers::create_image(dev_, CmdBufHandler::getUniqueQueueFamilies(true, false, true), extent_.width, extent_.height, 1,
-                          shell_->context().num_samples, format_, VK_IMAGE_TILING_OPTIMAL,
-                          VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, color_resource_.image, color_resource_.memory);
+    helpers::createImage(dev_, CmdBufHandler::getUniqueQueueFamilies(true, false, true), shell_->context().num_samples, format_,
+                         VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, color_resource_.image,
+                         color_resource_.memory);
 
-    helpers::create_image_view(dev_, color_resource_.image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D,
-                               color_resource_.view);
+    helpers::createImageView(dev_, color_resource_.image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D, 1,
+                             color_resource_.view);
 
-    helpers::transition_image_layout(CmdBufHandler::graphics_cmd(), color_resource_.image, 1, format_, VK_IMAGE_LAYOUT_UNDEFINED,
-                                     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                     VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT);
+    helpers::transitionImageLayout(CmdBufHandler::graphics_cmd(), color_resource_.image, format_, VK_IMAGE_LAYOUT_UNDEFINED,
+                                   VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                   VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 1, 1);
 
     // Name some objects for debugging
     ext::DebugMarkerSetObjectName(dev_, (uint64_t)color_resource_.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
@@ -511,22 +527,22 @@ void Guppy::create_depth_resources() {
         throw std::runtime_error(("depth_format Unsupported.\n"));
     }
 
-    helpers::create_image(dev_, CmdBufHandler::getUniqueQueueFamilies(true, false, true), extent_.width, extent_.height, 1,
-                          shell_->context().num_samples, depth_resource_.format, tiling,
-                          VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, depth_resource_.image,
-                          depth_resource_.memory);
+    helpers::createImage(dev_, CmdBufHandler::getUniqueQueueFamilies(true, false, true), shell_->context().num_samples,
+                         depth_resource_.format, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, depth_resource_.image,
+                         depth_resource_.memory);
 
     VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
-    if (helpers::has_stencil_component(depth_resource_.format)) {
+    if (helpers::hasStencilComponent(depth_resource_.format)) {
         aspectFlags |= VK_IMAGE_ASPECT_STENCIL_BIT;
     }
 
-    helpers::create_image_view(dev_, depth_resource_.image, 1, depth_resource_.format, aspectFlags, VK_IMAGE_VIEW_TYPE_2D,
-                               depth_resource_.view);
+    helpers::createImageView(dev_, depth_resource_.image, 1, depth_resource_.format, aspectFlags, VK_IMAGE_VIEW_TYPE_2D, 1,
+                             depth_resource_.view);
 
-    helpers::transition_image_layout(CmdBufHandler::graphics_cmd(), depth_resource_.image, 1, depth_resource_.format,
-                                     VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                                     VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT);
+    helpers::transitionImageLayout(CmdBufHandler::graphics_cmd(), depth_resource_.image, depth_resource_.format,
+                                   VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                                   VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 1, 1);
 
     // Name some objects for debugging
     ext::DebugMarkerSetObjectName(dev_, (uint64_t)depth_resource_.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
@@ -539,11 +555,10 @@ void Guppy::destroy_depth_resources() {
     vkDestroyImage(dev_, depth_resource_.image, nullptr);
     vkFreeMemory(dev_, depth_resource_.memory, nullptr);
 }
-
 void Guppy::createScenes() {
     auto ctx = shell_->context();
 
-    auto scene1 = std::make_unique<Scene>(ctx, uboResource_, pTextures_.size());
+    auto scene1 = std::make_unique<Scene>(ctx, settings_, uboResource_, textures_);
 
     // meshes
     // Plane p("..\\..\\..\\images\\texture.jpg");
@@ -590,26 +605,31 @@ void Guppy::createScenes() {
 }
 
 void Guppy::createTextures() {
-    // addTexture(dev_, STATUE_TEXTURE_PATH);
-    addTexture(dev_, CHALET_TEXTURE_PATH);
-    addTexture(dev_, VULKAN_TEXTURE_PATH);
+    addTexture(dev_, STATUE_TEX_PATH);
+    addTexture(dev_, CHALET_TEX_PATH);
+    addTexture(dev_, VULKAN_TEX_PATH);
+    addTexture(dev_, MED_H_DIFF_TEX_PATH, MED_H_NORM_TEX_PATH, MED_H_SPEC_TEX_PATH);
 }
 
-void Guppy::addTexture(const VkDevice& dev, std::string texPath) {
-    for (auto& tex : pTextures_) {
-        if (tex->path == texPath) shell_->log(MyShell::LOG_WARN, "Texture with same path was already loaded.");
+void Guppy::addTexture(const VkDevice& dev, std::string path, std::string normPath, std::string specPath) {
+    for (auto& tex : textures_) {
+        if (tex->path == path) shell_->log(MyShell::LOG_WARN, "Texture with same path was already loaded.");
+        if (!tex->normPath.empty() && tex->normPath == normPath)
+            shell_->log(MyShell::LOG_WARN, "Texture with same normal path was already loaded.");
+        if (!tex->specPath.empty() && tex->specPath == specPath)
+            shell_->log(MyShell::LOG_WARN, "Texture with same spectral path was already loaded.");
     }
     // make texture and a loading future
-    auto pTex = std::make_shared<Texture::TextureData>(pTextures_.size(), texPath);
+    auto pTex = std::make_shared<Texture::TextureData>(textures_.size(), path, normPath, specPath);
     auto fut = Texture::loadTexture(dev, true, pTex);
     // move texture and future to the vectors
-    pTextures_.emplace_back(std::move(pTex));
+    textures_.emplace_back(std::move(pTex));
     texFutures_.emplace_back(std::move(fut));
 }
 
 std::shared_ptr<Texture::TextureData> Guppy::getTextureByPath(std::string path) {
-    auto it = std::find_if(pTextures_.begin(), pTextures_.end(), [&path](auto& pTex) { return pTex->path == path; });
-    return it == pTextures_.end() ? nullptr : (*it);
+    auto it = std::find_if(textures_.begin(), textures_.end(), [&path](auto& pTex) { return pTex->path == path; });
+    return it == textures_.end() ? nullptr : (*it);
 }
 
 void Guppy::updateTextures(const VkDevice& dev) {
@@ -640,11 +660,11 @@ void Guppy::updateTextures(const VkDevice& dev) {
 }
 
 void Guppy::destroyTextures() {
-    for (auto& pTex : pTextures_) {
+    for (auto& pTex : textures_) {
         vkDestroySampler(dev_, pTex->sampler, nullptr);
         vkDestroyImageView(dev_, pTex->view, nullptr);
         vkDestroyImage(dev_, pTex->image, nullptr);
         vkFreeMemory(dev_, pTex->memory, nullptr);
     }
-    pTextures_.clear();
+    textures_.clear();
 }

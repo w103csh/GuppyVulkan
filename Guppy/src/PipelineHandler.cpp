@@ -3,6 +3,9 @@
 #include "FileLoader.h"
 #include "PipelineHandler.h"
 
+constexpr uint32_t NUM_COLOR_DESCRIPTORS = 1;
+constexpr uint32_t NUM_TEXTURE_DESCRIPTORS = 3;
+
 PipelineHandler PipelineHandler::inst_;
 PipelineHandler::PipelineHandler() {
     for (auto& layout : pipelineLayouts_) layout = VK_NULL_HANDLE;
@@ -89,7 +92,7 @@ void PipelineHandler::createShaderModules() {
 }
 
 void PipelineHandler::createShaderModule(const std::string& shaderText, VkShaderStageFlagBits stage,
-                                           ShaderResources& shaderResources, bool initGlslang, std::string markerName) {
+                                         ShaderResources& shaderResources, bool initGlslang, std::string markerName) {
     if (initGlslang) init_glslang();  // init glslang based on caller needs ...
 
     std::vector<unsigned int> spv;
@@ -127,23 +130,33 @@ void PipelineHandler::createDescriptorSetLayout(Vertex::TYPE type, VkDescriptorS
     std::vector<VkDescriptorSetLayoutBinding> bindings;
 
     // UNIFORM BUFFER
-    VkDescriptorSetLayoutBinding ubo_binding = {};
-    ubo_binding.binding = 0;
-    ubo_binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-    ubo_binding.descriptorCount = 1;
-    ubo_binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT; // TODO: make a frag specific ubo...
-    ubo_binding.pImmutableSamplers = nullptr;  // Optional
-    bindings.push_back(ubo_binding);
+    VkDescriptorSetLayoutBinding binding = {};
+    binding.binding = static_cast<uint32_t>(bindings.size());
+    binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    binding.descriptorCount = 1;
+    binding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;  // TODO: make a frag specific ubo...
+    binding.pImmutableSamplers = nullptr;                                            // Optional
+    bindings.push_back(binding);
 
     // TEXTURE
     if (type == Vertex::TYPE::TEXTURE) {
-        VkDescriptorSetLayoutBinding tex_binding = {};
-        tex_binding.binding = 1;
-        tex_binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        tex_binding.descriptorCount = 1;
-        tex_binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        tex_binding.pImmutableSamplers = nullptr;  // Optional
-        bindings.push_back(tex_binding);
+        // Sampler
+        binding = {};
+        binding.binding = static_cast<uint32_t>(bindings.size());
+        binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        binding.descriptorCount = 1;
+        binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        binding.pImmutableSamplers = nullptr;  // Optional
+        bindings.push_back(binding);
+
+        // Dynamic (texture flags)
+        binding = {};
+        binding.binding = static_cast<uint32_t>(bindings.size());
+        binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        binding.descriptorCount = 1;
+        binding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        binding.pImmutableSamplers = nullptr;  // Optional
+        bindings.push_back(binding);
     }
 
     // LAYOUT
@@ -153,11 +166,7 @@ void PipelineHandler::createDescriptorSetLayout(Vertex::TYPE type, VkDescriptorS
     layout_info.bindingCount = bindingCount;
     layout_info.pBindings = bindingCount > 0 ? bindings.data() : nullptr;
 
-    //// TODO: are all these layouts necessary?
-    // desc_set_layouts_.resize(ctx.image_count);
-    // for (auto& layout : desc_set_layouts_) {
     vk::assert_success(vkCreateDescriptorSetLayout(inst_.ctx_.dev, &layout_info, nullptr, &setLayout));
-    //}
 
     ext::DebugMarkerSetObjectName(inst_.ctx_.dev, (uint64_t)setLayout, VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT,
                                   (Vertex::getTypeName(type) + " descriptor set layout").c_str());
@@ -178,23 +187,31 @@ void PipelineHandler::getDescriptorLayouts(uint32_t image_count, Vertex::TYPE ty
 //      Possibly make the pool creation optional based on state of scene
 //      Make uniform buffer optional
 void PipelineHandler::createDescriptorPool(std::unique_ptr<DescriptorResources>& pRes) {
-    uint32_t poolSizeCount = pRes->colorCount + (pRes->texCount * 2);
-    uint32_t maxSets = (pRes->colorCount * inst_.ctx_.image_count) + ((pRes->texCount * 2) * inst_.ctx_.image_count);
+    uint32_t numColorDesc = (pRes->colorCount * NUM_COLOR_DESCRIPTORS);
+    uint32_t numTexDesc = (pRes->texCount * NUM_TEXTURE_DESCRIPTORS);
+
+    uint32_t poolSizeCount = numColorDesc + numTexDesc;
+    uint32_t maxSets = (numColorDesc * inst_.ctx_.image_count) + (numTexDesc * inst_.ctx_.image_count);
     std::vector<VkDescriptorPoolSize> pool_sizes(poolSizeCount);
 
-    // Uniform buffer
-    // TODO: look at dynamic ubo's (VK_DESCRIPTOR_SHADER_UNIFORM_BUFFER_DYNAMIC)
-    for (uint32_t i = 0; i < pRes->colorCount; i++) {
+    // Color
+    for (uint32_t i = 0; i < pRes->colorCount; i += NUM_COLOR_DESCRIPTORS) {
+        // Camera
         pool_sizes[i].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         pool_sizes[i].descriptorCount = 1;
     }
 
-    // Texture samplers
-    for (uint32_t i = pRes->colorCount; i < poolSizeCount; i += 2) {
+    // Texture
+    for (uint32_t i = pRes->colorCount; i < poolSizeCount; i += NUM_TEXTURE_DESCRIPTORS) {
+        // Camera
         pool_sizes[i].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
         pool_sizes[i].descriptorCount = 1;
+        // Sampler
         pool_sizes[i + 1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         pool_sizes[i + 1].descriptorCount = 1;
+        // Dynamic (texture flags)
+        pool_sizes[i + 2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+        pool_sizes[i + 2].descriptorCount = 1;
     }
 
     VkDescriptorPoolCreateInfo desc_pool_info = {};
@@ -207,8 +224,9 @@ void PipelineHandler::createDescriptorPool(std::unique_ptr<DescriptorResources>&
 }
 
 std::unique_ptr<DescriptorResources> PipelineHandler::createDescriptorResources(std::vector<VkDescriptorBufferInfo> uboInfos,
+                                                                                std::vector<VkDescriptorBufferInfo> dynUboInfos,
                                                                                 size_t colorCount, size_t texCount) {
-    auto pRes = std::make_unique<DescriptorResources>(uboInfos, colorCount, texCount);
+    auto pRes = std::make_unique<DescriptorResources>(uboInfos, dynUboInfos, colorCount, texCount);
 
     // POOL
     inst_.createDescriptorPool(pRes);
@@ -273,6 +291,7 @@ void PipelineHandler::createTextureDescriptorSets(const VkDescriptorImageInfo& i
         std::vector<VkWriteDescriptorSet> writes;
         VkWriteDescriptorSet write;
         for (size_t i = 0; i < sets.size(); i++) {
+            // Camera
             write = {};
             write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             write.dstSet = sets[i];
@@ -282,7 +301,7 @@ void PipelineHandler::createTextureDescriptorSets(const VkDescriptorImageInfo& i
             write.descriptorCount = 1;
             write.pBufferInfo = &pRes->uboInfos[0];  // !!! hardcode
             writes.push_back(write);
-
+            // Sampler
             write = {};
             write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
             write.dstSet = sets[i];
@@ -291,6 +310,16 @@ void PipelineHandler::createTextureDescriptorSets(const VkDescriptorImageInfo& i
             write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
             write.descriptorCount = 1;
             write.pImageInfo = &info;
+            writes.push_back(write);
+            // Dynamic (texture flags)
+            write = {};
+            write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+            write.dstSet = sets[i];
+            write.dstBinding = 2;  // !!!!
+            write.dstArrayElement = 0;
+            write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+            write.descriptorCount = 1;
+            write.pBufferInfo = &pRes->dynUboInfos[0];  // !!! hardcode
             writes.push_back(write);
         }
         vkUpdateDescriptorSets(inst_.ctx_.dev, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
@@ -454,7 +483,7 @@ void PipelineHandler::createPipelineResources(PipelineResources& resources) {
     // BASE
     // TRI_LIST_COLOR
     inst_.createBasePipeline(Vertex::TYPE::COLOR, TOPOLOGY::TRI_LIST_COLOR, inst_.colorVS_, inst_.colorFS_, inst_.createResources,
-                               resources);
+                             resources);
 
     // DERIVATIVES
     resources.pipelineInfo.flags = VK_PIPELINE_CREATE_DERIVATIVE_BIT;
@@ -596,8 +625,8 @@ void PipelineHandler::createRenderPass(PipelineResources& resources) {
 //      Make layout_ dynamic
 //      Make render_pass_ dynamic
 void PipelineHandler::createBasePipeline(Vertex::TYPE vertexType, TOPOLOGY pipelineType, const ShaderResources& vs,
-                                           const ShaderResources& fs, PipelineCreateInfoResources& createRes,
-                                           PipelineResources& pipelineRes) {
+                                         const ShaderResources& fs, PipelineCreateInfoResources& createRes,
+                                         PipelineResources& pipelineRes) {
     // DYNAMIC STATE
     // TODO: this is weird
     createRes.dynamicStateInfo = {};

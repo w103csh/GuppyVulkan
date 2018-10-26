@@ -119,7 +119,7 @@ class Guppy : public Game {
     inline const std::unique_ptr<Scene>& active_scene() const { return scenes_[active_scene_index_]; }
 
     // textures
-    void addTexture(const VkDevice& dev, std::string texPath);
+    void addTexture(const VkDevice& dev, std::string path, std::string normPath = "", std::string specPath = "");
     std::shared_ptr<Texture::TextureData> getTextureByPath(std::string path);
     void updateTextures(const VkDevice& dev);
     float test = 1.0;
@@ -139,7 +139,7 @@ class Guppy : public Game {
     int active_scene_index_;
     std::vector<std::unique_ptr<Scene>> scenes_;
     // textures
-    std::vector<std::shared_ptr<Texture::TextureData>> pTextures_;
+    std::vector<std::shared_ptr<Texture::TextureData>> textures_;
     std::vector<std::future<std::shared_ptr<Texture::TextureData>>> texFutures_;
 };
 

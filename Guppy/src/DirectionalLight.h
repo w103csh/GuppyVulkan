@@ -16,7 +16,7 @@ typedef enum FLAGS {
     SHOW = 0x00000002,
     // THROUGH 0x00000008
     MODE_BLINN_PHONG = 0x00000010,
-    MODE_BLINN = 0x00000020,
+    MODE_LAMERTIAN = 0x00000020,
     // THROUGH 0x00000080
 } FLAGS;
 
@@ -27,7 +27,7 @@ struct Base {
           color{1.0f, 1.0f, 1.0f},
           shininess{16.0f},
           diff{0.5f, 0.0f, 0.0f},
-          flags{(FLAGS::SHOW | FLAGS::MODE_BLINN_PHONG)},
+          flags{(FLAGS::SHOW | FLAGS::MODE_BLINN_PHONG | FLAGS::MODE_LAMERTIAN)},
           spec{1.0f, 1.0f, 1.0f} {};
 
     Base(glm::vec3 p, float pow, glm::vec3 c, float shi, glm::vec3 d, FLAGS f, glm::vec3 s)

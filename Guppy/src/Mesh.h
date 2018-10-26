@@ -3,6 +3,7 @@
 #define MESH_H
 
 #include <future>
+#include <glm/glm.hpp>
 #include <vector>
 
 #include "Constants.h"
@@ -20,7 +21,7 @@ class Mesh {
     enum class STATUS { PENDING = 0, VERTICES_LOADED, PENDING_TEXTURE, READY };
 
     Mesh();
-    Mesh(std::string modelPath);
+    Mesh(std::string modelPath, glm::mat4 transform = glm::identity<glm::mat4>(), float scale = 1.0f);
     /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTR OF THIS CLASS.
         IF THIS IS REMOVED THE DESCTRUCTOR HERE WILL BE CALLED INSTEAD OF THE DERIVED DESCTRUCTOR.
         IT MIGHT JUST BE EASIER/SMARTER TO GET RID OF POLYMORPHISM AND DROP THE POINTERS. */
@@ -47,7 +48,7 @@ class Mesh {
                     const VkDescriptorSet& descSet) const;
     // TODO: this shouldn't be virtual... its only for textures
     virtual void drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                               const VkDescriptorSet& descSet, size_t frameIndex,
+                               const VkDescriptorSet& descSet, const std::array<uint32_t, 1>& dynUboOffsets, size_t frameIndex,
                                const VkCommandBufferInheritanceInfo& inheritanceInfo, const VkViewport& viewport,
                                const VkRect2D& scissor) const {};
 
@@ -81,6 +82,8 @@ class Mesh {
     BufferResource index_res_;
     size_t offset_;
     std::unique_ptr<LoadingResources> pLdgRes_;
+    glm::mat4 transform_;
+    float scale_;
 
    private:
     void createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res);
@@ -94,6 +97,7 @@ class Mesh {
 class ColorMesh : public Mesh {
    public:
     ColorMesh();
+    ColorMesh(std::string modelPath, glm::mat4 transform = glm::identity<glm::mat4>(), float scale = 1.0f);
 
     // VERTEX
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
@@ -120,15 +124,17 @@ class ColorMesh : public Mesh {
 class TextureMesh : public Mesh {
    public:
     TextureMesh(std::shared_ptr<Texture::TextureData> pTex);
-    TextureMesh(std::shared_ptr<Texture::TextureData> pTex, std::string modelPath);
+    TextureMesh(std::shared_ptr<Texture::TextureData> pTex, std::string modelPath, glm::mat4 transform = glm::identity<glm::mat4>(),
+                float scale = 1.0f);
 
     // INIT
     void setSceneData(const MyShell::Context& ctx, size_t offset) override;
 
     void prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) override;
     void drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                       const VkDescriptorSet& descSet, size_t frameIndex, const VkCommandBufferInheritanceInfo& inheritanceInfo,
-                       const VkViewport& viewport, const VkRect2D& scissor) const override;
+                       const VkDescriptorSet& descSet, const std::array<uint32_t, 1>& dynUboOffsets, size_t frameIndex,
+                       const VkCommandBufferInheritanceInfo& inheritanceInfo, const VkViewport& viewport,
+                       const VkRect2D& scissor) const override;
 
     // VERTEX
     inline virtual const void* getVertexData() const override { return vertices_.data(); }

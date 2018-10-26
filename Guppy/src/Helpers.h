@@ -75,34 +75,34 @@ static MODEL_FILE_TYPE getModelFileType(std::string s) {
     return MODEL_FILE_TYPE::UNKNOWN;
 }
 
-bool has_stencil_component(VkFormat format);
+bool hasStencilComponent(VkFormat format);
 
-VkFormat find_supported_format(const VkPhysicalDevice &physical_dev, const std::vector<VkFormat> &candidates,
-                               const VkImageTiling tiling, const VkFormatFeatureFlags features);
+VkFormat findSupportedFormat(const VkPhysicalDevice &phyDev, const std::vector<VkFormat> &candidates, const VkImageTiling tiling,
+                             const VkFormatFeatureFlags features);
 
-VkFormat find_depth_format(const VkPhysicalDevice &physical_dev);
+VkFormat findDepthFormat(const VkPhysicalDevice &phyDev);
 
-bool memory_type_from_properties(uint32_t typeBits, VkFlags requirements_mask, uint32_t *typeIndex);
+bool getMemoryType(uint32_t typeBits, VkFlags reqMask, uint32_t *typeIndex);
 
-VkDeviceSize create_buffer(const VkDevice &dev, const VkDeviceSize &size, const VkBufferUsageFlags &usage,
-                           const VkMemoryPropertyFlags &props, VkBuffer &buf, VkDeviceMemory &buf_mem);
+VkDeviceSize createBuffer(const VkDevice &dev, const VkDeviceSize &size, const VkBufferUsageFlags &usage,
+                          const VkMemoryPropertyFlags &props, VkBuffer &buff, VkDeviceMemory &mem);
 
-void copy_buffer(const VkCommandBuffer &cmd, const VkBuffer &src_buf, const VkBuffer &dst_buf, const VkDeviceSize &size);
+void copyBuffer(const VkCommandBuffer &cmd, const VkBuffer &srcBuff, const VkBuffer &dstBuff, const VkDeviceSize &size);
 
-void create_image(const VkDevice &dev, const std::vector<uint32_t> &queueFamilyIndices, const uint32_t width, uint32_t height,
-                  uint32_t mip_levels, const VkSampleCountFlagBits &num_samples, const VkFormat &format,
-                  const VkImageTiling &tiling, const VkImageUsageFlags &usage, const VkFlags &requirements_mask, VkImage &image,
-                  VkDeviceMemory &image_memory);
+void createImage(const VkDevice &dev, const std::vector<uint32_t> &queueFamilyIndices, const VkSampleCountFlagBits &numSamples,
+                 const VkFormat &format, const VkImageTiling &tiling, const VkImageUsageFlags &usage, const VkFlags &reqMask,
+                 uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t arrayLayers, VkImage &image, VkDeviceMemory &memory);
 
-void copy_buffer_to_image(const VkCommandBuffer &cmd, const VkBuffer &src_buf, const VkImage &dst_img, const uint32_t &width,
-                          const uint32_t &height);
+void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount, const VkBuffer &src_buf,
+                       const VkImage &dst_img);
 
-void create_image_view(const VkDevice &device, const VkImage &image, const uint32_t &mip_levels, const VkFormat &format,
-                       const VkImageAspectFlags &aspectFlags, const VkImageViewType &viewType, VkImageView &image_view);
+void createImageView(const VkDevice &device, const VkImage &image, const uint32_t &mipLevels, const VkFormat &format,
+                     const VkImageAspectFlags &aspectFlags, const VkImageViewType &viewType, uint32_t layerCount,
+                     VkImageView &view);
 
-void transition_image_layout(const VkCommandBuffer &cmd, VkImage &image, const uint32_t &mip_levels, const VkFormat &format,
-                             const VkImageLayout &old_layout, const VkImageLayout &new_layout, VkPipelineStageFlags src_stages,
-                             VkPipelineStageFlags dst_stages);
+void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, const VkFormat &format, const VkImageLayout &oldLayout,
+                           const VkImageLayout &newLayout, VkPipelineStageFlags srcStages, VkPipelineStageFlags dstStages,
+                           uint32_t mipLevels, uint32_t arrayLayers);
 
 }  // namespace helpers
 
@@ -120,7 +120,7 @@ struct ShaderResources {
 
 struct UniformBufferResources {
     uint32_t count;
-    VkDeviceSize size; 
+    VkDeviceSize size;
     VkDescriptorBufferInfo info;
     VkBuffer buffer;
     VkDeviceMemory memory;

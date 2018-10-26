@@ -19,7 +19,6 @@ const int WIDTH = 800;
 const int HEIGHT = 600;
 const int MAX_FRAMES_IN_FLIGHT = 2;
 
-
 #ifdef NDEBUG
 const bool ENABLE_VALIDATION_LAYERS = false;
 #else
@@ -44,8 +43,8 @@ const std::vector<const char*> DEVICE_EXTENSIONS = {
     // VK_KHR_SWAPCHAIN_EXTENSION_NAME, in init_swapchain_extension now
 };
 
-const VkClearColorValue CLEAR_VALUE = {0.5f, 0.5f, 0.5f, 0.5f};
-// const VkClearColorValue CLEAR_VALUE = {};
+// const VkClearColorValue CLEAR_VALUE = {0.5f, 0.5f, 0.5f, 0.5f};
+const VkClearColorValue CLEAR_VALUE = {};
 
 // Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)
 typedef uint32_t VB_INDEX_TYPE;
@@ -59,7 +58,12 @@ const float MIN_SAMPLE_SHADING = 0.2f;
 
 // objs
 const std::string CHALET_MODEL_PATH = ROOT_PATH + "data\\chalet.obj";
+const std::string MED_H_MODEL_PATH = ROOT_PATH + "data\\Medieval_House.obj";
+const std::string SPHERE_MODEL_PATH = ROOT_PATH + "data\\sphere.obj";
 // jpgs
-const std::string CHALET_TEXTURE_PATH = ROOT_PATH + "images\\chalet.jpg";
-const std::string STATUE_TEXTURE_PATH = ROOT_PATH + "images\\texture.jpg";
-const std::string VULKAN_TEXTURE_PATH = ROOT_PATH + "images\\vulkan.png";
+const std::string CHALET_TEX_PATH = ROOT_PATH + "images\\chalet.jpg";
+const std::string STATUE_TEX_PATH = ROOT_PATH + "images\\texture.jpg";
+const std::string VULKAN_TEX_PATH = ROOT_PATH + "images\\vulkan.png";
+const std::string MED_H_DIFF_TEX_PATH = ROOT_PATH + "images\\Medieval_House\\Medieval_House_Diff.png";
+const std::string MED_H_NORM_TEX_PATH = ROOT_PATH + "images\\Medieval_House\\Medieval_House_Nor.png";
+const std::string MED_H_SPEC_TEX_PATH = ROOT_PATH + "images\\Medieval_House\\Medieval_House_Spec.png";

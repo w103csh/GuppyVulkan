@@ -3,10 +3,63 @@
 #include "PipelineHandler.h"
 #include "Scene.h"
 
-Scene::Scene(const MyShell::Context& ctx, const UniformBufferResources& uboResource, size_t texCount) {
-    pDescResources_ = PipelineHandler::createDescriptorResources({uboResource.info}, 1 /* !!! hardcode */, texCount);
+namespace {
+
+struct UBOTag {
+    const char name[17] = "ubo tag";
+} uboTag;
+
+}  // namespace
+
+Scene::Scene(const MyShell::Context& ctx, const Game::Settings& settings, const UniformBufferResources& uboResource,
+             std::vector<std::shared_ptr<Texture::TextureData>>& textures) {
+    createDynamicTexUniformBuffer(ctx, settings, textures);
+    pDescResources_ = PipelineHandler::createDescriptorResources({uboResource.info}, {pDynUboResource_->info}, 1 /* !!! hardcode */,
+                                                                 textures.size());
     PipelineHandler::createPipelineResources(plResources_);
     create_draw_cmds(ctx);
+}
+
+void Scene::createDynamicTexUniformBuffer(const MyShell::Context& ctx, const Game::Settings& settings,
+                                          std::vector<std::shared_ptr<Texture::TextureData>>& textures, std::string markerName) {
+    const auto& limits = ctx.physical_dev_props[ctx.physical_dev_index].properties.limits;
+
+    // this is just a single flag for now...
+    VkDeviceSize dynBuffSize = sizeof(Flags);
+
+    if (limits.minUniformBufferOffsetAlignment)
+        dynBuffSize = (dynBuffSize + limits.minUniformBufferOffsetAlignment - 1) & ~(limits.minUniformBufferOffsetAlignment - 1);
+
+    pDynUboResource_ = std::make_shared<UniformBufferResources>();
+    pDynUboResource_->count = textures.size();
+    pDynUboResource_->info.offset = 0;
+    pDynUboResource_->info.range = dynBuffSize;
+
+    pDynUboResource_->size = helpers::createBuffer(ctx.dev, (dynBuffSize * textures.size()), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+                                                   VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                                   pDynUboResource_->buffer, pDynUboResource_->memory);
+
+    void* pData;
+    size_t offset = 0;
+    vk::assert_success(vkMapMemory(ctx.dev, pDynUboResource_->memory, 0, pDynUboResource_->size, 0, &pData));
+
+    for (const auto& pTex : textures) {
+        memcpy(static_cast<char*>(pData) + offset, &pTex->flags, dynBuffSize);
+        offset += static_cast<size_t>(dynBuffSize);
+    }
+
+    vkUnmapMemory(ctx.dev, pDynUboResource_->memory);
+
+    pDynUboResource_->info.buffer = pDynUboResource_->buffer;
+
+    if (settings.enable_debug_markers) {
+        if (markerName.empty()) markerName += "Default";
+        markerName += " dynamic texture uniform buffer block";
+        ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)pDynUboResource_->buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                                      markerName.c_str());
+        ext::DebugMarkerSetObjectTag(ctx.dev, (uint64_t)pDynUboResource_->buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0,
+                                     sizeof(uboTag), &uboTag);
+    }
 }
 
 void Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<ColorMesh> pMesh) {
@@ -95,7 +148,8 @@ bool Scene::update(const MyShell::Context& ctx, int frameIndex) {
 void Scene::updateDescriptorResources(const MyShell::Context& ctx, std::unique_ptr<TextureMesh>& pMesh) {
     // There are not enough sets allocated for the descriptor pool so a new one needs to be created.
     auto newTexCount = pDescResources_->texCount + 1;
-    auto pNewRes = PipelineHandler::createDescriptorResources(pDescResources_->uboInfos, 1, newTexCount);
+    auto pNewRes =
+        PipelineHandler::createDescriptorResources(pDescResources_->uboInfos, pDescResources_->dynUboInfos, 1, newTexCount);
     // Move the previous descriptor resources to the handler for later cleanup.
     PipelineHandler::takeOldResources(std::move(pDescResources_));
     // Create and init the new descriptor resources
@@ -271,8 +325,13 @@ void Scene::record(const MyShell::Context& ctx, const VkCommandBuffer& cmd, cons
 
         for (auto& pMesh : texMeshes_) {
             if (pMesh->getStatus() == Mesh::STATUS::READY) {
+                // descriptor set
                 const auto& descSet = getTexDescSet(pMesh->getTextureOffset(), frameIndex);
-                pMesh->drawSecondary(cmd, layout, pipeline, descSet, frameIndex, inherit_info, viewport, scissor);
+                // dynamic uniform buffer offset
+                uint32_t offset = static_cast<uint32_t>(pDescResources_->dynUboInfos[0].range) * pMesh->getTextureOffset();
+                std::array<uint32_t, 1> dynUboOffsets = {offset};
+
+                pMesh->drawSecondary(cmd, layout, pipeline, descSet, dynUboOffsets, frameIndex, inherit_info, viewport, scissor);
             }
         }
     }

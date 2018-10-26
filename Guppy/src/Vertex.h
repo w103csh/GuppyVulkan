@@ -22,7 +22,7 @@ struct Base {
 };
 
 struct Color : Base {
-    Color() : Base(), color({}){};
+    Color() : Base(), color(1.0f, 1.0f, 1.0f, 1.0f){};
     Color(glm::vec3 p, glm::vec3 n, glm::vec4 c) : Base(p, n), color(c){};
     bool operator==(const Color& other) const { return pos == other.pos && normal == other.normal && color == other.color; }
     glm::vec4 color;
