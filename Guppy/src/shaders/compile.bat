@@ -1,6 +1,6 @@
 REM color
-C:\VulkanSDK\1.1.82.1\Bin32\glslangValidator.exe -V C:\Users\Colin\source\repos\VulkanTest\Guppy\src\shaders\color.vert
-C:\VulkanSDK\1.1.82.1\Bin32\glslangValidator.exe -V C:\Users\Colin\source\repos\VulkanTest\Guppy\src\shaders\color.frag
+%VULKAN_SDK%\Bin\glslangValidator.exe -V .\color.vert
+%VULKAN_SDK%\Bin\glslangValidator.exe -V .\color.frag
 REM texture
-C:\VulkanSDK\1.1.82.1\Bin32\glslangValidator.exe -V C:\Users\Colin\source\repos\VulkanTest\Guppy\src\shaders\texture.vert
-C:\VulkanSDK\1.1.82.1\Bin32\glslangValidator.exe -V C:\Users\Colin\source\repos\VulkanTest\Guppy\src\shaders\texture.frag
+%VULKAN_SDK%\Bin\glslangValidator.exe -V .\texture.vert
+%VULKAN_SDK%\Bin\glslangValidator.exe -V .\texture.frag

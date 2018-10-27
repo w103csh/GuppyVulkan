@@ -151,10 +151,8 @@ else()
     # external libraries
     include_directories(${TARGET_NAME}
         utils
-        # C:/libs/glfw-3.2.1.bin.WIN64/include
         ${GLM_LIB_DIR}
-        C:/libs/stb
-        C:/libs/tinyobjloader
+        ${EXT_LIB_DIR}
         )
 
     target_link_libraries(${LINKS})

@@ -3,9 +3,6 @@
 #include "FileLoader.h"
 #include "PipelineHandler.h"
 
-constexpr uint32_t NUM_COLOR_DESCRIPTORS = 1;
-constexpr uint32_t NUM_TEXTURE_DESCRIPTORS = 3;
-
 PipelineHandler PipelineHandler::inst_;
 PipelineHandler::PipelineHandler() {
     for (auto& layout : pipelineLayouts_) layout = VK_NULL_HANDLE;
@@ -187,38 +184,32 @@ void PipelineHandler::getDescriptorLayouts(uint32_t image_count, Vertex::TYPE ty
 //      Possibly make the pool creation optional based on state of scene
 //      Make uniform buffer optional
 void PipelineHandler::createDescriptorPool(std::unique_ptr<DescriptorResources>& pRes) {
-    uint32_t numColorDesc = (pRes->colorCount * NUM_COLOR_DESCRIPTORS);
-    uint32_t numTexDesc = (pRes->texCount * NUM_TEXTURE_DESCRIPTORS);
+    const auto& imageCount = inst_.ctx_.image_count;
+    uint32_t maxSets = (pRes->colorCount * imageCount) + (pRes->texCount * imageCount);
 
-    uint32_t poolSizeCount = numColorDesc + numTexDesc;
-    uint32_t maxSets = (numColorDesc * inst_.ctx_.image_count) + (numTexDesc * inst_.ctx_.image_count);
-    std::vector<VkDescriptorPoolSize> pool_sizes(poolSizeCount);
+    std::vector<VkDescriptorPoolSize> poolSizes;
+    VkDescriptorPoolSize poolSize;
 
-    // Color
-    for (uint32_t i = 0; i < pRes->colorCount; i += NUM_COLOR_DESCRIPTORS) {
-        // Camera
-        pool_sizes[i].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        pool_sizes[i].descriptorCount = 1;
-    }
+    poolSize = {};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+    poolSize.descriptorCount = (pRes->colorCount + pRes->texCount) * imageCount;
+    poolSizes.push_back(poolSize);
 
-    // Texture
-    for (uint32_t i = pRes->colorCount; i < poolSizeCount; i += NUM_TEXTURE_DESCRIPTORS) {
-        // Camera
-        pool_sizes[i].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-        pool_sizes[i].descriptorCount = 1;
-        // Sampler
-        pool_sizes[i + 1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        pool_sizes[i + 1].descriptorCount = 1;
-        // Dynamic (texture flags)
-        pool_sizes[i + 2].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-        pool_sizes[i + 2].descriptorCount = 1;
-    }
+    poolSize = {};
+    poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    poolSize.descriptorCount = pRes->texCount * imageCount;
+    poolSizes.push_back(poolSize);
+
+    poolSize = {};
+    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+    poolSize.descriptorCount = pRes->texCount * imageCount;
+    poolSizes.push_back(poolSize);
 
     VkDescriptorPoolCreateInfo desc_pool_info = {};
     desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     desc_pool_info.maxSets = maxSets;
-    desc_pool_info.poolSizeCount = poolSizeCount;
-    desc_pool_info.pPoolSizes = pool_sizes.data();
+    desc_pool_info.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+    desc_pool_info.pPoolSizes = poolSizes.data();
 
     vk::assert_success(vkCreateDescriptorPool(inst_.ctx_.dev, &desc_pool_info, nullptr, &pRes->pool));
 }
