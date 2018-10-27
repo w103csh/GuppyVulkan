@@ -1,9 +1,9 @@
 # Vulkan Test
   - This repository is a basic game engine using Vulkan C++. It borrows heavily from
-    the [Vulkan Samples repository](https://github.com/LunarG/VulkanSamples)
-    , which was used as a starting point - more specifically the
-    [Hologram example therein](https://github.com/LunarG/VulkanSamples/tree/master/Sample-Programs/Hologram)
-    , but it has been expanded upon pretty dramatically at this point.
+    the [Vulkan Samples repository](https://github.com/LunarG/VulkanSamples),
+    which was used as a starting point - more specifically the
+    [Hologram example therein](https://github.com/LunarG/VulkanSamples/tree/master/Sample-Programs/Hologram),
+    but it has been expanded upon pretty dramatically at this point.
   <!-- - Run the following script to obtain a short description of all or a 
     specific sample:
     `$ API-Samples/get-short-descripts.sh`
