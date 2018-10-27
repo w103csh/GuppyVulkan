@@ -193,7 +193,7 @@ create a build directory and generate the Visual Studio project files:
     mkdir build
     cd build
     cmake -A x64 -DVULKAN_HEADERS_INSTALL_DIR=absolute_path_to_install_dir \
-                 -GLM_INSTALL_DIR=absolute_path_to_install_dir \
+                 -DGLM_INSTALL_DIR=absolute_path_to_install_dir \
                  -DGLSLANG_INSTALL_DIR=absolute_path_to_install_dir ..
 
 > **Note: The path delimeters must be forward slashes even on Windows**
