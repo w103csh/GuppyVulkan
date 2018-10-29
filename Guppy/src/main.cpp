@@ -84,6 +84,7 @@ void android_main(android_app *app) {
 #include "ShellWin32.h"
 
 int main(int argc, char **argv) {
+    //Sleep(20000);
     Game *game = create_game(argc, argv);
     {
         ShellWin32 shell(*game);

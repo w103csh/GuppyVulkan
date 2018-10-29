@@ -20,15 +20,16 @@ std::vector<VkVertexInputAttributeDescription> Vertex::getColorAttrDesc() {
     attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
     attributeDescriptions[0].offset = offsetof(Vertex::Color, pos);
 
+    attributeDescriptions[2].binding = 0;
+    attributeDescriptions[2].location = 1;
+    attributeDescriptions[2].format = VK_FORMAT_R32G32B32A32_SFLOAT;  // vec4
+    attributeDescriptions[2].offset = offsetof(Vertex::Color, color);
+
     attributeDescriptions[1].binding = 0;
-    attributeDescriptions[1].location = 1;
+    attributeDescriptions[1].location = 2;
     attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
     attributeDescriptions[1].offset = offsetof(Vertex::Color, normal);
 
-    attributeDescriptions[2].binding = 0;
-    attributeDescriptions[2].location = 2;
-    attributeDescriptions[2].format = VK_FORMAT_R32G32B32A32_SFLOAT;  // vec4
-    attributeDescriptions[2].offset = offsetof(Vertex::Color, color);
 
     return attributeDescriptions;
 }
@@ -50,15 +51,15 @@ std::vector<VkVertexInputAttributeDescription> Vertex::getTexAttrDesc() {
     attributeDescriptions[0].format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
     attributeDescriptions[0].offset = offsetof(Vertex::Texture, pos);
 
-    attributeDescriptions[1].binding = 0;
-    attributeDescriptions[1].location = 1;
-    attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
-    attributeDescriptions[1].offset = offsetof(Vertex::Texture, normal);
-
     attributeDescriptions[2].binding = 0;
-    attributeDescriptions[2].location = 2;
+    attributeDescriptions[2].location = 1;
     attributeDescriptions[2].format = VK_FORMAT_R32G32_SFLOAT;  // vec2
     attributeDescriptions[2].offset = offsetof(Vertex::Texture, texCoord);
+
+    attributeDescriptions[1].binding = 0;
+    attributeDescriptions[1].location = 2;
+    attributeDescriptions[1].format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
+    attributeDescriptions[1].offset = offsetof(Vertex::Texture, normal);
 
     return attributeDescriptions;
 }

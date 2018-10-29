@@ -8,7 +8,7 @@
 #include "InputHandler.h"
 
 Camera::Camera(const glm::vec3 &eye, const glm::vec3 &center, float aspect, float fov, float n, float f)
-    : aspect_(aspect), center_(center), eye_(eye), far_(f), fov_(fov), near_(n), model_(1.0f) {
+    : Object3d(glm::mat4(1.0f)), aspect_(aspect), center_(center), eye_(eye), far_(f), fov_(fov), near_(n) {
     view_ = glm::lookAt(eye, center, UP_VECTOR);
     proj_ = glm::perspective(fov, aspect, near_, far_);
     // Vulkan clip space has inverted Y and half Z.
@@ -19,15 +19,17 @@ Camera::Camera(const glm::vec3 &eye, const glm::vec3 &center, float aspect, floa
 }
 
 glm::vec3 Camera::getDirection() {
-    glm::vec3 dir = glm::row(view_, 2) * -1.0f;
+    auto local = Object3d::obj3d_.model * view_;
+    glm::vec3 dir = glm::row(local, 2) * -1.0f;
     return glm::normalize(dir);
 }
 
 glm::vec3 Camera::getPosition() {
+    auto local = Object3d::obj3d_.model * view_;
     // I believe this is the "w" homogenous factor from the book.
     // Still not 100% sure.
-    auto w = view_[3];
-    glm::vec3 pos = -w * view_;
+    auto w = local[3];
+    glm::vec3 pos = -w * local;
     return pos;
 }
 

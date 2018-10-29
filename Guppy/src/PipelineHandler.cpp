@@ -56,11 +56,12 @@ void PipelineHandler::init(const MyShell::Context& ctx, const Game::Settings& se
 
 void PipelineHandler::createShaderModules() {
     // Relative to CMake being run in a "build" directory in the root of the repo like VulkanSamples
-    // color
+    // VERTREX FILES
     auto colorVSText = FileLoader::read_file("Guppy\\src\\shaders\\color.vert");
-    auto colorFSText = FileLoader::read_file("Guppy\\src\\shaders\\color.frag");
-    // texture
     auto textureVSText = FileLoader::read_file("Guppy\\src\\shaders\\texture.vert");
+    // FRAGMENT FILES
+    auto colorFSText = FileLoader::read_file("Guppy\\src\\shaders\\color.frag");
+    auto lineFSText = FileLoader::read_file("Guppy\\src\\shaders\\line.frag");
     auto textureFSText = FileLoader::read_file("Guppy\\src\\shaders\\texture.frag");
 
     // If no shaders were submitted, just return
@@ -68,19 +69,20 @@ void PipelineHandler::createShaderModules() {
 
     init_glslang();
 
-    // color vertex shader
+    // VERTEX SHADERS
     if (colorVSText.data()) {
         createShaderModule(colorVSText, VK_SHADER_STAGE_VERTEX_BIT, colorVS_, false, "COLOR VERT");
     }
-    // color fragment shader
-    if (colorFSText.data()) {
-        createShaderModule(colorFSText, VK_SHADER_STAGE_FRAGMENT_BIT, colorFS_, false, "COLOR FRAG");
-    }
-    // texture vertex shader
     if (textureVSText.data()) {
         createShaderModule(textureVSText, VK_SHADER_STAGE_VERTEX_BIT, texVS_, false, "TEXTURE VERT");
     }
-    // texture fragment shader
+    // FRAGMENT SHADERS
+    if (colorFSText.data()) {
+        createShaderModule(colorFSText, VK_SHADER_STAGE_FRAGMENT_BIT, colorFS_, false, "COLOR FRAG");
+    }
+    if (lineFSText.data()) {
+        createShaderModule(lineFSText, VK_SHADER_STAGE_FRAGMENT_BIT, lineFS_, false, "LINE FRAG");
+    }
     if (textureFSText.data()) {
         createShaderModule(textureFSText, VK_SHADER_STAGE_FRAGMENT_BIT, texFS_, false, "TEXTURE FRAG");
     }
@@ -116,13 +118,6 @@ void PipelineHandler::createShaderModule(const std::string& shaderText, VkShader
     if (initGlslang) finalize_glslang();
 }
 
-// Depends on:
-//      ctx - inst_.ctx_.dev
-//      ctx - image_count
-// Can change:
-//      Possibly make the set layout creation optional based on state of scene
-//      Shader bindings
-//      Make binding count dynamic
 void PipelineHandler::createDescriptorSetLayout(Vertex::TYPE type, VkDescriptorSetLayout& setLayout) {
     std::vector<VkDescriptorSetLayoutBinding> bindings;
 
@@ -177,12 +172,6 @@ void PipelineHandler::getDescriptorLayouts(uint32_t image_count, Vertex::TYPE ty
     }
 }
 
-// Depends on:
-//      ctx - inst_.ctx_.dev
-//      ctx - image_count
-// Can change:
-//      Possibly make the pool creation optional based on state of scene
-//      Make uniform buffer optional
 void PipelineHandler::createDescriptorPool(std::unique_ptr<DescriptorResources>& pRes) {
     const auto& imageCount = inst_.ctx_.image_count;
     uint32_t maxSets = (pRes->colorCount * imageCount) + (pRes->texCount * imageCount);
@@ -325,11 +314,6 @@ void PipelineHandler::createPipelineCache(VkPipelineCache& cache) {
     vk::assert_success(vkCreatePipelineCache(inst_.ctx_.dev, &pipeline_cache_info, nullptr, &cache));
 }
 
-// Depends on:
-//      desc_set_layouts_
-// Can change:
-//      Hook up push constants
-// template <typename T>
 void PipelineHandler::createPipelineLayout(Vertex::TYPE type, const VkDescriptorSetLayout& setLayout, std::string markerName) {
     VkPipelineLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -487,6 +471,10 @@ void PipelineHandler::createPipelineResources(PipelineResources& resources) {
 
     // LINE
     resources.pipelineInfo.subpass = static_cast<uint32_t>(TOPOLOGY::LINE);
+    // shader stages
+    inst_.createResources.stagesInfo[1] = inst_.lineFS_.info;
+    resources.pipelineInfo.stageCount = static_cast<uint32_t>(inst_.createResources.stagesInfo.size());
+    resources.pipelineInfo.pStages = inst_.createResources.stagesInfo.data();
     // topology
     input_info.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
     resources.pipelineInfo.pInputAssemblyState = &input_info;
@@ -504,9 +492,8 @@ void PipelineHandler::createPipelineResources(PipelineResources& resources) {
     // shader stages
     inst_.createResources.stagesInfo[0] = inst_.texVS_.info;
     inst_.createResources.stagesInfo[1] = inst_.texFS_.info;
-    uint32_t stageCount = static_cast<uint32_t>(inst_.createResources.stagesInfo.size());
-    resources.pipelineInfo.stageCount = stageCount;
-    resources.pipelineInfo.pStages = stageCount > 0 ? inst_.createResources.stagesInfo.data() : nullptr;
+    resources.pipelineInfo.stageCount = static_cast<uint32_t>(inst_.createResources.stagesInfo.size());
+    resources.pipelineInfo.pStages = inst_.createResources.stagesInfo.data();
     // topology
     input_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
     resources.pipelineInfo.pInputAssemblyState = &input_info;
@@ -565,15 +552,6 @@ void PipelineHandler::createDependencies(PipelineResources& resources) {
     resources.dependencies.push_back(dependency);
 }
 
-// Depends on:
-//      ctx - surface_format.format
-//      ctx - depth_format
-//      settings - include_color
-//      settings - include_depth
-// Can change:
-//      Make subpasses dynamic
-//      Make dependencies dynamic
-//      Make attachments more dynamic
 void PipelineHandler::createRenderPass(PipelineResources& resources) {
     VkRenderPassCreateInfo rp_info = {};
     rp_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
@@ -599,22 +577,6 @@ void PipelineHandler::createRenderPass(PipelineResources& resources) {
     }
 }
 
-// Depends on:
-//      Vertex::getBindingDescription()
-//      Vertex::getAttributeDescriptions()
-//      settings - enable_sample_shading
-//      MIN_SAMPLE_SHADING
-//      NUM_VIEWPORTS
-//      NUM_SCISSORS
-//      settings - include_depth
-//      vs - info
-//      fs - info
-//      layout_
-//      render_pass_
-// Can change:
-//      Just need an array of shader info
-//      Make layout_ dynamic
-//      Make render_pass_ dynamic
 void PipelineHandler::createBasePipeline(Vertex::TYPE vertexType, TOPOLOGY pipelineType, const ShaderResources& vs,
                                          const ShaderResources& fs, PipelineCreateInfoResources& createRes,
                                          PipelineResources& pipelineRes) {

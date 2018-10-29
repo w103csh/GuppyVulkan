@@ -129,9 +129,10 @@ class PipelineHandler {
     std::vector<VkAttachmentDescription> attachments_;
     // VERTEX SHADERS
     ShaderResources colorVS_;
-    ShaderResources colorFS_;
-    // FRAGMENT SHADERS
     ShaderResources texVS_;
+    // FRAGMENT SHADERS
+    ShaderResources colorFS_;
+    ShaderResources lineFS_;
     ShaderResources texFS_;
     // create info
     PipelineCreateInfoResources createResources;

@@ -1,6 +1,7 @@
 
 #include <algorithm>
 
+#include "Axes.h"
 #include "CmdBufHandler.h"
 #include "Constants.h"
 #include "Extensions.h"
@@ -19,11 +20,6 @@ struct ShaderParamBlock {
     float model[4 * 4];
     float view_projection[4 * 4];
     float alpha;
-};
-
-struct DefaultUBO {
-    glm::mat4 mvp;
-    DirectionalLight::Base dirLight;
 };
 
 struct UBOTag {
@@ -119,6 +115,8 @@ void Guppy::attach_shell(MyShell& sh) {
 }
 
 void Guppy::detach_shell() {
+    // TODO: kill futures !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
     if (multithread_) {
         // for (auto &worker : workers_) worker->stop();
     }
@@ -188,21 +186,21 @@ void Guppy::on_key(KEY key) {
             } else if (true) {
                 auto tm1 = std::make_unique<TextureMesh>(
                     getTextureByPath(MED_H_DIFF_TEX_PATH), MED_H_MODEL_PATH,
-                    glm::rotate(glm::identity<glm::mat4>(), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), 0.01f);
+                    glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), 0.01f);
                 active_scene()->addMesh(shell_->context(), std::move(tm1));
             } else if (false) {
                 auto sphereBot = std::make_unique<ColorMesh>(SPHERE_MODEL_PATH);
                 active_scene()->addMesh(shell_->context(), std::move(sphereBot));
                 auto sphereTop = std::make_unique<ColorMesh>(
-                    SPHERE_MODEL_PATH, glm::rotate(glm::identity<glm::mat4>(), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+                    SPHERE_MODEL_PATH, glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
                 active_scene()->addMesh(shell_->context(), std::move(sphereTop));
             }
         } break;
         case KEY::KEY_F5: {
-            if ((dirLight_.flags & DirectionalLight::FLAGS::SHOW) > 0) {
-                dirLight_.flags = DirectionalLight::FLAGS::HIDE | DirectionalLight::FLAGS::MODE_LAMERTIAN;
+            if ((light_.flags & Light::FLAGS::SHOW) > 0) {
+                light_.flags = Light::FLAGS::HIDE | Light::FLAGS::MODE_LAMERTIAN | Light::FLAGS::MODE_BLINN_PHONG;
             } else {
-                dirLight_.flags = DirectionalLight::FLAGS::SHOW | DirectionalLight::FLAGS::MODE_LAMERTIAN;
+                light_.flags = Light::FLAGS::SHOW | Light::FLAGS::MODE_LAMERTIAN | Light::FLAGS::MODE_BLINN_PHONG;
             }
             // if (test < 3) {
             //    addTexture(dev_, STATUE_TEXTURE_PATH);
@@ -375,24 +373,23 @@ void Guppy::createUniformBuffer(std::string markerName) {
     const MyShell::Context& ctx = shell_->context();
 
     camera_.update(static_cast<float>(settings_.initial_width) / static_cast<float>(settings_.initial_height));
-    auto mvp = camera_.getMVP();
 
-    uboResource_.count = 1;
-    uboResource_.info.offset = 0;
-    uboResource_.info.range = sizeof(mvp) + sizeof(dirLight_);
+    UBOResource_.count = 1;
+    UBOResource_.info.offset = 0;
+    UBOResource_.info.range = sizeof(DefaultUBO);
 
-    uboResource_.size = helpers::createBuffer(dev_, uboResource_.info.range, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    UBOResource_.size = helpers::createBuffer(dev_, UBOResource_.info.range, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                              uboResource_.buffer, uboResource_.memory);
+                                              UBOResource_.buffer, UBOResource_.memory);
 
     copyUniformBufferMemory();
 
     if (settings_.enable_debug_markers) {
         if (markerName.empty()) markerName += "Default";
         markerName += " uniform buffer block";
-        ext::DebugMarkerSetObjectName(dev_, (uint64_t)uboResource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+        ext::DebugMarkerSetObjectName(dev_, (uint64_t)UBOResource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                       markerName.c_str());
-        ext::DebugMarkerSetObjectTag(dev_, (uint64_t)uboResource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(uboTag),
+        ext::DebugMarkerSetObjectTag(dev_, (uint64_t)UBOResource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(uboTag),
                                      &uboTag);
     }
 }
@@ -401,40 +398,54 @@ void Guppy::updateUniformBuffer() {
     // Surface changed
     auto aspect = static_cast<float>(extent_.width) / static_cast<float>(extent_.height);
 
-    // Update the camera
+    // auto x1 = sizeof(DefaultUBO);
+    // auto x2 = sizeof(DefaultUBO::camera);
+    // auto x3 = sizeof(DefaultUBO::light);
+    // auto x4 = offsetof(DefaultUBO, camera);
+    // auto x5 = offsetof(DefaultUBO, light);
+
+    // auto y1 = sizeof(Light::Ambient::Data);
+    // auto y2 = offsetof(Light::Ambient::Data, model);
+    // auto y3 = offsetof(Light::Ambient::Data, color);
+    // auto y4 = offsetof(Light::Ambient::Data, flags);
+    // auto y5 = offsetof(Light::Ambient::Data, intensity);
+    // auto y6 = offsetof(Light::Ambient::Data, phongExp);
+
+    // Update the camera...
     auto pos_dir = InputHandler::get().getPosDir();
     auto look_dir = InputHandler::get().getLookDir();
     camera_.update(aspect, pos_dir, look_dir);
+    defUBO_.camera.mvp = camera_.getMVP();
+    defUBO_.camera.position = camera_.getPosition();
 
-    // Update the directional light
-    dirLight_.diff = camera_.getPosition();
+    // Update the directional light...
+    defUBO_.light = light_.getData();
 
     // If these change update them here...
     // uboResource_.info.offset = 0;
-    // uboResource_.info.range = sizeof(mvp) + sizeof(dirLight_);
+    // uboResource_.info.range = sizeof(DefaultUBO);
 
     copyUniformBufferMemory();
 }
 
 void Guppy::copyUniformBufferMemory() {
-    auto mvp = camera_.getMVP();
-
     uint8_t* pData;
-    vk::assert_success(vkMapMemory(dev_, uboResource_.memory, 0, uboResource_.size, 0, (void**)&pData));
+    vk::assert_success(vkMapMemory(dev_, UBOResource_.memory, 0, UBOResource_.size, 0, (void**)&pData));
 
-    // Camera
-    memcpy(pData, &mvp, sizeof(mvp));
-    // Directional light
-    memcpy(pData + sizeof(mvp), &dirLight_, sizeof(dirLight_));
+    memcpy(pData, &defUBO_, sizeof(defUBO_));
+    //// Camera
+    // memcpy(pData, &mvp, sizeof(mvp));
+    //// Directional light
+    // memcpy(pData + sizeof(mvp), &dirLight_, sizeof(dirLight_));
 
-    vkUnmapMemory(dev_, uboResource_.memory);
+    vkUnmapMemory(dev_, UBOResource_.memory);
 
-    uboResource_.info.buffer = uboResource_.buffer;
+    UBOResource_.info.buffer = UBOResource_.buffer;
 }
 
 void Guppy::destroyUniformBuffer() {
-    vkDestroyBuffer(dev_, uboResource_.buffer, nullptr);
-    vkFreeMemory(dev_, uboResource_.memory, nullptr);
+    vkDestroyBuffer(dev_, UBOResource_.buffer, nullptr);
+    vkFreeMemory(dev_, UBOResource_.memory, nullptr);
 }
 
 void Guppy::create_frame_data(int count) {
@@ -558,48 +569,25 @@ void Guppy::destroy_depth_resources() {
 void Guppy::createScenes() {
     auto ctx = shell_->context();
 
-    auto scene1 = std::make_unique<Scene>(ctx, settings_, uboResource_, textures_);
-
-    // meshes
-    // Plane p("..\\..\\..\\images\\texture.jpg");
-    // std::unique_ptr<Mesh> p1 = std::make_unique<Plane>();
-    // scene1->addMesh(ctx, cmd_data_, uboResource_.info, std::move(p1)); // add mesh tries to load it...
+    auto scene1 = std::make_unique<Scene>(ctx, settings_, UBOResource_, textures_);
 
     scenes_.push_back(std::move(scene1));
     active_scene_index_ = 0;
 
-    // if (loadDefault) {
-    // model_.loadAxes();
-    // model_.loadDefault();
-    //} else {
-    //    // UP_VECTOR = glm::vec3(0.0f, 0.0f, 1.0f);
-    //    tex_path = CHALET_TEXTURE_PATH;
-    //    model_.loadChalet();
-    //}
+    // Add defaults
+    if (true) {
+        std::unique_ptr<LineMesh> defAxes = std::make_unique<Axes>(glm::scale(glm::mat4(1.0f), glm::vec3(AXES_MAX_SIZE)), true);
+        active_scene()->addMesh(shell_->context(), std::move(defAxes));
+    }
 
-    // VkCommandBuffer cmd1, cmd2;
-    // StagingBufferHandler::get().begin_command_recording(cmd);
-
-    // StagingBufferResource stg_res;
-    // std::vector<StagingBufferResource> staging_resources;
-    // std::vector<uint32_t> queueFamilyIndices = {cmd_data_.graphics_queue_family};
-    // if (cmd_data_.graphics_queue_family != cmd_data_.transfer_queue_family)
-    //    queueFamilyIndices.push_back(cmd_data_.transfer_queue_family);
-
-    // stg_res = {};
-    // tex_path = "..\\..\\..\\images\\chalet.jpg";
-    // textures_.emplace_back(Texture::createTexture(ctx, stg_res, transfer_cmd(), graphics_cmd(), queueFamilyIndices, tex_path));
-    // staging_resources.emplace_back(stg_res);
-
-    // stg_res = {};
-    // tex_path = "..\\..\\..\\images\\texture.jpg";
-    // textures_.emplace_back(Texture::createTexture(ctx, stg_res, transfer_cmd(), graphics_cmd(), queueFamilyIndices, tex_path));
-    // staging_resources.emplace_back(stg_res);
-
-    // VkPipelineStageFlags wait_stages[] = {VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
-    // StagingBufferHandler::get().end_recording_and_submit(staging_resources.data(), staging_resources.size(), transfer_cmd(),
-    //                                                     cmd_data_.graphics_queue_family, &graphics_cmd(), wait_stages,
-    //                                                     StagingBufferHandler::END_TYPE::RESET);
+    // Lights
+    // TODO: move the light code into the scene, including ubo data
+    light_.transform(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 3.0f, 1.5f)));
+    light_.flags = Light::FLAGS::SHOW | Light::FLAGS::MODE_LAMERTIAN | Light::FLAGS::MODE_BLINN_PHONG;
+    if (showLightHelpers_) {
+        std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(light_, 1.0f);
+        lightHelperOffset_ = active_scene()->addMesh(shell_->context(), std::move(pHelper));
+    }
 
     assert(active_scene_index_ >= 0);
 }

@@ -5,23 +5,34 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
-class Camera {
+#include "Helpers.h"
+
+class Camera : public Object3d {
    public:
+    struct Data {
+        glm::mat4 mvp;
+        alignas(16) glm::vec3 position;
+        // rem 4
+    };
+
     Camera(const glm::vec3 &eye, const glm::vec3 &center, float aspect, float fov = glm::radians(45.0f), float n = 0.1f,
            float f = 1000.0f);
 
-    glm::vec3 getDirection();
-    glm::vec3 getPosition();
+    inline Data getData() { return data_; }
 
-    inline glm::mat4 getMVP() const { return clip_ * proj_ * view_ * model_; }
+    glm::vec3 getDirection() override;
+    glm::vec3 getPosition() override;
+
+    inline glm::mat4 getMVP() const { return clip_ * proj_ * view_ * Object3d::obj3d_.model; }
 
     void update(float aspect, const glm::vec3 &pos_dir = {}, const glm::vec3 &look_dir = {});
 
    private:
     void updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir);
 
+    Data data_;
+
     glm::mat4 clip_;
-    glm::mat4 model_;
     // projection
     float aspect_;
     float far_;

@@ -196,7 +196,7 @@ create a build directory and generate the Visual Studio project files:
                  -DGLM_INSTALL_DIR=absolute_path_to_install_dir \
                  -DGLSLANG_INSTALL_DIR=absolute_path_to_install_dir ..
 
-> **Note: The path delimeters must be forward slashes even on Windows**
+> **Note: The path delimeters must be forward slashes even on Windows.**
 > The `..` parameter tells `cmake` the location of the top of the
 > repository. If you place your build directory someplace else, you'll need to
 > specify the location of the repository top differently.

@@ -5,12 +5,17 @@
 #include <vector>
 
 #include "Camera.h"
-#include "DirectionalLight.h"
+#include "Light.h"
 #include "Game.h"
 #include "Helpers.h"
 #include "MyShell.h"
 #include "Scene.h"
 #include "Texture.h"
+
+struct DefaultUBO {
+    Camera::Data camera;
+    Light::Ambient::Data light;
+};
 
 class Guppy : public Game {
    public:
@@ -131,13 +136,21 @@ class Guppy : public Game {
     // frame buffer
     ImageResource color_resource_;
     ImageResource depth_resource_;
+
     // uniform buffer
+    DefaultUBO defUBO_;
+    UniformBufferResources UBOResource_;
+    // camera
     Camera camera_;
-    DirectionalLight::Base dirLight_;
-    UniformBufferResources uboResource_;
+    // directional lights
+    bool showLightHelpers_ = true;
+    Light::Ambient light_;
+    size_t lightHelperOffset_;
+
     // scene
     int active_scene_index_;
     std::vector<std::unique_ptr<Scene>> scenes_;
+
     // textures
     std::vector<std::shared_ptr<Texture::TextureData>> textures_;
     std::vector<std::future<std::shared_ptr<Texture::TextureData>>> texFutures_;

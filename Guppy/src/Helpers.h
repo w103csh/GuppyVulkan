@@ -4,6 +4,8 @@
 
 #include <assert.h>
 #include <cstring>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_access.hpp>
 #include <limits>
 #include <sstream>
 #include <thread>
@@ -151,6 +153,29 @@ struct DrawResources {
 template <typename T>
 struct SharedStruct : std::enable_shared_from_this<T> {
     const std::shared_ptr<const T> getPtr() const { return shared_from_this(); }
+};
+
+struct Object3d {
+   public:
+    struct Data {
+        glm::mat4 model = glm::mat4(1.0f);
+    };
+
+    Object3d(glm::mat4 model = glm::mat4(1.0f)) : obj3d_{model} {};
+
+    virtual inline glm::vec3 getDirection() {
+        glm::vec3 dir = glm::row(obj3d_.model, 2);
+        return glm::normalize(dir);
+    }
+
+    virtual inline glm::vec3 getPosition() { return obj3d_.model[3]; }
+
+    virtual inline void transform(glm::mat4 t) { obj3d_.model *= t; }
+
+    inline Data getData() const { return obj3d_; }
+
+   protected:
+    Data obj3d_;
 };
 
 #endif  // !HELPERS_H

@@ -11,22 +11,18 @@
 // **********************
 
 Mesh::Mesh()
-    : modelPath_(""),
-      status_(STATUS::PENDING),
-      markerName_(""),
-      pLdgRes_(nullptr),
-      transform_(glm::identity<glm::mat4>()),
-      scale_(1.0f) {}
+    : modelPath_(""), status_(STATUS::PENDING), markerName_(""), pLdgRes_(nullptr), transform_(glm::mat4(1.0f)), scale_(1.0f) {
+    pLdgRes_ = LoadingResourceHandler::createLoadingResources();
+}
 
 Mesh::Mesh(std::string modelPath, glm::mat4 transform, float scale)
-    : modelPath_(modelPath), status_(STATUS::PENDING), markerName_(""), pLdgRes_(nullptr), transform_(transform), scale_(scale) {}
+    : modelPath_(modelPath), status_(STATUS::PENDING), markerName_(""), pLdgRes_(nullptr), transform_(transform), scale_(scale) {
+    pLdgRes_ = LoadingResourceHandler::createLoadingResources();
+}
 
 void Mesh::setSceneData(const MyShell::Context& ctx, size_t offset) { offset_ = offset; }
 
-std::future<Mesh*> Mesh::load(const MyShell::Context& ctx) {
-    pLdgRes_ = LoadingResourceHandler::createLoadingResources();
-    return std::async(std::launch::async, &Mesh::async_load, this, ctx);
-}
+std::future<Mesh*> Mesh::load(const MyShell::Context& ctx) { return std::async(std::launch::async, &Mesh::async_load, this, ctx); }
 
 Mesh* Mesh::async_load(const MyShell::Context& ctx) {
     if (!modelPath_.empty()) {
@@ -155,38 +151,6 @@ void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout
     }
 }
 
-void TextureMesh::drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                                const VkDescriptorSet& descSet, const std::array<uint32_t, 1>& dynUboOffsets, size_t frameIndex,
-                                const VkCommandBufferInheritanceInfo& inheritanceInfo, const VkViewport& viewport,
-                                const VkRect2D& scissor) const {
-    assert(status_ == STATUS::READY);
-    auto& secCmd = secCmds_[frameIndex];
-
-    CmdBufHandler::beginCmd(secCmd, &inheritanceInfo);
-
-    vkCmdSetViewport(secCmd, 0, 1, &viewport);
-    vkCmdSetScissor(secCmd, 0, 1, &scissor);
-
-    vkCmdBindPipeline(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-
-    vkCmdBindDescriptorSets(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet,
-                            static_cast<uint32_t>(dynUboOffsets.size()), dynUboOffsets.data());
-
-    VkBuffer vertexBuffs[] = {vertex_res_.buffer};
-    VkDeviceSize vertexOffs[] = {0};
-    vkCmdBindVertexBuffers(secCmd, 0, 1, vertexBuffs, vertexOffs);
-
-    if (indices_.size()) {
-        vkCmdBindIndexBuffer(secCmd, index_res_.buffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(secCmd, getIndexSize(), 1, 0, 0, 0);
-    } else {
-        vkCmdDraw(secCmd, getVertexCount(), 1, 0, 0);
-    }
-
-    CmdBufHandler::endCmd(secCmd);
-    vkCmdExecuteCommands(cmd, 1, &secCmd);
-}
-
 void Mesh::destroy(const VkDevice& dev) {
     // vertex
     vkDestroyBuffer(dev, vertex_res_.buffer, nullptr);
@@ -203,11 +167,13 @@ void Mesh::destroy(const VkDevice& dev) {
 ColorMesh::ColorMesh() {
     vertexType_ = Vertex::TYPE::COLOR;
     topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_COLOR;
+    flags_ = FLAGS::POLY;
 }
 
 ColorMesh::ColorMesh(std::string modelPath, glm::mat4 transform, float scale) : Mesh(modelPath, transform, scale) {
     vertexType_ = Vertex::TYPE::COLOR;
     topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_COLOR;
+    flags_ = FLAGS::POLY;
 }
 
 void ColorMesh::loadObj() {
@@ -259,6 +225,16 @@ void ColorMesh::loadObj() {
             indices_.push_back(uniqueVertices[vertex]);
         }
     }
+}
+
+// **********************
+// ColorMesh
+// **********************
+
+LineMesh::LineMesh() {
+    vertexType_ = Vertex::TYPE::COLOR;
+    topoType_ = PipelineHandler::TOPOLOGY::LINE;
+    flags_ = FLAGS::LINE;
 }
 
 // **********************
@@ -338,6 +314,38 @@ void TextureMesh::prepare(const VkDevice& dev, std::unique_ptr<DescriptorResourc
     } else {
         status_ = STATUS::PENDING_TEXTURE;
     }
+}
+
+void TextureMesh::drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
+                                const VkDescriptorSet& descSet, const std::array<uint32_t, 1>& dynUboOffsets, size_t frameIndex,
+                                const VkCommandBufferInheritanceInfo& inheritanceInfo, const VkViewport& viewport,
+                                const VkRect2D& scissor) const {
+    assert(status_ == STATUS::READY);
+    auto& secCmd = secCmds_[frameIndex];
+
+    CmdBufHandler::beginCmd(secCmd, &inheritanceInfo);
+
+    vkCmdSetViewport(secCmd, 0, 1, &viewport);
+    vkCmdSetScissor(secCmd, 0, 1, &scissor);
+
+    vkCmdBindPipeline(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+    vkCmdBindDescriptorSets(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet,
+                            static_cast<uint32_t>(dynUboOffsets.size()), dynUboOffsets.data());
+
+    VkBuffer vertexBuffs[] = {vertex_res_.buffer};
+    VkDeviceSize vertexOffs[] = {0};
+    vkCmdBindVertexBuffers(secCmd, 0, 1, vertexBuffs, vertexOffs);
+
+    if (indices_.size()) {
+        vkCmdBindIndexBuffer(secCmd, index_res_.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(secCmd, getIndexSize(), 1, 0, 0, 0);
+    } else {
+        vkCmdDraw(secCmd, getVertexCount(), 1, 0, 0);
+    }
+
+    CmdBufHandler::endCmd(secCmd);
+    vkCmdExecuteCommands(cmd, 1, &secCmd);
 }
 
 void TextureMesh::destroy(const VkDevice& dev) {

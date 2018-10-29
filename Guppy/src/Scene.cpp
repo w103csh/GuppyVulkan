@@ -62,30 +62,42 @@ void Scene::createDynamicTexUniformBuffer(const MyShell::Context& ctx, const Gam
     }
 }
 
-void Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<ColorMesh> pMesh) {
-    pMesh->setSceneData(ctx, colorMeshes_.size());
-    if (pMesh->getStatus() != Mesh::STATUS::READY) {
-        ldgFutures_.emplace_back(pMesh->load(ctx));
-    } else {
-        pMesh->prepare(ctx.dev, pDescResources_);
-    }
+size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<ColorMesh> pMesh) {
+    auto offset = colorMeshes_.size();
+
+    pMesh->setSceneData(ctx, offset);
     colorMeshes_.push_back(std::move(pMesh));
+
+    if (colorMeshes_.back()->getStatus() != Mesh::STATUS::READY) {
+        ldgFutures_.emplace_back(colorMeshes_.back()->load(ctx));
+    } else {
+        colorMeshes_.back()->prepare(ctx.dev, pDescResources_);
+    }
+
+    return offset;
 }
 
-// void Scene::addMesh(const MyShell::Context& ctx, const VkDescriptorBufferInfo& ubo_info, std::unique_ptr<LineMesh> pMesh) {
-//    pMesh->setOffset(lineMeshes_.size());
-//    if (!pMesh->isReady()) {
-//        loading_futures_.emplace_back(pMesh->load(ctx));
-//    } else {
-//        pMesh->prepare(ctx, ubo_info, pDescResouces);
-//    }
-//    lineMeshes_.push_back(std::move(pMesh));
-//}
+size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<LineMesh> pMesh) {
+    auto offset = lineMeshes_.size();
 
-void Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<TextureMesh> pMesh) {
+    pMesh->setSceneData(ctx, offset);
+    lineMeshes_.push_back(std::move(pMesh));
+
+    if (lineMeshes_.back()->getStatus() != Mesh::STATUS::READY) {
+        ldgFutures_.emplace_back(lineMeshes_.back()->load(ctx));
+    } else {
+        lineMeshes_.back()->prepare(ctx.dev, pDescResources_);
+    }
+
+    return offset;
+}
+
+size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<TextureMesh> pMesh) {
+    auto offset = texMeshes_.size();
+
     // Set values based on scene, and move pointer onto scene
     // TODO: remove scene information from the mesh if mesh becomes shared
-    pMesh->setSceneData(ctx, texMeshes_.size());
+    pMesh->setSceneData(ctx, offset);
     texMeshes_.push_back(std::move(pMesh));
 
     // Update descriptors for all the meshes stored
@@ -99,6 +111,8 @@ void Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<TextureMesh> pM
     } else {
         texMeshes_.back()->prepare(ctx.dev, pDescResources_);
     }
+
+    return offset;
 }
 
 void Scene::removeMesh(Mesh* mesh) {

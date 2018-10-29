@@ -16,19 +16,18 @@
 //  Mesh
 // **********************
 
-class Mesh {
+class Mesh : public Object3d {
    public:
     enum class STATUS { PENDING = 0, VERTICES_LOADED, PENDING_TEXTURE, READY };
 
     Mesh();
-    Mesh(std::string modelPath, glm::mat4 transform = glm::identity<glm::mat4>(), float scale = 1.0f);
+    Mesh(std::string modelPath, glm::mat4 transform = glm::mat4(1.0f), float scale = 1.0f);
     /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTR OF THIS CLASS.
         IF THIS IS REMOVED THE DESCTRUCTOR HERE WILL BE CALLED INSTEAD OF THE DERIVED DESCTRUCTOR.
         IT MIGHT JUST BE EASIER/SMARTER TO GET RID OF POLYMORPHISM AND DROP THE POINTERS. */
     virtual ~Mesh() = default;
 
     // GETTERS
-
     inline std::string getMarkerName() const { return markerName_; }
     inline size_t getOffset() const { return offset_; }
     inline PipelineHandler::TOPOLOGY getTopologyType() const { return topoType_; }
@@ -97,7 +96,19 @@ class Mesh {
 class ColorMesh : public Mesh {
    public:
     ColorMesh();
-    ColorMesh(std::string modelPath, glm::mat4 transform = glm::identity<glm::mat4>(), float scale = 1.0f);
+    ColorMesh(std::string modelPath, glm::mat4 transform = glm::mat4(1.0f), float scale = 1.0f);
+
+    typedef enum FLAGS {
+        POLY = 0x00000001,
+        LINE = 0x00000002,
+        // THROUGH 0x00000008
+    } FLAGS;
+
+    // Object3d
+    virtual inline void transform(glm::mat4 t) override {
+        Object3d::transform(t);
+        for (auto& v : vertices_) v.pos = obj3d_.model * glm::vec4(v.pos, 1.0f);
+    }
 
     // VERTEX
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
@@ -113,8 +124,16 @@ class ColorMesh : public Mesh {
     void loadObj() override;
 
     std::vector<Vertex::Color> vertices_;
+    Flags flags_;
+};
 
-   private:
+// **********************
+// LineMesh
+// **********************
+
+class LineMesh : public ColorMesh {
+   public:
+    LineMesh();
 };
 
 // **********************
@@ -124,8 +143,14 @@ class ColorMesh : public Mesh {
 class TextureMesh : public Mesh {
    public:
     TextureMesh(std::shared_ptr<Texture::TextureData> pTex);
-    TextureMesh(std::shared_ptr<Texture::TextureData> pTex, std::string modelPath, glm::mat4 transform = glm::identity<glm::mat4>(),
+    TextureMesh(std::shared_ptr<Texture::TextureData> pTex, std::string modelPath, glm::mat4 transform = glm::mat4(1.0f),
                 float scale = 1.0f);
+
+    // Object3d
+    virtual inline void transform(glm::mat4 t) override {
+        Object3d::transform(t);
+        for (auto& v : vertices_) v.pos = obj3d_.model * glm::vec4(v.pos, 1.0f);
+    }
 
     // INIT
     void setSceneData(const MyShell::Context& ctx, size_t offset) override;

@@ -1,5 +1,7 @@
-
+    
 set(SOURCE
+    Axes.h
+    Axes.cpp
     Box.cpp
     Box.h
     Camera.cpp
@@ -8,8 +10,6 @@ set(SOURCE
 	CmdBufHandler.h
     CMakeLists.txt
     Constants.h
-    DirectionalLight.cpp
-    DirectionalLight.h
     EventHandlers.h
     Extensions.h
     FileLoader.cpp
@@ -21,6 +21,8 @@ set(SOURCE
     Helpers.h
     InputHandler.cpp
     InputHandler.h
+    Light.cpp
+    Light.h
     LoadingResourceHandler.cpp
     LoadingResourceHandler.h
     Main.cpp
