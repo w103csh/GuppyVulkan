@@ -70,8 +70,8 @@ class PipelineHandler {
         VkAttachmentReference depth;
     };
 
-    static void createShaderModule(const std::string &shaderText, VkShaderStageFlagBits stage, ShaderResources &shaderResources,
-                                   bool initGlslang = true, std::string markerName = "");
+    static void createShaderModule(const std::vector<const char *> pShaderTexts, VkShaderStageFlagBits stage,
+                                   ShaderResources &shaderResources, bool initGlslang = true, std::string markerName = "");
 
     static std::unique_ptr<DescriptorResources> createDescriptorResources(std::vector<VkDescriptorBufferInfo> uboInfos,
                                                                           std::vector<VkDescriptorBufferInfo> dynUboInfos,

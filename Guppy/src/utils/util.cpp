@@ -478,36 +478,38 @@ shaderc_shader_kind MapShadercType(VkShaderStageFlagBits vkShader) {
 // Compile a given string containing GLSL into SPV for use by VK
 // Return value of false means an error was encountered.
 //
-bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spirv) {
+bool GLSLtoSPV(const VkShaderStageFlagBits shaderType, std::vector<const char *> pShaderStrings, std::vector<unsigned int> &spirv) {
 #ifndef __ANDROID__
-    EShLanguage stage = FindLanguage(shader_type);
-    glslang::TShader shader(stage);
-    glslang::TProgram program;
-    const char *shaderStrings[1];
+    EShLanguage stage = FindLanguage(shaderType);
     TBuiltInResource Resources;
     init_resources(Resources);
 
     // Enable SPIR-V and Vulkan rules when parsing GLSL
     EShMessages messages = (EShMessages)(EShMsgSpvRules | EShMsgVulkanRules);
 
-    shaderStrings[0] = pshader;
-    shader.setStrings(shaderStrings, 1);
+    // TProgram needs to be destroyed before the TShaders!!!
+    std::vector<std::unique_ptr<glslang::TShader> > shaders;
+    glslang::TProgram program;
 
-    if (!shader.parse(&Resources, 100, false, messages)) {
-        puts(shader.getInfoLog());
-        puts(shader.getInfoDebugLog());
-        return false;  // something didn't work
+    for (auto s : pShaderStrings) {
+        shaders.emplace_back(std::make_unique<glslang::TShader>(stage));
+        shaders.back()->setStrings(&s, 1);
+
+        if (!shaders.back()->parse(&Resources, 100, false, messages)) {
+            puts(shaders.back()->getInfoLog());
+            puts(shaders.back()->getInfoDebugLog());
+            return false;  // something didn't work
+        }
+        program.addShader(shaders.back().get());
     }
-
-    program.addShader(&shader);
 
     //
     // Program-level processing...
     //
 
     if (!program.link(messages)) {
-        puts(shader.getInfoLog());
-        puts(shader.getInfoDebugLog());
+        puts(program.getInfoLog());
+        puts(program.getInfoDebugLog());
         fflush(stdout);
         return false;
     }

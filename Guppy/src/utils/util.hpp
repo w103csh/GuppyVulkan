@@ -263,7 +263,7 @@
 // bool read_ppm(char const *const filename, int &width, int &height, uint64_t rowPitch, unsigned char *dataPtr);
 // void write_ppm(struct sample_info &info, const char *basename);
 // void extract_version(uint32_t version, uint32_t &major, uint32_t &minor, uint32_t &patch);
-bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spirv);
+bool GLSLtoSPV(const VkShaderStageFlagBits shaderType, std::vector<const char *> pShaders, std::vector<unsigned int> &spirv);
 void init_glslang();
 void finalize_glslang();
 // void wait_seconds(int seconds);

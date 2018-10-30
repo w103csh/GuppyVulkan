@@ -63,6 +63,7 @@ void PipelineHandler::createShaderModules() {
     auto colorFSText = FileLoader::read_file("Guppy\\src\\shaders\\color.frag");
     auto lineFSText = FileLoader::read_file("Guppy\\src\\shaders\\line.frag");
     auto textureFSText = FileLoader::read_file("Guppy\\src\\shaders\\texture.frag");
+    auto utilFSText = FileLoader::read_file("Guppy\\src\\shaders\\util.frag");
 
     // If no shaders were submitted, just return
     if (!(colorVSText.data() || colorFSText.data()) || !(textureVSText.data() || textureFSText.data())) return;
@@ -71,31 +72,33 @@ void PipelineHandler::createShaderModules() {
 
     // VERTEX SHADERS
     if (colorVSText.data()) {
-        createShaderModule(colorVSText, VK_SHADER_STAGE_VERTEX_BIT, colorVS_, false, "COLOR VERT");
+        createShaderModule({colorVSText.c_str()}, VK_SHADER_STAGE_VERTEX_BIT, colorVS_, false, "COLOR VERT");
     }
     if (textureVSText.data()) {
-        createShaderModule(textureVSText, VK_SHADER_STAGE_VERTEX_BIT, texVS_, false, "TEXTURE VERT");
+        createShaderModule({textureVSText.c_str()}, VK_SHADER_STAGE_VERTEX_BIT, texVS_, false, "TEXTURE VERT");
     }
     // FRAGMENT SHADERS
     if (colorFSText.data()) {
-        createShaderModule(colorFSText, VK_SHADER_STAGE_FRAGMENT_BIT, colorFS_, false, "COLOR FRAG");
+        createShaderModule({colorFSText.c_str(), utilFSText.c_str()}, VK_SHADER_STAGE_FRAGMENT_BIT, colorFS_, false, "COLOR FRAG");
     }
     if (lineFSText.data()) {
-        createShaderModule(lineFSText, VK_SHADER_STAGE_FRAGMENT_BIT, lineFS_, false, "LINE FRAG");
+        createShaderModule({lineFSText.c_str() /*, utilFSText.c_str()*/}, VK_SHADER_STAGE_FRAGMENT_BIT, lineFS_, false,
+                           "LINE FRAG");
     }
     if (textureFSText.data()) {
-        createShaderModule(textureFSText, VK_SHADER_STAGE_FRAGMENT_BIT, texFS_, false, "TEXTURE FRAG");
+        createShaderModule({textureFSText.c_str() /*, utilFSText.c_str()*/}, VK_SHADER_STAGE_FRAGMENT_BIT, texFS_, false,
+                           "TEXTURE FRAG");
     }
 
     finalize_glslang();
 }
 
-void PipelineHandler::createShaderModule(const std::string& shaderText, VkShaderStageFlagBits stage,
+void PipelineHandler::createShaderModule(const std::vector<const char*> pShaderTexts, VkShaderStageFlagBits stage,
                                          ShaderResources& shaderResources, bool initGlslang, std::string markerName) {
     if (initGlslang) init_glslang();  // init glslang based on caller needs ...
 
     std::vector<unsigned int> spv;
-    assert(GLSLtoSPV(stage, shaderText.data(), spv));
+    assert(GLSLtoSPV(stage, pShaderTexts, spv));
 
     VkShaderModuleCreateInfo module_info = {};
     module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
