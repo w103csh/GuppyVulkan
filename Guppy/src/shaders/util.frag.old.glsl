@@ -11,38 +11,36 @@ const uint DL_BLINN_PHONG   = 0x00000020u;
 // APPLICATION CONSTANTS
 // TODO: get these from a ubo or something...
 const float screenGamma = 2.2; // Assume the monitor is calibrated to the sRGB color space
-const float Ia = 0.85; // ambient light intesity
+const float Ia = 0.35; // ambient light intesity
 
 struct Camera {
 	mat4 mvp;
 	vec3 position;
 };
 
-struct AmbientLight {
+struct PositionalLight {
 	mat4 model;
 	vec3 color; uint flags;
 	float intensity;
 	float phongExp;
 };
 
-layout(binding = 0) uniform DefaultUBO {
+// IN
+layout(location = 0) in vec3 fragPos;
+// UNIFORM BUFFER
+layout(binding = 0) uniform DefaultUniformBuffer {
 	Camera camera;
-	AmbientLight light;
+	PositionalLight light;
 } ubo;
 
-layout(location = 0) in vec3 fragPos;
-layout(location = 2) in vec3 fragNormal;
-
-vec4 getColor(vec3 ka, vec3 kd, vec3 ks, float opacity) {
-    vec3 Ld, Ls;
-    vec3 n = fragNormal;
+vec4 getColor(vec3 n, vec3 ka, vec3 kd, vec3 ks, float opacity) {
+    vec3 La = (ka * Ia), Ld, Ls;
 
     // check if light should be shown
     if ((ubo.light.flags & DL_SHOW) > 0) {
 
         vec3 l = normalize(vec3(ubo.light.model[3]) - fragPos);
         float I = ubo.light.intensity;
-        // float I = 1.4;
 
         // Lambertian
         if ((ubo.light.flags & DL_LAMBERTIAN | ubo.light.flags & DL_BLINN_PHONG) > 0) {
@@ -78,7 +76,7 @@ vec4 getColor(vec3 ka, vec3 kd, vec3 ks, float opacity) {
             vec3 h = normalize(v + l);
             float p = ubo.light.phongExp;
 
-            Ld = ks * I * pow(max(0, dot(n, h)), p);
+            Ls = ks * I * pow(max(0, dot(n, h)), p);
         }
 	}
 
@@ -89,5 +87,5 @@ vec4 getColor(vec3 ka, vec3 kd, vec3 ks, float opacity) {
         where ka is the surface’s ambient coefficient, or “ambient
         color,” and Ia is the ambient light intensity.
     */
-    return vec4(ka * Ia + Ld + Ls, opacity);
+    return vec4(La + Ld  + Ls, opacity);
 }

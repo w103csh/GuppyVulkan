@@ -105,7 +105,9 @@ class PipelineHandler {
     static PipelineHandler inst_;
 
     void reset();
+
     void createShaderModules();
+    void createPushConstantRange();
     void createDescriptorPool(std::unique_ptr<DescriptorResources> &pDescResources);
     void createDescriptorSetLayout(Vertex::TYPE type, VkDescriptorSetLayout &setLayout);
     void createDefaultAttachments(bool clear = true, VkImageLayout finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
@@ -120,6 +122,7 @@ class PipelineHandler {
     MyShell::Context ctx_;     // TODO: shared_ptr
     Game::Settings settings_;  // TODO: shared_ptr
 
+    std::vector<VkPushConstantRange> pushConstantRanges_;
     // Default instances ... (so that users can make pipeline derivatives from these)
     std::array<VkDescriptorSetLayout, 2> setLayouts_;  // COLOR, TEXTURE
     VkPipelineCache cache_;                            // TODO: what is this for???

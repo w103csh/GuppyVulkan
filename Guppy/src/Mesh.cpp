@@ -10,13 +10,15 @@
 // Mesh
 // **********************
 
-Mesh::Mesh()
-    : modelPath_(""), status_(STATUS::PENDING), markerName_(""), pLdgRes_(nullptr), transform_(glm::mat4(1.0f)), scale_(1.0f) {
+Mesh::Mesh(std::unique_ptr<Material> pMaterial)
+    : Object3d(glm::mat4(1.0f)), modelPath_(""), status_(STATUS::PENDING), markerName_(""), pLdgRes_(nullptr) {
+    pMaterial_ = std::move(pMaterial);
     pLdgRes_ = LoadingResourceHandler::createLoadingResources();
 }
 
-Mesh::Mesh(std::string modelPath, glm::mat4 transform, float scale)
-    : modelPath_(modelPath), status_(STATUS::PENDING), markerName_(""), pLdgRes_(nullptr), transform_(transform), scale_(scale) {
+Mesh::Mesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model)
+    : Object3d(model), modelPath_(modelPath), status_(STATUS::PENDING), markerName_(""), pLdgRes_(nullptr) {
+    pMaterial_ = std::move(pMaterial);
     pLdgRes_ = LoadingResourceHandler::createLoadingResources();
 }
 
@@ -132,6 +134,11 @@ void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout
     VkDeviceSize offsets[] = {0};
 
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+    PushConstants pushConstants = {getData().model, pMaterial_->getData()};
+    vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pushConstants),
+                        &pushConstants);
+
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet, 0, nullptr);
     vkCmdBindVertexBuffers(cmd, 0, 1, vertex_buffers, offsets);
 
@@ -164,13 +171,14 @@ void Mesh::destroy(const VkDevice& dev) {
 // ColorMesh
 // **********************
 
-ColorMesh::ColorMesh() {
+ColorMesh::ColorMesh(std::unique_ptr<Material> pMaterial) : Mesh(std::move(pMaterial)) {
     vertexType_ = Vertex::TYPE::COLOR;
     topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_COLOR;
     flags_ = FLAGS::POLY;
 }
 
-ColorMesh::ColorMesh(std::string modelPath, glm::mat4 transform, float scale) : Mesh(modelPath, transform, scale) {
+ColorMesh::ColorMesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model)
+    : Mesh(std::move(pMaterial), modelPath, model) {
     vertexType_ = Vertex::TYPE::COLOR;
     topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_COLOR;
     flags_ = FLAGS::POLY;
@@ -210,11 +218,7 @@ void ColorMesh::loadObj() {
             if (useColors) {
                 vertex.color = {attrib.colors[3 * index.vertex_index + 0], attrib.colors[3 * index.vertex_index + 1],
                                 attrib.colors[3 * index.vertex_index + 2], 1.0f};
-                vertex.color = {0.0f, 1.0f, 0.0f, 1.0f};
             }
-
-            vertex.pos = transform_ * glm::vec4(vertex.pos, 1.0f);
-            vertex.pos *= scale_;
 
             if (uniqueVertices.count(vertex) == 0) {
                 uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
@@ -231,7 +235,7 @@ void ColorMesh::loadObj() {
 // ColorMesh
 // **********************
 
-LineMesh::LineMesh() {
+LineMesh::LineMesh() : ColorMesh(std::make_unique<Material>()) {
     vertexType_ = Vertex::TYPE::COLOR;
     topoType_ = PipelineHandler::TOPOLOGY::LINE;
     flags_ = FLAGS::LINE;
@@ -241,15 +245,15 @@ LineMesh::LineMesh() {
 // TextureMesh
 // **********************
 
-TextureMesh::TextureMesh(std::shared_ptr<Texture::TextureData> pTex) : pTex_(pTex) {
-    assert(pTex);
+TextureMesh::TextureMesh(std::unique_ptr<Material> pMaterial) : Mesh(std::move(pMaterial)) {
+    assert(pMaterial_->hasTexture());
     vertexType_ = Vertex::TYPE::TEXTURE;
     topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_TEX;
 };
 
-TextureMesh::TextureMesh(std::shared_ptr<Texture::TextureData> pTex, std::string modelPath, glm::mat4 transform, float scale)
-    : Mesh(modelPath, transform, scale), pTex_(pTex) {
-    assert(pTex);
+TextureMesh::TextureMesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model)
+    : Mesh(std::move(pMaterial), modelPath, model) {
+    assert(pMaterial_->hasTexture());
     vertexType_ = Vertex::TYPE::TEXTURE;
     topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_TEX;
 };
@@ -288,9 +292,6 @@ void TextureMesh::loadObj() {
             vertex.pos = {attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1],
                           attrib.vertices[3 * index.vertex_index + 2]};
 
-            vertex.pos = transform_ * glm::vec4(vertex.pos, 1.0f);
-            vertex.pos *= scale_;
-
             vertex.texCoord = {attrib.texcoords[2 * index.texcoord_index + 0],
                                1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
 
@@ -308,8 +309,8 @@ void TextureMesh::loadObj() {
 void TextureMesh::prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) {
     loadVertexBuffers(dev);
     LoadingResourceHandler::loadSubmit(std::move(pLdgRes_));
-    if (pTex_->status == Texture::STATUS::READY) {
-        PipelineHandler::createTextureDescriptorSets(pTex_->imgDescInfo, pTex_->offset, pRes);
+    if (pMaterial_->getTexture().status == Texture::STATUS::READY) {
+        PipelineHandler::createTextureDescriptorSets(pMaterial_->getTexture().imgDescInfo, pMaterial_->getTexture().offset, pRes);
         status_ = STATUS::READY;
     } else {
         status_ = STATUS::PENDING_TEXTURE;
@@ -329,6 +330,10 @@ void TextureMesh::drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayo
     vkCmdSetScissor(secCmd, 0, 1, &scissor);
 
     vkCmdBindPipeline(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+
+    PushConstants pushConstants = {getData().model, pMaterial_->getData()};
+    vkCmdPushConstants(secCmd, layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pushConstants),
+                       &pushConstants);
 
     vkCmdBindDescriptorSets(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet,
                             static_cast<uint32_t>(dynUboOffsets.size()), dynUboOffsets.data());

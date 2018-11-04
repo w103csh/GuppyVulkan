@@ -12,7 +12,7 @@ struct UBOTag {
 }  // namespace
 
 Scene::Scene(const MyShell::Context& ctx, const Game::Settings& settings, const UniformBufferResources& uboResource,
-             std::vector<std::shared_ptr<Texture::TextureData>>& textures) {
+             std::vector<std::shared_ptr<Texture::Data>>& textures) {
     createDynamicTexUniformBuffer(ctx, settings, textures);
     pDescResources_ = PipelineHandler::createDescriptorResources({uboResource.info}, {pDynUboResource_->info}, 1 /* !!! hardcode */,
                                                                  textures.size());
@@ -21,11 +21,11 @@ Scene::Scene(const MyShell::Context& ctx, const Game::Settings& settings, const 
 }
 
 void Scene::createDynamicTexUniformBuffer(const MyShell::Context& ctx, const Game::Settings& settings,
-                                          std::vector<std::shared_ptr<Texture::TextureData>>& textures, std::string markerName) {
+                                          std::vector<std::shared_ptr<Texture::Data>>& textures, std::string markerName) {
     const auto& limits = ctx.physical_dev_props[ctx.physical_dev_index].properties.limits;
 
     // this is just a single flag for now...
-    VkDeviceSize dynBuffSize = sizeof(Flags);
+    VkDeviceSize dynBuffSize = sizeof(FlagBits);
 
     if (limits.minUniformBufferOffsetAlignment)
         dynBuffSize = (dynBuffSize + limits.minUniformBufferOffsetAlignment - 1) & ~(limits.minUniformBufferOffsetAlignment - 1);

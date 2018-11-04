@@ -7,6 +7,7 @@
 #include "Extensions.h"
 #include "Guppy.h"
 #include "InputHandler.h"
+#include "LoadingResourceHandler.h"
 #include "PipelineHandler.h"
 #include "Plane.h"
 
@@ -175,32 +176,38 @@ void Guppy::on_key(KEY key) {
         case KEY::KEY_F:
             // sim_fade_ = !sim_fade_;
             break;
-        case KEY::KEY_F1: {
+        case KEY::KEY_1: {
             auto p1 = std::make_unique<ColorPlane>();
             active_scene()->addMesh(shell_->context(), std::move(p1));
         } break;
-        case KEY::KEY_F3: {
+        case KEY::KEY_3: {
             if (false) {
-                auto tm1 = std::make_unique<TextureMesh>(textures_.back(), CHALET_MODEL_PATH);
-                active_scene()->addMesh(shell_->context(), std::move(tm1));
-            } else if (true) {
-                auto tm1 = std::make_unique<TextureMesh>(
-                    getTextureByPath(MED_H_DIFF_TEX_PATH), MED_H_MODEL_PATH,
-                    glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)), 0.01f);
+                auto tm1 =
+                    std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(CHALET_TEX_PATH)), CHALET_MODEL_PATH);
                 active_scene()->addMesh(shell_->context(), std::move(tm1));
             } else if (false) {
-                auto sphereBot = std::make_unique<ColorMesh>(SPHERE_MODEL_PATH);
+                auto model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+                             glm::scale(glm::mat4(1.0f), glm::vec3(0.01f));
+                auto tm1 = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(MED_H_DIFF_TEX_PATH)),
+                                                         MED_H_MODEL_PATH, model);
+                active_scene()->addMesh(shell_->context(), std::move(tm1));
+            } else if (false) {
+                auto sphereBot = std::make_unique<ColorMesh>(std::make_unique<Material>(), SPHERE_MODEL_PATH);
                 active_scene()->addMesh(shell_->context(), std::move(sphereBot));
-                auto sphereTop = std::make_unique<ColorMesh>(
-                    SPHERE_MODEL_PATH, glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+                auto sphereTop =
+                    std::make_unique<ColorMesh>(std::make_unique<Material>(), SPHERE_MODEL_PATH,
+                                                glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
                 active_scene()->addMesh(shell_->context(), std::move(sphereTop));
+            } else if (true) {
+                auto p2 = std::make_unique<TexturePlane>(getTextureByPath(STATUE_TEX_PATH), glm::mat4(1.0f), true);
+                active_scene()->addMesh(shell_->context(), std::move(p2));
             }
         } break;
-        case KEY::KEY_F5: {
-            if ((light_.flags & Light::FLAGS::SHOW) > 0) {
-                light_.flags = Light::FLAGS::HIDE | Light::FLAGS::MODE_LAMERTIAN | Light::FLAGS::MODE_BLINN_PHONG;
+        case KEY::KEY_5: {
+            if ((light_.getFlags() & Light::FLAGS::SHOW) > 0) {
+                light_.setFlags(Light::FLAGS::HIDE);
             } else {
-                light_.flags = Light::FLAGS::SHOW | Light::FLAGS::MODE_LAMERTIAN | Light::FLAGS::MODE_BLINN_PHONG;
+                light_.setFlags(Light::FLAGS::SHOW);
             }
             // if (test < 3) {
             //    addTexture(dev_, STATUE_TEXTURE_PATH);
@@ -215,17 +222,11 @@ void Guppy::on_key(KEY key) {
             //                                       0.0f)));
             // active_scene()->addMesh(shell_->context(), std::move(p1), frame_data_index_);
         } break;
-        case KEY::KEY_F6: {
-            auto p1 =
-                std::make_unique<TexturePlane>(getTextureByPath(VULKAN_TEX_PATH), 1.0f, 1.0f, true, glm::vec3(0.0f, ++test, 0.0f),
-                                               glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+        case KEY::KEY_6: {
+            auto model =
+                helpers::affine(glm::vec3(0.5f), glm::vec3(0.0f, ++test, 0.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+            auto p1 = std::make_unique<TexturePlane>(getTextureByPath(VULKAN_TEX_PATH), model, true);
             active_scene()->addMesh(shell_->context(), std::move(p1));
-            auto p2 = std::make_unique<TexturePlane>(getTextureByPath(STATUE_TEX_PATH));
-            active_scene()->addMesh(shell_->context(), std::move(p2));
-            // auto p1 = std::make_unique<ColorPlane>(1.0f, 1.0f, true, glm::vec3(),
-            //                                       glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f,
-            //                                       0.0f)));
-            // active_scene()->addMesh(shell_->context(), std::move(p1), frame_data_index_);
         } break;
         default:
             break;
@@ -578,12 +579,19 @@ void Guppy::createScenes() {
     if (true) {
         std::unique_ptr<LineMesh> defAxes = std::make_unique<Axes>(glm::scale(glm::mat4(1.0f), glm::vec3(AXES_MAX_SIZE)), true);
         active_scene()->addMesh(shell_->context(), std::move(defAxes));
+
+        // material
+        auto pMaterial = std::make_unique<Material>();
+        pMaterial->setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
+        pMaterial->setColor({0.8f, 0.3f, 0.0f});
+
+        auto torus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, helpers::affine(glm::vec3(0.07f)));
+        active_scene()->addMesh(shell_->context(), std::move(torus));
     }
 
     // Lights
     // TODO: move the light code into the scene, including ubo data
-    light_.transform(glm::translate(glm::mat4(1.0f), glm::vec3(3.0f, 3.0f, 1.5f)));
-    light_.flags = Light::FLAGS::SHOW | Light::FLAGS::MODE_LAMERTIAN | Light::FLAGS::MODE_BLINN_PHONG;
+    light_.transform(glm::translate(glm::mat4(1.0f), glm::vec3(1.5f, 1.5f, 0.5f)));
     if (showLightHelpers_) {
         std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(light_, 1.0f);
         lightHelperOffset_ = active_scene()->addMesh(shell_->context(), std::move(pHelper));
@@ -608,14 +616,14 @@ void Guppy::addTexture(const VkDevice& dev, std::string path, std::string normPa
             shell_->log(MyShell::LOG_WARN, "Texture with same spectral path was already loaded.");
     }
     // make texture and a loading future
-    auto pTex = std::make_shared<Texture::TextureData>(textures_.size(), path, normPath, specPath);
-    auto fut = Texture::loadTexture(dev, true, pTex);
+    auto pTexture = std::make_shared<Texture::Data>(textures_.size(), path, normPath, specPath);
+    auto fut = Texture::loadTexture(dev, true, pTexture);
     // move texture and future to the vectors
-    textures_.emplace_back(std::move(pTex));
+    textures_.emplace_back(std::move(pTexture));
     texFutures_.emplace_back(std::move(fut));
 }
 
-std::shared_ptr<Texture::TextureData> Guppy::getTextureByPath(std::string path) {
+std::shared_ptr<Texture::Data> Guppy::getTextureByPath(std::string path) {
     auto it = std::find_if(textures_.begin(), textures_.end(), [&path](auto& pTex) { return pTex->path == path; });
     return it == textures_.end() ? nullptr : (*it);
 }

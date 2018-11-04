@@ -1,6 +1,7 @@
 
 #include "Constants.h"
 #include "FileLoader.h"
+#include "Material.h"
 #include "PipelineHandler.h"
 
 PipelineHandler PipelineHandler::inst_;
@@ -45,6 +46,8 @@ void PipelineHandler::init(const MyShell::Context& ctx, const Game::Settings& se
     // TODO: Just create all shaders right away for now...
     inst_.createShaderModules();
 
+    inst_.createPushConstantRange();
+
     inst_.createDescriptorSetLayout(Vertex::TYPE::COLOR, inst_.setLayouts_[static_cast<int>(Vertex::TYPE::COLOR)]);
     inst_.createDescriptorSetLayout(Vertex::TYPE::TEXTURE, inst_.setLayouts_[static_cast<int>(Vertex::TYPE::TEXTURE)]);
 
@@ -52,6 +55,19 @@ void PipelineHandler::init(const MyShell::Context& ctx, const Game::Settings& se
     // PipelineHandler::createPipelineLayout(inst_.setLayouts_, inst_.layout_, "DEFAULT");
 
     inst_.createDefaultAttachments();
+}
+
+void PipelineHandler::createPushConstantRange() {
+    VkPushConstantRange range;
+
+    // Material
+    if (sizeof(PushConstants) > inst_.ctx_.physical_dev_props[inst_.ctx_.physical_dev_index].properties.limits.maxPushConstantsSize)
+        assert(0 && "Too many push constants");
+    range = {};
+    range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    range.offset = 0;
+    range.size = sizeof(PushConstants);
+    pushConstantRanges_.push_back(range);
 }
 
 void PipelineHandler::createShaderModules() {
@@ -63,7 +79,8 @@ void PipelineHandler::createShaderModules() {
     auto colorFSText = FileLoader::read_file("Guppy\\src\\shaders\\color.frag");
     auto lineFSText = FileLoader::read_file("Guppy\\src\\shaders\\line.frag");
     auto textureFSText = FileLoader::read_file("Guppy\\src\\shaders\\texture.frag");
-    auto utilFSText = FileLoader::read_file("Guppy\\src\\shaders\\util.frag");
+    // SHARED
+    auto utilFSText = FileLoader::read_file("Guppy\\src\\shaders\\util.frag.glsl");
 
     // If no shaders were submitted, just return
     if (!(colorVSText.data() || colorFSText.data()) || !(textureVSText.data() || textureFSText.data())) return;
@@ -82,11 +99,10 @@ void PipelineHandler::createShaderModules() {
         createShaderModule({colorFSText.c_str(), utilFSText.c_str()}, VK_SHADER_STAGE_FRAGMENT_BIT, colorFS_, false, "COLOR FRAG");
     }
     if (lineFSText.data()) {
-        createShaderModule({lineFSText.c_str() /*, utilFSText.c_str()*/}, VK_SHADER_STAGE_FRAGMENT_BIT, lineFS_, false,
-                           "LINE FRAG");
+        createShaderModule({lineFSText.c_str()}, VK_SHADER_STAGE_FRAGMENT_BIT, lineFS_, false, "LINE FRAG");
     }
     if (textureFSText.data()) {
-        createShaderModule({textureFSText.c_str() /*, utilFSText.c_str()*/}, VK_SHADER_STAGE_FRAGMENT_BIT, texFS_, false,
+        createShaderModule({textureFSText.c_str(), utilFSText.c_str()}, VK_SHADER_STAGE_FRAGMENT_BIT, texFS_, false,
                            "TEXTURE FRAG");
     }
 
@@ -320,21 +336,13 @@ void PipelineHandler::createPipelineCache(VkPipelineCache& cache) {
 void PipelineHandler::createPipelineLayout(Vertex::TYPE type, const VkDescriptorSetLayout& setLayout, std::string markerName) {
     VkPipelineLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-
-    // VkPushConstantRange push_const_range = {};
-    // if (use_push_constants_) {
-    //    throw std::runtime_error("not handled!");
-    //    push_const_range.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-    //    push_const_range.offset = 0;
-    //    push_const_range.size = sizeof(ShaderParamBlock);
-    //
-    //    pipeline_layout_info.pushConstantRangeCount = 1;
-    //    pipeline_layout_info.pPushConstantRanges = &push_const_range;
-    //} else {
+    // push constants
+    layoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges_.size());
+    layoutInfo.pPushConstantRanges = pushConstantRanges_.data();
+    // descriptor layouts
     uint32_t setLayoutCount = 1;  // static_cast<uint32_t>(setLayouts.size());
     layoutInfo.setLayoutCount = setLayoutCount;
     layoutInfo.pSetLayouts = &setLayout;
-    //}
 
     auto& layout = pipelineLayouts_[static_cast<int>(type)];
     vk::assert_success(vkCreatePipelineLayout(inst_.ctx_.dev, &layoutInfo, nullptr, &layout));

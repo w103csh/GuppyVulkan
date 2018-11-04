@@ -20,23 +20,16 @@ void Plane::createIndices(std::vector<VB_INDEX_TYPE>& indices, bool doubleSided)
 // ColorPlane
 // **********************
 
-ColorPlane::ColorPlane() : Plane(), ColorMesh() {
+ColorPlane::ColorPlane(glm::mat4 model, bool doubleSided)
+    : ColorMesh(std::make_unique<Material>(), "", model) {
     markerName_ = "ColorPlane";
     createVertices();
-    Plane::createIndices(indices_);
-}
-
-ColorPlane::ColorPlane(float width, float height, bool doubleSided, glm::vec3 pos, glm::mat4 rot) {
-    markerName_ = "ColorPlane";
-    createVertices(width, height);
-    for (auto& vertex : vertices_) {
-        vertex.pos = glm::vec4(vertex.pos, 0.0) * rot;
-        vertex.pos += pos;
-    }
     Plane::createIndices(indices_, doubleSided);
 }
 
-void ColorPlane::createVertices(float width, float height) {
+void ColorPlane::createVertices() {
+    float width, height;
+    width = height = 2.0f;
     float l = (width / 2 * -1), r = (width / 2);
     float b = (height / 2 * -1), t = (height / 2);
     vertices_ = {
@@ -71,25 +64,16 @@ void ColorPlane::createVertices(float width, float height) {
 // TexturePlane
 // **********************
 
-TexturePlane::TexturePlane(std::shared_ptr<Texture::TextureData> pTex) : TextureMesh(pTex) {
+TexturePlane::TexturePlane(std::shared_ptr<Texture::Data> pTexture, glm::mat4 model, bool doubleSided)
+    : TextureMesh(std::make_unique<Material>(pTexture), "", model) {
     markerName_ = "TexturePlane";
     createVertices();
-    Plane::createIndices(indices_);
-}
-
-TexturePlane::TexturePlane(std::shared_ptr<Texture::TextureData> pTex, float width, float height, bool doubleSided, glm::vec3 pos,
-                           glm::mat4 rot)
-    : TextureMesh(pTex) {
-    markerName_ = "TexturePlane";
-    createVertices(width, height);
-    for (auto& vertex : vertices_) {
-        vertex.pos = glm::vec4(vertex.pos, 0.0) * rot;
-        vertex.pos += pos;
-    }
     Plane::createIndices(indices_, doubleSided);
 }
 
-void TexturePlane::createVertices(float width, float height) {
+void TexturePlane::createVertices() {
+    float width, height;
+    width = height = 2.0f;
     float l = (width / 2 * -1), r = (width / 2);
     float b = (height / 2 * -1), t = (height / 2);
     vertices_ = {

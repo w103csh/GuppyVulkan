@@ -248,14 +248,46 @@ Game::KEY ShellWin32::get_key(WPARAM wParam, InputHandler::INPUT_TYPE type) {
         case 'q':
             key = Game::KEY::KEY_Q;
             break;
-        case '_':
+        // NUMBER KEYS
+        case '1':
+            key = Game::KEY::KEY_1;
+            break;
+        case '2':
+            key = Game::KEY::KEY_2;
+            break;
+            break;
+        case '3':
+            key = Game::KEY::KEY_3;
+            break;
+        case '4':
+            key = Game::KEY::KEY_4;
+            break;
+        case '5':
+            key = Game::KEY::KEY_5;
+            break;
+            break;
+        case '6':
+            key = Game::KEY::KEY_6;
+            break;
+        case '7':
+            key = Game::KEY::KEY_7;
+            break;
+        case '8':
+            key = Game::KEY::KEY_8;
+            break;
+        case '9':
+            key = Game::KEY::KEY_9;
+            break;
+        case '0':
+            key = Game::KEY::KEY_0;
+            break;
         case '-':
             key = Game::KEY::KEY_MINUS;
             break;
-        case '+':
         case '=':
             key = Game::KEY::KEY_PLUS;
             break;
+        // FUNCTION KEYS
         case VK_F1:
             key = Game::KEY::KEY_F1;
             break;

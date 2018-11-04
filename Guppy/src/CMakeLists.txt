@@ -26,6 +26,8 @@ set(SOURCE
     LoadingResourceHandler.cpp
     LoadingResourceHandler.h
     Main.cpp
+	Material.cpp
+	Material.h
 	Mesh.cpp
 	Mesh.h
     Model.cpp
@@ -54,6 +56,7 @@ file(GLOB SHADERS
     shaders/*.geom # - geometry shader
     shaders/*.frag # - fragment shader
     shaders/*.comp # - compute shader
+    shaders/*.glsl # - general
     shaders/compile.bat
     )
 

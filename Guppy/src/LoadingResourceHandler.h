@@ -1,9 +1,11 @@
 #ifndef LDG_RESOURCE_HANDLER_H
 #define LDG_RESOURCE_HANDLER_H
 
-#include "Helpers.h"
 #include <vector>
 #include <vulkan\vulkan.h>
+
+#include "Helpers.h"
+#include "MyShell.h"
 
 struct LoadingResources {
     LoadingResources() : shouldWait(false) {};

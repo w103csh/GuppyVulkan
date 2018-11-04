@@ -106,6 +106,9 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
                            const VkImageLayout &newLayout, VkPipelineStageFlags srcStages, VkPipelineStageFlags dstStages,
                            uint32_t mipLevels, uint32_t arrayLayers);
 
+glm::mat4 affine(glm::vec3 scale = glm::vec3(1.0f), glm::vec3 translate = glm::vec3(0.0f), float angle = 0.0f,
+                 glm::vec3 rotationAxis = glm::vec3(1.0f), glm::mat4 model = glm::mat4(1.0f));
+
 }  // namespace helpers
 
 struct ImageResource {
@@ -169,7 +172,6 @@ struct Object3d {
     }
 
     virtual inline glm::vec3 getPosition() { return obj3d_.model[3]; }
-
     virtual inline void transform(glm::mat4 t) { obj3d_.model *= t; }
 
     inline Data getData() const { return obj3d_; }

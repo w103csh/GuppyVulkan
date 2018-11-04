@@ -14,7 +14,7 @@
 
 struct DefaultUBO {
     Camera::Data camera;
-    Light::Ambient::Data light;
+    Light::Positional::Data light;
 };
 
 class Guppy : public Game {
@@ -125,7 +125,7 @@ class Guppy : public Game {
 
     // textures
     void addTexture(const VkDevice& dev, std::string path, std::string normPath = "", std::string specPath = "");
-    std::shared_ptr<Texture::TextureData> getTextureByPath(std::string path);
+    std::shared_ptr<Texture::Data> getTextureByPath(std::string path);
     void updateTextures(const VkDevice& dev);
     float test = 1.0;
 
@@ -144,7 +144,7 @@ class Guppy : public Game {
     Camera camera_;
     // directional lights
     bool showLightHelpers_ = true;
-    Light::Ambient light_;
+    Light::Positional light_;
     size_t lightHelperOffset_;
 
     // scene
@@ -152,8 +152,8 @@ class Guppy : public Game {
     std::vector<std::unique_ptr<Scene>> scenes_;
 
     // textures
-    std::vector<std::shared_ptr<Texture::TextureData>> textures_;
-    std::vector<std::future<std::shared_ptr<Texture::TextureData>>> texFutures_;
+    std::vector<std::shared_ptr<Texture::Data>> textures_;
+    std::vector<std::future<std::shared_ptr<Texture::Data>>> texFutures_;
 };
 
 #endif  // !GUPPY_H

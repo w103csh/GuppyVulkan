@@ -15,7 +15,7 @@ class Scene {
    public:
     Scene() = delete;
     Scene(const MyShell::Context &ctx, const Game::Settings &settings, const UniformBufferResources &uboResource,
-          std::vector<std::shared_ptr<Texture::TextureData>> &pTextures);
+          std::vector<std::shared_ptr<Texture::Data>> &pTextures);
 
     // TODO: there is too much redundancy here...
     size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<ColorMesh> pMesh);
@@ -87,7 +87,7 @@ class Scene {
 
     // Uniform buffer
     void createDynamicTexUniformBuffer(const MyShell::Context &ctx, const Game::Settings &settings,
-                                    std::vector<std::shared_ptr<Texture::TextureData>> &textures, std::string markerName = "");
+                                    std::vector<std::shared_ptr<Texture::Data>> &textures, std::string markerName = "");
     std::shared_ptr<UniformBufferResources> pDynUboResource_;
 };
 

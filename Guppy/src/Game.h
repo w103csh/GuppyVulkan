@@ -83,6 +83,17 @@ class Game {
         KEY_D,
         KEY_E,
         KEY_Q,
+        // number keys
+        KEY_1,
+        KEY_2,
+        KEY_3,
+        KEY_4,
+        KEY_5,
+        KEY_6,
+        KEY_7,
+        KEY_8,
+        KEY_9,
+        KEY_0,
         KEY_PLUS,
         KEY_MINUS,
         // function keys

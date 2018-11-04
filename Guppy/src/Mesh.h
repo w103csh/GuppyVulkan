@@ -9,6 +9,8 @@
 #include "Constants.h"
 #include "MyShell.h"
 #include "Helpers.h"
+#include "Material.h"
+#include "LoadingResourceHandler.h"
 #include "PipelineHandler.h"
 #include "Texture.h"
 
@@ -20,8 +22,8 @@ class Mesh : public Object3d {
    public:
     enum class STATUS { PENDING = 0, VERTICES_LOADED, PENDING_TEXTURE, READY };
 
-    Mesh();
-    Mesh(std::string modelPath, glm::mat4 transform = glm::mat4(1.0f), float scale = 1.0f);
+    Mesh(std::unique_ptr<Material> pMaterial);
+    Mesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model = glm::mat4(1.0f));
     /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTR OF THIS CLASS.
         IF THIS IS REMOVED THE DESCTRUCTOR HERE WILL BE CALLED INSTEAD OF THE DERIVED DESCTRUCTOR.
         IT MIGHT JUST BE EASIER/SMARTER TO GET RID OF POLYMORPHISM AND DROP THE POINTERS. */
@@ -72,6 +74,7 @@ class Mesh : public Object3d {
         return p_bufferSize;
     }
 
+    std::unique_ptr<LoadingResources> pLdgRes_;
     std::string modelPath_;
     std::string markerName_;
     Vertex::TYPE vertexType_;
@@ -80,9 +83,7 @@ class Mesh : public Object3d {
     std::vector<VB_INDEX_TYPE> indices_;
     BufferResource index_res_;
     size_t offset_;
-    std::unique_ptr<LoadingResources> pLdgRes_;
-    glm::mat4 transform_;
-    float scale_;
+    std::unique_ptr<Material> pMaterial_;
 
    private:
     void createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res);
@@ -95,20 +96,14 @@ class Mesh : public Object3d {
 
 class ColorMesh : public Mesh {
    public:
-    ColorMesh();
-    ColorMesh(std::string modelPath, glm::mat4 transform = glm::mat4(1.0f), float scale = 1.0f);
+    ColorMesh(std::unique_ptr<Material> pMaterial);
+    ColorMesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model = glm::mat4(1.0f));
 
     typedef enum FLAGS {
         POLY = 0x00000001,
         LINE = 0x00000002,
         // THROUGH 0x00000008
     } FLAGS;
-
-    // Object3d
-    virtual inline void transform(glm::mat4 t) override {
-        Object3d::transform(t);
-        for (auto& v : vertices_) v.pos = obj3d_.model * glm::vec4(v.pos, 1.0f);
-    }
 
     // VERTEX
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
@@ -124,7 +119,7 @@ class ColorMesh : public Mesh {
     void loadObj() override;
 
     std::vector<Vertex::Color> vertices_;
-    Flags flags_;
+    FlagBits flags_;
 };
 
 // **********************
@@ -142,15 +137,8 @@ class LineMesh : public ColorMesh {
 
 class TextureMesh : public Mesh {
    public:
-    TextureMesh(std::shared_ptr<Texture::TextureData> pTex);
-    TextureMesh(std::shared_ptr<Texture::TextureData> pTex, std::string modelPath, glm::mat4 transform = glm::mat4(1.0f),
-                float scale = 1.0f);
-
-    // Object3d
-    virtual inline void transform(glm::mat4 t) override {
-        Object3d::transform(t);
-        for (auto& v : vertices_) v.pos = obj3d_.model * glm::vec4(v.pos, 1.0f);
-    }
+    TextureMesh(std::unique_ptr<Material> pMaterial);
+    TextureMesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model = glm::mat4(1.0f));
 
     // INIT
     void setSceneData(const MyShell::Context& ctx, size_t offset) override;
@@ -171,12 +159,12 @@ class TextureMesh : public Mesh {
 
     // TEXTURE
     inline void tryCreateDescriptorSets(std::unique_ptr<DescriptorResources>& pRes) {
-        if (pTex_->status == Texture::STATUS::READY) {
-            PipelineHandler::createTextureDescriptorSets(pTex_->imgDescInfo, pTex_->offset, pRes);
+        if (pMaterial_->getTexture().status == Texture::STATUS::READY) {
+            PipelineHandler::createTextureDescriptorSets(pMaterial_->getTexture().imgDescInfo, pMaterial_->getTexture().offset, pRes);
             status_ = STATUS::READY;
         }
     }
-    inline uint32_t getTextureOffset() const { return pTex_->offset; }
+    inline uint32_t getTextureOffset() const { return pMaterial_->getTexture().offset; }
 
     void destroy(const VkDevice& dev) override;
 
@@ -188,7 +176,6 @@ class TextureMesh : public Mesh {
     std::vector<Vertex::Texture> vertices_;
 
    private:
-    std::shared_ptr<Texture::TextureData> pTex_;
     std::vector<VkDescriptorSet> descSets_;
     std::vector<VkCommandBuffer> secCmds_;
 };

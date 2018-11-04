@@ -9,7 +9,7 @@
 
 #include "Vertex.h"
 
-typedef uint32_t Flags;
+typedef uint32_t FlagBits;
 
 constexpr auto APP_SHORT_NAME = "Guppy Application";
 constexpr auto DEPTH_PRESENT = true;
@@ -60,6 +60,8 @@ const float MIN_SAMPLE_SHADING = 0.2f;
 const std::string CHALET_MODEL_PATH = ROOT_PATH + "data\\chalet.obj";
 const std::string MED_H_MODEL_PATH = ROOT_PATH + "data\\Medieval_House.obj";
 const std::string SPHERE_MODEL_PATH = ROOT_PATH + "data\\sphere.obj";
+const std::string TORUS_MODEL_PATH = ROOT_PATH + "data\\torus.obj";
+const std::string SOMETHING_MODEL_PATH = ROOT_PATH + "data\\pig_triangulated.obj";
 // jpgs
 const std::string CHALET_TEX_PATH = ROOT_PATH + "images\\chalet.jpg";
 const std::string STATUE_TEX_PATH = ROOT_PATH + "images\\texture.jpg";

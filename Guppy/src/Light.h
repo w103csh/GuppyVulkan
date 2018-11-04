@@ -19,38 +19,32 @@ typedef enum FLAGS {
     MODE_LAMERTIAN = 0x00000010,
     MODE_BLINN_PHONG = 0x00000020,
     // THROUGH 0x00000080
+    BITS_MAX_ENUM = 0x7FFFFFFF
 } FLAGS;
 
-class Ambient : public Object3d {
+class Positional : public Object3d {
    public:
     struct Data {
-        Object3d::Data obj3d;
-        // 64
-        glm::vec3 color;
-        Flags flags;
-        // 16
-        float intensity;
-        float phongExp;
-        // 8 rem
+        glm::vec4 position;  // 16
+        glm::vec3 La;        // 12 (Ambient light intensity)
+        FlagBits flags;      // 4
+        glm::vec3 L;         // 12 Diffuse and specular light intensity
+        // 4 rem
     };
 
-    Ambient()
-        : color{1.0f, 1.0f, 1.0f},
-          flags{FLAGS::HIDE},
-          intensity(0.7f),
-          phongExp(1000.0f){};
-
-    // Ambient(glm::mat4 m, glm::vec3 c, Flags f, float I, float p) : data_(m) color(c), flags(f), intensity(I), phongExp(p){};
+    Positional() : flags_(FLAGS::SHOW), La_(glm::vec3(0.2f)), L_(glm::vec3(0.6f)){};
 
     // bool operator==(const Base& other) const { return pos == other.pos && normal == other.normal; }
 
-    inline Data getData() { return {obj3d_, color, flags, intensity, phongExp}; };
+    inline FlagBits getFlags() const { return flags_; }
+    inline void setFlags(FlagBits flags) { flags_ = flags; }
 
-    glm::vec3 color;
-    Flags flags;
-    // 16
-    float intensity;
-    float phongExp;
+    Data getData();
+
+   private:
+    FlagBits flags_;
+    glm::vec3 La_;
+    glm::vec3 L_;
 
 };  // struct Base
 

@@ -1,4 +1,6 @@
 
+#include <glm/gtc/matrix_transform.hpp>
+
 #include "CmdBufHandler.h"
 #include "Helpers.h"
 
@@ -70,7 +72,7 @@ VkDeviceSize createBuffer(const VkDevice &dev, const VkDeviceSize &size, const V
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memReqs.size;
     auto pass = getMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                         &allocInfo.memoryTypeIndex);
+                              &allocInfo.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
     /*
@@ -153,7 +155,8 @@ void createImage(const VkDevice &dev, const std::vector<uint32_t> &queueFamilyIn
     vk::assert_success(vkBindImageMemory(dev, image, memory, 0));
 }
 
-void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount, const VkBuffer &srcBuff, const VkImage &dstImg) {
+void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount, const VkBuffer &srcBuff,
+                       const VkImage &dstImg) {
     VkBufferImageCopy region = {};
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
@@ -173,7 +176,8 @@ void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t heig
 }
 
 void createImageView(const VkDevice &device, const VkImage &image, const uint32_t &mipLevels, const VkFormat &format,
-                     const VkImageAspectFlags &aspectFlags, const VkImageViewType &viewType, uint32_t layerCount, VkImageView &view) {
+                     const VkImageAspectFlags &aspectFlags, const VkImageViewType &viewType, uint32_t layerCount,
+                     VkImageView &view) {
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
@@ -305,6 +309,10 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
 
         vkCmdPipelineBarrier(cmd, srcStages, dstStages, 0, 0, nullptr, 0, nullptr, 1, &barrier);
     }
+}
+
+glm::mat4 affine(glm::vec3 scale, glm::vec3 translate, float angle, glm::vec3 rotationAxis, glm::mat4 model) {
+    return glm::translate(glm::scale(glm::rotate(model, angle, rotationAxis), scale), translate);
 }
 
 }  // namespace helpers

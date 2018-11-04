@@ -24,8 +24,8 @@ class Texture {
         SPECULAR = 0x00000100,
         // THROUGH 0x00000800
     } FLAGS;
-    struct TextureData {
-        TextureData(uint32_t offset, std::string path, std::string normPath = "", std::string specPath = "")
+    struct Data {
+        Data(uint32_t offset, std::string path, std::string normPath = "", std::string specPath = "")
             : offset(offset),
               status(STATUS::PENDING),
               flags(0),
@@ -44,7 +44,7 @@ class Texture {
             assert(flags);
         };
         STATUS status;
-        Flags flags;
+        FlagBits flags;
         VkImage image;
         VkDeviceMemory memory;
         VkSampler sampler;
@@ -56,17 +56,17 @@ class Texture {
         stbi_uc *pixels, *normPixels, *specPixels;
     };
 
-    static std::future<std::shared_ptr<Texture::TextureData>> loadTexture(const VkDevice& dev, const bool makeMipmaps,
-                                                                          std::shared_ptr<TextureData> pTex);
-    static void createTexture(const VkDevice& dev, const bool makeMipmaps, std::shared_ptr<TextureData> pTex);
+    static std::future<std::shared_ptr<Texture::Data>> loadTexture(const VkDevice& dev, const bool makeMipmaps,
+                                                                          std::shared_ptr<Data> pTexture);
+    static void createTexture(const VkDevice& dev, const bool makeMipmaps, std::shared_ptr<Data> pTexture);
 
    private:
-    static void createImage(const VkDevice& dev, TextureData& tex);
-    static void createImageView(const VkDevice& dev, TextureData& tex);
-    static void createSampler(const VkDevice& dev, TextureData& tex);
-    static void createDescInfo(TextureData& tex);
-    static void generateMipmaps(const TextureData& tex);
-    static uint32_t getArrayLayerCount(const TextureData& tex);
+    static void createImage(const VkDevice& dev, Data& tex);
+    static void createImageView(const VkDevice& dev, Data& tex);
+    static void createSampler(const VkDevice& dev, Data& tex);
+    static void createDescInfo(Data& tex);
+    static void generateMipmaps(const Data& tex);
+    static uint32_t getArrayLayerCount(const Data& tex);
 
 };  // class Texture
 
