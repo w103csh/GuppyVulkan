@@ -86,7 +86,10 @@ void Guppy::attach_shell(MyShell& sh) {
     CmdBufHandler::init(ctx);
     LoadingResourceHandler::init(ctx);
 
+    createLights();
     createUniformBuffer();
+
+    ShaderHandler::init(sh, settings(), defUBO_.positionalLights.size());
 
     PipelineHandler::init(ctx, settings());
 
@@ -128,6 +131,7 @@ void Guppy::detach_shell() {
 
     CmdBufHandler::destroy();
     PipelineHandler::destroy();
+    ShaderHandler::destroy();
     LoadingResourceHandler::cleanupResources();
 
     destroyUniformBuffer();
@@ -204,10 +208,12 @@ void Guppy::on_key(KEY key) {
             }
         } break;
         case KEY::KEY_5: {
-            if ((light_.getFlags() & Light::FLAGS::SHOW) > 0) {
-                light_.setFlags(Light::FLAGS::HIDE);
-            } else {
-                light_.setFlags(Light::FLAGS::SHOW);
+            for (auto& light : positionalLights_) {
+                if ((light.getFlags() & Light::FLAGS::SHOW) > 0) {
+                    light.setFlags(Light::FLAGS::HIDE);
+                } else {
+                    light.setFlags(Light::FLAGS::SHOW);
+                }
             }
             // if (test < 3) {
             //    addTexture(dev_, STATUE_TEXTURE_PATH);
@@ -373,17 +379,25 @@ void Guppy::prepare_framebuffers(const VkSwapchainKHR& swapchain) {
 void Guppy::createUniformBuffer(std::string markerName) {
     const MyShell::Context& ctx = shell_->context();
 
+    // camera
     camera_.update(static_cast<float>(settings_.initial_width) / static_cast<float>(settings_.initial_height));
+    // lights
+    defUBO_.positionalLights.resize(positionalLights_.size());
 
-    UBOResource_.count = 1;
-    UBOResource_.info.offset = 0;
-    UBOResource_.info.range = sizeof(DefaultUBO);
+    VkDeviceSize size = 0;
+    // camera
+    size += sizeof(Camera::Data);
+    // lights
+    size += sizeof(Light::Positional::Data) * defUBO_.positionalLights.size();
 
-    UBOResource_.size = helpers::createBuffer(dev_, UBOResource_.info.range, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    UBOResource_.size = helpers::createBuffer(dev_, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
                                               UBOResource_.buffer, UBOResource_.memory);
 
-    copyUniformBufferMemory();
+    UBOResource_.count = 1;
+    UBOResource_.info.offset = 0;
+    UBOResource_.info.range = size;
+    UBOResource_.info.buffer = UBOResource_.buffer;
 
     if (settings_.enable_debug_markers) {
         if (markerName.empty()) markerName += "Default";
@@ -393,6 +407,20 @@ void Guppy::createUniformBuffer(std::string markerName) {
         ext::DebugMarkerSetObjectTag(dev_, (uint64_t)UBOResource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(uboTag),
                                      &uboTag);
     }
+}
+
+void Guppy::copyUniformBufferMemory() {
+    uint8_t* pData;
+    vk::assert_success(vkMapMemory(dev_, UBOResource_.memory, 0, UBOResource_.size, 0, (void**)&pData));
+
+    // camera
+    memcpy(pData, &defUBO_.camera, sizeof(Camera::Data));
+    // lights
+    memcpy(pData + sizeof(Camera::Data), defUBO_.positionalLights.data(),
+           sizeof(Light::Positional::Data) * defUBO_.positionalLights.size());
+
+    vkUnmapMemory(dev_, UBOResource_.memory);
+
 }
 
 void Guppy::updateUniformBuffer() {
@@ -419,29 +447,17 @@ void Guppy::updateUniformBuffer() {
     defUBO_.camera.mvp = camera_.getMVP();
     defUBO_.camera.position = camera_.getPosition();
 
-    // Update the directional light...
-    defUBO_.light = light_.getData();
+    // Update the light...
+    for (size_t i = 0; i < positionalLights_.size(); i++) {
+        auto& light = positionalLights_[i];
+        light.getData(defUBO_.positionalLights[i]);
+    }
 
     // If these change update them here...
     // uboResource_.info.offset = 0;
     // uboResource_.info.range = sizeof(DefaultUBO);
 
     copyUniformBufferMemory();
-}
-
-void Guppy::copyUniformBufferMemory() {
-    uint8_t* pData;
-    vk::assert_success(vkMapMemory(dev_, UBOResource_.memory, 0, UBOResource_.size, 0, (void**)&pData));
-
-    memcpy(pData, &defUBO_, sizeof(defUBO_));
-    //// Camera
-    // memcpy(pData, &mvp, sizeof(mvp));
-    //// Directional light
-    // memcpy(pData + sizeof(mvp), &dirLight_, sizeof(dirLight_));
-
-    vkUnmapMemory(dev_, UBOResource_.memory);
-
-    UBOResource_.info.buffer = UBOResource_.buffer;
 }
 
 void Guppy::destroyUniformBuffer() {
@@ -567,6 +583,16 @@ void Guppy::destroy_depth_resources() {
     vkDestroyImage(dev_, depth_resource_.image, nullptr);
     vkFreeMemory(dev_, depth_resource_.memory, nullptr);
 }
+
+void Guppy::createLights() {
+    // TODO: move the light code into the scene, including ubo data
+    positionalLights_.push_back(Light::Positional());
+    positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(1.5f, 1.5f, 0.5f)));
+
+    positionalLights_.push_back(Light::Positional());
+    positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(-1.5f, -1.5f, 0.5f)));
+}
+
 void Guppy::createScenes() {
     auto ctx = shell_->context();
 
@@ -590,11 +616,11 @@ void Guppy::createScenes() {
     }
 
     // Lights
-    // TODO: move the light code into the scene, including ubo data
-    light_.transform(glm::translate(glm::mat4(1.0f), glm::vec3(1.5f, 1.5f, 0.5f)));
     if (showLightHelpers_) {
-        std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(light_, 1.0f);
-        lightHelperOffset_ = active_scene()->addMesh(shell_->context(), std::move(pHelper));
+        for (auto& light : positionalLights_) {
+            std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(light, 1.0f);
+            lightHelperOffset_ = active_scene()->addMesh(shell_->context(), std::move(pHelper));
+        }
     }
 
     assert(active_scene_index_ >= 0);

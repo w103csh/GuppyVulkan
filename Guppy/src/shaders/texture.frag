@@ -3,7 +3,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 // DECLARATIONS
-vec3 getColor(vec3 normal, vec3 ambientColor, vec3 diffuseColor, vec3 spectralColor, uint shininess);
+vec3 getColor(uint shininess);
 
 // MATERIAL FLAGS
 const uint PER_MATERIAL_COLOR   = 0x00000001u;
@@ -52,8 +52,9 @@ layout(binding = 2) uniform DynamicUniformBuffer {
 // OUT
 layout(location = 0) out vec4 outColor;
 
+vec3 n, v, Ka, Kd, Ks;
+
 void main() {
-    vec3 Ka, Kd, Ks, worldNormal;
     float opacity;
     int samplerOffset = 0;
 
@@ -85,16 +86,13 @@ void main() {
 
     // Normal
     if ((dynamicUbo.texFlags & TEX_NORMAL) > 0) {
-        worldNormal = normalize(vec3(texture(texSampler, vec3(fragTexCoord, samplerOffset++))));
+        n = normalize(vec3(texture(texSampler, vec3(fragTexCoord, samplerOffset++))));
     } else {
-	    worldNormal = normalize(mat3(pushConstantsBlock.model) * fragNormal);
+	    n = normalize(mat3(pushConstantsBlock.model) * fragNormal);
     }
-    
+
     outColor = vec4(
-        getColor(
-            worldNormal,
-            Ka, Kd, Ks, pushConstantsBlock.material.shininess
-        ),
+        getColor(pushConstantsBlock.material.shininess),
         pushConstantsBlock.material.opacity
     );
 }

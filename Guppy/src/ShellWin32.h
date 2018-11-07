@@ -24,13 +24,25 @@
 #include "InputHandler.h"
 #include "MyShell.h"
 
+#define BUFSIZE 8
+
+typedef struct _DIR_INST {
+    OVERLAPPED oOverlap;
+    HANDLE hDir;
+    FILE_NOTIFY_INFORMATION lpBuffer[BUFSIZE];
+    LPDWORD lpBytesReturned;
+    BOOL firstComp;
+    std::function<void(std::string)> callback;
+} DIR_INST, *LPDIR_INST;
+
 class ShellWin32 : public MyShell {
    public:
     ShellWin32(Game &game);
     ~ShellWin32();
 
-    void run();
-    void quit();
+    void watch_directory(std::string dir, std::function<void(std::string)> callback) override;
+    void run() override;
+    void quit() override;
 
    private:
     PFN_vkGetInstanceProcAddr load_vk();
@@ -52,6 +64,12 @@ class ShellWin32 : public MyShell {
         return shell->handle_message(uMsg, wParam, lParam);
     }
     LRESULT handle_message(UINT msg, WPARAM wparam, LPARAM lparam);
+
+    // Directory listener
+    std::string GetWorkingDirectory();
+    std::string GetLastErrorAsString();
+    void CheckDirectories();
+    std::vector<DIR_INST> dirInsts_;
 
     HINSTANCE hinstance_;
     HWND hwnd_;

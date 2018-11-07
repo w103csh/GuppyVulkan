@@ -11,11 +11,7 @@
 #include "MyShell.h"
 #include "Scene.h"
 #include "Texture.h"
-
-struct DefaultUBO {
-    Camera::Data camera;
-    Light::Positional::Data light;
-};
+#include "Shader.h"
 
 class Guppy : public Game {
    public:
@@ -50,14 +46,6 @@ class Guppy : public Game {
 
     VkPhysicalDeviceProperties physical_dev_props_;
     std::vector<VkMemoryPropertyFlags> mem_flags_;
-
-    VkRenderPass render_pass_;
-    ShaderResources vs_;
-    ShaderResources fs_;
-    VkPipelineCache pipeline_cache_;
-    std::vector<VkDescriptorSetLayout> desc_set_layouts_;
-    VkPipelineLayout pipeline_layout_;
-    VkPipeline pipeline_;
 
     VkCommandPool primary_cmd_pool_;
     std::vector<VkCommandPool> worker_cmd_pools_;
@@ -100,6 +88,7 @@ class Guppy : public Game {
 
     // called by attach_shell
     void createUniformBuffer(std::string markName = "");
+    void createLights();
     void createTextures();
     void createScenes();
 
@@ -138,13 +127,13 @@ class Guppy : public Game {
     ImageResource depth_resource_;
 
     // uniform buffer
-    DefaultUBO defUBO_;
+    DefaultUniformBuffer defUBO_;
     UniformBufferResources UBOResource_;
     // camera
     Camera camera_;
-    // directional lights
+    // lights
     bool showLightHelpers_ = true;
-    Light::Positional light_;
+    std::vector<Light::Positional> positionalLights_;
     size_t lightHelperOffset_;
 
     // scene

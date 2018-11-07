@@ -40,6 +40,8 @@ set(SOURCE
     Plane.h
 	Scene.cpp
 	Scene.h
+	Shader.cpp
+	shader.h
     Shell.cpp
     Shell.h
     Texture.cpp

@@ -118,6 +118,7 @@ class MyShell {
     };
     virtual void log(LogPriority priority, const char *msg) const;
 
+    virtual void watch_directory(std::string dir, std::function<void(std::string)> callback) = 0;
     virtual void run() = 0;
     virtual void quit() = 0;
 

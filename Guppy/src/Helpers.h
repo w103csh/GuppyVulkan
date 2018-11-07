@@ -47,6 +47,18 @@ std::vector<T> &&slice(const std::vector<T> &v, int m, int n) {
     return std::vector<T> vec(first, last);
 }
 
+static std::string getFilePath(std::string s) {
+    char sep = '/';
+#ifdef _WIN32
+    sep = '\\';
+#endif
+    size_t i = s.rfind(sep, s.length());
+    if (i != std::string::npos) {
+        return (s.substr(0, i + 1));
+    }
+    return ("");
+}
+
 static std::string getFileName(std::string s) {
     char sep = '/';
 #ifdef _WIN32
@@ -116,11 +128,6 @@ struct ImageResource {
     VkImage image;
     VkDeviceMemory memory;
     VkImageView view;
-};
-
-struct ShaderResources {
-    VkPipelineShaderStageCreateInfo info;
-    VkShaderModule module;
 };
 
 struct UniformBufferResources {

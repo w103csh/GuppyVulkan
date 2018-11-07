@@ -1,7 +1,9 @@
 
 #include "Light.h"
 
-Light::Positional::Data Light::Positional::getData() {
-    auto position = glm::vec4(getPosition(), 1.0f);
-    return {position, La_, flags_, L_};
+void Light::Positional::getData(Positional::Data& data) {
+    data.position = glm::vec4(getPosition(), 1.0f);
+    data.La = La_;
+    data.flags = flags_;
+    data.L = L_;
 };

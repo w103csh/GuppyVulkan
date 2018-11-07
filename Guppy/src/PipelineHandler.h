@@ -5,6 +5,7 @@
 #include <vulkan/vulkan.h>
 
 #include "MyShell.h"
+#include "Shader.h"
 #include "Vertex.h"
 
 struct DescriptorResources {
@@ -70,9 +71,6 @@ class PipelineHandler {
         VkAttachmentReference depth;
     };
 
-    static void createShaderModule(const std::vector<const char *> pShaderTexts, VkShaderStageFlagBits stage,
-                                   ShaderResources &shaderResources, bool initGlslang = true, std::string markerName = "");
-
     static std::unique_ptr<DescriptorResources> createDescriptorResources(std::vector<VkDescriptorBufferInfo> uboInfos,
                                                                           std::vector<VkDescriptorBufferInfo> dynUboInfos,
                                                                           size_t colorCount, size_t texCount);
@@ -101,12 +99,9 @@ class PipelineHandler {
 
    private:
     PipelineHandler();  // Prevent construction
-
     static PipelineHandler inst_;
-
     void reset();
 
-    void createShaderModules();
     void createPushConstantRange();
     void createDescriptorPool(std::unique_ptr<DescriptorResources> &pDescResources);
     void createDescriptorSetLayout(Vertex::TYPE type, VkDescriptorSetLayout &setLayout);
@@ -116,7 +111,7 @@ class PipelineHandler {
     void createPipelineLayout(Vertex::TYPE type, const VkDescriptorSetLayout &setLayout, std::string markerName = "");
     // maybe make something like below public ...
     void createInputStateCreateInfo(Vertex::TYPE type, PipelineCreateInfoResources &resources);
-    void createBasePipeline(Vertex::TYPE vertexType, TOPOLOGY pipelineType, const ShaderResources &vs, const ShaderResources &fs,
+    void createBasePipeline(Vertex::TYPE vertexType, TOPOLOGY pipelineType, const Shader &vs, const Shader &fs,
                             PipelineCreateInfoResources &createRes, PipelineResources &pipelineRes);
 
     MyShell::Context ctx_;     // TODO: shared_ptr
@@ -130,15 +125,8 @@ class PipelineHandler {
     // attachments
     DefaultAttachementReferences defAttachRefs_;
     std::vector<VkAttachmentDescription> attachments_;
-    // VERTEX SHADERS
-    ShaderResources colorVS_;
-    ShaderResources texVS_;
-    // FRAGMENT SHADERS
-    ShaderResources colorFS_;
-    ShaderResources lineFS_;
-    ShaderResources texFS_;
     // create info
-    PipelineCreateInfoResources createResources;
+    PipelineCreateInfoResources createResources_;
     // global storage for clean up
     std::vector<std::unique_ptr<DescriptorResources>> oldDescRes_;
 };

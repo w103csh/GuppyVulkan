@@ -25,10 +25,10 @@ typedef enum FLAGS {
 class Positional : public Object3d {
    public:
     struct Data {
-        glm::vec4 position;  // 16
-        glm::vec3 La;        // 12 (Ambient light intensity)
-        FlagBits flags;      // 4
-        glm::vec3 L;         // 12 Diffuse and specular light intensity
+        glm::vec4 position;       // 16
+        glm::vec3 La;             // 12 (Ambient light intensity)
+        FlagBits flags;           // 4
+        alignas(16) glm::vec3 L;  // 12 Diffuse and specular light intensity
         // 4 rem
     };
 
@@ -39,7 +39,7 @@ class Positional : public Object3d {
     inline FlagBits getFlags() const { return flags_; }
     inline void setFlags(FlagBits flags) { flags_ = flags; }
 
-    Data getData();
+    void getData(Data& data);
 
    private:
     FlagBits flags_;

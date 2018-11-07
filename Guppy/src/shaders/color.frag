@@ -3,7 +3,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 // DECLARATIONS
-vec3 getColor(vec3 normal, vec3 ambientColor, vec3 diffuseColor, vec3 spectralColor, uint shininess);
+vec3 getColor(uint shininess);
 
 // MATERIAL FLAGS
 const uint PER_MATERIAL_COLOR   = 0x00000001u;
@@ -31,8 +31,9 @@ layout(push_constant) uniform PushBlock {
 // OUT
 layout(location = 0) out vec4 outColor;
 
+vec3 n, Ka, Kd, Ks;
+
 void main() {
-    vec3 Ka, Kd, Ks;
     float opacity;
 
 	vec3 worldNormal = normalize(mat3(pushConstantsBlock.model) * fragNormal);
@@ -52,10 +53,7 @@ void main() {
     }
     
     outColor = vec4(
-        getColor(
-            worldNormal,
-            Ka, Kd, Ks, pushConstantsBlock.material.shininess
-        ),
+        getColor(pushConstantsBlock.material.shininess),
         pushConstantsBlock.material.opacity
     );
 }

@@ -15,17 +15,24 @@
  */
 
 #include <cassert>
+#include <chrono>
 #include <iostream>
 #include <sstream>
+#include <thread>
 
+#include <tchar.h>
 #include <windowsx.h>
 
+#include "Constants.h"
 #include "Game.h"
 #include "Helpers.h"
 #include "ShellWin32.h"
 
-namespace {
+#define LIMIT_FRAMERATE
 
+VOID WINAPI FileIOCompletionRoutine(DWORD, DWORD, LPOVERLAPPED);
+
+namespace {
 class Win32Timer {
    public:
     Win32Timer() {
@@ -52,7 +59,7 @@ class Win32Timer {
 
 }  // namespace
 
-ShellWin32::ShellWin32(Game &game) : MyShell(game), hwnd_(nullptr), minimized_(false) {
+ShellWin32::ShellWin32(Game& game) : MyShell(game), hwnd_(nullptr), minimized_(false) {
     instance_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     init_vk();
 }
@@ -401,7 +408,15 @@ void ShellWin32::run() {
     Win32Timer timer;
     double current_time = timer.get();
 
+#ifdef LIMIT_FRAMERATE
+    auto next_frame = std::chrono::steady_clock::now();
+#endif
+
     while (true) {
+#ifdef LIMIT_FRAMERATE
+        next_frame += std::chrono::milliseconds(1000 / 30);  // 30Hz
+#endif
+
         bool quit = false;
 
         assert(settings_.animate);
@@ -417,6 +432,8 @@ void ShellWin32::run() {
             TranslateMessage(&msg);
             DispatchMessage(&msg);
         }
+
+        if (settings_.enable_directory_listener) CheckDirectories();
 
         if (quit) {
             break;
@@ -436,9 +453,83 @@ void ShellWin32::run() {
 
             current_time = t;
         }
+
+#ifdef LIMIT_FRAMERATE
+        std::this_thread::sleep_until(next_frame);
+#endif
+    }
+
+    // Free any directory listening handles
+    for (auto& dirInst : dirInsts_) {
+        CloseHandle(dirInst.hDir);
     }
 
     destroy_context();
 
     DestroyWindow(hwnd_);
+}
+
+void ShellWin32::watch_directory(std::string dir, std::function<void(std::string)> callback) {
+    if (settings_.enable_directory_listener) {
+        // build absolute path
+        dir = GetWorkingDirectory() + ROOT_PATH + dir;
+
+        dirInsts_.push_back({});
+        // Completion routine gets called twice for some reason so I use
+        // this flag instead of spending another night on this...
+        dirInsts_.back().firstComp = true;
+        dirInsts_.back().callback = callback;
+        // Create directory listener handle
+        dirInsts_.back().hDir = CreateFile(dir.c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_WRITE | FILE_SHARE_READ | FILE_SHARE_DELETE,
+                                           NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
+        // hEvent is not used by completion function so store the listener object for use. 
+        dirInsts_.back().oOverlap.hEvent = &dirInsts_.back();
+    }
+}
+
+std::string ShellWin32::GetWorkingDirectory() {
+    char result[_MAX_PATH];
+    auto fileName = std::string(result, GetModuleFileName(NULL, result, MAX_PATH));
+    return helpers::getFilePath(fileName) + "..\\";
+}
+
+void ShellWin32::CheckDirectories() {
+    SleepEx(0, TRUE);  // FileIOCompletionRoutine requires alertable thread wait
+    for (auto& dirInst : dirInsts_) {
+        BOOL result =
+            ReadDirectoryChangesW(dirInst.hDir, dirInst.lpBuffer, sizeof(dirInst.lpBuffer), FALSE, FILE_NOTIFY_CHANGE_LAST_WRITE,
+                                  dirInst.lpBytesReturned, &dirInst.oOverlap, &FileIOCompletionRoutine);
+        if (result == 0) {
+            _tprintf(TEXT("\n ERROR: (%s)"), GetLastErrorAsString().c_str());
+        }
+    }
+}
+
+VOID WINAPI FileIOCompletionRoutine(DWORD dwErrorCode, DWORD dwNumberOfBytesTransfered, LPOVERLAPPED lpOverlapped) {
+    LPDIR_INST lpDirInst = (LPDIR_INST)lpOverlapped->hEvent;
+    lpDirInst->firstComp = !lpDirInst->firstComp;
+    if (lpDirInst->firstComp) {
+        // Divide file name length by 2 because chars are wide.
+        auto ws = std::wstring(lpDirInst->lpBuffer->FileName, lpDirInst->lpBuffer->FileNameLength / 2);
+        std::string fileName = std::string(ws.begin(), ws.end());
+        // Invoke callback with the name of the file that was modified.
+        lpDirInst->callback(fileName);
+    }
+}
+
+std::string ShellWin32::GetLastErrorAsString() {
+    // Get the error message, if any.
+    DWORD errorMessageID = ::GetLastError();
+    if (errorMessageID == 0) return std::string();  // No error message has been recorded
+
+    LPSTR messageBuffer = nullptr;
+    size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+                                 errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+
+    std::string message(messageBuffer, size);
+
+    // Free the buffer.
+    LocalFree(messageBuffer);
+
+    return message;
 }

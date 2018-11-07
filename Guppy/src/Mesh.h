@@ -114,8 +114,6 @@ class ColorMesh : public Mesh {
     }
 
    protected:
-    // LOADING
-    // Mesh* async_load(const MyShell::Context& ctx) override;
     void loadObj() override;
 
     std::vector<Vertex::Color> vertices_;
@@ -169,8 +167,6 @@ class TextureMesh : public Mesh {
     void destroy(const VkDevice& dev) override;
 
    protected:
-    // LOADING
-    // Mesh* async_load(const MyShell::Context& ctx) override;
     void loadObj() override;
 
     std::vector<Vertex::Texture> vertices_;

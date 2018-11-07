@@ -29,7 +29,7 @@ class Game {
     Game &operator=(const Game &game) = delete;
     virtual ~Game() {}
 
-    struct Settings : std::enable_shared_from_this<Settings> {
+    struct Settings {
         std::string name;
         int initial_width;
         int initial_height;
@@ -54,9 +54,10 @@ class Game {
         bool include_depth;
         bool enable_double_clicks;
         bool enable_debug_markers;
-        const std::shared_ptr<const Settings> getPtr() const { return shared_from_this(); }
+        bool enable_directory_listener;
     };
     const Settings &settings() const { return settings_; }
+    MyShell &shell() const { return (*shell_); }  // TODO: maybe don't do this??? (Used for listening to shader changes)
 
     virtual void attach_shell(MyShell &shell) { shell_ = &shell; }
     virtual void detach_shell() { shell_ = nullptr; }
@@ -152,6 +153,7 @@ class Game {
         settings_.include_depth = true;
         settings_.enable_double_clicks = false;
         settings_.enable_debug_markers = false;
+        settings_.enable_directory_listener = true;  // TODO: make this default to false
 
         parse_args(args);
     }
