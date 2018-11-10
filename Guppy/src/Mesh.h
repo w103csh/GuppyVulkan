@@ -32,7 +32,7 @@ class Mesh : public Object3d {
     // GETTERS
     inline std::string getMarkerName() const { return markerName_; }
     inline size_t getOffset() const { return offset_; }
-    inline PipelineHandler::TOPOLOGY getTopologyType() const { return topoType_; }
+    inline PIPELINE_TYPE getTopologyType() const { return pipelineType_; }
     inline Vertex::TYPE getVertexType() const { return vertexType_; }
     inline STATUS getStatus() const { return status_; }
     STATUS status_;
@@ -78,7 +78,7 @@ class Mesh : public Object3d {
     std::string modelPath_;
     std::string markerName_;
     Vertex::TYPE vertexType_;
-    PipelineHandler::TOPOLOGY topoType_;
+    PIPELINE_TYPE pipelineType_;
     BufferResource vertex_res_;
     std::vector<VB_INDEX_TYPE> indices_;
     BufferResource index_res_;

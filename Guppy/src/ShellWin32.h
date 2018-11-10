@@ -66,6 +66,7 @@ class ShellWin32 : public MyShell {
     LRESULT handle_message(UINT msg, WPARAM wparam, LPARAM lparam);
 
     // Directory listener
+    void AsyncAlert(DWORD);
     std::string GetWorkingDirectory();
     std::string GetLastErrorAsString();
     void CheckDirectories();

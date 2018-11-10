@@ -381,54 +381,95 @@ void PipelineHandler::createPipelineResources(PipelineResources& resources) {
     // RENDER PASS
     inst_.createRenderPass(resources);
 
-    // PIPELINES
+    // BASE PIPELINE (TRI_LIST_COLOR)
+    inst_.createBasePipeline(Vertex::TYPE::COLOR, PIPELINE_TYPE::TRI_LIST_COLOR, ShaderHandler::getShader(SHADER_TYPE::COLOR_VERT),
+                             ShaderHandler::getShader(SHADER_TYPE::COLOR_FRAG), inst_.createResources_, resources);
 
-    // BASE
-    // TRI_LIST_COLOR
-    inst_.createBasePipeline(Vertex::TYPE::COLOR, TOPOLOGY::TRI_LIST_COLOR,
-                             ShaderHandler::getShader(Shader::TYPE::COLOR_VERT),
-                             ShaderHandler::getShader(Shader::TYPE::COLOR_FRAG), inst_.createResources_, resources);
-
-    // DERIVATIVES
+    // SETUP FOR DERIVATIVES
     resources.pipelineInfo.flags = VK_PIPELINE_CREATE_DERIVATIVE_BIT;
-    resources.pipelineInfo.basePipelineHandle = resources.pipelines[static_cast<int>(TOPOLOGY::TRI_LIST_COLOR)];
+    resources.pipelineInfo.basePipelineHandle = resources.pipelines[static_cast<int>(PIPELINE_TYPE::TRI_LIST_COLOR)];
     resources.pipelineInfo.basePipelineIndex = -1;  // TODO: why is this -1?
 
+    // DERIVATIVES
+    inst_.createPipeline(PIPELINE_TYPE::LINE, resources);
+    inst_.createPipeline(PIPELINE_TYPE::TRI_LIST_TEX, resources);
+}
+
+void PipelineHandler::createPipeline(PIPELINE_TYPE type, PipelineResources& resources) {
+    // Destory old pipeline if necessary
+    VkPipeline& oldPipeline = resources.pipelines[static_cast<int>(type)];
+    if (oldPipeline != VK_NULL_HANDLE) {
+        inst_.oldPipelines_.push_back(oldPipeline);
+    }
+
+    // Create the pipeline (Requires the base pipeline to have been created!!!)
     VkPipelineInputAssemblyStateCreateInfo input_info = {};
     input_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     input_info.primitiveRestartEnable = VK_FALSE;
 
-    // LINE
-    resources.pipelineInfo.subpass = static_cast<uint32_t>(TOPOLOGY::LINE);
-    // shader stages
-    inst_.createResources_.stagesInfo[1] = ShaderHandler::getShader(Shader::TYPE::LINE_FRAG).info;
-    resources.pipelineInfo.stageCount = static_cast<uint32_t>(inst_.createResources_.stagesInfo.size());
-    resources.pipelineInfo.pStages = inst_.createResources_.stagesInfo.data();
-    // topology
-    input_info.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
-    resources.pipelineInfo.pInputAssemblyState = &input_info;
+    switch (type) {
+        case PIPELINE_TYPE::LINE: {
+            resources.pipelineInfo.subpass = static_cast<uint32_t>(type);
+            // layout
+            resources.pipelineInfo.layout = inst_.pipelineLayouts_[static_cast<int>(Vertex::TYPE::COLOR)];
+            // vertex input
+            inst_.createInputStateCreateInfo(Vertex::TYPE::COLOR, inst_.createResources_);
+            resources.pipelineInfo.pVertexInputState = &inst_.createResources_.vertexInputStateInfo;
+            // shader stages
+            inst_.createResources_.stagesInfo[0] = ShaderHandler::getShader(SHADER_TYPE::COLOR_VERT)->info;
+            inst_.createResources_.stagesInfo[1] = ShaderHandler::getShader(SHADER_TYPE::LINE_FRAG)->info;
+            resources.pipelineInfo.stageCount = static_cast<uint32_t>(inst_.createResources_.stagesInfo.size());
+            resources.pipelineInfo.pStages = inst_.createResources_.stagesInfo.data();
+            // topology
+            input_info.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+            resources.pipelineInfo.pInputAssemblyState = &input_info;
 
-    vk::assert_success(vkCreateGraphicsPipelines(inst_.ctx_.dev, inst_.cache_, 1, &resources.pipelineInfo, nullptr,
-                                                 &resources.pipelines[static_cast<int>(TOPOLOGY::LINE)]));
+            vk::assert_success(vkCreateGraphicsPipelines(inst_.ctx_.dev, inst_.cache_, 1, &resources.pipelineInfo, nullptr,
+                                                         &resources.pipelines[static_cast<int>(PIPELINE_TYPE::LINE)]));
+        } break;
 
-    // TRI_LIST_TEX
-    resources.pipelineInfo.subpass = static_cast<uint32_t>(TOPOLOGY::TRI_LIST_TEX);
-    // layout
-    resources.pipelineInfo.layout = inst_.pipelineLayouts_[static_cast<int>(Vertex::TYPE::TEXTURE)];
-    // vertex input
-    inst_.createInputStateCreateInfo(Vertex::TYPE::TEXTURE, inst_.createResources_);
-    resources.pipelineInfo.pVertexInputState = &inst_.createResources_.vertexInputStateInfo;
-    // shader stages
-    inst_.createResources_.stagesInfo[0] = ShaderHandler::getShader(Shader::TYPE::TEX_VERT).info;
-    inst_.createResources_.stagesInfo[1] = ShaderHandler::getShader(Shader::TYPE::TEX_FRAG).info;
-    resources.pipelineInfo.stageCount = static_cast<uint32_t>(inst_.createResources_.stagesInfo.size());
-    resources.pipelineInfo.pStages = inst_.createResources_.stagesInfo.data();
-    // topology
-    input_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-    resources.pipelineInfo.pInputAssemblyState = &input_info;
+        case PIPELINE_TYPE::TRI_LIST_COLOR: {
+            resources.pipelineInfo.subpass = static_cast<uint32_t>(type);
+            // layout
+            resources.pipelineInfo.layout = inst_.pipelineLayouts_[static_cast<int>(Vertex::TYPE::COLOR)];
+            // vertex input
+            inst_.createInputStateCreateInfo(Vertex::TYPE::COLOR, inst_.createResources_);
+            resources.pipelineInfo.pVertexInputState = &inst_.createResources_.vertexInputStateInfo;
+            // shader stages
+            inst_.createResources_.stagesInfo[0] = ShaderHandler::getShader(SHADER_TYPE::COLOR_VERT)->info;
+            inst_.createResources_.stagesInfo[1] = ShaderHandler::getShader(SHADER_TYPE::COLOR_FRAG)->info;
+            resources.pipelineInfo.stageCount = static_cast<uint32_t>(inst_.createResources_.stagesInfo.size());
+            resources.pipelineInfo.pStages = inst_.createResources_.stagesInfo.data();
+            // topology
+            input_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            resources.pipelineInfo.pInputAssemblyState = &input_info;
 
-    vk::assert_success(vkCreateGraphicsPipelines(inst_.ctx_.dev, inst_.cache_, 1, &resources.pipelineInfo, nullptr,
-                                                 &resources.pipelines[static_cast<int>(TOPOLOGY::TRI_LIST_TEX)]));
+            vk::assert_success(vkCreateGraphicsPipelines(inst_.ctx_.dev, inst_.cache_, 1, &resources.pipelineInfo, nullptr,
+                                                         &resources.pipelines[static_cast<int>(PIPELINE_TYPE::TRI_LIST_COLOR)]));
+        } break;
+
+        case PIPELINE_TYPE::TRI_LIST_TEX: {
+            resources.pipelineInfo.subpass = static_cast<uint32_t>(type);
+            // layout
+            resources.pipelineInfo.layout = inst_.pipelineLayouts_[static_cast<int>(Vertex::TYPE::TEXTURE)];
+            // vertex input
+            inst_.createInputStateCreateInfo(Vertex::TYPE::TEXTURE, inst_.createResources_);
+            resources.pipelineInfo.pVertexInputState = &inst_.createResources_.vertexInputStateInfo;
+            // shader stages
+            inst_.createResources_.stagesInfo[0] = ShaderHandler::getShader(SHADER_TYPE::TEX_VERT)->info;
+            inst_.createResources_.stagesInfo[1] = ShaderHandler::getShader(SHADER_TYPE::TEX_FRAG)->info;
+            resources.pipelineInfo.stageCount = static_cast<uint32_t>(inst_.createResources_.stagesInfo.size());
+            resources.pipelineInfo.pStages = inst_.createResources_.stagesInfo.data();
+            // topology
+            input_info.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+            resources.pipelineInfo.pInputAssemblyState = &input_info;
+
+            vk::assert_success(vkCreateGraphicsPipelines(inst_.ctx_.dev, inst_.cache_, 1, &resources.pipelineInfo, nullptr,
+                                                         &resources.pipelines[static_cast<int>(PIPELINE_TYPE::TRI_LIST_TEX)]));
+        } break;
+
+        default: { throw std::runtime_error("Unhandled pipeline type"); } break;
+    }
 }
 
 void PipelineHandler::createSubpasses(PipelineResources& resources) {
@@ -451,7 +492,7 @@ void PipelineHandler::createDependencies(PipelineResources& resources) {
     // TODO: used for waiting in draw (figure this out... what is the VK_SUBPASS_EXTERNAL one?)
     VkSubpassDependency dependency = {};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = static_cast<uint32_t>(TOPOLOGY::TRI_LIST_COLOR);
+    dependency.dstSubpass = static_cast<uint32_t>(PIPELINE_TYPE::TRI_LIST_COLOR);
     dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     dependency.srcAccessMask = 0;
     dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
@@ -461,8 +502,8 @@ void PipelineHandler::createDependencies(PipelineResources& resources) {
     // Line subpass
     // TODO: fix this...
     dependency = {};
-    dependency.srcSubpass = static_cast<uint32_t>(TOPOLOGY::TRI_LIST_COLOR);
-    dependency.dstSubpass = static_cast<uint32_t>(TOPOLOGY::LINE);
+    dependency.srcSubpass = static_cast<uint32_t>(PIPELINE_TYPE::TRI_LIST_COLOR);
+    dependency.dstSubpass = static_cast<uint32_t>(PIPELINE_TYPE::LINE);
     dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     dependency.srcAccessMask = 0;
     dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
@@ -472,8 +513,8 @@ void PipelineHandler::createDependencies(PipelineResources& resources) {
     // Tex subpass
     // TODO: fix this...
     dependency = {};
-    dependency.srcSubpass = static_cast<uint32_t>(TOPOLOGY::LINE);
-    dependency.dstSubpass = static_cast<uint32_t>(TOPOLOGY::TRI_LIST_TEX);
+    dependency.srcSubpass = static_cast<uint32_t>(PIPELINE_TYPE::LINE);
+    dependency.dstSubpass = static_cast<uint32_t>(PIPELINE_TYPE::TRI_LIST_TEX);
     dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     dependency.srcAccessMask = 0;
     dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
@@ -506,9 +547,8 @@ void PipelineHandler::createRenderPass(PipelineResources& resources) {
     }
 }
 
-void PipelineHandler::createBasePipeline(Vertex::TYPE vertexType, TOPOLOGY pipelineType, const Shader& vs,
-                                         const Shader& fs, PipelineCreateInfoResources& createRes,
-                                         PipelineResources& pipelineRes) {
+void PipelineHandler::createBasePipeline(Vertex::TYPE vertexType, PIPELINE_TYPE pipelineType, const std::unique_ptr<Shader>& vs, const std::unique_ptr<Shader>& fs,
+                                         PipelineCreateInfoResources& createRes, PipelineResources& pipelineRes) {
     // DYNAMIC STATE
     // TODO: this is weird
     createRes.dynamicStateInfo = {};
@@ -659,9 +699,8 @@ void PipelineHandler::createBasePipeline(Vertex::TYPE vertexType, TOPOLOGY pipel
     createRes.tessellationStateInfo = {};  // TODO: this is a potential problem
 
     // SHADER
-
-    createRes.stagesInfo[0] = vs.info;
-    createRes.stagesInfo[1] = fs.info;
+    createRes.stagesInfo[0] = vs->info;
+    createRes.stagesInfo[1] = fs->info;
 
     // PIPELINE
 
@@ -712,6 +751,8 @@ void PipelineHandler::destroyDescriptorResources(std::unique_ptr<DescriptorResou
 }
 
 void PipelineHandler::cleanupOldResources() {
+    for (auto& pipeline : inst_.oldPipelines_) vkDestroyPipeline(inst_.ctx_.dev, pipeline, nullptr);
+    inst_.oldPipelines_.clear();
     for (auto& pRes : inst_.oldDescRes_) inst_.destroyDescriptorResources(pRes);
     inst_.oldDescRes_.clear();
 }

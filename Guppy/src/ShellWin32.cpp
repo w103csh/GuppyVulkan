@@ -15,7 +15,6 @@
  */
 
 #include <cassert>
-#include <chrono>
 #include <iostream>
 #include <sstream>
 #include <thread>
@@ -408,15 +407,7 @@ void ShellWin32::run() {
     Win32Timer timer;
     double current_time = timer.get();
 
-#ifdef LIMIT_FRAMERATE
-    auto next_frame = std::chrono::steady_clock::now();
-#endif
-
     while (true) {
-#ifdef LIMIT_FRAMERATE
-        next_frame += std::chrono::milliseconds(1000 / 30);  // 30Hz
-#endif
-
         bool quit = false;
 
         assert(settings_.animate);
@@ -455,7 +446,11 @@ void ShellWin32::run() {
         }
 
 #ifdef LIMIT_FRAMERATE
-        std::this_thread::sleep_until(next_frame);
+        // TODO: this is crude and inaccurate.
+        DWORD Hz = static_cast<DWORD>(1000 / 30);  // 30Hz
+        if (settings_.enable_directory_listener) AsyncAlert(Hz);
+#else
+        if (settings_.enable_directory_listener) AsyncAlert(0);
 #endif
     }
 
@@ -469,11 +464,15 @@ void ShellWin32::run() {
     DestroyWindow(hwnd_);
 }
 
+void ShellWin32::AsyncAlert(DWORD milliseconds) {
+    // Watch directory FileIOCompletionRoutine requires alertable thread wait.
+    SleepEx(milliseconds, TRUE);
+}
+
 void ShellWin32::watch_directory(std::string dir, std::function<void(std::string)> callback) {
     if (settings_.enable_directory_listener) {
         // build absolute path
         dir = GetWorkingDirectory() + ROOT_PATH + dir;
-
         dirInsts_.push_back({});
         // Completion routine gets called twice for some reason so I use
         // this flag instead of spending another night on this...
@@ -482,7 +481,7 @@ void ShellWin32::watch_directory(std::string dir, std::function<void(std::string
         // Create directory listener handle
         dirInsts_.back().hDir = CreateFile(dir.c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_WRITE | FILE_SHARE_READ | FILE_SHARE_DELETE,
                                            NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
-        // hEvent is not used by completion function so store the listener object for use. 
+        // hEvent is not used by completion function so store the listener object for use.
         dirInsts_.back().oOverlap.hEvent = &dirInsts_.back();
     }
 }
@@ -494,7 +493,6 @@ std::string ShellWin32::GetWorkingDirectory() {
 }
 
 void ShellWin32::CheckDirectories() {
-    SleepEx(0, TRUE);  // FileIOCompletionRoutine requires alertable thread wait
     for (auto& dirInst : dirInsts_) {
         BOOL result =
             ReadDirectoryChangesW(dirInst.hDir, dirInst.lpBuffer, sizeof(dirInst.lpBuffer), FALSE, FILE_NOTIFY_CHANGE_LAST_WRITE,

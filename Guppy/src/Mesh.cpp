@@ -173,14 +173,14 @@ void Mesh::destroy(const VkDevice& dev) {
 
 ColorMesh::ColorMesh(std::unique_ptr<Material> pMaterial) : Mesh(std::move(pMaterial)) {
     vertexType_ = Vertex::TYPE::COLOR;
-    topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_COLOR;
+    pipelineType_ = PIPELINE_TYPE::TRI_LIST_COLOR;
     flags_ = FLAGS::POLY;
 }
 
 ColorMesh::ColorMesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model)
     : Mesh(std::move(pMaterial), modelPath, model) {
     vertexType_ = Vertex::TYPE::COLOR;
-    topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_COLOR;
+    pipelineType_ = PIPELINE_TYPE::TRI_LIST_COLOR;
     flags_ = FLAGS::POLY;
 }
 
@@ -237,7 +237,7 @@ void ColorMesh::loadObj() {
 
 LineMesh::LineMesh() : ColorMesh(std::make_unique<Material>()) {
     vertexType_ = Vertex::TYPE::COLOR;
-    topoType_ = PipelineHandler::TOPOLOGY::LINE;
+    pipelineType_ = PIPELINE_TYPE::LINE;
     flags_ = FLAGS::LINE;
 }
 
@@ -248,14 +248,14 @@ LineMesh::LineMesh() : ColorMesh(std::make_unique<Material>()) {
 TextureMesh::TextureMesh(std::unique_ptr<Material> pMaterial) : Mesh(std::move(pMaterial)) {
     assert(pMaterial_->hasTexture());
     vertexType_ = Vertex::TYPE::TEXTURE;
-    topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_TEX;
+    pipelineType_ = PIPELINE_TYPE::TRI_LIST_TEX;
 };
 
 TextureMesh::TextureMesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model)
     : Mesh(std::move(pMaterial), modelPath, model) {
     assert(pMaterial_->hasTexture());
     vertexType_ = Vertex::TYPE::TEXTURE;
-    topoType_ = PipelineHandler::TOPOLOGY::TRI_LIST_TEX;
+    pipelineType_ = PIPELINE_TYPE::TRI_LIST_TEX;
 };
 
 void TextureMesh::setSceneData(const MyShell::Context& ctx, size_t offset) {

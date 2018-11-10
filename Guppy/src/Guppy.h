@@ -110,7 +110,7 @@ class Guppy : public Game {
     void destroy_depth_resources();
 
     // Scene
-    inline const std::unique_ptr<Scene>& active_scene() const { return scenes_[active_scene_index_]; }
+    inline const std::unique_ptr<Scene>& active_scene() const { return pScenes_[active_scene_index_]; }
 
     // textures
     void addTexture(const VkDevice& dev, std::string path, std::string normPath = "", std::string specPath = "");
@@ -138,7 +138,7 @@ class Guppy : public Game {
 
     // scene
     int active_scene_index_;
-    std::vector<std::unique_ptr<Scene>> scenes_;
+    std::vector<std::unique_ptr<Scene>> pScenes_;
 
     // textures
     std::vector<std::shared_ptr<Texture::Data>> textures_;

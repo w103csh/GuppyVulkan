@@ -55,6 +55,7 @@ class Game {
         bool enable_double_clicks;
         bool enable_debug_markers;
         bool enable_directory_listener;
+        bool assert_on_recompile_shader;
     };
     const Settings &settings() const { return settings_; }
     MyShell &shell() const { return (*shell_); }  // TODO: maybe don't do this??? (Used for listening to shader changes)
@@ -154,6 +155,7 @@ class Game {
         settings_.enable_double_clicks = false;
         settings_.enable_debug_markers = false;
         settings_.enable_directory_listener = true;  // TODO: make this default to false
+        settings_.assert_on_recompile_shader = false;
 
         parse_args(args);
     }

@@ -176,6 +176,10 @@ void Scene::updateDescriptorResources(const MyShell::Context& ctx, std::unique_p
     }
 }
 
+void Scene::updatePipeline(PIPELINE_TYPE type) {
+    PipelineHandler::createPipeline(type, plResources_);
+}
+
 // TODO: make cmd amount dynamic
 const VkCommandBuffer& Scene::getDrawCmds(const uint32_t& frame_data_index) {
     auto& res = draw_resources_[frame_data_index];
@@ -213,6 +217,7 @@ void Scene::recordDrawCmds(const MyShell::Context& ctx, const std::vector<FrameD
                                                     frame_data[i].fence, viewport, scissor, i, true);
         }
     }
+    ShaderHandler::cleanupOldResources();
     PipelineHandler::cleanupOldResources();
 }
 
@@ -293,7 +298,7 @@ void Scene::record(const MyShell::Context& ctx, const VkCommandBuffer& cmd, cons
         const auto& descSet = getColorDescSet(frameIndex);
 
         if (!colorMeshes_.empty()) {
-            const auto& pipeline = getPipeline(PipelineHandler::TOPOLOGY::TRI_LIST_COLOR);
+            const auto& pipeline = getPipeline(PIPELINE_TYPE::TRI_LIST_COLOR);
 
             for (auto& pMesh : colorMeshes_) {
                 if (pMesh->getStatus() == Mesh::STATUS::READY) {
@@ -310,7 +315,7 @@ void Scene::record(const MyShell::Context& ctx, const VkCommandBuffer& cmd, cons
         // **********************
 
         if (!lineMeshes_.empty()) {
-            const auto& pipeline = getPipeline(PipelineHandler::TOPOLOGY::LINE);
+            const auto& pipeline = getPipeline(PIPELINE_TYPE::LINE);
 
             for (auto& pMesh : lineMeshes_) {
                 if (pMesh->getStatus() == Mesh::STATUS::READY) {
@@ -335,7 +340,7 @@ void Scene::record(const MyShell::Context& ctx, const VkCommandBuffer& cmd, cons
     if (!texMeshes_.empty()) {
         // TODO: I don't like the search for the pipeline coming here.
         const auto& layout = PipelineHandler::getPipelineLayout(Vertex::TYPE::TEXTURE);
-        const auto& pipeline = getPipeline(PipelineHandler::TOPOLOGY::TRI_LIST_TEX);
+        const auto& pipeline = getPipeline(PIPELINE_TYPE::TRI_LIST_TEX);
 
         for (auto& pMesh : texMeshes_) {
             if (pMesh->getStatus() == Mesh::STATUS::READY) {

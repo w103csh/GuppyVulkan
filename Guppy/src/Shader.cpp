@@ -4,41 +4,77 @@
 #include "util.hpp"
 
 #include "FileLoader.h"
+#include "Scene.h"
 #include "Shader.h"
 
 // **********************
 //      Shader
 // **********************
 
+// directory of shader files relative to the root of the repo
 const std::string SHADER_DIR = "Guppy\\src\\shaders\\";
+// file names
+// link
+const std::string UTIL_FRAG_FILENAME = "util.frag.glsl";
+// fragment
+const std::string COLOR_FRAG_FILENAME = "color.frag";
+const std::string TEX_FRAG_FILENAME = "texture.frag";
+const std::string LINE_FRAG_FILENAME = "line.frag";
+// vertex
+const std::string COLOR_VERT_FILENAME = "color.vert";
+const std::string TEX_VERT_FILENAME = "texture.vert";
 
 Shader::Shader(const VkDevice dev, std::string fileName, std::vector<const char*> pLinkTexts, VkShaderStageFlagBits stage,
-               std::string markerName) {
-    text_ = FileLoader::read_file(SHADER_DIR + fileName);
+               bool updateTextFromFile, std::string markerName)
+    : info({}), module(VK_NULL_HANDLE), fileName_(fileName), markerName_(markerName), stage_(stage) {
+    init(dev, pLinkTexts, true, std::vector<VkShaderModule>{}, updateTextFromFile);
+}
+
+void Shader::init(const VkDevice dev, std::vector<const char*> pLinkTexts, bool doAssert, std::vector<VkShaderModule>& oldModules,
+                  bool updateTextFromFile) {
+    bool isRecompile = (module != VK_NULL_HANDLE);
+
+    // Check if shader needs to be (re)compiled
+    if (updateTextFromFile) {
+        text_ = FileLoader::read_file(SHADER_DIR + fileName_);
+    }
 
     std::vector<const char*> pShaderTexts = {text_.c_str()};
     pShaderTexts.insert(pShaderTexts.end(), pLinkTexts.begin(), pLinkTexts.end());
 
     std::vector<unsigned int> spv;
-    assert(GLSLtoSPV(stage, pShaderTexts, spv));
+    bool success = GLSLtoSPV(stage_, pShaderTexts, spv);
+
+    // Return or assert on fail
+    if (!success) {
+        if (doAssert)
+            assert(success);
+        else
+            return;
+    }
 
     VkShaderModuleCreateInfo module_info = {};
     module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
     module_info.codeSize = spv.size() * sizeof(unsigned int);
     module_info.pCode = spv.data();
-    vk::assert_success(vkCreateShaderModule(dev, &module_info, nullptr, &module));
+
+    VkShaderModule sm;
+    vk::assert_success(vkCreateShaderModule(dev, &module_info, nullptr, &sm));
+    // Store old module for clean up if necessary
+    if (isRecompile) oldModules.push_back(std::move(module));
+    module = std::move(sm);
 
     VkPipelineShaderStageCreateInfo stageInfo = {};
     stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stageInfo.stage = stage;
+    stageInfo.stage = stage_;
     stageInfo.pName = "main";
     stageInfo.module = module;
     info = std::move(stageInfo);
 
     // TODO: check settings
-    if (!markerName.empty()) {
+    if (!markerName_.empty()) {
         ext::DebugMarkerSetObjectName(dev, (uint64_t)module, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT,
-                                      (markerName + " shader module").c_str());
+                                      (markerName_ + " shader module").c_str());
     }
 }
 
@@ -50,8 +86,8 @@ ShaderHandler ShaderHandler::inst_;
 ShaderHandler::ShaderHandler() {}
 
 void ShaderHandler::reset() {
-    for (auto& shaderRes : shaders_) {
-        if (shaderRes.module) vkDestroyShaderModule(ctx_.dev, shaderRes.module, nullptr);
+    for (auto& shader : shaders_) {
+        if (shader->module) vkDestroyShaderModule(ctx_.dev, shader->module, nullptr);
     }
 }
 
@@ -61,39 +97,171 @@ void ShaderHandler::init(MyShell& sh, const Game::Settings& settings, uint32_t n
 
     inst_.ctx_ = sh.context();
     inst_.settings_ = settings;
+    inst_.numPosLights_ = numPosLights;
 
-    // link shaders
-    inst_.utilFragText_ = FileLoader::read_file(SHADER_DIR + "util.frag.glsl");
-
-    inst_.createShaderModules(numPosLights);
+    inst_.loadShaders(
+        {SHADER_TYPE::COLOR_FRAG, SHADER_TYPE::COLOR_VERT, SHADER_TYPE::LINE_FRAG, SHADER_TYPE::TEX_FRAG, SHADER_TYPE::TEX_VERT},
+        true);
 
     // listen to changes to the shader files
     if (settings.enable_directory_listener) {
         sh.watch_directory(SHADER_DIR, &ShaderHandler::recompileShader);
     }
 }
-
-void ShaderHandler::recompileShader(std::string fileName) {
-    //inst_.reset();
+bool ShaderHandler::update(std::unique_ptr<Scene>& pScene) {
+    bool hasUpdate = false;
+    for (; !inst_.updateQueue_.empty(); inst_.updateQueue_.pop()) {
+        // TODO: should this update be with the other redraw checking??? I think so.
+        // This whole thing is sloppy. Fix it. The PipelineHandler should probably
+        // signal this not the ShaderHandler.
+        pScene->updatePipeline(inst_.updateQueue_.front());
+        hasUpdate = true;
+    }
+    return hasUpdate;
 }
 
-void ShaderHandler::createShaderModules(uint32_t numPositionLights) {
-    // link shaders
-    std::string utilFragText = utilFragText_;          // copy text for string replace ...
-    posLightReplace(numPositionLights, utilFragText);  // replace position light array size
+void ShaderHandler::recompileShader(std::string fileName) {
+    bool assert = inst_.settings_.assert_on_recompile_shader;
+    if (fileName == UTIL_FRAG_FILENAME) {
+        if (inst_.loadShaders({SHADER_TYPE::COLOR_FRAG, SHADER_TYPE::TEX_FRAG}, assert)) {
+            inst_.updateQueue_.push(PIPELINE_TYPE::TRI_LIST_COLOR);
+            inst_.updateQueue_.push(PIPELINE_TYPE::TRI_LIST_TEX);
+        };
+
+    } else if (fileName == COLOR_FRAG_FILENAME) {
+        if (inst_.loadShaders({SHADER_TYPE::COLOR_FRAG}, assert)) {
+            inst_.updateQueue_.push(PIPELINE_TYPE::TRI_LIST_COLOR);
+        }
+
+    } else if (fileName == TEX_FRAG_FILENAME) {
+        if (inst_.loadShaders({SHADER_TYPE::TEX_FRAG}, assert)) {
+            inst_.updateQueue_.push(PIPELINE_TYPE::TRI_LIST_TEX);
+        }
+
+    } else if (fileName == LINE_FRAG_FILENAME) {
+        if (inst_.loadShaders({SHADER_TYPE::LINE_FRAG}, assert)) {
+            inst_.updateQueue_.push(PIPELINE_TYPE::LINE);
+        }
+
+    } else if (fileName == COLOR_VERT_FILENAME) {
+        if (inst_.loadShaders({SHADER_TYPE::COLOR_VERT}, assert)) {
+            inst_.updateQueue_.push(PIPELINE_TYPE::TRI_LIST_COLOR);
+        }
+
+    } else if (fileName == TEX_VERT_FILENAME) {
+        if (inst_.loadShaders({SHADER_TYPE::TEX_VERT}, assert)) {
+            inst_.updateQueue_.push(PIPELINE_TYPE::TRI_LIST_TEX);
+        }
+    }
+}
+
+bool ShaderHandler::loadShaders(std::vector<SHADER_TYPE> types, bool doAssert, bool updateFromFile) {
+    if (types.empty()) return false;  // TODO: warn
+
+    auto numOldResources = inst_.oldModules_.size();
+
+    // Make sure the storage vector is big enough
+    if (shaders_.size() < types.size()) shaders_.resize(types.size());
+
+    // Link text flags
+    bool utilFragLoaded = false;
+    std::string fileName;
+    std::vector<const char*> pLinkTexts;
+    VkShaderStageFlagBits stage;
 
     init_glslang();
 
-    shaders_.emplace_back(Shader(ctx_.dev, "color.vert", {}, VK_SHADER_STAGE_VERTEX_BIT, "COLOR VERT"));
-    shaders_.emplace_back(Shader(ctx_.dev, "texture.vert", {}, VK_SHADER_STAGE_VERTEX_BIT, "TEXTURE VERT"));
-    shaders_.emplace_back(Shader(ctx_.dev, "color.frag", {utilFragText.c_str()}, VK_SHADER_STAGE_FRAGMENT_BIT, "COLOR FRAG"));
-    shaders_.emplace_back(Shader(ctx_.dev, "line.frag", {}, VK_SHADER_STAGE_FRAGMENT_BIT, "LINE FRAG"));
-    shaders_.emplace_back(Shader(ctx_.dev, "texture.frag", {utilFragText.c_str()}, VK_SHADER_STAGE_FRAGMENT_BIT, "TEXTURE FRAG"));
+    for (auto& type : types) {
+        int index = static_cast<int>(type);
+
+        switch (type) {
+            case SHADER_TYPE::COLOR_VERT: {
+                fileName = COLOR_VERT_FILENAME;
+                stage = VK_SHADER_STAGE_VERTEX_BIT;
+                pLinkTexts = {};
+
+            } break;
+
+            case SHADER_TYPE::TEX_VERT: {
+                fileName = TEX_VERT_FILENAME;
+                stage = VK_SHADER_STAGE_VERTEX_BIT;
+                pLinkTexts = {};
+
+            } break;
+
+            case SHADER_TYPE::COLOR_FRAG: {
+                // load link text
+                if (!utilFragLoaded) {
+                    loadLinkText(SHADER_TYPE::UTIL_FRAG);
+                    utilFragLoaded = true;
+                }
+
+                fileName = COLOR_FRAG_FILENAME;
+                stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+                pLinkTexts = {utilFragText_.c_str()};
+
+            } break;
+
+            case SHADER_TYPE::TEX_FRAG: {
+                // load link text
+                if (!utilFragLoaded) {
+                    loadLinkText(SHADER_TYPE::UTIL_FRAG);
+                    utilFragLoaded = true;
+                }
+
+                fileName = TEX_FRAG_FILENAME;
+                stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+                pLinkTexts = {utilFragText_.c_str()};
+
+            } break;
+
+            case SHADER_TYPE::LINE_FRAG: {
+                fileName = LINE_FRAG_FILENAME;
+                stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+                pLinkTexts = {};
+
+            } break;
+
+            default:
+                throw std::runtime_error("Unhandled shader type.");
+                break;
+        }
+
+        if (!shaders_[index]) {
+            // instantiate
+            shaders_[index] = std::make_unique<Shader>(ctx_.dev, fileName, pLinkTexts, stage, updateFromFile, fileName);
+        } else {
+            // recompile
+            shaders_[index]->init(ctx_.dev, pLinkTexts, doAssert, oldModules_, updateFromFile);
+        }
+    }
 
     finalize_glslang();
+
+    return numOldResources < inst_.oldModules_.size();
+}
+
+void ShaderHandler::loadLinkText(SHADER_TYPE type, bool updateFromFile) {
+    switch (type) {
+        case SHADER_TYPE::UTIL_FRAG: {
+            // update text from file
+            if (updateFromFile) utilFragText_ = FileLoader::read_file(SHADER_DIR + UTIL_FRAG_FILENAME);
+            posLightReplace(numPosLights_, utilFragText_);  // replace position light array size
+        } break;
+
+        default:
+            throw std::runtime_error("Unhandled shader type for linking.");
+            break;
+    }
+}
+
+void ShaderHandler::cleanupOldResources() {
+    for (auto& module : inst_.oldModules_) vkDestroyShaderModule(inst_.ctx_.dev, module, nullptr);
+    inst_.oldModules_.clear();
 }
 
 void ShaderHandler::posLightReplace(uint32_t numLights, std::string& text) {
+    // TODO: fix the regex so that you don't have to read from file...
     text = textReplace(text, "PositionalLight lights[", "];", 1, numLights);
 }
 

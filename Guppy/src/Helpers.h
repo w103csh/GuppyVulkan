@@ -18,6 +18,13 @@
 
 enum class MODEL_FILE_TYPE { UNKNOWN = 0, OBJ };
 
+enum class PIPELINE_TYPE {
+    // These numbers are used as indices
+    TRI_LIST_COLOR = 0,
+    LINE = 1,
+    TRI_LIST_TEX = 2,
+};
+
 namespace vk {
 inline VkResult assert_success(VkResult res) {
     if (res != VK_SUCCESS) {

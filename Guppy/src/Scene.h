@@ -49,8 +49,9 @@ class Scene {
 
     void destroy(const VkDevice &dev);
 
-    // TODO: not sure about this being here...
-    inline const VkPipeline &getPipeline(PipelineHandler::TOPOLOGY topo) { return plResources_.pipelines[static_cast<int>(topo)]; }
+    // TODO: not sure about these being here...
+    inline const VkPipeline &getPipeline(PIPELINE_TYPE type) { return plResources_.pipelines[static_cast<int>(type)]; }
+    void updatePipeline(PIPELINE_TYPE type);
 
    private:
     // Descriptor
@@ -76,10 +77,10 @@ class Scene {
 
     // Meshes
     // color
-    std::vector<std::unique_ptr<ColorMesh>> colorMeshes_;  // Vertex::TYPE::COLOR, PipelineHandler::TOPOLOGY::TRI_LIST_COLOR
-    std::vector<std::unique_ptr<ColorMesh>> lineMeshes_;   // Vertex::TYPE::COLOR, PipelineHandler::TOPOLOGY::LINE
+    std::vector<std::unique_ptr<ColorMesh>> colorMeshes_;  // Vertex::TYPE::COLOR, PIPELINE_TYPE::TRI_LIST_COLOR
+    std::vector<std::unique_ptr<ColorMesh>> lineMeshes_;   // Vertex::TYPE::COLOR, PIPELINE_TYPE::LINE
     // texture
-    std::vector<std::unique_ptr<TextureMesh>> texMeshes_;  // Vertex::TYPE::TEX, PipelineHandler::TOPOLOGY::TRI_LIST_TEX
+    std::vector<std::unique_ptr<TextureMesh>> texMeshes_;  // Vertex::TYPE::TEX, PIPELINE_TYPE::TRI_LIST_TEX
 
     // Loading
     std::vector<std::future<Mesh *>> ldgFutures_;

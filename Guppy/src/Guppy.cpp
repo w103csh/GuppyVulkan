@@ -127,7 +127,7 @@ void Guppy::detach_shell() {
     // delete meshes_;
 
     // *
-    for (auto& scene : scenes_) scene->destroy(dev_);
+    for (auto& scene : pScenes_) scene->destroy(dev_);
 
     CmdBufHandler::destroy();
     PipelineHandler::destroy();
@@ -283,16 +283,23 @@ void Guppy::on_tick() {
 
     auto ctx = shell_->context();
 
-    // TODO: should this be "on_frame", here, every other frame, async ... I have no clue yet.
-    // loading resources
+    // TODO: Should this be "on_frame"? every other frame? async? ... I have no clue yet.
     LoadingResourceHandler::cleanupResources();
-    // textures
     updateTextures(dev_);
-    // scenes
-    for (auto& scene : scenes_) {
+
+    for (auto& pScene : pScenes_) {
+        bool redraw = false;
+        // TODO: ifdef this stuff out
+        if (settings_.enable_directory_listener) {
+            redraw |= ShaderHandler::update(pScene);
+        }
         // TODO: im really not into this...
-        if (scene->update(ctx, frame_data_index_)) {
-            scene->recordDrawCmds(ctx, frameData(), framebuffers_, viewport_, scissor_);
+        redraw |= pScene->update(ctx, frame_data_index_);
+
+        // (Re)make the draw commands
+        if (redraw) {
+            // TODO: put all the frame data in one parameter...
+            pScene->recordDrawCmds(ctx, frameData(), framebuffers_, viewport_, scissor_);
         }
     }
 
@@ -420,7 +427,6 @@ void Guppy::copyUniformBufferMemory() {
            sizeof(Light::Positional::Data) * defUBO_.positionalLights.size());
 
     vkUnmapMemory(dev_, UBOResource_.memory);
-
 }
 
 void Guppy::updateUniformBuffer() {
@@ -598,7 +604,7 @@ void Guppy::createScenes() {
 
     auto scene1 = std::make_unique<Scene>(ctx, settings_, UBOResource_, textures_);
 
-    scenes_.push_back(std::move(scene1));
+    pScenes_.push_back(std::move(scene1));
     active_scene_index_ = 0;
 
     // Add defaults

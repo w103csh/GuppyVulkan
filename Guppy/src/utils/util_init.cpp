@@ -1562,7 +1562,7 @@ samples "init" utility functions
 //    ia.pNext = NULL;
 //    ia.flags = 0;
 //    ia.primitiveRestartEnable = VK_FALSE;
-//    ia.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+//    ia.topology = VK_PRIMITIVE_PIPELINE_TYPE_TRIANGLE_LIST;
 //
 //    VkPipelineRasterizationStateCreateInfo rs;
 //    rs.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;

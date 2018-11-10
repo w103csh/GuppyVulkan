@@ -49,8 +49,10 @@ struct PipelineResources {
     VkRenderPass renderPass;
     VkGraphicsPipelineCreateInfo pipelineInfo;
     // TRI_LIST_COLOR, TRI_LIST_TEX, COLOR
-    std::array<VkPipeline, 3> pipelines;
+    std::array<VkPipeline, 3> pipelines{VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE};
 };
+
+class Scene;
 
 class PipelineHandler {
    public:
@@ -62,8 +64,6 @@ class PipelineHandler {
 
     PipelineHandler(const PipelineHandler &) = delete;             // Prevent construction by copying
     PipelineHandler &operator=(const PipelineHandler &) = delete;  // Prevent assignment
-
-    enum class TOPOLOGY { TRI_LIST_COLOR = 0, LINE, TRI_LIST_TEX };
 
     struct DefaultAttachementReferences {
         VkAttachmentReference color;
@@ -81,6 +81,7 @@ class PipelineHandler {
     // static VkSubpassDescription PipelineHandler::create_default_subpass();
     static void createPipelineResources(PipelineResources &resources);
     static void createRenderPass(PipelineResources &resources);
+    static void createPipeline(PIPELINE_TYPE type, PipelineResources &resources);
 
     static inline const DefaultAttachementReferences &get_def_attach_refs() { return inst_.defAttachRefs_; }
     static void PipelineHandler::getDescriptorLayouts(uint32_t image_count, Vertex::TYPE type,
@@ -90,8 +91,10 @@ class PipelineHandler {
         return inst_.pipelineLayouts_[static_cast<int>(type)];
     }
 
+    static bool update(std::unique_ptr<Scene> &pScene);
     static void destroyPipelineResources(PipelineResources &resources);
     static void destroyDescriptorResources(std::unique_ptr<DescriptorResources> &resources);
+
 
     // old resources
     static inline void takeOldResources(std::unique_ptr<DescriptorResources> pRes) { inst_.oldDescRes_.push_back(std::move(pRes)); }
@@ -111,8 +114,9 @@ class PipelineHandler {
     void createPipelineLayout(Vertex::TYPE type, const VkDescriptorSetLayout &setLayout, std::string markerName = "");
     // maybe make something like below public ...
     void createInputStateCreateInfo(Vertex::TYPE type, PipelineCreateInfoResources &resources);
-    void createBasePipeline(Vertex::TYPE vertexType, TOPOLOGY pipelineType, const Shader &vs, const Shader &fs,
-                            PipelineCreateInfoResources &createRes, PipelineResources &pipelineRes);
+    void createBasePipeline(Vertex::TYPE vertexType, PIPELINE_TYPE pipelineType, const std::unique_ptr<Shader> &vs,
+                            const std::unique_ptr<Shader> &fs, PipelineCreateInfoResources &createRes,
+                            PipelineResources &pipelineRes);
 
     MyShell::Context ctx_;     // TODO: shared_ptr
     Game::Settings settings_;  // TODO: shared_ptr
@@ -128,6 +132,7 @@ class PipelineHandler {
     // create info
     PipelineCreateInfoResources createResources_;
     // global storage for clean up
+    std::vector<VkPipeline> oldPipelines_;
     std::vector<std::unique_ptr<DescriptorResources>> oldDescRes_;
 };
 
