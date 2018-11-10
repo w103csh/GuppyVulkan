@@ -261,7 +261,6 @@ Game::KEY ShellWin32::get_key(WPARAM wParam, InputHandler::INPUT_TYPE type) {
         case '2':
             key = Game::KEY::KEY_2;
             break;
-            break;
         case '3':
             key = Game::KEY::KEY_3;
             break;
@@ -270,7 +269,6 @@ Game::KEY ShellWin32::get_key(WPARAM wParam, InputHandler::INPUT_TYPE type) {
             break;
         case '5':
             key = Game::KEY::KEY_5;
-            break;
             break;
         case '6':
             key = Game::KEY::KEY_6;
@@ -299,7 +297,7 @@ Game::KEY ShellWin32::get_key(WPARAM wParam, InputHandler::INPUT_TYPE type) {
             break;
             // case VK_F2:
             //    key = Game::KEY::KEY_F2;
-            break;
+            // break;
         case VK_F3:
             key = Game::KEY::KEY_F3;
             break;
