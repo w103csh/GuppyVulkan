@@ -20,8 +20,8 @@ void Plane::createIndices(std::vector<VB_INDEX_TYPE>& indices, bool doubleSided)
 // ColorPlane
 // **********************
 
-ColorPlane::ColorPlane(glm::mat4 model, bool doubleSided)
-    : ColorMesh(std::make_unique<Material>(), "", model) {
+ColorPlane::ColorPlane(std::unique_ptr<Material> pMaterial, glm::mat4 model, bool doubleSided)
+    : ColorMesh(std::move(pMaterial), "", model) {
     markerName_ = "ColorPlane";
     createVertices();
     Plane::createIndices(indices_, doubleSided);

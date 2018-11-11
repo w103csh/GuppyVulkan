@@ -27,7 +27,8 @@ class Plane {
 
 class ColorPlane : public Plane, public ColorMesh {
    public:
-    ColorPlane(glm::mat4 rot = glm::mat4(1.0f), bool doubleSided = false);
+    ColorPlane(std::unique_ptr<Material> pMaterial = std::make_unique<Material>(), glm::mat4 rot = glm::mat4(1.0f),
+               bool doubleSided = false);
 
    private:
     void createVertices() override;

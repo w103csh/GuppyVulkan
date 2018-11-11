@@ -25,10 +25,11 @@ layout(location = 2) out vec3 fragNormal;
 
 void main() {
 	vec3 worldPosition = vec3(pushConstantsBlock.model * vec4(inPosition, 1.0));
+	vec3 worldNormal = normalize(mat3(pushConstantsBlock.model) * inNormal);
 
 	gl_Position = ubo.camera.mvp * vec4(worldPosition, 1.0);
 	
 	fragPos = worldPosition;
     fragTexCoord = inTexCoord;
-    fragNormal = inNormal;
+    fragNormal = worldNormal;
 }

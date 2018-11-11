@@ -88,7 +88,7 @@ void main() {
     if ((dynamicUbo.texFlags & TEX_NORMAL) > 0) {
         n = normalize(vec3(texture(texSampler, vec3(fragTexCoord, samplerOffset++))));
     } else {
-	    n = normalize(mat3(pushConstantsBlock.model) * fragNormal);
+	    n = fragNormal;
     }
 
     outColor = vec4(

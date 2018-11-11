@@ -22,7 +22,7 @@ layout(location = 0) in vec3 fragPos;
 // UNIFORM BUFFER
 layout(binding = 0) uniform DefaultUniformBuffer {
 	Camera camera;
-	PositionalLight lights[2];
+	PositionalLight lights[1]; // This has to be [1]
 } ubo;
 
 vec3 n, Ka, Kd, Ks;

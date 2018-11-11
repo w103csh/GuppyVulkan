@@ -214,7 +214,7 @@ void Guppy::on_key(KEY key) {
             }
         } break;
         case KEY::KEY_4: {
-            auto p1 = std::make_unique<ColorPlane>();
+            auto p1 = std::make_unique<ColorPlane>(std::make_unique<Material>(Material::PER_VERTEX_COLOR));
             active_scene()->addMesh(shell_->context(), std::move(p1));
         } break;
         case KEY::KEY_5: {

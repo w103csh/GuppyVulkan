@@ -36,8 +36,6 @@ vec3 n, Ka, Kd, Ks;
 void main() {
     float opacity;
 
-    n = fragNormal;
-
     // Get the colors per vertex
     if ((pushConstantsBlock.material.flags & PER_VERTEX_COLOR) > 0) {
         Ka = vec3(fragColor);
@@ -51,6 +49,9 @@ void main() {
         Ks = pushConstantsBlock.material.Ks;
         opacity = pushConstantsBlock.material.opacity;
     }
+
+    // Normal
+    n = fragNormal;
     
     outColor = vec4(
         getColor(pushConstantsBlock.material.shininess),
