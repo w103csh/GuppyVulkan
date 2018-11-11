@@ -3,7 +3,6 @@
 #include "LoadingResourceHandler.h"
 
 LoadingResourceHandler LoadingResourceHandler::inst_;
-LoadingResourceHandler::LoadingResourceHandler() {}
 
 void LoadingResourceHandler::init(const MyShell::Context& ctx) {
     inst_.cleanupResources();

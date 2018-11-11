@@ -36,7 +36,7 @@ void Shader::init(const VkDevice dev, std::vector<const char*> pLinkTexts, bool 
 
     // Check if shader needs to be (re)compiled
     if (updateTextFromFile) {
-        text_ = FileLoader::read_file(SHADER_DIR + fileName_);
+        text_ = FileLoader::readFile(SHADER_DIR + fileName_);
     }
 
     std::vector<const char*> pShaderTexts = {text_.c_str()};
@@ -245,7 +245,7 @@ void ShaderHandler::loadLinkText(SHADER_TYPE type, bool updateFromFile) {
     switch (type) {
         case SHADER_TYPE::UTIL_FRAG: {
             // update text from file
-            if (updateFromFile) utilFragText_ = FileLoader::read_file(SHADER_DIR + UTIL_FRAG_FILENAME);
+            if (updateFromFile) utilFragText_ = FileLoader::readFile(SHADER_DIR + UTIL_FRAG_FILENAME);
             posLightReplace(numPosLights_, utilFragText_);  // replace position light array size
         } break;
 

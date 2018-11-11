@@ -6,9 +6,10 @@
 
 #include "Helpers.h"
 #include "MyShell.h"
+#include "Singleton.h"
 
 struct LoadingResources {
-    LoadingResources() : shouldWait(false) {};
+    LoadingResources() : shouldWait(false){};
     bool shouldWait;
     VkCommandBuffer graphicsCmd, transferCmd;
     std::vector<BufferResource> stgResources;
@@ -17,20 +18,21 @@ struct LoadingResources {
     bool cleanup(const VkDevice &dev);
 };
 
-class LoadingResourceHandler {
+class LoadingResourceHandler : Singleton {
    public:
     static void init(const MyShell::Context &ctx);
-
-    LoadingResourceHandler(const LoadingResourceHandler &) = delete;             // Prevent construction by copying
-    LoadingResourceHandler &operator=(const LoadingResourceHandler &) = delete;  // Prevent assignment
 
     static std::unique_ptr<LoadingResources> createLoadingResources();
     static void loadSubmit(std::unique_ptr<LoadingResources> pLdgRes);
     static void cleanupResources();
 
    private:
-    LoadingResourceHandler();  // Prevent construction
+    LoadingResourceHandler(){};   // Prevent construction
+    ~LoadingResourceHandler(){};  // Prevent construction
+
     static LoadingResourceHandler inst_;
+
+    void reset() override{};
 
     MyShell::Context ctx_;  // TODO: shared_ptr
 

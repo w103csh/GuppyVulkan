@@ -161,7 +161,7 @@ LRESULT ShellWin32::handle_message(UINT uMsg, WPARAM wParam, LPARAM lParam) {
             get_mouse_mod(wParam, lParam);
         } break;
         case WM_MOUSELEAVE: {
-            InputHandler::get().mouseLeave();
+            InputHandler::mouseLeave();
         } break;
         case WM_LBUTTONDOWN:
         case WM_LBUTTONUP:
@@ -341,7 +341,7 @@ Game::KEY ShellWin32::get_key(WPARAM wParam, InputHandler::INPUT_TYPE type) {
             key = Game::KEY::KEY_UNKNOWN;
             break;
     }
-    InputHandler::get().updateKeyInput(key, type);
+    InputHandler::updateKeyInput(key, type);
     return key;
 }
 
@@ -391,7 +391,7 @@ void ShellWin32::get_mouse_mod(WPARAM wParam, LPARAM lParam) {
             // nothing here yet...
         } break;
     }
-    InputHandler::get().updateMousePosition(xPos, yPos, is_looking);
+    InputHandler::updateMousePosition(xPos, yPos, is_looking);
 }
 
 void ShellWin32::quit() { PostQuitMessage(0); }
@@ -431,21 +431,22 @@ void ShellWin32::run() {
             // std::unique_lock<std::mutex> lock(mtx_);
             // while (minimized_) pause_.wait(lock);
         } else {
-            InputHandler::get().updateInput();
-
             acquire_back_buffer();
 
-            double t = timer.get();
-            add_game_time(static_cast<float>(t - current_time));
+            // TODO: simplify this?
+            double now = timer.get();
+            double elapsed = now - current_time;
+            current_time = now;
+
+            InputHandler::updateInput(static_cast<float>(elapsed));
+            add_game_time(static_cast<float>(elapsed));
 
             present_back_buffer();
-
-            current_time = t;
         }
 
 #ifdef LIMIT_FRAMERATE
         // TODO: this is crude and inaccurate.
-        DWORD Hz = static_cast<DWORD>(1000 / 30);  // 30Hz
+        DWORD Hz = static_cast<DWORD>(1000 / 10);  // 30Hz
         if (settings_.enable_directory_listener) AsyncAlert(Hz);
 #else
         if (settings_.enable_directory_listener) AsyncAlert(0);

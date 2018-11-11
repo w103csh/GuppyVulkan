@@ -24,11 +24,12 @@ layout(location = 1) out vec4 fragColor;
 layout(location = 2) out vec3 fragNormal;
 
 void main() {
-	vec3 worldPosition = vec3(pushConstantsBlock.model * vec4(inPosition, 1.0));
+	vec3 worldPosition = mat3(pushConstantsBlock.model) * inPosition;
+	vec3 worldNormal = normalize(mat3(pushConstantsBlock.model) * inNormal);
 
 	gl_Position = ubo.camera.mvp * vec4(worldPosition, 1.0);
 
 	fragPos = worldPosition;
     fragColor = inColor;
-    fragNormal = inNormal;
+    fragNormal = worldNormal;
 }

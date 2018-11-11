@@ -4,8 +4,6 @@
 #include "CmdBufHandler.h"
 
 CmdBufHandler CmdBufHandler::inst_;
-CmdBufHandler::CmdBufHandler() {}
-CmdBufHandler::~CmdBufHandler() {}
 
 void CmdBufHandler::reset() {
     // TODO: maybe wait for idle???

@@ -3,8 +3,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 // LIGHT FLAGS
-const uint DL_HIDE          = 0x00000001u;
-const uint DL_SHOW          = 0x00000002u;
+const uint POSLIGHT_SHOW    = 0x00000001u;
 
 struct Camera {
 	mat4 mvp;
@@ -23,7 +22,7 @@ layout(location = 0) in vec3 fragPos;
 // UNIFORM BUFFER
 layout(binding = 0) uniform DefaultUniformBuffer {
 	Camera camera;
-	PositionalLight lights[1];
+	PositionalLight lights[2];
 } ubo;
 
 vec3 n, Ka, Kd, Ks;
@@ -44,22 +43,22 @@ vec3 phongModel(PositionalLight light, uint shininess) {
         vec3 v = normalize(ubo.camera.position - fragPos);
         // "h" is the halfway vector between "v" & "s" (Blinn)
         vec3 h = normalize(v + s);
+
         spec = Ks *
                 pow(max(dot(h,n), 0.0), shininess);
     }
 
-    // return ambient + light.L * (diff + spec); asdf
-    return ambient;
+    return ambient + light.L * (diff + spec);
 }
 
 vec3 getColor(uint shininess) {
     vec3 color = vec3(0.0);
 
-    // for (int i = 0; i < ubo.lights.length(); i++)
-    //     if ((ubo.lights[i].flags & DL_SHOW) > 0)
-    //         color += phongModel(ubo.lights[i], shininess);
-    
-    color += phongModel(ubo.lights[0], shininess);
+    for (int i = 0; i < ubo.lights.length(); i++) {
+        if ((ubo.lights[i].flags & POSLIGHT_SHOW) > 0) {
+            color += phongModel(ubo.lights[i], shininess);
+        }
+    }
 
     return color;
 }

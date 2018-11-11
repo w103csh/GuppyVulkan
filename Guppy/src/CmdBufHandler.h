@@ -5,14 +5,12 @@
 #include <vulkan/vulkan.h>
 
 #include "MyShell.h"
+#include "Singleton.h"
 
-class CmdBufHandler {
+class CmdBufHandler : Singleton {
    public:
     static void init(const MyShell::Context &ctx);
     static void destroy() { inst_.reset(); }
-
-    CmdBufHandler(const CmdBufHandler &) = delete;             // Prevent construction by copying
-    CmdBufHandler &operator=(const CmdBufHandler &) = delete;  // Prevent assignment
 
     enum class QUEUE { GRAPHICS = 0, PRESENT, TRANSFER };
 
@@ -41,12 +39,10 @@ class CmdBufHandler {
     static void endCmd(const VkCommandBuffer &cmd);
 
    private:
-    CmdBufHandler();   // Prevent construction
-    ~CmdBufHandler();  // Prevent destruction
-
+    CmdBufHandler(){};   // Prevent construction
+    ~CmdBufHandler(){};  // Prevent destruction
     static CmdBufHandler inst_;
-
-    void reset();
+    void reset() override;
 
     MyShell::Context ctx_;  // TODO: shared_ptr
 

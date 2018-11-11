@@ -12,7 +12,6 @@ set(SOURCE
     Constants.h
     EventHandlers.h
     Extensions.h
-    FileLoader.cpp
     FileLoader.h
     Game.h
     Guppy.cpp
@@ -44,6 +43,7 @@ set(SOURCE
 	shader.h
     Shell.cpp
     Shell.h
+    Singleton.h
     Texture.cpp
     Texture.h
     Vertex.cpp

@@ -36,8 +36,8 @@ vec3 n, Ka, Kd, Ks;
 void main() {
     float opacity;
 
-	vec3 worldNormal = normalize(mat3(pushConstantsBlock.model) * fragNormal);
-    
+    n = fragNormal;
+
     // Get the colors per vertex
     if ((pushConstantsBlock.material.flags & PER_VERTEX_COLOR) > 0) {
         Ka = vec3(fragColor);

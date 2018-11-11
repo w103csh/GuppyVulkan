@@ -4,6 +4,7 @@
 #include "PipelineHandler.h"
 
 PipelineHandler PipelineHandler::inst_;
+
 PipelineHandler::PipelineHandler() {
     for (auto& layout : pipelineLayouts_) layout = VK_NULL_HANDLE;
     inst_.cache_ = VK_NULL_HANDLE;

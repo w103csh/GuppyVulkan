@@ -16,7 +16,21 @@
 // This is here for convenience
 #include "Extensions.h"
 
-enum class MODEL_FILE_TYPE { UNKNOWN = 0, OBJ };
+enum class MODEL_FILE_TYPE {
+    //
+    UNKNOWN = 0,
+    OBJ
+};
+
+enum class SHADER_TYPE {
+    //
+    COLOR_VERT = 0,
+    TEX_VERT,
+    COLOR_FRAG,
+    LINE_FRAG,
+    TEX_FRAG,
+    UTIL_FRAG
+};
 
 enum class PIPELINE_TYPE {
     // These numbers are used as indices
@@ -96,6 +110,15 @@ static MODEL_FILE_TYPE getModelFileType(std::string s) {
     return MODEL_FILE_TYPE::UNKNOWN;
 }
 
+glm::mat4 affine(glm::vec3 scale = glm::vec3(1.0f), glm::vec3 translate = glm::vec3(0.0f), float angle = 0.0f,
+                        glm::vec3 rotationAxis = glm::vec3(1.0f), glm::mat4 model = glm::mat4(1.0f));
+
+static std::string makeVec3String(std::string prefix, glm::vec3 v) {
+    std::stringstream ss;
+     ss << prefix << "(" << v.x << ", " << v.y << ", " << v.z << ")" << std::endl;
+    return ss.str();
+}
+
 bool hasStencilComponent(VkFormat format);
 
 VkFormat findSupportedFormat(const VkPhysicalDevice &phyDev, const std::vector<VkFormat> &candidates, const VkImageTiling tiling,
@@ -124,9 +147,6 @@ void createImageView(const VkDevice &device, const VkImage &image, const uint32_
 void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, const VkFormat &format, const VkImageLayout &oldLayout,
                            const VkImageLayout &newLayout, VkPipelineStageFlags srcStages, VkPipelineStageFlags dstStages,
                            uint32_t mipLevels, uint32_t arrayLayers);
-
-glm::mat4 affine(glm::vec3 scale = glm::vec3(1.0f), glm::vec3 translate = glm::vec3(0.0f), float angle = 0.0f,
-                 glm::vec3 rotationAxis = glm::vec3(1.0f), glm::mat4 model = glm::mat4(1.0f));
 
 }  // namespace helpers
 

@@ -5,6 +5,7 @@
 #include <vulkan/vulkan.h>
 
 #include "MyShell.h"
+#include "Singleton.h"
 #include "Shader.h"
 #include "Vertex.h"
 
@@ -54,7 +55,7 @@ struct PipelineResources {
 
 class Scene;
 
-class PipelineHandler {
+class PipelineHandler : Singleton {
    public:
     static void init(const MyShell::Context &ctx, const Game::Settings &settings);
     static inline void destroy() {
@@ -95,15 +96,15 @@ class PipelineHandler {
     static void destroyPipelineResources(PipelineResources &resources);
     static void destroyDescriptorResources(std::unique_ptr<DescriptorResources> &resources);
 
-
     // old resources
     static inline void takeOldResources(std::unique_ptr<DescriptorResources> pRes) { inst_.oldDescRes_.push_back(std::move(pRes)); }
     static void cleanupOldResources();
 
    private:
-    PipelineHandler();  // Prevent construction
+    PipelineHandler();     // Prevent construction
+    ~PipelineHandler(){};  // Prevent destruction
     static PipelineHandler inst_;
-    void reset();
+    void reset() override;
 
     void createPushConstantRange();
     void createDescriptorPool(std::unique_ptr<DescriptorResources> &pDescResources);

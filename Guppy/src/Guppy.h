@@ -27,7 +27,7 @@ class Guppy : public Game {
     void on_key(KEY key);
     void on_tick();
 
-    void on_frame(float frame_pred);
+    void on_frame(float framePred);
 
    private:
     bool multithread_;

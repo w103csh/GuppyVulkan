@@ -5,12 +5,12 @@
 #include <vulkan/vulkan.h>
 
 #include "Camera.h"
+#include "Constants.h"
 #include "Light.h"
 #include "MyShell.h"
+#include "Singleton.h"
 
-
-enum class SHADER_TYPE { COLOR_VERT = 0, TEX_VERT, COLOR_FRAG, LINE_FRAG, TEX_FRAG, UTIL_FRAG };
-
+// TODO: move uniform handling here...
 struct DefaultUniformBuffer {
     Camera::Data camera;
     std::vector<Light::Positional::Data> positionalLights;
@@ -45,7 +45,7 @@ class Shader {
 
 class Scene;
 
-class ShaderHandler {
+class ShaderHandler : Singleton {
    public:
     static void init(MyShell &sh, const Game::Settings &settings, uint32_t numPosLights);
     static inline void destroy() { inst_.reset(); }
@@ -62,11 +62,11 @@ class ShaderHandler {
     static void cleanupOldResources();
 
    private:
-    ShaderHandler();  // Prevent construction
-
+    ShaderHandler();     // Prevent construction
+    ~ShaderHandler(){};  // Prevent construction
     static ShaderHandler inst_;
+    void reset() override;
 
-    void reset();
     bool loadShaders(std::vector<SHADER_TYPE> types, bool doAssert, bool updateFromFile = true);
     void loadLinkText(SHADER_TYPE type, bool updateFromFile = true);
 

@@ -3,90 +3,116 @@
 #include <sstream>
 
 #include "InputHandler.h"
+#include "MyShell.h"
 
-// TDOD: these are probably platform specific
-constexpr float K_X_MOVE_FACT = 0.01f;
-constexpr float K_Y_MOVE_FACT = 0.01f;
-constexpr float K_Z_MOVE_FACT = 0.01f;
-constexpr float M_X_LOOK_FACT = 0.01f;
-constexpr float M_Y_LOOK_FACT = -0.01f;
+const bool MY_DEBUG = false;
 
-InputHandler::InputHandler(MyShell* sh) : sh_(sh) { assert(sh != nullptr); }
+// move
+constexpr float K_X_MOVE_FACT = 2.0f;
+constexpr float K_Y_MOVE_FACT = 2.0f;
+constexpr float K_Z_MOVE_FACT = 2.0f;
+// look
+constexpr float M_X_LOOK_FACT = 0.1f;
+constexpr float M_Y_LOOK_FACT = -0.1f;
 
-void InputHandler::updateInput() {
-    reset();
-    updateKeyInput();
-    updateMouseInput();
+InputHandler InputHandler::inst_;
+
+void InputHandler::init(MyShell* sh) {
+    if (sh != nullptr)
+        inst_.sh_ = sh;
+    else
+        inst_.reset();
+    assert(inst_.sh_);
+}
+
+void InputHandler::updateInput(float elapsed) {
+    inst_.reset();
+
+    inst_.updateKeyInput();
+    inst_.updateMouseInput();
+
+    // account for time
+    inst_.posDir_ *= elapsed;
+    //inst_.lookDir_ *= (0.001 / elapsed);
+
+    if (glm::any(glm::notEqual(inst_.posDir_, glm::vec3(0.0f)))) {
+        std::stringstream ss;
+        ss << "move (" << elapsed << "):";
+        inst_.sh_->log(MyShell::LOG_INFO, helpers::makeVec3String(ss.str(), inst_.posDir_).c_str());
+    }
 }
 
 void InputHandler::updateKeyInput() {
     std::stringstream ss;
 
-    for (auto& key : curr_key_input_) {
+    for (auto& key : currKeyInput_) {
         switch (key) {
                 // FORWARD
             case Game::KEY::KEY_UP:
             case Game::KEY::KEY_W: {
                 if (MY_DEBUG) ss << " FORWARD ";
-                pos_dir_.z += K_Z_MOVE_FACT;
+                posDir_.z += K_Z_MOVE_FACT;
             } break;
                 // BACK
             case Game::KEY::KEY_DOWN:
             case Game::KEY::KEY_S: {
                 if (MY_DEBUG) ss << " BACK ";
-                pos_dir_.z += K_Z_MOVE_FACT * -1;
+                posDir_.z += K_Z_MOVE_FACT * -1;
             } break;
                 // RIGHT
             case Game::KEY::KEY_RIGHT:
             case Game::KEY::KEY_D: {
                 if (MY_DEBUG) ss << " RIGHT ";
-                pos_dir_.x += K_X_MOVE_FACT;
+                posDir_.x += K_X_MOVE_FACT;
             } break;
                 // LEFT
             case Game::KEY::KEY_LEFT:
             case Game::KEY::KEY_A: {
                 if (MY_DEBUG) ss << " LEFT ";
-                pos_dir_.x += K_X_MOVE_FACT * -1;
+                posDir_.x += K_X_MOVE_FACT * -1;
             } break;
                 // UP
             case Game::KEY::KEY_E: {
                 if (MY_DEBUG) ss << " UP ";
-                pos_dir_.y += K_Y_MOVE_FACT;
+                posDir_.y += K_Y_MOVE_FACT;
             } break;
                 // DOWN
             case Game::KEY::KEY_Q: {
                 if (MY_DEBUG) ss << " DOWN ";
-                pos_dir_.y += K_Y_MOVE_FACT * -1;
+                posDir_.y += K_Y_MOVE_FACT * -1;
             } break;
         }
     }
 
-    auto msg = ss.str();
-    if (MY_DEBUG && msg.size() > 0) {
-        ss << "\ninput direction: (" << pos_dir_.x << ", " << pos_dir_.y << ", " << pos_dir_.z << ")" << std::endl;
-        sh_->log(MyShell::LOG_INFO, ss.str().c_str());
+    if (MY_DEBUG && ss.str().size() > 0) {
+        ss << "\n Y position direction: ";
+        sh_->log(MyShell::LOG_INFO, helpers::makeVec3String(ss.str(), posDir_).c_str());
     }
 }
 
 void InputHandler::updateMouseInput() {
     std::stringstream ss;
 
-    if (is_looking_) {
-        look_dir_.x = (curr_mouse_input_.xPos - prev_mouse_input_.xPos) * M_X_LOOK_FACT;
-        look_dir_.y = (curr_mouse_input_.yPos - prev_mouse_input_.yPos) * M_Y_LOOK_FACT;
+    if (isLooking_) {
+        lookDir_.x = (currMouseInput_.xPos - prevMouseInput_.xPos) * M_X_LOOK_FACT;
+        lookDir_.y = (currMouseInput_.yPos - prevMouseInput_.yPos) * M_Y_LOOK_FACT;
 
-        if (MY_DEBUG && (!helpers::almost_equal(look_dir_.x, 0.0f, 1) || !helpers::almost_equal(look_dir_.y, 0.0f, 1))) {
-            ss << "( " << look_dir_.x << ", " << look_dir_.y << ")";
-            auto str = ss.str();
-            sh_->log(MyShell::LOG_INFO, str.c_str());
+        if (MY_DEBUG && ss.str().size() > 0) {
+            ss << "look direction: ";
+            sh_->log(MyShell::LOG_INFO, helpers::makeVec3String(ss.str(), posDir_).c_str());
+        }
+
+        if (MY_DEBUG && (!helpers::almost_equal(lookDir_.x, 0.0f, 1) || !helpers::almost_equal(lookDir_.y, 0.0f, 1))) {
+            ss << "look direction: ";
+            sh_->log(MyShell::LOG_INFO, helpers::makeVec3String(ss.str(), lookDir_).c_str());
         }
     }
 
-    prev_mouse_input_ = curr_mouse_input_;
-    is_looking_ = false;
+    prevMouseInput_ = currMouseInput_;
+    isLooking_ = false;
 }
 
 void InputHandler::reset() {
-    look_dir_ = {};
-    pos_dir_ = {};
+    inst_.lookDir_ = {};
+    inst_.posDir_ = {};
 }

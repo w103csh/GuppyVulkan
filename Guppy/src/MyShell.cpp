@@ -41,7 +41,7 @@ MyShell::MyShell(Game &game)
         instance_extensions_.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
-    InputHandler::get(this);
+    InputHandler::init(this);
 }
 
 void MyShell::log(LogPriority priority, const char *msg) const {

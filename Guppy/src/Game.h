@@ -127,7 +127,7 @@ class Game {
     virtual void on_key(KEY key) {}
     virtual void on_tick() {}
 
-    virtual void on_frame(float frame_pred) {}
+    virtual void on_frame(float framePred) {}
 
    protected:
     Game(const std::string &name, const std::vector<std::string> &args) : settings_(), shell_(nullptr) {

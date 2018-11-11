@@ -13,8 +13,7 @@ namespace Light {
 enum class TYPE { BASE = 0 };
 
 typedef enum FLAGS {
-    HIDE = 0x00000001,
-    SHOW = 0x00000002,
+    SHOW = 0x00000001,
     // THROUGH 0x00000008
     MODE_LAMERTIAN = 0x00000010,
     MODE_BLINN_PHONG = 0x00000020,
@@ -32,7 +31,7 @@ class Positional : public Object3d {
         // 4 rem
     };
 
-    Positional() : flags_(FLAGS::SHOW), La_(glm::vec3(0.2f)), L_(glm::vec3(0.6f)){};
+    Positional() : flags_(FLAGS::SHOW), La_(glm::vec3(0.1f)), L_(glm::vec3(0.6f)){};
 
     // bool operator==(const Base& other) const { return pos == other.pos && normal == other.normal; }
 

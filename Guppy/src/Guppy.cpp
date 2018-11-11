@@ -181,8 +181,14 @@ void Guppy::on_key(KEY key) {
             // sim_fade_ = !sim_fade_;
             break;
         case KEY::KEY_1: {
-            auto p1 = std::make_unique<ColorPlane>();
-            active_scene()->addMesh(shell_->context(), std::move(p1));
+            FlagBits flags = positionalLights_[0].getFlags();
+            flags ^= Light::FLAGS::SHOW;
+            positionalLights_[0].setFlags(flags);
+        } break;
+        case KEY::KEY_2: {
+            FlagBits flags = positionalLights_[1].getFlags();
+            flags ^= Light::FLAGS::SHOW;
+            positionalLights_[1].setFlags(flags);
         } break;
         case KEY::KEY_3: {
             if (false) {
@@ -207,13 +213,15 @@ void Guppy::on_key(KEY key) {
                 active_scene()->addMesh(shell_->context(), std::move(p2));
             }
         } break;
+        case KEY::KEY_4: {
+            auto p1 = std::make_unique<ColorPlane>();
+            active_scene()->addMesh(shell_->context(), std::move(p1));
+        } break;
         case KEY::KEY_5: {
             for (auto& light : positionalLights_) {
-                if ((light.getFlags() & Light::FLAGS::SHOW) > 0) {
-                    light.setFlags(Light::FLAGS::HIDE);
-                } else {
-                    light.setFlags(Light::FLAGS::SHOW);
-                }
+                FlagBits flags = light.getFlags();
+                flags ^= Light::FLAGS::SHOW;
+                light.setFlags(flags);
             }
             // if (test < 3) {
             //    addTexture(dev_, STATUE_TEXTURE_PATH);
@@ -239,7 +247,7 @@ void Guppy::on_key(KEY key) {
     }
 }
 
-void Guppy::on_frame(float frame_pred) {
+void Guppy::on_frame(float framePred) {
     auto& data = frame_data_[frame_data_index_];
 
     // wait for the last submission since we reuse frame data
@@ -447,8 +455,8 @@ void Guppy::updateUniformBuffer() {
     // auto y6 = offsetof(Light::Ambient::Data, phongExp);
 
     // Update the camera...
-    auto pos_dir = InputHandler::get().getPosDir();
-    auto look_dir = InputHandler::get().getLookDir();
+    auto pos_dir = InputHandler::getPosDir();
+    auto look_dir = InputHandler::getLookDir();
     camera_.update(aspect, pos_dir, look_dir);
     defUBO_.camera.mvp = camera_.getMVP();
     defUBO_.camera.position = camera_.getPosition();
