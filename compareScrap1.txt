@@ -1,18 +1,32 @@
-    if (vertShaderText.data()) {
-        std::vector<unsigned int> vtx_spv;
-        retVal = GLSLtoSPV(VK_SHADER_STAGE_VERTEX_BIT, vertShaderText.data(), vtx_spv);
-        assert(retVal);
+void TextureMesh::loadObj() {
+    tinyobj::attrib_t attrib;
+    std::vector<tinyobj::shape_t> shapes;
+    std::vector<tinyobj::material_t> materials;
+    std::string warn, err;  // TODO: log warings
 
-        module_info = {};
-        module_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        module_info.codeSize = vtx_spv.size() * sizeof(unsigned int);
-        module_info.pCode = vtx_spv.data();
-        vk::assert_success(vkCreateShaderModule(dev_, &module_info, nullptr, &vs_.module));
-
-        stage_info = {};
-        stage_info.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        stage_info.stage = VK_SHADER_STAGE_VERTEX_BIT;
-        stage_info.pName = "main";
-        stage_info.module = vs_.module;
-        vs_.info = std::move(stage_info);
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath_.c_str())) {
+        throw std::runtime_error(err);
     }
+
+    std::unordered_map<Vertex::Texture, uint32_t> uniqueVertices = {};
+
+    for (const auto& shape : shapes) {
+        for (const auto& index : shape.mesh.indices) {
+            // Create the vertex ...
+            Vertex::Texture vertex = {};
+            vertex.pos = {attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1],
+                          attrib.vertices[3 * index.vertex_index + 2]};
+
+            vertex.texCoord = {attrib.texcoords[2 * index.texcoord_index + 0],
+                               1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
+
+            if (uniqueVertices.count(vertex) == 0) {
+                uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
+
+                vertices_.push_back(std::move(vertex));
+            }
+
+            indices_.push_back(uniqueVertices[vertex]);
+        }
+    }
+}

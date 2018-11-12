@@ -37,11 +37,11 @@ class Scene {
     inline size_t readyCount() {
         size_t count = 0;
         for (auto &pMesh : colorMeshes_)
-            if (pMesh->getStatus() == Mesh::STATUS::READY) count++;
+            if (pMesh->getStatus() == STATUS::READY) count++;
         // for (auto &pMesh : lineMeshes_)
         //    if (pMesh->isReady()) count++;
         for (auto &pMesh : texMeshes_) {
-            if (pMesh->getStatus() == Mesh::STATUS::READY) count++;
+            if (pMesh->getStatus() == STATUS::READY) count++;
         }
         return count;
         // return std::count_if(meshes_.begin(), meshes_.end(), [](auto &mesh) { return mesh->isReady(); });
@@ -88,8 +88,9 @@ class Scene {
 
     // Uniform buffer
     void createDynamicTexUniformBuffer(const MyShell::Context &ctx, const Game::Settings &settings,
-                                    std::vector<std::shared_ptr<Texture::Data>> &textures, std::string markerName = "");
-    std::shared_ptr<UniformBufferResources> pDynUboResource_;
+                                       std::vector<std::shared_ptr<Texture::Data>> &textures, std::string markerName = "");
+    void destroyUniforms(const VkDevice &dev);
+    std::shared_ptr<UniformBufferResources> pDynUBOResource_;
 };
 
 #endif  // !SCENE_H

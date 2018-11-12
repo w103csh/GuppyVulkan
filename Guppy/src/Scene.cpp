@@ -14,7 +14,7 @@ struct UBOTag {
 Scene::Scene(const MyShell::Context& ctx, const Game::Settings& settings, const UniformBufferResources& uboResource,
              std::vector<std::shared_ptr<Texture::Data>>& textures) {
     createDynamicTexUniformBuffer(ctx, settings, textures);
-    pDescResources_ = PipelineHandler::createDescriptorResources({uboResource.info}, {pDynUboResource_->info}, 1 /* !!! hardcode */,
+    pDescResources_ = PipelineHandler::createDescriptorResources({uboResource.info}, {pDynUBOResource_->info}, 1 /* !!! hardcode */,
                                                                  textures.size());
     PipelineHandler::createPipelineResources(plResources_);
     create_draw_cmds(ctx);
@@ -30,34 +30,34 @@ void Scene::createDynamicTexUniformBuffer(const MyShell::Context& ctx, const Gam
     if (limits.minUniformBufferOffsetAlignment)
         dynBuffSize = (dynBuffSize + limits.minUniformBufferOffsetAlignment - 1) & ~(limits.minUniformBufferOffsetAlignment - 1);
 
-    pDynUboResource_ = std::make_shared<UniformBufferResources>();
-    pDynUboResource_->count = textures.size();
-    pDynUboResource_->info.offset = 0;
-    pDynUboResource_->info.range = dynBuffSize;
+    pDynUBOResource_ = std::make_shared<UniformBufferResources>();
+    pDynUBOResource_->count = textures.size();
+    pDynUBOResource_->info.offset = 0;
+    pDynUBOResource_->info.range = dynBuffSize;
 
-    pDynUboResource_->size = helpers::createBuffer(ctx.dev, (dynBuffSize * textures.size()), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+    pDynUBOResource_->size = helpers::createBuffer(ctx.dev, (dynBuffSize * textures.size()), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                                    VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                                   pDynUboResource_->buffer, pDynUboResource_->memory);
+                                                   pDynUBOResource_->buffer, pDynUBOResource_->memory);
 
     void* pData;
     size_t offset = 0;
-    vk::assert_success(vkMapMemory(ctx.dev, pDynUboResource_->memory, 0, pDynUboResource_->size, 0, &pData));
+    vk::assert_success(vkMapMemory(ctx.dev, pDynUBOResource_->memory, 0, pDynUBOResource_->size, 0, &pData));
 
     for (const auto& pTex : textures) {
         memcpy(static_cast<char*>(pData) + offset, &pTex->flags, dynBuffSize);
         offset += static_cast<size_t>(dynBuffSize);
     }
 
-    vkUnmapMemory(ctx.dev, pDynUboResource_->memory);
+    vkUnmapMemory(ctx.dev, pDynUBOResource_->memory);
 
-    pDynUboResource_->info.buffer = pDynUboResource_->buffer;
+    pDynUBOResource_->info.buffer = pDynUBOResource_->buffer;
 
     if (settings.enable_debug_markers) {
         if (markerName.empty()) markerName += "Default";
         markerName += " dynamic texture uniform buffer block";
-        ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)pDynUboResource_->buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+        ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)pDynUBOResource_->buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                       markerName.c_str());
-        ext::DebugMarkerSetObjectTag(ctx.dev, (uint64_t)pDynUboResource_->buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0,
+        ext::DebugMarkerSetObjectTag(ctx.dev, (uint64_t)pDynUBOResource_->buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0,
                                      sizeof(uboTag), &uboTag);
     }
 }
@@ -68,7 +68,7 @@ size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<ColorMesh> pM
     pMesh->setSceneData(ctx, offset);
     colorMeshes_.push_back(std::move(pMesh));
 
-    if (colorMeshes_.back()->getStatus() != Mesh::STATUS::READY) {
+    if (colorMeshes_.back()->getStatus() != STATUS::READY) {
         ldgFutures_.emplace_back(colorMeshes_.back()->load(ctx));
     } else {
         colorMeshes_.back()->prepare(ctx.dev, pDescResources_);
@@ -83,7 +83,7 @@ size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<LineMesh> pMe
     pMesh->setSceneData(ctx, offset);
     lineMeshes_.push_back(std::move(pMesh));
 
-    if (lineMeshes_.back()->getStatus() != Mesh::STATUS::READY) {
+    if (lineMeshes_.back()->getStatus() != STATUS::READY) {
         ldgFutures_.emplace_back(lineMeshes_.back()->load(ctx));
     } else {
         lineMeshes_.back()->prepare(ctx.dev, pDescResources_);
@@ -106,7 +106,7 @@ size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<TextureMesh> 
     }
 
     // Check mesh loading status
-    if (texMeshes_.back()->getStatus() != Mesh::STATUS::READY) {
+    if (texMeshes_.back()->getStatus() != STATUS::READY) {
         ldgFutures_.emplace_back(texMeshes_.back()->load(ctx));
     } else {
         texMeshes_.back()->prepare(ctx.dev, pDescResources_);
@@ -149,7 +149,7 @@ bool Scene::update(const MyShell::Context& ctx, int frameIndex) {
 
     // TODO: fix all this ready stuff
     for (auto& pMesh : texMeshes_) {
-        if (pMesh->getStatus() == Mesh::STATUS::PENDING_TEXTURE) {
+        if (pMesh->getStatus() == STATUS::PENDING_TEXTURE) {
             pMesh->tryCreateDescriptorSets(pDescResources_);
         }
     }
@@ -170,15 +170,13 @@ void Scene::updateDescriptorResources(const MyShell::Context& ctx, std::unique_p
     pDescResources_ = std::move(pNewRes);
     // Allocate descriptor sets for meshes that are ready ...
     for (auto& pMesh : texMeshes_) {
-        if (pMesh->getStatus() == Mesh::STATUS::READY) {
+        if (pMesh->getStatus() == STATUS::READY) {
             pMesh->tryCreateDescriptorSets(pDescResources_);
         }
     }
 }
 
-void Scene::updatePipeline(PIPELINE_TYPE type) {
-    PipelineHandler::createPipeline(type, plResources_);
-}
+void Scene::updatePipeline(PIPELINE_TYPE type) { PipelineHandler::createPipeline(type, plResources_); }
 
 // TODO: make cmd amount dynamic
 const VkCommandBuffer& Scene::getDrawCmds(const uint32_t& frame_data_index) {
@@ -301,7 +299,7 @@ void Scene::record(const MyShell::Context& ctx, const VkCommandBuffer& cmd, cons
             const auto& pipeline = getPipeline(PIPELINE_TYPE::TRI_LIST_COLOR);
 
             for (auto& pMesh : colorMeshes_) {
-                if (pMesh->getStatus() == Mesh::STATUS::READY) {
+                if (pMesh->getStatus() == STATUS::READY) {
                     pMesh->drawInline(cmd, layout, pipeline, descSet);
                 }
             }
@@ -318,7 +316,7 @@ void Scene::record(const MyShell::Context& ctx, const VkCommandBuffer& cmd, cons
             const auto& pipeline = getPipeline(PIPELINE_TYPE::LINE);
 
             for (auto& pMesh : lineMeshes_) {
-                if (pMesh->getStatus() == Mesh::STATUS::READY) {
+                if (pMesh->getStatus() == STATUS::READY) {
                     pMesh->drawInline(cmd, layout, pipeline, descSet);
                 }
             }
@@ -343,7 +341,7 @@ void Scene::record(const MyShell::Context& ctx, const VkCommandBuffer& cmd, cons
         const auto& pipeline = getPipeline(PIPELINE_TYPE::TRI_LIST_TEX);
 
         for (auto& pMesh : texMeshes_) {
-            if (pMesh->getStatus() == Mesh::STATUS::READY) {
+            if (pMesh->getStatus() == STATUS::READY) {
                 // descriptor set
                 const auto& descSet = getTexDescSet(pMesh->getTextureOffset(), frameIndex);
                 // dynamic uniform buffer offset
@@ -371,14 +369,21 @@ void Scene::destroy_cmds(const VkDevice& dev) {
     draw_resources_.clear();
 }
 
+void Scene::destroyUniforms(const VkDevice& dev) {
+    vkDestroyBuffer(dev, pDynUBOResource_->buffer, nullptr);
+    vkFreeMemory(dev, pDynUBOResource_->memory, nullptr);
+}
+
 void Scene::destroy(const VkDevice& dev) {
     // mesh
     for (auto& pMesh : colorMeshes_) pMesh->destroy(dev);
     colorMeshes_.clear();
-    // for (auto& pMesh : lineMeshes_) pMesh->destroy(dev);
-    // lineMeshes_.clear();
+    for (auto& pMesh : lineMeshes_) pMesh->destroy(dev);
+    lineMeshes_.clear();
     for (auto& pMesh : texMeshes_) pMesh->destroy(dev);
     texMeshes_.clear();
+    // uniforms
+    destroyUniforms(dev);
     // descriptor
     PipelineHandler::destroyDescriptorResources(pDescResources_);
     // pipeline

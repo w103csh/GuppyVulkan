@@ -18,13 +18,13 @@ Camera::Camera(const glm::vec3 &eye, const glm::vec3 &center, float aspect, floa
                       0.0f, 0.0f, 0.5f, 1.0f);  //
 }
 
-glm::vec3 Camera::getDirection() {
+glm::vec3 Camera::getDirection() const {
     auto local = Object3d::obj3d_.model * view_;
     glm::vec3 dir = glm::row(local, 2) * -1.0f;
     return glm::normalize(dir);
 }
 
-glm::vec3 Camera::getPosition() {
+glm::vec3 Camera::getPosition() const {
     auto local = Object3d::obj3d_.model * view_;
     // I believe this is the "w" homogenous factor from the book.
     // Still not 100% sure.
@@ -33,7 +33,7 @@ glm::vec3 Camera::getPosition() {
     return pos;
 }
 
-void Camera::update(float aspect, const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
+void Camera::update(const float aspect, const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
     // ASPECT
     if (!helpers::almost_equal(aspect, aspect_, 2)) {
         proj_ = glm::perspective(fov_, aspect, near_, far_);

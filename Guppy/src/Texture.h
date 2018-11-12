@@ -15,7 +15,6 @@
 // TODO: hold the data on the class. This is getting stupid.
 class Texture {
    public:
-    enum class STATUS { PENDING = 0, READY };
     typedef enum FLAGS {
         DIFFUSE = 0x00000001,
         // THROUGH 0x00000008
@@ -51,6 +50,7 @@ class Texture {
         VkDescriptorImageInfo imgDescInfo;
         VkImageView view;
         uint32_t offset, width, height, channels, mipLevels;
+        float aspect;
         std::string name, path, normPath, specPath;
         std::unique_ptr<LoadingResources> pLdgRes;
         stbi_uc *pixels, *normPixels, *specPixels;

@@ -5,7 +5,7 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
-#include "Helpers.h"
+#include "Object3d.h"
 
 class Camera : public Object3d {
    public:
@@ -20,12 +20,12 @@ class Camera : public Object3d {
 
     inline Data getData() { return data_; }
 
-    glm::vec3 getDirection() override;
-    glm::vec3 getPosition() override;
+    glm::vec3 getDirection() const override;
+    glm::vec3 getPosition() const  override;
 
     inline glm::mat4 getMVP() const { return clip_ * proj_ * view_ * Object3d::obj3d_.model; }
 
-    void update(float aspect, const glm::vec3 &pos_dir = {}, const glm::vec3 &look_dir = {});
+    void update(const float aspect, const glm::vec3 &pos_dir = {}, const glm::vec3 &look_dir = {});
 
    private:
     void updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir);

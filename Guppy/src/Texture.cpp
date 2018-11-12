@@ -10,7 +10,7 @@
 #define STB_FORMAT VK_FORMAT_R8G8B8A8_UNORM
 
 std::future<std::shared_ptr<Texture::Data>> Texture::loadTexture(const VkDevice& dev, const bool makeMipmaps,
-                                                                        std::shared_ptr<Data> pTexture) {
+                                                                 std::shared_ptr<Data> pTexture) {
     pTexture->pLdgRes = LoadingResourceHandler::createLoadingResources();
 
     return std::async(std::launch::async, [&dev, &makeMipmaps, pTexture]() {
@@ -28,6 +28,7 @@ std::future<std::shared_ptr<Texture::Data>> Texture::loadTexture(const VkDevice&
         pTexture->height = static_cast<uint32_t>(height);
         pTexture->channels = static_cast<uint32_t>(channels);
         pTexture->mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(pTexture->width, pTexture->height)))) + 1;
+        pTexture->aspect = static_cast<float>(width) / static_cast<float>(height);
 
         // Normal map
         if (!pTexture->normPath.empty()) {
@@ -83,7 +84,7 @@ void Texture::createTexture(const VkDevice& dev, const bool makeMipmaps, std::sh
 
     LoadingResourceHandler::loadSubmit(std::move(pTexture->pLdgRes));
 
-    pTexture->status = Texture::STATUS::READY;
+    pTexture->status = STATUS::READY;
 }
 
 void Texture::createImage(const VkDevice& dev, Data& tex) {

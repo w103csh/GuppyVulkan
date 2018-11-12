@@ -6,7 +6,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Constants.h"
-#include "Helpers.h"
+#include "Object3d.h"
 
 namespace Light {
 

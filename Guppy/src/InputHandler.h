@@ -34,15 +34,12 @@ class InputHandler : Singleton {
         }
     }
 
-    static inline void updateMousePosition(float xPos, float yPos, bool is_looking) {
+    static inline void updateMousePosition(float xPos, float yPos, float zDelta, bool isLooking) {
         inst_.currMouseInput_.xPos = xPos;
         inst_.currMouseInput_.yPos = yPos;
-        inst_.isLooking_ = is_looking;
+        inst_.currMouseInput_.zDelta = zDelta;
+        inst_.isLooking_ = isLooking;
     }
-
-    // inline bool hasMouseInput() {
-    //    return !helpers::almost_equal(curr_mouse_input_.xPos, 0.0f, 1) && !helpers::almost_equal(curr_mouse_input_.yPos, 0.0f, 1);
-    //}
 
     static inline void mouseLeave() { inst_.hasFocus_ = true; }
 
@@ -71,7 +68,7 @@ class InputHandler : Singleton {
     glm::vec3 posDir_;
 
     struct MouseInput {
-        float xPos, yPos;
+        float xPos, yPos, zDelta;
         // std::set<Game::MOUSE> inputs;
         // std::set<Game::MOUSE> type;
     };

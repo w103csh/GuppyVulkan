@@ -33,6 +33,8 @@ set(SOURCE
     Model.h
     MyShell.cpp
     MyShell.h
+    Object3d.cpp
+    Object3d.h
 	PipelineHandler.cpp
 	PipelineHandler.h
     Plane.cpp

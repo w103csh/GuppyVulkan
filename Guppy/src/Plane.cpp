@@ -24,12 +24,13 @@ ColorPlane::ColorPlane(std::unique_ptr<Material> pMaterial, glm::mat4 model, boo
     : ColorMesh(std::move(pMaterial), "", model) {
     markerName_ = "ColorPlane";
     createVertices();
+    updateBoundingBox(vertices_);
     Plane::createIndices(indices_, doubleSided);
 }
 
 void ColorPlane::createVertices() {
     float width, height;
-    width = height = 2.0f;
+    width = height = 1.0f;
     float l = (width / 2 * -1), r = (width / 2);
     float b = (height / 2 * -1), t = (height / 2);
     vertices_ = {
@@ -68,12 +69,21 @@ TexturePlane::TexturePlane(std::shared_ptr<Texture::Data> pTexture, glm::mat4 mo
     : TextureMesh(std::make_unique<Material>(pTexture), "", model) {
     markerName_ = "TexturePlane";
     createVertices();
+    updateBoundingBox(vertices_);
+    Plane::createIndices(indices_, doubleSided);
+}
+
+TexturePlane::TexturePlane(std::unique_ptr<Material> pMaterial, glm::mat4 model, bool doubleSided)
+    : TextureMesh(std::move(pMaterial), "", model) {
+    markerName_ = "TexturePlane";
+    createVertices();
+    updateBoundingBox(vertices_);
     Plane::createIndices(indices_, doubleSided);
 }
 
 void TexturePlane::createVertices() {
     float width, height;
-    width = height = 2.0f;
+    width = height = 1.0f;
     float l = (width / 2 * -1), r = (width / 2);
     float b = (height / 2 * -1), t = (height / 2);
     vertices_ = {

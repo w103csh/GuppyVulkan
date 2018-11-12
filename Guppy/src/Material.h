@@ -30,10 +30,16 @@ class Material {
     struct Data {
         glm::vec3 Ka;
         FlagBits flags;
+        // 16
         glm::vec3 Kd;
         float opacity;
+        // 16
         glm::vec3 Ks;
         uint32_t shininess;
+        // 16
+        float xRepeat;
+        float yRepeat;
+        // 8 (8 rem)
     };
 
     Material(FlagBits flags = PER_MATERIAL_COLOR | MODE_LAMERTIAN)
@@ -42,6 +48,9 @@ class Material {
           diffuseCoeff_(1.0f),
           specularCoeff_(0.9f),
           opacity_(1.0f),
+          repeat_(1.0f),
+          // xRepeat_(1.0f),
+          // yRepeat_(1.0f),
           shininess_(MILDLY_SHINY),
           pTexture_(nullptr){};
 
@@ -51,11 +60,15 @@ class Material {
           diffuseCoeff_(1.0f),
           specularCoeff_(0.9f),
           opacity_(1.0f),
+          repeat_(1.0f),
+          // xRepeat_(1.0f),
+          // yRepeat_(1.0f),
           shininess_(MILDLY_SHINY),
           pTexture_(pTexture){};
 
+    STATUS getStatus();
+    Data getData() const;
     inline const Texture::Data& getTexture() const { return (*pTexture_); }
-    inline Data getData() const { return {ambientCoeff_, flags_, diffuseCoeff_, opacity_, specularCoeff_, shininess_}; }
 
     inline void setFlags(FlagBits flags) { flags_ = flags; }
     inline void setColor(glm::vec3 c) { ambientCoeff_ = diffuseCoeff_ = c; }
@@ -67,14 +80,17 @@ class Material {
         flags_ = flags_ | (BITS_MAX_ENUM & PER_TEXTURE_COLOR);
         pTexture_ = pTexture;
     }
+    inline void setRepeat(float r) { repeat_ = r; }
+    // inline void setXRepeat(float r) { xRepeat_ = r; }
+    // inline void setYRepeat(float r) { yRepeat_ = r; }
 
-    inline bool hasTexture() { return pTexture_.get() != nullptr; }
+    inline bool hasTexture() const { return pTexture_.get() != nullptr; }
 
    private:
     FlagBits flags_;
     glm::vec3 ambientCoeff_, diffuseCoeff_, specularCoeff_;
-    float opacity_;
-    uint32_t shininess_;  // phong exponent
+    float opacity_, repeat_;  //, xRepeat_, yRepeat_;
+    uint32_t shininess_;     // phong exponent
     std::shared_ptr<Texture::Data> pTexture_;
 };
 

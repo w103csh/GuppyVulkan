@@ -40,20 +40,20 @@ class ShellWin32 : public MyShell {
     ShellWin32(Game &game);
     ~ShellWin32();
 
-    void watch_directory(std::string dir, std::function<void(std::string)> callback) override;
+    void watchDirectory(std::string dir, std::function<void(std::string)> callback) override;
     void run() override;
     void quit() override;
 
    private:
     PFN_vkGetInstanceProcAddr load_vk();
-    VkBool32 can_present(VkPhysicalDevice phy, uint32_t queue_family);
+    VkBool32 canPresent(VkPhysicalDevice phy, uint32_t queue_family);
 
-    void create_window();
-    VkSurfaceKHR create_surface(VkInstance instance);
+    void createWindow();
+    VkSurfaceKHR createSurface(VkInstance instance);
 
-    Game::KEY get_key(WPARAM wParam, InputHandler::INPUT_TYPE type);
-    void get_mouse(Game::MOUSE mouse, UINT uMsg, LPARAM lParam);
-    void get_mouse_mod(WPARAM wParam, LPARAM lParam);
+    Game::KEY getKey(WPARAM wParam, InputHandler::INPUT_TYPE type);
+    void getMouse(Game::MOUSE mouse, UINT uMsg, LPARAM lParam);
+    void getMouseModifier(WPARAM wParam, LPARAM lParam);
 
     static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         ShellWin32 *shell = reinterpret_cast<ShellWin32 *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));
@@ -61,9 +61,9 @@ class ShellWin32 : public MyShell {
         // called from constructor, CreateWindowEx specifically.  But why?
         if (!shell) return DefWindowProc(hwnd, uMsg, wParam, lParam);
 
-        return shell->handle_message(uMsg, wParam, lParam);
+        return shell->handleMessage(uMsg, wParam, lParam);
     }
-    LRESULT handle_message(UINT msg, WPARAM wparam, LPARAM lparam);
+    LRESULT handleMessage(UINT msg, WPARAM wparam, LPARAM lparam);
 
     // Directory listener
     void AsyncAlert(DWORD);

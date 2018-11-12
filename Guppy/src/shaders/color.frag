@@ -17,6 +17,8 @@ struct Material {
     float opacity;      // Overall opacity
     vec3 Ks;            // Specular reflectivity
     uint shininess;     // Specular shininess factor
+	float xRepeat;		// Texture xRepeat
+	float yRepeat;		// Texture yRepeat
 };
 
 // IN

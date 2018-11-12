@@ -118,7 +118,7 @@ class MyShell {
     };
     virtual void log(LogPriority priority, const char *msg) const;
 
-    virtual void watch_directory(std::string dir, std::function<void(std::string)> callback) = 0;
+    virtual void watchDirectory(std::string dir, std::function<void(std::string)> callback) = 0;
     virtual void run() = 0;
     virtual void quit() = 0;
 
@@ -174,7 +174,7 @@ class MyShell {
     void enumerate_instance_layer_extension_properties(LayerProperties &layer_props);  // *
     void init_validation_messenger();                                                  // *
     virtual PFN_vkGetInstanceProcAddr load_vk() = 0;
-    virtual VkBool32 can_present(VkPhysicalDevice phy, uint32_t queue_family) = 0;
+    virtual VkBool32 canPresent(VkPhysicalDevice phy, uint32_t queue_family) = 0;
     void init_instance();
     void init_debug_report();
     void init_physical_dev();
@@ -204,7 +204,7 @@ class MyShell {
     void create_dev();
     void create_back_buffers();
     void destroy_back_buffers();
-    virtual VkSurfaceKHR create_surface(VkInstance instance) = 0;
+    virtual VkSurfaceKHR createSurface(VkInstance instance) = 0;
     void create_swapchain();
     void destroy_swapchain();
 

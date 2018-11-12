@@ -97,15 +97,27 @@ void InputHandler::updateMouseInput() {
         lookDir_.x = (currMouseInput_.xPos - prevMouseInput_.xPos) * M_X_LOOK_FACT;
         lookDir_.y = (currMouseInput_.yPos - prevMouseInput_.yPos) * M_Y_LOOK_FACT;
 
-        if (MY_DEBUG && ss.str().size() > 0) {
+        if (MY_DEBUG) {
             ss << "look direction: ";
-            sh_->log(MyShell::LOG_INFO, helpers::makeVec3String(ss.str(), posDir_).c_str());
+            ss << helpers::makeVec3String(ss.str(), posDir_);
         }
 
         if (MY_DEBUG && (!helpers::almost_equal(lookDir_.x, 0.0f, 1) || !helpers::almost_equal(lookDir_.y, 0.0f, 1))) {
             ss << "look direction: ";
-            sh_->log(MyShell::LOG_INFO, helpers::makeVec3String(ss.str(), lookDir_).c_str());
+            ss << helpers::makeVec3String(ss.str(), lookDir_);
         }
+    }
+    if (currMouseInput_.zDelta) {
+        posDir_.z += currMouseInput_.zDelta > 0 ? K_Z_MOVE_FACT * 6 : K_Z_MOVE_FACT * -6;
+        currMouseInput_.zDelta = 0; // reset zDelta here... this stuff is not great
+
+        if (MY_DEBUG) {
+            ss << helpers::makeVec3String("mouse wheel: ", posDir_);
+        }
+    }
+
+    if (MY_DEBUG && ss.str().size() > 0) {
+        sh_->log(MyShell::LOG_INFO, ss.str().c_str());
     }
 
     prevMouseInput_ = currMouseInput_;

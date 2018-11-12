@@ -19,7 +19,15 @@
 enum class MODEL_FILE_TYPE {
     //
     UNKNOWN = 0,
-    OBJ
+    OBJ,
+};
+
+enum class STATUS {
+    //
+    PENDING = 0,
+    READY, 
+    VERTICES_LOADED,
+    PENDING_TEXTURE,
 };
 
 enum class SHADER_TYPE {
@@ -29,7 +37,7 @@ enum class SHADER_TYPE {
     COLOR_FRAG,
     LINE_FRAG,
     TEX_FRAG,
-    UTIL_FRAG
+    UTIL_FRAG,
 };
 
 enum class PIPELINE_TYPE {
@@ -111,11 +119,11 @@ static MODEL_FILE_TYPE getModelFileType(std::string s) {
 }
 
 glm::mat4 affine(glm::vec3 scale = glm::vec3(1.0f), glm::vec3 translate = glm::vec3(0.0f), float angle = 0.0f,
-                        glm::vec3 rotationAxis = glm::vec3(1.0f), glm::mat4 model = glm::mat4(1.0f));
+                 glm::vec3 rotationAxis = glm::vec3(1.0f), glm::mat4 model = glm::mat4(1.0f));
 
 static std::string makeVec3String(std::string prefix, glm::vec3 v) {
     std::stringstream ss;
-     ss << prefix << "(" << v.x << ", " << v.y << ", " << v.z << ")" << std::endl;
+    ss << prefix << "(" << v.x << ", " << v.y << ", " << v.z << ")" << std::endl;
     return ss.str();
 }
 
@@ -190,28 +198,6 @@ struct DrawResources {
 template <typename T>
 struct SharedStruct : std::enable_shared_from_this<T> {
     const std::shared_ptr<const T> getPtr() const { return shared_from_this(); }
-};
-
-struct Object3d {
-   public:
-    struct Data {
-        glm::mat4 model = glm::mat4(1.0f);
-    };
-
-    Object3d(glm::mat4 model = glm::mat4(1.0f)) : obj3d_{model} {};
-
-    virtual inline glm::vec3 getDirection() {
-        glm::vec3 dir = glm::row(obj3d_.model, 2);
-        return glm::normalize(dir);
-    }
-
-    virtual inline glm::vec3 getPosition() { return obj3d_.model[3]; }
-    virtual inline void transform(glm::mat4 t) { obj3d_.model *= t; }
-
-    inline Data getData() const { return obj3d_; }
-
-   protected:
-    Data obj3d_;
 };
 
 #endif  // !HELPERS_H

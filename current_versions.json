@@ -1,0 +1,36 @@
+{
+  "repos" : [
+    {
+      "name" : "glslang",
+      "url" : "https://github.com/KhronosGroup/glslang.git",
+      "sub_dir" : "glslang",
+      "build_dir" : "glslang/build",
+      "install_dir" : "glslang/build/install",
+      "commit" : "a440fbb04f82b5cb19541802a31abdf1aeb94abe",
+      "prebuild" : [
+        "python update_glslang_sources.py"
+      ]
+    },
+    {
+      "name" : "Vulkan-Headers",
+      "url" : "https://github.com/KhronosGroup/Vulkan-Headers.git",
+      "sub_dir" : "Vulkan-Headers",
+      "build_dir" : "Vulkan-Headers/build",
+      "install_dir" : "Vulkan-Headers/build/install",
+      "commit" : "aaca7baef0132f5f8c8f89ee07e3a27aca52b59c"
+    },
+    {
+      "name" : "GLM",
+      "version" : "0.9.9.2"
+    },
+    {
+      "name" : "LunarG Vulkan SDK",
+      "version" : "1.1.85.0"
+    }
+  ],
+  "install_names" : {
+      "glslang" : "GLSLANG_INSTALL_DIR",
+      "Vulkan-Headers" : "VULKAN_HEADERS_INSTALL_DIR",
+      "GLM" : "GLM_INSTALL_DIR"
+    }
+}

@@ -11,13 +11,23 @@
 // **********************
 
 Mesh::Mesh(std::unique_ptr<Material> pMaterial)
-    : Object3d(glm::mat4(1.0f)), modelPath_(""), status_(STATUS::PENDING), markerName_(""), pLdgRes_(nullptr) {
+    : Object3d(glm::mat4(1.0f)),
+      index_res_{VK_NULL_HANDLE, VK_NULL_HANDLE},
+      markerName_(""),
+      modelPath_(""),
+      pLdgRes_(nullptr),
+      status_(STATUS::PENDING) {
     pMaterial_ = std::move(pMaterial);
     pLdgRes_ = LoadingResourceHandler::createLoadingResources();
 }
 
 Mesh::Mesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model)
-    : Object3d(model), modelPath_(modelPath), status_(STATUS::PENDING), markerName_(""), pLdgRes_(nullptr) {
+    : Object3d(model),
+      index_res_{VK_NULL_HANDLE, VK_NULL_HANDLE},
+      markerName_(""),
+      modelPath_(modelPath),
+      pLdgRes_(nullptr),
+      status_(STATUS::PENDING) {
     pMaterial_ = std::move(pMaterial);
     pLdgRes_ = LoadingResourceHandler::createLoadingResources();
 }
@@ -137,7 +147,7 @@ void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout
 
     PushConstants pushConstants = {getData().model, pMaterial_->getData()};
     vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pushConstants),
-                        &pushConstants);
+                       &pushConstants);
 
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet, 0, nullptr);
     vkCmdBindVertexBuffers(cmd, 0, 1, vertex_buffers, offsets);
@@ -163,8 +173,12 @@ void Mesh::destroy(const VkDevice& dev) {
     vkDestroyBuffer(dev, vertex_res_.buffer, nullptr);
     vkFreeMemory(dev, vertex_res_.memory, nullptr);
     // index
-    vkDestroyBuffer(dev, index_res_.buffer, nullptr);
-    vkFreeMemory(dev, index_res_.memory, nullptr);
+    if (index_res_.buffer != VK_NULL_HANDLE) {
+        vkDestroyBuffer(dev, index_res_.buffer, nullptr);
+    }
+    if (index_res_.memory != VK_NULL_HANDLE) {
+        vkFreeMemory(dev, index_res_.memory, nullptr);
+    }
 }
 
 // **********************
@@ -222,13 +236,16 @@ void ColorMesh::loadObj() {
 
             if (uniqueVertices.count(vertex) == 0) {
                 uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
-
                 vertices_.push_back(std::move(vertex));
+                updateBoundingBox(vertex);
             }
 
             indices_.push_back(uniqueVertices[vertex]);
         }
     }
+
+    // TODO: remove this
+    putOnTop({0, 0, 0, 0, 0, 0});
 }
 
 // **********************
@@ -289,16 +306,19 @@ void TextureMesh::loadObj() {
         for (const auto& index : shape.mesh.indices) {
             // Create the vertex ...
             Vertex::Texture vertex = {};
+
+            // position
             vertex.pos = {attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1],
                           attrib.vertices[3 * index.vertex_index + 2]};
 
+            // texture coordinate
             vertex.texCoord = {attrib.texcoords[2 * index.texcoord_index + 0],
                                1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
 
             if (uniqueVertices.count(vertex) == 0) {
                 uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
-
                 vertices_.push_back(std::move(vertex));
+                updateBoundingBox(vertex);
             }
 
             indices_.push_back(uniqueVertices[vertex]);
@@ -309,12 +329,7 @@ void TextureMesh::loadObj() {
 void TextureMesh::prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) {
     loadVertexBuffers(dev);
     LoadingResourceHandler::loadSubmit(std::move(pLdgRes_));
-    if (pMaterial_->getTexture().status == Texture::STATUS::READY) {
-        PipelineHandler::createTextureDescriptorSets(pMaterial_->getTexture().imgDescInfo, pMaterial_->getTexture().offset, pRes);
-        status_ = STATUS::READY;
-    } else {
-        status_ = STATUS::PENDING_TEXTURE;
-    }
+    tryCreateDescriptorSets(pRes);
 }
 
 void TextureMesh::drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
@@ -351,6 +366,13 @@ void TextureMesh::drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayo
 
     CmdBufHandler::endCmd(secCmd);
     vkCmdExecuteCommands(cmd, 1, &secCmd);
+}
+
+void TextureMesh::tryCreateDescriptorSets(std::unique_ptr<DescriptorResources>& pRes) {
+    if (pMaterial_->getStatus() == STATUS::READY) {
+        PipelineHandler::createTextureDescriptorSets(pMaterial_->getTexture().imgDescInfo, pMaterial_->getTexture().offset, pRes);
+    }
+    status_ = pMaterial_->getStatus();
 }
 
 void TextureMesh::destroy(const VkDevice& dev) {

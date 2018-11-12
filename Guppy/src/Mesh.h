@@ -7,10 +7,11 @@
 #include <vector>
 
 #include "Constants.h"
-#include "MyShell.h"
 #include "Helpers.h"
-#include "Material.h"
 #include "LoadingResourceHandler.h"
+#include "Material.h"
+#include "MyShell.h"
+#include "Object3d.h"
 #include "PipelineHandler.h"
 #include "Texture.h"
 
@@ -20,8 +21,6 @@
 
 class Mesh : public Object3d {
    public:
-    enum class STATUS { PENDING = 0, VERTICES_LOADED, PENDING_TEXTURE, READY };
-
     Mesh(std::unique_ptr<Material> pMaterial);
     Mesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model = glm::mat4(1.0f));
     /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTR OF THIS CLASS.
@@ -156,13 +155,8 @@ class TextureMesh : public Mesh {
     }
 
     // TEXTURE
-    inline void tryCreateDescriptorSets(std::unique_ptr<DescriptorResources>& pRes) {
-        if (pMaterial_->getTexture().status == Texture::STATUS::READY) {
-            PipelineHandler::createTextureDescriptorSets(pMaterial_->getTexture().imgDescInfo, pMaterial_->getTexture().offset, pRes);
-            status_ = STATUS::READY;
-        }
-    }
     inline uint32_t getTextureOffset() const { return pMaterial_->getTexture().offset; }
+    void tryCreateDescriptorSets(std::unique_ptr<DescriptorResources>& pRes);
 
     void destroy(const VkDevice& dev) override;
 

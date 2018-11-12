@@ -209,7 +209,7 @@ void Guppy::on_key(KEY key) {
                                                 glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
                 active_scene()->addMesh(shell_->context(), std::move(sphereTop));
             } else if (true) {
-                auto p2 = std::make_unique<TexturePlane>(getTextureByPath(STATUE_TEX_PATH), glm::mat4(1.0f), true);
+                auto p2 = std::make_unique<TexturePlane>(getTextureByPath(HARDWOOD_FLOOR_TEX_PATH), glm::mat4(1.0f), true);
                 active_scene()->addMesh(shell_->context(), std::move(p2));
             }
         } break;
@@ -487,13 +487,9 @@ void Guppy::create_frame_data(int count) {
     create_fences();
 
     if (!use_push_constants_) {
-        // create_buffers(); // TODO: this is their ubo implementation. It is worth figuring out !!!!!
-        // create_buffer_memory();
         create_color_resources();
         create_depth_resources();
         updateUniformBuffer();
-        // create_descriptor_pool();
-        // create_descriptor_sets(); // Not sure how to make this work here... pipeline relies on this info
     }
 
     frame_data_index_ = 0;
@@ -605,6 +601,9 @@ void Guppy::createLights() {
 
     positionalLights_.push_back(Light::Positional());
     positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(-1.5f, -1.5f, 0.5f)));
+
+    positionalLights_.push_back(Light::Positional());
+    positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(-10.0f, 30.0f, 6.0f)));
 }
 
 void Guppy::createScenes() {
@@ -617,14 +616,22 @@ void Guppy::createScenes() {
 
     // Add defaults
     if (true) {
+        // GROUND PLANE
+        auto pMaterial = std::make_unique<Material>(getTextureByPath(HARDWOOD_FLOOR_TEX_PATH));
+        pMaterial->setRepeat(800.0f);
+        glm::mat4 model = helpers::affine(glm::vec3(2000.0f));
+        auto groundPlane = std::make_unique<TexturePlane>(std::move(pMaterial), model);
+        auto gpbb = groundPlane->getBoundingBox();
+        active_scene()->addMesh(shell_->context(), std::move(groundPlane));
+
+        // ORIGIN AXES
         std::unique_ptr<LineMesh> defAxes = std::make_unique<Axes>(glm::scale(glm::mat4(1.0f), glm::vec3(AXES_MAX_SIZE)), true);
         active_scene()->addMesh(shell_->context(), std::move(defAxes));
 
-        // material
-        auto pMaterial = std::make_unique<Material>();
+        // BURNT ORANGE TORUS
+        pMaterial = std::make_unique<Material>();
         pMaterial->setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
         pMaterial->setColor({0.8f, 0.3f, 0.0f});
-
         auto torus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, helpers::affine(glm::vec3(0.07f)));
         active_scene()->addMesh(shell_->context(), std::move(torus));
     }
@@ -645,6 +652,7 @@ void Guppy::createTextures() {
     addTexture(dev_, CHALET_TEX_PATH);
     addTexture(dev_, VULKAN_TEX_PATH);
     addTexture(dev_, MED_H_DIFF_TEX_PATH, MED_H_NORM_TEX_PATH, MED_H_SPEC_TEX_PATH);
+    addTexture(dev_, HARDWOOD_FLOOR_TEX_PATH);
 }
 
 void Guppy::addTexture(const VkDevice& dev, std::string path, std::string normPath, std::string specPath) {

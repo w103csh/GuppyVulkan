@@ -326,14 +326,14 @@ void MyShell::destroy_back_buffers() {
 
 // TODO: this doesn't create the swapchain
 void MyShell::create_swapchain() {
-    ctx_.surface = create_surface(ctx_.instance);
+    ctx_.surface = createSurface(ctx_.instance);
 
     VkBool32 supported;
     vk::assert_success(
         vkGetPhysicalDeviceSurfaceSupportKHR(ctx_.physical_dev, ctx_.present_queue_family, ctx_.surface, &supported));
     assert(supported);
     // this should be guaranteed by the platform-specific can_present call
-    supported = can_present(ctx_.physical_dev, ctx_.present_index);
+    supported = canPresent(ctx_.physical_dev, ctx_.present_index);
     assert(supported);
 
     enumerate_surface_properties();
@@ -753,7 +753,7 @@ bool MyShell::determine_queue_families_support(const PhysicalDeviceProperties &p
     // Iterate over each queue to learn whether it supports presenting:
     VkBool32 *pSupportsPresent = (VkBool32 *)malloc(props.queue_family_count * sizeof(VkBool32));
     // TODO: I don't feel like re-arranging the whole start up atm.
-    auto surface = create_surface(ctx_.instance);
+    auto surface = createSurface(ctx_.instance);
     for (uint32_t i = 0; i < props.queue_family_count; i++) {
         vk::assert_success(vkGetPhysicalDeviceSurfaceSupportKHR(props.device, i, surface, &pSupportsPresent[i]));
 

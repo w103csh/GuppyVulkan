@@ -89,6 +89,7 @@ void ShaderHandler::reset() {
     for (auto& shader : shaders_) {
         if (shader->module) vkDestroyShaderModule(ctx_.dev, shader->module, nullptr);
     }
+    inst_.cleanupOldResources();
 }
 
 void ShaderHandler::init(MyShell& sh, const Game::Settings& settings, uint32_t numPosLights) {
@@ -105,7 +106,7 @@ void ShaderHandler::init(MyShell& sh, const Game::Settings& settings, uint32_t n
 
     // listen to changes to the shader files
     if (settings.enable_directory_listener) {
-        sh.watch_directory(SHADER_DIR, &ShaderHandler::recompileShader);
+        sh.watchDirectory(SHADER_DIR, &ShaderHandler::recompileShader);
     }
 }
 bool ShaderHandler::update(std::unique_ptr<Scene>& pScene) {

@@ -41,9 +41,7 @@ class Win32Timer {
 
         reset();
     }
-
     void reset() { QueryPerformanceCounter(&start_); }
-
     double get() const {
         LARGE_INTEGER now;
         QueryPerformanceCounter(&now);
@@ -68,7 +66,7 @@ ShellWin32::~ShellWin32() {
     FreeLibrary(hmodule_);
 }
 
-void ShellWin32::create_window() {
+void ShellWin32::createWindow() {
     const std::string class_name(settings_.name + "WindowClass");
 
     hinstance_ = GetModuleHandle(nullptr);
@@ -119,11 +117,11 @@ PFN_vkGetInstanceProcAddr ShellWin32::load_vk() {
     return get_proc;
 }
 
-VkBool32 ShellWin32::can_present(VkPhysicalDevice phy, uint32_t queue_family) {
-    return vkGetPhysicalDeviceWin32PresentationSupportKHR(phy, queue_family);
+VkBool32 ShellWin32::canPresent(VkPhysicalDevice phy, uint32_t queueFamily) {
+    return vkGetPhysicalDeviceWin32PresentationSupportKHR(phy, queueFamily);
 }
 
-VkSurfaceKHR ShellWin32::create_surface(VkInstance instance) {
+VkSurfaceKHR ShellWin32::createSurface(VkInstance instance) {
     VkWin32SurfaceCreateInfoKHR surface_info = {};
     surface_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
     surface_info.hinstance = hinstance_;
@@ -135,7 +133,7 @@ VkSurfaceKHR ShellWin32::create_surface(VkInstance instance) {
     return surface;
 }
 
-LRESULT ShellWin32::handle_message(UINT uMsg, WPARAM wParam, LPARAM lParam) {
+LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
     switch (uMsg) {
             // WINDOW EVENTS
         case WM_SIZE: {
@@ -157,8 +155,9 @@ LRESULT ShellWin32::handle_message(UINT uMsg, WPARAM wParam, LPARAM lParam) {
             game_.on_key(Game::KEY::KEY_SHUTDOWN);
         } break;
             // MOUSE INPUT
+        case WM_MOUSEWHEEL:
         case WM_MOUSEMOVE: {
-            get_mouse_mod(wParam, lParam);
+            getMouseModifier(wParam, lParam);
         } break;
         case WM_MOUSELEAVE: {
             InputHandler::mouseLeave();
@@ -185,10 +184,10 @@ LRESULT ShellWin32::handle_message(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         } break;
             // KEYBOARD INPUT
         case WM_KEYUP: {
-            auto key = get_key(wParam, InputHandler::INPUT_TYPE::UP);
+            auto key = getKey(wParam, InputHandler::INPUT_TYPE::UP);
         } break;
         case WM_KEYDOWN: {
-            auto key = get_key(wParam, InputHandler::INPUT_TYPE::DOWN);
+            auto key = getKey(wParam, InputHandler::INPUT_TYPE::DOWN);
             game_.on_key(key);
         } break;
             // GENERAL
@@ -201,7 +200,7 @@ LRESULT ShellWin32::handle_message(UINT uMsg, WPARAM wParam, LPARAM lParam) {
     return 0;
 }
 
-Game::KEY ShellWin32::get_key(WPARAM wParam, InputHandler::INPUT_TYPE type) {
+Game::KEY ShellWin32::getKey(WPARAM wParam, InputHandler::INPUT_TYPE type) {
     Game::KEY key;
     switch (wParam) {
         case VK_ESCAPE:
@@ -345,7 +344,7 @@ Game::KEY ShellWin32::get_key(WPARAM wParam, InputHandler::INPUT_TYPE type) {
     return key;
 }
 
-void ShellWin32::get_mouse(Game::MOUSE mouse, UINT uMsg, LPARAM lParam) {
+void ShellWin32::getMouse(Game::MOUSE mouse, UINT uMsg, LPARAM lParam) {
     switch (uMsg) {
             // UP
         case WM_LBUTTONUP:
@@ -374,13 +373,14 @@ void ShellWin32::get_mouse(Game::MOUSE mouse, UINT uMsg, LPARAM lParam) {
     }
 }
 
-void ShellWin32::get_mouse_mod(WPARAM wParam, LPARAM lParam) {
+void ShellWin32::getMouseModifier(WPARAM wParam, LPARAM lParam) {
     float xPos = static_cast<float>(GET_X_LPARAM(lParam));
     float yPos = static_cast<float>(GET_Y_LPARAM(lParam));
-    bool is_looking = false;
+    float zDelta = static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam));
+    bool isLooking = false;
     switch (wParam) {
         case MK_RBUTTON: {
-            is_looking = true;
+            isLooking = true;
         } break;
         case MK_CONTROL:
         case MK_LBUTTON:
@@ -391,13 +391,13 @@ void ShellWin32::get_mouse_mod(WPARAM wParam, LPARAM lParam) {
             // nothing here yet...
         } break;
     }
-    InputHandler::updateMousePosition(xPos, yPos, is_looking);
+    InputHandler::updateMousePosition(xPos, yPos, zDelta, isLooking);
 }
 
 void ShellWin32::quit() { PostQuitMessage(0); }
 
 void ShellWin32::run() {
-    create_window();
+    createWindow();
 
     create_context();
     resize_swapchain(settings_.initial_width, settings_.initial_height, false);
@@ -468,7 +468,7 @@ void ShellWin32::AsyncAlert(DWORD milliseconds) {
     SleepEx(milliseconds, TRUE);
 }
 
-void ShellWin32::watch_directory(std::string dir, std::function<void(std::string)> callback) {
+void ShellWin32::watchDirectory(std::string dir, std::function<void(std::string)> callback) {
     if (settings_.enable_directory_listener) {
         // build absolute path
         dir = GetWorkingDirectory() + ROOT_PATH + dir;
