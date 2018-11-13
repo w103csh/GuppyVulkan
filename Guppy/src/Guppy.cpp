@@ -621,7 +621,7 @@ void Guppy::createScenes() {
         pMaterial->setRepeat(800.0f);
         glm::mat4 model = helpers::affine(glm::vec3(2000.0f));
         auto groundPlane = std::make_unique<TexturePlane>(std::move(pMaterial), model);
-        auto gpbb = groundPlane->getBoundingBox();
+        auto gpbbmm = groundPlane->getBoundingBoxMinMax();
         active_scene()->addMesh(shell_->context(), std::move(groundPlane));
 
         // ORIGIN AXES
@@ -634,7 +634,7 @@ void Guppy::createScenes() {
         pMaterial->setColor({0.8f, 0.3f, 0.0f});
         model = helpers::affine(glm::vec3(0.07f), glm::vec3(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
         auto torus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, model);
-        active_scene()->addMesh(shell_->context(), std::move(torus), false, [&gpbb](auto pMesh) { pMesh->putOnTop(gpbb); });
+        active_scene()->addMesh(shell_->context(), std::move(torus), false, [&gpbbmm](auto pMesh) { pMesh->putOnTop(gpbbmm); });
     }
 
     // Lights

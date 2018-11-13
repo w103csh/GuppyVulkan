@@ -8,14 +8,19 @@
 
 #include "Vertex.h"
 
-typedef std::array<glm::vec4, 6> BoundingBox;
+typedef std::array<glm::vec3, 6> BoundingBox;
 const BoundingBox DefaultBoundingBox = {
-    glm::vec4(FLT_MAX, 0.0f, 0.0f, 1.0f),   // xMin
-    glm::vec4(-FLT_MAX, 0.0f, 0.0f, 1.0f),  // xMax
-    glm::vec4(0.0f, FLT_MAX, 0.0f, 1.0f),   // yMin
-    glm::vec4(0.0f, -FLT_MAX, 0.0f, 1.0f),  // yMax
-    glm::vec4(0.0f, 0.0f, FLT_MAX, 1.0f),   // zMin
-    glm::vec4(0.0f, 0.0f, -FLT_MAX, 1.0f)   // zMax
+    glm::vec3(FLT_MAX, 0.0f, 0.0f),   // xMin
+    glm::vec3(-FLT_MAX, 0.0f, 0.0f),  // xMax
+    glm::vec3(0.0f, FLT_MAX, 0.0f),   // yMin
+    glm::vec3(0.0f, -FLT_MAX, 0.0f),  // yMax
+    glm::vec3(0.0f, 0.0f, FLT_MAX),   // zMin
+    glm::vec3(0.0f, 0.0f, -FLT_MAX)   // zMax
+};
+struct BoundingBoxMinMax {
+    float xMin, xMax;
+    float yMin, yMax;
+    float zMin, zMax;
 };
 
 struct Object3d {
@@ -35,8 +40,8 @@ struct Object3d {
     }
     virtual inline void transform(const glm::mat4 t) { obj3d_.model *= t; }
 
-    BoundingBox getBoundingBox() const;
-    void putOnTop(const BoundingBox& boundingBox);
+    BoundingBoxMinMax getBoundingBoxMinMax() const;
+    void putOnTop(const BoundingBoxMinMax& boundingBox);
 
    protected:
     template <typename T>
@@ -44,13 +49,14 @@ struct Object3d {
         for (auto& v : vs) updateBoundingBox(v);
     }
     inline void updateBoundingBox(Vertex::Base v) {
-        if (v.pos.x < boundingBox_[0].x) boundingBox_[0].x = v.pos.x;  // xMin
-        if (v.pos.x > boundingBox_[1].x) boundingBox_[1].x = v.pos.x;  // xMax
-        if (v.pos.y < boundingBox_[2].y) boundingBox_[2].y = v.pos.y;  // yMin
-        if (v.pos.y > boundingBox_[3].y) boundingBox_[3].y = v.pos.y;  // yMax
-        if (v.pos.z < boundingBox_[4].z) boundingBox_[4].z = v.pos.z;  // zMin
-        if (v.pos.z > boundingBox_[5].z) boundingBox_[5].z = v.pos.z;  // zMax
+        if (v.pos.x < boundingBox_[0].x) boundingBox_[0] = v.pos;  // xMin
+        if (v.pos.x > boundingBox_[1].x) boundingBox_[1] = v.pos;  // xMax
+        if (v.pos.y < boundingBox_[2].y) boundingBox_[2] = v.pos;  // yMin
+        if (v.pos.y > boundingBox_[3].y) boundingBox_[3] = v.pos;  // yMax
+        if (v.pos.z < boundingBox_[4].z) boundingBox_[4] = v.pos;  // zMin
+        if (v.pos.z > boundingBox_[5].z) boundingBox_[5] = v.pos;  // zMax
     }
+    BoundingBox getBoundingBox() const;
 
     Data obj3d_;
 

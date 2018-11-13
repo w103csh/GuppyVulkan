@@ -1,41 +1,22 @@
 
 #include "Object3d.h"
 
-void Object3d::putOnTop(const BoundingBox& inBoundingBox) {
-    auto myBoundingBox = getBoundingBox();  // bounding box needs to be transformed
+void Object3d::putOnTop(const BoundingBoxMinMax& inBoundingBoxMinMax) {
+    auto myBoundingBoxMinMax = getBoundingBoxMinMax();
 
     // TODO: account for UP_VECTOR
 
-    float inXCtr = 0.0f, inYCtr = 0.0f, inZCtr = 0.0f;
-    float myXCtr = 0.0f, myYCtr = 0.0f, myZCtr = 0.0f;
+    // in
+    float inXCtr, inYCtr, inZCtr;
+    inXCtr = inBoundingBoxMinMax.xMin + std::abs((inBoundingBoxMinMax.xMax - inBoundingBoxMinMax.xMin) / 2);
+    inYCtr = inBoundingBoxMinMax.yMin + std::abs((inBoundingBoxMinMax.yMax - inBoundingBoxMinMax.yMin) / 2);
+    inZCtr = inBoundingBoxMinMax.zMax;  // top
 
-    float xMin, xMax, yMin, yMax, zMin, zMax;
-
-    for (int i = 0; i < 2; i++) {
-        xMin = yMin = zMin = FLT_MAX;
-        xMax = yMax = zMax = -FLT_MAX;
-
-        auto& bb = i == 0 ? inBoundingBox : myBoundingBox;
-
-        for (auto& v : bb) {
-            if (v.x < xMin) xMin = v.x;  // xMin
-            if (v.x > xMax) xMax = v.x;  // xMax
-            if (v.y < yMin) yMin = v.y;  // yMin
-            if (v.y > yMax) yMax = v.y;  // yMax
-            if (v.z < zMin) zMin = v.z;  // zMin
-            if (v.z > zMax) zMax = v.z;  // zMax
-        }
-
-        if (i == 0) {
-            inXCtr = xMin + std::abs((xMax - xMin) / 2);
-            inYCtr = yMin + std::abs((yMax - yMin) / 2);
-            inZCtr = zMax;  // top
-        } else if (i == 1) {
-            myXCtr = xMin + std::abs((xMax - xMin) / 2);
-            myYCtr = yMin + std::abs((yMax - yMin) / 2);
-            myZCtr = zMin;  // bottom
-        }
-    }
+    // my
+    float myXCtr, myYCtr, myZCtr;
+    myXCtr = myBoundingBoxMinMax.xMin + std::abs((myBoundingBoxMinMax.xMax - myBoundingBoxMinMax.xMin) / 2);
+    myYCtr = myBoundingBoxMinMax.yMin + std::abs((myBoundingBoxMinMax.yMax - myBoundingBoxMinMax.yMin) / 2);
+    myZCtr = myBoundingBoxMinMax.zMin;  // bottom
 
     auto tm = glm::translate(glm::mat4(1.0f),       //
                              {(inXCtr - myXCtr),    //
@@ -45,10 +26,24 @@ void Object3d::putOnTop(const BoundingBox& inBoundingBox) {
     obj3d_.model = tm * obj3d_.model;
 }
 
+BoundingBoxMinMax Object3d::getBoundingBoxMinMax() const {
+    BoundingBoxMinMax bbmm = {FLT_MAX, -FLT_MAX, FLT_MAX, -FLT_MAX, FLT_MAX, -FLT_MAX};
+    for (auto v : boundingBox_) {
+        v = obj3d_.model * glm::vec4(v, 1.0f);
+        if (v.x < bbmm.xMin) bbmm.xMin = v.x;  // xMin
+        if (v.x > bbmm.xMax) bbmm.xMax = v.x;  // xMax
+        if (v.y < bbmm.yMin) bbmm.yMin = v.y;  // yMin
+        if (v.y > bbmm.yMax) bbmm.yMax = v.y;  // yMax
+        if (v.z < bbmm.zMin) bbmm.zMin = v.z;  // zMin
+        if (v.z > bbmm.zMax) bbmm.zMax = v.z;  // zMax
+    }
+    return bbmm;
+}
+
 BoundingBox Object3d::getBoundingBox() const {
     BoundingBox bb = {};
     for (size_t i = 0; i < boundingBox_.size(); i++) {
-        bb[i] = obj3d_.model * boundingBox_[i];
+        bb[i] = obj3d_.model * glm::vec4(boundingBox_[i], 1.0f);
     }
     return bb;
 }
