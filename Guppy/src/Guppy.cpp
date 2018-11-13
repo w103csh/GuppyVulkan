@@ -632,8 +632,9 @@ void Guppy::createScenes() {
         pMaterial = std::make_unique<Material>();
         pMaterial->setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
         pMaterial->setColor({0.8f, 0.3f, 0.0f});
-        auto torus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, helpers::affine(glm::vec3(0.07f)));
-        active_scene()->addMesh(shell_->context(), std::move(torus));
+        model = helpers::affine(glm::vec3(0.07f), glm::vec3(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        auto torus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, model);
+        active_scene()->addMesh(shell_->context(), std::move(torus), false, [&gpbb](auto pMesh) { pMesh->putOnTop(gpbb); });
     }
 
     // Lights

@@ -34,9 +34,11 @@ Mesh::Mesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4
 
 void Mesh::setSceneData(const MyShell::Context& ctx, size_t offset) { offset_ = offset; }
 
-std::future<Mesh*> Mesh::load(const MyShell::Context& ctx) { return std::async(std::launch::async, &Mesh::async_load, this, ctx); }
+std::future<Mesh*> Mesh::load(const MyShell::Context& ctx, std::function<void(Mesh*)> callback) {
+    return std::async(std::launch::async, &Mesh::async_load, this, ctx, callback);
+}
 
-Mesh* Mesh::async_load(const MyShell::Context& ctx) {
+Mesh* Mesh::async_load(const MyShell::Context& ctx, std::function<void(Mesh*)> callback) {
     if (!modelPath_.empty()) {
         switch (helpers::getModelFileType(modelPath_)) {
             case MODEL_FILE_TYPE::OBJ: {
@@ -49,6 +51,9 @@ Mesh* Mesh::async_load(const MyShell::Context& ctx) {
         assert(getVertexCount());
     }
     status_ = STATUS::VERTICES_LOADED;
+
+    if (callback != nullptr) callback(this);
+
     return this;
 }
 
@@ -243,9 +248,6 @@ void ColorMesh::loadObj() {
             indices_.push_back(uniqueVertices[vertex]);
         }
     }
-
-    // TODO: remove this
-    putOnTop({0, 0, 0, 0, 0, 0});
 }
 
 // **********************

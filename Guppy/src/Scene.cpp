@@ -62,16 +62,24 @@ void Scene::createDynamicTexUniformBuffer(const MyShell::Context& ctx, const Gam
     }
 }
 
-size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<ColorMesh> pMesh) {
+size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<ColorMesh> pMesh, bool async,
+                      std::function<void(Mesh*)> callback) {
     auto offset = colorMeshes_.size();
 
     pMesh->setSceneData(ctx, offset);
     colorMeshes_.push_back(std::move(pMesh));
 
-    if (colorMeshes_.back()->getStatus() != STATUS::READY) {
-        ldgFutures_.emplace_back(colorMeshes_.back()->load(ctx));
-    } else {
+    if (colorMeshes_.back()->getStatus() == STATUS::READY) {
         colorMeshes_.back()->prepare(ctx.dev, pDescResources_);
+    } else {
+        auto fut = colorMeshes_.back()->load(ctx, callback);
+
+        // If async is specified then store the future, and get it later
+        if (async) {
+            ldgFutures_.emplace_back(std::move(fut));
+        } else {
+            fut.get()->prepare(ctx.dev, pDescResources_);
+        }
     }
 
     return offset;

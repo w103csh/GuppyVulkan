@@ -8,15 +8,19 @@
 
 #include "Vertex.h"
 
+typedef std::array<glm::vec4, 6> BoundingBox;
+const BoundingBox DefaultBoundingBox = {
+    glm::vec4(FLT_MAX, 0.0f, 0.0f, 1.0f),   // xMin
+    glm::vec4(-FLT_MAX, 0.0f, 0.0f, 1.0f),  // xMax
+    glm::vec4(0.0f, FLT_MAX, 0.0f, 1.0f),   // yMin
+    glm::vec4(0.0f, -FLT_MAX, 0.0f, 1.0f),  // yMax
+    glm::vec4(0.0f, 0.0f, FLT_MAX, 1.0f),   // zMin
+    glm::vec4(0.0f, 0.0f, -FLT_MAX, 1.0f)   // zMax
+};
+
 struct Object3d {
    public:
-    Object3d(glm::mat4 model = glm::mat4(1.0f)) : obj3d_{model} {};
-
-    struct BoundingBox {
-        float xMin = FLT_MAX, xMax = -FLT_MAX;
-        float yMin = FLT_MAX, yMax = -FLT_MAX;
-        float zMin = FLT_MAX, zMax = -FLT_MAX;
-    };
+    Object3d(glm::mat4 model = glm::mat4(1.0f)) : obj3d_{model}, boundingBox_(DefaultBoundingBox){};
 
     struct Data {
         glm::mat4 model = glm::mat4(1.0f);
@@ -40,18 +44,23 @@ struct Object3d {
         for (auto& v : vs) updateBoundingBox(v);
     }
     inline void updateBoundingBox(Vertex::Base v) {
-        if (v.pos.x < boundingBox_.xMin) boundingBox_.xMin = v.pos.x;
-        if (v.pos.x > boundingBox_.xMax) boundingBox_.xMax = v.pos.x;
-        if (v.pos.y < boundingBox_.yMin) boundingBox_.yMin = v.pos.y;
-        if (v.pos.y > boundingBox_.yMax) boundingBox_.yMax = v.pos.y;
-        if (v.pos.z < boundingBox_.zMin) boundingBox_.zMin = v.pos.z;
-        if (v.pos.z > boundingBox_.zMax) boundingBox_.zMax = v.pos.z;
+        if (v.pos.x < boundingBox_[0].x) boundingBox_[0].x = v.pos.x;  // xMin
+        if (v.pos.x > boundingBox_[1].x) boundingBox_[1].x = v.pos.x;  // xMax
+        if (v.pos.y < boundingBox_[2].y) boundingBox_[2].y = v.pos.y;  // yMin
+        if (v.pos.y > boundingBox_[3].y) boundingBox_[3].y = v.pos.y;  // yMax
+        if (v.pos.z < boundingBox_[4].z) boundingBox_[4].z = v.pos.z;  // zMin
+        if (v.pos.z > boundingBox_[5].z) boundingBox_[5].z = v.pos.z;  // zMax
     }
 
     Data obj3d_;
 
    private:
-    BoundingBox boundingBox_;  // this needs to be transformed so it should be private
+    /* This needs to be transformed so it should be private!
+       TODO: If a vertex is changed then this needs to be updated using one
+       of the updateBoundingBox functions... this is not great. ATM it would
+       be safer to just always use the update that takes all the vertices.
+    */
+    BoundingBox boundingBox_;
 };
 
 #endif  // !OBJECT3D_H

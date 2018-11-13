@@ -40,7 +40,7 @@ class Mesh : public Object3d {
     virtual void setSceneData(const MyShell::Context& ctx, size_t offset);
 
     // LOADING
-    virtual std::future<Mesh*> load(const MyShell::Context& ctx);
+    virtual std::future<Mesh*> load(const MyShell::Context& ctx, std::function<void(Mesh*)> callbacak = nullptr);
     virtual void prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes);
 
     // DRAWING
@@ -56,7 +56,7 @@ class Mesh : public Object3d {
 
    protected:
     // LOADING
-    Mesh* async_load(const MyShell::Context& ctx);
+    Mesh* async_load(const MyShell::Context& ctx, std::function<void(Mesh*)> callbacak = nullptr);
     virtual void loadObj() = 0;
 
     // VERTEX
