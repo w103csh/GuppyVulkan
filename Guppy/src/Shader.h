@@ -13,7 +13,8 @@
 // TODO: move uniform handling here...
 struct DefaultUniformBuffer {
     Camera::Data camera;
-    std::vector<Light::Positional::Data> positionalLights;
+    std::vector<Light::PositionalData> positionalLightData;
+    std::vector<Light::SpotData> spotLightData;
 };
 
 // **********************
@@ -47,7 +48,7 @@ class Scene;
 
 class ShaderHandler : Singleton {
    public:
-    static void init(MyShell &sh, const Game::Settings &settings, uint32_t numPosLights);
+    static void init(MyShell &sh, const Game::Settings &settings, uint32_t numPosLights, uint32_t numSpotLights);
     static inline void destroy() { inst_.reset(); }
 
     ShaderHandler(const ShaderHandler &) = delete;             // Prevent construction by copying
@@ -57,7 +58,7 @@ class ShaderHandler : Singleton {
     static inline void setNumPosLights(uint32_t numPosLights) { inst_.numPosLights_ = numPosLights; }
 
     static bool update(std::unique_ptr<Scene> &pScene);
-    static void posLightReplace(uint32_t numLights, std::string &text);
+    static void lightMacroReplace(std::string macroVariable, uint32_t numLights, std::string &text);
     static void recompileShader(std::string);
     static void cleanupOldResources();
 
@@ -77,7 +78,7 @@ class ShaderHandler : Singleton {
     Game::Settings settings_;  // TODO: shared_ptr
 
     std::vector<std::unique_ptr<Shader>> shaders_;
-    uint32_t numPosLights_;
+    uint32_t numPosLights_, numSpotLights_;
     // link shaders
     std::string utilFragText_;
 

@@ -27,7 +27,7 @@
 #include "Helpers.h"
 #include "ShellWin32.h"
 
-#define LIMIT_FRAMERATE
+//#define LIMIT_FRAMERATE
 
 VOID WINAPI FileIOCompletionRoutine(DWORD, DWORD, LPOVERLAPPED);
 

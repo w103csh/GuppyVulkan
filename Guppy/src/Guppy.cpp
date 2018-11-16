@@ -89,7 +89,7 @@ void Guppy::attach_shell(MyShell& sh) {
     createLights();
     createUniformBuffer();
 
-    ShaderHandler::init(sh, settings(), defUBO_.positionalLights.size());
+    ShaderHandler::init(sh, settings(), defUBO_.positionalLightData.size(), defUBO_.spotLightData.size());
 
     PipelineHandler::init(ctx, settings());
 
@@ -397,13 +397,15 @@ void Guppy::createUniformBuffer(std::string markerName) {
     // camera
     camera_.update(static_cast<float>(settings_.initial_width) / static_cast<float>(settings_.initial_height));
     // lights
-    defUBO_.positionalLights.resize(positionalLights_.size());
+    defUBO_.positionalLightData.resize(positionalLights_.size());
+    defUBO_.spotLightData.resize(spotLights_.size());
 
     VkDeviceSize size = 0;
     // camera
     size += sizeof(Camera::Data);
     // lights
-    size += sizeof(Light::Positional::Data) * defUBO_.positionalLights.size();
+    size += sizeof(Light::PositionalData) * defUBO_.positionalLightData.size();
+    size += sizeof(Light::SpotData) * defUBO_.spotLightData.size();
 
     UBOResource_.size = helpers::createBuffer(dev_, size, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
                                               VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -428,11 +430,22 @@ void Guppy::copyUniformBufferMemory() {
     uint8_t* pData;
     vk::assert_success(vkMapMemory(dev_, UBOResource_.memory, 0, UBOResource_.size, 0, (void**)&pData));
 
-    // camera
-    memcpy(pData, &defUBO_.camera, sizeof(Camera::Data));
-    // lights
-    memcpy(pData + sizeof(Camera::Data), defUBO_.positionalLights.data(),
-           sizeof(Light::Positional::Data) * defUBO_.positionalLights.size());
+    VkDeviceSize size = 0, offset = 0;
+
+    // CAMERA
+    size = sizeof(Camera::Data);
+    memcpy(pData, &defUBO_.camera, size);
+    offset += size;
+
+    // LIGHTS
+    // positional
+    size = sizeof(Light::PositionalData) * defUBO_.positionalLightData.size();
+    if (size) memcpy(pData + offset, defUBO_.positionalLightData.data(), size);
+    offset += size;
+    // spot
+    size = sizeof(Light::SpotData) * defUBO_.spotLightData.size();
+    if (size) memcpy(pData + offset, defUBO_.spotLightData.data(), size);
+    offset += size;
 
     vkUnmapMemory(dev_, UBOResource_.memory);
 }
@@ -461,10 +474,15 @@ void Guppy::updateUniformBuffer() {
     defUBO_.camera.mvp = camera_.getMVP();
     defUBO_.camera.position = camera_.getPosition();
 
-    // Update the light...
+    // Update the lights... (!!!!!! THE NUMBER OF LIGHTS HERE CANNOT CHANGE AT RUNTIME YET !!!!!
+    // Need to recreate the uniform descriptors!)
     for (size_t i = 0; i < positionalLights_.size(); i++) {
         auto& light = positionalLights_[i];
-        light.getData(defUBO_.positionalLights[i]);
+        light.getData(defUBO_.positionalLightData[i]);
+    }
+    for (size_t i = 0; i < spotLights_.size(); i++) {
+        auto& light = spotLights_[i];
+        light.getData(defUBO_.spotLightData[i]);
     }
 
     // If these change update them here...
@@ -595,15 +613,19 @@ void Guppy::destroy_depth_resources() {
 }
 
 void Guppy::createLights() {
-    // TODO: move the light code into the scene, including ubo data
-    positionalLights_.push_back(Light::Positional());
-    positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(1.5f, 1.5f, 0.5f)));
+    //// TODO: move the light code into the scene, including ubo data
+    //positionalLights_.push_back(Light::Positional());
+    //positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(1.5f, 1.5f, 0.5f)));
 
-    positionalLights_.push_back(Light::Positional());
-    positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(-1.5f, -1.5f, 0.5f)));
+    //positionalLights_.push_back(Light::Positional());
+    //positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(-3.5f, -1.5f, 0.5f)));
 
-    positionalLights_.push_back(Light::Positional());
-    positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(-10.0f, 30.0f, 6.0f)));
+    // positionalLights_.push_back(Light::Positional());
+    // positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(-10.0f, 30.0f, 6.0f)));
+
+     auto model = glm::lookAt({-0.5f, -0.5f, 5.5f}, {-0.5f, -0.49f, 0.0f}, UP_VECTOR);
+     spotLights_.push_back({});
+     spotLights_.back().transform(model);
 }
 
 void Guppy::createScenes() {
@@ -639,8 +661,13 @@ void Guppy::createScenes() {
 
     // Lights
     if (showLightHelpers_) {
+
         for (auto& light : positionalLights_) {
-            std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(light, 1.0f);
+            std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(light, 0.5f);
+            lightHelperOffset_ = active_scene()->addMesh(shell_->context(), std::move(pHelper));
+        }
+        for (auto& light : spotLights_) {
+            std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(light, 0.5f);
             lightHelperOffset_ = active_scene()->addMesh(shell_->context(), std::move(pHelper));
         }
     }

@@ -92,13 +92,14 @@ void ShaderHandler::reset() {
     inst_.cleanupOldResources();
 }
 
-void ShaderHandler::init(MyShell& sh, const Game::Settings& settings, uint32_t numPosLights) {
+void ShaderHandler::init(MyShell& sh, const Game::Settings& settings, uint32_t numPosLights, uint32_t numSpotLights) {
     // Clean up owned memory...
     inst_.reset();
 
     inst_.ctx_ = sh.context();
     inst_.settings_ = settings;
     inst_.numPosLights_ = numPosLights;
+    inst_.numSpotLights_ = numSpotLights;
 
     inst_.loadShaders(
         {SHADER_TYPE::COLOR_FRAG, SHADER_TYPE::COLOR_VERT, SHADER_TYPE::LINE_FRAG, SHADER_TYPE::TEX_FRAG, SHADER_TYPE::TEX_VERT},
@@ -247,7 +248,8 @@ void ShaderHandler::loadLinkText(SHADER_TYPE type, bool updateFromFile) {
         case SHADER_TYPE::UTIL_FRAG: {
             // update text from file
             if (updateFromFile) utilFragText_ = FileLoader::readFile(SHADER_DIR + UTIL_FRAG_FILENAME);
-            posLightReplace(numPosLights_, utilFragText_);  // replace position light array size
+            lightMacroReplace("NUM_POS_LIGHTS", numPosLights_, utilFragText_);
+            lightMacroReplace("NUM_SPOT_LIGHTS", numSpotLights_, utilFragText_);
         } break;
 
         default:
@@ -261,9 +263,11 @@ void ShaderHandler::cleanupOldResources() {
     inst_.oldModules_.clear();
 }
 
-void ShaderHandler::posLightReplace(uint32_t numLights, std::string& text) {
+void ShaderHandler::lightMacroReplace(std::string macroVariable, uint32_t numLights, std::string& text) {
     // TODO: fix the regex so that you don't have to read from file...
-    text = textReplace(text, "PositionalLight lights[", "];", 1, numLights);
+    std::stringstream ss;
+    ss << "#define " << macroVariable << " ";
+    text = textReplace(text, ss.str(), "", 0, numLights);
 }
 
 template <typename T1, typename T2>

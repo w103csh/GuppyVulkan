@@ -21,31 +21,83 @@ typedef enum FLAGS {
     BITS_MAX_ENUM = 0x7FFFFFFF
 } FLAGS;
 
-class Positional : public Object3d {
+template <class T>
+struct Base : public Object3d {
    public:
-    struct Data {
-        glm::vec4 position;       // 16
-        glm::vec3 La;             // 12 (Ambient light intensity)
-        FlagBits flags;           // 4
-        alignas(16) glm::vec3 L;  // 12 Diffuse and specular light intensity
-        // 4 rem
-    };
-
-    Positional() : flags_(FLAGS::SHOW), La_(glm::vec3(0.1f)), L_(glm::vec3(0.6f)){};
+    Base() : flags_(FLAGS::SHOW){};
 
     // bool operator==(const Base& other) const { return pos == other.pos && normal == other.normal; }
 
     inline FlagBits getFlags() const { return flags_; }
     inline void setFlags(FlagBits flags) { flags_ = flags; }
 
-    void getData(Data& data);
+    virtual void getData(T& data) = 0;
+
+   protected:
+    FlagBits flags_;
+};  // class Base
+
+struct PositionalData {
+    glm::vec3 position;        // 12
+    FlagBits flags;            // 4
+    alignas(16) glm::vec3 La;  // 12 (Ambient light intensity)
+    // 4 rem
+    alignas(16) glm::vec3 L;  // 12 Diffuse and specular light intensity
+    // 4 rem
+};  // struct BaseData
+
+class Positional : public Base<PositionalData> {
+   public:
+    Positional() : Base(), La_(glm::vec3(0.1f)), L_(glm::vec3(0.6f)){};
+
+    void getData(PositionalData& data) override {
+        data.position = glm::vec4(getPosition(), 1.0f);
+        data.flags = flags_;
+        data.La = La_;
+        data.L = L_;
+    };
 
    private:
-    FlagBits flags_;
     glm::vec3 La_;
     glm::vec3 L_;
 
-};  // struct Base
+};  // class Positional
+
+struct SpotData {
+    glm::vec3 position;   // 12
+    FlagBits flags;       // 4
+    glm::vec3 La;         // 12 (Ambient light intensity)
+    float exponent;       // 4
+    glm::vec3 L;          // 12 Diffuse and specular light intensity
+    float cutoff;         // 4
+    alignas (16) glm::vec3 direction;  // 12
+    // 4 rem
+};
+
+class Spot : public Base<SpotData> {
+   public:
+    Spot() : Base(), La_(glm::vec3(0.5f)), L_(glm::vec3(0.9f)), exponent_(50.0f), cutoff_(glm::radians(15.0f)){};
+
+    void getData(SpotData& data) override {
+        data.flags = flags_;
+        data.position = getPosition();
+        data.direction = getDirection();
+        data.La = La_;
+        data.L = L_;
+        data.exponent = exponent_;
+        data.cutoff = cutoff_;
+    };
+
+    glm::vec3 getDirection() const override;
+    glm::vec3 getPosition() const override;
+
+   private:
+    glm::vec3 La_;
+    glm::vec3 L_;
+    float exponent_;
+    float cutoff_;
+
+};  // class Spot
 
 }  // namespace Light
 

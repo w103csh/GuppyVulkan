@@ -37,7 +37,5 @@ Axes::Axes(glm::mat4 model, bool showNegative) : LineMesh() {
         vertices_.insert(vertices_.end(), nvs.begin(), nvs.end());
     }
 
-    for (auto& v : vertices_) v.pos = obj3d_.model * glm::vec4(v.pos, 1.0f);
-
     status_ = STATUS::READY;
 }

@@ -134,6 +134,7 @@ class Guppy : public Game {
     // lights
     bool showLightHelpers_ = true;
     std::vector<Light::Positional> positionalLights_;
+    std::vector<Light::Spot> spotLights_;
     size_t lightHelperOffset_;
 
     // scene
