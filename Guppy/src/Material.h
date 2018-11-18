@@ -94,10 +94,4 @@ class Material {
     std::shared_ptr<Texture::Data> pTexture_;
 };
 
-// TODO: move this to a better spot
-struct PushConstants {
-    glm::mat4 model;
-    Material::Data material;
-};
-
 #endif  // !MATERIAL_H

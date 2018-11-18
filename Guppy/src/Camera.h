@@ -20,10 +20,17 @@ class Camera : public Object3d {
 
     inline Data getData() { return data_; }
 
-    glm::vec3 getDirection() const override;
-    glm::vec3 getPosition() const  override;
+    inline glm::vec3 getWorldDirection(const glm::vec3 &d = FORWARD_VECTOR) const {
+        glm::vec3 direction = glm::inverse(view_) * glm::vec4(d, 0.0f);
+        return glm::normalize(direction);
+    }
 
-    inline glm::mat4 getMVP() const { return clip_ * proj_ * view_ * Object3d::obj3d_.model; }
+    inline glm::vec3 getWorldPosition(const glm::vec3 &p = {}) const {
+        // TODO: deal with model...
+        return glm::inverse(view_) * glm::vec4(p, 1.0f);
+    }
+
+    inline glm::mat4 getMVP() const { return clip_ * proj_ * view_ /** model_*/; }
 
     void update(const float aspect, const glm::vec3 &pos_dir = {}, const glm::vec3 &look_dir = {});
 
@@ -40,9 +47,11 @@ class Camera : public Object3d {
     float near_;
     glm::mat4 proj_;
     // view
+    // storing eye & center make the matrix creation faster?
     glm::vec3 eye_;
     glm::vec3 center_;
-    glm::mat4 view_;
+    // World space to view space
+    glm::mat4 view_;  // view matrix created from glm::lookAt
 };
 
 #endif  // !CAMERA_H

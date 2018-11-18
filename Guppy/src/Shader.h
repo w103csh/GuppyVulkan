@@ -10,19 +10,21 @@
 #include "MyShell.h"
 #include "Singleton.h"
 
-// TODO: move uniform handling here...
-struct DefaultUniformBuffer {
-    Camera::Data camera;
-    std::vector<Light::PositionalData> positionalLightData;
-    std::vector<Light::SpotData> spotLightData;
-};
-
 // **********************
 //      Shader
 // **********************
 
 class Shader {
    public:
+    typedef enum FLAGS {
+        DEFAULT = 0x00000000,
+        // Should this be on the "Dynamic" uniform buffer? Now its on "Default". If it stays then
+        // move it to Scene.
+        TOON_SHADE = 0x00000001,
+        // THROUGH 0x00000008
+        BITS_MAX_ENUM = 0x7FFFFFFF
+    } FLAGS;
+
     Shader(const VkDevice dev, std::string fileName, std::vector<const char *> pLinkTexts, VkShaderStageFlagBits stage,
            bool updateTextFromFile = true, std::string markerName = "");
     ~Shader(){};
@@ -38,6 +40,21 @@ class Shader {
     std::string markerName_;
     std::string text_;
     VkShaderStageFlagBits stage_;
+};
+
+// **********************
+//      Default Uniform
+// **********************
+
+// TODO: move uniform handling here...
+struct DefaultUniformBuffer {
+    Camera::Data camera;
+    struct ShaderData {
+        alignas(16) FlagBits flags = Shader::FLAGS::DEFAULT;
+        // 12 rem
+    } shaderData;
+    std::vector<Light::PositionalData> positionalLightData;
+    std::vector<Light::SpotData> spotLightData;
 };
 
 // **********************

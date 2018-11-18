@@ -85,22 +85,31 @@ size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<ColorMesh> pM
     return offset;
 }
 
-size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<LineMesh> pMesh) {
+size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<LineMesh> pMesh, bool async,
+                      std::function<void(Mesh*)> callback) {
     auto offset = lineMeshes_.size();
 
     pMesh->setSceneData(ctx, offset);
     lineMeshes_.push_back(std::move(pMesh));
 
-    if (lineMeshes_.back()->getStatus() != STATUS::READY) {
-        ldgFutures_.emplace_back(lineMeshes_.back()->load(ctx));
-    } else {
+    if (lineMeshes_.back()->getStatus() == STATUS::READY) {
         lineMeshes_.back()->prepare(ctx.dev, pDescResources_);
+    } else {
+        auto fut = lineMeshes_.back()->load(ctx, callback);
+
+        // If async is specified then store the future, and get it later
+        if (async) {
+            ldgFutures_.emplace_back(std::move(fut));
+        } else {
+            fut.get()->prepare(ctx.dev, pDescResources_);
+        }
     }
 
     return offset;
 }
 
-size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<TextureMesh> pMesh) {
+size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<TextureMesh> pMesh, bool async,
+                      std::function<void(Mesh*)> callback) {
     auto offset = texMeshes_.size();
 
     // Set values based on scene, and move pointer onto scene
@@ -114,10 +123,17 @@ size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<TextureMesh> 
     }
 
     // Check mesh loading status
-    if (texMeshes_.back()->getStatus() != STATUS::READY) {
-        ldgFutures_.emplace_back(texMeshes_.back()->load(ctx));
-    } else {
+    if (texMeshes_.back()->getStatus() == STATUS::READY) {
         texMeshes_.back()->prepare(ctx.dev, pDescResources_);
+    } else {
+        auto fut = texMeshes_.back()->load(ctx, callback);
+
+        // If async is specified then store the future, and get it later
+        if (async) {
+            ldgFutures_.emplace_back(std::move(fut));
+        } else {
+            fut.get()->prepare(ctx.dev, pDescResources_);
+        }
     }
 
     return offset;

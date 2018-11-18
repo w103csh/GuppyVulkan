@@ -44,7 +44,7 @@ Guppy::Guppy(const std::vector<std::string>& args)
       primary_cmd_submit_info_(),
       depth_resource_(),
       active_scene_index_(-1),
-      camera_(glm::vec3(2.0f, -4.0f, 2.0f), glm::vec3(0.0f, 0.0f, 0.0f),
+      camera_(glm::vec3(2.0f, 2.0f, 4.0f), glm::vec3(0.0f, 0.0f, 0.0f),
               static_cast<float>(settings_.initial_width) / static_cast<float>(settings_.initial_height)) {
     for (auto it = args.begin(); it != args.end(); ++it) {
         if (*it == "-s")
@@ -242,6 +242,18 @@ void Guppy::on_key(KEY key) {
             auto p1 = std::make_unique<TexturePlane>(getTextureByPath(VULKAN_TEX_PATH), model, true);
             active_scene()->addMesh(shell_->context(), std::move(p1));
         } break;
+        case KEY::KEY_7: {
+            if (spotLights_.size() > 0) {
+                auto& light = spotLights_[0];
+                auto worldY = light.worldToLocal(CARDINAL_Y);
+                light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_X * -2.0f), M_PI_FLT, worldY));
+                light.setCutoff(glm::radians(25.0f));
+                light.setExponent(25.0f);
+            }
+        } break;
+        case KEY::KEY_8: {
+            defUBO_.shaderData.flags ^= Shader::FLAGS::TOON_SHADE;
+        } break;
         default:
             break;
     }
@@ -403,6 +415,8 @@ void Guppy::createUniformBuffer(std::string markerName) {
     VkDeviceSize size = 0;
     // camera
     size += sizeof(Camera::Data);
+    // shader
+    size += sizeof(DefaultUniformBuffer::ShaderData);
     // lights
     size += sizeof(Light::PositionalData) * defUBO_.positionalLightData.size();
     size += sizeof(Light::SpotData) * defUBO_.spotLightData.size();
@@ -435,6 +449,11 @@ void Guppy::copyUniformBufferMemory() {
     // CAMERA
     size = sizeof(Camera::Data);
     memcpy(pData, &defUBO_.camera, size);
+    offset += size;
+
+    // SHADER
+    size = sizeof(DefaultUniformBuffer::ShaderData);
+    memcpy(pData + offset, &defUBO_.shaderData.flags, size);
     offset += size;
 
     // LIGHTS
@@ -472,7 +491,7 @@ void Guppy::updateUniformBuffer() {
     auto look_dir = InputHandler::getLookDir();
     camera_.update(aspect, pos_dir, look_dir);
     defUBO_.camera.mvp = camera_.getMVP();
-    defUBO_.camera.position = camera_.getPosition();
+    defUBO_.camera.position = camera_.getWorldPosition();
 
     // Update the lights... (!!!!!! THE NUMBER OF LIGHTS HERE CANNOT CHANGE AT RUNTIME YET !!!!!
     // Need to recreate the uniform descriptors!)
@@ -613,19 +632,19 @@ void Guppy::destroy_depth_resources() {
 }
 
 void Guppy::createLights() {
-    //// TODO: move the light code into the scene, including ubo data
-    //positionalLights_.push_back(Light::Positional());
-    //positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(1.5f, 1.5f, 0.5f)));
+    // TODO: move the light code into the scene, including ubo data
+    positionalLights_.push_back(Light::Positional());
+    positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(20.5f, 10.5f, -23.5f)));
 
-    //positionalLights_.push_back(Light::Positional());
-    //positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(-3.5f, -1.5f, 0.5f)));
+    positionalLights_.push_back(Light::Positional());
+    positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(-60.5f, 6.5f, -18.5f)));
 
     // positionalLights_.push_back(Light::Positional());
     // positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(-10.0f, 30.0f, 6.0f)));
 
-     auto model = glm::lookAt({-0.5f, -0.5f, 5.5f}, {-0.5f, -0.49f, 0.0f}, UP_VECTOR);
-     spotLights_.push_back({});
-     spotLights_.back().transform(model);
+    auto model = helpers::viewToWorld({0.0f, 2.5f, 0.0f}, {0.0f, 0.0f, 1.5f}, UP_VECTOR);
+    spotLights_.push_back({});
+    spotLights_.back().transform(model);
 }
 
 void Guppy::createScenes() {
@@ -641,27 +660,32 @@ void Guppy::createScenes() {
         // GROUND PLANE
         auto pMaterial = std::make_unique<Material>(getTextureByPath(HARDWOOD_FLOOR_TEX_PATH));
         pMaterial->setRepeat(800.0f);
-        glm::mat4 model = helpers::affine(glm::vec3(2000.0f));
+        glm::mat4 model = helpers::affine(glm::vec3(2000.0f), {}, -M_PI_2_FLT, CARDINAL_X);
         auto groundPlane = std::make_unique<TexturePlane>(std::move(pMaterial), model);
         auto gpbbmm = groundPlane->getBoundingBoxMinMax();
         active_scene()->addMesh(shell_->context(), std::move(groundPlane));
 
         // ORIGIN AXES
-        std::unique_ptr<LineMesh> defAxes = std::make_unique<Axes>(glm::scale(glm::mat4(1.0f), glm::vec3(AXES_MAX_SIZE)), true);
+        std::unique_ptr<LineMesh> defAxes = std::make_unique<Axes>(glm::mat4(1.0f), AXES_MAX_SIZE, true);
         active_scene()->addMesh(shell_->context(), std::move(defAxes));
 
         // BURNT ORANGE TORUS
         pMaterial = std::make_unique<Material>();
         pMaterial->setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
         pMaterial->setColor({0.8f, 0.3f, 0.0f});
-        model = helpers::affine(glm::vec3(0.07f), glm::vec3(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+        model = helpers::affine(glm::vec3(0.07f));
         auto torus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, model);
-        active_scene()->addMesh(shell_->context(), std::move(torus), false, [&gpbbmm](auto pMesh) { pMesh->putOnTop(gpbbmm); });
+        active_scene()->addMesh(shell_->context(), std::move(torus), true, [&gpbbmm](auto pMesh) { pMesh->putOnTop(gpbbmm); });
+
+        // ORANGE
+        model = helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f});
+        auto tm1 =
+            std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(ORANGE_DIFF_TEX_PATH)), ORANGE_MODEL_PATH, model);
+        active_scene()->addMesh(shell_->context(), std::move(tm1), true, [&gpbbmm](auto pMesh) { pMesh->putOnTop(gpbbmm); });
     }
 
     // Lights
     if (showLightHelpers_) {
-
         for (auto& light : positionalLights_) {
             std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(light, 0.5f);
             lightHelperOffset_ = active_scene()->addMesh(shell_->context(), std::move(pHelper));
@@ -680,6 +704,7 @@ void Guppy::createTextures() {
     addTexture(dev_, CHALET_TEX_PATH);
     addTexture(dev_, VULKAN_TEX_PATH);
     addTexture(dev_, MED_H_DIFF_TEX_PATH, MED_H_NORM_TEX_PATH, MED_H_SPEC_TEX_PATH);
+    addTexture(dev_, ORANGE_DIFF_TEX_PATH, ORANGE_NORM_TEX_PATH);
     addTexture(dev_, HARDWOOD_FLOOR_TEX_PATH);
 }
 

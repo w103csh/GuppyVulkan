@@ -18,9 +18,12 @@ class Scene {
           std::vector<std::shared_ptr<Texture::Data>> &pTextures);
 
     // TODO: there is too much redundancy here...
-    size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<ColorMesh> pMesh, bool async = true, std::function<void(Mesh*)> callback = nullptr);
-    size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<LineMesh> pMesh);
-    size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<TextureMesh> pMesh);
+    size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<ColorMesh> pMesh, bool async = true,
+                   std::function<void(Mesh *)> callback = nullptr);
+    size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<LineMesh> pMesh, bool async = true,
+                   std::function<void(Mesh *)> callback = nullptr);
+    size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<TextureMesh> pMesh, bool async = true,
+                   std::function<void(Mesh *)> callback = nullptr);
 
     void removeMesh(Mesh *mesh);
 

@@ -35,7 +35,7 @@ void InputHandler::updateInput(float elapsed) {
     inst_.posDir_ *= elapsed;
     //inst_.lookDir_ *= (0.001 / elapsed);
 
-    if (glm::any(glm::notEqual(inst_.posDir_, glm::vec3(0.0f)))) {
+    if (MY_DEBUG && glm::any(glm::notEqual(inst_.posDir_, glm::vec3(0.0f)))) {
         std::stringstream ss;
         ss << "move (" << elapsed << "):";
         inst_.sh_->log(MyShell::LOG_INFO, helpers::makeVec3String(ss.str(), inst_.posDir_).c_str());

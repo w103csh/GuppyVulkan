@@ -6,6 +6,7 @@
 #include <cstring>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_access.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <limits>
 #include <sstream>
 #include <thread>
@@ -13,6 +14,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "Constants.h"
 // This is here for convenience
 #include "Extensions.h"
 
@@ -25,7 +27,7 @@ enum class MODEL_FILE_TYPE {
 enum class STATUS {
     //
     PENDING = 0,
-    READY, 
+    READY,
     VERTICES_LOADED,
     PENDING_TEXTURE,
 };
@@ -118,8 +120,52 @@ static MODEL_FILE_TYPE getModelFileType(std::string s) {
     return MODEL_FILE_TYPE::UNKNOWN;
 }
 
-glm::mat4 affine(glm::vec3 scale = glm::vec3(1.0f), glm::vec3 translate = glm::vec3(0.0f), float angle = 0.0f,
-                 glm::vec3 rotationAxis = glm::vec3(1.0f), glm::mat4 model = glm::mat4(1.0f));
+// The point of this is to turn the glm::lookAt into an affine transform for
+// the Object3d model.
+static glm::mat4 viewToWorld(glm::vec3 position, glm::vec3 focalPoint, glm::vec3 up) {
+    /*  This assumes the up vector is a cardinal x, y, or z vector. glm::lookAt constructs
+        a matrix where the direction from position to focal point is assign to the 3rd row (or
+        z row). Here we shift the result to match the up vector.
+    */
+    auto m = glm::inverse(glm::lookAt(position, focalPoint, up));
+
+    // glm::vec3 const f(glm::normalize(focalPoint - position));
+    // glm::vec3 const s(glm::normalize(cross(f, up)));
+    // glm::vec3 const u(glm::cross(s, f));
+
+    // glm::mat4 m(1.0f);
+    // m[0][0] = s.x;
+    // m[1][0] = s.y;
+    // m[2][0] = s.z;
+    // m[0][1] = u.x;
+    // m[1][1] = u.y;
+    // m[2][1] = u.z;
+    // m[0][2] = -f.x;
+    // m[1][2] = -f.y;
+    // m[2][2] = -f.z;
+    // m[3][0] = -dot(position, s);
+    // m[3][1] = -dot(position, u);
+    // m[3][2] = dot(position, f);
+
+     if (up.x == 1.0f) {
+        // TODO: rotate
+    } else if (up.y == 1.0f) {
+        // glm::lookAt defaults to looking in -z by default so rotate it to positive...
+        m = glm::rotate(m, M_PI_FLT, CARDINAL_Y);
+        //m = glm::rotate(m, M_PI_FLT, glm::vec3(glm::row(m, 1)));
+    } else if (up.z == 1.0f) {
+        // TODO: rotate
+    } else {
+        throw std::runtime_error("Up vector not accounted for.");
+    }
+
+    return m;
+}
+
+static glm::mat4 affine(glm::vec3 scale = glm::vec3(1.0f), glm::vec3 translate = glm::vec3(0.0f), float angle = 0.0f,
+                        glm::vec3 rotationAxis = glm::vec3(1.0f), glm::mat4 model = glm::mat4(1.0f)) {
+    return glm::translate(glm::rotate(glm::scale(model, scale), angle, rotationAxis), translate);
+}
 
 static std::string makeVec3String(std::string prefix, glm::vec3 v) {
     std::stringstream ss;

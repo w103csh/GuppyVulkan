@@ -4,6 +4,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "Material.h"
 #include "MyShell.h"
 #include "Singleton.h"
 #include "Shader.h"
@@ -51,6 +52,11 @@ struct PipelineResources {
     VkGraphicsPipelineCreateInfo pipelineInfo;
     // TRI_LIST_COLOR, TRI_LIST_TEX, COLOR
     std::array<VkPipeline, 3> pipelines{VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE};
+};
+
+struct PushConstants {
+    glm::mat4 model;
+    Material::Data material;
 };
 
 class Scene;

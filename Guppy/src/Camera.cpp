@@ -1,6 +1,5 @@
 
 #include <glm/gtc/matrix_access.hpp>
-#include <glm/gtc/matrix_transform.hpp>
 
 #include "Camera.h"
 #include "Constants.h"
@@ -16,21 +15,6 @@ Camera::Camera(const glm::vec3 &eye, const glm::vec3 &center, float aspect, floa
                       0.0f, -1.0f, 0.0f, 0.0f,  //
                       0.0f, 0.0f, 0.5f, 0.0f,   //
                       0.0f, 0.0f, 0.5f, 1.0f);  //
-}
-
-glm::vec3 Camera::getDirection() const {
-    auto local = Object3d::obj3d_.model * view_;
-    glm::vec3 dir = glm::row(local, 2) * -1.0f;
-    return glm::normalize(dir);
-}
-
-glm::vec3 Camera::getPosition() const {
-    auto local = Object3d::obj3d_.model * view_;
-    // I believe this is the "w" homogenous factor from the book.
-    // Still not 100% sure.
-    auto w = local[3];
-    glm::vec3 pos = -w * local;
-    return pos;
 }
 
 void Camera::update(const float aspect, const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
@@ -49,13 +33,13 @@ void Camera::updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
     if (!update_pos && !update_look) return;
 
     // Get othonormal basis for camera view ...
-    auto w = getDirection();
-    auto u = glm::normalize(glm::cross(w, UP_VECTOR));  // TODO: handle looking straight up
-    auto v = glm::normalize(glm::cross(u, w));
+    glm::vec3 w = glm::row(view_, 2);
+    glm::vec3 u = glm::row(view_, 0);  // TODO: handle looking straight up
+    glm::vec3 v = glm::row(view_, 1);
 
     // MOVEMENT
     if (update_pos) {
-        auto pos = w * pos_dir.z;
+        auto pos = w * (pos_dir.z * -1); // w is pointing in -z direction
         pos += u * pos_dir.x;
         pos += v * pos_dir.y;
         // update both eye_ & center_ so that movement doesn't affect look

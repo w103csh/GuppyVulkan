@@ -50,7 +50,7 @@ artifacts/
 *_i.h
 *.ilk
 *.meta
-*.obj
+# *.obj
 *.pch
 *.pdb
 *.pgc
@@ -262,5 +262,5 @@ __pycache__/
 
 
 build
-!data/*.obj
 *.spv
+data/models/AS12_Murraya_koenigii_Curry_Leaf_Tree_obj/**/*

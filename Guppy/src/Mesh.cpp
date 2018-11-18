@@ -206,10 +206,11 @@ ColorMesh::ColorMesh(std::unique_ptr<Material> pMaterial, std::string modelPath,
 void ColorMesh::loadObj() {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string warn, err;  // TODO: log warings
+    std::vector<tinyobj::material_t> materials;  // TODO: use this data
+    std::string warn, err;                       // TODO: log warings
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath_.c_str())) {
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath_.c_str(),
+                          helpers::getFilePath(modelPath_).c_str())) {
         throw std::runtime_error(err);
     }
 
@@ -295,10 +296,11 @@ void TextureMesh::setSceneData(const MyShell::Context& ctx, size_t offset) {
 void TextureMesh::loadObj() {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string warn, err;  // TODO: log warings
+    std::vector<tinyobj::material_t> materials;  // TODO: use this data
+    std::string warn, err;                       // TODO: log warings
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath_.c_str())) {
+    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath_.c_str(),
+                          helpers::getFilePath(modelPath_).c_str())) {
         throw std::runtime_error(err);
     }
 

@@ -6,10 +6,10 @@ const glm::vec4 green(0.0f, 1.0f, 0.0f, 1.0f);
 const glm::vec4 blue(0.0f, 0.0f, 1.0f, 1.0f);
 const glm::vec4 white(1.0f);
 
-Axes::Axes(glm::mat4 model, bool showNegative) : LineMesh() {
-    obj3d_ = {model};  // TODO: move this to the constructors
+Axes::Axes(glm::mat4 model, float lineSize, bool showNegative) : LineMesh() {
+    model_ = model;  // TODO: move this to the constructors
 
-    float max_ = 1;
+    float max_ = lineSize;
     float min_ = max_ * -1;
 
     vertices_ = {

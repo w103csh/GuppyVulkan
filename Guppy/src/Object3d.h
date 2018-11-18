@@ -3,9 +3,9 @@
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_access.hpp>
-#include <limits>
 #include <vector>
 
+#include "Helpers.h"
 #include "Vertex.h"
 
 typedef std::array<glm::vec3, 6> BoundingBox;
@@ -25,20 +25,29 @@ struct BoundingBoxMinMax {
 
 struct Object3d {
    public:
-    Object3d(glm::mat4 model = glm::mat4(1.0f)) : obj3d_{model}, boundingBox_(DefaultBoundingBox){};
-
     struct Data {
         glm::mat4 model = glm::mat4(1.0f);
     };
 
-    inline Data getData() const { return obj3d_; }
+    Object3d(glm::mat4 model = glm::mat4(1.0f)) : model_{model}, boundingBox_(DefaultBoundingBox){};
 
-    virtual inline glm::vec3 getPosition() const { return obj3d_.model[3]; }
-    virtual inline glm::vec3 getDirection() const {
-        glm::vec3 dir = glm::row(obj3d_.model, 2);
-        return glm::normalize(dir);
+    inline Data getData() const { return {model_}; }
+
+    virtual inline glm::vec3 getWorldDirection(const glm::vec3& d = FORWARD_VECTOR) const {
+        glm::vec3 direction = model_ * glm::vec4(d, 0.0f);
+        return glm::normalize(direction);
     }
-    virtual inline void transform(const glm::mat4 t) { obj3d_.model *= t; }
+
+    virtual inline glm::vec3 worldToLocal(const glm::vec3& v, bool isPosition = false) const {
+        glm::vec3 local = glm::inverse(model_) * glm::vec4(v, isPosition ? 1.0f : 0.0f);
+        return isPosition ? local : glm::normalize(local);
+    }
+
+    virtual inline glm::vec3 getWorldPosition(const glm::vec3& p = {}) const {  //
+        return model_ * glm::vec4(p, 1.0f);
+    }
+
+    virtual inline void transform(const glm::mat4 t) { model_ *= t; }
 
     BoundingBoxMinMax getBoundingBoxMinMax() const;
     void putOnTop(const BoundingBoxMinMax& boundingBox);
@@ -58,7 +67,8 @@ struct Object3d {
     }
     BoundingBox getBoundingBox() const;
 
-    Data obj3d_;
+    // Model space to world space
+    glm::mat4 model_ = glm::mat4(1.0f);
 
    private:
     /* This needs to be transformed so it should be private!

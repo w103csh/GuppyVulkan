@@ -138,6 +138,7 @@ class Guppy : public Game {
     size_t lightHelperOffset_;
 
     // scene
+    // This should go onto the scene dynamic buffer if it stays like this.
     int active_scene_index_;
     std::vector<std::unique_ptr<Scene>> pScenes_;
 

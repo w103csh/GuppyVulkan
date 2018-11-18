@@ -25,6 +25,10 @@ const bool ENABLE_VALIDATION_LAYERS = false;
 const bool ENABLE_VALIDATION_LAYERS = true;
 #endif
 
+#define M_PI_FLT static_cast<float>(M_PI)       // pi
+#define M_PI_2_FLT static_cast<float>(M_PI_2)   // pi/2
+#define M_PI_4_FLT static_cast<float>(M_PI_4)   // pi/4
+
 /* Number of viewports and number of scissors have to be the same */
 /* at pipeline creation and in any call to set them dynamically   */
 /* They also have to be the same as each other                    */
@@ -50,27 +54,47 @@ const VkClearColorValue CLEAR_VALUE = {};
 typedef uint32_t VB_INDEX_TYPE;
 
 // Application wide up vector
-static glm::vec3 UP_VECTOR = glm::vec3(0.0f, 0.0f, 1.0f);
-// static glm::vec3 UP_VECTOR = glm::vec3(0.0f, 0.0f, 1.0f);
+// X
+const glm::vec3 CARDINAL_X = glm::vec3(1.0f, 0.0f, 0.0f);
+const glm::vec3 CARDINAL_X_POS = glm::vec4(CARDINAL_X, 1.0f);
+const glm::vec3 CARDINAL_X_DIR = glm::vec4(CARDINAL_X, 0.0f);
+// Y
+const glm::vec3 CARDINAL_Y = glm::vec3(0.0f, 1.0f, 0.0f);
+const glm::vec3 CARDINAL_Y_POS = glm::vec4(CARDINAL_Y, 1.0f);
+const glm::vec3 CARDINAL_Y_DIR = glm::vec4(CARDINAL_Y, 0.0f);
+// Z
+const glm::vec3 CARDINAL_Z = glm::vec3(0.0f, 0.0f, 1.0f);
+const glm::vec3 CARDINAL_Z_POS = glm::vec4(CARDINAL_Z, 1.0f);
+const glm::vec3 CARDINAL_Z_DIR = glm::vec4(CARDINAL_Z, 0.0f);
+// DIRECTIONAL
+const glm::vec3 UP_VECTOR = CARDINAL_Y;
+const glm::vec3 FORWARD_VECTOR = CARDINAL_Z;
 
 const auto ENABLE_SAMPLE_SHADING = VK_TRUE;
 const float MIN_SAMPLE_SHADING = 0.2f;
 
-// data
+// DATA
 const std::string DATA_PATH = ROOT_PATH + "data\\";
-// models
+// MODELS
 const std::string MODEL_PATH = DATA_PATH + "models\\";
-const std::string CHALET_MODEL_PATH = MODEL_PATH + "chalet.obj";
-const std::string MED_H_MODEL_PATH = MODEL_PATH + "Medieval_House.obj";
+// chalet
+const std::string CHALET_MODEL_PATH = MODEL_PATH + "chalet_obj\\chalet.obj";
+const std::string CHALET_TEX_PATH = MODEL_PATH + "chalet_obj\\chalet.jpg";
+// medieval house
+const std::string MED_H_MODEL_PATH = MODEL_PATH + "Medieval_House_obj\\Medieval_House.obj";
+const std::string MED_H_DIFF_TEX_PATH = MODEL_PATH + "Medieval_House_obj\\Medieval_House_Diff.png";
+const std::string MED_H_NORM_TEX_PATH = MODEL_PATH + "Medieval_House_obj\\Medieval_House_Nor.png";
+const std::string MED_H_SPEC_TEX_PATH = MODEL_PATH + "Medieval_House_obj\\Medieval_House_Spec.png";
+// orange
+const std::string ORANGE_MODEL_PATH = MODEL_PATH + "Orange_obj\\Orange.obj";
+const std::string ORANGE_DIFF_TEX_PATH = MODEL_PATH + "Orange_obj\\Color.jpg";
+const std::string ORANGE_NORM_TEX_PATH = MODEL_PATH + "Orange_obj\\Normal.jpg";
+// general
 const std::string SPHERE_MODEL_PATH = MODEL_PATH + "sphere.obj";
 const std::string TORUS_MODEL_PATH = MODEL_PATH + "torus.obj";
 const std::string SOMETHING_MODEL_PATH = MODEL_PATH + "pig_triangulated.obj";
-// images
+// IMAGES
 const std::string IMG_PATH = DATA_PATH + "images\\";
-const std::string CHALET_TEX_PATH = IMG_PATH + "chalet.jpg";
 const std::string STATUE_TEX_PATH = IMG_PATH + "texture.jpg";
 const std::string VULKAN_TEX_PATH = IMG_PATH + "vulkan.png";
-const std::string MED_H_DIFF_TEX_PATH = IMG_PATH + "Medieval_House\\Medieval_House_Diff.png";
-const std::string MED_H_NORM_TEX_PATH = IMG_PATH + "Medieval_House\\Medieval_House_Nor.png";
-const std::string MED_H_SPEC_TEX_PATH = IMG_PATH + "Medieval_House\\Medieval_House_Spec.png";
 const std::string HARDWOOD_FLOOR_TEX_PATH = IMG_PATH + "hardwood_floor.jpg";

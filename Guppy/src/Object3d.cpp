@@ -9,27 +9,31 @@ void Object3d::putOnTop(const BoundingBoxMinMax& inBoundingBoxMinMax) {
     // in
     float inXCtr, inYCtr, inZCtr;
     inXCtr = inBoundingBoxMinMax.xMin + std::abs((inBoundingBoxMinMax.xMax - inBoundingBoxMinMax.xMin) / 2);
-    inYCtr = inBoundingBoxMinMax.yMin + std::abs((inBoundingBoxMinMax.yMax - inBoundingBoxMinMax.yMin) / 2);
-    inZCtr = inBoundingBoxMinMax.zMax;  // top
+    inYCtr = inBoundingBoxMinMax.yMax;  // top
+    inZCtr = inBoundingBoxMinMax.zMin + std::abs((inBoundingBoxMinMax.zMax - inBoundingBoxMinMax.zMin) / 2);
 
     // my
     float myXCtr, myYCtr, myZCtr;
     myXCtr = myBoundingBoxMinMax.xMin + std::abs((myBoundingBoxMinMax.xMax - myBoundingBoxMinMax.xMin) / 2);
-    myYCtr = myBoundingBoxMinMax.yMin + std::abs((myBoundingBoxMinMax.yMax - myBoundingBoxMinMax.yMin) / 2);
-    myZCtr = myBoundingBoxMinMax.zMin;  // bottom
+    myYCtr = myBoundingBoxMinMax.yMin;  // bottom
+    myZCtr = myBoundingBoxMinMax.zMin + std::abs((myBoundingBoxMinMax.zMax - myBoundingBoxMinMax.zMin) / 2);
 
-    auto tm = glm::translate(glm::mat4(1.0f),       //
-                             {(inXCtr - myXCtr),    //
-                              (inYCtr - myYCtr),    //
-                              (inZCtr - myZCtr)});  //
+    auto tm = glm::translate(glm::mat4(1.0f),  //
+                             {
+                                 //(inXCtr - myXCtr),  //
+                                 0.0f,
+                                 (inYCtr - myYCtr),
+                                 //(inZCtr - myZCtr)  //
+                                 0.0f,
+                             });
 
-    obj3d_.model = tm * obj3d_.model;
+    model_ = tm * model_;
 }
 
 BoundingBoxMinMax Object3d::getBoundingBoxMinMax() const {
     BoundingBoxMinMax bbmm = {FLT_MAX, -FLT_MAX, FLT_MAX, -FLT_MAX, FLT_MAX, -FLT_MAX};
     for (auto v : boundingBox_) {
-        v = obj3d_.model * glm::vec4(v, 1.0f);
+        v = model_ * glm::vec4(v, 1.0f);
         if (v.x < bbmm.xMin) bbmm.xMin = v.x;  // xMin
         if (v.x > bbmm.xMax) bbmm.xMax = v.x;  // xMax
         if (v.y < bbmm.yMin) bbmm.yMin = v.y;  // yMin
@@ -43,7 +47,7 @@ BoundingBoxMinMax Object3d::getBoundingBoxMinMax() const {
 BoundingBox Object3d::getBoundingBox() const {
     BoundingBox bb = {};
     for (size_t i = 0; i < boundingBox_.size(); i++) {
-        bb[i] = obj3d_.model * glm::vec4(boundingBox_[i], 1.0f);
+        bb[i] = model_ * glm::vec4(boundingBox_[i], 1.0f);
     }
     return bb;
 }

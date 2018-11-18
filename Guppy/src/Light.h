@@ -51,7 +51,7 @@ class Positional : public Base<PositionalData> {
     Positional() : Base(), La_(glm::vec3(0.1f)), L_(glm::vec3(0.6f)){};
 
     void getData(PositionalData& data) override {
-        data.position = glm::vec4(getPosition(), 1.0f);
+        data.position = getWorldPosition();
         data.flags = flags_;
         data.La = La_;
         data.L = L_;
@@ -64,13 +64,13 @@ class Positional : public Base<PositionalData> {
 };  // class Positional
 
 struct SpotData {
-    glm::vec3 position;   // 12
-    FlagBits flags;       // 4
-    glm::vec3 La;         // 12 (Ambient light intensity)
-    float exponent;       // 4
-    glm::vec3 L;          // 12 Diffuse and specular light intensity
-    float cutoff;         // 4
-    alignas (16) glm::vec3 direction;  // 12
+    glm::vec3 position;               // 12
+    FlagBits flags;                   // 4
+    glm::vec3 La;                     // 12 (Ambient light intensity)
+    float exponent;                   // 4
+    glm::vec3 L;                      // 12 Diffuse and specular light intensity
+    float cutoff;                     // 4
+    alignas(16) glm::vec3 direction;  // 12
     // 4 rem
 };
 
@@ -80,16 +80,16 @@ class Spot : public Base<SpotData> {
 
     void getData(SpotData& data) override {
         data.flags = flags_;
-        data.position = getPosition();
-        data.direction = getDirection();
+        data.position = getWorldPosition();
+        data.direction = getWorldDirection();
         data.La = La_;
         data.L = L_;
         data.exponent = exponent_;
         data.cutoff = cutoff_;
     };
 
-    glm::vec3 getDirection() const override;
-    glm::vec3 getPosition() const override;
+    inline void setCutoff(float f) { cutoff_ = f; }
+    inline void setExponent(float f) { exponent_ = f; }
 
    private:
     glm::vec3 La_;

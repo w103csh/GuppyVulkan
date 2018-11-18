@@ -8,7 +8,7 @@
 #define HAS_SPOT_LIGHTS NUM_SPOT_LIGHTS > 0
 
 #if HAS_POS_LIGHTS || HAS_SPOT_LIGHTS
-// LIGHT FLAGS
+// LIGHT flags
 const uint LIGHT_SHOW    = 0x00000001u;
 #endif
 
@@ -32,6 +32,13 @@ struct SpotLight {
 };
 #endif
 
+// SHADER flags
+const uint SHADER_DEFAULT       = 0x00000000u;
+const uint SHADER_TOON_SHADE    = 0x00000001u;
+// SHADER variables
+const int ts_levels = 3;
+const float ts_scaleFactor = 1.0 / ts_levels;
+
 struct Camera {
 	mat4 mvp;
 	vec3 position;
@@ -39,9 +46,10 @@ struct Camera {
 
 // IN
 layout(location = 0) in vec3 fragPos;
-// UNIFORM BUFFER
+// UNIFORM buffer
 layout(binding = 0) uniform DefaultUniformBuffer {
 	Camera camera;
+    uint shaderFlags; // 12 rem
 #if HAS_POS_LIGHTS
 	PositionalLight positionLights[NUM_POS_LIGHTS];
 #endif
@@ -52,17 +60,29 @@ layout(binding = 0) uniform DefaultUniformBuffer {
 
 vec3 n, Ka, Kd, Ks;
 
+vec3 toonShade(float sDotN) {
+    return Kd * floor(sDotN * ts_levels) * ts_scaleFactor;
+}
+
 #if HAS_POS_LIGHTS
-vec3 phongModel(PositionalLight light, uint shininess) {
-    vec3 ambient = light.La * Ka;
+vec3 phongModel(PositionalLight light, uint shininess, uint lightCount) {
+    vec3 ambient = pow(light.La, vec3(lightCount)) * Ka;
+    vec3 diff = vec3(0.0), spec = vec3(0.0);
+
     // "s" is the direction to the light
     vec3 s = normalize(vec3(light.position) - fragPos);
     float sDotN = max(dot(s,n), 0.0);
 
-    // Diffuse color depends on "s" and the "n" only (Lambertian)
-    vec3 diff = Kd * sDotN;
+    // Skip the rest if toon shading
+    if ((ubo.shaderFlags & SHADER_TOON_SHADE) > 0) {
+        diff = toonShade(sDotN);
+        return ambient + light.L * diff;
+    }
 
-    vec3 spec = vec3(0.0);
+    // Diffuse color depends on "s" and the "n" only (Lambertian)
+    diff = Kd * sDotN;
+
+    spec = vec3(0.0);
     // Only calculate specular if the cosine is positive
     if(sDotN > 0.0) {
         // "v" is the direction to the camera
@@ -79,15 +99,15 @@ vec3 phongModel(PositionalLight light, uint shininess) {
 #endif
 
 #if HAS_SPOT_LIGHTS
-vec3 blinnPhongSpot(SpotLight light, uint shininess) {
-    vec3 ambient = light.La * Ka;
+vec3 blinnPhongSpot(SpotLight light, uint shininess, uint lightCount) {
+    vec3 ambient = pow(light.La, vec3(lightCount)) * Ka;
     vec3 diff = vec3(0.0), spec = vec3(0.0);
 
     vec3 s = normalize(vec3(light.position) - fragPos);
     float cosAng = dot(-s, light.direction);
     float angle = acos(cosAng);
+
     float spotScale = 0.0;
-    
     if(angle < light.cutoff) {
         spotScale = pow(cosAng, light.exponent);
         float sDotN = max(dot(s,n), 0.0);
@@ -106,11 +126,12 @@ vec3 blinnPhongSpot(SpotLight light, uint shininess) {
 
 vec3 getColor(uint shininess) {
     vec3 color = vec3(0.0);
+    uint lightCount = 0;
 
 #if HAS_POS_LIGHTS
     for (int i = 0; i < ubo.positionLights.length(); i++) {
         if ((ubo.positionLights[i].flags & LIGHT_SHOW) > 0) {
-            color += phongModel(ubo.positionLights[i], shininess);
+            color += phongModel(ubo.positionLights[i], shininess, ++lightCount);
         }
     }
 #endif
@@ -118,7 +139,7 @@ vec3 getColor(uint shininess) {
 #if HAS_SPOT_LIGHTS
     for (int i = 0; i < ubo.spotLights.length(); i++) {
         if ((ubo.spotLights[i].flags & LIGHT_SHOW) > 0) {
-            color += blinnPhongSpot(ubo.spotLights[i], shininess);
+            color += blinnPhongSpot(ubo.spotLights[i], shininess, ++lightCount);
         }
     }
 #endif

@@ -1,6 +1,4 @@
 
-#include <glm/gtc/matrix_transform.hpp>
-
 #include "CmdBufHandler.h"
 #include "Helpers.h"
 
@@ -309,10 +307,6 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
 
         vkCmdPipelineBarrier(cmd, srcStages, dstStages, 0, 0, nullptr, 0, nullptr, 1, &barrier);
     }
-}
-
-glm::mat4 affine(glm::vec3 scale, glm::vec3 translate, float angle, glm::vec3 rotationAxis, glm::mat4 model) {
-    return glm::translate(glm::scale(glm::rotate(model, angle, rotationAxis), scale), translate);
 }
 
 }  // namespace helpers
