@@ -70,15 +70,16 @@ std::future<std::shared_ptr<Texture::Data>> Texture::loadTexture(const VkDevice&
 
 void Texture::createTexture(const VkDevice& dev, const bool makeMipmaps, std::shared_ptr<Data> pTexture) {
     auto& tex = (*pTexture);
+    uint32_t layerCount = getArrayLayerCount(tex);
 
-    createImage(dev, tex);
+    createImage(dev, tex, layerCount);
 
     if (makeMipmaps) {
-        generateMipmaps(tex);
+        generateMipmaps(tex, layerCount);
     } else {
         // TODO: DO SOMETHING .. this was not tested
     }
-    createImageView(dev, tex);
+    createImageView(dev, tex, layerCount);
     createSampler(dev, tex);
     createDescInfo(tex);
 
@@ -87,9 +88,8 @@ void Texture::createTexture(const VkDevice& dev, const bool makeMipmaps, std::sh
     pTexture->status = STATUS::READY;
 }
 
-void Texture::createImage(const VkDevice& dev, Data& tex) {
-    VkDeviceSize imageSize = tex.width * tex.height * 4;  // TODO: where does this 4 come from?!!!!!!!!!!!!!!
-    auto layerCount = getArrayLayerCount(tex);
+void Texture::createImage(const VkDevice& dev, Data& tex, uint32_t layerCount) {
+    VkDeviceSize imageSize = tex.width * tex.height * 4;  // 4 components from STBI_rgb_alpha
 
     BufferResource stgRes = {};
     auto memReqsSize = helpers::createBuffer(dev, (imageSize * layerCount), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -97,20 +97,20 @@ void Texture::createImage(const VkDevice& dev, Data& tex) {
                                              stgRes.buffer, stgRes.memory);
 
     void* pData;
-    size_t offset = 0;
+    size_t offset = 0, size = static_cast<size_t>(imageSize);
     vkMapMemory(dev, stgRes.memory, 0, memReqsSize, 0, &pData);
 
     if (tex.flags & FLAGS::DIFFUSE) {
-        memcpy(static_cast<char*>(pData) + offset, tex.pixels, static_cast<size_t>(imageSize));
-        offset += static_cast<size_t>(imageSize);
+        memcpy(static_cast<char*>(pData) + offset, tex.pixels, size);
+        offset += size;
     }
     if (tex.flags & FLAGS::NORMAL) {
-        memcpy(static_cast<char*>(pData) + offset, tex.pixels, static_cast<size_t>(imageSize));
-        offset += static_cast<size_t>(imageSize);  // TODO: same size for all?
+        memcpy(static_cast<char*>(pData) + offset, tex.normPixels, size);
+        offset += size;  // TODO: same size for all?
     }
     if (tex.flags & FLAGS::SPECULAR) {
-        memcpy(static_cast<char*>(pData) + offset, tex.pixels, static_cast<size_t>(imageSize));
-        offset += static_cast<size_t>(imageSize);  // TODO: same size for all?
+        memcpy(static_cast<char*>(pData) + offset, tex.specPixels, size);
+        offset += size;  // TODO: same size for all?
     }
 
     vkUnmapMemory(dev, stgRes.memory);
@@ -136,7 +136,7 @@ void Texture::createImage(const VkDevice& dev, Data& tex) {
     tex.pLdgRes->stgResources.push_back(stgRes);
 }
 
-void Texture::generateMipmaps(const Data& tex) {
+void Texture::generateMipmaps(const Data& tex, uint32_t layerCount) {
     // This was the way before mip maps
     // transitionImageLayout(
     //    srcQueueFamilyIndexFinal,
@@ -158,7 +158,7 @@ void Texture::generateMipmaps(const Data& tex) {
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = 1;
+    barrier.subresourceRange.layerCount = layerCount;
     barrier.subresourceRange.levelCount = 1;
 
     int32_t mipWidth = tex.width;
@@ -177,18 +177,20 @@ void Texture::generateMipmaps(const Data& tex) {
                              nullptr, 0, nullptr, 1, &barrier);
 
         VkImageBlit blit = {};
+        // source
         blit.srcOffsets[0] = {0, 0, 0};
         blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
         blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         blit.srcSubresource.mipLevel = i - 1;
         blit.srcSubresource.baseArrayLayer = 0;
-        blit.srcSubresource.layerCount = 1;
+        blit.srcSubresource.layerCount = layerCount;
+        // destination
         blit.dstOffsets[0] = {0, 0, 0};
         blit.dstOffsets[1] = {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
         blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         blit.dstSubresource.mipLevel = i;
         blit.dstSubresource.baseArrayLayer = 0;
-        blit.dstSubresource.layerCount = 1;
+        blit.dstSubresource.layerCount = layerCount;
 
         vkCmdBlitImage(tex.pLdgRes->graphicsCmd, tex.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, tex.image,
                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
@@ -221,9 +223,9 @@ void Texture::generateMipmaps(const Data& tex) {
                          nullptr, 0, nullptr, 1, &barrier);
 }
 
-void Texture::createImageView(const VkDevice& dev, Data& tex) {
+void Texture::createImageView(const VkDevice& dev, Data& tex, uint32_t layerCount) {
     helpers::createImageView(dev, tex.image, tex.mipLevels, STB_FORMAT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-                             getArrayLayerCount(tex), tex.view);
+                             layerCount, tex.view);
 }
 
 void Texture::createSampler(const VkDevice& dev, Data& tex) {

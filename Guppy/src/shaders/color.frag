@@ -52,6 +52,9 @@ void main() {
         opacity = pushConstantsBlock.material.opacity;
     }
 
+    // outColor = vec4(Kd, 1.0);
+    // return;
+
     // Normal
     n = fragNormal;
     

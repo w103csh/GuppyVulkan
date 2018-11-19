@@ -637,7 +637,7 @@ void Guppy::createLights() {
     positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(20.5f, 10.5f, -23.5f)));
 
     positionalLights_.push_back(Light::Positional());
-    positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(-60.5f, 6.5f, -18.5f)));
+    positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), {-2.5f, 4.5f, -1.5f}));
 
     // positionalLights_.push_back(Light::Positional());
     // positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(-10.0f, 30.0f, 6.0f)));
@@ -661,27 +661,33 @@ void Guppy::createScenes() {
         auto pMaterial = std::make_unique<Material>(getTextureByPath(HARDWOOD_FLOOR_TEX_PATH));
         pMaterial->setRepeat(800.0f);
         glm::mat4 model = helpers::affine(glm::vec3(2000.0f), {}, -M_PI_2_FLT, CARDINAL_X);
-        auto groundPlane = std::make_unique<TexturePlane>(std::move(pMaterial), model);
-        auto gpbbmm = groundPlane->getBoundingBoxMinMax();
-        active_scene()->addMesh(shell_->context(), std::move(groundPlane));
+        auto pGroundPlane = std::make_unique<TexturePlane>(std::move(pMaterial), model);
+        auto gpbbmm = pGroundPlane->getBoundingBoxMinMax();
+        active_scene()->addMesh(shell_->context(), std::move(pGroundPlane));
 
         // ORIGIN AXES
-        std::unique_ptr<LineMesh> defAxes = std::make_unique<Axes>(glm::mat4(1.0f), AXES_MAX_SIZE, true);
-        active_scene()->addMesh(shell_->context(), std::move(defAxes));
+        std::unique_ptr<LineMesh> pDefaultAxes = std::make_unique<Axes>(glm::mat4(1.0f), AXES_MAX_SIZE, true);
+        active_scene()->addMesh(shell_->context(), std::move(pDefaultAxes));
 
         // BURNT ORANGE TORUS
         pMaterial = std::make_unique<Material>();
         pMaterial->setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
         pMaterial->setColor({0.8f, 0.3f, 0.0f});
         model = helpers::affine(glm::vec3(0.07f));
-        auto torus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, model);
-        active_scene()->addMesh(shell_->context(), std::move(torus), true, [&gpbbmm](auto pMesh) { pMesh->putOnTop(gpbbmm); });
+        auto pTorus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, model);
+        active_scene()->addMesh(shell_->context(), std::move(pTorus), true, [&gpbbmm](auto pMesh) { pMesh->putOnTop(gpbbmm); });
 
-        // ORANGE
-        model = helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f});
-        auto tm1 =
-            std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(ORANGE_DIFF_TEX_PATH)), ORANGE_MODEL_PATH, model);
-        active_scene()->addMesh(shell_->context(), std::move(tm1), true, [&gpbbmm](auto pMesh) { pMesh->putOnTop(gpbbmm); });
+        //// ORANGE
+        //model = helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f});
+        //auto pOrange = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(ORANGE_DIFF_TEX_PATH)),
+        //                                             ORANGE_MODEL_PATH, model);
+        //active_scene()->addMesh(shell_->context(), std::move(pOrange), true, [&gpbbmm](auto pMesh) { pMesh->putOnTop(gpbbmm); });
+
+        //// MEDIEVAL HOUSE
+        //model = helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
+        //auto pMedeivalHouse = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(MED_H_DIFF_TEX_PATH)),
+        //                                                    MED_H_MODEL_PATH, model);
+        //active_scene()->addMesh(shell_->context(), std::move(pMedeivalHouse));
     }
 
     // Lights

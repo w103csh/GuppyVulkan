@@ -69,6 +69,8 @@ vec3 phongModel(PositionalLight light, uint shininess, uint lightCount) {
     vec3 ambient = pow(light.La, vec3(lightCount)) * Ka;
     vec3 diff = vec3(0.0), spec = vec3(0.0);
 
+    // return n;
+
     // "s" is the direction to the light
     vec3 s = normalize(vec3(light.position) - fragPos);
     float sDotN = max(dot(s,n), 0.0);
@@ -137,11 +139,11 @@ vec3 getColor(uint shininess) {
 #endif
 
 #if HAS_SPOT_LIGHTS
-    for (int i = 0; i < ubo.spotLights.length(); i++) {
-        if ((ubo.spotLights[i].flags & LIGHT_SHOW) > 0) {
-            color += blinnPhongSpot(ubo.spotLights[i], shininess, ++lightCount);
-        }
-    }
+    // for (int i = 0; i < ubo.spotLights.length(); i++) {
+    //     if ((ubo.spotLights[i].flags & LIGHT_SHOW) > 0) {
+    //         color += blinnPhongSpot(ubo.spotLights[i], shininess, ++lightCount);
+    //     }
+    // }
 #endif
 
     return color;

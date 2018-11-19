@@ -24,7 +24,7 @@ ColorPlane::ColorPlane(std::unique_ptr<Material> pMaterial, glm::mat4 model, boo
     : ColorMesh(std::move(pMaterial), "", model) {
     markerName_ = "ColorPlane";
     createVertices();
-    updateBoundingBox(vertices_);
+    updateBoundingBox(true);
     Plane::createIndices(indices_, doubleSided);
 }
 
@@ -69,7 +69,7 @@ TexturePlane::TexturePlane(std::shared_ptr<Texture::Data> pTexture, glm::mat4 mo
     : TextureMesh(std::make_unique<Material>(pTexture), "", model) {
     markerName_ = "TexturePlane";
     createVertices();
-    updateBoundingBox(vertices_);
+    updateBoundingBox(true);
     Plane::createIndices(indices_, doubleSided);
 }
 
@@ -77,7 +77,7 @@ TexturePlane::TexturePlane(std::unique_ptr<Material> pMaterial, glm::mat4 model,
     : TextureMesh(std::move(pMaterial), "", model) {
     markerName_ = "TexturePlane";
     createVertices();
-    updateBoundingBox(vertices_);
+    updateBoundingBox(true);
     Plane::createIndices(indices_, doubleSided);
 }
 

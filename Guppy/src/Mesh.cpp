@@ -1,9 +1,8 @@
 
-#define TINYOBJLOADER_IMPLEMENTATION
-#include <tiny_obj_loader.h>
 #include <unordered_map>
 
 #include "CmdBufHandler.h"
+#include "FileLoader.h"
 #include "Mesh.h"
 
 // **********************
@@ -42,7 +41,7 @@ Mesh* Mesh::async_load(const MyShell::Context& ctx, std::function<void(Mesh*)> c
     if (!modelPath_.empty()) {
         switch (helpers::getModelFileType(modelPath_)) {
             case MODEL_FILE_TYPE::OBJ: {
-                loadObj();
+                FileLoader::loadObj(this);
             } break;
             default: { throw std::runtime_error("file type not handled!"); } break;
         }
@@ -203,54 +202,6 @@ ColorMesh::ColorMesh(std::unique_ptr<Material> pMaterial, std::string modelPath,
     flags_ = FLAGS::POLY;
 }
 
-void ColorMesh::loadObj() {
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;  // TODO: use this data
-    std::string warn, err;                       // TODO: log warings
-
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath_.c_str(),
-                          helpers::getFilePath(modelPath_).c_str())) {
-        throw std::runtime_error(err);
-    }
-
-    std::unordered_map<Vertex::Color, uint32_t> uniqueVertices = {};
-
-    bool useNormals = (!attrib.normals.empty() && attrib.vertices.size() == attrib.normals.size());
-    bool useColors = (!attrib.colors.empty() && attrib.vertices.size() == attrib.colors.size());
-
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            // Create the vertex ...
-            Vertex::Color vertex = {};
-
-            // position
-            vertex.pos = {attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1],
-                          attrib.vertices[3 * index.vertex_index + 2]};
-
-            // normal
-            if (useNormals) {
-                vertex.normal = {attrib.normals[3 * index.vertex_index + 0], attrib.normals[3 * index.vertex_index + 1],
-                                 attrib.normals[3 * index.vertex_index + 2]};
-            }
-
-            // color
-            if (useColors) {
-                vertex.color = {attrib.colors[3 * index.vertex_index + 0], attrib.colors[3 * index.vertex_index + 1],
-                                attrib.colors[3 * index.vertex_index + 2], 1.0f};
-            }
-
-            if (uniqueVertices.count(vertex) == 0) {
-                uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
-                vertices_.push_back(std::move(vertex));
-                updateBoundingBox(vertex);
-            }
-
-            indices_.push_back(uniqueVertices[vertex]);
-        }
-    }
-}
-
 // **********************
 // ColorMesh
 // **********************
@@ -291,43 +242,6 @@ void TextureMesh::setSceneData(const MyShell::Context& ctx, size_t offset) {
 
     // call override
     Mesh::setSceneData(ctx, offset);
-}
-
-void TextureMesh::loadObj() {
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;  // TODO: use this data
-    std::string warn, err;                       // TODO: log warings
-
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath_.c_str(),
-                          helpers::getFilePath(modelPath_).c_str())) {
-        throw std::runtime_error(err);
-    }
-
-    std::unordered_map<Vertex::Texture, uint32_t> uniqueVertices = {};
-
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            // Create the vertex ...
-            Vertex::Texture vertex = {};
-
-            // position
-            vertex.pos = {attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1],
-                          attrib.vertices[3 * index.vertex_index + 2]};
-
-            // texture coordinate
-            vertex.texCoord = {attrib.texcoords[2 * index.texcoord_index + 0],
-                               1.0f - attrib.texcoords[2 * index.texcoord_index + 1]};
-
-            if (uniqueVertices.count(vertex) == 0) {
-                uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
-                vertices_.push_back(std::move(vertex));
-                updateBoundingBox(vertex);
-            }
-
-            indices_.push_back(uniqueVertices[vertex]);
-        }
-    }
 }
 
 void TextureMesh::prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) {

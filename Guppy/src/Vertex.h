@@ -51,7 +51,7 @@ std::string getTypeName(TYPE type);
 // **********************
 
 namespace std {
-// Hash function for ColorVertex class
+// Hash function for Color
 template <>
 struct hash<Vertex::Color> {
     size_t operator()(Vertex::Color const& vertex) const {
@@ -59,7 +59,7 @@ struct hash<Vertex::Color> {
                (hash<glm::vec2>()(vertex.color) << 1);
     }
 };
-// Hash function for TextureVertex class
+// Hash function for Texture
 template <>
 struct hash<Vertex::Texture> {
     size_t operator()(Vertex::Texture const& vertex) const {

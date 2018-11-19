@@ -50,6 +50,7 @@ struct Object3d {
     virtual inline void transform(const glm::mat4 t) { model_ *= t; }
 
     BoundingBoxMinMax getBoundingBoxMinMax() const;
+
     void putOnTop(const BoundingBoxMinMax& boundingBox);
 
    protected:
@@ -57,7 +58,8 @@ struct Object3d {
     inline void updateBoundingBox(const std::vector<T>& vs) {
         for (auto& v : vs) updateBoundingBox(v);
     }
-    inline void updateBoundingBox(Vertex::Base v) {
+
+    inline void updateBoundingBox(const Vertex::Base v) {
         if (v.pos.x < boundingBox_[0].x) boundingBox_[0] = v.pos;  // xMin
         if (v.pos.x > boundingBox_[1].x) boundingBox_[1] = v.pos;  // xMax
         if (v.pos.y < boundingBox_[2].y) boundingBox_[2] = v.pos;  // yMin
@@ -65,6 +67,7 @@ struct Object3d {
         if (v.pos.z < boundingBox_[4].z) boundingBox_[4] = v.pos;  // zMin
         if (v.pos.z > boundingBox_[5].z) boundingBox_[5] = v.pos;  // zMax
     }
+
     BoundingBox getBoundingBox() const;
 
     // Model space to world space

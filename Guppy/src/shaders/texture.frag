@@ -55,41 +55,66 @@ layout(location = 0) out vec4 outColor;
 vec3 n, v, Ka, Kd, Ks;
 
 void main() {
-    float opacity;
+    /*  Sampler offset if based on the Texture::FLAGS enum in C++ and
+        the TEX_ constants in GLSL here. The order  in which samplerOffset
+        is incremented is important and should match the C++ enum. */
     int samplerOffset = 0;
+    float opacity = pushConstantsBlock.material.opacity;
+    Ka = pushConstantsBlock.material.Ka;
+    Kd = pushConstantsBlock.material.Kd;
+    Ks = pushConstantsBlock.material.Ks;
 
     // Diffuse color
-    vec4 diffuseColor = vec4(0, 0, 0, 1.0);
     if ((dynamicUbo.texFlags & TEX_DIFFUSE) > 0) {
-        vec4 diffColor = texture(texSampler, vec3(fragTexCoord, samplerOffset++));
-        Kd = vec3(diffColor);
-        opacity = diffColor[3];
+        vec4 texDiff = texture(texSampler, vec3(fragTexCoord, samplerOffset++));
+        Kd = vec3(texDiff);
+        opacity = texDiff[3];
+        // Use diffuse color for ambient because we haven't created
+        // an ambient texture layer yet...
+        Ka = Kd;
     } else if ((pushConstantsBlock.material.flags & PER_MATERIAL_COLOR) > 0) {
-        Kd = pushConstantsBlock.material.Kd;
-        opacity = pushConstantsBlock.material.opacity;
+        // Seems superfluous...
     } else {
-        // This shouldn't happen at this point...
-        opacity = pushConstantsBlock.material.opacity;
-    }
-
-    // Ambient color
-    Ka = Kd;
-
-    // Specular color
-    vec4 specularColor = vec4(0, 0, 0, 1.0);
-    if ((dynamicUbo.texFlags & TEX_SPECULAR) > 0) {
-        Ks = vec3(texture(texSampler, vec3(fragTexCoord, samplerOffset++)));
-        // TODO: should we use the 4th component here???
-    } else {
-        Ks = pushConstantsBlock.material.Kd;
+        // This shouldn't happen currently...
     }
 
     // Normal
     if ((dynamicUbo.texFlags & TEX_NORMAL) > 0) {
-        n = normalize(vec3(texture(texSampler, vec3(fragTexCoord, samplerOffset++))));
+	    // n = fragNormal;
+
+        vec4 texNormal = texture(texSampler, vec3(fragTexCoord, samplerOffset++));
+	    n = mat3(pushConstantsBlock.model) * texNormal.xyz;
+    
+        // outColor = vec4(n, 1.0);
+        // outColor = texNormal;
+        // return;
+
     } else {
 	    n = fragNormal;
     }
+
+    // Specular color
+    vec4 specularColor = vec4(pushConstantsBlock.material.Kd, opacity);
+    if ((dynamicUbo.texFlags & TEX_SPECULAR) > 0) {
+
+        vec4 texSpec = texture(texSampler, vec3(fragTexCoord, samplerOffset++));
+        Ks = vec3(texSpec);
+        opacity = texSpec[3];
+
+    
+        // outColor = vec4(Ks, 1.0);
+        // return;
+
+    }
+
+    // outColor = vec4(fragPos, 0.0);
+    // return;
+
+    // outColor = vec4(Ka, opacity);
+    // outColor = vec4(Kd, opacity);
+    // outColor = vec4(n, opacity);
+    // outColor = vec4(Ks, opacity);
+    // return;
 
     outColor = vec4(
         getColor(pushConstantsBlock.material.shininess),

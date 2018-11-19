@@ -12,6 +12,7 @@ set(SOURCE
     Constants.h
     EventHandlers.h
     Extensions.h
+	FileLoader.cpp
     FileLoader.h
     Game.h
     Guppy.cpp
@@ -151,6 +152,9 @@ else()
         # ${UTILS_HEADERS}
         ${SHADERS}
         )
+
+    # This is needed for dynamic casting
+    # target_compile_options(${TARGET_NAME} PRIVATE "/GR")
 
     source_group("Shaders" FILES ${SHADERS})
     source_group("Utils" FILES ${UTILS})

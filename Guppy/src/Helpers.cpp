@@ -206,9 +206,10 @@ void createImageView(const VkDevice &device, const VkImage &image, const uint32_
 
 void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, const VkFormat &format, const VkImageLayout &oldLayout,
                            const VkImageLayout &newLayout, VkPipelineStageFlags srcStages, VkPipelineStageFlags dstStages,
-                           uint32_t mipLevels, uint32_t arrayLayers) {
+                           uint32_t mipLevels, uint32_t layerCount) {
     VkImageMemoryBarrier barrier;
-    for (uint32_t i = 0; i < arrayLayers; i++) {
+    //for (uint32_t i = 0; i < arrayLayers; i++) {
+
         barrier = {};
         barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         barrier.pNext = nullptr;
@@ -221,8 +222,8 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
         barrier.image = image;
         barrier.subresourceRange.baseMipLevel = 0;
         barrier.subresourceRange.levelCount = mipLevels;
-        barrier.subresourceRange.baseArrayLayer = i;
-        barrier.subresourceRange.layerCount = 1;
+        barrier.subresourceRange.baseArrayLayer = 0;
+        barrier.subresourceRange.layerCount = layerCount;
 
         // ACCESS MASK
 
@@ -306,7 +307,7 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
         }
 
         vkCmdPipelineBarrier(cmd, srcStages, dstStages, 0, 0, nullptr, 0, nullptr, 1, &barrier);
-    }
+    //}
 }
 
 }  // namespace helpers

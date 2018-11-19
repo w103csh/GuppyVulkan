@@ -30,11 +30,15 @@ class Mesh : public Object3d {
 
     // GETTERS
     inline std::string getMarkerName() const { return markerName_; }
+    inline std::string getModelPath() const { return modelPath_; }
     inline size_t getOffset() const { return offset_; }
+    inline STATUS getStatus() const { return status_; }
     inline PIPELINE_TYPE getTopologyType() const { return pipelineType_; }
     inline Vertex::TYPE getVertexType() const { return vertexType_; }
-    inline STATUS getStatus() const { return status_; }
     STATUS status_;
+
+    // OBJECT 3D
+    virtual void updateBoundingBox(bool updateAll) = 0;
 
     // INIT
     virtual void setSceneData(const MyShell::Context& ctx, size_t offset);
@@ -42,6 +46,17 @@ class Mesh : public Object3d {
     // LOADING
     virtual std::future<Mesh*> load(const MyShell::Context& ctx, std::function<void(Mesh*)> callbacak = nullptr);
     virtual void prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes);
+
+    // VERTEX
+    virtual void addVertices(std::vector<Vertex::Base>& vs, std::vector<glm::vec4>& colors, std::vector<glm::vec2>& texCoords) = 0;
+    virtual void addVertex(const Vertex::Base& v, glm::vec4 color, glm::vec2 texCoord) = 0;
+    virtual inline uint32_t getVertexCount() const = 0;  // TODO: this shouldn't be public
+
+    // INDEX
+    inline void addIndices(std::vector<VB_INDEX_TYPE>& is) {
+        for (auto i : is) indices_.push_back(i);
+    }
+    inline void addIndex(VB_INDEX_TYPE index) { indices_.push_back(index); }
 
     // DRAWING
     void drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
@@ -57,12 +72,10 @@ class Mesh : public Object3d {
    protected:
     // LOADING
     Mesh* async_load(const MyShell::Context& ctx, std::function<void(Mesh*)> callbacak = nullptr);
-    virtual void loadObj() = 0;
 
     // VERTEX
     void loadVertexBuffers(const VkDevice& dev);
     virtual inline const void* getVertexData() const = 0;
-    virtual inline uint32_t getVertexCount() const = 0;
     virtual inline VkDeviceSize getVertexBufferSize() const = 0;
 
     // INDEX
@@ -104,7 +117,25 @@ class ColorMesh : public Mesh {
         // THROUGH 0x00000008
     } FLAGS;
 
+    // OBJECT 3D
+    inline void updateBoundingBox(bool updateAll) override {
+        if (updateAll)
+            Object3d::updateBoundingBox(vertices_);
+        else
+            Object3d::updateBoundingBox(vertices_.back());
+    };
+
     // VERTEX
+    inline void addVertices(std::vector<Vertex::Base>& vs, std::vector<glm::vec4>& colors,
+                            std::vector<glm::vec2>& texCoords) override {
+        for (size_t i = 0; i < vs.size(); i++) {
+            vertices_.push_back({vs[i].pos, vs[i].normal, colors[i]});
+            ColorMesh::updateBoundingBox(false);
+        }
+    }
+    inline void addVertex(const Vertex::Base& v, glm::vec4 color, glm::vec2 texCoord) override {
+        vertices_.push_back({v.pos, v.normal, color});
+    }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
     inline uint32_t getVertexCount() const { return vertices_.size(); }
     inline VkDeviceSize getVertexBufferSize() const {
@@ -113,8 +144,6 @@ class ColorMesh : public Mesh {
     }
 
    protected:
-    void loadObj() override;
-
     std::vector<Vertex::Color> vertices_;
     FlagBits flags_;
 };
@@ -147,12 +176,30 @@ class TextureMesh : public Mesh {
                        const VkRect2D& scissor) const override;
 
     // VERTEX
+    inline void addVertices(std::vector<Vertex::Base>& vs, std::vector<glm::vec4>& colors,
+                            std::vector<glm::vec2>& texCoords) override {
+        for (size_t i = 0; i < vs.size(); i++) {
+            vertices_.push_back({vs[i].pos, vs[i].normal, texCoords[i]});
+            TextureMesh::updateBoundingBox(false);
+        }
+    }
+    inline void addVertex(const Vertex::Base& v, glm::vec4 color, glm::vec2 texCoord) override {
+        vertices_.push_back({v.pos, v.normal, texCoord});
+    }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
     inline uint32_t getVertexCount() const { return vertices_.size(); }
     inline VkDeviceSize getVertexBufferSize() const {
         VkDeviceSize p_bufferSize = sizeof(Vertex::Texture) * vertices_.size();
         return p_bufferSize;
     }
+
+    // OBJECT 3D
+    inline void updateBoundingBox(bool updateAll) override {
+        if (updateAll)
+            Object3d::updateBoundingBox(vertices_);
+        else
+            Object3d::updateBoundingBox(vertices_.back());
+    };
 
     // TEXTURE
     inline uint32_t getTextureOffset() const { return pMaterial_->getTexture().offset; }
@@ -161,8 +208,6 @@ class TextureMesh : public Mesh {
     void destroy(const VkDevice& dev) override;
 
    protected:
-    void loadObj() override;
-
     std::vector<Vertex::Texture> vertices_;
 
    private:

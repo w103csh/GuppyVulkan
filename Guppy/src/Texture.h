@@ -61,11 +61,11 @@ class Texture {
     static void createTexture(const VkDevice& dev, const bool makeMipmaps, std::shared_ptr<Data> pTexture);
 
    private:
-    static void createImage(const VkDevice& dev, Data& tex);
-    static void createImageView(const VkDevice& dev, Data& tex);
+    static void createImage(const VkDevice& dev, Data& tex, uint32_t layerCount);
+    static void createImageView(const VkDevice& dev, Data& tex, uint32_t layerCount);
     static void createSampler(const VkDevice& dev, Data& tex);
     static void createDescInfo(Data& tex);
-    static void generateMipmaps(const Data& tex);
+    static void generateMipmaps(const Data& tex, uint32_t layerCount);
     static uint32_t getArrayLayerCount(const Data& tex);
 
 };  // class Texture
