@@ -48,8 +48,8 @@ class Mesh : public Object3d {
     virtual void prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes);
 
     // VERTEX
-    virtual void addVertices(std::vector<Vertex::Base>& vs, std::vector<glm::vec4>& colors, std::vector<glm::vec2>& texCoords) = 0;
-    virtual void addVertex(const Vertex::Base& v, glm::vec4 color, glm::vec2 texCoord) = 0;
+    virtual void addVertex(const Vertex::Base& v, const glm::vec4& color, const glm::vec2& texCoord, const glm::vec3& tangent,
+                           const glm::vec3& bitangent) = 0;
     virtual inline uint32_t getVertexCount() const = 0;  // TODO: this shouldn't be public
 
     // INDEX
@@ -126,15 +126,10 @@ class ColorMesh : public Mesh {
     };
 
     // VERTEX
-    inline void addVertices(std::vector<Vertex::Base>& vs, std::vector<glm::vec4>& colors,
-                            std::vector<glm::vec2>& texCoords) override {
-        for (size_t i = 0; i < vs.size(); i++) {
-            vertices_.push_back({vs[i].pos, vs[i].normal, colors[i]});
-            ColorMesh::updateBoundingBox(false);
-        }
-    }
-    inline void addVertex(const Vertex::Base& v, glm::vec4 color, glm::vec2 texCoord) override {
+    inline void addVertex(const Vertex::Base& v, const glm::vec4& color, const glm::vec2& texCoord, const glm::vec3& tangent,
+                          const glm::vec3& bitangent) override {
         vertices_.push_back({v.pos, v.normal, color});
+        ColorMesh::updateBoundingBox(true);
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
     inline uint32_t getVertexCount() const { return vertices_.size(); }
@@ -176,15 +171,10 @@ class TextureMesh : public Mesh {
                        const VkRect2D& scissor) const override;
 
     // VERTEX
-    inline void addVertices(std::vector<Vertex::Base>& vs, std::vector<glm::vec4>& colors,
-                            std::vector<glm::vec2>& texCoords) override {
-        for (size_t i = 0; i < vs.size(); i++) {
-            vertices_.push_back({vs[i].pos, vs[i].normal, texCoords[i]});
-            TextureMesh::updateBoundingBox(false);
-        }
-    }
-    inline void addVertex(const Vertex::Base& v, glm::vec4 color, glm::vec2 texCoord) override {
-        vertices_.push_back({v.pos, v.normal, texCoord});
+    inline void addVertex(const Vertex::Base& v, const glm::vec4& color, const glm::vec2& texCoord, const glm::vec3& tangent,
+                          const glm::vec3& bitangent) override {
+        vertices_.push_back({v.pos, v.normal, texCoord, tangent, bitangent});
+        TextureMesh::updateBoundingBox(false);
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
     inline uint32_t getVertexCount() const { return vertices_.size(); }

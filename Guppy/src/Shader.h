@@ -48,7 +48,7 @@ class Shader {
 
 // TODO: move uniform handling here...
 struct DefaultUniformBuffer {
-    Camera::Data camera;
+    const Camera::Data *pCamera;
     struct ShaderData {
         alignas(16) FlagBits flags = Shader::FLAGS::DEFAULT;
         // 12 rem

@@ -91,25 +91,33 @@ void TexturePlane::createVertices() {
             // geom - bottom left
             {l, b, 0.0f},        //
             {0.0f, 0.0f, 1.0f},  //
-            {0.0f, 1.0f}         // tex - bottom left
+            {0.0f, 1.0f},        // tex - bottom left
+            {},                  //
+            {}                   //
         },                       //
         {
             // geom - bottom right
             {r, b, 0.0f},        //
             {0.0f, 0.0f, 1.0f},  //
-            {1.0f, 1.0f}         // tex - bottom right
+            {1.0f, 1.0f},        // tex - bottom right
+            {},                  //
+            {}                   //
         },                       //
         {
             // geom - top left
             {l, t, 0.0f},        //
             {0.0f, 0.0f, 1.0f},  //
-            {0.0f, 0.0f}         // tex - top left
+            {0.0f, 0.0f},        // tex - top left
+            {},                  //
+            {}                   //
         },                       //
         {
             // geom - top right
             {r, t, 0.0f},        //
             {0.0f, 0.0f, 1.0f},  //
-            {1.0f, 0.0f}         // tex - top right
+            {1.0f, 0.0f},        // tex - top right
+            {},                  //
+            {}                   //
         },                       //
     };
 }

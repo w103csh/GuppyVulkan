@@ -36,6 +36,8 @@ struct TinyObjVertex {
     glm::vec3 norm;
     glm::vec4 color;
     glm::vec2 tex;
+    glm::vec3 tan;
+    glm::vec3 bitan;
     int smoothingGroupId;
     bool operator==(const TinyObjVertex &other) const { return pos == other.pos && other.smoothingGroupId == smoothingGroupId; }
 };
@@ -123,6 +125,7 @@ void FileLoader::loadObj(Mesh *pMesh) {
                 if (uniqueVertices.count(face[i]) == 0) {
                     face[i].norm = normal;
                     uniqueVertices[face[i]] = static_cast<uint32_t>(vertices.size());
+                    vertices.push_back(std::move(face[i]));
                 } else {
                     // If
                     auto offset = uniqueVertices[face[i]];
@@ -131,6 +134,10 @@ void FileLoader::loadObj(Mesh *pMesh) {
                 pMesh->addIndex(uniqueVertices[face[i]]);
             }
         }
-        pMesh->addVertices(vertices);
+
+        // TODO: there has to be a faster way to do all of this...
+        for (auto &v : vertices) {
+            pMesh->addVertex({v.pos, v.norm}, v.color, v.tex, v.tan, v.bitan);
+        }
     }
 }

@@ -51,7 +51,7 @@ class Positional : public Base<PositionalData> {
     Positional() : Base(), La_(glm::vec3(0.1f)), L_(glm::vec3(0.6f)){};
 
     void getData(PositionalData& data) override {
-        data.position = getWorldPosition();
+        data.position = getWorldSpacePosition();
         data.flags = flags_;
         data.La = La_;
         data.L = L_;
@@ -80,8 +80,8 @@ class Spot : public Base<SpotData> {
 
     void getData(SpotData& data) override {
         data.flags = flags_;
-        data.position = getWorldPosition();
-        data.direction = getWorldDirection();
+        data.position = getWorldSpacePosition();
+        data.direction = getWorldSpaceDirection();
         data.La = La_;
         data.L = L_;
         data.exponent = exponent_;

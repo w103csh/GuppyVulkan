@@ -7,7 +7,15 @@
 #include "InputHandler.h"
 
 Camera::Camera(const glm::vec3 &eye, const glm::vec3 &center, float aspect, float fov, float n, float f)
-    : Object3d(glm::mat4(1.0f)), aspect_(aspect), center_(center), eye_(eye), far_(f), fov_(fov), near_(n) {
+    : Object3d(glm::mat4(1.0f)),
+      dirty_(true),
+      data_({glm::mat4(1.0f), glm::mat4(1.0f)}),
+      aspect_(aspect),
+      center_(center),
+      eye_(eye),
+      far_(f),
+      fov_(fov),
+      near_(n) {
     view_ = glm::lookAt(eye, center, UP_VECTOR);
     proj_ = glm::perspective(fov, aspect, near_, far_);
     // Vulkan clip space has inverted Y and half Z.
@@ -23,14 +31,14 @@ void Camera::update(const float aspect, const glm::vec3 &pos_dir, const glm::vec
         proj_ = glm::perspective(fov_, aspect, near_, far_);
     }
     // VIEW
-    updateView(pos_dir, look_dir);
+    dirty_ |= updateView(pos_dir, look_dir);
 }
 
-void Camera::updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
+bool Camera::updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
     bool update_pos = !glm::all(glm::equal(pos_dir, glm::vec3()));
     bool update_look = !glm::all(glm::equal(look_dir, glm::vec3()));
     // If there is nothing to update then return ...
-    if (!update_pos && !update_look) return;
+    if (!update_pos && !update_look) return false;
 
     // Get othonormal basis for camera view ...
     glm::vec3 w = glm::row(view_, 2);
@@ -39,7 +47,7 @@ void Camera::updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
 
     // MOVEMENT
     if (update_pos) {
-        auto pos = w * (pos_dir.z * -1); // w is pointing in -z direction
+        auto pos = w * (pos_dir.z * -1);  // w is pointing in -z direction
         pos += u * pos_dir.x;
         pos += v * pos_dir.y;
         // update both eye_ & center_ so that movement doesn't affect look
@@ -54,4 +62,6 @@ void Camera::updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
     }
 
     view_ = glm::lookAt(eye_, center_, UP_VECTOR);
+
+    return true;
 }

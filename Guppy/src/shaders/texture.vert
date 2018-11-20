@@ -3,7 +3,8 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 struct Camera {
-	mat4 mvp;
+	mat4 viewProjection;
+	mat4 view;
 };
 
 struct Material {
@@ -19,8 +20,8 @@ struct Material {
 
 // IN
 layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec2 inTexCoord;
-layout(location = 2) in vec3 inNormal;
+layout(location = 1) in vec3 inNormal;
+layout(location = 2) in vec2 inTexCoord;
 // PUSH CONSTANTS
 layout(push_constant) uniform PushBlock {
     mat4 model;
@@ -32,18 +33,19 @@ layout(binding = 0) uniform DefaultUniformBuffer {
 } ubo;
 // OUT
 layout(location = 0) out vec3 fragPos;
-layout(location = 1) out vec2 fragTexCoord;
-layout(location = 2) out vec3 fragNormal;
+layout(location = 1) out vec3 fragNormal;
+layout(location = 2) out vec2 fragTexCoord;
 
 void main() {
-	vec3 worldPosition = vec3(pushConstantsBlock.model * vec4(inPosition, 1.0));
-	vec3 worldNormal = normalize(mat3(pushConstantsBlock.model) * inNormal);
+	// This obviously can be much more efficient
+	mat4 viewModel = ubo.camera.view * pushConstantsBlock.model;
+	vec3 cameraSpacePosition = (viewModel * vec4(inPosition, 1.0)).xyz;
+	vec3 cameraSpaceNormal = normalize(mat3(viewModel) * inNormal);
 
-	gl_Position = ubo.camera.mvp * vec4(worldPosition, 1.0);
+	gl_Position = ubo.camera.viewProjection * pushConstantsBlock.model * vec4(inPosition, 1.0);
 	
-	fragPos = worldPosition;
-    fragNormal = worldNormal;
-
+	fragPos = cameraSpacePosition;
+    fragNormal = cameraSpaceNormal;
     fragTexCoord = inTexCoord;
 	fragTexCoord.x *= pushConstantsBlock.material.xRepeat;
 	fragTexCoord.y *= pushConstantsBlock.material.yRepeat;

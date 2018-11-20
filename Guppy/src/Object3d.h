@@ -33,17 +33,17 @@ struct Object3d {
 
     inline Data getData() const { return {model_}; }
 
-    virtual inline glm::vec3 getWorldDirection(const glm::vec3& d = FORWARD_VECTOR) const {
-        glm::vec3 direction = model_ * glm::vec4(d, 0.0f);
-        return glm::normalize(direction);
-    }
-
     virtual inline glm::vec3 worldToLocal(const glm::vec3& v, bool isPosition = false) const {
         glm::vec3 local = glm::inverse(model_) * glm::vec4(v, isPosition ? 1.0f : 0.0f);
         return isPosition ? local : glm::normalize(local);
     }
 
-    virtual inline glm::vec3 getWorldPosition(const glm::vec3& p = {}) const {  //
+    virtual inline glm::vec3 getWorldSpaceDirection(const glm::vec3& d = FORWARD_VECTOR) const {
+        glm::vec3 direction = model_ * glm::vec4(d, 0.0f);
+        return glm::normalize(direction);
+    }
+
+    virtual inline glm::vec3 getWorldSpacePosition(const glm::vec3& p = {}) const {  //
         return model_ * glm::vec4(p, 1.0f);
     }
 

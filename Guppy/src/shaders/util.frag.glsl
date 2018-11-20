@@ -40,8 +40,8 @@ const int ts_levels = 3;
 const float ts_scaleFactor = 1.0 / ts_levels;
 
 struct Camera {
-	mat4 mvp;
-	vec3 position;
+	mat4 viewProjection;
+	mat4 view;
 };
 
 // IN
@@ -88,7 +88,7 @@ vec3 phongModel(PositionalLight light, uint shininess, uint lightCount) {
     // Only calculate specular if the cosine is positive
     if(sDotN > 0.0) {
         // "v" is the direction to the camera
-        vec3 v = normalize(ubo.camera.position - fragPos);
+        vec3 v = normalize(-fragPos);
         // "h" is the halfway vector between "v" & "s" (Blinn)
         vec3 h = normalize(v + s);
 
@@ -115,7 +115,7 @@ vec3 blinnPhongSpot(SpotLight light, uint shininess, uint lightCount) {
         float sDotN = max(dot(s,n), 0.0);
         diff = Kd * sDotN;
         if (sDotN > 0.0) {
-            vec3 v = normalize(ubo.camera.position - fragPos);
+            vec3 v = normalize(-fragPos);
             vec3 h = normalize(v + s);
             spec = Ks *
                 pow(max(dot(h,n), 0.0), shininess);
@@ -139,11 +139,11 @@ vec3 getColor(uint shininess) {
 #endif
 
 #if HAS_SPOT_LIGHTS
-    // for (int i = 0; i < ubo.spotLights.length(); i++) {
-    //     if ((ubo.spotLights[i].flags & LIGHT_SHOW) > 0) {
-    //         color += blinnPhongSpot(ubo.spotLights[i], shininess, ++lightCount);
-    //     }
-    // }
+    for (int i = 0; i < ubo.spotLights.length(); i++) {
+        if ((ubo.spotLights[i].flags & LIGHT_SHOW) > 0) {
+            color += blinnPhongSpot(ubo.spotLights[i], shininess, ++lightCount);
+        }
+    }
 #endif
 
     return color;

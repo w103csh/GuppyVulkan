@@ -29,15 +29,10 @@ struct Material {
     uint shininess;     // Specular shininess factor
 };
 
-struct Camera {
-	mat4 mvp;
-	vec3 position;
-};
-
 // IN
 layout(location = 0) in vec3 fragPos;
-layout(location = 1) in vec2 fragTexCoord;
-layout(location = 2) in vec3 fragNormal;
+layout(location = 1) in vec3 fragNormal;
+layout(location = 2) in vec2 fragTexCoord;
 // PUSH CONSTANTS
 layout(push_constant) uniform PushBlock {
     mat4 model;
@@ -52,7 +47,7 @@ layout(binding = 2) uniform DynamicUniformBuffer {
 // OUT
 layout(location = 0) out vec4 outColor;
 
-vec3 n, v, Ka, Kd, Ks;
+vec3 n, Ka, Kd, Ks;
 
 void main() {
     /*  Sampler offset if based on the Texture::FLAGS enum in C++ and
@@ -80,15 +75,8 @@ void main() {
 
     // Normal
     if ((dynamicUbo.texFlags & TEX_NORMAL) > 0) {
-	    // n = fragNormal;
-
         vec4 texNormal = texture(texSampler, vec3(fragTexCoord, samplerOffset++));
 	    n = mat3(pushConstantsBlock.model) * texNormal.xyz;
-    
-        // outColor = vec4(n, 1.0);
-        // outColor = texNormal;
-        // return;
-
     } else {
 	    n = fragNormal;
     }
@@ -96,25 +84,10 @@ void main() {
     // Specular color
     vec4 specularColor = vec4(pushConstantsBlock.material.Kd, opacity);
     if ((dynamicUbo.texFlags & TEX_SPECULAR) > 0) {
-
         vec4 texSpec = texture(texSampler, vec3(fragTexCoord, samplerOffset++));
         Ks = vec3(texSpec);
         opacity = texSpec[3];
-
-    
-        // outColor = vec4(Ks, 1.0);
-        // return;
-
     }
-
-    // outColor = vec4(fragPos, 0.0);
-    // return;
-
-    // outColor = vec4(Ka, opacity);
-    // outColor = vec4(Kd, opacity);
-    // outColor = vec4(n, opacity);
-    // outColor = vec4(Ks, opacity);
-    // return;
 
     outColor = vec4(
         getColor(pushConstantsBlock.material.shininess),

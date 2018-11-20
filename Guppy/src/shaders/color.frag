@@ -23,8 +23,8 @@ struct Material {
 
 // IN
 layout(location = 0) in vec3 fragPos;
-layout(location = 1) in vec4 fragColor;
-layout(location = 2) in vec3 fragNormal;
+layout(location = 1) in vec3 fragNormal;
+layout(location = 2) in vec4 fragColor;
 // PUSH CONSTANTS
 layout(push_constant) uniform PushBlock {
     mat4 model;
@@ -52,12 +52,13 @@ void main() {
         opacity = pushConstantsBlock.material.opacity;
     }
 
-    // outColor = vec4(Kd, 1.0);
-    // return;
-
     // Normal
     n = fragNormal;
     
+
+
+
+
     outColor = vec4(
         getColor(pushConstantsBlock.material.shininess),
         pushConstantsBlock.material.opacity

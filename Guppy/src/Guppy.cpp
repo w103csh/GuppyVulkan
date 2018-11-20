@@ -448,7 +448,7 @@ void Guppy::copyUniformBufferMemory() {
 
     // CAMERA
     size = sizeof(Camera::Data);
-    memcpy(pData, &defUBO_.camera, size);
+    memcpy(pData, defUBO_.pCamera, size);
     offset += size;
 
     // SHADER
@@ -490,18 +490,24 @@ void Guppy::updateUniformBuffer() {
     auto pos_dir = InputHandler::getPosDir();
     auto look_dir = InputHandler::getLookDir();
     camera_.update(aspect, pos_dir, look_dir);
-    defUBO_.camera.mvp = camera_.getMVP();
-    defUBO_.camera.position = camera_.getWorldPosition();
+    defUBO_.pCamera = camera_.getData();
 
     // Update the lights... (!!!!!! THE NUMBER OF LIGHTS HERE CANNOT CHANGE AT RUNTIME YET !!!!!
     // Need to recreate the uniform descriptors!)
     for (size_t i = 0; i < positionalLights_.size(); i++) {
         auto& light = positionalLights_[i];
-        light.getData(defUBO_.positionalLightData[i]);
+        auto& uboLight = defUBO_.positionalLightData[i];
+        // set data (TODO: this is terrible)
+        light.getData(uboLight);
+        uboLight.position = camera_.getCameraSpacePosition(uboLight.position);
     }
     for (size_t i = 0; i < spotLights_.size(); i++) {
         auto& light = spotLights_[i];
+        auto& uboLight = defUBO_.spotLightData[i];
+        // set data (TODO: this is terrible)
         light.getData(defUBO_.spotLightData[i]);
+        uboLight.position = camera_.getCameraSpacePosition(uboLight.position);
+        uboLight.direction = camera_.getCameraSpacePosition(uboLight.direction);
     }
 
     // If these change update them here...
@@ -642,9 +648,9 @@ void Guppy::createLights() {
     // positionalLights_.push_back(Light::Positional());
     // positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(-10.0f, 30.0f, 6.0f)));
 
-    auto model = helpers::viewToWorld({0.0f, 2.5f, 0.0f}, {0.0f, 0.0f, 1.5f}, UP_VECTOR);
-    spotLights_.push_back({});
-    spotLights_.back().transform(model);
+    // auto model = helpers::viewToWorld({0.0f, 2.5f, 0.0f}, {0.0f, 0.0f, 1.5f}, UP_VECTOR);
+    // spotLights_.push_back({});
+    // spotLights_.back().transform(model);
 }
 
 void Guppy::createScenes() {
@@ -675,19 +681,19 @@ void Guppy::createScenes() {
         pMaterial->setColor({0.8f, 0.3f, 0.0f});
         model = helpers::affine(glm::vec3(0.07f));
         auto pTorus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, model);
-        active_scene()->addMesh(shell_->context(), std::move(pTorus), true, [&gpbbmm](auto pMesh) { pMesh->putOnTop(gpbbmm); });
+        active_scene()->addMesh(shell_->context(), std::move(pTorus), true, [gpbbmm](auto pMesh) { pMesh->putOnTop(gpbbmm); });
 
         //// ORANGE
-        //model = helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f});
-        //auto pOrange = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(ORANGE_DIFF_TEX_PATH)),
+        // model = helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f});
+        // auto pOrange = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(ORANGE_DIFF_TEX_PATH)),
         //                                             ORANGE_MODEL_PATH, model);
-        //active_scene()->addMesh(shell_->context(), std::move(pOrange), true, [&gpbbmm](auto pMesh) { pMesh->putOnTop(gpbbmm); });
+        // active_scene()->addMesh(shell_->context(), std::move(pOrange), true, [gpbbmm](auto pMesh) { pMesh->putOnTop(gpbbmm); });
 
         //// MEDIEVAL HOUSE
-        //model = helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
-        //auto pMedeivalHouse = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(MED_H_DIFF_TEX_PATH)),
+        // model = helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
+        // auto pMedeivalHouse = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(MED_H_DIFF_TEX_PATH)),
         //                                                    MED_H_MODEL_PATH, model);
-        //active_scene()->addMesh(shell_->context(), std::move(pMedeivalHouse));
+        // active_scene()->addMesh(shell_->context(), std::move(pMedeivalHouse));
     }
 
     // Lights

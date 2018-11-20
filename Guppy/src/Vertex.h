@@ -14,7 +14,7 @@ namespace Vertex {
 enum class TYPE { COLOR = 0, TEXTURE };
 
 struct Base {
-    Base() : pos({}), normal({}){};
+    Base() : pos(), normal(){};
     Base(glm::vec3 p, glm::vec3 n) : pos(p), normal(n){};
     bool operator==(const Base& other) const { return pos == other.pos && normal == other.normal; }
     glm::vec3 pos;
@@ -29,10 +29,13 @@ struct Color : Base {
 };
 
 struct Texture : Base {
-    Texture() : Base(), texCoord({}){};
-    Texture(glm::vec3 p, glm::vec3 n, glm::vec2 t) : Base(p, n), texCoord(t){};
+    Texture() : Base(), texCoord(), tangent(), bitangent(){};
+    Texture(glm::vec3 p, glm::vec3 n, glm::vec2 tc, glm::vec3 t, glm::vec3 b)
+        : Base(p, n), texCoord(tc), tangent(t), bitangent(b){};
     bool operator==(const Texture& other) const { return pos == other.pos && normal == other.normal && texCoord == other.texCoord; }
     glm::vec2 texCoord;
+    glm::vec3 tangent;
+    glm::vec3 bitangent;
 };
 
 // color

@@ -10,33 +10,51 @@
 class Camera : public Object3d {
    public:
     struct Data {
-        glm::mat4 mvp;
-        alignas(16) glm::vec3 position;
-        // rem 4
+        glm::mat4 viewProjection;
+        glm::mat4 view;
     };
 
     Camera(const glm::vec3 &eye, const glm::vec3 &center, float aspect, float fov = glm::radians(45.0f), float n = 0.1f,
            float f = 1000.0f);
 
-    inline Data getData() { return data_; }
+    inline const Data *getData() {
+        if (dirty_) {
+            data_.view = getMV();
+            data_.viewProjection = getMVP();
+        }
+        return &data_;
+    }
 
-    inline glm::vec3 getWorldDirection(const glm::vec3 &d = FORWARD_VECTOR) const {
+    inline glm::vec3 getCameraSpaceDirection(const glm::vec3 &d = FORWARD_VECTOR) const {
+        // TODO: deal with model_...
+        glm::vec3 direction = view_ * glm::vec4(d, 0.0f);
+        return glm::normalize(direction);
+    }
+
+    inline glm::vec3 getCameraSpacePosition(const glm::vec3 &p = {}) const {
+        // TODO: deal with model_...
+        return view_ * glm::vec4(p, 1.0f);
+    }
+
+    inline glm::vec3 getWorldSpaceDirection(const glm::vec3 &d = FORWARD_VECTOR) const override {
+        // TODO: deal with model_...
         glm::vec3 direction = glm::inverse(view_) * glm::vec4(d, 0.0f);
         return glm::normalize(direction);
     }
 
-    inline glm::vec3 getWorldPosition(const glm::vec3 &p = {}) const {
-        // TODO: deal with model...
+    inline glm::vec3 getWorldSpacePosition(const glm::vec3 &p = {}) const override {
+        // TODO: deal with model_...
         return glm::inverse(view_) * glm::vec4(p, 1.0f);
     }
-
-    inline glm::mat4 getMVP() const { return clip_ * proj_ * view_ /** model_*/; }
 
     void update(const float aspect, const glm::vec3 &pos_dir = {}, const glm::vec3 &look_dir = {});
 
    private:
-    void updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir);
+    inline glm::mat4 getMVP() const { return clip_ * proj_ * getMV(); }
+    inline glm::mat4 getMV() const { return view_ * model_; }
+    bool updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir);
 
+    bool dirty_;
     Data data_;
 
     glm::mat4 clip_;
