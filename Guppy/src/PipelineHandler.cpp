@@ -5,7 +5,12 @@
 
 PipelineHandler PipelineHandler::inst_;
 
-PipelineHandler::PipelineHandler() {
+PipelineHandler::PipelineHandler()
+    : setLayouts_{VK_NULL_HANDLE, VK_NULL_HANDLE},
+      cache_(VK_NULL_HANDLE),
+      pipelineLayouts_{VK_NULL_HANDLE, VK_NULL_HANDLE},
+      defAttachRefs_(),
+      createResources_() {
     for (auto& layout : pipelineLayouts_) layout = VK_NULL_HANDLE;
     inst_.cache_ = VK_NULL_HANDLE;
     for (auto& layout : setLayouts_) layout = VK_NULL_HANDLE;
@@ -548,8 +553,9 @@ void PipelineHandler::createRenderPass(PipelineResources& resources) {
     }
 }
 
-void PipelineHandler::createBasePipeline(Vertex::TYPE vertexType, PIPELINE_TYPE pipelineType, const std::unique_ptr<Shader>& vs, const std::unique_ptr<Shader>& fs,
-                                         PipelineCreateInfoResources& createRes, PipelineResources& pipelineRes) {
+void PipelineHandler::createBasePipeline(Vertex::TYPE vertexType, PIPELINE_TYPE pipelineType, const std::unique_ptr<Shader>& vs,
+                                         const std::unique_ptr<Shader>& fs, PipelineCreateInfoResources& createRes,
+                                         PipelineResources& pipelineRes) {
     // DYNAMIC STATE
     // TODO: this is weird
     createRes.dynamicStateInfo = {};

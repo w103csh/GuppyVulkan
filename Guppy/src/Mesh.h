@@ -35,10 +35,6 @@ class Mesh : public Object3d {
     inline STATUS getStatus() const { return status_; }
     inline PIPELINE_TYPE getTopologyType() const { return pipelineType_; }
     inline Vertex::TYPE getVertexType() const { return vertexType_; }
-    STATUS status_;
-
-    // OBJECT 3D
-    virtual void updateBoundingBox(bool updateAll) = 0;
 
     // INIT
     virtual void setSceneData(const MyShell::Context& ctx, size_t offset);
@@ -86,7 +82,7 @@ class Mesh : public Object3d {
         return p_bufferSize;
     }
 
-    std::unique_ptr<LoadingResources> pLdgRes_;
+    STATUS status_;
     std::string modelPath_;
     std::string markerName_;
     Vertex::TYPE vertexType_;
@@ -96,6 +92,7 @@ class Mesh : public Object3d {
     BufferResource index_res_;
     size_t offset_;
     std::unique_ptr<Material> pMaterial_;
+    std::unique_ptr<LoadingResources> pLdgRes_;
 
    private:
     void createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res);
@@ -117,19 +114,11 @@ class ColorMesh : public Mesh {
         // THROUGH 0x00000008
     } FLAGS;
 
-    // OBJECT 3D
-    inline void updateBoundingBox(bool updateAll) override {
-        if (updateAll)
-            Object3d::updateBoundingBox(vertices_);
-        else
-            Object3d::updateBoundingBox(vertices_.back());
-    };
-
     // VERTEX
     inline void addVertex(const Vertex::Base& v, const glm::vec4& color, const glm::vec2& texCoord, const glm::vec3& tangent,
                           const glm::vec3& bitangent) override {
         vertices_.push_back({v.pos, v.normal, color});
-        ColorMesh::updateBoundingBox(true);
+        updateBoundingBox(vertices_.back());
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
     inline uint32_t getVertexCount() const { return vertices_.size(); }
@@ -174,7 +163,7 @@ class TextureMesh : public Mesh {
     inline void addVertex(const Vertex::Base& v, const glm::vec4& color, const glm::vec2& texCoord, const glm::vec3& tangent,
                           const glm::vec3& bitangent) override {
         vertices_.push_back({v.pos, v.normal, texCoord, tangent, bitangent});
-        TextureMesh::updateBoundingBox(false);
+        updateBoundingBox(vertices_.back());
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
     inline uint32_t getVertexCount() const { return vertices_.size(); }
@@ -182,14 +171,6 @@ class TextureMesh : public Mesh {
         VkDeviceSize p_bufferSize = sizeof(Vertex::Texture) * vertices_.size();
         return p_bufferSize;
     }
-
-    // OBJECT 3D
-    inline void updateBoundingBox(bool updateAll) override {
-        if (updateAll)
-            Object3d::updateBoundingBox(vertices_);
-        else
-            Object3d::updateBoundingBox(vertices_.back());
-    };
 
     // TEXTURE
     inline uint32_t getTextureOffset() const { return pMaterial_->getTexture().offset; }

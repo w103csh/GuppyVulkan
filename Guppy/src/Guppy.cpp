@@ -36,12 +36,27 @@ Guppy::Guppy(const std::vector<std::string>& args)
       sim_paused_(false),
       sim_fade_(false),
       // sim_(5000),
-      // camera_(2.5f),
-      frame_data_(),
-      render_pass_clear_value_({{0.0f, 0.1f, 0.2f, 1.0f}}),
+      physical_dev_(VK_NULL_HANDLE),
+      dev_(VK_NULL_HANDLE),
+      queue_(VK_NULL_HANDLE),
+      queue_family_(),
+      format_(),
+      aligned_object_data_size(),
+      physical_dev_props_(),
+      primary_cmd_pool_(VK_NULL_HANDLE),
+      desc_pool_(VK_NULL_HANDLE),
+      frame_data_index_(),
+      frame_data_mem_(VK_NULL_HANDLE),
+      render_pass_clear_value_({0.0f, 0.1f, 0.2f, 1.0f}),
       render_pass_begin_info_(),
       primary_cmd_begin_info_(),
+      primary_cmd_submit_wait_stages_(),
       primary_cmd_submit_info_(),
+      extent_(),
+      viewport_(),
+      scissor_(),
+      swapchain_image_count_(),
+      color_resource_(),
       depth_resource_(),
       active_scene_index_(-1),
       camera_(glm::vec3(2.0f, 2.0f, 4.0f), glm::vec3(0.0f, 0.0f, 0.0f),
@@ -293,7 +308,7 @@ void Guppy::on_frame(float framePred) {
 
     VkResult res = vkQueueSubmit(CmdBufHandler::graphics_queue(), 1, &submit_info, data.fence);
 
-    frame_data_index_ = (frame_data_index_ + 1) % frame_data_.size();
+    frame_data_index_ = (frame_data_index_ + 1) % static_cast<uint32_t>(frame_data_.size());
 
     (void)res;
 }
@@ -332,16 +347,15 @@ void Guppy::get_swapchain_image_data(const VkSwapchainKHR& swapchain) {
     // If this ever fails then you have to change the start up a ton!!!!
     assert(swapchain_image_count_ == image_count);
 
-    VkImage* images = (VkImage*)malloc(image_count * sizeof(VkImage));
-    vk::assert_success(vkGetSwapchainImagesKHR(dev_, swapchain, &image_count, images));
+    std::vector<VkImage> images(image_count);
+    vk::assert_success(vkGetSwapchainImagesKHR(dev_, swapchain, &image_count, images.data()));
 
-    for (uint32_t i = 0; i < image_count; i++) {
+    for (auto& image : images) {
         SwapchainImageResource res;
-        res.image = images[i];
+        res.image = std::move(image);
         helpers::createImageView(dev_, res.image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D, 1, res.view);
         swapchain_image_resources_.push_back(res);
     }
-    free(images);
 }
 
 void Guppy::prepare_viewport() {
@@ -495,19 +509,17 @@ void Guppy::updateUniformBuffer() {
     // Update the lights... (!!!!!! THE NUMBER OF LIGHTS HERE CANNOT CHANGE AT RUNTIME YET !!!!!
     // Need to recreate the uniform descriptors!)
     for (size_t i = 0; i < positionalLights_.size(); i++) {
-        auto& light = positionalLights_[i];
         auto& uboLight = defUBO_.positionalLightData[i];
         // set data (TODO: this is terrible)
-        light.getData(uboLight);
+        positionalLights_[i].getData(uboLight);
         uboLight.position = camera_.getCameraSpacePosition(uboLight.position);
     }
     for (size_t i = 0; i < spotLights_.size(); i++) {
-        auto& light = spotLights_[i];
         auto& uboLight = defUBO_.spotLightData[i];
         // set data (TODO: this is terrible)
-        light.getData(defUBO_.spotLightData[i]);
+        spotLights_[i].getData(defUBO_.spotLightData[i]);
         uboLight.position = camera_.getCameraSpacePosition(uboLight.position);
-        uboLight.direction = camera_.getCameraSpacePosition(uboLight.direction);
+        uboLight.direction = camera_.getCameraSpaceDirection(uboLight.direction);
     }
 
     // If these change update them here...
@@ -648,16 +660,16 @@ void Guppy::createLights() {
     // positionalLights_.push_back(Light::Positional());
     // positionalLights_.back().transform(helpers::affine(glm::vec3(1.0f), glm::vec3(-10.0f, 30.0f, 6.0f)));
 
-    // auto model = helpers::viewToWorld({0.0f, 2.5f, 0.0f}, {0.0f, 0.0f, 1.5f}, UP_VECTOR);
-    // spotLights_.push_back({});
-    // spotLights_.back().transform(model);
+    spotLights_.push_back({});
+    spotLights_.back().transform(helpers::viewToWorld({0.0f, 4.5f, 1.0f}, {0.0f, 0.0f, -1.5f}, UP_VECTOR));
+    spotLights_.back().setCutoff(glm::radians(25.0f));
+    spotLights_.back().setExponent(25.0f);
 }
 
 void Guppy::createScenes() {
     auto ctx = shell_->context();
 
     auto scene1 = std::make_unique<Scene>(ctx, settings_, UBOResource_, textures_);
-
     pScenes_.push_back(std::move(scene1));
     active_scene_index_ = 0;
 
@@ -668,7 +680,7 @@ void Guppy::createScenes() {
         pMaterial->setRepeat(800.0f);
         glm::mat4 model = helpers::affine(glm::vec3(2000.0f), {}, -M_PI_2_FLT, CARDINAL_X);
         auto pGroundPlane = std::make_unique<TexturePlane>(std::move(pMaterial), model);
-        auto gpbbmm = pGroundPlane->getBoundingBoxMinMax();
+        auto groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
         active_scene()->addMesh(shell_->context(), std::move(pGroundPlane));
 
         // ORIGIN AXES
@@ -681,19 +693,21 @@ void Guppy::createScenes() {
         pMaterial->setColor({0.8f, 0.3f, 0.0f});
         model = helpers::affine(glm::vec3(0.07f));
         auto pTorus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, model);
-        active_scene()->addMesh(shell_->context(), std::move(pTorus), true, [gpbbmm](auto pMesh) { pMesh->putOnTop(gpbbmm); });
+        active_scene()->addMesh(shell_->context(), std::move(pTorus), true,
+                                [groundPlane_bbmm](auto pMesh) { pMesh->putOnTop(groundPlane_bbmm); });
 
-        //// ORANGE
-        // model = helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f});
-        // auto pOrange = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(ORANGE_DIFF_TEX_PATH)),
-        //                                             ORANGE_MODEL_PATH, model);
-        // active_scene()->addMesh(shell_->context(), std::move(pOrange), true, [gpbbmm](auto pMesh) { pMesh->putOnTop(gpbbmm); });
+        // ORANGE
+        model = helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f});
+        auto pOrange = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(ORANGE_DIFF_TEX_PATH)),
+                                                     ORANGE_MODEL_PATH, model);
+        active_scene()->addMesh(shell_->context(), std::move(pOrange), true,
+                                [groundPlane_bbmm](auto pMesh) { pMesh->putOnTop(groundPlane_bbmm); });
 
-        //// MEDIEVAL HOUSE
-        // model = helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
-        // auto pMedeivalHouse = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(MED_H_DIFF_TEX_PATH)),
-        //                                                    MED_H_MODEL_PATH, model);
-        // active_scene()->addMesh(shell_->context(), std::move(pMedeivalHouse));
+        // MEDIEVAL HOUSE
+        model = helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
+        auto pMedeivalHouse = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(MED_H_DIFF_TEX_PATH)),
+                                                            MED_H_MODEL_PATH, model);
+        active_scene()->addMesh(shell_->context(), std::move(pMedeivalHouse));
     }
 
     // Lights

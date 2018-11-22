@@ -29,7 +29,7 @@
 #include "util.hpp"
 
 MyShell::MyShell(Game &game)
-    : game_(game), settings_(game.settings()), ctx_(), game_tick_(1.0f / settings_.ticks_per_second), game_time_(game_tick_) {
+    : game_(game), settings_(game.settings()), game_tick_(1.0f / settings_.ticks_per_second), game_time_(game_tick_), ctx_() {
     // require generic WSI extensions
     instance_extensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     device_extensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -353,7 +353,7 @@ void MyShell::create_swapchain() {
     */
     ctx_.linear_blitting_supported_ =
         helpers::findSupportedFormat(ctx_.physical_dev, {ctx_.surface_format.format}, VK_IMAGE_TILING_OPTIMAL,
-                                       VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != VK_FORMAT_UNDEFINED;
+                                     VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != VK_FORMAT_UNDEFINED;
 
     // defer to resize_swapchain()
     ctx_.swapchain = VK_NULL_HANDLE;
@@ -560,8 +560,6 @@ void MyShell::init_dev_queues() {
 void MyShell::destroy_instance() { vkDestroyInstance(ctx_.instance, nullptr); }
 
 void MyShell::enumerate_instance_properties() {
-    uint32_t instance_layer_count;
-    VkLayerProperties *vk_props = nullptr;
 #ifdef __ANDROID__
     // This place is the first place for samples to use Vulkan APIs.
     // Here, we are going to open Vulkan.so on the device and retrieve function pointers using
@@ -585,25 +583,22 @@ void MyShell::enumerate_instance_properties() {
      * entries loaded into the data pointer - in case the number
      * of layers went down or is smaller than the size given.
      */
+    uint32_t instance_layer_count;
     vk::assert_success(vkEnumerateInstanceLayerProperties(&instance_layer_count, nullptr));
 
-    vk_props = (VkLayerProperties *)realloc(vk_props, instance_layer_count * sizeof(VkLayerProperties));
-    vk::assert_success(vkEnumerateInstanceLayerProperties(&instance_layer_count, vk_props));
+    std::vector<VkLayerProperties> props(instance_layer_count);
+    vk::assert_success(vkEnumerateInstanceLayerProperties(&instance_layer_count, props.data()));
 
     /*
      * Now gather the extension list for each instance layer.
      */
-    for (uint32_t i = 0; i < instance_layer_count; i++) {
-        LayerProperties layer_props;
-        layer_props.properties = vk_props[i];
-        enumerate_instance_layer_extension_properties(layer_props);
-        layerProps_.push_back(layer_props);
+    for (auto &prop : props) {
+        layerProps_.push_back({prop});
+        enumerate_instance_layer_extension_properties(layerProps_.back());
     }
 
     // Get instance extension properties
     enumerate_instance_extension_properties();
-
-    free(vk_props);
 }
 
 void MyShell::enumerate_instance_layer_extension_properties(LayerProperties &layer_props) {
@@ -751,11 +746,11 @@ bool MyShell::determine_queue_families_support(const PhysicalDeviceProperties &p
     // Determine graphics and present queues ...
 
     // Iterate over each queue to learn whether it supports presenting:
-    VkBool32 *pSupportsPresent = (VkBool32 *)malloc(props.queue_family_count * sizeof(VkBool32));
+    std::vector<VkBool32> pSupportsPresent(props.queue_family_count);
     // TODO: I don't feel like re-arranging the whole start up atm.
     auto surface = createSurface(ctx_.instance);
     for (uint32_t i = 0; i < props.queue_family_count; i++) {
-        vk::assert_success(vkGetPhysicalDeviceSurfaceSupportKHR(props.device, i, surface, &pSupportsPresent[i]));
+        vk::assert_success(vkGetPhysicalDeviceSurfaceSupportKHR(props.device, i, surface, pSupportsPresent.data()));
 
         // Search for a graphics and a present queue in the array of queue
         // families, try to find one that supports both
@@ -781,7 +776,6 @@ bool MyShell::determine_queue_families_support(const PhysicalDeviceProperties &p
         }
     }
     vkDestroySurfaceKHR(ctx_.instance, surface, nullptr);
-    free(pSupportsPresent);
 
     // Determine transfer queue ...
 

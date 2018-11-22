@@ -87,7 +87,7 @@ static std::string getFilePath(std::string s) {
     if (i != std::string::npos) {
         return (s.substr(0, i + 1));
     }
-    return ("");
+    return {};
 }
 
 static std::string getFileName(std::string s) {
@@ -99,7 +99,7 @@ static std::string getFileName(std::string s) {
     if (i != std::string::npos) {
         return (s.substr(i + 1, s.length() - i));
     }
-    return ("");
+    return {};
 }
 
 static std::string getFileExt(std::string s) {
@@ -109,7 +109,7 @@ static std::string getFileExt(std::string s) {
     if (i != std::string::npos) {
         return (s.substr(i + 1, s.length() - i));
     }
-    return ("");
+    return {};
 }
 
 static MODEL_FILE_TYPE getModelFileType(std::string s) {
@@ -227,14 +227,14 @@ struct BufferResource {
 
 struct FrameData {
     // signaled when this struct is ready for reuse
-    VkFence fence;
+    VkFence fence = VK_NULL_HANDLE;
 
-    VkCommandBuffer primary_cmd;
+    VkCommandBuffer primary_cmd = VK_NULL_HANDLE;
     std::vector<VkCommandBuffer> worker_cmds;
 
-    VkBuffer buf;
-    uint8_t *base;
-    VkDescriptorSet desc_set;
+    VkBuffer buf = VK_NULL_HANDLE;
+    uint8_t *base = nullptr;
+    VkDescriptorSet desc_set = VK_NULL_HANDLE;
 };
 
 struct DrawResources {

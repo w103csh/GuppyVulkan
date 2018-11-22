@@ -12,6 +12,8 @@ set(SOURCE
     Constants.h
     EventHandlers.h
     Extensions.h
+    Face.cpp
+    Face.h
 	FileLoader.cpp
     FileLoader.h
     Game.h

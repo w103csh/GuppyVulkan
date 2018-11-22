@@ -50,11 +50,11 @@ class Guppy : public Game {
     VkCommandPool primary_cmd_pool_;
     std::vector<VkCommandPool> worker_cmd_pools_;
     VkDescriptorPool desc_pool_;
-    VkDeviceMemory frame_data_mem_;
-    std::vector<FrameData> frame_data_;
-    int frame_data_index_;
+    uint32_t frame_data_index_;
     const auto& frameData() const { return frame_data_; }
 
+    VkDeviceMemory frame_data_mem_;
+    std::vector<FrameData> frame_data_;
     VkClearValue render_pass_clear_value_;
     VkRenderPassBeginInfo render_pass_begin_info_;
 
@@ -127,8 +127,8 @@ class Guppy : public Game {
     ImageResource depth_resource_;
 
     // uniform buffer
-    DefaultUniformBuffer defUBO_;
-    UniformBufferResources UBOResource_;
+    DefaultUniformBuffer defUBO_ = {};
+    UniformBufferResources UBOResource_ = {};
     // camera
     Camera camera_;
     // lights

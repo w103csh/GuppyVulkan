@@ -2,14 +2,14 @@
 #define LDG_RESOURCE_HANDLER_H
 
 #include <vector>
-#include <vulkan\vulkan.h>
+#include <vulkan/vulkan.h>
 
 #include "Helpers.h"
 #include "MyShell.h"
 #include "Singleton.h"
 
 struct LoadingResources {
-    LoadingResources() : shouldWait(false){};
+    LoadingResources() : shouldWait(false), graphicsCmd(VK_NULL_HANDLE), transferCmd(VK_NULL_HANDLE), semaphore(VK_NULL_HANDLE){};
     bool shouldWait;
     VkCommandBuffer graphicsCmd, transferCmd;
     std::vector<BufferResource> stgResources;

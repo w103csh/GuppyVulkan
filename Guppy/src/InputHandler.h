@@ -46,9 +46,17 @@ class InputHandler : Singleton {
     static void updateInput(float elapsed);
 
    private:
-    InputHandler(){};   // Prevent construction
-    ~InputHandler(){};  // Prevent destruction
-    
+    InputHandler()
+        : sh_(nullptr),
+          currKeyInput_(),
+          posDir_(),
+          isLooking_(false),
+          hasFocus_(false),
+          currMouseInput_{0.0f, 0.0f, 0.0f},
+          prevMouseInput_{0.0f, 0.0f, 0.0f},
+          lookDir_(){};  // Prevent construction
+    ~InputHandler(){};   // Prevent destruction
+
     static InputHandler inst_;
     void reset() override;
 

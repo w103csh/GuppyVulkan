@@ -31,31 +31,31 @@ class Game {
 
     struct Settings {
         std::string name;
-        int initial_width;
-        int initial_height;
-        int queue_count;
-        int back_buffer_count;
-        int ticks_per_second;
-        bool vsync;
-        bool animate;
+        int initial_width = 1280;
+        int initial_height = 1024;
+        int queue_count = 1;
+        int back_buffer_count = 3;
+        int ticks_per_second = 30;
+        bool vsync = true;
+        bool animate = true;
 
-        bool validate;
-        bool validate_verbose;
+        bool validate = false;
+        bool validate_verbose = false;
 
-        bool no_tick;
-        bool no_render;
-        bool no_present;
+        bool no_tick = false;
+        bool no_render = false;
+        bool no_present = false;
 
         // *
-        bool try_sampler_anisotropy;  // TODO: Not sure what this does
-        bool try_sample_rate_shading;
-        bool enable_sample_shading;
-        bool include_color;
-        bool include_depth;
-        bool enable_double_clicks;
-        bool enable_debug_markers;
-        bool enable_directory_listener;
-        bool assert_on_recompile_shader;
+        bool try_sampler_anisotropy = true;  // TODO: Not sure what this does
+        bool try_sample_rate_shading = true;
+        bool enable_sample_shading = true;
+        bool include_color = true;
+        bool include_depth = true;
+        bool enable_double_clicks = false;
+        bool enable_debug_markers = false;
+        bool enable_directory_listener = true;
+        bool assert_on_recompile_shader = false;
     };
     const Settings &settings() const { return settings_; }
     MyShell &shell() const { return (*shell_); }  // TODO: maybe don't do this??? (Used for listening to shader changes)
@@ -130,33 +130,8 @@ class Game {
     virtual void on_frame(float framePred) {}
 
    protected:
-    Game(const std::string &name, const std::vector<std::string> &args) : settings_(), shell_(nullptr) {
+    Game(const std::string &name, const std::vector<std::string> &args) : shell_(nullptr), settings_() {
         settings_.name = name;
-        settings_.initial_width = 1280;
-        settings_.initial_height = 1024;
-        settings_.queue_count = 1;
-        settings_.back_buffer_count = 3;
-        settings_.ticks_per_second = 30;
-        settings_.vsync = true;
-        settings_.animate = true;
-
-        settings_.validate = false;
-        settings_.validate_verbose = false;
-
-        settings_.no_tick = false;
-        settings_.no_render = false;
-        settings_.no_present = false;
-
-        // *
-        settings_.try_sampler_anisotropy = true;
-        settings_.try_sample_rate_shading = true;
-        settings_.include_color = true;
-        settings_.include_depth = true;
-        settings_.enable_double_clicks = false;
-        settings_.enable_debug_markers = false;
-        settings_.enable_directory_listener = true;  // TODO: make this default to false
-        settings_.assert_on_recompile_shader = false;
-
         parse_args(args);
     }
 

@@ -34,7 +34,7 @@ VOID WINAPI FileIOCompletionRoutine(DWORD, DWORD, LPOVERLAPPED);
 namespace {
 class Win32Timer {
    public:
-    Win32Timer() {
+    Win32Timer() : freq_(), start_() {
         LARGE_INTEGER freq;
         QueryPerformanceFrequency(&freq);
         freq_ = static_cast<double>(freq.QuadPart);
@@ -56,7 +56,7 @@ class Win32Timer {
 
 }  // namespace
 
-ShellWin32::ShellWin32(Game& game) : MyShell(game), hwnd_(nullptr), minimized_(false) {
+ShellWin32::ShellWin32(Game& game) : MyShell(game), hinstance_(nullptr), hwnd_(nullptr), hmodule_(nullptr), minimized_(false) {
     instance_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
     init_vk();
 }

@@ -11,25 +11,29 @@
 
 Mesh::Mesh(std::unique_ptr<Material> pMaterial)
     : Object3d(glm::mat4(1.0f)),
+      status_(STATUS::PENDING),
+      markerName_(),
+      vertexType_(),
+      pipelineType_(),
+      vertex_res_(),
       index_res_{VK_NULL_HANDLE, VK_NULL_HANDLE},
-      markerName_(""),
-      modelPath_(""),
-      pLdgRes_(nullptr),
-      status_(STATUS::PENDING) {
-    pMaterial_ = std::move(pMaterial);
-    pLdgRes_ = LoadingResourceHandler::createLoadingResources();
-}
+      offset_(),
+      modelPath_(),
+      pMaterial_(std::move(pMaterial)),
+      pLdgRes_(LoadingResourceHandler::createLoadingResources()) {}
 
 Mesh::Mesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model)
     : Object3d(model),
+      status_(STATUS::PENDING),
+      markerName_(),
+      vertexType_(),
+      pipelineType_(),
+      vertex_res_(),
       index_res_{VK_NULL_HANDLE, VK_NULL_HANDLE},
-      markerName_(""),
+      offset_(),
       modelPath_(modelPath),
-      pLdgRes_(nullptr),
-      status_(STATUS::PENDING) {
-    pMaterial_ = std::move(pMaterial);
-    pLdgRes_ = LoadingResourceHandler::createLoadingResources();
-}
+      pMaterial_(std::move(pMaterial)),
+      pLdgRes_(LoadingResourceHandler::createLoadingResources()) {}
 
 void Mesh::setSceneData(const MyShell::Context& ctx, size_t offset) { offset_ = offset; }
 

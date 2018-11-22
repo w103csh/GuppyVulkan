@@ -70,43 +70,43 @@ class MyShell {
     };  // *
 
     struct Context {
-        VkInstance instance;
-        VkDebugReportCallbackEXT debug_report;
-        VkDebugUtilsMessengerEXT debug_utils_messenger;
+        VkInstance instance = VK_NULL_HANDLE;
+        VkDebugReportCallbackEXT debug_report = VK_NULL_HANDLE;
+        VkDebugUtilsMessengerEXT debug_utils_messenger = VK_NULL_HANDLE;
 
-        bool sampler_anisotropy_enabled_;   // *
-        bool sample_rate_shading_enabled_;  // *
-        bool linear_blitting_supported_;    // *
+        bool sampler_anisotropy_enabled_ = false;   // *
+        bool sample_rate_shading_enabled_ = false;  // *
+        bool linear_blitting_supported_ = false;    // *
 
-        VkPhysicalDevice physical_dev;
+        VkPhysicalDevice physical_dev = VK_NULL_HANDLE;
         std::vector<PhysicalDeviceProperties> physical_dev_props;  // *
-        uint32_t physical_dev_index;                               // *
-        VkPhysicalDeviceMemoryProperties mem_props;                // *
+        uint32_t physical_dev_index = 0;                           // *
+        VkPhysicalDeviceMemoryProperties mem_props = {};           // *
         std::vector<VkQueue> queues;                               // *
-        uint32_t graphics_index;                                   // *
-        uint32_t present_index;                                    // *
-        uint32_t transfer_index;                                   // *
-        uint32_t game_queue_family;
-        uint32_t present_queue_family;
+        uint32_t graphics_index = 0;                               // *
+        uint32_t present_index = 0;                                // *
+        uint32_t transfer_index = 0;                               // *
+        uint32_t game_queue_family = 0;
+        uint32_t present_queue_family = 0;
 
-        VkDevice dev;
+        VkDevice dev = VK_NULL_HANDLE;
         // VkQueue game_queue;
         // VkQueue present_queue;
 
         std::queue<BackBuffer> back_buffers;
 
-        SurfaceProperties surface_props;  // *
-        VkSurfaceKHR surface;
-        VkSurfaceFormatKHR surface_format;
-        VkPresentModeKHR mode;              // *
-        uint32_t image_count;               // *
-        VkFormat depth_format;              // *
-        VkSampleCountFlagBits num_samples;  // *
+        SurfaceProperties surface_props = {};  // *
+        VkSurfaceKHR surface = VK_NULL_HANDLE;
+        VkSurfaceFormatKHR surface_format = {};
+        VkPresentModeKHR mode = {};              // *
+        uint32_t image_count = 0;                // *
+        VkFormat depth_format = {};              // *
+        VkSampleCountFlagBits num_samples = {};  // *
 
-        VkSwapchainKHR swapchain;
-        VkExtent2D extent;
+        VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+        VkExtent2D extent = {};
 
-        BackBuffer acquired_back_buffer;
+        BackBuffer acquired_back_buffer = {};
     };
     const Context &context() const { return ctx_; }
 

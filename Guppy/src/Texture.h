@@ -25,17 +25,26 @@ class Texture {
     } FLAGS;
     struct Data {
         Data(uint32_t offset, std::string path, std::string normPath = "", std::string specPath = "")
-            : offset(offset),
-              status(STATUS::PENDING),
+            : status(STATUS::PENDING),
               flags(0),
+              image(VK_NULL_HANDLE),
+              memory(VK_NULL_HANDLE),
+              sampler(VK_NULL_HANDLE),
+              imgDescInfo(),
+              view(VK_NULL_HANDLE),
+              offset(offset),
+              width(0),
+              height(0),
+              channels(0),
+              mipLevels(0),
+              aspect(4.0f/3.0f),
+              name(helpers::getFileName(path)),
               path(path),
               normPath(normPath),
               specPath(specPath),
               pixels(nullptr),
               normPixels(nullptr),
               specPixels(nullptr) {
-            // Just make the name from the path
-            name = helpers::getFileName(path);
             // Make sure we have valid flags
             if (!path.empty()) flags |= FLAGS::DIFFUSE;
             if (!normPath.empty()) flags |= FLAGS::NORMAL;
@@ -57,7 +66,7 @@ class Texture {
     };
 
     static std::future<std::shared_ptr<Texture::Data>> loadTexture(const VkDevice& dev, const bool makeMipmaps,
-                                                                          std::shared_ptr<Data> pTexture);
+                                                                   std::shared_ptr<Data> pTexture);
     static void createTexture(const VkDevice& dev, const bool makeMipmaps, std::shared_ptr<Data> pTexture);
 
    private:
