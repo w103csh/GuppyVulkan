@@ -1,49 +1,22 @@
-validation layer:
-Cannot submit cmd buffer using image (0xa0)
-[sub-resource: aspectMask 0x1 array layer 1, mip level 1],
-with layout
-	VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
-when first use is
-	VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
-
-
-validation layer: Cannot submit cmd buffer using image (0xa0) [sub-resource: aspectMask 0x1 array layer 1, mip level 1], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xa0) [sub-resource: aspectMask 0x1 array layer 1, mip level 0], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xa0) [sub-resource: aspectMask 0x1 array layer 1, mip level 3], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xa0) [sub-resource: aspectMask 0x1 array layer 1, mip level 2], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xa0) [sub-resource: aspectMask 0x1 array layer 1, mip level 5], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xa0) [sub-resource: aspectMask 0x1 array layer 1, mip level 4], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xa0) [sub-resource: aspectMask 0x1 array layer 1, mip level 7], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xa0) [sub-resource: aspectMask 0x1 array layer 1, mip level 6], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xa0) [sub-resource: aspectMask 0x1 array layer 1, mip level 9], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xa0) [sub-resource: aspectMask 0x1 array layer 1, mip level 8], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xa0) [sub-resource: aspectMask 0x1 array layer 1, mip level 11], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xa0) [sub-resource: aspectMask 0x1 array layer 1, mip level 10], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xa0) [sub-resource: aspectMask 0x1 array layer 1, mip level 12], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 1, mip level 0], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 2, mip level 3], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 1, mip level 1], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 2, mip level 2], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 2, mip level 0], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 1, mip level 3], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 2, mip level 1], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 1, mip level 2], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 1, mip level 5], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 2, mip level 6], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 1, mip level 4], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 2, mip level 7], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 2, mip level 4], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 1, mip level 7], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 2, mip level 5], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 1, mip level 6], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 1, mip level 9], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 2, mip level 10], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 2, mip level 11], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 1, mip level 8], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 1, mip level 11], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 2, mip level 8], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 2, mip level 9], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 1, mip level 10], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 1, mip level 12], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
-validation layer: Cannot submit cmd buffer using image (0xb7) [sub-resource: aspectMask 0x1 array layer 2, mip level 12], with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
+std::string name;
+int initial_width;
+int initial_height;
+int queue_count;
+int back_buffer_count;
+int ticks_per_second;
+bool vsync;
+bool animate;
+bool validate;
+bool validate_verbose;
+bool no_tick;
+bool no_render;
+bool no_present;
+bool try_sampler_anisotropy;
+bool try_sample_rate_shading;
+bool enable_sample_shading;
+bool include_color;
+bool include_depth;
+bool enable_double_clicks;
+bool enable_debug_markers;
+bool enable_directory_listener;
+bool assert_on_recompile_shader;

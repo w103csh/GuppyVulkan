@@ -25,7 +25,7 @@ class Scene {
     size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<TextureMesh> pMesh, bool async = true,
                    std::function<void(Mesh *)> callback = nullptr);
 
-    void removeMesh(Mesh *mesh);
+    void removeMesh(std::unique_ptr<Mesh> &pMesh);
 
     inline const VkRenderPass activeRenderPass() const { return plResources_.renderPass; }
 

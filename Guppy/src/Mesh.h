@@ -23,8 +23,8 @@ class Mesh : public Object3d {
    public:
     Mesh(std::unique_ptr<Material> pMaterial);
     Mesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model = glm::mat4(1.0f));
-    /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTR OF THIS CLASS.
-        IF THIS IS REMOVED THE DESCTRUCTOR HERE WILL BE CALLED INSTEAD OF THE DERIVED DESCTRUCTOR.
+    /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTRs OF THIS CLASS.
+        IF THIS IS REMOVED THE DESTRUCTOR HERE WILL BE CALLED INSTEAD OF THE DERIVED DESTRUCTOR.
         IT MIGHT JUST BE EASIER/SMARTER TO GET RID OF POLYMORPHISM AND DROP THE POINTERS. */
     virtual ~Mesh() = default;
 
@@ -44,8 +44,8 @@ class Mesh : public Object3d {
     virtual void prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes);
 
     // VERTEX
-    virtual void addVertex(const Vertex::Base& v, const glm::vec4& color, const glm::vec2& texCoord, const glm::vec3& tangent,
-                           const glm::vec3& bitangent) = 0;
+    virtual Vertex::Complete getVertexComplete(size_t index) = 0;
+    virtual void addVertex(const Vertex::Complete& v) = 0;
     virtual inline uint32_t getVertexCount() const = 0;  // TODO: this shouldn't be public
 
     // INDEX
@@ -115,9 +115,12 @@ class ColorMesh : public Mesh {
     } FLAGS;
 
     // VERTEX
-    inline void addVertex(const Vertex::Base& v, const glm::vec4& color, const glm::vec2& texCoord, const glm::vec3& tangent,
-                          const glm::vec3& bitangent) override {
-        vertices_.push_back({v.pos, v.normal, color});
+    inline Vertex::Complete getVertexComplete(size_t index) override {
+        assert(index < vertices_.size());
+        return {vertices_.at(index)};
+    }
+    inline void addVertex(const Vertex::Complete& v) override {
+        vertices_.push_back(v.getColorData());
         updateBoundingBox(vertices_.back());
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
@@ -160,9 +163,12 @@ class TextureMesh : public Mesh {
                        const VkRect2D& scissor) const override;
 
     // VERTEX
-    inline void addVertex(const Vertex::Base& v, const glm::vec4& color, const glm::vec2& texCoord, const glm::vec3& tangent,
-                          const glm::vec3& bitangent) override {
-        vertices_.push_back({v.pos, v.normal, texCoord, tangent, bitangent});
+    inline Vertex::Complete getVertexComplete(size_t index) override {
+        assert(index < vertices_.size());
+        return {vertices_.at(index)};
+    }
+    inline void addVertex(const Vertex::Complete& v) override {
+        vertices_.push_back(v.getTextureData());
         updateBoundingBox(vertices_.back());
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }

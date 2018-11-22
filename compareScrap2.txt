@@ -1,47 +1,25 @@
+name,   // name
+1280,   // initial_width
+1024,   // initial_height
+1,      // queue_count
+3,      // back_buffer_count
+30,     // ticks_per_second
+true,   // vsync
+true,   // animate
+false,  // validate
+false,  // validate_verbose
+false,  // no_tick
+false,  // no_render
+false,  // no_present
+true,   // try_sampler_anisotropy
+true,   // try_sample_rate_shading
+true,   // enable_sample_shading
+true,   // include_color
+true,   // include_depth
+false,  // enable_double_clicks
+false,  // enable_debug_markers
+true,   // enable_directory_listener TODO: make this default to false
+false   // assert_on_recompile_
 
-void ColorMesh::loadObj() {
-    tinyobj::attrib_t attrib;
-    std::vector<tinyobj::shape_t> shapes;
-    std::vector<tinyobj::material_t> materials;
-    std::string warn, err;  // TODO: log warings
 
-    if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, modelPath_.c_str())) {
-        throw std::runtime_error(err);
-    }
 
-    std::unordered_map<Vertex::Color, uint32_t> uniqueVertices = {};
-
-    bool useNormals = (!attrib.normals.empty() && attrib.vertices.size() == attrib.normals.size());
-    bool useColors = (!attrib.colors.empty() && attrib.vertices.size() == attrib.colors.size());
-
-    for (const auto& shape : shapes) {
-        for (const auto& index : shape.mesh.indices) {
-            // Create the vertex ...
-            Vertex::Color vertex = {};
-
-            // position
-            vertex.pos = {attrib.vertices[3 * index.vertex_index + 0], attrib.vertices[3 * index.vertex_index + 1],
-                          attrib.vertices[3 * index.vertex_index + 2]};
-
-            // normal
-            if (useNormals) {
-                vertex.normal = {attrib.normals[3 * index.vertex_index + 0], attrib.normals[3 * index.vertex_index + 1],
-                                 attrib.normals[3 * index.vertex_index + 2]};
-            }
-
-            // color
-            if (useColors) {
-                vertex.color = {attrib.colors[3 * index.vertex_index + 0], attrib.colors[3 * index.vertex_index + 1],
-                                attrib.colors[3 * index.vertex_index + 2], 1.0f};
-            }
-
-            if (uniqueVertices.count(vertex) == 0) {
-                uniqueVertices[vertex] = static_cast<uint32_t>(vertices_.size());
-
-                vertices_.push_back(std::move(vertex));
-            }
-
-            indices_.push_back(uniqueVertices[vertex]);
-        }
-    }
-}

@@ -59,6 +59,9 @@ void main() {
     Kd = pushConstantsBlock.material.Kd;
     Ks = pushConstantsBlock.material.Ks;
 
+    // outColor = vec4(fragNormal, 1.0);
+    // return;
+
     // Diffuse color
     if ((dynamicUbo.texFlags & TEX_DIFFUSE) > 0) {
         vec4 texDiff = texture(texSampler, vec3(fragTexCoord, samplerOffset++));
@@ -88,6 +91,9 @@ void main() {
         Ks = vec3(texSpec);
         opacity = texSpec[3];
     }
+
+    // outColor = vec4(n, 1.0);
+    // return;
 
     outColor = vec4(
         getColor(pushConstantsBlock.material.shininess),

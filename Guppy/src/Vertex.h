@@ -13,26 +13,61 @@ namespace Vertex {
 
 enum class TYPE { COLOR = 0, TEXTURE };
 
-struct Base {
-    Base() : pos(), normal(){};
-    Base(glm::vec3 p, glm::vec3 n) : pos(p), normal(n){};
-    bool operator==(const Base& other) const { return pos == other.pos && normal == other.normal; }
-    glm::vec3 pos;
+struct Color {
+    glm::vec3 position;
     glm::vec3 normal;
-};
-
-struct Color : Base {
-    Color() : Base(), color(1.0f, 1.0f, 1.0f, 1.0f){};
-    Color(glm::vec3 p, glm::vec3 n, glm::vec4 c) : Base(p, n), color(c){};
-    bool operator==(const Color& other) const { return pos == other.pos && normal == other.normal && color == other.color; }
     glm::vec4 color;
 };
 
-struct Texture : Base {
-    Texture() : Base(), texCoord(), tangent(), bitangent(){};
-    Texture(glm::vec3 p, glm::vec3 n, glm::vec2 tc, glm::vec3 t, glm::vec3 b)
-        : Base(p, n), texCoord(tc), tangent(t), bitangent(b){};
-    bool operator==(const Texture& other) const { return pos == other.pos && normal == other.normal && texCoord == other.texCoord; }
+struct Texture {
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 texCoord;
+    glm::vec3 tangent;
+    glm::vec3 bitangent;
+};
+
+/*  This is used for .obj loading, and the Face class. At some point I might just use
+    this instead of breaking the data up because its a pain.
+*/
+class Complete {
+   public:
+    // default
+    Complete() : position(), normal(), smoothingGroupId(), color(), texCoord(), tangent(), bitangent(){};
+    // color
+    Complete(const Color &v)
+        : position(v.position), normal(v.normal), smoothingGroupId(), color(v.color), texCoord(), tangent(), bitangent(){};
+    // texture
+    Complete(const Texture &v)
+        : position(v.position),
+          normal(v.normal),
+          smoothingGroupId(),
+          color(),
+          texCoord(v.texCoord),
+          tangent(v.tangent),
+          bitangent(v.bitangent){};
+    // complete
+    Complete(const glm::vec3 &p, const glm::vec3 &n, const uint32_t &sgi, const glm::vec4 &c, const glm::vec2 &tc,
+             const glm::vec3 &t, const glm::vec3 &b)
+        : position(p), normal(n), smoothingGroupId(sgi), color(c), texCoord(tc), tangent(t), bitangent(b){};
+
+    bool operator==(const Complete &other) const {
+        return //
+            position == other.position
+            // && texCoord == other.texCoord
+            && other.smoothingGroupId == smoothingGroupId;
+    }
+
+    inline Color getColorData() const { return {position, normal, color}; }
+    inline Texture getTextureData() const { return {position, normal, texCoord, tangent, bitangent}; }
+
+    // shared
+    glm::vec3 position;
+    glm::vec3 normal;
+    uint32_t smoothingGroupId;
+    // color
+    glm::vec4 color;
+    // texture
     glm::vec2 texCoord;
     glm::vec3 tangent;
     glm::vec3 bitangent;
@@ -54,19 +89,12 @@ std::string getTypeName(TYPE type);
 // **********************
 
 namespace std {
-// Hash function for Color
+// Hash function for Complete
 template <>
-struct hash<Vertex::Color> {
-    size_t operator()(Vertex::Color const& vertex) const {
-        return ((hash<glm::vec3>()(vertex.pos) ^ (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
-               (hash<glm::vec2>()(vertex.color) << 1);
-    }
-};
-// Hash function for Texture
-template <>
-struct hash<Vertex::Texture> {
-    size_t operator()(Vertex::Texture const& vertex) const {
-        return ((hash<glm::vec3>()(vertex.pos) ^ (hash<glm::vec3>()(vertex.normal) << 1)) >> 1) ^
+struct hash<Vertex::Complete> {
+    size_t operator()(Vertex::Complete const &vertex) const {
+        // TODO: wtf is this doing?
+        return (hash<glm::vec3>()(vertex.position) ^ (hash<int>()(vertex.smoothingGroupId) << 1)) ^
                (hash<glm::vec2>()(vertex.texCoord) << 1);
     }
 };

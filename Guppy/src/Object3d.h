@@ -54,18 +54,19 @@ struct Object3d {
     void putOnTop(const BoundingBoxMinMax& boundingBox);
 
    protected:
-    template <typename T>
+    template <class T>
     inline void updateBoundingBox(const std::vector<T>& vs) {
         for (auto& v : vs) updateBoundingBox(v);
     }
 
-    inline void updateBoundingBox(const Vertex::Base v) {
-        if (v.pos.x < boundingBox_[0].x) boundingBox_[0] = v.pos;  // xMin
-        if (v.pos.x > boundingBox_[1].x) boundingBox_[1] = v.pos;  // xMax
-        if (v.pos.y < boundingBox_[2].y) boundingBox_[2] = v.pos;  // yMin
-        if (v.pos.y > boundingBox_[3].y) boundingBox_[3] = v.pos;  // yMax
-        if (v.pos.z < boundingBox_[4].z) boundingBox_[4] = v.pos;  // zMin
-        if (v.pos.z > boundingBox_[5].z) boundingBox_[5] = v.pos;  // zMax
+    template <class T>
+    inline void updateBoundingBox(const T& v) {
+        if (v.position.x < boundingBox_[0].x) boundingBox_[0] = v.position;  // xMin
+        if (v.position.x > boundingBox_[1].x) boundingBox_[1] = v.position;  // xMax
+        if (v.position.y < boundingBox_[2].y) boundingBox_[2] = v.position;  // yMin
+        if (v.position.y > boundingBox_[3].y) boundingBox_[3] = v.position;  // yMax
+        if (v.position.z < boundingBox_[4].z) boundingBox_[4] = v.position;  // zMin
+        if (v.position.z > boundingBox_[5].z) boundingBox_[5] = v.position;  // zMax
     }
 
     BoundingBox getBoundingBox() const;

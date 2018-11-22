@@ -139,9 +139,9 @@ size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<TextureMesh> 
     return offset;
 }
 
-void Scene::removeMesh(Mesh* mesh) {
+void Scene::removeMesh(std::unique_ptr<Mesh>& pMesh) {
     // TODO...
-    return;
+    assert(false);
 }
 
 bool Scene::update(const MyShell::Context& ctx, int frameIndex) {
