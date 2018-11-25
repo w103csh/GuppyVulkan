@@ -9,20 +9,7 @@
 // Mesh
 // **********************
 
-Mesh::Mesh(std::unique_ptr<Material> pMaterial)
-    : Object3d(glm::mat4(1.0f)),
-      status_(STATUS::PENDING),
-      markerName_(),
-      vertexType_(),
-      pipelineType_(),
-      vertex_res_(),
-      index_res_{VK_NULL_HANDLE, VK_NULL_HANDLE},
-      offset_(),
-      modelPath_(),
-      pMaterial_(std::move(pMaterial)),
-      pLdgRes_(LoadingResourceHandler::createLoadingResources()) {}
-
-Mesh::Mesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model)
+Mesh::Mesh(std::unique_ptr<Material> pMaterial, glm::mat4 model)
     : Object3d(model),
       status_(STATUS::PENDING),
       markerName_(),
@@ -31,31 +18,30 @@ Mesh::Mesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4
       vertex_res_(),
       index_res_{VK_NULL_HANDLE, VK_NULL_HANDLE},
       offset_(),
-      modelPath_(modelPath),
       pMaterial_(std::move(pMaterial)),
       pLdgRes_(LoadingResourceHandler::createLoadingResources()) {}
 
-void Mesh::setSceneData(const MyShell::Context& ctx, size_t offset) { offset_ = offset; }
+void Mesh::setSceneData(size_t offset) { offset_ = offset; }
 
 std::future<Mesh*> Mesh::load(const MyShell::Context& ctx, std::function<void(Mesh*)> callback) {
     return std::async(std::launch::async, &Mesh::async_load, this, ctx, callback);
 }
 
 Mesh* Mesh::async_load(const MyShell::Context& ctx, std::function<void(Mesh*)> callback) {
-    if (!modelPath_.empty()) {
-        switch (helpers::getModelFileType(modelPath_)) {
-            case MODEL_FILE_TYPE::OBJ: {
-                FileLoader::loadObj(this);
-            } break;
-            default: { throw std::runtime_error("file type not handled!"); } break;
-        }
-    } else {
-        // Vertices should have been created elsewhere then ...
-        assert(getVertexCount());
-    }
-    status_ = STATUS::VERTICES_LOADED;
+    // if (!modelPath_.empty()) {
+    //    switch (helpers::getModelFileType(modelPath_)) {
+    //        case MODEL_FILE_TYPE::OBJ: {
+    //            FileLoader::loadObj(this);
+    //        } break;
+    //        default: { throw std::runtime_error("file type not handled!"); } break;
+    //    }
+    //} else {
+    //    // Vertices should have been created elsewhere then ...
+    //    assert(getVertexCount());
+    //}
+    // status_ = STATUS::VERTICES_LOADED;
 
-    if (callback != nullptr) callback(this);
+    // if (callback != nullptr) callback(this);
 
     return this;
 }
@@ -193,14 +179,7 @@ void Mesh::destroy(const VkDevice& dev) {
 // ColorMesh
 // **********************
 
-ColorMesh::ColorMesh(std::unique_ptr<Material> pMaterial) : Mesh(std::move(pMaterial)) {
-    vertexType_ = Vertex::TYPE::COLOR;
-    pipelineType_ = PIPELINE_TYPE::TRI_LIST_COLOR;
-    flags_ = FLAGS::POLY;
-}
-
-ColorMesh::ColorMesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model)
-    : Mesh(std::move(pMaterial), modelPath, model) {
+ColorMesh::ColorMesh(std::unique_ptr<Material> pMaterial, glm::mat4 model) : Mesh(std::move(pMaterial), model) {
     vertexType_ = Vertex::TYPE::COLOR;
     pipelineType_ = PIPELINE_TYPE::TRI_LIST_COLOR;
     flags_ = FLAGS::POLY;
@@ -220,14 +199,7 @@ LineMesh::LineMesh() : ColorMesh(std::make_unique<Material>()) {
 // TextureMesh
 // **********************
 
-TextureMesh::TextureMesh(std::unique_ptr<Material> pMaterial) : Mesh(std::move(pMaterial)) {
-    assert(pMaterial_->hasTexture());
-    vertexType_ = Vertex::TYPE::TEXTURE;
-    pipelineType_ = PIPELINE_TYPE::TRI_LIST_TEX;
-};
-
-TextureMesh::TextureMesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model)
-    : Mesh(std::move(pMaterial), modelPath, model) {
+TextureMesh::TextureMesh(std::unique_ptr<Material> pMaterial, glm::mat4 model) : Mesh(std::move(pMaterial), model) {
     assert(pMaterial_->hasTexture());
     vertexType_ = Vertex::TYPE::TEXTURE;
     pipelineType_ = PIPELINE_TYPE::TRI_LIST_TEX;
@@ -245,7 +217,7 @@ void TextureMesh::setSceneData(const MyShell::Context& ctx, size_t offset) {
     vk::assert_success(vkAllocateCommandBuffers(ctx.dev, &alloc_info, secCmds_.data()));
 
     // call override
-    Mesh::setSceneData(ctx, offset);
+    Mesh::setSceneData(offset);
 }
 
 void TextureMesh::prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) {

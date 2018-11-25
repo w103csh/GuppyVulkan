@@ -7,9 +7,13 @@
 #include "Extensions.h"
 #include "Guppy.h"
 #include "InputHandler.h"
+#include "ModelHandler.h"
 #include "LoadingResourceHandler.h"
+#include "Model.h"
+#include "ModelHandler.h"
 #include "PipelineHandler.h"
 #include "Plane.h"
+#include "TextureHandler.h"
 
 namespace {
 
@@ -105,8 +109,9 @@ void Guppy::attach_shell(MyShell& sh) {
     createUniformBuffer();
 
     ShaderHandler::init(sh, settings(), defUBO_.positionalLightData.size(), defUBO_.spotLightData.size());
-
     PipelineHandler::init(ctx, settings());
+    TextureHandler::init(&sh);
+    ModelHandler::init(&sh);
 
     createTextures();
     createScenes();
@@ -150,7 +155,7 @@ void Guppy::detach_shell() {
     LoadingResourceHandler::cleanupResources();
 
     destroyUniformBuffer();
-    destroyTextures();
+    TextureHandler::destroy();
 
     Game::detach_shell();
 }
@@ -351,7 +356,8 @@ void Guppy::on_tick() {
 
     // TODO: Should this be "on_frame"? every other frame? async? ... I have no clue yet.
     LoadingResourceHandler::cleanupResources();
-    updateTextures(dev_);
+    TextureHandler::update();
+    ModelHandler::update();
 
     for (auto& pScene : pScenes_) {
         bool redraw = false;
@@ -679,7 +685,6 @@ void Guppy::destroy_depth_resources() {
     vkDestroyImage(dev_, depth_resource_.image, nullptr);
     vkFreeMemory(dev_, depth_resource_.memory, nullptr);
 }
-
 void Guppy::createLights() {
     // TODO: move the light code into the scene, including ubo data
     positionalLights_.push_back(Light::Positional());
@@ -697,17 +702,26 @@ void Guppy::createLights() {
     spotLights_.back().setExponent(25.0f);
 }
 
+void Guppy::createTextures() {
+    TextureHandler::addTexture(STATUE_TEX_PATH);
+    TextureHandler::addTexture(CHALET_TEX_PATH);
+    TextureHandler::addTexture(VULKAN_TEX_PATH);
+    TextureHandler::addTexture(MED_H_DIFF_TEX_PATH, MED_H_NORM_TEX_PATH, MED_H_SPEC_TEX_PATH);
+    TextureHandler::addTexture(ORANGE_DIFF_TEX_PATH, ORANGE_NORM_TEX_PATH);
+    TextureHandler::addTexture(HARDWOOD_FLOOR_TEX_PATH);
+    TextureHandler::addTexture(WOOD_007_DIFF_TEX_PATH, WOOD_007_NORM_TEX_PATH);
+}
+
 void Guppy::createScenes() {
     auto ctx = shell_->context();
 
-    auto scene1 = std::make_unique<Scene>(ctx, settings_, UBOResource_, textures_);
-    pScenes_.push_back(std::move(scene1));
-    active_scene_index_ = 0;
+    pScenes_.emplace_back(std::make_unique<Scene>(ctx, settings_, UBOResource_, TextureHandler::textures(), pScenes_.size()));
+    active_scene_index_ = pScenes_.back()->getOffset();
 
     // Add defaults
     if (true) {
         // GROUND PLANE
-        auto pMaterial = std::make_unique<Material>(getTextureByPath(HARDWOOD_FLOOR_TEX_PATH));
+        auto pMaterial = std::make_unique<Material>(TextureHandler::getTextureByPath(HARDWOOD_FLOOR_TEX_PATH));
         pMaterial->setRepeat(800.0f);
         glm::mat4 model = helpers::affine(glm::vec3(2000.0f), {}, -M_PI_2_FLT, CARDINAL_X);
         auto pGroundPlane = std::make_unique<TexturePlane>(std::move(pMaterial), model);
@@ -723,26 +737,27 @@ void Guppy::createScenes() {
         // active_scene()->addMesh(shell_->context(), std::move(p1));
 
         // BURNT ORANGE TORUS
-        pMaterial = std::make_unique<Material>();
-        pMaterial->setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
-        pMaterial->setColor({0.8f, 0.3f, 0.0f});
+        Material material;
+        material.setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
+        material.setColor({0.8f, 0.3f, 0.0f});
         model = helpers::affine(glm::vec3(0.07f));
-        auto pTorus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, model);
-        active_scene()->addMesh(shell_->context(), std::move(pTorus), true,
-                                [groundPlane_bbmm](auto pMesh) { pMesh->putOnTop(groundPlane_bbmm); });
+        Model torus(active_scene(), TORUS_MODEL_PATH, material, model, false);
+        // auto pTorus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, model);
+        // active_scene()->addMesh(shell_->context(), std::move(pTorus), true,
+        //                        [groundPlane_bbmm](auto pMesh) { pMesh->putOnTop(groundPlane_bbmm); });
 
-        // ORANGE
-        model = helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f});
-        auto pOrange = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(ORANGE_DIFF_TEX_PATH)),
-                                                     ORANGE_MODEL_PATH, model);
-        active_scene()->addMesh(shell_->context(), std::move(pOrange), true,
-                                [groundPlane_bbmm](auto pMesh) { pMesh->putOnTop(groundPlane_bbmm); });
+        //// ORANGE
+        // model = helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f});
+        // auto pOrange = std::make_unique<TextureMesh>(
+        //    std::make_unique<Material>(TextureHandler::getTextureByPath(ORANGE_DIFF_TEX_PATH)), ORANGE_MODEL_PATH, model);
+        // active_scene()->addMesh(shell_->context(), std::move(pOrange), true,
+        //                        [groundPlane_bbmm](auto pMesh) { pMesh->putOnTop(groundPlane_bbmm); });
 
-        // MEDIEVAL HOUSE
-        model = helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
-        auto pMedeivalHouse = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(MED_H_DIFF_TEX_PATH)),
-                                                            MED_H_MODEL_PATH, model);
-        active_scene()->addMesh(shell_->context(), std::move(pMedeivalHouse));
+        //// MEDIEVAL HOUSE
+        // model = helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
+        // auto pMedeivalHouse = std::make_unique<TextureMesh>(
+        //    std::make_unique<Material>(TextureHandler::getTextureByPath(MED_H_DIFF_TEX_PATH)), MED_H_MODEL_PATH, model);
+        // active_scene()->addMesh(shell_->context(), std::move(pMedeivalHouse));
     }
 
     // Lights
@@ -758,72 +773,4 @@ void Guppy::createScenes() {
     }
 
     assert(active_scene_index_ >= 0);
-}
-
-void Guppy::createTextures() {
-    addTexture(dev_, STATUE_TEX_PATH);
-    addTexture(dev_, CHALET_TEX_PATH);
-    addTexture(dev_, VULKAN_TEX_PATH);
-    addTexture(dev_, MED_H_DIFF_TEX_PATH, MED_H_NORM_TEX_PATH, MED_H_SPEC_TEX_PATH);
-    addTexture(dev_, ORANGE_DIFF_TEX_PATH, ORANGE_NORM_TEX_PATH);
-    addTexture(dev_, HARDWOOD_FLOOR_TEX_PATH);
-    addTexture(dev_, WOOD_007_DIFF_TEX_PATH, WOOD_007_NORM_TEX_PATH);
-}
-
-void Guppy::addTexture(const VkDevice& dev, std::string path, std::string normPath, std::string specPath) {
-    for (auto& tex : textures_) {
-        if (tex->path == path) shell_->log(MyShell::LOG_WARN, "Texture with same path was already loaded.");
-        if (!tex->normPath.empty() && tex->normPath == normPath)
-            shell_->log(MyShell::LOG_WARN, "Texture with same normal path was already loaded.");
-        if (!tex->specPath.empty() && tex->specPath == specPath)
-            shell_->log(MyShell::LOG_WARN, "Texture with same spectral path was already loaded.");
-    }
-    // make texture and a loading future
-    auto pTexture = std::make_shared<Texture::Data>(textures_.size(), path, normPath, specPath);
-    auto fut = Texture::loadTexture(dev, true, pTexture);
-    // move texture and future to the vectors
-    textures_.emplace_back(std::move(pTexture));
-    texFutures_.emplace_back(std::move(fut));
-}
-
-std::shared_ptr<Texture::Data> Guppy::getTextureByPath(std::string path) {
-    auto it = std::find_if(textures_.begin(), textures_.end(), [&path](auto& pTex) { return pTex->path == path; });
-    return it == textures_.end() ? nullptr : (*it);
-}
-
-void Guppy::updateTextures(const VkDevice& dev) {
-    // Check texture futures
-    if (!texFutures_.empty()) {
-        auto itFut = texFutures_.begin();
-
-        while (itFut != texFutures_.end()) {
-            auto& fut = (*itFut);
-
-            // Check the status but don't wait...
-            auto status = fut.wait_for(std::chrono::seconds(0));
-
-            if (status == std::future_status::ready) {
-                // Finish creating the texture
-                auto& tex = fut.get();
-
-                Texture::createTexture(dev, true, tex);
-
-                // Remove the future from the list if all goes well.
-                itFut = texFutures_.erase(itFut);
-
-            } else {
-                ++itFut;
-            }
-        }
-    }
-}
-
-void Guppy::destroyTextures() {
-    for (auto& pTex : textures_) {
-        vkDestroySampler(dev_, pTex->sampler, nullptr);
-        vkDestroyImageView(dev_, pTex->view, nullptr);
-        vkDestroyImage(dev_, pTex->image, nullptr);
-        vkFreeMemory(dev_, pTex->memory, nullptr);
-    }
-    textures_.clear();
 }

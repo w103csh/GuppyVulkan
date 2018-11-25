@@ -21,8 +21,7 @@
 
 class Mesh : public Object3d {
    public:
-    Mesh(std::unique_ptr<Material> pMaterial);
-    Mesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model = glm::mat4(1.0f));
+    Mesh(std::unique_ptr<Material> pMaterial, glm::mat4 model = glm::mat4(1.0f));
     /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTRs OF THIS CLASS.
         IF THIS IS REMOVED THE DESTRUCTOR HERE WILL BE CALLED INSTEAD OF THE DERIVED DESTRUCTOR.
         IT MIGHT JUST BE EASIER/SMARTER TO GET RID OF POLYMORPHISM AND DROP THE POINTERS. */
@@ -30,7 +29,6 @@ class Mesh : public Object3d {
 
     // GETTERS
     inline std::string getMarkerName() const { return markerName_; }
-    inline std::string getModelPath() const { return modelPath_; }
     inline size_t getOffset() const { return offset_; }
     inline STATUS getStatus() const { return status_; }
     inline PIPELINE_TYPE getTopologyType() const { return pipelineType_; }
@@ -43,13 +41,13 @@ class Mesh : public Object3d {
         status_ = STATUS::REDRAW;
     }
     inline void setStatusReady() {
-        // Only allow update to ready if a redraw is requested.
-        assert(status_ == STATUS::REDRAW);
+        //// Only allow update to ready if a redraw is requested.
+        // assert(status_ == STATUS::REDRAW);
         status_ = STATUS::READY;
     }
 
     // INIT
-    virtual void setSceneData(const MyShell::Context& ctx, size_t offset);
+    void setSceneData(size_t offset);
 
     // LOADING
     virtual std::future<Mesh*> load(const MyShell::Context& ctx, std::function<void(Mesh*)> callbacak = nullptr);
@@ -95,7 +93,6 @@ class Mesh : public Object3d {
     }
 
     STATUS status_;
-    std::string modelPath_;
     std::string markerName_;
     Vertex::TYPE vertexType_;
     PIPELINE_TYPE pipelineType_;
@@ -117,8 +114,7 @@ class Mesh : public Object3d {
 
 class ColorMesh : public Mesh {
    public:
-    ColorMesh(std::unique_ptr<Material> pMaterial);
-    ColorMesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model = glm::mat4(1.0f));
+    ColorMesh(std::unique_ptr<Material> pMaterial, glm::mat4 model = glm::mat4(1.0f));
 
     typedef enum FLAGS {
         POLY = 0x00000001,
@@ -167,11 +163,10 @@ class LineMesh : public ColorMesh {
 
 class TextureMesh : public Mesh {
    public:
-    TextureMesh(std::unique_ptr<Material> pMaterial);
-    TextureMesh(std::unique_ptr<Material> pMaterial, std::string modelPath, glm::mat4 model = glm::mat4(1.0f));
+    TextureMesh(std::unique_ptr<Material> pMaterial, glm::mat4 model = glm::mat4(1.0f));
 
     // INIT
-    void setSceneData(const MyShell::Context& ctx, size_t offset) override;
+    void setSceneData(const MyShell::Context& ctx, size_t offset);
 
     void prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) override;
     void drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,

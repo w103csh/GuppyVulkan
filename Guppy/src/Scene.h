@@ -15,11 +15,14 @@ class Scene {
    public:
     Scene() = delete;
     Scene(const MyShell::Context &ctx, const Game::Settings &settings, const UniformBufferResources &uboResource,
-          std::vector<std::shared_ptr<Texture::Data>> &pTextures);
+          const std::vector<std::shared_ptr<Texture::Data>> &pTextures, size_t offset);
 
     std::unique_ptr<TextureMesh> &getTextureMesh(size_t index) { return texMeshes_[index]; }
 
+    inline size_t getOffset() { return offset_; }
+
     // TODO: there is too much redundancy here...
+    size_t moveMesh(const MyShell::Context &ctx, std::unique_ptr<ColorMesh> pMesh);
     size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<ColorMesh> pMesh, bool async = true,
                    std::function<void(Mesh *)> callback = nullptr);
     size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<LineMesh> pMesh, bool async = true,
@@ -59,6 +62,8 @@ class Scene {
     void updatePipeline(PIPELINE_TYPE type);
 
    private:
+    size_t offset_;
+
     // Descriptor
     void updateDescriptorResources(const MyShell::Context &ctx, std::unique_ptr<TextureMesh> &pMesh);
     inline bool isNewTexture(std::unique_ptr<TextureMesh> &pMesh) const {
@@ -93,7 +98,7 @@ class Scene {
 
     // Uniform buffer
     void createDynamicTexUniformBuffer(const MyShell::Context &ctx, const Game::Settings &settings,
-                                       std::vector<std::shared_ptr<Texture::Data>> &textures, std::string markerName = "");
+                                       const std::vector<std::shared_ptr<Texture::Data>> &textures, std::string markerName = "");
     void destroyUniforms(const VkDevice &dev);
     std::shared_ptr<UniformBufferResources> pDynUBOResource_;
 };

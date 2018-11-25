@@ -34,6 +34,8 @@ set(SOURCE
 	Mesh.h
     Model.cpp
     Model.h
+    ModelHandler.cpp
+    ModelHandler.h
     MyShell.cpp
     MyShell.h
     Object3d.cpp
@@ -51,6 +53,8 @@ set(SOURCE
     Singleton.h
     Texture.cpp
     Texture.h
+    TextureHandler.cpp
+    TextureHandler.h
     Vertex.cpp
     Vertex.h
     )

@@ -12,7 +12,7 @@ class MyShell;
 
 class InputHandler : Singleton {
    public:
-    static void init(MyShell* ctx);
+    static void init(MyShell* sh);
 
     enum class INPUT_TYPE {
         UP,

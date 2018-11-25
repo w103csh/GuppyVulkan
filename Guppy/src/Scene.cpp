@@ -12,7 +12,8 @@ struct UBOTag {
 }  // namespace
 
 Scene::Scene(const MyShell::Context& ctx, const Game::Settings& settings, const UniformBufferResources& uboResource,
-             std::vector<std::shared_ptr<Texture::Data>>& textures) {
+             const std::vector<std::shared_ptr<Texture::Data>>& textures, size_t offset)
+    : offset_(offset) {
     createDynamicTexUniformBuffer(ctx, settings, textures);
     pDescResources_ = PipelineHandler::createDescriptorResources({uboResource.info}, {pDynUBOResource_->info}, 1 /* !!! hardcode */,
                                                                  textures.size());
@@ -21,7 +22,7 @@ Scene::Scene(const MyShell::Context& ctx, const Game::Settings& settings, const 
 }
 
 void Scene::createDynamicTexUniformBuffer(const MyShell::Context& ctx, const Game::Settings& settings,
-                                          std::vector<std::shared_ptr<Texture::Data>>& textures, std::string markerName) {
+                                          const std::vector<std::shared_ptr<Texture::Data>>& textures, std::string markerName) {
     const auto& limits = ctx.physical_dev_props[ctx.physical_dev_index].properties.limits;
 
     // this is just a single flag for now...
@@ -62,11 +63,23 @@ void Scene::createDynamicTexUniformBuffer(const MyShell::Context& ctx, const Gam
     }
 }
 
+size_t Scene::moveMesh(const MyShell::Context& ctx, std::unique_ptr<ColorMesh> pMesh) {
+    assert(pMesh->getStatus() == STATUS::READY);
+
+    auto offset = colorMeshes_.size();
+    pMesh->setSceneData(offset);
+
+    colorMeshes_.push_back(std::move(pMesh));
+    colorMeshes_.back()->prepare(ctx.dev, pDescResources_);
+
+    return offset;
+}
+
 size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<ColorMesh> pMesh, bool async,
                       std::function<void(Mesh*)> callback) {
     auto offset = colorMeshes_.size();
 
-    pMesh->setSceneData(ctx, offset);
+    pMesh->setSceneData(offset);
     colorMeshes_.push_back(std::move(pMesh));
 
     if (colorMeshes_.back()->getStatus() == STATUS::READY) {
@@ -89,7 +102,7 @@ size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<LineMesh> pMe
                       std::function<void(Mesh*)> callback) {
     auto offset = lineMeshes_.size();
 
-    pMesh->setSceneData(ctx, offset);
+    pMesh->setSceneData(offset);
     lineMeshes_.push_back(std::move(pMesh));
 
     if (lineMeshes_.back()->getStatus() == STATUS::READY) {

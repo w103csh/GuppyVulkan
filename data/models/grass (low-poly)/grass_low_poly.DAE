@@ -1,0 +1,210 @@
+<?xml version="1.0" encoding="utf-8"?>
+<COLLADA xmlns="http://www.collada.org/2005/11/COLLADASchema" version="1.4.1">
+  <asset>
+    <contributor>
+      <author></author>
+      <authoring_tool>FBX COLLADA exporter</authoring_tool>
+      <comments></comments>
+    </contributor>
+    <created>2012-03-21T00:42:40Z</created>
+    <keywords></keywords>
+    <modified>2012-03-21T00:42:40Z</modified>
+    <revision></revision>
+    <subject></subject>
+    <title></title>
+    <unit meter="0.010000" name="centimeter"></unit>
+    <up_axis>Y_UP</up_axis>
+  </asset>
+  <library_images>
+    <image id="Map #180-image" name="Map #180">
+      <init_from>file://L:\TURBOSQUID\grass (low-poly)\grass_low_poly.fbm\low_poly_grass2.png</init_from>
+    </image>
+    <image id="Map #179-image" name="Map #179">
+      <init_from>file://L:\TURBOSQUID\grass (low-poly)\grass_low_poly.fbm\low_poly_grass_opacity.png</init_from>
+    </image>
+  </library_images>
+  <library_materials>
+    <material id="grass_mat" name="grass_mat">
+      <instance_effect url="#grass_mat-fx"/>
+    </material>
+  </library_materials>
+  <library_effects>
+    <effect id="grass_mat-fx" name="grass_mat">
+      <profile_COMMON>
+        <technique sid="standard">
+          <phong>
+            <emission>
+              <color sid="emission">0.000000  0.000000 0.000000 1.000000</color>
+            </emission>
+            <ambient>
+              <color sid="ambient">0.294000  0.267000 0.149000 1.000000</color>
+            </ambient>
+            <diffuse>
+              <texture texture="Map #180-image" texcoord="CHANNEL0">
+                <extra>
+                  <technique profile="MAYA">
+                    <wrapU sid="wrapU0">TRUE</wrapU>
+                    <wrapV sid="wrapV0">TRUE</wrapV>
+                    <blend_mode>ADD</blend_mode>
+                  </technique>
+                </extra>
+              </texture>
+            </diffuse>
+            <specular>
+              <color sid="specular">0.000000  0.000000 0.000000 1.000000</color>
+            </specular>
+            <shininess>
+              <float sid="shininess">2.000000</float>
+            </shininess>
+            <reflective>
+              <color sid="reflective">0.000000  0.000000 0.000000 1.000000</color>
+            </reflective>
+            <reflectivity>
+              <float sid="reflectivity">1.000000</float>
+            </reflectivity>
+            <transparent opaque="RGB_ZERO">
+              <texture texture="Map #179-image" texcoord="CHANNEL0">
+                <extra>
+                  <technique profile="MAYA">
+                    <wrapU sid="wrapU0">TRUE</wrapU>
+                    <wrapV sid="wrapV0">TRUE</wrapV>
+                    <blend_mode>ADD</blend_mode>
+                  </technique>
+                </extra>
+              </texture>
+            </transparent>
+            <transparency>
+              <float sid="transparency">0.000000</float>
+            </transparency>
+          </phong>
+        </technique>
+      </profile_COMMON>
+    </effect>
+  </library_effects>
+  <library_geometries>
+    <geometry id="grass_2_0-lib" name="grass_2_0Mesh">
+      <mesh>
+        <source id="grass_2_0-POSITION">
+          <float_array id="grass_2_0-POSITION-array" count="33">
+-1.500000 -0.037186 -0.000000
+1.500000 -0.037186 -0.000000
+-1.500000 2.186170 -0.000000
+1.500000 2.186170 0.000000
+-0.890934 -0.037186 -1.206747
+0.890934 -0.037186 1.206747
+-0.890934 2.186170 -1.206747
+0.890933 2.186170 1.206747
+-0.000000 -0.037186 -0.000000
+-0.000000 2.962814 -0.000000
+-0.000000 -0.037186 -0.000000
+</float_array>
+          <technique_common>
+            <accessor source="#grass_2_0-POSITION-array" count="11" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="grass_2_0-Normal0">
+          <float_array id="grass_2_0-Normal0-array" count="72">
+-0.000000 0.000000 1.000000
+0.000000 0.000000 1.000000
+-0.450580 -0.000000 0.892736
+-0.450580 -0.000000 0.892736
+-0.000000 0.000000 1.000000
+-0.000000 0.000000 1.000000
+-0.804498 -0.000000 0.593956
+-0.804498 0.000000 0.593956
+-0.450580 -0.000000 0.892736
+-0.450580 -0.000000 0.892736
+-0.804498 -0.000000 0.593956
+-0.804498 -0.000000 0.593956
+-0.000000 -0.000000 1.000000
+-0.000000 -0.000000 1.000000
+-0.450580 -0.000000 0.892736
+-0.450580 -0.000000 0.892736
+0.000000 0.000000 1.000000
+-0.000000 -0.000000 1.000000
+-0.804498 -0.000000 0.593956
+-0.804498 -0.000000 0.593955
+-0.450580 -0.000000 0.892736
+-0.450580 -0.000000 0.892736
+-0.804498 0.000000 0.593956
+-0.804498 -0.000000 0.593956
+</float_array>
+          <technique_common>
+            <accessor source="#grass_2_0-Normal0-array" count="24" stride="3">
+              <param name="X" type="float"/>
+              <param name="Y" type="float"/>
+              <param name="Z" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <source id="grass_2_0-UV0">
+          <float_array id="grass_2_0-UV0-array" count="24">
+0.002981 0.003070
+0.995659 0.003070
+0.002982 0.992559
+0.995659 0.992558
+0.004030 0.004071
+0.996006 0.004071
+0.004030 0.993559
+0.996007 0.993559
+0.499320 0.992558
+0.499320 0.003070
+0.500018 0.993559
+0.500018 0.004071
+</float_array>
+          <technique_common>
+            <accessor source="#grass_2_0-UV0-array" count="12" stride="2">
+              <param name="S" type="float"/>
+              <param name="T" type="float"/>
+            </accessor>
+          </technique_common>
+        </source>
+        <vertices id="grass_2_0-VERTEX">
+          <input semantic="POSITION" source="#grass_2_0-POSITION"/>
+        </vertices>
+        <triangles count="8" material="grass_mat">
+          <input semantic="VERTEX" offset="0" source="#grass_2_0-VERTEX"/>
+          <input semantic="NORMAL" offset="1" source="#grass_2_0-Normal0"/>
+          <input semantic="TEXCOORD" offset="2" set="0" source="#grass_2_0-UV0"/>
+          <p> 0 0 0 8 1 9 9 2 8 9 3 8 2 4 2 0 5 0 4 6 4 10 7 11 9 8 10 9 9 10 6 10 6 4 11 4 1 12 1 3 13 3 9 14 8 9 15 8 8 16 9 1 17 1 5 18 5 7 19 7 9 20 10 9 21 10 10 22 11 5 23 5</p>
+        </triangles>
+      </mesh>
+    </geometry>
+  </library_geometries>
+  <library_visual_scenes>
+    <visual_scene id="" name="">
+      <node name="grass_2_0" id="grass_2_0" sid="grass_2_0">
+        <matrix sid="matrix">2.276701 0.000001 3.083734 0.000000 -0.000000 3.833117 -0.000001 0.000000 -3.083734 0.000000 2.276701 0.000000 0.000000 0.000000 0.000000 1.000000</matrix>
+        <instance_geometry url="#grass_2_0-lib">
+          <bind_material>
+            <technique_common>
+              <instance_material symbol="grass_mat" target="#grass_mat"/>
+            </technique_common>
+          </bind_material>
+        </instance_geometry>
+        <extra>
+          <technique profile="FCOLLADA">
+            <visibility>1.000000</visibility>
+          </technique>
+        </extra>
+      </node>
+      <extra>
+        <technique profile="MAX3D">
+          <frame_rate>30.000000</frame_rate>
+        </technique>
+        <technique profile="FCOLLADA">
+          <start_time>0.000000</start_time>
+          <end_time>3.333333</end_time>
+        </technique>
+      </extra>
+    </visual_scene>
+  </library_visual_scenes>
+  <scene>
+    <instance_visual_scene url="#"></instance_visual_scene>
+  </scene>
+</COLLADA>
+

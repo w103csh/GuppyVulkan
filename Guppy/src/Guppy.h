@@ -110,13 +110,7 @@ class Guppy : public Game {
     void destroy_depth_resources();
 
     // Scene
-    inline const std::unique_ptr<Scene>& active_scene() const { return pScenes_[active_scene_index_]; }
-
-    // textures
-    void addTexture(const VkDevice& dev, std::string path, std::string normPath = "", std::string specPath = "");
-    std::shared_ptr<Texture::Data> getTextureByPath(std::string path);
-    void updateTextures(const VkDevice& dev);
-    float test = 1.0;
+    inline std::unique_ptr<Scene>& active_scene() { return pScenes_[active_scene_index_]; }
 
     // uniform buffer
     void updateUniformBuffer();
@@ -141,10 +135,6 @@ class Guppy : public Game {
     // This should go onto the scene dynamic buffer if it stays like this.
     int active_scene_index_;
     std::vector<std::unique_ptr<Scene>> pScenes_;
-
-    // textures
-    std::vector<std::shared_ptr<Texture::Data>> textures_;
-    std::vector<std::future<std::shared_ptr<Texture::Data>>> texFutures_;
 };
 
 #endif  // !GUPPY_H

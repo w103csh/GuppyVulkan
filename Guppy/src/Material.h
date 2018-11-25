@@ -3,7 +3,8 @@
 #define MATERIAL_H
 
 #include <functional>
-#include <glm\glm.hpp>
+#include <glm/glm.hpp>
+#include <tiny_obj_loader.h>
 
 #include "Texture.h"
 
@@ -84,6 +85,12 @@ class Material {
     // inline void setXRepeat(float r) { xRepeat_ = r; }
     // inline void setYRepeat(float r) { yRepeat_ = r; }
     inline void setShininess(float s) { shininess_ = s; }
+    inline void setMaterialData(const tinyobj::material_t &m) {
+        shininess_ = m.shininess;
+        ambientCoeff_ = {m.ambient[0], m.ambient[1], m.ambient[2]};
+        diffuseCoeff_ = {m.diffuse[0], m.diffuse[1], m.diffuse[2]};
+        specularCoeff_ = {m.specular[0], m.specular[1], m.specular[2]};
+    }
 
     inline bool hasTexture() const { return pTexture_.get() != nullptr; }
 
