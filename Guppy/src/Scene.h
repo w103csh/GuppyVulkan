@@ -17,6 +17,8 @@ class Scene {
     Scene(const MyShell::Context &ctx, const Game::Settings &settings, const UniformBufferResources &uboResource,
           std::vector<std::shared_ptr<Texture::Data>> &pTextures);
 
+    std::unique_ptr<TextureMesh> &getTextureMesh(size_t index) { return texMeshes_[index]; }
+
     // TODO: there is too much redundancy here...
     size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<ColorMesh> pMesh, bool async = true,
                    std::function<void(Mesh *)> callback = nullptr);

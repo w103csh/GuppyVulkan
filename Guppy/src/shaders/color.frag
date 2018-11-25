@@ -3,7 +3,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 // DECLARATIONS
-vec3 getColor(uint shininess);
+vec3 getColor(float shininess);
 
 // MATERIAL FLAGS
 const uint PER_MATERIAL_COLOR   = 0x00000001u;
@@ -16,7 +16,7 @@ struct Material {
     vec3 Kd;            // Diffuse reflectivity
     float opacity;      // Overall opacity
     vec3 Ks;            // Specular reflectivity
-    uint shininess;     // Specular shininess factor
+    float shininess;     // Specular shininess factor
 	float xRepeat;		// Texture xRepeat
 	float yRepeat;		// Texture yRepeat
 };
@@ -32,6 +32,9 @@ layout(push_constant) uniform PushBlock {
 } pushConstantsBlock;
 // OUT
 layout(location = 0) out vec4 outColor;
+
+vec3 getDirToPos(vec3 position) { return normalize(position - fragPos); }
+vec3 getDir(vec3 direction) { return normalize(direction); }
 
 vec3 n, Ka, Kd, Ks;
 
@@ -54,10 +57,6 @@ void main() {
 
     // Normal
     n = fragNormal;
-    
-
-
-
 
     outColor = vec4(
         getColor(pushConstantsBlock.material.shininess),

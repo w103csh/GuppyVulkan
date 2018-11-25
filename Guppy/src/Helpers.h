@@ -13,10 +13,14 @@
 #include <type_traits>
 #include <vector>
 #include <vulkan/vulkan.h>
+#include <unordered_map>
 
 #include "Constants.h"
 // This is here for convenience
 #include "Extensions.h"
+
+class Face;  // indexVertices
+class Mesh;  // indexVertices
 
 enum class MODEL_FILE_TYPE {
     //
@@ -30,6 +34,7 @@ enum class STATUS {
     READY,
     VERTICES_LOADED,
     PENDING_TEXTURE,
+    REDRAW,
 };
 
 enum class SHADER_TYPE {
@@ -167,6 +172,8 @@ static glm::mat4 affine(glm::vec3 scale = glm::vec3(1.0f), glm::vec3 translate =
     return glm::translate(glm::mat4(1.0f), translate) * glm::rotate(glm::mat4(1.0f), angle, rotationAxis) *
            glm::scale(model, scale);
 }
+
+void indexVertices(Face &face, std::unordered_map<Vertex::Complete, size_t> &uniqueVertices, bool doTangentSpace, Mesh *pMesh);
 
 static std::string makeVec3String(std::string prefix, glm::vec3 v) {
     std::stringstream ss;

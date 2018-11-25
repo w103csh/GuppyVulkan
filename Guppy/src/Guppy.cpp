@@ -196,48 +196,74 @@ void Guppy::on_key(KEY key) {
             // sim_fade_ = !sim_fade_;
             break;
         case KEY::KEY_1: {
-            FlagBits flags = positionalLights_[0].getFlags();
-            flags ^= Light::FLAGS::SHOW;
-            positionalLights_[0].setFlags(flags);
+            if (positionalLights_.size() > 1) {
+                // light
+                auto& light = positionalLights_[1];
+                light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_X * -2.0f)));
+                //// mesh
+                // auto& pMesh = active_scene()->getTextureMesh(1);
+                // pMesh->transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_X * -2.0f)));
+                // pMesh->setStatusRedraw();
+            }
+            // FlagBits flags = positionalLights_[0].getFlags();
+            // flags ^= Light::FLAGS::SHOW;
+            // positionalLights_[0].setFlags(flags);
         } break;
         case KEY::KEY_2: {
-            FlagBits flags = positionalLights_[1].getFlags();
-            flags ^= Light::FLAGS::SHOW;
-            positionalLights_[1].setFlags(flags);
+            if (positionalLights_.size() > 1) {
+                auto& light = positionalLights_[1];
+                light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_X * 2.0f)));
+            }
+            // FlagBits flags = positionalLights_[1].getFlags();
+            // flags ^= Light::FLAGS::SHOW;
+            // positionalLights_[1].setFlags(flags);
         } break;
         case KEY::KEY_3: {
-            if (false) {
-                auto tm1 =
-                    std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(CHALET_TEX_PATH)), CHALET_MODEL_PATH);
-                active_scene()->addMesh(shell_->context(), std::move(tm1));
-            } else if (false) {
-                auto model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
-                             glm::scale(glm::mat4(1.0f), glm::vec3(0.01f));
-                auto tm1 = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(MED_H_DIFF_TEX_PATH)),
-                                                         MED_H_MODEL_PATH, model);
-                active_scene()->addMesh(shell_->context(), std::move(tm1));
-            } else if (false) {
-                auto sphereBot = std::make_unique<ColorMesh>(std::make_unique<Material>(), SPHERE_MODEL_PATH);
-                active_scene()->addMesh(shell_->context(), std::move(sphereBot));
-                auto sphereTop =
-                    std::make_unique<ColorMesh>(std::make_unique<Material>(), SPHERE_MODEL_PATH,
-                                                glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
-                active_scene()->addMesh(shell_->context(), std::move(sphereTop));
-            } else if (true) {
-                auto p2 = std::make_unique<TexturePlane>(getTextureByPath(HARDWOOD_FLOOR_TEX_PATH), glm::mat4(1.0f), true);
-                active_scene()->addMesh(shell_->context(), std::move(p2));
+            if (positionalLights_.size() > 1) {
+                auto& light = positionalLights_[1];
+                light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Z * 2.0f)));
             }
+            // if (false) {
+            //    auto tm1 =
+            //        std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(CHALET_TEX_PATH)),
+            //        CHALET_MODEL_PATH);
+            //    active_scene()->addMesh(shell_->context(), std::move(tm1));
+            //} else if (false) {
+            //    auto model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
+            //                 glm::scale(glm::mat4(1.0f), glm::vec3(0.01f));
+            //    auto tm1 = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(MED_H_DIFF_TEX_PATH)),
+            //                                             MED_H_MODEL_PATH, model);
+            //    active_scene()->addMesh(shell_->context(), std::move(tm1));
+            //} else if (false) {
+            //    auto sphereBot = std::make_unique<ColorMesh>(std::make_unique<Material>(), SPHERE_MODEL_PATH);
+            //    active_scene()->addMesh(shell_->context(), std::move(sphereBot));
+            //    auto sphereTop =
+            //        std::make_unique<ColorMesh>(std::make_unique<Material>(), SPHERE_MODEL_PATH,
+            //                                    glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+            //    active_scene()->addMesh(shell_->context(), std::move(sphereTop));
+            //} else if (true) {
+            //    auto p2 = std::make_unique<TexturePlane>(getTextureByPath(HARDWOOD_FLOOR_TEX_PATH), glm::mat4(1.0f), true);
+            //    active_scene()->addMesh(shell_->context(), std::move(p2));
+            //}
         } break;
         case KEY::KEY_4: {
-            auto p1 = std::make_unique<ColorPlane>(std::make_unique<Material>(Material::PER_VERTEX_COLOR));
-            active_scene()->addMesh(shell_->context(), std::move(p1));
+            if (positionalLights_.size() > 1) {
+                auto& light = positionalLights_[1];
+                light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Z * -2.0f)));
+            }
+            // auto p1 = std::make_unique<ColorPlane>(std::make_unique<Material>(Material::PER_VERTEX_COLOR));
+            // active_scene()->addMesh(shell_->context(), std::move(p1));
         } break;
         case KEY::KEY_5: {
-            for (auto& light : positionalLights_) {
-                FlagBits flags = light.getFlags();
-                flags ^= Light::FLAGS::SHOW;
-                light.setFlags(flags);
+            if (positionalLights_.size() > 1) {
+                auto& light = positionalLights_[1];
+                light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Y * 2.0f)));
             }
+            // for (auto& light : positionalLights_) {
+            //    FlagBits flags = light.getFlags();
+            //    flags ^= Light::FLAGS::SHOW;
+            //    light.setFlags(flags);
+            //}
             // if (test < 3) {
             //    addTexture(dev_, STATUE_TEXTURE_PATH);
             //}
@@ -252,10 +278,15 @@ void Guppy::on_key(KEY key) {
             // active_scene()->addMesh(shell_->context(), std::move(p1), frame_data_index_);
         } break;
         case KEY::KEY_6: {
-            auto model =
-                helpers::affine(glm::vec3(0.5f), glm::vec3(0.0f, ++test, 0.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-            auto p1 = std::make_unique<TexturePlane>(getTextureByPath(VULKAN_TEX_PATH), model, true);
-            active_scene()->addMesh(shell_->context(), std::move(p1));
+            if (positionalLights_.size() > 1) {
+                auto& light = positionalLights_[1];
+                light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Y * -2.0f)));
+            }
+            // auto model =
+            //    helpers::affine(glm::vec3(0.5f), glm::vec3(0.0f, ++test, 0.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f,
+            //    0.0f));
+            // auto p1 = std::make_unique<TexturePlane>(getTextureByPath(VULKAN_TEX_PATH), model, true);
+            // active_scene()->addMesh(shell_->context(), std::move(p1));
         } break;
         case KEY::KEY_7: {
             if (spotLights_.size() > 0) {
@@ -687,6 +718,10 @@ void Guppy::createScenes() {
         std::unique_ptr<LineMesh> pDefaultAxes = std::make_unique<Axes>(glm::mat4(1.0f), AXES_MAX_SIZE, true);
         active_scene()->addMesh(shell_->context(), std::move(pDefaultAxes));
 
+        // model = helpers::affine(glm::vec3(2.0f), (CARDINAL_Y * 0.1f), -M_PI_2_FLT, CARDINAL_X);
+        // auto p1 = std::make_unique<TexturePlane>(getTextureByPath(WOOD_007_DIFF_TEX_PATH), model, true);
+        // active_scene()->addMesh(shell_->context(), std::move(p1));
+
         // BURNT ORANGE TORUS
         pMaterial = std::make_unique<Material>();
         pMaterial->setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
@@ -732,6 +767,7 @@ void Guppy::createTextures() {
     addTexture(dev_, MED_H_DIFF_TEX_PATH, MED_H_NORM_TEX_PATH, MED_H_SPEC_TEX_PATH);
     addTexture(dev_, ORANGE_DIFF_TEX_PATH, ORANGE_NORM_TEX_PATH);
     addTexture(dev_, HARDWOOD_FLOOR_TEX_PATH);
+    addTexture(dev_, WOOD_007_DIFF_TEX_PATH, WOOD_007_NORM_TEX_PATH);
 }
 
 void Guppy::addTexture(const VkDevice& dev, std::string path, std::string normPath, std::string specPath) {

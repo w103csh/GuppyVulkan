@@ -25,9 +25,9 @@ const bool ENABLE_VALIDATION_LAYERS = false;
 const bool ENABLE_VALIDATION_LAYERS = true;
 #endif
 
-#define M_PI_FLT static_cast<float>(M_PI)       // pi
-#define M_PI_2_FLT static_cast<float>(M_PI_2)   // pi/2
-#define M_PI_4_FLT static_cast<float>(M_PI_4)   // pi/4
+#define M_PI_FLT static_cast<float>(M_PI)      // pi
+#define M_PI_2_FLT static_cast<float>(M_PI_2)  // pi/2
+#define M_PI_4_FLT static_cast<float>(M_PI_4)  // pi/4
 
 /* Number of viewports and number of scissors have to be the same */
 /* at pipeline creation and in any call to set them dynamically   */
@@ -98,3 +98,7 @@ const std::string IMG_PATH = DATA_PATH + "images\\";
 const std::string STATUE_TEX_PATH = IMG_PATH + "texture.jpg";
 const std::string VULKAN_TEX_PATH = IMG_PATH + "vulkan.png";
 const std::string HARDWOOD_FLOOR_TEX_PATH = IMG_PATH + "hardwood_floor.jpg";
+// wood
+const std::string WOOD_PATH = IMG_PATH + "Wood_007\\";
+const std::string WOOD_007_DIFF_TEX_PATH = WOOD_PATH + "Wood_007_COLOR.jpg";
+const std::string WOOD_007_NORM_TEX_PATH = WOOD_PATH + "Wood_007_NORM.jpg";

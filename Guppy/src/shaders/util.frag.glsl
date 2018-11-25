@@ -7,6 +7,12 @@
 #define NUM_SPOT_LIGHTS 0
 #define HAS_SPOT_LIGHTS NUM_SPOT_LIGHTS > 0
 
+// DECLARATIONS
+// Gets the direction from the fragment to the position.
+vec3 getDirToPos(vec3 position);
+// Transform and normalize a direction to local coordinate space.
+vec3 getDir(vec3 direction);
+
 #if HAS_POS_LIGHTS || HAS_SPOT_LIGHTS
 // LIGHT flags
 const uint LIGHT_SHOW    = 0x00000001u;
@@ -44,8 +50,6 @@ struct Camera {
 	mat4 view;
 };
 
-// IN
-layout(location = 0) in vec3 fragPos;
 // UNIFORM buffer
 layout(binding = 0) uniform DefaultUniformBuffer {
 	Camera camera;
@@ -65,15 +69,13 @@ vec3 toonShade(float sDotN) {
 }
 
 #if HAS_POS_LIGHTS
-vec3 phongModel(PositionalLight light, uint shininess, uint lightCount) {
+vec3 phongModel(PositionalLight light, float shininess, uint lightCount) {
     vec3 ambient = pow(light.La, vec3(lightCount)) * Ka;
     vec3 diff = vec3(0.0), spec = vec3(0.0);
 
-    // return n;
-
     // "s" is the direction to the light
-    vec3 s = normalize(vec3(light.position) - fragPos);
-    float sDotN = max(dot(s,n), 0.0);
+    vec3 s = getDirToPos(light.position);
+    float sDotN = max(dot(s, n), 0.0);
 
     // Skip the rest if toon shading
     if ((ubo.shaderFlags & SHADER_TOON_SHADE) > 0) {
@@ -88,12 +90,12 @@ vec3 phongModel(PositionalLight light, uint shininess, uint lightCount) {
     // Only calculate specular if the cosine is positive
     if(sDotN > 0.0) {
         // "v" is the direction to the camera
-        vec3 v = normalize(-fragPos);
+        vec3 v = getDirToPos(vec3(0.0));
         // "h" is the halfway vector between "v" & "s" (Blinn)
         vec3 h = normalize(v + s);
 
         spec = Ks *
-                pow(max(dot(h,n), 0.0), shininess);
+                pow(max(dot(h, n), 0.0), shininess);
     }
 
     return ambient + light.L * (diff + spec);
@@ -101,12 +103,12 @@ vec3 phongModel(PositionalLight light, uint shininess, uint lightCount) {
 #endif
 
 #if HAS_SPOT_LIGHTS
-vec3 blinnPhongSpot(SpotLight light, uint shininess, uint lightCount) {
+vec3 blinnPhongSpot(SpotLight light, float shininess, uint lightCount) {
     vec3 ambient = pow(light.La, vec3(lightCount)) * Ka;
     vec3 diff = vec3(0.0), spec = vec3(0.0);
 
-    vec3 s = normalize(vec3(light.position) - fragPos);
-    float cosAng = dot(-s, light.direction);
+    vec3 s = getDirToPos(light.position);
+    float cosAng = dot(-s, getDir(light.direction));
     float angle = acos(cosAng);
 
     float spotScale = 0.0;
@@ -115,10 +117,10 @@ vec3 blinnPhongSpot(SpotLight light, uint shininess, uint lightCount) {
         float sDotN = max(dot(s,n), 0.0);
         diff = Kd * sDotN;
         if (sDotN > 0.0) {
-            vec3 v = normalize(-fragPos);
+            vec3 v = getDirToPos(vec3(0.0));
             vec3 h = normalize(v + s);
             spec = Ks *
-                pow(max(dot(h,n), 0.0), shininess);
+                pow(max(dot(h, n), 0.0), shininess);
         }
     }
     
@@ -126,7 +128,7 @@ vec3 blinnPhongSpot(SpotLight light, uint shininess, uint lightCount) {
 }
 #endif
 
-vec3 getColor(uint shininess) {
+vec3 getColor(float shininess) {
     vec3 color = vec3(0.0);
     uint lightCount = 0;
 

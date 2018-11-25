@@ -1,25 +1,13 @@
-name,   // name
-1280,   // initial_width
-1024,   // initial_height
-1,      // queue_count
-3,      // back_buffer_count
-30,     // ticks_per_second
-true,   // vsync
-true,   // animate
-false,  // validate
-false,  // validate_verbose
-false,  // no_tick
-false,  // no_render
-false,  // no_present
-true,   // try_sampler_anisotropy
-true,   // try_sample_rate_shading
-true,   // enable_sample_shading
-true,   // include_color
-true,   // include_depth
-false,  // enable_double_clicks
-false,  // enable_debug_markers
-true,   // enable_directory_listener TODO: make this default to false
-false   // assert_on_recompile_
-
-
-
+            for (size_t i = 0; i < 3; ++i) {
+                if (uniqueVertices.count(face[i]) == 0) {
+                    uniqueVertices[face[i]] = static_cast<uint32_t>(pMesh->getVertexCount());
+                    pMesh->addVertex(std::move(face[i]));
+                } else {
+                    // Averge vertex attributes
+                    auto vertex = pMesh->getVertexComplete(uniqueVertices[face[i]]);
+                    vertex.normal = glm::normalize(vertex.normal + face[i].normal);
+                    vertex.tangent += face[i].tangent;
+                    vertex.binormal += face[i].binormal;
+                }
+                pMesh->addIndex(uniqueVertices[face[i]]);
+            }

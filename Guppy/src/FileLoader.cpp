@@ -40,7 +40,9 @@ void FileLoader::loadObj(Mesh *pMesh) {
     }
 
     // Map of unique vertices for indexed drawing, and calculating smoothing groups.
-    std::unordered_map<Vertex::Complete, size_t> uniqueVertices = {};
+    std::unordered_map<Vertex::Complete, size_t> uniqueVertices;
+    // std::vector<std::pair<Vertex::Complete, size_t>> uniqueVertices1;
+    // std::vector<std::pair<Vertex::Complete, size_t>> uniqueVertices2;
 
     bool useColors = !attrib.colors.empty();
     bool useNormals = !attrib.normals.empty();
@@ -55,7 +57,8 @@ void FileLoader::loadObj(Mesh *pMesh) {
     for (const auto &shape : shapes) {
         uniqueVertices.clear();
 
-        // Increment by 3 for each face.
+        // Increment by 3 for each face. (A face has 3 vertices. There is a param for forcing
+        // this in the LoadObj function)
         for (size_t f = 0; f < shape.mesh.indices.size() / 3; f++) {
             // A face has 3 vertices. There is a param for forcing this in LoadObj.
             face = {};
@@ -69,7 +72,10 @@ void FileLoader::loadObj(Mesh *pMesh) {
             // Materials are per face
             hasNormalMap = false;
             materialOffset = shape.mesh.material_ids[f];
-            if (materialOffset >= 0) {
+            // TODO: bring back the model class that loads all of these things in the right order...
+            if (pMesh->getMaterial().hasTexture() && pMesh->getMaterial().getTexture().flags & Texture::FLAGS::NORMAL) {
+                hasNormalMap = true;
+            } else if (materialOffset >= 0) {
                 // TODO: do this right...
                 auto &material = materials[materialOffset];
                 hasNormalMap = !material.bump_texname.empty() || !material.normal_texname.empty();
@@ -128,24 +134,57 @@ void FileLoader::loadObj(Mesh *pMesh) {
                 }
             }
 
-            face.calcNormal();
-            if (hasNormalMap) {
-                face.calcImageSpaceData();
-            }
-
-            for (size_t i = 0; i < 3; ++i) {
-                if (uniqueVertices.count(face[i]) == 0) {
-                    uniqueVertices[face[i]] = static_cast<uint32_t>(pMesh->getVertexCount());
-                    pMesh->addVertex(std::move(face[i]));
-                } else {
-                    // Averge vertex attributes
-                    auto vertex = pMesh->getVertexComplete(uniqueVertices[face[i]]);
-                    vertex.normal = glm::normalize(vertex.normal + face[i].normal);
-                    vertex.tangent += face[i].tangent;
-                    vertex.bitangent += face[i].bitangent;
-                }
-                pMesh->addIndex(uniqueVertices[face[i]]);
-            }
+            helpers::indexVertices(face, uniqueVertices, true, pMesh);
         }
     }
 }
+
+// for (size_t i = 0; i < 3; ++i) {
+//    auto &vertex = face[i];
+//    auto it = uniqueVertices.find(vertex);
+//
+//    // auto it = std::find_if(uniqueVertices2.begin(), uniqueVertices2.end(), [&vertex](auto &p) {
+//    //    return p.first == vertex && glm::all(glm::epsilonEqual(p.first.texCoord, vertex.texCoord, FLT_EPSILON));
+//    //});
+//
+//    // if (it != uniqueVertices2.end()) {
+//    //    assert(false);
+//    //} else {
+//    uint32_t index = 0;  // TODO: this shouldn't be initialized
+//
+//    bool samePositionDifferentTexCoords = false;
+//    // it = std::find_if(uniqueVertices1.begin(), uniqueVertices1.end(), [&vertex](auto &p) { return p.first == vertex;
+//    // });
+//
+//    // if (it != uniqueVertices1.end()) {
+//    if (it != uniqueVertices.end()) {
+//        // Vertex with same position already in the buffer...
+//        auto &sharedVertex = const_cast<Vertex::Complete &>((*it).first);
+//
+//        // Averge vertex attributes
+//        vertex.normal = sharedVertex.normal = glm::normalize(sharedVertex.normal + vertex.normal);
+//        vertex.tangent = sharedVertex.tangent += vertex.tangent;
+//        vertex.bitangent = sharedVertex.bitangent += vertex.bitangent;
+//
+//        // If the vertex shares a position, but has a different texture coordinate we still
+//        // need to smooth the tangent space vectors, but need a new index.
+//        samePositionDifferentTexCoords = !glm::all(glm::epsilonEqual(vertex.texCoord, sharedVertex.texCoord, FLT_EPSILON));
+//
+//        // Update vertex in mesh
+//        pMesh->addVertex(vertex, (*it).second);
+//    }
+//
+//    if (it == uniqueVertices.end() || samePositionDifferentTexCoords) {
+//        if (samePositionDifferentTexCoords) {
+//            assert(false);
+//        }
+//        // New unique vertex...
+//        index = static_cast<uint32_t>(pMesh->getVertexCount());
+//        uniqueVertices.insert(std::make_pair(vertex, index));
+//        pMesh->addVertex(std::move(vertex));
+//    }
+//
+//    // Add an index to the buffer
+//    pMesh->addIndex(index);
+//    //}
+//}

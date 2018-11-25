@@ -35,7 +35,7 @@ class Material {
         float opacity;
         // 16
         glm::vec3 Ks;
-        uint32_t shininess;
+        float shininess;
         // 16
         float xRepeat;
         float yRepeat;
@@ -83,6 +83,7 @@ class Material {
     inline void setRepeat(float r) { repeat_ = r; }
     // inline void setXRepeat(float r) { xRepeat_ = r; }
     // inline void setYRepeat(float r) { yRepeat_ = r; }
+    inline void setShininess(float s) { shininess_ = s; }
 
     inline bool hasTexture() const { return pTexture_.get() != nullptr; }
 
@@ -90,7 +91,7 @@ class Material {
     FlagBits flags_;
     glm::vec3 ambientCoeff_, diffuseCoeff_, specularCoeff_;
     float opacity_, repeat_;  //, xRepeat_, yRepeat_;
-    uint32_t shininess_;     // phong exponent
+    float shininess_;         // phong exponent
     std::shared_ptr<Texture::Data> pTexture_;
 };
 

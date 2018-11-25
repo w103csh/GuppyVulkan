@@ -33,10 +33,10 @@ struct Texture {
 class Complete {
    public:
     // default
-    Complete() : position(), normal(), smoothingGroupId(), color(), texCoord(), tangent(), bitangent(){};
+    Complete() : position(), normal(), smoothingGroupId(), color(), texCoord(), tangent(), binormal(){};
     // color
     Complete(const Color &v)
-        : position(v.position), normal(v.normal), smoothingGroupId(), color(v.color), texCoord(), tangent(), bitangent(){};
+        : position(v.position), normal(v.normal), smoothingGroupId(), color(v.color), texCoord(), tangent(), binormal(){};
     // texture
     Complete(const Texture &v)
         : position(v.position),
@@ -45,21 +45,20 @@ class Complete {
           color(),
           texCoord(v.texCoord),
           tangent(v.tangent),
-          bitangent(v.bitangent){};
+          binormal(v.bitangent){};
     // complete
     Complete(const glm::vec3 &p, const glm::vec3 &n, const uint32_t &sgi, const glm::vec4 &c, const glm::vec2 &tc,
              const glm::vec3 &t, const glm::vec3 &b)
-        : position(p), normal(n), smoothingGroupId(sgi), color(c), texCoord(tc), tangent(t), bitangent(b){};
+        : position(p), normal(n), smoothingGroupId(sgi), color(c), texCoord(tc), tangent(t), binormal(b){};
 
     bool operator==(const Complete &other) const {
-        return //
-            position == other.position
-            // && texCoord == other.texCoord
+        return                                                                  //
+            glm::all(glm::epsilonEqual(position, other.position, FLT_EPSILON))  //
             && other.smoothingGroupId == smoothingGroupId;
     }
 
-    inline Color getColorData() const { return {position, normal, color}; }
-    inline Texture getTextureData() const { return {position, normal, texCoord, tangent, bitangent}; }
+    inline Color getColorVertex() const { return {position, normal, color}; }
+    inline Texture getTextureVertex() const { return {position, normal, texCoord, tangent, binormal}; }
 
     // shared
     glm::vec3 position;
@@ -70,7 +69,7 @@ class Complete {
     // texture
     glm::vec2 texCoord;
     glm::vec3 tangent;
-    glm::vec3 bitangent;
+    glm::vec3 binormal;
 };
 
 // color
@@ -94,8 +93,8 @@ template <>
 struct hash<Vertex::Complete> {
     size_t operator()(Vertex::Complete const &vertex) const {
         // TODO: wtf is this doing?
-        return (hash<glm::vec3>()(vertex.position) ^ (hash<int>()(vertex.smoothingGroupId) << 1)) ^
-               (hash<glm::vec2>()(vertex.texCoord) << 1);
+        return ((hash<glm::vec3>()(vertex.position) ^ (hash<glm::vec2>()(vertex.texCoord) << 1)) >> 1) ^
+               (hash<int>()(vertex.smoothingGroupId) << 1);
     }
 };
 }  // namespace std

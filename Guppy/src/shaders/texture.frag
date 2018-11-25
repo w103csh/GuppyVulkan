@@ -3,7 +3,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 // DECLARATIONS
-vec3 getColor(uint shininess);
+vec3 getColor(float shininess);
 
 // MATERIAL FLAGS
 const uint PER_MATERIAL_COLOR   = 0x00000001u;
@@ -26,13 +26,14 @@ struct Material {
     vec3 Kd;            // Diffuse reflectivity
     float opacity;      // Overall opacity
     vec3 Ks;            // Specular reflectivity
-    uint shininess;     // Specular shininess factor
+    float shininess;     // Specular shininess factor
 };
 
 // IN
-layout(location = 0) in vec3 fragPos;
-layout(location = 1) in vec3 fragNormal;
-layout(location = 2) in vec2 fragTexCoord;
+layout(location = 0) in vec3 CS_position;
+layout(location = 1) in vec3 TS_normal;
+layout(location = 2) in vec2 TS_texCoord;
+layout(location = 3) in mat3 TBN;
 // PUSH CONSTANTS
 layout(push_constant) uniform PushBlock {
     mat4 model;
@@ -47,6 +48,9 @@ layout(binding = 2) uniform DynamicUniformBuffer {
 // OUT
 layout(location = 0) out vec4 outColor;
 
+vec3 getDirToPos(vec3 position) { return normalize(TBN * (position - CS_position)); }
+vec3 getDir(vec3 direction) { return normalize(TBN * direction); }
+
 vec3 n, Ka, Kd, Ks;
 
 void main() {
@@ -59,12 +63,9 @@ void main() {
     Kd = pushConstantsBlock.material.Kd;
     Ks = pushConstantsBlock.material.Ks;
 
-    // outColor = vec4(fragNormal, 1.0);
-    // return;
-
     // Diffuse color
     if ((dynamicUbo.texFlags & TEX_DIFFUSE) > 0) {
-        vec4 texDiff = texture(texSampler, vec3(fragTexCoord, samplerOffset++));
+        vec4 texDiff = texture(texSampler, vec3(TS_texCoord, samplerOffset++));
         Kd = vec3(texDiff);
         opacity = texDiff[3];
         // Use diffuse color for ambient because we haven't created
@@ -78,22 +79,18 @@ void main() {
 
     // Normal
     if ((dynamicUbo.texFlags & TEX_NORMAL) > 0) {
-        vec4 texNormal = texture(texSampler, vec3(fragTexCoord, samplerOffset++));
-	    n = mat3(pushConstantsBlock.model) * texNormal.xyz;
+        vec3 texNorm = texture(texSampler, vec3(TS_texCoord, samplerOffset++)).xyz;
+        n = 2.0 * texNorm - 1.0;
     } else {
-	    n = fragNormal;
+	    n = TS_normal;
     }
 
     // Specular color
-    vec4 specularColor = vec4(pushConstantsBlock.material.Kd, opacity);
+    Ks = pushConstantsBlock.material.Ks;
     if ((dynamicUbo.texFlags & TEX_SPECULAR) > 0) {
-        vec4 texSpec = texture(texSampler, vec3(fragTexCoord, samplerOffset++));
+        vec4 texSpec = texture(texSampler, vec3(TS_texCoord, samplerOffset++));
         Ks = vec3(texSpec);
-        opacity = texSpec[3];
     }
-
-    // outColor = vec4(n, 1.0);
-    // return;
 
     outColor = vec4(
         getColor(pushConstantsBlock.material.shininess),

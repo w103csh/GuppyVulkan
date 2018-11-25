@@ -35,6 +35,18 @@ class Mesh : public Object3d {
     inline STATUS getStatus() const { return status_; }
     inline PIPELINE_TYPE getTopologyType() const { return pipelineType_; }
     inline Vertex::TYPE getVertexType() const { return vertexType_; }
+    inline const Material& getMaterial() const { return std::cref(*pMaterial_); }
+
+    inline void setStatusRedraw() {
+        // Only allow update to redraw if ready.
+        assert(status_ == STATUS::READY);
+        status_ = STATUS::REDRAW;
+    }
+    inline void setStatusReady() {
+        // Only allow update to ready if a redraw is requested.
+        assert(status_ == STATUS::REDRAW);
+        status_ = STATUS::READY;
+    }
 
     // INIT
     virtual void setSceneData(const MyShell::Context& ctx, size_t offset);
@@ -45,7 +57,7 @@ class Mesh : public Object3d {
 
     // VERTEX
     virtual Vertex::Complete getVertexComplete(size_t index) = 0;
-    virtual void addVertex(const Vertex::Complete& v) = 0;
+    virtual void addVertex(const Vertex::Complete& v, int32_t index = -1) = 0;
     virtual inline uint32_t getVertexCount() const = 0;  // TODO: this shouldn't be public
 
     // INDEX
@@ -119,8 +131,13 @@ class ColorMesh : public Mesh {
         assert(index < vertices_.size());
         return {vertices_.at(index)};
     }
-    inline void addVertex(const Vertex::Complete& v) override {
-        vertices_.push_back(v.getColorData());
+    inline void addVertex(const Vertex::Complete& v, int32_t index = -1) override {
+        if (index == -1) {
+            vertices_.push_back(v.getColorVertex());
+        } else {
+            assert(index < vertices_.size());
+            vertices_[index] = v.getColorVertex();
+        }
         updateBoundingBox(vertices_.back());
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
@@ -167,8 +184,13 @@ class TextureMesh : public Mesh {
         assert(index < vertices_.size());
         return {vertices_.at(index)};
     }
-    inline void addVertex(const Vertex::Complete& v) override {
-        vertices_.push_back(v.getTextureData());
+    inline void addVertex(const Vertex::Complete& v, int32_t index = -1) override {
+        if (index == -1) {
+            vertices_.push_back(v.getTextureVertex());
+        } else {
+            assert(index < vertices_.size());
+            vertices_[index] = v.getTextureVertex();
+        }
         updateBoundingBox(vertices_.back());
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }

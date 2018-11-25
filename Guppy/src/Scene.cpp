@@ -176,6 +176,9 @@ bool Scene::update(const MyShell::Context& ctx, int frameIndex) {
         if (pMesh->getStatus() == STATUS::PENDING_TEXTURE) {
             pMesh->tryCreateDescriptorSets(pDescResources_);
         }
+        if (pMesh->getStatus() == STATUS::REDRAW) {
+            pMesh->setStatusReady();
+        }
     }
 
     // TODO: This is bad. Should store descriptor sets on the scene and only record if a new

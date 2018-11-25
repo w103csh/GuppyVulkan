@@ -1,22 +1,13 @@
-std::string name;
-int initial_width;
-int initial_height;
-int queue_count;
-int back_buffer_count;
-int ticks_per_second;
-bool vsync;
-bool animate;
-bool validate;
-bool validate_verbose;
-bool no_tick;
-bool no_render;
-bool no_present;
-bool try_sampler_anisotropy;
-bool try_sample_rate_shading;
-bool enable_sample_shading;
-bool include_color;
-bool include_depth;
-bool enable_double_clicks;
-bool enable_debug_markers;
-bool enable_directory_listener;
-bool assert_on_recompile_shader;
+    for (size_t i = 0; i < 3; ++i) {
+        if (uniqueVertices.count(face[i]) == 0) {
+            uniqueVertices[face[i]] = static_cast<uint32_t>(pMesh->getVertexCount());
+            pMesh->addVertex(std::move(face[i]));
+        } else {
+            // Averge vertex attributes
+            auto vertex = pMesh->getVertexComplete(uniqueVertices[face[i]]);
+            vertex.normal = glm::normalize(vertex.normal + face[i].normal);
+            vertex.tangent += face[i].tangent;
+            vertex.binormal += face[i].binormal;
+        }
+        pMesh->addIndex(uniqueVertices[face[i]]);
+    }
