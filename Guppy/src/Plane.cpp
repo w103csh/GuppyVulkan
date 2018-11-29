@@ -118,6 +118,7 @@ ColorPlane::ColorPlane(std::unique_ptr<Material> pMaterial, glm::mat4 model, boo
     markerName_ = "ColorPlane";
     createVertices(this, doubleSided);
     updateBoundingBox(vertices_);
+    status_ = STATUS::PENDING_BUFFERS;
 }
 
 // void ColorPlane::createVertices() {
@@ -162,6 +163,7 @@ TexturePlane::TexturePlane(std::shared_ptr<Texture::Data> pTexture, glm::mat4 mo
     markerName_ = "TexturePlane";
     createVertices(this, doubleSided);
     updateBoundingBox(vertices_);
+    status_ = STATUS::PENDING;
 }
 
 TexturePlane::TexturePlane(std::unique_ptr<Material> pMaterial, glm::mat4 model, bool doubleSided)
@@ -169,6 +171,7 @@ TexturePlane::TexturePlane(std::unique_ptr<Material> pMaterial, glm::mat4 model,
     markerName_ = "TexturePlane";
     createVertices(this, doubleSided);
     updateBoundingBox(vertices_);
+    status_ = STATUS::PENDING;
 }
 
 // void TexturePlane::createVertices() {

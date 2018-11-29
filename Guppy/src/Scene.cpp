@@ -64,13 +64,25 @@ void Scene::createDynamicTexUniformBuffer(const MyShell::Context& ctx, const Gam
 }
 
 size_t Scene::moveMesh(const MyShell::Context& ctx, std::unique_ptr<ColorMesh> pMesh) {
-    assert(pMesh->getStatus() == STATUS::READY);
+    assert(pMesh->getStatus() == STATUS::PENDING_BUFFERS);
 
     auto offset = colorMeshes_.size();
     pMesh->setSceneData(offset);
 
     colorMeshes_.push_back(std::move(pMesh));
     colorMeshes_.back()->prepare(ctx.dev, pDescResources_);
+
+    return offset;
+}
+
+size_t Scene::moveMesh(const MyShell::Context& ctx, std::unique_ptr<LineMesh> pMesh) {
+    assert(pMesh->getStatus() == STATUS::PENDING_BUFFERS);
+
+    auto offset = lineMeshes_.size();
+    pMesh->setSceneData(offset);
+
+    lineMeshes_.push_back(std::move(pMesh));
+    lineMeshes_.back()->prepare(ctx.dev, pDescResources_);
 
     return offset;
 }

@@ -128,6 +128,8 @@ void loadObjData(const tinyobj_data &data, T &pMeshes) {
             helpers::indexVertices(face, uniqueVertices, true, pMesh);
         }
     }
+
+    pMesh->setStatusPendingBuffers();
 }
 
 };  // namespace FileLoader

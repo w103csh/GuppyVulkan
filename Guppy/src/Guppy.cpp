@@ -357,7 +357,7 @@ void Guppy::on_tick() {
     // TODO: Should this be "on_frame"? every other frame? async? ... I have no clue yet.
     LoadingResourceHandler::cleanupResources();
     TextureHandler::update();
-    ModelHandler::update();
+    ModelHandler::update(active_scene());
 
     for (auto& pScene : pScenes_) {
         bool redraw = false;
@@ -685,6 +685,7 @@ void Guppy::destroy_depth_resources() {
     vkDestroyImage(dev_, depth_resource_.image, nullptr);
     vkFreeMemory(dev_, depth_resource_.memory, nullptr);
 }
+
 void Guppy::createLights() {
     // TODO: move the light code into the scene, including ubo data
     positionalLights_.push_back(Light::Positional());
@@ -730,7 +731,7 @@ void Guppy::createScenes() {
 
         // ORIGIN AXES
         std::unique_ptr<LineMesh> pDefaultAxes = std::make_unique<Axes>(glm::mat4(1.0f), AXES_MAX_SIZE, true);
-        active_scene()->addMesh(shell_->context(), std::move(pDefaultAxes));
+        active_scene()->moveMesh(shell_->context(), std::move(pDefaultAxes));
 
         // model = helpers::affine(glm::vec3(2.0f), (CARDINAL_Y * 0.1f), -M_PI_2_FLT, CARDINAL_X);
         // auto p1 = std::make_unique<TexturePlane>(getTextureByPath(WOOD_007_DIFF_TEX_PATH), model, true);
@@ -741,7 +742,9 @@ void Guppy::createScenes() {
         material.setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
         material.setColor({0.8f, 0.3f, 0.0f});
         model = helpers::affine(glm::vec3(0.07f));
-        Model torus(active_scene(), TORUS_MODEL_PATH, material, model, false);
+        ModelHandler::makeModel(active_scene(), TORUS_MODEL_PATH, material, model, false,
+                                [groundPlane_bbmm](auto pMesh) { pMesh->putOnTop(groundPlane_bbmm); });
+
         // auto pTorus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, model);
         // active_scene()->addMesh(shell_->context(), std::move(pTorus), true,
         //                        [groundPlane_bbmm](auto pMesh) { pMesh->putOnTop(groundPlane_bbmm); });
@@ -764,11 +767,11 @@ void Guppy::createScenes() {
     if (showLightHelpers_) {
         for (auto& light : positionalLights_) {
             std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(light, 0.5f);
-            lightHelperOffset_ = active_scene()->addMesh(shell_->context(), std::move(pHelper));
+            lightHelperOffset_ = active_scene()->moveMesh(shell_->context(), std::move(pHelper));
         }
         for (auto& light : spotLights_) {
             std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(light, 0.5f);
-            lightHelperOffset_ = active_scene()->addMesh(shell_->context(), std::move(pHelper));
+            lightHelperOffset_ = active_scene()->moveMesh(shell_->context(), std::move(pHelper));
         }
     }
 

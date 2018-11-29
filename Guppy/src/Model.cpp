@@ -4,6 +4,7 @@
 #include "Mesh.h"
 #include "ModelHandler.h"
 #include "Model.h"
+#include "Object3d.h"
 #include "Scene.h"
 
 // Model::Model(MyShell *sh, std::unique_ptr<Scene> &pScene, std::string modelPath, std::string texPath = "",
@@ -33,37 +34,43 @@
 //    }
 //}
 
-Model::Model(std::unique_ptr<Scene> &pScene, std::string modelPath, Material material, glm::mat4 model, bool async,
-             std::function<void(std::vector<Mesh *>)> callback)
-    : status(STATUS::PENDING), modelPath_(modelPath), sceneOffset_(pScene->getOffset()) {
+Model::Model(mdl_idx handlerOffset, std::unique_ptr<Scene> &pScene, std::string modelPath, glm::mat4 model)
+    : Object3d(model),
+      status(STATUS::PENDING),
+      handlerOffset_(handlerOffset),
+      modelPath_(modelPath),
+      sceneOffset_(pScene->getOffset()) {}
+
+std::vector<ColorMesh *> Model::load(MyShell *sh, Material material, std::function<void(Mesh *)> callback) {
     FileLoader::tinyobj_data data = {modelPath_, ""};
 
-    auto lambda = [&pScene, &material, &model, &callback, &data, this](MyShell *sh) {
-        // Get obj data from the file loader...
-        FileLoader::getObjData(sh, data);
+    // Get obj data from the file loader...
+    FileLoader::getObjData(sh, data);
+    assert(data.attrib.vertices.size());
 
-        // determine amount and type of meshes...
-        std::vector<ColorMesh *> pMeshes;
-        if (data.materials.empty()) {
-            pMeshes.push_back(new ColorMesh(std::make_unique<Material>(material), model));
-        } else {
-            for (auto &m : data.materials) {
-                auto pMaterial = std::make_unique<Material>(material);
-                pMaterial->setMaterialData(m);
-                pMeshes.push_back(new ColorMesh(std::move(pMaterial), model));
-            }
+    // determine amount and type of meshes...
+    std::vector<ColorMesh *> pMeshes;
+    if (data.materials.empty()) {
+        pMeshes.push_back(new ColorMesh(std::make_unique<Material>(material), model_));
+    } else {
+        for (auto &m : data.materials) {
+            auto pMaterial = std::make_unique<Material>(material);
+            pMaterial->setMaterialData(m);
+            pMeshes.push_back(new ColorMesh(std::move(pMaterial), model_));
         }
+    }
 
-        // Load obj data into mesh...
-        FileLoader::loadObjData(data, pMeshes);
+    // Load obj data into mesh...
+    FileLoader::loadObjData(data, pMeshes);
 
-        for (auto &pMesh : pMeshes) {
-            pMesh->setStatusReady();
-            colorOffsets_.push_back(pScene->moveMesh(sh->context(), std::unique_ptr<ColorMesh>(pMesh)));
-        }
+    // Invoke callback for say... model transformations...
+    if (callback)
+        for (auto &pMesh : pMeshes) callback(pMesh);
 
-        // callback(pMeshes);
-    };
-
-    ModelHandler::loadModel(lambda, async);
+    return pMeshes;
 }
+
+
+void Model::addOffset(std::unique_ptr<ColorMesh> &pMesh) { colorOffsets_.push_back(pMesh->getOffset()); }
+// void addOffset(std::unique_ptr<LineMesh> &pMesh) { lineOffsets_.push_back(pMesh->getOffset()); }
+void Model::addOffset(std::unique_ptr<TextureMesh> &pMesh) { texOffsets_.push_back(pMesh->getOffset()); }

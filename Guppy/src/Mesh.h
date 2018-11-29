@@ -35,14 +35,18 @@ class Mesh : public Object3d {
     inline Vertex::TYPE getVertexType() const { return vertexType_; }
     inline const Material& getMaterial() const { return std::cref(*pMaterial_); }
 
+    inline void setStatusPendingBuffers() {
+        assert(status_ == STATUS::PENDING || status_ == STATUS::PENDING_TEXTURE);
+        status_ = STATUS::PENDING_BUFFERS;
+    }
     inline void setStatusRedraw() {
         // Only allow update to redraw if ready.
         assert(status_ == STATUS::READY);
         status_ = STATUS::REDRAW;
     }
     inline void setStatusReady() {
-        //// Only allow update to ready if a redraw is requested.
-        // assert(status_ == STATUS::REDRAW);
+        // Only allow update to ready if a redraw is requested.
+        assert(status_ == STATUS::REDRAW);
         status_ = STATUS::READY;
     }
 

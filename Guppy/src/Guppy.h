@@ -13,6 +13,8 @@
 #include "Texture.h"
 #include "Shader.h"
 
+class Model;
+
 class Guppy : public Game {
    public:
     Guppy(const std::vector<std::string>& args);
@@ -94,7 +96,6 @@ class Guppy : public Game {
 
     // called by detach_shell
     void destroyUniformBuffer();
-    void destroyTextures();
 
     // called by attach_swapchain
     void get_swapchain_image_data(const VkSwapchainKHR& swapchain);
@@ -135,6 +136,6 @@ class Guppy : public Game {
     // This should go onto the scene dynamic buffer if it stays like this.
     int active_scene_index_;
     std::vector<std::unique_ptr<Scene>> pScenes_;
-};
+ };
 
 #endif  // !GUPPY_H

@@ -48,6 +48,7 @@ Mesh* Mesh::async_load(const MyShell::Context& ctx, std::function<void(Mesh*)> c
 
 void Mesh::prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) {
     loadVertexBuffers(dev);
+    // Submit vertex loading commands...
     LoadingResourceHandler::loadSubmit(std::move(pLdgRes_));
     status_ = STATUS::READY;
 }
@@ -222,7 +223,9 @@ void TextureMesh::setSceneData(const MyShell::Context& ctx, size_t offset) {
 
 void TextureMesh::prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) {
     loadVertexBuffers(dev);
+    // Submit vertex loading commands...
     LoadingResourceHandler::loadSubmit(std::move(pLdgRes_));
+    // See if the descriptor sets for the texture(s) can be made...
     tryCreateDescriptorSets(pRes);
 }
 

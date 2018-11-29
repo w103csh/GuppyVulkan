@@ -37,5 +37,5 @@ Axes::Axes(glm::mat4 model, float lineSize, bool showNegative) : LineMesh() {
         vertices_.insert(vertices_.end(), nvs.begin(), nvs.end());
     }
 
-    status_ = STATUS::READY;
+    status_ = STATUS::PENDING_BUFFERS;
 }

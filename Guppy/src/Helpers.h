@@ -32,7 +32,7 @@ enum class STATUS {
     //
     PENDING = 0,
     READY,
-    VERTICES_LOADED,
+    PENDING_BUFFERS,
     PENDING_TEXTURE,
     REDRAW,
 };

@@ -22,7 +22,10 @@ class Scene {
     inline size_t getOffset() { return offset_; }
 
     // TODO: there is too much redundancy here...
+
     size_t moveMesh(const MyShell::Context &ctx, std::unique_ptr<ColorMesh> pMesh);
+    size_t moveMesh(const MyShell::Context &ctx, std::unique_ptr<LineMesh> pMesh);
+    size_t moveMesh(const MyShell::Context &ctx, std::unique_ptr<TextureMesh> pMesh) { return 0; };
     size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<ColorMesh> pMesh, bool async = true,
                    std::function<void(Mesh *)> callback = nullptr);
     size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<LineMesh> pMesh, bool async = true,

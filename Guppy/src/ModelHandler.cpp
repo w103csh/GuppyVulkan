@@ -2,40 +2,26 @@
 #include "FileLoader.h"
 #include "Model.h"
 #include "ModelHandler.h"
+#include "Scene.h"
 
 ModelHandler ModelHandler::inst_;
 
 void ModelHandler::init(MyShell* sh) { inst_.sh_ = sh; }
 
-void ModelHandler::loadModel(std::function<void(MyShell*)> ldgFunction, bool async) {
+void ModelHandler::makeModel(std::unique_ptr<Scene>& pScene, std::string modelPath, Material material, glm::mat4 model,
+          bool async, std::function<void(Mesh*)> callback) {
+    // Add a new model instance
+    inst_.pModels_.emplace_back(std::make_unique<Model>(inst_.pModels_.size(), pScene, modelPath, model));
+
     if (async) {
-        auto fut = std::async(std::launch::async, ldgFunction, inst_.sh_);
-        inst_.ldgFutures_.emplace_back(std::move(fut));
+        inst_.ldgColorFutures_[inst_.pModels_.back()->getHandlerOffset()] =
+            std::async(std::launch::async, &Model::load, inst_.pModels_.back().get(), inst_.sh_, material, callback);
     } else {
-        ldgFunction(inst_.sh_);
+        inst_.handleMeshes(pScene, inst_.pModels_.back(), inst_.pModels_.back()->load(inst_.sh_, material, callback));
     }
 }
 
-void ModelHandler::update() {
-    // Check mesh futures
-    if (!inst_.ldgFutures_.empty()) {
-        auto itFut = inst_.ldgFutures_.begin();
-
-        while (itFut != inst_.ldgFutures_.end()) {
-            auto& fut = (*itFut);
-
-            // Check the status but don't wait...
-            auto status = fut.wait_for(std::chrono::seconds(0));
-
-            if (status == std::future_status::ready) {
-                // Finish future
-                fut.get();
-                // Remove the future from the list if all goes well.
-                itFut = inst_.ldgFutures_.erase(itFut);
-
-            } else {
-                ++itFut;
-            }
-        }
-    }
+void ModelHandler::update(std::unique_ptr<Scene>& pScene) {
+    inst_.checkFutures(pScene, inst_.ldgColorFutures_);
+    inst_.checkFutures(pScene, inst_.ldgTexFutures_);
 }
