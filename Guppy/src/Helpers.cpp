@@ -8,25 +8,6 @@
 
 namespace helpers {
 
-void indexVertices(Face &face, std::unordered_map<Vertex::Complete, size_t> &uniqueVertices, bool doTangentSpace, Mesh *pMesh) {
-    face.calcNormal();
-    if (doTangentSpace) face.calcTangentSpaceVectors();
-
-    for (size_t i = 0; i < 3; ++i) {
-        if (uniqueVertices.count(face[i]) == 0) {
-            uniqueVertices[face[i]] = static_cast<uint32_t>(pMesh->getVertexCount());
-            pMesh->addVertex(std::move(face[i]));
-        } else {
-            // Averge vertex attributes
-            auto vertex = pMesh->getVertexComplete(uniqueVertices[face[i]]);
-            vertex.normal = glm::normalize(vertex.normal + face[i].normal);
-            vertex.tangent += face[i].tangent;
-            vertex.binormal += face[i].binormal;
-        }
-        pMesh->addIndex(uniqueVertices[face[i]]);
-    }
-}
-
 bool hasStencilComponent(VkFormat format) {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT ||
            format == VK_FORMAT_D32_SFLOAT_S8_UINT;

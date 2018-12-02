@@ -129,7 +129,7 @@ class ColorMesh : public Mesh {
     // VERTEX
     inline Vertex::Complete getVertexComplete(size_t index) override {
         assert(index < vertices_.size());
-        return {vertices_.at(index)};
+        return {vertices_[index]};
     }
     inline void addVertex(const Vertex::Complete& v, int32_t index = -1) override {
         if (index == -1) {

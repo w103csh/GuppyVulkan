@@ -14,39 +14,46 @@
 #include "Object3d.h"
 
 class ColorMesh;
+class Mesh;
 class MyShell;
 class Scene;
 class TextureMesh;
 
-typedef uint32_t mdl_idx;
-
-class Model : Object3d {
+class Model : public Object3d {
    public:
-    // texture mesh
-    // Model(std::unique_ptr<Scene> &pScene, std::string modelPath, std::string texPath = "", std::string normPath = "",
-    //      std::string specPath = "", std::string materialPath = "");
+    typedef uint32_t IDX;
+    typedef std::function<void(Model *)> CALLBK;
 
-    // color mesh
-    Model::Model(mdl_idx handlerOffset, std::unique_ptr<Scene> &pScene, std::string modelPath, glm::mat4 model = glm::mat4(1.0f));
+    Model::Model(Model::IDX handlerOffset, std::unique_ptr<Scene> &pScene, std::string modelPath,
+                 glm::mat4 model = glm::mat4(1.0f));
 
-    inline mdl_idx getHandlerOffset() const { return handlerOffset_; }
-    inline mdl_idx getSceneOffset() const { return sceneOffset_; }
+    inline Model::IDX getHandlerOffset() const { return handlerOffset_; }
+    inline Model::IDX getSceneOffset() const { return sceneOffset_; }
 
-    std::vector<ColorMesh *> load(MyShell *sh, Material material, std::function<void(Mesh *)> callback);
+    std::vector<ColorMesh *> loadColor(MyShell *sh, Material material);
+    std::vector<TextureMesh *> loadTexture(MyShell *sh, Material material, std::shared_ptr<Texture::Data> pTexture);
+
+    void postLoad(Model::CALLBK callback);
+
+    virtual inline void transform(const glm::mat4 t) override;
+    void updateAggregateBoundingBox(std::unique_ptr<Scene> &pScene);
 
     STATUS status;
 
     void addOffset(std::unique_ptr<ColorMesh> &pMesh);
-    //void addOffset(std::unique_ptr<LineMesh> &pMesh);
+    // void addOffset(std::unique_ptr<LineMesh> &pMesh);
     void addOffset(std::unique_ptr<TextureMesh> &pMesh);
 
    private:
-    mdl_idx handlerOffset_;
+    void allMeshAction(std::function<void(Mesh *)> action);
+    void updateAggregateBoundingBox(Mesh *pMesh);
+
+    Model::IDX handlerOffset_;
     std::string modelPath_;
-    mdl_idx sceneOffset_;
-    std::vector<mdl_idx> colorOffsets_;
-    std::vector<mdl_idx> lineOffsets_;
-    std::vector<mdl_idx> texOffsets_;
+    Model::IDX sceneOffset_;
+    std::vector<Model::IDX> colorOffsets_;
+    std::vector<Model::IDX> lineOffsets_;
+    std::vector<Model::IDX> texOffsets_;
 };
 
 #endif  // !MODEL_H

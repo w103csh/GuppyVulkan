@@ -753,13 +753,7 @@ void PipelineHandler::destroyPipelineResources(PipelineResources& resources) {
     for (auto& pipeline : resources.pipelines) vkDestroyPipeline(inst_.ctx_.dev, pipeline, nullptr);
 }
 
-void PipelineHandler::destroyDescriptorResources(std::unique_ptr<DescriptorResources>& pRes) {
-    vkDestroyDescriptorPool(inst_.ctx_.dev, pRes->pool, nullptr);
-}
-
 void PipelineHandler::cleanupOldResources() {
     for (auto& pipeline : inst_.oldPipelines_) vkDestroyPipeline(inst_.ctx_.dev, pipeline, nullptr);
     inst_.oldPipelines_.clear();
-    for (auto& pRes : inst_.oldDescRes_) inst_.destroyDescriptorResources(pRes);
-    inst_.oldDescRes_.clear();
 }

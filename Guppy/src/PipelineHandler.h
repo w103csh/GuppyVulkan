@@ -20,6 +20,7 @@ struct DescriptorResources {
     std::vector<VkDescriptorBufferInfo> dynUboInfos;
     std::vector<VkDescriptorSet> colorSets;
     std::vector<std::vector<VkDescriptorSet>> texSets;
+    std::shared_ptr<UniformBufferResources> pDynUBORes;  // only used for clean up
 };
 
 struct PipelineCreateInfoResources {
@@ -98,12 +99,9 @@ class PipelineHandler : Singleton {
         return inst_.pipelineLayouts_[static_cast<int>(type)];
     }
 
-    static bool update(std::unique_ptr<Scene> &pScene);
     static void destroyPipelineResources(PipelineResources &resources);
-    static void destroyDescriptorResources(std::unique_ptr<DescriptorResources> &resources);
 
     // old resources
-    static inline void takeOldResources(std::unique_ptr<DescriptorResources> pRes) { inst_.oldDescRes_.push_back(std::move(pRes)); }
     static void cleanupOldResources();
 
    private:
@@ -140,7 +138,6 @@ class PipelineHandler : Singleton {
     PipelineCreateInfoResources createResources_;
     // global storage for clean up
     std::vector<VkPipeline> oldPipelines_;
-    std::vector<std::unique_ptr<DescriptorResources>> oldDescRes_;
 };
 
 #endif  // !PIPELINE_RESOURCES_H

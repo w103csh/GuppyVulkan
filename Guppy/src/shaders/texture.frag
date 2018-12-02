@@ -29,6 +29,7 @@ struct Material {
     float shininess;     // Specular shininess factor
 };
 
+
 // IN
 layout(location = 0) in vec3 CS_position;
 layout(location = 1) in vec3 TS_normal;
@@ -48,11 +49,23 @@ layout(binding = 2) uniform DynamicUniformBuffer {
 // OUT
 layout(location = 0) out vec4 outColor;
 
+bool TEX_COORD_SHADE = false;
+
+vec3 texCoordShade() {
+    float modX = floor(mod((TS_texCoord.x * 50), 2.0));
+    float modY = floor(mod((TS_texCoord.y * 50), 2.0));
+    float total = modX + modY;
+    if (total == 1.0) {
+        return vec3(1.0);
+    } else {
+        return vec3(0.45);
+    }
+}
+
 vec3 getDirToPos(vec3 position) { return normalize(TBN * (position - CS_position)); }
 vec3 getDir(vec3 direction) { return normalize(TBN * direction); }
 
 vec3 n, Ka, Kd, Ks;
-
 void main() {
     /*  Sampler offset if based on the Texture::FLAGS enum in C++ and
         the TEX_ constants in GLSL here. The order  in which samplerOffset
@@ -90,6 +103,11 @@ void main() {
     if ((dynamicUbo.texFlags & TEX_SPECULAR) > 0) {
         vec4 texSpec = texture(texSampler, vec3(TS_texCoord, samplerOffset++));
         Ks = vec3(texSpec);
+    }
+
+    if (TEX_COORD_SHADE) {
+        outColor = vec4(texCoordShade(), 1.0);
+        return;
     }
 
     outColor = vec4(

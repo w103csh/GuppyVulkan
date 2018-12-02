@@ -15,7 +15,7 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
 
     // Mimic approach in loadObj in FileLoader. This way everything is
     // using the same ideas (for testing)...
-    std::unordered_map<Vertex::Complete, size_t> vertMap = {};
+    unique_vertices_map vertexMap = {};
     Face face;
 
     // bottom left
@@ -26,7 +26,7 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
         {},                        // normal
         0,                         // smoothing group id
         {1.0f, 0.0f, 0.0f, 1.0f},  // color (red)
-        {0.0f, 1.0f},              // texCoorde (bottom left)
+        {0.0f, 1.0f},              // texCoord (bottom left)
         {},                        // tangent
         {}                         // bitangent
     };
@@ -36,7 +36,7 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
         {},                        // normal
         0,                         // smoothing group id
         {0.0f, 0.0f, 1.0f, 1.0f},  // color (blue)
-        {1.0f, 1.0f},              // texCoorde (bottom right)
+        {1.0f, 1.0f},              // texCoord (bottom right)
         {},                        // tangent
         {}                         // bitangent
     };
@@ -46,16 +46,16 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
         {},                        // normal
         0,                         // smoothing group id
         {0.0f, 1.0f, 0.0f, 1.0f},  // color (green)
-        {0.0f, 0.0f},              // texCoorde (top left)
+        {0.0f, 0.0f},              // texCoord (top left)
         {},                        // tangent
         {}                         // bitangent
     };
-    helpers::indexVertices(face, vertMap, true, pMesh);
+    face.indexVertices(vertexMap, pMesh);
 
     if (doubleSided) {
         face.reverse();
         face.setSmoothingGroup(1);
-        helpers::indexVertices(face, vertMap, true, pMesh);
+        face.indexVertices(vertexMap, pMesh);
     }
 
     // top right
@@ -66,7 +66,7 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
         {},                        // normal
         0,                         // smoothing group id
         {0.0f, 1.0f, 0.0f, 1.0f},  // color (green)
-        {0.0f, 0.0f},              // texCoorde (top left)
+        {0.0f, 0.0f},              // texCoord (top left)
         {},                        // tangent
         {}                         // bitangent
     };
@@ -76,7 +76,7 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
         {},                        // normal
         0,                         // smoothing group id
         {0.0f, 0.0f, 1.0f, 1.0f},  // color (blue)
-        {1.0f, 1.0f},              // texCoorde (bottom right)
+        {1.0f, 1.0f},              // texCoord (bottom right)
         {},                        // tangent
         {}                         // bitangent
     };
@@ -86,16 +86,16 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
         {},                        // normal
         0,                         // smoothing group id
         {1.0f, 1.0f, 0.0f, 1.0f},  // color (yellow)
-        {1.0f, 0.0f},              // texCoorde (top right)
+        {1.0f, 0.0f},              // texCoord (top right)
         {},                        // tangent
         {}                         // bitangent
     };
-    helpers::indexVertices(face, vertMap, true, pMesh);
+    face.indexVertices(vertexMap, pMesh);
 
     if (doubleSided) {
         face.reverse();
         face.setSmoothingGroup(1);
-        helpers::indexVertices(face, vertMap, true, pMesh);
+        face.indexVertices(vertexMap, pMesh);
     }
 }
 

@@ -17,7 +17,8 @@ class TextureHandler : Singleton {
     static std::shared_ptr<Texture::Data> getTextureByPath(std::string path);
     static void update();
 
-    static const std::vector<std::shared_ptr<Texture::Data>>& textures() { return inst_.textures_; }
+    static const std::vector<std::shared_ptr<Texture::Data>>& getTextures() { return inst_.pTextures_; }
+    static uint32_t getCount() { return static_cast<uint32_t>(inst_.pTextures_.size()); }
 
    private:
     TextureHandler() : sh_(nullptr){};  // Prevent construction
@@ -27,7 +28,7 @@ class TextureHandler : Singleton {
 
     MyShell* sh_;  // TODO: shared_ptr
 
-    std::vector<std::shared_ptr<Texture::Data>> textures_;
+    std::vector<std::shared_ptr<Texture::Data>> pTextures_;
     std::vector<std::future<std::shared_ptr<Texture::Data>>> texFutures_;
 };
 

@@ -1,5 +1,6 @@
 
 #include "Face.h"
+#include "Mesh.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtx/projection.hpp>
@@ -8,7 +9,7 @@
 
 void Face::calcNormal() {
     glm::vec3 normal = glm::triangleNormal(vertices_[0].position, vertices_[1].position, vertices_[2].position);
-    for (auto& v : vertices_) v.normal = normal;
+    for (auto &v : vertices_) v.normal = normal;
 }
 
 void Face::calcTangentSpaceVectors() {
@@ -52,8 +53,13 @@ void Face::calcTangentSpaceVectors() {
         t *= -1.0f;
     }
 
-    for (auto& v : vertices_) {
+    for (auto &v : vertices_) {
         v.tangent = t;
         v.binormal = b;
     }
+}
+
+void Face::indexVertices(unique_vertices_map &uniqueVertices, Mesh *pMesh, bool calcTangentSpace) {
+    std::vector<Mesh *> pMeshes = {pMesh};
+    indexVertices(uniqueVertices, pMeshes, 0, calcTangentSpace);
 }

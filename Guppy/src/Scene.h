@@ -12,20 +12,20 @@
 #include "MyShell.h"
 
 class Scene {
-   public:
-    Scene() = delete;
-    Scene(const MyShell::Context &ctx, const Game::Settings &settings, const UniformBufferResources &uboResource,
-          const std::vector<std::shared_ptr<Texture::Data>> &pTextures, size_t offset);
+    friend class SceneHandler;
 
+   public:
+    std::unique_ptr<ColorMesh> &getColorMesh(size_t index) { return colorMeshes_[index]; }
+    std::unique_ptr<ColorMesh> &getLineMesh(size_t index) { return lineMeshes_[index]; }
     std::unique_ptr<TextureMesh> &getTextureMesh(size_t index) { return texMeshes_[index]; }
 
     inline size_t getOffset() { return offset_; }
 
     // TODO: there is too much redundancy here...
 
-    size_t moveMesh(const MyShell::Context &ctx, std::unique_ptr<ColorMesh> pMesh);
-    size_t moveMesh(const MyShell::Context &ctx, std::unique_ptr<LineMesh> pMesh);
-    size_t moveMesh(const MyShell::Context &ctx, std::unique_ptr<TextureMesh> pMesh) { return 0; };
+    std::unique_ptr<ColorMesh> &moveMesh(const MyShell::Context &ctx, std::unique_ptr<ColorMesh> pMesh);
+    std::unique_ptr<ColorMesh> &moveMesh(const MyShell::Context &ctx, std::unique_ptr<LineMesh> pMesh);
+    std::unique_ptr<TextureMesh> &moveMesh(const MyShell::Context &ctx, std::unique_ptr<TextureMesh> pMesh);
     size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<ColorMesh> pMesh, bool async = true,
                    std::function<void(Mesh *)> callback = nullptr);
     size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<LineMesh> pMesh, bool async = true,
@@ -65,12 +65,14 @@ class Scene {
     void updatePipeline(PIPELINE_TYPE type);
 
    private:
+    Scene() = delete;
+    Scene(size_t offset);
+
     size_t offset_;
 
     // Descriptor
-    void updateDescriptorResources(const MyShell::Context &ctx, std::unique_ptr<TextureMesh> &pMesh);
     inline bool isNewTexture(std::unique_ptr<TextureMesh> &pMesh) const {
-        return pMesh->getTextureOffset() >= pDescResources_->texSets.size();
+        return !(pMesh->getTextureOffset() < pDescResources_->texSets.size());
     }
     inline const VkDescriptorSet &getColorDescSet(int frameIndex) { return pDescResources_->colorSets[frameIndex]; }
     inline const VkDescriptorSet &getTexDescSet(size_t offset, int frameIndex) {
@@ -100,8 +102,7 @@ class Scene {
     std::vector<std::unique_ptr<LoadingResources>> ldgResources_;
 
     // Uniform buffer
-    void createDynamicTexUniformBuffer(const MyShell::Context &ctx, const Game::Settings &settings,
-                                       const std::vector<std::shared_ptr<Texture::Data>> &textures, std::string markerName = "");
+    void createDynamicTexUniformBuffer(const MyShell::Context &ctx, const Game::Settings &settings, std::string markerName = "");
     void destroyUniforms(const VkDevice &dev);
     std::shared_ptr<UniformBufferResources> pDynUBOResource_;
 };

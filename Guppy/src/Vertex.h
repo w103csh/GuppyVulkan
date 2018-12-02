@@ -57,6 +57,16 @@ class Complete {
             && other.smoothingGroupId == smoothingGroupId;
     }
 
+    inline bool compareTexCoords(const Complete &other) const {
+        return glm::all(glm::epsilonEqual(texCoord, other.texCoord, FLT_EPSILON));
+    }
+
+    inline void setNormalData(const Complete &other) {
+        normal = other.normal;
+        tangent = other.tangent;
+        binormal = other.binormal;
+    }
+
     inline Color getColorVertex() const { return {position, normal, color}; }
     inline Texture getTextureVertex() const { return {position, normal, texCoord, tangent, binormal}; }
 
@@ -93,8 +103,7 @@ template <>
 struct hash<Vertex::Complete> {
     size_t operator()(Vertex::Complete const &vertex) const {
         // TODO: wtf is this doing?
-        return ((hash<glm::vec3>()(vertex.position) ^ (hash<glm::vec2>()(vertex.texCoord) << 1)) >> 1) ^
-               (hash<int>()(vertex.smoothingGroupId) << 1);
+        return ((hash<glm::vec3>()(vertex.position) ^ (hash<int>()(vertex.smoothingGroupId) << 1)) >> 1);
     }
 };
 }  // namespace std

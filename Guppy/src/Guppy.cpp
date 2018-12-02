@@ -13,6 +13,7 @@
 #include "ModelHandler.h"
 #include "PipelineHandler.h"
 #include "Plane.h"
+#include "SceneHandler.h"
 #include "TextureHandler.h"
 
 namespace {
@@ -62,7 +63,6 @@ Guppy::Guppy(const std::vector<std::string>& args)
       swapchain_image_count_(),
       color_resource_(),
       depth_resource_(),
-      active_scene_index_(-1),
       camera_(glm::vec3(2.0f, 2.0f, 4.0f), glm::vec3(0.0f, 0.0f, 0.0f),
               static_cast<float>(settings_.initial_width) / static_cast<float>(settings_.initial_height)) {
     for (auto it = args.begin(); it != args.end(); ++it) {
@@ -108,12 +108,12 @@ void Guppy::attach_shell(MyShell& sh) {
     createLights();
     createUniformBuffer();
 
-    ShaderHandler::init(sh, settings(), defUBO_.positionalLightData.size(), defUBO_.spotLightData.size());
-    PipelineHandler::init(ctx, settings());
+    ShaderHandler::init(sh, settings_, defUBO_.positionalLightData.size(), defUBO_.spotLightData.size());
+    PipelineHandler::init(ctx, settings_);
     TextureHandler::init(&sh);
     ModelHandler::init(&sh);
 
-    createTextures();
+    SceneHandler::init(ctx, settings_);
     createScenes();
 
     // render_pass_begin_info_.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -147,7 +147,7 @@ void Guppy::detach_shell() {
     // delete meshes_;
 
     // *
-    for (auto& scene : pScenes_) scene->destroy(dev_);
+    SceneHandler::destroy();
 
     CmdBufHandler::destroy();
     PipelineHandler::destroy();
@@ -172,7 +172,8 @@ void Guppy::attach_swapchain() {
     prepare_viewport();
     prepare_framebuffers(ctx.swapchain);
 
-    active_scene()->recordDrawCmds(ctx, frameData(), framebuffers_, viewport_, scissor_);
+    // TODO: this is deceptive...
+    SceneHandler::getActiveScene()->recordDrawCmds(ctx, frameData(), framebuffers_, viewport_, scissor_);
 }
 
 void Guppy::detach_swapchain() {
@@ -206,7 +207,7 @@ void Guppy::on_key(KEY key) {
                 auto& light = positionalLights_[1];
                 light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_X * -2.0f)));
                 //// mesh
-                // auto& pMesh = active_scene()->getTextureMesh(1);
+                // auto& pMesh = SceneHandler::getActiveScene()->getTextureMesh(1);
                 // pMesh->transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_X * -2.0f)));
                 // pMesh->setStatusRedraw();
             }
@@ -232,23 +233,23 @@ void Guppy::on_key(KEY key) {
             //    auto tm1 =
             //        std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(CHALET_TEX_PATH)),
             //        CHALET_MODEL_PATH);
-            //    active_scene()->addMesh(shell_->context(), std::move(tm1));
+            //    SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(tm1));
             //} else if (false) {
             //    auto model = glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f)) *
             //                 glm::scale(glm::mat4(1.0f), glm::vec3(0.01f));
             //    auto tm1 = std::make_unique<TextureMesh>(std::make_unique<Material>(getTextureByPath(MED_H_DIFF_TEX_PATH)),
             //                                             MED_H_MODEL_PATH, model);
-            //    active_scene()->addMesh(shell_->context(), std::move(tm1));
+            //    SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(tm1));
             //} else if (false) {
             //    auto sphereBot = std::make_unique<ColorMesh>(std::make_unique<Material>(), SPHERE_MODEL_PATH);
-            //    active_scene()->addMesh(shell_->context(), std::move(sphereBot));
+            //    SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(sphereBot));
             //    auto sphereTop =
             //        std::make_unique<ColorMesh>(std::make_unique<Material>(), SPHERE_MODEL_PATH,
             //                                    glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
-            //    active_scene()->addMesh(shell_->context(), std::move(sphereTop));
+            //    SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(sphereTop));
             //} else if (true) {
             //    auto p2 = std::make_unique<TexturePlane>(getTextureByPath(HARDWOOD_FLOOR_TEX_PATH), glm::mat4(1.0f), true);
-            //    active_scene()->addMesh(shell_->context(), std::move(p2));
+            //    SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(p2));
             //}
         } break;
         case KEY::KEY_4: {
@@ -257,7 +258,7 @@ void Guppy::on_key(KEY key) {
                 light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Z * -2.0f)));
             }
             // auto p1 = std::make_unique<ColorPlane>(std::make_unique<Material>(Material::PER_VERTEX_COLOR));
-            // active_scene()->addMesh(shell_->context(), std::move(p1));
+            // SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(p1));
         } break;
         case KEY::KEY_5: {
             if (positionalLights_.size() > 1) {
@@ -276,11 +277,11 @@ void Guppy::on_key(KEY key) {
             //    getTextureByPath(STATUE_TEXTURE_PATH), 1.0f, 1.0f, true, glm::vec3(0.0f, -test, 0.0f),
             //    glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
 
-            // active_scene()->addMesh(shell_->context(), std::move(p1));
+            // SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(p1));
             // auto p1 = std::make_unique<ColorPlane>(1.0f, 1.0f, true, glm::vec3(),
             //                                       glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f,
             //                                       0.0f)));
-            // active_scene()->addMesh(shell_->context(), std::move(p1), frame_data_index_);
+            // SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(p1), frame_data_index_);
         } break;
         case KEY::KEY_6: {
             if (positionalLights_.size() > 1) {
@@ -291,7 +292,7 @@ void Guppy::on_key(KEY key) {
             //    helpers::affine(glm::vec3(0.5f), glm::vec3(0.0f, ++test, 0.0f), glm::radians(-90.0f), glm::vec3(1.0f, 0.0f,
             //    0.0f));
             // auto p1 = std::make_unique<TexturePlane>(getTextureByPath(VULKAN_TEX_PATH), model, true);
-            // active_scene()->addMesh(shell_->context(), std::move(p1));
+            // SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(p1));
         } break;
         case KEY::KEY_7: {
             if (spotLights_.size() > 0) {
@@ -328,7 +329,7 @@ void Guppy::on_frame(float framePred) {
     // **********************
 
     uint32_t commandBufferCount = 1;
-    auto draw_cmds = active_scene()->getDrawCmds(frame_data_index_);
+    auto draw_cmds = SceneHandler::getActiveScene()->getDrawCmds(frame_data_index_);
 
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -357,22 +358,23 @@ void Guppy::on_tick() {
     // TODO: Should this be "on_frame"? every other frame? async? ... I have no clue yet.
     LoadingResourceHandler::cleanupResources();
     TextureHandler::update();
-    ModelHandler::update(active_scene());
 
-    for (auto& pScene : pScenes_) {
-        bool redraw = false;
-        // TODO: ifdef this stuff out
-        if (settings_.enable_directory_listener) {
-            redraw |= ShaderHandler::update(pScene);
-        }
-        // TODO: im really not into this...
-        redraw |= pScene->update(ctx, frame_data_index_);
+    // TODO: move to SceneHandler::update or something!
+    auto& pScene = SceneHandler::getActiveScene();
+    ModelHandler::update(pScene);
 
-        // (Re)make the draw commands
-        if (redraw) {
-            // TODO: put all the frame data in one parameter...
-            pScene->recordDrawCmds(ctx, frameData(), framebuffers_, viewport_, scissor_);
-        }
+    bool redraw = false;
+    // TODO: ifdef this stuff out
+    if (settings_.enable_directory_listener) {
+        redraw |= ShaderHandler::update(pScene);
+    }
+    // TODO: im really not into this...
+    redraw |= pScene->update(ctx, frame_data_index_);
+
+    // (Re)make the draw commands
+    if (redraw) {
+        // TODO: put all the frame data in one parameter...
+        pScene->recordDrawCmds(ctx, frameData(), framebuffers_, viewport_, scissor_);
     }
 
     // for (auto &worker : workers_) worker->update_simulation();
@@ -410,7 +412,7 @@ void Guppy::prepare_viewport() {
 // Depends on:
 //      swapchain_image_count_
 //      The attachment descriptions created by create_render_pass in Scene...
-//      active_scene() - render pass
+//      SceneHandler::getActiveScene() - render pass
 //      extent_
 //      swapchain_image_resources_ - view -> are an attachment
 // Can change:
@@ -439,7 +441,7 @@ void Guppy::prepare_framebuffers(const VkSwapchainKHR& swapchain) {
     VkFramebufferCreateInfo fb_info = {};
     fb_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     fb_info.pNext = NULL;
-    fb_info.renderPass = active_scene()->activeRenderPass();
+    fb_info.renderPass = SceneHandler::getActiveScene()->activeRenderPass();
     fb_info.attachmentCount = static_cast<uint32_t>(attachments.size());
     fb_info.pAttachments = attachments.data();
     fb_info.width = extent_.width;
@@ -703,21 +705,8 @@ void Guppy::createLights() {
     spotLights_.back().setExponent(25.0f);
 }
 
-void Guppy::createTextures() {
-    TextureHandler::addTexture(STATUE_TEX_PATH);
-    TextureHandler::addTexture(CHALET_TEX_PATH);
-    TextureHandler::addTexture(VULKAN_TEX_PATH);
-    TextureHandler::addTexture(MED_H_DIFF_TEX_PATH, MED_H_NORM_TEX_PATH, MED_H_SPEC_TEX_PATH);
-    TextureHandler::addTexture(ORANGE_DIFF_TEX_PATH, ORANGE_NORM_TEX_PATH);
-    TextureHandler::addTexture(HARDWOOD_FLOOR_TEX_PATH);
-    TextureHandler::addTexture(WOOD_007_DIFF_TEX_PATH, WOOD_007_NORM_TEX_PATH);
-}
-
 void Guppy::createScenes() {
-    auto ctx = shell_->context();
-
-    pScenes_.emplace_back(std::make_unique<Scene>(ctx, settings_, UBOResource_, TextureHandler::textures(), pScenes_.size()));
-    active_scene_index_ = pScenes_.back()->getOffset();
+    SceneHandler::makeScene(UBOResource_, true);  // default active scene
 
     // Add defaults
     if (true) {
@@ -727,53 +716,48 @@ void Guppy::createScenes() {
         glm::mat4 model = helpers::affine(glm::vec3(2000.0f), {}, -M_PI_2_FLT, CARDINAL_X);
         auto pGroundPlane = std::make_unique<TexturePlane>(std::move(pMaterial), model);
         auto groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
-        active_scene()->addMesh(shell_->context(), std::move(pGroundPlane));
+        SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(pGroundPlane));
 
         // ORIGIN AXES
         std::unique_ptr<LineMesh> pDefaultAxes = std::make_unique<Axes>(glm::mat4(1.0f), AXES_MAX_SIZE, true);
-        active_scene()->moveMesh(shell_->context(), std::move(pDefaultAxes));
+        SceneHandler::getActiveScene()->moveMesh(shell_->context(), std::move(pDefaultAxes));
 
         // model = helpers::affine(glm::vec3(2.0f), (CARDINAL_Y * 0.1f), -M_PI_2_FLT, CARDINAL_X);
         // auto p1 = std::make_unique<TexturePlane>(getTextureByPath(WOOD_007_DIFF_TEX_PATH), model, true);
-        // active_scene()->addMesh(shell_->context(), std::move(p1));
+        // SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(p1));
 
         // BURNT ORANGE TORUS
         Material material;
         material.setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
         material.setColor({0.8f, 0.3f, 0.0f});
-        model = helpers::affine(glm::vec3(0.07f));
-        ModelHandler::makeModel(active_scene(), TORUS_MODEL_PATH, material, model, false,
-                                [groundPlane_bbmm](auto pMesh) { pMesh->putOnTop(groundPlane_bbmm); });
+        ModelHandler::makeModel(SceneHandler::getActiveScene(), TORUS_MODEL_PATH, material, helpers::affine(glm::vec3(0.07f)),
+                                false, [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); });
 
         // auto pTorus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, model);
-        // active_scene()->addMesh(shell_->context(), std::move(pTorus), true,
+        // SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(pTorus), true,
         //                        [groundPlane_bbmm](auto pMesh) { pMesh->putOnTop(groundPlane_bbmm); });
 
-        //// ORANGE
-        // model = helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f});
-        // auto pOrange = std::make_unique<TextureMesh>(
-        //    std::make_unique<Material>(TextureHandler::getTextureByPath(ORANGE_DIFF_TEX_PATH)), ORANGE_MODEL_PATH, model);
-        // active_scene()->addMesh(shell_->context(), std::move(pOrange), true,
-        //                        [groundPlane_bbmm](auto pMesh) { pMesh->putOnTop(groundPlane_bbmm); });
+        // ORANGE
+        model = helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f});
+        ModelHandler::makeModel(SceneHandler::getActiveScene(), ORANGE_MODEL_PATH, material, model, nullptr, true,
+                                [groundPlane_bbmm](auto pmodel) { pmodel->putOnTop(groundPlane_bbmm); });
 
-        //// MEDIEVAL HOUSE
-        // model = helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
-        // auto pMedeivalHouse = std::make_unique<TextureMesh>(
-        //    std::make_unique<Material>(TextureHandler::getTextureByPath(MED_H_DIFF_TEX_PATH)), MED_H_MODEL_PATH, model);
-        // active_scene()->addMesh(shell_->context(), std::move(pMedeivalHouse));
+        // MEDIEVAL HOUSE
+        model = helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
+        ModelHandler::makeModel(SceneHandler::getActiveScene(), MED_H_MODEL_PATH, {}, model,
+                                TextureHandler::getTextureByPath(MED_H_DIFF_TEX_PATH), true,
+                                [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); });
     }
 
     // Lights
     if (showLightHelpers_) {
         for (auto& light : positionalLights_) {
             std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(light, 0.5f);
-            lightHelperOffset_ = active_scene()->moveMesh(shell_->context(), std::move(pHelper));
+            SceneHandler::getActiveScene()->moveMesh(shell_->context(), std::move(pHelper));
         }
         for (auto& light : spotLights_) {
             std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(light, 0.5f);
-            lightHelperOffset_ = active_scene()->moveMesh(shell_->context(), std::move(pHelper));
+            SceneHandler::getActiveScene()->moveMesh(shell_->context(), std::move(pHelper));
         }
     }
-
-    assert(active_scene_index_ >= 0);
 }

@@ -27,13 +27,13 @@ void Object3d::putOnTop(const BoundingBoxMinMax& inBoundingBoxMinMax) {
                                  0.0f,
                              });
 
-    model_ = tm * model_;
+    transform(tm);
 }
 
-BoundingBoxMinMax Object3d::getBoundingBoxMinMax() const {
+BoundingBoxMinMax Object3d::getBoundingBoxMinMax(bool transform) const {
     BoundingBoxMinMax bbmm = {FLT_MAX, -FLT_MAX, FLT_MAX, -FLT_MAX, FLT_MAX, -FLT_MAX};
     for (auto v : boundingBox_) {
-        v = model_ * glm::vec4(v, 1.0f);
+        if (transform) v = model_ * glm::vec4(v, 1.0f);
         if (v.x < bbmm.xMin) bbmm.xMin = v.x;  // xMin
         if (v.x > bbmm.xMax) bbmm.xMax = v.x;  // xMax
         if (v.y < bbmm.yMin) bbmm.yMin = v.y;  // yMin

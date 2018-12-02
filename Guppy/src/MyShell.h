@@ -98,10 +98,10 @@ class MyShell {
         SurfaceProperties surface_props = {};  // *
         VkSurfaceKHR surface = VK_NULL_HANDLE;
         VkSurfaceFormatKHR surface_format = {};
-        VkPresentModeKHR mode = {};              // *
-        uint32_t image_count = 0;                // *
-        VkFormat depth_format = {};              // *
-        VkSampleCountFlagBits num_samples = {};  // *
+        VkPresentModeKHR mode = {};                // *
+        uint32_t image_count = 0;                  // *
+        VkFormat depth_format = {};                // *
+        VkSampleCountFlagBits num_samples = {};    // *
 
         VkSwapchainKHR swapchain = VK_NULL_HANDLE;
         VkExtent2D extent = {};

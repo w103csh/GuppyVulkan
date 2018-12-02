@@ -13,7 +13,6 @@
 #include <type_traits>
 #include <vector>
 #include <vulkan/vulkan.h>
-#include <unordered_map>
 
 #include "Constants.h"
 // This is here for convenience
@@ -173,8 +172,6 @@ static glm::mat4 affine(glm::vec3 scale = glm::vec3(1.0f), glm::vec3 translate =
            glm::scale(model, scale);
 }
 
-void indexVertices(Face &face, std::unordered_map<Vertex::Complete, size_t> &uniqueVertices, bool doTangentSpace, Mesh *pMesh);
-
 static std::string makeVec3String(std::string prefix, glm::vec3 v) {
     std::stringstream ss;
     ss << prefix << "(" << v.x << ", " << v.y << ", " << v.z << ")" << std::endl;
@@ -223,8 +220,8 @@ struct UniformBufferResources {
     uint32_t count;
     VkDeviceSize size;
     VkDescriptorBufferInfo info;
-    VkBuffer buffer;
-    VkDeviceMemory memory;
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
 };
 
 struct BufferResource {

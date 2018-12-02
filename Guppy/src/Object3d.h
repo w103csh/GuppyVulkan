@@ -47,11 +47,13 @@ struct Object3d {
         return model_ * glm::vec4(p, 1.0f);
     }
 
-    virtual inline void transform(const glm::mat4 t) { model_ *= t; }
+    // I did the order this way so that the incoming tranform doesn't get scaled...
+    // This could be problematic. Not sure yet.
+    virtual inline void transform(const glm::mat4 t) { model_ = t * model_; }
 
-    BoundingBoxMinMax getBoundingBoxMinMax() const;
+    BoundingBoxMinMax getBoundingBoxMinMax(bool transform = true) const;
 
-    void putOnTop(const BoundingBoxMinMax& boundingBox);
+    virtual void putOnTop(const BoundingBoxMinMax& boundingBox);
 
    protected:
     template <class T>
@@ -67,6 +69,15 @@ struct Object3d {
         if (v.position.y > boundingBox_[3].y) boundingBox_[3] = v.position;  // yMax
         if (v.position.z < boundingBox_[4].z) boundingBox_[4] = v.position;  // zMin
         if (v.position.z > boundingBox_[5].z) boundingBox_[5] = v.position;  // zMax
+    }
+
+    inline void updateBoundingBox(const BoundingBoxMinMax& bbmm) {
+        if (bbmm.xMin < boundingBox_[0].x) boundingBox_[0].x = bbmm.xMin;  // xMin
+        if (bbmm.xMax > boundingBox_[1].x) boundingBox_[1].x = bbmm.xMax;  // xMax
+        if (bbmm.yMin < boundingBox_[2].y) boundingBox_[2].y = bbmm.yMin;  // yMin
+        if (bbmm.yMax > boundingBox_[3].y) boundingBox_[3].y = bbmm.yMax;  // yMax
+        if (bbmm.zMin < boundingBox_[4].z) boundingBox_[4].z = bbmm.zMin;  // zMin
+        if (bbmm.zMax > boundingBox_[5].z) boundingBox_[5].z = bbmm.zMax;  // zMax
     }
 
     BoundingBox getBoundingBox() const;

@@ -5,6 +5,8 @@
 #include "FileLoader.h"
 #include "Mesh.h"
 
+#include "TextureHandler.h"
+
 // **********************
 // Mesh
 // **********************

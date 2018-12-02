@@ -27,11 +27,9 @@ void getObjData(MyShell *sh, tinyobj_data &data);
 
 /* BECUASE TEMPLATES ARE STUPID ALL OF THIS CODE NEEDS TO BE IN THE HEADER */
 template <class T>
-void loadObjData(const tinyobj_data &data, T &pMeshes) {
-    auto pMesh = pMeshes.back();
-
+void loadObjData(const tinyobj_data &data, std::vector<T *> &pMeshes) {
     // Map of unique vertices for indexed drawing, and calculating smoothing groups.
-    std::unordered_map<Vertex::Complete, size_t> uniqueVertices;
+    unique_vertices_map vertexMap;
     // std::vector<std::pair<Vertex::Complete, size_t>> uniqueVertices1;
     // std::vector<std::pair<Vertex::Complete, size_t>> uniqueVertices2;
 
@@ -41,12 +39,11 @@ void loadObjData(const tinyobj_data &data, T &pMeshes) {
     bool hasNormalMap = false;
 
     Face face;
-    size_t faceOffset = 0;
-    int materialOffset = -1;
+    size_t faceOffset = 0, materialOffset;
     tinyobj::index_t index0, index1, index2;
 
     for (const auto &shape : data.shapes) {
-        uniqueVertices.clear();
+        vertexMap.clear();
 
         // Increment by 3 for each face. (A face has 3 vertices. There is a param for forcing
         // this in the LoadObj function)
@@ -62,11 +59,15 @@ void loadObjData(const tinyobj_data &data, T &pMeshes) {
 
             // Materials are per face
             hasNormalMap = false;
-            materialOffset = shape.mesh.material_ids[f];
+            materialOffset = shape.mesh.material_ids[f] < 0 ? 0 : static_cast<size_t>(shape.mesh.material_ids[f]);
+
+            // Mesh is based on material
+            auto &pMesh = pMeshes[materialOffset];
+
             // TODO: bring back the model class that loads all of these things in the right order...
             if (pMesh->getMaterial().hasTexture() && pMesh->getMaterial().getTexture().flags & Texture::FLAGS::NORMAL) {
                 hasNormalMap = true;
-            } else if (materialOffset >= 0) {
+            } else if (!data.materials.empty()) {
                 // TODO: do this right...
                 auto &material = data.materials[materialOffset];
                 hasNormalMap = !material.bump_texname.empty() || !material.normal_texname.empty();
@@ -93,6 +94,7 @@ void loadObjData(const tinyobj_data &data, T &pMeshes) {
                     face[2].color[k] = data.attrib.colors[3 * static_cast<size_t>(index2.vertex_index) + k];
                 }
 
+                // TODO: These currently will never be used...
                 if (useNormals) {
                     // normal components
                     face[0].normal[k] = data.attrib.normals[3 * static_cast<size_t>(index0.normal_index) + k];
@@ -125,11 +127,11 @@ void loadObjData(const tinyobj_data &data, T &pMeshes) {
                 }
             }
 
-            helpers::indexVertices(face, uniqueVertices, true, pMesh);
+            face.indexVertices(vertexMap, pMeshes, materialOffset);
         }
     }
 
-    pMesh->setStatusPendingBuffers();
+    for (auto &pMesh : pMeshes) pMesh->setStatusPendingBuffers();
 }
 
 };  // namespace FileLoader

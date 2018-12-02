@@ -50,6 +50,8 @@ struct Camera {
 	mat4 view;
 };
 
+layout(location = 0) in vec3 CS_position;
+layout(location = 1) in vec3 TS_normal;
 // UNIFORM buffer
 layout(binding = 0) uniform DefaultUniformBuffer {
 	Camera camera;
@@ -76,6 +78,8 @@ vec3 phongModel(PositionalLight light, float shininess, uint lightCount) {
     // "s" is the direction to the light
     vec3 s = getDirToPos(light.position);
     float sDotN = max(dot(s, n), 0.0);
+
+    // return TS_normals;
 
     // Skip the rest if toon shading
     if ((ubo.shaderFlags & SHADER_TOON_SHADE) > 0) {
@@ -136,6 +140,7 @@ vec3 getColor(float shininess) {
     for (int i = 0; i < ubo.positionLights.length(); i++) {
         if ((ubo.positionLights[i].flags & LIGHT_SHOW) > 0) {
             color += phongModel(ubo.positionLights[i], shininess, ++lightCount);
+            break;
         }
     }
 #endif
@@ -143,7 +148,7 @@ vec3 getColor(float shininess) {
 #if HAS_SPOT_LIGHTS
     for (int i = 0; i < ubo.spotLights.length(); i++) {
         if ((ubo.spotLights[i].flags & LIGHT_SHOW) > 0) {
-            color += blinnPhongSpot(ubo.spotLights[i], shininess, ++lightCount);
+            // color += blinnPhongSpot(ubo.spotLights[i], shininess, ++lightCount);
         }
     }
 #endif

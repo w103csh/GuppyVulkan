@@ -1,13 +1,34 @@
-    for (size_t i = 0; i < 3; ++i) {
-        if (uniqueVertices.count(face[i]) == 0) {
-            uniqueVertices[face[i]] = static_cast<uint32_t>(pMesh->getVertexCount());
-            pMesh->addVertex(std::move(face[i]));
-        } else {
-            // Averge vertex attributes
-            auto vertex = pMesh->getVertexComplete(uniqueVertices[face[i]]);
-            vertex.normal = glm::normalize(vertex.normal + face[i].normal);
-            vertex.tangent += face[i].tangent;
-            vertex.binormal += face[i].binormal;
-        }
-        pMesh->addIndex(uniqueVertices[face[i]]);
-    }
+
+# torus
+vertices_ 100
+indices_  600
+
+# orange
+vertices_ 641
+indices_  3744
+vertices_ 162
+indices_  768
+
+ [ UNASSIGNED-CoreValidation-DrawState-InvalidImageLayout ]
+ Object: 0x14ab3d39d60 (Type = 6) |
+ Cannot submit cmd buffer using image (0x159)
+ [sub-resource: aspectMask 0x1 array layer 2, mip level 8],
+ with layout VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
+ when first use is VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL.
+
+		xMin	5.96244621	float
+		xMax	6.04014921	float
+		yMin	-0.961139023	float
+		yMax	0.973621011	float
+		zMin	-0.0393990017	float
+		zMax	0.0383040011	float
+
+
+		xMin	5.00000000	float
+		xMax	7.00000000	float
+		yMin	-0.975103021	float
+		yMax	0.988045990	float
+		zMin	-1.00000000	float
+		zMax	1.00000000	float
+
+93 b & 94 m

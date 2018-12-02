@@ -9,9 +9,7 @@
 #include "Game.h"
 #include "Helpers.h"
 #include "MyShell.h"
-#include "Scene.h"
-#include "Texture.h"
-#include "Shader.h"
+#include "Shader.h"  // DefaultUniformBuffer
 
 class Model;
 
@@ -91,7 +89,6 @@ class Guppy : public Game {
     // called by attach_shell
     void createUniformBuffer(std::string markName = "");
     void createLights();
-    void createTextures();
     void createScenes();
 
     // called by detach_shell
@@ -109,9 +106,6 @@ class Guppy : public Game {
     // called by destroy_frame_data
     void destroy_color_resources();
     void destroy_depth_resources();
-
-    // Scene
-    inline std::unique_ptr<Scene>& active_scene() { return pScenes_[active_scene_index_]; }
 
     // uniform buffer
     void updateUniformBuffer();
@@ -131,11 +125,6 @@ class Guppy : public Game {
     std::vector<Light::Positional> positionalLights_;
     std::vector<Light::Spot> spotLights_;
     size_t lightHelperOffset_;
-
-    // scene
-    // This should go onto the scene dynamic buffer if it stays like this.
-    int active_scene_index_;
-    std::vector<std::unique_ptr<Scene>> pScenes_;
- };
+};
 
 #endif  // !GUPPY_H

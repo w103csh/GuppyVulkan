@@ -53,7 +53,6 @@ const VkClearColorValue CLEAR_VALUE = {};
 // Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)
 typedef uint32_t VB_INDEX_TYPE;
 
-// Application wide up vector
 // X
 const glm::vec3 CARDINAL_X = glm::vec3(1.0f, 0.0f, 0.0f);
 const glm::vec3 CARDINAL_X_POS = glm::vec4(CARDINAL_X, 1.0f);
