@@ -41,6 +41,10 @@ class Face {
         calcNormal();
         if (calcTangentSpace) calcTangentSpaceVectors();
 
+        std::map<float, int> m;
+        m[1.02345f] = 1;
+        m[1.02345f] = 2;
+
         for (size_t i = 0; i < 3; ++i) {
             long index = -1;
 

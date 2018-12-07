@@ -52,6 +52,7 @@ set(SOURCE
 	shader.h
     Shell.cpp
     Shell.h
+    ShellGLFW.h
     Singleton.h
     Texture.cpp
     Texture.h
@@ -78,7 +79,7 @@ file(GLOB UTILS
     utils/*.cpp
     utils/*.h
     utils/*.hpp
-    )
+    ) 
 
 # # utils folder (mimice directory structure?)
 # file(GLOB UTILS_SOURCE
@@ -89,16 +90,20 @@ file(GLOB UTILS
 #     utils/*.hpp
 #     )
 
+# message(STATUS ${IMGUI})
+
 # target links
 set(LINKS
     ${TARGET_NAME}
     ${GLSLANG_LIBRARIES}
     ${VULKAN_LOADER}
     ${SPIRV_TOOLS_LIBRARIES}
+    ${GLFW_LIBRARIES}
+    ${IMGUI}
     )
 
+# message(STATUS ${LINKS})
 # message(STATUS ${SHADERS})
-
 
 if(WIN32)
     list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_WIN32_KHR)
@@ -166,6 +171,7 @@ else()
 
     source_group("Shaders" FILES ${SHADERS})
     source_group("Utils" FILES ${UTILS})
+    source_group("imgui" FILES ${IMGUI})
     # source_group("Utils/Source Files" FILES ${UTILS})
     # source_group("Utils/Headers" FILES ${UTILS})
 
@@ -174,6 +180,8 @@ else()
         utils
         ${GLM_LIB_DIR}
         ${EXT_LIB_DIR}
+        ${GLFW_INCLUDE_DIR}
+        ${IMGUI_DIR}
         )
 
     target_link_libraries(${LINKS})

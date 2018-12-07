@@ -36,7 +36,7 @@ class Model : public Object3d {
     void postLoad(Model::CALLBK callback);
 
     virtual inline void transform(const glm::mat4 t) override;
-    void updateAggregateBoundingBox(std::unique_ptr<Scene> &pScene);
+    // void updateAggregateBoundingBox(std::unique_ptr<Scene> &pScene);
 
     STATUS status;
 

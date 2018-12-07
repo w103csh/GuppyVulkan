@@ -26,11 +26,20 @@
     {
       "name" : "LunarG Vulkan SDK",
       "version" : "1.1.85.0"
+    },
+    {
+      "name" : "ImGui",
+      "version" : "125e62491eb29d4d91429ba7653a50714f9fe123"
+    },
+    {
+      "name" : "GLFW",
+      "version" : "glfw-3.2.1.bin.WIN64"
     }
   ],
   "install_names" : {
       "glslang" : "GLSLANG_INSTALL_DIR",
       "Vulkan-Headers" : "VULKAN_HEADERS_INSTALL_DIR",
-      "GLM" : "GLM_INSTALL_DIR"
+      "GLM" : "GLM_INSTALL_DIR",
+      "GLFW" : ["GLFW_INCLUDE_DIR", "GLFW_LIB_DIR"]
     }
 }

@@ -123,21 +123,4 @@ void Model::transform(const glm::mat4 t) {
     allMeshAction([&t](Mesh *pMesh) { pMesh->transform(t); });
 }
 
-void Model::updateAggregateBoundingBox(std::unique_ptr<Scene> &pScene){
-    // for (auto &offset : colorOffsets_) {
-    //    auto& pMesh = pScene->getColorMesh(offset);
-    //    auto
-    //    if (v.position.x < boundingBox_[0].x) boundingBox_[0] = v.position;  // xMin
-    //    if (v.position.x > boundingBox_[1].x) boundingBox_[1] = v.position;  // xMax
-    //    if (v.position.y < boundingBox_[2].y) boundingBox_[2] = v.position;  // yMin
-    //    if (v.position.y > boundingBox_[3].y) boundingBox_[3] = v.position;  // yMax
-    //    if (v.position.z < boundingBox_[4].z) boundingBox_[4] = v.position;  // zMin
-    //    if (v.position.z > boundingBox_[5].z) boundingBox_[5] = v.position;  // zMax
-    //}
-    // for (auto &offset : lineOffsets_) {
-    //}
-    // for (auto &offset : texOffsets_) {
-    //}
-};
-
 void Model::updateAggregateBoundingBox(Mesh *pMesh) { updateBoundingBox(pMesh->getBoundingBoxMinMax(false)); }

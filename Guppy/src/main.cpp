@@ -19,6 +19,8 @@
 
 #include "Guppy.h"
 
+#define USE_DEBUG_GUI  // Used in "MyShell.h", "ShellWin32.h", etc.
+
 namespace {
 
 Game *create_game(const std::vector<std::string> &args) { return new Guppy(args); }
@@ -82,13 +84,21 @@ void android_main(android_app *app) {
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
 
 #include "ShellWin32.h"
+#ifndef USE_DEBUG_GUI
+#include "ShellGLFW.h"
+#endif
 
 int main(int argc, char **argv) {
-    //Sleep(20000);
+    // Sleep(20000);
     Game *game = create_game(argc, argv);
     {
+#ifndef USE_DEBUG_GUI
         ShellWin32 shell(*game);
         shell.run();
+#else
+        ShellGLFW<ShellWin32> shell(*game);
+        shell.run();
+#endif
     }
     delete game;
 

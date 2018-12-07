@@ -98,10 +98,10 @@ class MyShell {
         SurfaceProperties surface_props = {};  // *
         VkSurfaceKHR surface = VK_NULL_HANDLE;
         VkSurfaceFormatKHR surface_format = {};
-        VkPresentModeKHR mode = {};                // *
-        uint32_t image_count = 0;                  // *
-        VkFormat depth_format = {};                // *
-        VkSampleCountFlagBits num_samples = {};    // *
+        VkPresentModeKHR mode = {};              // *
+        uint32_t image_count = 0;                // *
+        VkFormat depth_format = {};              // *
+        VkSampleCountFlagBits num_samples = {};  // *
 
         VkSwapchainKHR swapchain = VK_NULL_HANDLE;
         VkExtent2D extent = {};
@@ -118,13 +118,14 @@ class MyShell {
     };
     virtual void log(LogPriority priority, const char *msg) const;
 
-    virtual void watchDirectory(std::string dir, std::function<void(std::string)> callback) = 0;
     virtual void run() = 0;
     virtual void quit() = 0;
+    virtual void watchDirectory(std::string dir, std::function<void(std::string)> callback) = 0;
 
    protected:
     MyShell(Game &game);
 
+    virtual void setPlatformSpecificExtensions() = 0;
     void init_vk();
     void cleanup_vk();
 
@@ -204,6 +205,7 @@ class MyShell {
     void create_dev();
     void create_back_buffers();
     void destroy_back_buffers();
+    virtual void createWindow() = 0;
     virtual VkSurfaceKHR createSurface(VkInstance instance) = 0;
     void create_swapchain();
     void destroy_swapchain();

@@ -14,6 +14,8 @@ string(TOLOWER ${API_NAME} API_LOWERCASE)
 set(VULKAN_HEADERS_INSTALL_DIR "HEADERS-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Headers install directory")
 set(VULKAN_LOADER_INSTALL_DIR "LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
 set(GLM_LIB_DIR "GLM-NOTFOUND" CACHE PATH "Absolute path to a GLM library directory")
+set(GLFW_INCLUDE_DIR "GLFW-INCLUDE-NOTFOUND" CACHE PATH "Absolute path to a GLFW include directory")
+set(GLFW_LIB_DIR "GLFW-LIB-NOTFOUND" CACHE PATH "Absolute path to a GLFW library directory")
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};${VULKAN_HEADERS_INSTALL_DIR};${VULKAN_LOADER_INSTALL_DIR};${GLM_INSTALL_DIR};
                        $ENV{VULKAN_HEADERS_INSTALL_DIR};$ENV{VULKAN_LOADER_INSTALL_DIR};$ENV{GLM_INSTALL_DIR})
 
@@ -204,6 +206,7 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     endif()
 endif()
 
+############# GLSLANG
 set(GLSLANG_INSTALL_DIR "GLSLANG-NOTFOUND" CACHE PATH "Absolute path to a glslang install directory")
 if(NOT GLSLANG_INSTALL_DIR AND NOT DEFINED ENV{GLSLANG_INSTALL_DIR})
     message(FATAL_ERROR "Must define location of glslang binaries -- see BUILD.md")
@@ -214,6 +217,7 @@ if(NOT GLSLANG_INSTALL_DIR)
     set(GLSLANG_INSTALL_DIR $ENV{GLSLANG_INSTALL_DIR})
 endif()
 
+############# VULKAN HEADER
 set(VULKAN_HEADERS_INSTALL_DIR "VULKAN-HEADERS-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Headers install directory")
 if(NOT VULKAN_HEADERS_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_HEADERS_INSTALL_DIR})
     message(FATAL_ERROR "Must define location of vulkan headers -- see BUILD.md")
@@ -224,6 +228,7 @@ if(NOT VULKAN_HEADERS_INSTALL_DIR)
     set(VULKAN_HEADERS_INSTALL_DIR $ENV{VULKAN_HEADERS_INSTALL_DIR})
 endif()
 
+############# VULKAN LOADER
 set(VULKAN_LOADER_INSTALL_DIR "VULKAN-LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
 if(NOT VULKAN_LOADER_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_LOADER_INSTALL_DIR})
     message(FATAL_ERROR "Must define location of vulkan loader -- see BUILD.md")
@@ -234,6 +239,7 @@ if(NOT VULKAN_LOADER_INSTALL_DIR)
     set(VULKAN_LOADER_INSTALL_DIR $ENV{VULKAN_LOADER_INSTALL_DIR})
 endif()
 
+############# GLM
 set(GLM_LIB_DIR "GLM-NOTFOUND" CACHE PATH "Absolute path to a GLM install directory")
 if(NOT GLM_LIB_DIR AND NOT DEFINED ENV{GLM_LIB_DIR})
     message(FATAL_ERROR "Must define location of glm -- see BUILD.md")
@@ -244,6 +250,31 @@ if(NOT GLM_LIB_DIR)
     set(GLM_LIB_DIR $ENV{GLM_LIB_DIR})
 endif()
 message(STATUS "Using GLM library located at ${GLM_LIB_DIR}")
+
+############# GLFW INCLUDE
+set(GLFW_INCLUDE_DIR "GLFW-INCLUDE-NOTFOUND" CACHE PATH "Absolute path to a GLFW include directory")
+if(NOT GLFW_INCLUDE_DIR AND NOT DEFINED ENV{GLFW_INCLUDE_DIR})
+    message(FATAL_ERROR "Must define location of glfw include directory -- see BUILD.md")
+endif()
+
+# Cmake command line option overrides environment variable
+if(NOT GLFW_INCLUDE_DIR)
+    set(GLFW_INCLUDE_DIR $ENV{GLFW_INCLUDE_DIR})
+endif()
+message(STATUS "Using GLFW include directory located at ${GLFW_INCLUDE_DIR}")
+
+############# GLFW LIB
+set(GLFW_LIB_DIR "GLFW-LIB-NOTFOUND" CACHE PATH "Absolute path to a GLFW library directory")
+if(NOT GLFW_LIB_DIR AND NOT DEFINED ENV{GLFW_LIB_DIR})
+    message(FATAL_ERROR "Must define location of glfw library directory -- see BUILD.md")
+endif()
+
+# Cmake command line option overrides environment variable
+if(NOT GLFW_LIB_DIR)
+    set(GLFW_LIB_DIR $ENV{GLFW_LIB_DIR})
+endif()
+message(STATUS "Using GLFW library located at ${GLFW_LIB_DIR}")
+set(GLFW_LIBRARIES "${GLFW_LIB_DIR}/glfw3.lib")
 
 message(STATUS "Using glslang install located at ${GLSLANG_INSTALL_DIR}")
 set(SPIRV_TOOLS_BINARY_ROOT "${GLSLANG_INSTALL_DIR}/lib"
@@ -341,4 +372,9 @@ add_definitions(-DGUPPY_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Guppy/utils)
 
+# TODO: make this optional
+set(IMGUI ${ImGui})
+add_subdirectory(imgui)
+
 add_subdirectory(Guppy)
+

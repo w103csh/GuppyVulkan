@@ -56,15 +56,14 @@ class Win32Timer {
 
 }  // namespace
 
-ShellWin32::ShellWin32(Game& game) : MyShell(game), hinstance_(nullptr), hwnd_(nullptr), hmodule_(nullptr), minimized_(false) {
-    instance_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
-    init_vk();
-}
+ShellWin32::ShellWin32(Game& game) : MyShell(game), hinstance_(nullptr), hwnd_(nullptr), hmodule_(nullptr), minimized_(false) {}
 
 ShellWin32::~ShellWin32() {
     cleanup_vk();
     FreeLibrary(hmodule_);
 }
+
+void ShellWin32::setPlatformSpecificExtensions() { instance_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME); }
 
 void ShellWin32::createWindow() {
     const std::string class_name(settings_.name + "WindowClass");
@@ -397,6 +396,9 @@ void ShellWin32::getMouseModifier(WPARAM wParam, LPARAM lParam) {
 void ShellWin32::quit() { PostQuitMessage(0); }
 
 void ShellWin32::run() {
+    setPlatformSpecificExtensions();
+    init_vk();
+
     createWindow();
 
     create_context();

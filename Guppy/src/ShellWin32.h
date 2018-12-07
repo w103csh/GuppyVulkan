@@ -23,6 +23,7 @@
 
 #include "InputHandler.h"
 #include "MyShell.h"
+#include "ShellGLFW.h"
 
 #define BUFSIZE 8
 
@@ -44,11 +45,14 @@ class ShellWin32 : public MyShell {
     void run() override;
     void quit() override;
 
-   private:
+   protected:
+    virtual void setPlatformSpecificExtensions() override;
     PFN_vkGetInstanceProcAddr load_vk();
+
+   private:
     VkBool32 canPresent(VkPhysicalDevice phy, uint32_t queue_family);
 
-    void createWindow();
+    void createWindow() override;
     VkSurfaceKHR createSurface(VkInstance instance);
 
     Game::KEY getKey(WPARAM wParam, InputHandler::INPUT_TYPE type);
