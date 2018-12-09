@@ -51,6 +51,7 @@ enum class PIPELINE_TYPE {
     TRI_LIST_COLOR = 0,
     LINE = 1,
     TRI_LIST_TEX = 2,
+    UI = 3,
 };
 
 namespace vk {

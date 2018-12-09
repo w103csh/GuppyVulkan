@@ -56,7 +56,7 @@ class Win32Timer {
 
 }  // namespace
 
-ShellWin32::ShellWin32(Game& game) : MyShell(game), hinstance_(nullptr), hwnd_(nullptr), hmodule_(nullptr), minimized_(false) {}
+ShellWin32::ShellWin32(Game& game) : Shell(game), hinstance_(nullptr), hwnd_(nullptr), hmodule_(nullptr), minimized_(false) {}
 
 ShellWin32::~ShellWin32() {
     cleanup_vk();

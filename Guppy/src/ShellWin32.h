@@ -22,7 +22,7 @@
 #include <windows.h>
 
 #include "InputHandler.h"
-#include "MyShell.h"
+#include "Shell.h"
 #include "ShellGLFW.h"
 
 #define BUFSIZE 8
@@ -36,7 +36,7 @@ typedef struct _DIR_INST {
     std::function<void(std::string)> callback;
 } DIR_INST, *LPDIR_INST;
 
-class ShellWin32 : public MyShell {
+class ShellWin32 : public Shell {
    public:
     ShellWin32(Game &game);
     ~ShellWin32();

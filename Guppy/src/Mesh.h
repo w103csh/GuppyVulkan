@@ -10,7 +10,7 @@
 #include "Helpers.h"
 #include "LoadingResourceHandler.h"
 #include "Material.h"
-#include "MyShell.h"
+#include "Shell.h"
 #include "Object3d.h"
 #include "PipelineHandler.h"
 #include "Texture.h"
@@ -39,22 +39,12 @@ class Mesh : public Object3d {
         assert(status_ == STATUS::PENDING || status_ == STATUS::PENDING_TEXTURE);
         status_ = STATUS::PENDING_BUFFERS;
     }
-    inline void setStatusRedraw() {
-        // Only allow update to redraw if ready.
-        assert(status_ == STATUS::READY);
-        status_ = STATUS::REDRAW;
-    }
-    inline void setStatusReady() {
-        // Only allow update to ready if a redraw is requested.
-        assert(status_ == STATUS::REDRAW);
-        status_ = STATUS::READY;
-    }
 
     // INIT
     void setSceneData(size_t offset);
 
     // LOADING
-    virtual std::future<Mesh*> load(const MyShell::Context& ctx, std::function<void(Mesh*)> callbacak = nullptr);
+    virtual std::future<Mesh*> load(const Shell::Context& ctx, std::function<void(Mesh*)> callbacak = nullptr);
     virtual void prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes);
 
     // VERTEX
@@ -81,7 +71,7 @@ class Mesh : public Object3d {
 
    protected:
     // LOADING
-    Mesh* async_load(const MyShell::Context& ctx, std::function<void(Mesh*)> callbacak = nullptr);
+    Mesh* async_load(const Shell::Context& ctx, std::function<void(Mesh*)> callbacak = nullptr);
 
     // VERTEX
     void loadVertexBuffers(const VkDevice& dev);
@@ -170,7 +160,7 @@ class TextureMesh : public Mesh {
     TextureMesh(std::unique_ptr<Material> pMaterial, glm::mat4 model = glm::mat4(1.0f));
 
     // INIT
-    void setSceneData(const MyShell::Context& ctx, size_t offset);
+    void setSceneData(const Shell::Context& ctx, size_t offset);
 
     void prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) override;
     void drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,

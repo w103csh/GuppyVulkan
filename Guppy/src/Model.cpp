@@ -16,7 +16,7 @@ Model::Model(Model::IDX handlerOffset, std::unique_ptr<Scene> &pScene, std::stri
       modelPath_(modelPath),
       sceneOffset_(pScene->getOffset()) {}
 
-std::vector<ColorMesh *> Model::loadColor(MyShell *sh, Material material) {
+std::vector<ColorMesh *> Model::loadColor(Shell *sh, Material material) {
     FileLoader::tinyobj_data data = {modelPath_, ""};
 
     // Get obj data from the file loader...
@@ -42,7 +42,7 @@ std::vector<ColorMesh *> Model::loadColor(MyShell *sh, Material material) {
     return pMeshes;
 }
 
-std::vector<TextureMesh *> Model::loadTexture(MyShell *sh, Material material, std::shared_ptr<Texture::Data> pTexture) {
+std::vector<TextureMesh *> Model::loadTexture(Shell *sh, Material material, std::shared_ptr<Texture::Data> pTexture) {
     std::string modelDirectory = helpers::getFilePath(modelPath_);
     FileLoader::tinyobj_data data = {modelPath_, modelDirectory.c_str()};
 

@@ -5,7 +5,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Helpers.h"
-#include "MyShell.h"
+#include "Shell.h"
 #include "Singleton.h"
 
 struct LoadingResources {
@@ -20,7 +20,7 @@ struct LoadingResources {
 
 class LoadingResourceHandler : Singleton {
    public:
-    static void init(const MyShell::Context &ctx);
+    static void init(const Shell::Context &ctx);
 
     static std::unique_ptr<LoadingResources> createLoadingResources();
     static void loadSubmit(std::unique_ptr<LoadingResources> pLdgRes);
@@ -34,7 +34,7 @@ class LoadingResourceHandler : Singleton {
 
     void reset() override{};
 
-    MyShell::Context ctx_;  // TODO: shared_ptr
+    Shell::Context ctx_;  // TODO: shared_ptr
 
     std::vector<std::unique_ptr<LoadingResources>> ldgResources_;
 };

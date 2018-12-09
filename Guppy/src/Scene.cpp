@@ -4,6 +4,7 @@
 #include "Scene.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
+#include "UIHandler.h"
 
 namespace {
 
@@ -15,14 +16,16 @@ struct UBOTag {
 
 Scene::Scene(size_t offset) : offset_(offset), pDescResources_(nullptr) {}
 
-void Scene::createDynamicTexUniformBuffer(const MyShell::Context& ctx, const Game::Settings& settings, std::string markerName) {
+void Scene::createDynamicTexUniformBuffer(const Shell::Context& ctx, const Game::Settings& settings,
+                                          std::string markerName) {
     const auto& limits = ctx.physical_dev_props[ctx.physical_dev_index].properties.limits;
 
     // this is just a single flag for now...
     VkDeviceSize dynBuffSize = sizeof(FlagBits);
 
     if (limits.minUniformBufferOffsetAlignment)
-        dynBuffSize = (dynBuffSize + limits.minUniformBufferOffsetAlignment - 1) & ~(limits.minUniformBufferOffsetAlignment - 1);
+        dynBuffSize =
+            (dynBuffSize + limits.minUniformBufferOffsetAlignment - 1) & ~(limits.minUniformBufferOffsetAlignment - 1);
 
     pDynUBOResource_ = std::make_shared<UniformBufferResources>();
     pDynUBOResource_->count = TextureHandler::getCount();
@@ -31,8 +34,8 @@ void Scene::createDynamicTexUniformBuffer(const MyShell::Context& ctx, const Gam
 
     pDynUBOResource_->size =
         helpers::createBuffer(ctx.dev, (dynBuffSize * pDynUBOResource_->count), VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, pDynUBOResource_->buffer,
-                              pDynUBOResource_->memory);
+                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                              pDynUBOResource_->buffer, pDynUBOResource_->memory);
 
     void* pData;
     size_t offset = 0;
@@ -57,7 +60,7 @@ void Scene::createDynamicTexUniformBuffer(const MyShell::Context& ctx, const Gam
     }
 }
 
-std::unique_ptr<ColorMesh>& Scene::moveMesh(const MyShell::Context& ctx, std::unique_ptr<ColorMesh> pMesh) {
+std::unique_ptr<ColorMesh>& Scene::moveMesh(const Shell::Context& ctx, std::unique_ptr<ColorMesh> pMesh) {
     assert(pMesh->getStatus() == STATUS::PENDING_BUFFERS);
 
     auto offset = colorMeshes_.size();
@@ -69,7 +72,7 @@ std::unique_ptr<ColorMesh>& Scene::moveMesh(const MyShell::Context& ctx, std::un
     return colorMeshes_.back();
 }
 
-std::unique_ptr<ColorMesh>& Scene::moveMesh(const MyShell::Context& ctx, std::unique_ptr<LineMesh> pMesh) {
+std::unique_ptr<ColorMesh>& Scene::moveMesh(const Shell::Context& ctx, std::unique_ptr<LineMesh> pMesh) {
     assert(pMesh->getStatus() == STATUS::PENDING_BUFFERS);
 
     auto offset = lineMeshes_.size();
@@ -81,7 +84,7 @@ std::unique_ptr<ColorMesh>& Scene::moveMesh(const MyShell::Context& ctx, std::un
     return lineMeshes_.back();
 }
 
-std::unique_ptr<TextureMesh>& Scene::moveMesh(const MyShell::Context& ctx, std::unique_ptr<TextureMesh> pMesh) {
+std::unique_ptr<TextureMesh>& Scene::moveMesh(const Shell::Context& ctx, std::unique_ptr<TextureMesh> pMesh) {
     assert(pMesh->getStatus() == STATUS::PENDING_BUFFERS);
 
     auto offset = texMeshes_.size();
@@ -98,7 +101,7 @@ std::unique_ptr<TextureMesh>& Scene::moveMesh(const MyShell::Context& ctx, std::
     return texMeshes_.back();
 }
 
-size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<ColorMesh> pMesh, bool async,
+size_t Scene::addMesh(const Shell::Context& ctx, std::unique_ptr<ColorMesh> pMesh, bool async,
                       std::function<void(Mesh*)> callback) {
     auto offset = colorMeshes_.size();
 
@@ -121,7 +124,7 @@ size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<ColorMesh> pM
     return offset;
 }
 
-size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<LineMesh> pMesh, bool async,
+size_t Scene::addMesh(const Shell::Context& ctx, std::unique_ptr<LineMesh> pMesh, bool async,
                       std::function<void(Mesh*)> callback) {
     auto offset = lineMeshes_.size();
 
@@ -144,7 +147,7 @@ size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<LineMesh> pMe
     return offset;
 }
 
-size_t Scene::addMesh(const MyShell::Context& ctx, std::unique_ptr<TextureMesh> pMesh, bool async,
+size_t Scene::addMesh(const Shell::Context& ctx, std::unique_ptr<TextureMesh> pMesh, bool async,
                       std::function<void(Mesh*)> callback) {
     auto offset = texMeshes_.size();
 
@@ -180,9 +183,7 @@ void Scene::removeMesh(std::unique_ptr<Mesh>& pMesh) {
     assert(false);
 }
 
-bool Scene::update(const MyShell::Context& ctx, int frameIndex) {
-    auto startCount = readyCount();
-
+void Scene::update(const Shell::Context& ctx) {
     // Check loading futures
     if (!ldgFutures_.empty()) {
         auto itFut = ldgFutures_.begin();
@@ -212,26 +213,20 @@ bool Scene::update(const MyShell::Context& ctx, int frameIndex) {
         if (pMesh->getStatus() == STATUS::PENDING_TEXTURE) {
             pMesh->tryCreateDescriptorSets(pDescResources_);
         }
-        if (pMesh->getStatus() == STATUS::REDRAW) {
-            pMesh->setStatusReady();
-        }
     }
-
-    // TODO: This is bad. Should store descriptor sets on the scene and only record if a new
-    // descriptor set is added... or something like that. Really this should be fast...
-    return startCount != readyCount();
 }
 
 void Scene::updatePipeline(PIPELINE_TYPE type) { PipelineHandler::createPipeline(type, plResources_); }
 
 // TODO: make cmd amount dynamic
-const VkCommandBuffer& Scene::getDrawCmds(const uint32_t& frame_data_index) {
+const VkCommandBuffer& Scene::getDrawCmds(const uint8_t& frame_data_index, uint32_t& commandBufferCount) {
     auto& res = draw_resources_[frame_data_index];
     if (res.thread.joinable()) res.thread.join();
+    commandBufferCount = 1;  // !hardcode
     return res.cmd;
 }
 
-void Scene::create_draw_cmds(const MyShell::Context& ctx) {
+void Scene::createDrawCmds(const Shell::Context& ctx) {
     draw_resources_.resize(ctx.image_count);
 
     VkCommandBufferAllocateInfo alloc_info = {};
@@ -245,29 +240,10 @@ void Scene::create_draw_cmds(const MyShell::Context& ctx) {
     }
 }
 
-void Scene::recordDrawCmds(const MyShell::Context& ctx, const std::vector<FrameData>& frame_data,
-                           const std::vector<VkFramebuffer>& framebuffers, const VkViewport& viewport, const VkRect2D& scissor) {
-    // TODO: this is in the wrong order. YOu should loop through the meshes, and then update each draw resource...
-    // MAYBE USE PRIMARY AND SECONDARY COMMAND BUFFERS!!!
-    for (size_t i = 0; i < draw_resources_.size(); i++) {
-        if (vkGetFenceStatus(ctx.dev, frame_data[i].fence) == VK_SUCCESS) {
-            // sync
-            record(ctx, draw_resources_[i].cmd, framebuffers[i], frame_data[i].fence, viewport, scissor, i);
-        } else {
-            // If this fails, then some things need to be rethought.
-            assert(false);
-            // asnyc TODO: Can't update current draw until its done.. This isn't great. It can be revisited later.
-            draw_resources_[i].thread = std::thread(&Scene::record, this, ctx, draw_resources_[i].cmd, framebuffers[i],
-                                                    frame_data[i].fence, viewport, scissor, i, true);
-        }
-    }
-    ShaderHandler::cleanupOldResources();
-    PipelineHandler::cleanupOldResources();
-    SceneHandler::cleanupOldResources();
-}
+void Scene::record(const Shell::Context& ctx, const VkFramebuffer& framebuffer, const VkFence& fence,
+                   const VkViewport& viewport, const VkRect2D& scissor, uint8_t frameIndex, bool wait) {
+    auto& cmd = draw_resources_[frameIndex].cmd;
 
-void Scene::record(const MyShell::Context& ctx, const VkCommandBuffer& cmd, const VkFramebuffer& framebuffer, const VkFence& fence,
-                   const VkViewport& viewport, const VkRect2D& scissor, size_t frameIndex, bool wait) {
     if (wait) {
         // Wait for fences
         vk::assert_success(vkWaitForFences(ctx.dev, 1, &fence, VK_TRUE, UINT64_MAX));
@@ -395,10 +371,18 @@ void Scene::record(const MyShell::Context& ctx, const VkCommandBuffer& cmd, cons
                 uint32_t offset = static_cast<uint32_t>(pDescResources_->dynUboInfos[0].range) * pMesh->getTextureOffset();
                 std::array<uint32_t, 1> dynUboOffsets = {offset};
 
-                pMesh->drawSecondary(cmd, layout, pipeline, descSet, dynUboOffsets, frameIndex, inherit_info, viewport, scissor);
+                pMesh->drawSecondary(cmd, layout, pipeline, descSet, dynUboOffsets, frameIndex, inherit_info, viewport,
+                                     scissor);
             }
         }
     }
+
+    // **********************
+    //  UI PIPELINE
+    // **********************
+
+    vkCmdNextSubpass(cmd, VK_SUBPASS_CONTENTS_INLINE);
+    UIHandler::draw(cmd, frameIndex);
 
     vkCmdEndRenderPass(cmd);
 
@@ -408,7 +392,7 @@ void Scene::record(const MyShell::Context& ctx, const VkCommandBuffer& cmd, cons
     vk::assert_success(vkEndCommandBuffer(cmd));
 }
 
-void Scene::destroy_cmds(const VkDevice& dev) {
+void Scene::destroyCmds(const VkDevice& dev) {
     for (auto& res : draw_resources_) {
         if (res.thread.joinable()) res.thread.join();
         vkFreeCommandBuffers(dev, CmdBufHandler::graphics_cmd_pool(), 1, &res.cmd);
@@ -436,5 +420,5 @@ void Scene::destroy(const VkDevice& dev) {
     // pipeline
     PipelineHandler::destroyPipelineResources(plResources_);
     // commands
-    destroy_cmds(dev);
+    destroyCmds(dev);
 }

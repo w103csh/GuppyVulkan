@@ -38,14 +38,16 @@ else()
     message(FATAL_ERROR "Unsupported Platform!")
 endif()
 
+message(STATUS "GLSLANG_SPIRV_INCLUDE_DIR XXX: ${GLSLANG_SPIRV_INCLUDE_DIR}")
+
 # set(SAMPLES_DATA_DIR ${SAMPLES_DATA_DIR} "${CMAKE_SOURCE_DIR}/API-Samples/data")
 set(SHADER_FILES ${SHADER_FILES} "")
 include_directories(
-  # ${SAMPLES_DATA_DIR}
-  ${GLSLANG_SPIRV_INCLUDE_DIR}
-  ${GLMINC_PREFIX}
-  ${Vulkan_INCLUDE_DIR}
-  )
+    # ${SAMPLES_DATA_DIR}
+    ${GLSLANG_SPIRV_INCLUDE_DIR}
+    ${GLMINC_PREFIX}
+    ${Vulkan_INCLUDE_DIR}
+    )
 
 # Additional includes for spirv-tools
 include_directories(${SPIRV_TOOLS_INCLUDE_DIR})

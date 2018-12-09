@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-class MyShell;
+class Shell;
 
 class Game {
    public:
@@ -31,8 +31,8 @@ class Game {
 
     struct Settings {
         std::string name;
-        int initial_width = 1280;
-        int initial_height = 1024;
+        int initial_width = 1920;
+        int initial_height = 1080;
         int queue_count = 1;
         int back_buffer_count = 3;
         int ticks_per_second = 30;
@@ -58,9 +58,9 @@ class Game {
         bool assert_on_recompile_shader = false;
     };
     const Settings &settings() const { return settings_; }
-    MyShell &shell() const { return (*shell_); }  // TODO: maybe don't do this??? (Used for listening to shader changes)
+    Shell &shell() const { return (*shell_); }  // TODO: maybe don't do this??? (Used for listening to shader changes)
 
-    virtual void attach_shell(MyShell &shell) { shell_ = &shell; }
+    virtual void attach_shell(Shell &shell) { shell_ = &shell; }
     virtual void detach_shell() { shell_ = nullptr; }
 
     virtual void attach_swapchain() {}
@@ -136,7 +136,7 @@ class Game {
     }
 
     Settings settings_;
-    MyShell *shell_;
+    Shell *shell_;
 
    private:
     void parse_args(const std::vector<std::string> &args) {

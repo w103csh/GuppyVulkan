@@ -30,8 +30,8 @@ Shader::Shader(const VkDevice dev, std::string fileName, std::vector<const char*
     init(dev, pLinkTexts, true, std::vector<VkShaderModule>{}, updateTextFromFile);
 }
 
-void Shader::init(const VkDevice dev, std::vector<const char*> pLinkTexts, bool doAssert, std::vector<VkShaderModule>& oldModules,
-                  bool updateTextFromFile) {
+void Shader::init(const VkDevice dev, std::vector<const char*> pLinkTexts, bool doAssert,
+                  std::vector<VkShaderModule>& oldModules, bool updateTextFromFile) {
     bool isRecompile = (module != VK_NULL_HANDLE);
 
     // Check if shader needs to be (re)compiled
@@ -92,7 +92,7 @@ void ShaderHandler::reset() {
     inst_.cleanupOldResources();
 }
 
-void ShaderHandler::init(MyShell& sh, const Game::Settings& settings, uint32_t numPosLights, uint32_t numSpotLights) {
+void ShaderHandler::init(Shell& sh, const Game::Settings& settings, uint32_t numPosLights, uint32_t numSpotLights) {
     // Clean up owned memory...
     inst_.reset();
 
@@ -101,25 +101,19 @@ void ShaderHandler::init(MyShell& sh, const Game::Settings& settings, uint32_t n
     inst_.numPosLights_ = numPosLights;
     inst_.numSpotLights_ = numSpotLights;
 
-    inst_.loadShaders(
-        {SHADER_TYPE::COLOR_FRAG, SHADER_TYPE::COLOR_VERT, SHADER_TYPE::LINE_FRAG, SHADER_TYPE::TEX_FRAG, SHADER_TYPE::TEX_VERT},
-        true);
+    inst_.loadShaders({SHADER_TYPE::COLOR_FRAG, SHADER_TYPE::COLOR_VERT, SHADER_TYPE::LINE_FRAG, SHADER_TYPE::TEX_FRAG,
+                       SHADER_TYPE::TEX_VERT},
+                      true);
 
     // listen to changes to the shader files
     if (settings.enable_directory_listener) {
         sh.watchDirectory(SHADER_DIR, &ShaderHandler::recompileShader);
     }
 }
-bool ShaderHandler::update(std::unique_ptr<Scene>& pScene) {
-    bool hasUpdate = false;
+void ShaderHandler::update(std::unique_ptr<Scene>& pScene) {
     for (; !inst_.updateQueue_.empty(); inst_.updateQueue_.pop()) {
-        // TODO: should this update be with the other redraw checking??? I think so.
-        // This whole thing is sloppy. Fix it. The PipelineHandler should probably
-        // signal this not the ShaderHandler.
         pScene->updatePipeline(inst_.updateQueue_.front());
-        hasUpdate = true;
     }
-    return hasUpdate;
 }
 
 void ShaderHandler::recompileShader(std::string fileName) {

@@ -14,17 +14,26 @@
  * limitations under the License.
  */
 
-#ifndef SHELL_H
-#define SHELL_H
+#ifndef MY_SHELL_H
+#define MY_SHELL_H
 
 #include <queue>
+#include <map>
 #include <vector>
 #include <stdexcept>
 #include <vulkan/vulkan.h>
 
 #include "Game.h"
+#include "Helpers.h"
 
 class Game;
+struct DescriptorResources;  // UI only
+struct PipelineResources;    // UI only
+
+// structure for comparing char arrays
+struct less_str {
+    bool operator()(char const *a, char const *b) const { return std::strcmp(a, b) < 0; }
+};
 
 class Shell {
    public:
@@ -32,38 +41,78 @@ class Shell {
     Shell &operator=(const Shell &sh) = delete;
     virtual ~Shell() {}
 
+    virtual void updateUIResources(DescriptorResources &desRes, PipelineResources &plRes){};  // UI only
+
     struct BackBuffer {
         uint32_t image_index;
-
         VkSemaphore acquire_semaphore;
         VkSemaphore render_semaphore;
-
         // signaled when this struct is ready for reuse
         VkFence present_fence;
     };
 
+    struct LayerProperties {
+        VkLayerProperties properties;
+        std::vector<VkExtensionProperties> extensionProps;
+    };  // *
+
+    struct SurfaceProperties {
+        VkSurfaceCapabilitiesKHR capabilities;
+        std::vector<VkSurfaceFormatKHR> surf_formats;
+        std::vector<VkPresentModeKHR> presentModes;
+    };  // *
+
+    struct PhysicalDeviceProperties {
+        VkPhysicalDevice device;
+        uint32_t queue_family_count;
+        std::vector<VkQueueFamilyProperties> queue_props;
+        VkPhysicalDeviceMemoryProperties memory_properties;
+        VkPhysicalDeviceProperties properties;
+        std::vector<VkExtensionProperties> extensions;
+        std::multimap<const char *, VkExtensionProperties, less_str> layer_extension_map = {};
+        VkPhysicalDeviceFeatures features;
+    };  // *
+
     struct Context {
-        VkInstance instance;
-        VkDebugReportCallbackEXT debug_report;
+        VkInstance instance = VK_NULL_HANDLE;
+        VkDebugReportCallbackEXT debug_report = VK_NULL_HANDLE;
+        VkDebugUtilsMessengerEXT debug_utils_messenger = VK_NULL_HANDLE;
 
-        VkPhysicalDevice physical_dev;
-        uint32_t game_queue_family;
-        uint32_t present_queue_family;
+        bool sampler_anisotropy_enabled_ = false;   // *
+        bool sample_rate_shading_enabled_ = false;  // *
+        bool linear_blitting_supported_ = false;    // *
 
-        VkDevice dev;
-        VkQueue game_queue;
-        VkQueue present_queue;
+        VkPhysicalDevice physical_dev = VK_NULL_HANDLE;
+        std::vector<PhysicalDeviceProperties> physical_dev_props;  // *
+        uint32_t physical_dev_index = 0;                           // *
+        VkPhysicalDeviceMemoryProperties mem_props = {};           // *
+        std::vector<VkQueue> queues;                               // *
+        uint32_t graphics_index = 0;                               // *
+        uint32_t present_index = 0;                                // *
+        uint32_t transfer_index = 0;                               // *
+        uint32_t game_queue_family = 0;
+        uint32_t present_queue_family = 0;
+
+        VkDevice dev = VK_NULL_HANDLE;
+        // VkQueue game_queue;
+        // VkQueue present_queue;
 
         std::queue<BackBuffer> back_buffers;
 
-        VkSurfaceKHR surface;
-        VkSurfaceFormatKHR format;
+        SurfaceProperties surface_props = {};  // *
+        VkSurfaceKHR surface = VK_NULL_HANDLE;
+        VkSurfaceFormatKHR surface_format = {};
+        VkPresentModeKHR mode = {};              // *
+        uint32_t image_count = 0;                // *
+        VkFormat depth_format = {};              // *
+        VkSampleCountFlagBits num_samples = {};  // *
 
-        VkSwapchainKHR swapchain;
-        VkExtent2D extent;
+        VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+        VkExtent2D extent = {};
 
-        BackBuffer acquired_back_buffer;
+        BackBuffer acquired_back_buffer = {};
     };
+
     const Context &context() const { return ctx_; }
 
     enum LogPriority {
@@ -76,17 +125,19 @@ class Shell {
 
     virtual void run() = 0;
     virtual void quit() = 0;
+    virtual void watchDirectory(std::string dir, std::function<void(std::string)> callback) = 0;
+    
+    void resize_swapchain(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities = true);
 
    protected:
     Shell(Game &game);
 
+    virtual void setPlatformSpecificExtensions() = 0;
     void init_vk();
     void cleanup_vk();
 
     void create_context();
     void destroy_context();
-
-    void resize_swapchain(uint32_t width_hint, uint32_t height_hint);
 
     void add_game_time(float time);
 
@@ -100,6 +151,10 @@ class Shell {
     std::vector<const char *> instance_extensions_;
 
     std::vector<const char *> device_extensions_;
+
+    // NEW
+    std::vector<LayerProperties> layerProps_;
+    std::vector<VkExtensionProperties> instExtProps_;
 
    private:
     bool debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT obj_type, uint64_t object, size_t location,
@@ -117,20 +172,61 @@ class Shell {
     bool has_all_device_layers(VkPhysicalDevice phy) const;
     bool has_all_device_extensions(VkPhysicalDevice phy) const;
 
+    // called by init_instance
+    void enumerate_instance_properties();           // *
+    void determine_api_version(uint32_t &version);  // *
+
     // called by init_vk
+    void enumerate_instance_layer_extension_properties(LayerProperties &layer_props);  // *
+    void init_validation_messenger();                                                  // *
     virtual PFN_vkGetInstanceProcAddr load_vk() = 0;
-    virtual VkBool32 can_present(VkPhysicalDevice phy, uint32_t queue_family) = 0;
+    virtual VkBool32 canPresent(VkPhysicalDevice phy, uint32_t queue_family) = 0;
     void init_instance();
     void init_debug_report();
     void init_physical_dev();
 
+    // called by enumerate_instance_layer_extension_properties
+    void enumerate_instance_extension_properties();                                                                   // *
+    void enumerate_device_layer_extension_properties(PhysicalDeviceProperties &props, LayerProperties &layer_props);  // *
+
+    // called by init_physical_dev
+    void enumerate_physical_devs(uint32_t physical_dev_count = 1);  // *
+    void pick_physical_dev();                                       // *
+
+    // called by pick_device
+    bool is_dev_suitable(const PhysicalDeviceProperties &props, uint32_t &graphics_queue_index, uint32_t &present_queue_index,
+                         uint32_t &transfer_queue_index);  // *
+
+    // called by is_dev_suitable
+    bool determine_queue_families_support(const PhysicalDeviceProperties &props, uint32_t &graphics_queue_family_index,
+                                          uint32_t &present_queue_family_index,
+                                          uint32_t &transfer_queue_family_index);    // *
+    bool determine_device_extension_support(const PhysicalDeviceProperties &props);  // *
+    void determine_device_feature_support(const PhysicalDeviceProperties &props);    // *
+    void determine_sample_count(const PhysicalDeviceProperties &props);              // *
+
     // called by create_context
+    void init_dev_queues();  // *
     void create_dev();
     void create_back_buffers();
     void destroy_back_buffers();
-    virtual VkSurfaceKHR create_surface(VkInstance instance) = 0;
+    virtual void createWindow() = 0;
+    virtual VkSurfaceKHR createSurface(VkInstance instance) = 0;
     void create_swapchain();
     void destroy_swapchain();
+
+    // called by create_swapchain
+    void enumerate_surface_properties();        // *
+    void determine_depth_format();              // *
+    void determine_swapchain_surface_format();  // *
+    void determine_swapchain_present_mode();    // *
+    void determine_swapchain_image_count();     // *
+
+    // called by resize_swapchain
+    bool Shell::determine_swapchain_extent(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities);  // *
+
+    // called by cleanup_vk
+    void destroy_instance();  // *
 
     void fake_present();
 

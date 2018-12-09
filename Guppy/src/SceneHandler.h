@@ -8,14 +8,20 @@
 #include "Singleton.h"
 #include "Scene.h"
 
-class MyShell;
+class Shell;
+
+struct InvalidSceneResources {
+    VkDescriptorPool pool = VK_NULL_HANDLE;
+    std::vector<std::vector<VkDescriptorSet>> texSets = {};
+    std::shared_ptr<UniformBufferResources> pDynUBORes = nullptr;
+};
 
 class SceneHandler : Singleton {
    public:
-    static void init(const MyShell::Context& ctx, const Game::Settings& settings);
+    static void init(Shell* sh, const Game::Settings& settings);
     static inline void destroy() {
         inst_.reset();
-        inst_.cleanupOldResources();
+        inst_.cleanupInvalidResources();
     }
 
     static uint8_t makeScene(const UniformBufferResources& uboResource, bool setActive = false);
@@ -35,10 +41,9 @@ class SceneHandler : Singleton {
         return inst_.pScenes_[sceneOffset]->getTextureMesh(meshOffset);
     }
 
-    static void updateDescriptorResources(uint8_t offset, const UniformBufferResources* pUBORes = nullptr);
-
+    static void updateDescriptorResources(uint8_t offset, bool isUpdate = true);
     static void destroyDescriptorResources(std::unique_ptr<DescriptorResources>& pRes);
-    static void cleanupOldResources();
+    static void cleanupInvalidResources();
 
    private:
     SceneHandler();     // Prevent construction
@@ -46,14 +51,15 @@ class SceneHandler : Singleton {
     static SceneHandler inst_;
     void reset() override;
 
-    MyShell::Context ctx_;     // TODO: shared_ptr
+    Shell* sh_;
+    Shell::Context ctx_;     // TODO: shared_ptr
     Game::Settings settings_;  // TODO: shared_ptr
 
     uint8_t activeSceneIndex_;
     std::vector<std::unique_ptr<Scene>> pScenes_;
 
     // global storage for clean up
-    std::vector<std::unique_ptr<DescriptorResources>> oldDescRes_;
+    std::vector<InvalidSceneResources> invalidRes_;
 };
 
 #endif  // !SCENE_HANDLER_H

@@ -5,7 +5,7 @@
 #include <sstream>
 
 #include "FileLoader.h"
-#include "MyShell.h"
+#include "Shell.h"
 
 std::string FileLoader::readFile(std::string filepath) {
     std::ifstream file(ROOT_PATH + filepath, std::ios::binary);
@@ -23,15 +23,15 @@ std::string FileLoader::readFile(std::string filepath) {
     return str;
 }
 
-void FileLoader::getObjData(MyShell *sh, tinyobj_data &data) {
+void FileLoader::getObjData(Shell *sh, tinyobj_data &data) {
     std::string warn, err;
     if (!tinyobj::LoadObj(&data.attrib, &data.shapes, &data.materials, &warn, &err, data.filename.c_str(),
                           data.mtl_basedir.c_str())) {
-        sh->log(MyShell::LOG_ERR, err.c_str());
+        sh->log(Shell::LOG_ERR, err.c_str());
         throw std::runtime_error(err);
     }
     if (!warn.empty()) {
-        sh->log(MyShell::LOG_WARN, warn.c_str());
+        sh->log(Shell::LOG_WARN, warn.c_str());
     }
 }
 

@@ -4,7 +4,7 @@
 
 LoadingResourceHandler LoadingResourceHandler::inst_;
 
-void LoadingResourceHandler::init(const MyShell::Context& ctx) {
+void LoadingResourceHandler::init(const Shell::Context& ctx) {
     inst_.cleanupResources();
     inst_.ctx_ = ctx;
 }

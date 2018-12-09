@@ -281,8 +281,8 @@ set(SPIRV_TOOLS_BINARY_ROOT "${GLSLANG_INSTALL_DIR}/lib"
     CACHE PATH "User defined path to the SPIRV-Tools binaries for this project")
 set(SPIRV_TOOLS_OPT_BINARY_ROOT "${GLSLANG_INSTALL_DIR}/lib"
     CACHE PATH "User defined path to the SPIRV-Tools-opt binaries for this project")
-set(GLSLANG_SPIRV_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/include" CACHE PATH "Path to glslang spirv headers")
-set(SPIRV_TOOLS_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/include" CACHE PATH "Path to spirv tools headers")
+# set(GLSLANG_SPIRV_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/include" CACHE PATH "Path to glslang spirv headers")
+# set(SPIRV_TOOLS_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/include" CACHE PATH "Path to spirv tools headers")
 set(GLSLANG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
 set(GLSLANG_DEBUG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
 set(SPIRV_TOOLS_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
@@ -290,21 +290,43 @@ set(SPIRV_TOOLS_DEBUG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
 set(SPIRV_TOOLS_OPT_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
 set(SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
 
-find_library(GLSLANG_LIB NAMES glslang HINTS ${GLSLANG_SEARCH_PATH})
+# message(STATUS "GLSLANG_SEARCH_PATH: ${GLSLANG_SEARCH_PATH}")
+# message(STATUS "GLSLANG_DEBUG_SEARCH_PATH: ${GLSLANG_DEBUG_SEARCH_PATH}")
+# message(STATUS "DEBUG_DECORATION: ${DEBUG_DECORATION}")
+# message(STATUS "RELEASE_DECORATION: ${RELEASE_DECORATION}")
 
-find_library(OGLCompiler_LIB NAMES OGLCompiler HINTS ${GLSLANG_SEARCH_PATH})
+# set(GLSLANG_SPIRV_DINCLUDE_DIR "${GLSLANG_INSTALL_DIR}/${DEBUG_DECORATION}/include" CACHE PATH "Path to glslang spirv debug headers")
+set(GLSLANG_SPIRV_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/${RELEASE_DECORATION}/include" CACHE PATH "Path to glslang spirv headers")
 
-find_library(OSDependent_LIB NAMES OSDependent HINTS ${GLSLANG_SEARCH_PATH})
+# set(SPIRV_TOOLS_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/${DEBUG_DECORATION}/include" CACHE PATH "Path to spirv tools debug headers")
+set(SPIRV_TOOLS_DINCLUDE_DIR "${GLSLANG_INSTALL_DIR}/${RELEASE_DECORATION}/include" CACHE PATH "Path to spirv tools headers")
 
-find_library(HLSL_LIB NAMES HLSL HINTS ${GLSLANG_SEARCH_PATH})
+set(GLSLANG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/${DEBUG_DECORATION}/lib")
+# message(STATUS "GLSLANG_SEARCH_PATH DEBUG: ${GLSLANG_SEARCH_PATH}")
 
-find_library(SPIRV_LIB NAMES SPIRV HINTS ${GLSLANG_SEARCH_PATH})
+find_library(        GLSLANG_DLIB NAMES glslangd HINTS         ${GLSLANG_SEARCH_PATH})
+find_library(    OGLCompiler_DLIB NAMES OGLCompilerd HINTS     ${GLSLANG_SEARCH_PATH})
+find_library(    OSDependent_DLIB NAMES OSDependentd HINTS     ${GLSLANG_SEARCH_PATH})
+find_library(           HLSL_DLIB NAMES HLSLd HINTS            ${GLSLANG_SEARCH_PATH})
+find_library(          SPIRV_DLIB NAMES SPIRVd HINTS           ${GLSLANG_SEARCH_PATH})
+find_library( SPIRV_REMAPPER_DLIB NAMES SPVRemapperd HINTS     ${GLSLANG_SEARCH_PATH})
+find_library(    SPIRV_TOOLS_DLIB NAMES SPIRV-Toolsd HINTS     ${GLSLANG_SEARCH_PATH})
+find_library(SPIRV_TOOLS_OPT_DLIB NAMES SPIRV-Tools-optd HINTS ${GLSLANG_SEARCH_PATH})
 
-find_library(SPIRV_REMAPPER_LIB NAMES SPVRemapper HINTS ${GLSLANG_SEARCH_PATH})
+set(GLSLANG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/${RELEASE_DECORATION}/lib")
+# message(STATUS "GLSLANG_SEARCH_PATH RELEASE: ${GLSLANG_SEARCH_PATH}")
 
-find_library(SPIRV_TOOLS_LIB NAMES SPIRV-Tools HINTS ${SPIRV_TOOLS_SEARCH_PATH})
+find_library(        GLSLANG_LIB NAMES glslang HINTS         ${GLSLANG_SEARCH_PATH})
+find_library(    OGLCompiler_LIB NAMES OGLCompiler HINTS     ${GLSLANG_SEARCH_PATH})
+find_library(    OSDependent_LIB NAMES OSDependent HINTS     ${GLSLANG_SEARCH_PATH})
+find_library(           HLSL_LIB NAMES HLSL HINTS            ${GLSLANG_SEARCH_PATH})
+find_library(          SPIRV_LIB NAMES SPIRV HINTS           ${GLSLANG_SEARCH_PATH})
+find_library( SPIRV_REMAPPER_LIB NAMES SPVRemapper HINTS     ${GLSLANG_SEARCH_PATH})
+find_library(    SPIRV_TOOLS_LIB NAMES SPIRV-Tools HINTS     ${GLSLANG_SEARCH_PATH})
+find_library(SPIRV_TOOLS_OPT_LIB NAMES SPIRV-Tools-opt HINTS ${GLSLANG_SEARCH_PATH})
 
-find_library(SPIRV_TOOLS_OPT_LIB NAMES SPIRV-Tools-opt HINTS ${SPIRV_TOOLS_OPT_SEARCH_PATH})
+# message(STATUS "GLSLANG_DLIB: ${GLSLANG_DLIB}")
+# message(STATUS "GLSLANG_LIB: ${GLSLANG_LIB}")
 
 if(WIN32)
     add_library(glslang STATIC IMPORTED)
@@ -343,8 +365,18 @@ if(WIN32)
 endif()
 
 if(WIN32)
-    set(SPIRV_TOOLS_LIBRARIES SPIRV-Tools-opt SPIRV-Tools)
-    set(GLSLANG_LIBRARIES glslang OGLCompiler OSDependent HLSL SPIRV SPVRemapper ${SPIRV_TOOLS_LIBRARIES})
+    set(SPIRV_TOOLS_LIBRARIES
+        SPIRV-Tools-opt
+        SPIRV-Tools
+        )
+    set(GLSLANG_LIBRARIES
+        glslang
+        OGLCompiler
+        OSDependent
+        HLSL SPIRV
+        SPVRemapper
+        ${SPIRV_TOOLS_LIBRARIES}
+        )
 else()
     set(SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_OPT_LIB} ${SPIRV_TOOLS_LIB})
     set(GLSLANG_LIBRARIES
@@ -354,7 +386,8 @@ else()
         ${HLSL_LIB}
         ${SPIRV_LIB}
         ${SPIRV_REMAPPER_LIB}
-        ${SPIRV_TOOLS_LIBRARIES})
+        ${SPIRV_TOOLS_LIBRARIES}
+        )
 endif()
 
 set (PYTHON_CMD ${PYTHON_EXECUTABLE})
@@ -369,8 +402,6 @@ endif()
 
 add_definitions(-DVULKAN_SAMPLES_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 add_definitions(-DGUPPY_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
-
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/Guppy/utils)
 
 # TODO: make this optional
 set(IMGUI ${ImGui})

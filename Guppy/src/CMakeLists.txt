@@ -21,6 +21,8 @@ set(SOURCE
     Guppy.h
 	Helpers.cpp
     Helpers.h
+    ImGuiUI.cpp
+    ImGuiUI.h
     InputHandler.cpp
     InputHandler.h
     Light.cpp
@@ -36,8 +38,6 @@ set(SOURCE
     Model.h
     ModelHandler.cpp
     ModelHandler.h
-    MyShell.cpp
-    MyShell.h
     Object3d.cpp
     Object3d.h
 	PipelineHandler.cpp
@@ -58,6 +58,8 @@ set(SOURCE
     Texture.h
     TextureHandler.cpp
     TextureHandler.h
+    UIHandler.cpp
+    UIHandler.h
     Vertex.cpp
     Vertex.h
     )
@@ -171,7 +173,6 @@ else()
 
     source_group("Shaders" FILES ${SHADERS})
     source_group("Utils" FILES ${UTILS})
-    source_group("imgui" FILES ${IMGUI})
     # source_group("Utils/Source Files" FILES ${UTILS})
     # source_group("Utils/Headers" FILES ${UTILS})
 

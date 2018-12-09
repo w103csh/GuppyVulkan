@@ -3,7 +3,7 @@
 #include <sstream>
 
 #include "InputHandler.h"
-#include "MyShell.h"
+#include "Shell.h"
 
 const bool MY_DEBUG = false;
 
@@ -17,7 +17,7 @@ constexpr float M_Y_LOOK_FACT = -0.1f;
 
 InputHandler InputHandler::inst_;
 
-void InputHandler::init(MyShell* sh) {
+void InputHandler::init(Shell* sh) {
     if (sh != nullptr)
         inst_.sh_ = sh;
     else
@@ -38,7 +38,7 @@ void InputHandler::updateInput(float elapsed) {
     if (MY_DEBUG && glm::any(glm::notEqual(inst_.posDir_, glm::vec3(0.0f)))) {
         std::stringstream ss;
         ss << "move (" << elapsed << "):";
-        inst_.sh_->log(MyShell::LOG_INFO, helpers::makeVec3String(ss.str(), inst_.posDir_).c_str());
+        inst_.sh_->log(Shell::LOG_INFO, helpers::makeVec3String(ss.str(), inst_.posDir_).c_str());
     }
 }
 
@@ -86,7 +86,7 @@ void InputHandler::updateKeyInput() {
 
     if (MY_DEBUG && ss.str().size() > 0) {
         ss << "\n Y position direction: ";
-        sh_->log(MyShell::LOG_INFO, helpers::makeVec3String(ss.str(), posDir_).c_str());
+        sh_->log(Shell::LOG_INFO, helpers::makeVec3String(ss.str(), posDir_).c_str());
     }
 }
 
@@ -117,7 +117,7 @@ void InputHandler::updateMouseInput() {
     }
 
     if (MY_DEBUG && ss.str().size() > 0) {
-        sh_->log(MyShell::LOG_INFO, ss.str().c_str());
+        sh_->log(Shell::LOG_INFO, ss.str().c_str());
     }
 
     prevMouseInput_ = currMouseInput_;

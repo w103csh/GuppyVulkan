@@ -34,3 +34,6 @@ indices_  768
 93 b & 94 m
 
 23280666638158
+
+
+/GS /TP /W3 /wd"4267" /Zc:wchar_t /I"C:\Users\cloin\source\repos\VulkanTest\Guppy\utils" /I"C:\Users\cloin\source\repos\glslang\build\RelWithDebInfo\install\include" /I"C:\libs\glm-0.9.9.2\glm" /I"C:\Users\cloin\source\repos\Vulkan-Headers\build\RelWithDebInfo\install\include" /I"C:\Users\cloin\source\repos\VulkanTest\Guppy\src\Guppy" /I"C:\Users\cloin\source\repos\VulkanTest\Guppy\src\utils" /I"C:\Users\cloin\source\repos\VulkanTest\libs" /I"C:\libs\glfw-3.2.1.bin.WIN64\include" /I"C:\Users\cloin\source\repos\VulkanTest\imgui" /Zi /Gm- /Od /Ob0 /Fd"Guppy.dir\Debug\vc141.pdb" /Zc:inline /fp:precise /D "WIN32" /D "_WINDOWS" /D "_CRT_SECURE_NO_WARNINGS" /D "_USE_MATH_DEFINES" /D "API_NAME=\"Vulkan\"" /D "VULKAN_SAMPLES_BASE_DIR=\"C:/Users/cloin/source/repos/VulkanTest\"" /D "GUPPY_BASE_DIR=\"C:/Users/cloin/source/repos/VulkanTest\"" /D "VK_USE_PLATFORM_WIN32_KHR" /D "WIN32_LEAN_AND_MEAN" /D "CMAKE_INTDIR=\"Debug\"" /D "_MBCS" /errorReport:prompt /WX /Zc:forScope /RTC1 /GR- /Gd /MDd /Fa"Debug/" /EHsc /nologo /Fo"Guppy.dir\Debug\" /Fp"Guppy.dir\Debug\Guppy.pch" /diagnostics:classic 

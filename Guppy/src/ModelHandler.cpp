@@ -6,7 +6,7 @@
 
 ModelHandler ModelHandler::inst_;
 
-void ModelHandler::init(MyShell* sh) { inst_.sh_ = sh; }
+void ModelHandler::init(Shell* sh) { inst_.sh_ = sh; }
 
 void ModelHandler::makeModel(std::unique_ptr<Scene>& pScene, std::string modelPath, Material material, glm::mat4 model, bool async,
                              Model::CALLBK callback) {

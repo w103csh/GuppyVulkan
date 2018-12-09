@@ -6,11 +6,11 @@
 #include "Singleton.h"
 #include "Texture.h"
 
-class MyShell;
+class Shell;
 
 class TextureHandler : Singleton {
    public:
-    static void init(MyShell* sh);
+    static void init(Shell* sh);
     static inline void destroy() { inst_.reset(); }
 
     static void addTexture(std::string path, std::string normPath = "", std::string specPath = "");
@@ -26,7 +26,7 @@ class TextureHandler : Singleton {
     static TextureHandler inst_;
     void reset() override;
 
-    MyShell* sh_;  // TODO: shared_ptr
+    Shell* sh_;  // TODO: shared_ptr
 
     std::vector<std::shared_ptr<Texture::Data>> pTextures_;
     std::vector<std::future<std::shared_ptr<Texture::Data>>> texFutures_;

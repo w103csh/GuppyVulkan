@@ -25,11 +25,11 @@ Mesh::Mesh(std::unique_ptr<Material> pMaterial, glm::mat4 model)
 
 void Mesh::setSceneData(size_t offset) { offset_ = offset; }
 
-std::future<Mesh*> Mesh::load(const MyShell::Context& ctx, std::function<void(Mesh*)> callback) {
+std::future<Mesh*> Mesh::load(const Shell::Context& ctx, std::function<void(Mesh*)> callback) {
     return std::async(std::launch::async, &Mesh::async_load, this, ctx, callback);
 }
 
-Mesh* Mesh::async_load(const MyShell::Context& ctx, std::function<void(Mesh*)> callback) {
+Mesh* Mesh::async_load(const Shell::Context& ctx, std::function<void(Mesh*)> callback) {
     // if (!modelPath_.empty()) {
     //    switch (helpers::getModelFileType(modelPath_)) {
     //        case MODEL_FILE_TYPE::OBJ: {
@@ -208,17 +208,11 @@ TextureMesh::TextureMesh(std::unique_ptr<Material> pMaterial, glm::mat4 model) :
     pipelineType_ = PIPELINE_TYPE::TRI_LIST_TEX;
 };
 
-void TextureMesh::setSceneData(const MyShell::Context& ctx, size_t offset) {
+void TextureMesh::setSceneData(const Shell::Context& ctx, size_t offset) {
     // Only texture meshes are draw on a secondary command buffer atm...
-    VkCommandBufferAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.commandPool = CmdBufHandler::graphics_cmd_pool();
-    alloc_info.level = VK_COMMAND_BUFFER_LEVEL_SECONDARY;
-    alloc_info.commandBufferCount = ctx.image_count;
-
     secCmds_.resize(ctx.image_count);
-    vk::assert_success(vkAllocateCommandBuffers(ctx.dev, &alloc_info, secCmds_.data()));
-
+    CmdBufHandler::createCmdBuffers(CmdBufHandler::graphics_cmd_pool(), secCmds_.data(), VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+                                    ctx.image_count);
     // call override
     Mesh::setSceneData(offset);
 }

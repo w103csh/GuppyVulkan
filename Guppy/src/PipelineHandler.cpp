@@ -29,11 +29,12 @@ void PipelineHandler::reset() {
         if (layout != VK_NULL_HANDLE) vkDestroyDescriptorSetLayout(ctx_.dev, layout, nullptr);
 }
 
-void PipelineHandler::init(const MyShell::Context& ctx, const Game::Settings& settings) {
+void PipelineHandler::init(Shell* sh, const Game::Settings& settings) {
     // Clean up owned memory...
     inst_.reset();
 
-    inst_.ctx_ = ctx;
+    inst_.sh_ = sh;
+    inst_.ctx_ = sh->context();
     inst_.settings_ = settings;
 
     inst_.createPushConstantRange();
@@ -150,8 +151,24 @@ std::unique_ptr<DescriptorResources> PipelineHandler::createDescriptorResources(
                                                                                 size_t colorCount, size_t texCount) {
     auto pRes = std::make_unique<DescriptorResources>(uboInfos, dynUboInfos, colorCount, texCount);
 
-    // POOL
-    inst_.createDescriptorPool(pRes);
+    std::vector<VkDescriptorPoolSize> pool_sizes = {{VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
+                                                    {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
+                                                    {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
+                                                    {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
+                                                    {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
+                                                    {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
+                                                    {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+                                                    {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
+                                                    {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
+                                                    {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
+                                                    {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}};
+    VkDescriptorPoolCreateInfo pool_info = {};
+    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    pool_info.maxSets = 1000 * pool_sizes.size();
+    pool_info.poolSizeCount = static_cast<uint32_t>(pool_sizes.size());
+    pool_info.pPoolSizes = pool_sizes.data();
+    vk::assert_success(vkCreateDescriptorPool(inst_.ctx_.dev, &pool_info, nullptr, &pRes->pool));
 
     // As of now these don't change dynamically so just create them after the pool is created.
     // COLOR
@@ -489,9 +506,10 @@ void PipelineHandler::createSubpasses(PipelineResources& resources) {
     subpass.pDepthStencilAttachment = inst_.settings_.include_depth ? &inst_.defAttachRefs_.depth : nullptr;
     subpass.preserveAttachmentCount = 0;
     subpass.pPreserveAttachments = nullptr;
-    resources.subpasses.push_back(subpass);  // TRI_LIST_COLOR
-    resources.subpasses.push_back(subpass);  // LINE
-    resources.subpasses.push_back(subpass);  // TRI_LIST_TEX
+    resources.subpasses.push_back(subpass);  // 0 - TRI_LIST_COLOR
+    resources.subpasses.push_back(subpass);  // 1 - LINE
+    resources.subpasses.push_back(subpass);  // 2 - TRI_LIST_TEX
+    resources.subpasses.push_back(subpass);  // 3 - UI
 }
 
 void PipelineHandler::createDependencies(PipelineResources& resources) {
@@ -525,6 +543,17 @@ void PipelineHandler::createDependencies(PipelineResources& resources) {
     dependency.srcAccessMask = 0;
     dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     dependency.dstAccessMask = 0;
+    resources.dependencies.push_back(dependency);
+
+    // UI subpass
+    // TODO: fix this...
+    dependency = {};
+    dependency.srcSubpass = static_cast<uint32_t>(PIPELINE_TYPE::TRI_LIST_TEX);
+    dependency.dstSubpass = static_cast<uint32_t>(PIPELINE_TYPE::UI);
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.srcAccessMask = 0;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     resources.dependencies.push_back(dependency);
 }
 

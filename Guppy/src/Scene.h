@@ -9,7 +9,7 @@
 
 #include "Helpers.h"
 #include "Mesh.h"
-#include "MyShell.h"
+#include "Shell.h"
 
 class Scene {
     friend class SceneHandler;
@@ -23,26 +23,29 @@ class Scene {
 
     // TODO: there is too much redundancy here...
 
-    std::unique_ptr<ColorMesh> &moveMesh(const MyShell::Context &ctx, std::unique_ptr<ColorMesh> pMesh);
-    std::unique_ptr<ColorMesh> &moveMesh(const MyShell::Context &ctx, std::unique_ptr<LineMesh> pMesh);
-    std::unique_ptr<TextureMesh> &moveMesh(const MyShell::Context &ctx, std::unique_ptr<TextureMesh> pMesh);
-    size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<ColorMesh> pMesh, bool async = true,
+    std::unique_ptr<ColorMesh> &moveMesh(const Shell::Context &ctx, std::unique_ptr<ColorMesh> pMesh);
+    std::unique_ptr<ColorMesh> &moveMesh(const Shell::Context &ctx, std::unique_ptr<LineMesh> pMesh);
+    std::unique_ptr<TextureMesh> &moveMesh(const Shell::Context &ctx, std::unique_ptr<TextureMesh> pMesh);
+    size_t addMesh(const Shell::Context &ctx, std::unique_ptr<ColorMesh> pMesh, bool async = true,
                    std::function<void(Mesh *)> callback = nullptr);
-    size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<LineMesh> pMesh, bool async = true,
+    size_t addMesh(const Shell::Context &ctx, std::unique_ptr<LineMesh> pMesh, bool async = true,
                    std::function<void(Mesh *)> callback = nullptr);
-    size_t addMesh(const MyShell::Context &ctx, std::unique_ptr<TextureMesh> pMesh, bool async = true,
+    size_t addMesh(const Shell::Context &ctx, std::unique_ptr<TextureMesh> pMesh, bool async = true,
                    std::function<void(Mesh *)> callback = nullptr);
 
     void removeMesh(std::unique_ptr<Mesh> &pMesh);
 
     inline const VkRenderPass activeRenderPass() const { return plResources_.renderPass; }
 
-    void recordDrawCmds(const MyShell::Context &ctx, const std::vector<FrameData> &frame_data,
+    void recordDrawCmds(const Shell::Context &ctx, const std::vector<FrameData> &frame_data,
                         const std::vector<VkFramebuffer> &framebuffers, const VkViewport &viewport, const VkRect2D &scissor);
 
-    bool update(const MyShell::Context &ctx, int frameIndex);
+    void record(const Shell::Context &ctx, const VkFramebuffer &framebuffer, const VkFence &fence,
+                const VkViewport &viewport, const VkRect2D &scissor, uint8_t frameIndex, bool wait = false);
 
-    const VkCommandBuffer &getDrawCmds(const uint32_t &frame_data_index);
+    void update(const Shell::Context &ctx);
+
+    const VkCommandBuffer &getDrawCmds(const uint8_t &frame_data_index, uint32_t &commandBufferCount);
 
     // TODO: there must be a better way...
     inline size_t readyCount() {
@@ -84,10 +87,8 @@ class Scene {
     PipelineResources plResources_;
 
     // Draw commands
-    void create_draw_cmds(const MyShell::Context &ctx);
-    void destroy_cmds(const VkDevice &dev);
-    void record(const MyShell::Context &ctx, const VkCommandBuffer &cmd, const VkFramebuffer &framebuffer, const VkFence &fence,
-                const VkViewport &viewport, const VkRect2D &scissor, size_t index, bool wait = false);
+    void createDrawCmds(const Shell::Context &ctx);
+    void destroyCmds(const VkDevice &dev);
     std::vector<DrawResources> draw_resources_;
 
     // Meshes
@@ -102,7 +103,8 @@ class Scene {
     std::vector<std::unique_ptr<LoadingResources>> ldgResources_;
 
     // Uniform buffer
-    void createDynamicTexUniformBuffer(const MyShell::Context &ctx, const Game::Settings &settings, std::string markerName = "");
+    void createDynamicTexUniformBuffer(const Shell::Context &ctx, const Game::Settings &settings,
+                                       std::string markerName = "");
     void destroyUniforms(const VkDevice &dev);
     std::shared_ptr<UniformBufferResources> pDynUBOResource_;
 };

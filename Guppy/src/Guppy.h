@@ -6,28 +6,28 @@
 
 #include "Camera.h"
 #include "Light.h"
-#include "Game.h"
 #include "Helpers.h"
-#include "MyShell.h"
 #include "Shader.h"  // DefaultUniformBuffer
 
+class Game;
 class Model;
+class Shell;
 
 class Guppy : public Game {
    public:
     Guppy(const std::vector<std::string>& args);
     ~Guppy();
 
-    void attach_shell(MyShell& sh);
-    void detach_shell();
+    void attach_shell(Shell& sh) override;
+    void detach_shell() override;
 
-    void attach_swapchain();
-    void detach_swapchain();
+    void attach_swapchain() override;
+    void detach_swapchain() override;
 
-    void on_key(KEY key);
-    void on_tick();
+    void on_key(KEY key) override;
+    void on_tick() override;
 
-    void on_frame(float framePred);
+    void on_frame(float framePred) override;
 
    private:
     bool multithread_;
@@ -50,7 +50,7 @@ class Guppy : public Game {
     VkCommandPool primary_cmd_pool_;
     std::vector<VkCommandPool> worker_cmd_pools_;
     VkDescriptorPool desc_pool_;
-    uint32_t frame_data_index_;
+    uint8_t frame_data_index_;
     const auto& frameData() const { return frame_data_; }
 
     VkDeviceMemory frame_data_mem_;

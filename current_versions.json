@@ -29,7 +29,8 @@
     },
     {
       "name" : "ImGui",
-      "version" : "125e62491eb29d4d91429ba7653a50714f9fe123"
+      "version" : "125e62491eb29d4d91429ba7653a50714f9fe123",
+      "change_commits" : ["12/7/2018 Changed "]
     },
     {
       "name" : "GLFW",

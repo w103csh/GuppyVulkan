@@ -10,12 +10,12 @@
 #include "Vertex.h"
 
 class ColorMesh;
-class MyShell;
+class Shell;
 class TextureMesh;
 
 class ModelHandler : Singleton {
    public:
-    static void init(MyShell* sh);
+    static void init(Shell* sh);
     static inline void destroy() { inst_.reset(); }
 
     // color
@@ -38,7 +38,7 @@ class ModelHandler : Singleton {
     static ModelHandler inst_;
     void reset() override{};
 
-    MyShell* sh_;  // TODO: shared_ptr
+    Shell* sh_;  // TODO: shared_ptr
 
     // Mesh futures
     template <typename T>

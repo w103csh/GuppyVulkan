@@ -4,15 +4,20 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "MyShell.h"
+#include "Shell.h"
 #include "Singleton.h"
 
 class CmdBufHandler : Singleton {
    public:
-    static void init(const MyShell::Context &ctx);
+    static void init(const Shell::Context &ctx);
     static void destroy() { inst_.reset(); }
 
     enum class QUEUE { GRAPHICS = 0, PRESENT, TRANSFER };
+
+    static void createCmdPool(const uint32_t queueFamilyIndex, VkCommandPool &cmdPool);
+    static void createCmdBuffers(const VkCommandPool &cmdPool, VkCommandBuffer *pCommandBuffers,
+                                VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY, uint32_t count = 1);
+    static void resetCmdBuffers();
 
     // indices
     static inline uint32_t graphics_index() { return inst_.ctx_.graphics_index; }
@@ -44,7 +49,7 @@ class CmdBufHandler : Singleton {
     static CmdBufHandler inst_;
     void reset() override;
 
-    MyShell::Context ctx_;  // TODO: shared_ptr
+    Shell::Context ctx_;  // TODO: shared_ptr
 
     std::vector<VkCommandPool> cmd_pools_;
     std::vector<VkCommandBuffer> cmds_;

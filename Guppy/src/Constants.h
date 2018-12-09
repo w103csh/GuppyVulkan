@@ -1,13 +1,15 @@
 
-#pragma once
+#ifndef CONSTANTS_H
+#define CONSTANTS_H
 
 #include <glm/glm.hpp>
 #include <map>
-#include <util.hpp>
 #include <vector>
 #include <vulkan/vulkan.h>
 
 #include "Vertex.h"
+
+#define USE_DEBUG_GUI
 
 typedef uint32_t FlagBits;
 
@@ -101,3 +103,5 @@ const std::string HARDWOOD_FLOOR_TEX_PATH = IMG_PATH + "hardwood_floor.jpg";
 const std::string WOOD_PATH = IMG_PATH + "Wood_007\\";
 const std::string WOOD_007_DIFF_TEX_PATH = WOOD_PATH + "Wood_007_COLOR.jpg";
 const std::string WOOD_007_NORM_TEX_PATH = WOOD_PATH + "Wood_007_NORM.jpg";
+
+#endif  // !CONSTANTS_H

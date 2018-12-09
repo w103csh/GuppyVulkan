@@ -1,7 +1,7 @@
 #ifndef SINGLETON_H
 #define SINGLETON_H
 
-#include "MyShell.h"
+#include "Shell.h"
 
 class Singleton {
    public:

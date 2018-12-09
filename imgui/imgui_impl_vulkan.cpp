@@ -30,6 +30,7 @@
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
 #include <stdio.h>
+#include <vector>
 
 // Vulkan data
 static const VkAllocationCallbacks* g_Allocator = NULL;
@@ -42,6 +43,10 @@ static VkPipelineCache              g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool             g_DescriptorPool = VK_NULL_HANDLE;
 static VkRenderPass                 g_RenderPass = VK_NULL_HANDLE;
 static void                         (*g_CheckVkResultFn)(VkResult err) = NULL;
+static uint32_t                     g_Subpass = (uint32_t)-1;
+static VkSampleCountFlagBits        g_RasterizationSamples;
+static VkBool32                     g_SampleShadingEnable;
+static float                        g_MinSampleShading;
 
 static VkDeviceSize                 g_BufferMemoryAlignment = 256;
 static VkPipelineCreateFlags        g_PipelineCreateFlags = 0;
@@ -52,17 +57,16 @@ static VkDescriptorSet              g_DescriptorSet = VK_NULL_HANDLE;
 static VkPipeline                   g_Pipeline = VK_NULL_HANDLE;
 
 // Frame data
-struct FrameDataForRender
-{
-    VkDeviceMemory  VertexBufferMemory;
-    VkDeviceMemory  IndexBufferMemory;
-    VkDeviceSize    VertexBufferSize;
-    VkDeviceSize    IndexBufferSize;
-    VkBuffer        VertexBuffer;
-    VkBuffer        IndexBuffer;
+struct FrameDataForRender {
+    VkDeviceMemory VertexBufferMemory;
+    VkDeviceMemory IndexBufferMemory;
+    VkDeviceSize VertexBufferSize;
+    VkDeviceSize IndexBufferSize;
+    VkBuffer VertexBuffer;
+    VkBuffer IndexBuffer;
 };
-static int                    g_FrameIndex = 0;
-static FrameDataForRender     g_FramesDataBuffers[IMGUI_VK_QUEUED_FRAMES] = {};
+static int                              g_FrameIndex = 0;
+static std::vector<FrameDataForRender>  g_FramesDataBuffers;
 
 // Font data
 static VkSampler              g_FontSampler = VK_NULL_HANDLE;
@@ -198,16 +202,17 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
     p_buffer_size = new_size;
 }
 
+
+void ImGui_ImplVulkan_SetFrameCount(uint8_t frame_count) { g_FramesDataBuffers.resize(frame_count); }
+
 // Render function
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
-void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer)
-{
+void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, uint8_t frame_index) {
     VkResult err;
     if (draw_data->TotalVtxCount == 0)
         return;
 
-    FrameDataForRender* fd = &g_FramesDataBuffers[g_FrameIndex];
-    g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
+    FrameDataForRender* fd = &g_FramesDataBuffers[frame_index];
 
     // Create the Vertex and Index buffers:
     size_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
@@ -608,7 +613,9 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
 
     VkPipelineMultisampleStateCreateInfo ms_info = {};
     ms_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    ms_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+    ms_info.rasterizationSamples = g_RasterizationSamples;
+    ms_info.sampleShadingEnable = g_SampleShadingEnable;
+    ms_info.minSampleShading = g_MinSampleShading;
 
     VkPipelineColorBlendAttachmentState color_attachment[1] = {};
     color_attachment[0].blendEnable = VK_TRUE;
@@ -649,6 +656,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     info.pDynamicState = &dynamic_state;
     info.layout = g_PipelineLayout;
     info.renderPass = g_RenderPass;
+    info.subpass = g_Subpass;
     err = vkCreateGraphicsPipelines(g_Device, g_PipelineCache, 1, &info, g_Allocator, &g_Pipeline);
     check_vk_result(err);
 
@@ -676,7 +684,7 @@ void    ImGui_ImplVulkan_InvalidateDeviceObjects()
 {
     ImGui_ImplVulkan_InvalidateFontUploadObjects();
 
-    for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
+    for (int i = 0; i < g_FramesDataBuffers.size(); i++)
     {
         FrameDataForRender* fd = &g_FramesDataBuffers[i];
         if (fd->VertexBuffer)       { vkDestroyBuffer   (g_Device, fd->VertexBuffer,        g_Allocator); fd->VertexBuffer = VK_NULL_HANDLE; }
@@ -716,6 +724,10 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     g_DescriptorPool = info->DescriptorPool;
     g_Allocator = info->Allocator;
     g_CheckVkResultFn = info->CheckVkResultFn;
+    g_Subpass = info->Subpass;
+    g_RasterizationSamples = info->RasterizationSamples;
+    g_SampleShadingEnable = info->SampleShadingEnable;
+    g_MinSampleShading = info->MinSampleShading;
 
     ImGui_ImplVulkan_CreateDeviceObjects();
 
@@ -979,13 +991,16 @@ void ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(VkPhysicalDevice 
         attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         attachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
         VkAttachmentReference color_attachment = {};
         color_attachment.attachment = 0;
         color_attachment.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
         VkSubpassDescription subpass = {};
         subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subpass.colorAttachmentCount = 1;
         subpass.pColorAttachments = &color_attachment;
+
         VkSubpassDependency dependency = {};
         dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
         dependency.dstSubpass = 0;
@@ -993,6 +1008,7 @@ void ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(VkPhysicalDevice 
         dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         dependency.srcAccessMask = 0;
         dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
         VkRenderPassCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         info.attachmentCount = 1;

@@ -15,7 +15,7 @@ void CmdBufHandler::reset() {
     cmd_pools_.clear();
 }
 
-void CmdBufHandler::init(const MyShell::Context& ctx) {
+void CmdBufHandler::init(const Shell::Context& ctx) {
     // Clean up owned memory...
     inst_.reset();
 
@@ -28,26 +28,40 @@ void CmdBufHandler::init(const MyShell::Context& ctx) {
 
     for (const auto& index : uniq) {
         // POOLS
-        VkCommandPoolCreateInfo cmd_pool_info = {};
-        cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-        cmd_pool_info.queueFamilyIndex = index;
-        cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-        vk::assert_success(vkCreateCommandPool(inst_.ctx_.dev, &cmd_pool_info, nullptr, &inst_.cmd_pools_[index]));
-
+        createCmdPool(index, inst_.cmd_pools_[index]);
         // BUFFERS
-        VkCommandBufferAllocateInfo cmd = {};
-        cmd.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-        cmd.pNext = nullptr;
-        cmd.commandPool = inst_.cmd_pools_[index];
-        cmd.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-        cmd.commandBufferCount = 1;
-
-        vk::assert_success(vkAllocateCommandBuffers(inst_.ctx_.dev, &cmd, &inst_.cmds_[index]));
-
+        createCmdBuffers(inst_.cmd_pools_[index], &inst_.cmds_[index]);
         // TODO: Begin recording the default command buffers???
         inst_.beginCmd(inst_.cmds_[index]);
     };
+}
+
+void CmdBufHandler::createCmdPool(const uint32_t queueFamilyIndex, VkCommandPool& cmdPool) {
+    VkCommandPoolCreateInfo cmd_pool_info = {};
+    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    cmd_pool_info.queueFamilyIndex = queueFamilyIndex;
+    cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+
+    vk::assert_success(vkCreateCommandPool(inst_.ctx_.dev, &cmd_pool_info, nullptr, &cmdPool));
+}
+
+void CmdBufHandler::createCmdBuffers(const VkCommandPool& cmdPool, VkCommandBuffer* pCommandBuffers,
+                                     VkCommandBufferLevel level, uint32_t count) {
+    VkCommandBufferAllocateInfo alloc_info = {};
+    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    alloc_info.pNext = nullptr;
+    alloc_info.commandPool = cmdPool;
+    alloc_info.level = level;
+    alloc_info.commandBufferCount = count;
+
+    vk::assert_success(vkAllocateCommandBuffers(inst_.ctx_.dev, &alloc_info, pCommandBuffers));
+}
+
+void CmdBufHandler::resetCmdBuffers() {
+    for (auto& cmd : inst_.cmds_) {
+        vkResetCommandBuffer(cmd, 0);
+        beginCmd(cmd);
+    }
 }
 
 std::vector<uint32_t> CmdBufHandler::getUniqueQueueFamilies(bool graphics, bool present, bool transfer) {
@@ -67,14 +81,14 @@ std::vector<uint32_t> CmdBufHandler::getUniqueQueueFamilies(bool graphics, bool 
 }
 
 void CmdBufHandler::beginCmd(const VkCommandBuffer& cmd, const VkCommandBufferInheritanceInfo* inheritanceInfo) {
-    VkCommandBufferBeginInfo cmd_info = {};
-    cmd_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    cmd_info.pNext = nullptr;
-    cmd_info.flags = inheritanceInfo == nullptr
-                         ? 0
-                         : VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
-    cmd_info.pInheritanceInfo = inheritanceInfo;
-    vk::assert_success(vkBeginCommandBuffer(cmd, &cmd_info));
+    VkCommandBufferBeginInfo begin_info = {};
+    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    begin_info.pNext = nullptr;
+    begin_info.flags = inheritanceInfo == nullptr
+                           ? 0
+                           : VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+    begin_info.pInheritanceInfo = inheritanceInfo;
+    vk::assert_success(vkBeginCommandBuffer(cmd, &begin_info));
 }
 
 void CmdBufHandler::endCmd(const VkCommandBuffer& cmd) { vk::assert_success(vkEndCommandBuffer(cmd)); }

@@ -15,7 +15,7 @@
 
 class ColorMesh;
 class Mesh;
-class MyShell;
+class Shell;
 class Scene;
 class TextureMesh;
 
@@ -30,8 +30,8 @@ class Model : public Object3d {
     inline Model::IDX getHandlerOffset() const { return handlerOffset_; }
     inline Model::IDX getSceneOffset() const { return sceneOffset_; }
 
-    std::vector<ColorMesh *> loadColor(MyShell *sh, Material material);
-    std::vector<TextureMesh *> loadTexture(MyShell *sh, Material material, std::shared_ptr<Texture::Data> pTexture);
+    std::vector<ColorMesh *> loadColor(Shell *sh, Material material);
+    std::vector<TextureMesh *> loadTexture(Shell *sh, Material material, std::shared_ptr<Texture::Data> pTexture);
 
     void postLoad(Model::CALLBK callback);
 

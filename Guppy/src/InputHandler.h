@@ -8,11 +8,11 @@
 #include "Helpers.h"
 #include "Singleton.h"
 
-class MyShell;
+class Shell;
 
 class InputHandler : Singleton {
    public:
-    static void init(MyShell* sh);
+    static void init(Shell* sh);
 
     enum class INPUT_TYPE {
         UP,
@@ -63,7 +63,7 @@ class InputHandler : Singleton {
     void updateKeyInput();
     void updateMouseInput();
 
-    MyShell* sh_;
+    Shell* sh_;
 
     std::set<Game::KEY> currKeyInput_;
     /*  This is not really a position direction vector. Its a holder for how much
@@ -87,4 +87,4 @@ class InputHandler : Singleton {
     glm::vec3 lookDir_;
 };
 
-#endif  // !INPUT_HANLDER_H
+#endif  // !INPUT_HANDLER_H

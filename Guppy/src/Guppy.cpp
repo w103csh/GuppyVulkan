@@ -5,16 +5,23 @@
 #include "CmdBufHandler.h"
 #include "Constants.h"
 #include "Extensions.h"
+#include "Game.h"
 #include "Guppy.h"
 #include "InputHandler.h"
 #include "ModelHandler.h"
 #include "LoadingResourceHandler.h"
 #include "Model.h"
 #include "ModelHandler.h"
+#include "Shell.h"
 #include "PipelineHandler.h"
 #include "Plane.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
+#include "UIHandler.h"
+
+#ifdef USE_DEBUG_GUI
+#include "ImGuiUI.h"
+#endif
 
 namespace {
 
@@ -77,22 +84,22 @@ Guppy::Guppy(const std::vector<std::string>& args)
 
 Guppy::~Guppy() {}
 
-void Guppy::attach_shell(MyShell& sh) {
+void Guppy::attach_shell(Shell& sh) {
     Game::attach_shell(sh);
 
-    const MyShell::Context& ctx = sh.context();
+    const Shell::Context& ctx = sh.context();
     physical_dev_ = ctx.physical_dev;
     dev_ = ctx.dev;
     // queue_ = ctx.game_queue;
     queue_family_ = ctx.game_queue_family;
     format_ = ctx.surface_format.format;
-    // * Data from MyShell
+    // * Data from Shell
     swapchain_image_count_ = ctx.image_count;
     depth_resource_.format = ctx.depth_format;
     physical_dev_props_ = ctx.physical_dev_props[ctx.physical_dev_index].properties;
 
     if (use_push_constants_ && sizeof(ShaderParamBlock) > physical_dev_props_.limits.maxPushConstantsSize) {
-        shell_->log(MyShell::LOG_WARN, "cannot enable push constants");
+        shell_->log(Shell::LOG_WARN, "cannot enable push constants");
         use_push_constants_ = false;
     }
 
@@ -103,17 +110,22 @@ void Guppy::attach_shell(MyShell& sh) {
     // meshes_ = new Meshes(dev_, mem_flags_);
 
     CmdBufHandler::init(ctx);
+#ifdef USE_DEBUG_GUI
+    UIHandler::init(&sh, settings_, std::make_unique<ImGuiUI>());
+#else
+    UIHandler::init(&sh, settings_);
+#endif
     LoadingResourceHandler::init(ctx);
 
     createLights();
     createUniformBuffer();
 
     ShaderHandler::init(sh, settings_, defUBO_.positionalLightData.size(), defUBO_.spotLightData.size());
-    PipelineHandler::init(ctx, settings_);
+    PipelineHandler::init(&sh, settings_);
     TextureHandler::init(&sh);
     ModelHandler::init(&sh);
 
-    SceneHandler::init(ctx, settings_);
+    SceneHandler::init(&sh, settings_);
     createScenes();
 
     // render_pass_begin_info_.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -161,7 +173,7 @@ void Guppy::detach_shell() {
 }
 
 void Guppy::attach_swapchain() {
-    const MyShell::Context& ctx = shell_->context();
+    const Shell::Context& ctx = shell_->context();
     extent_ = ctx.extent;
 
     // Get the image data from the swapchain
@@ -171,9 +183,6 @@ void Guppy::attach_swapchain() {
 
     prepare_viewport();
     prepare_framebuffers(ctx.swapchain);
-
-    // TODO: this is deceptive...
-    SceneHandler::getActiveScene()->recordDrawCmds(ctx, frameData(), framebuffers_, viewport_, scissor_);
 }
 
 void Guppy::detach_swapchain() {
@@ -187,6 +196,8 @@ void Guppy::detach_swapchain() {
     swapchain_image_resources_.clear();
 
     destroy_frame_data();
+
+    CmdBufHandler::resetCmdBuffers();
 }
 
 void Guppy::on_key(KEY key) {
@@ -245,7 +256,8 @@ void Guppy::on_key(KEY key) {
             //    SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(sphereBot));
             //    auto sphereTop =
             //        std::make_unique<ColorMesh>(std::make_unique<Material>(), SPHERE_MODEL_PATH,
-            //                                    glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f, 0.0f)));
+            //                                    glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(1.0f, 0.0f,
+            //                                    0.0f)));
             //    SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(sphereTop));
             //} else if (true) {
             //    auto p2 = std::make_unique<TexturePlane>(getTextureByPath(HARDWOOD_FLOOR_TEX_PATH), glm::mat4(1.0f), true);
@@ -311,25 +323,69 @@ void Guppy::on_key(KEY key) {
     }
 }
 
+/*  This function is for updating things regardless of framerate. It is based on settings.ticks_per_second,
+    and should be called that many times per second. add_game_time is weird and appears to limit the amount
+    of ticks per second arbitrarily, so this in reality could do anything.
+    NOTE: Things like input should not used here since this is not guaranteed to be called each time input
+    is collected. This function could be called as many as
+*/
+void Guppy::on_tick() {
+    if (sim_paused_) return;
+
+    auto& pScene = SceneHandler::getActiveScene();
+
+    // TODO: Should this be "on_frame"? every other frame? async? ... I have no clue yet.
+    LoadingResourceHandler::cleanupResources();
+    TextureHandler::update();
+
+    // TODO: move to SceneHandler::update or something!
+    ModelHandler::update(pScene);
+
+    // TODO: ifdef this stuff out
+    if (settings_.enable_directory_listener) {
+        ShaderHandler::update(pScene);
+    }
+
+    pScene->update(shell_->context());
+
+    // for (auto &worker : workers_) worker->update_simulation();
+}
+
 void Guppy::on_frame(float framePred) {
     auto& data = frame_data_[frame_data_index_];
+    const auto& ctx = shell_->context();
+    auto& pScene = SceneHandler::getActiveScene();
 
     // wait for the last submission since we reuse frame data
     vk::assert_success(vkWaitForFences(dev_, 1, &data.fence, true, UINT64_MAX));
     vk::assert_success(vkResetFences(dev_, 1, &data.fence));
 
-    const MyShell::BackBuffer& back = shell_->context().acquired_back_buffer;
+    const Shell::BackBuffer& back = ctx.acquired_back_buffer;
 
     // **********************
-    //  Frame specfic tasks
+    // Pre-record tasks
     // **********************
 
     updateUniformBuffer();
 
     // **********************
+    // Record
+    // **********************
 
-    uint32_t commandBufferCount = 1;
-    auto draw_cmds = SceneHandler::getActiveScene()->getDrawCmds(frame_data_index_);
+    pScene->record(ctx, framebuffers_[frame_data_index_], data.fence, viewport_, scissor_, frame_data_index_, false);
+
+    // **********************
+    // Post-record tasks
+    // **********************
+
+    ShaderHandler::cleanupOldResources();
+    PipelineHandler::cleanupOldResources();
+    SceneHandler::cleanupInvalidResources();
+
+    // **********************
+
+    uint32_t commandBufferCount;
+    auto draw_cmds = pScene->getDrawCmds(frame_data_index_, commandBufferCount);
 
     VkSubmitInfo submit_info = {};
     submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -343,41 +399,9 @@ void Guppy::on_frame(float framePred) {
     submit_info.signalSemaphoreCount = 1;
     submit_info.pSignalSemaphores = &back.render_semaphore;
 
-    VkResult res = vkQueueSubmit(CmdBufHandler::graphics_queue(), 1, &submit_info, data.fence);
+    vk::assert_success(vkQueueSubmit(CmdBufHandler::graphics_queue(), 1, &submit_info, data.fence));
 
-    frame_data_index_ = (frame_data_index_ + 1) % static_cast<uint32_t>(frame_data_.size());
-
-    (void)res;
-}
-
-void Guppy::on_tick() {
-    if (sim_paused_) return;
-
-    auto ctx = shell_->context();
-
-    // TODO: Should this be "on_frame"? every other frame? async? ... I have no clue yet.
-    LoadingResourceHandler::cleanupResources();
-    TextureHandler::update();
-
-    // TODO: move to SceneHandler::update or something!
-    auto& pScene = SceneHandler::getActiveScene();
-    ModelHandler::update(pScene);
-
-    bool redraw = false;
-    // TODO: ifdef this stuff out
-    if (settings_.enable_directory_listener) {
-        redraw |= ShaderHandler::update(pScene);
-    }
-    // TODO: im really not into this...
-    redraw |= pScene->update(ctx, frame_data_index_);
-
-    // (Re)make the draw commands
-    if (redraw) {
-        // TODO: put all the frame data in one parameter...
-        pScene->recordDrawCmds(ctx, frameData(), framebuffers_, viewport_, scissor_);
-    }
-
-    // for (auto &worker : workers_) worker->update_simulation();
+    frame_data_index_ = (frame_data_index_ + 1) % static_cast<uint8_t>(frame_data_.size());
 }
 
 void Guppy::get_swapchain_image_data(const VkSwapchainKHR& swapchain) {
@@ -457,7 +481,7 @@ void Guppy::prepare_framebuffers(const VkSwapchainKHR& swapchain) {
 }
 
 void Guppy::createUniformBuffer(std::string markerName) {
-    const MyShell::Context& ctx = shell_->context();
+    const Shell::Context& ctx = shell_->context();
 
     // camera
     camera_.update(static_cast<float>(settings_.initial_width) / static_cast<float>(settings_.initial_height));
@@ -488,8 +512,8 @@ void Guppy::createUniformBuffer(std::string markerName) {
         markerName += " uniform buffer block";
         ext::DebugMarkerSetObjectName(dev_, (uint64_t)UBOResource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                       markerName.c_str());
-        ext::DebugMarkerSetObjectTag(dev_, (uint64_t)UBOResource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0, sizeof(uboTag),
-                                     &uboTag);
+        ext::DebugMarkerSetObjectTag(dev_, (uint64_t)UBOResource_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0,
+                                     sizeof(uboTag), &uboTag);
     }
 }
 
@@ -574,7 +598,7 @@ void Guppy::destroyUniformBuffer() {
 }
 
 void Guppy::create_frame_data(int count) {
-    const MyShell::Context& ctx = shell_->context();
+    const Shell::Context& ctx = shell_->context();
 
     frame_data_.resize(count);
 
@@ -622,8 +646,9 @@ void Guppy::destroy_frame_data() {
 }
 
 void Guppy::create_color_resources() {
-    helpers::createImage(dev_, CmdBufHandler::getUniqueQueueFamilies(true, false, true), shell_->context().num_samples, format_,
-                         VK_IMAGE_TILING_OPTIMAL, VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+    helpers::createImage(dev_, CmdBufHandler::getUniqueQueueFamilies(true, false, true), shell_->context().num_samples,
+                         format_, VK_IMAGE_TILING_OPTIMAL,
+                         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, color_resource_.image,
                          color_resource_.memory);
 
@@ -730,8 +755,9 @@ void Guppy::createScenes() {
         Material material;
         material.setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
         material.setColor({0.8f, 0.3f, 0.0f});
-        ModelHandler::makeModel(SceneHandler::getActiveScene(), TORUS_MODEL_PATH, material, helpers::affine(glm::vec3(0.07f)),
-                                false, [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); });
+        ModelHandler::makeModel(SceneHandler::getActiveScene(), TORUS_MODEL_PATH, material,
+                                helpers::affine(glm::vec3(0.07f)), false,
+                                [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); });
 
         // auto pTorus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, model);
         // SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(pTorus), true,

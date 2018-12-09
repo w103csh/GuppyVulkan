@@ -9,7 +9,7 @@
 #include "Helpers.h"
 #include "Vertex.h"
 
-class MyShell;
+class Shell;
 
 namespace FileLoader {
 
@@ -23,7 +23,7 @@ typedef struct {
     std::vector<tinyobj::material_t> materials;
 } tinyobj_data;
 
-void getObjData(MyShell *sh, tinyobj_data &data);
+void getObjData(Shell *sh, tinyobj_data &data);
 
 /* BECUASE TEMPLATES ARE STUPID ALL OF THIS CODE NEEDS TO BE IN THE HEADER */
 template <class T>

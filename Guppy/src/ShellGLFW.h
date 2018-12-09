@@ -7,26 +7,93 @@
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
+#include <type_traits>
 #include <vulkan/vulkan.h>
 
+#include "CmdBufHandler.h"
 #include "Helpers.h"
-#include "MyShell.h"
+#include "UIHandler.h"
+#include "Shell.h"
+#include "PipelineHandler.h"
 
 static void glfw_error_callback(int error, const char* description) {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);  // TODO: shell logging
 }
 
-static void glfw_resize_callback(GLFWwindow*, int w, int h) {
+static void glfw_resize_callback(GLFWwindow* window, int w, int h) {
     fprintf(stderr, "Glfw resize\n");  //
+    auto pShell = reinterpret_cast<Shell*>(glfwGetWindowUserPointer(window));
+    pShell->resize_swapchain(w, h);
 }
 
 template <class T>
 class ShellGLFW : public T {
+    static_assert(std::is_base_of<Shell, T>::value, "T must be a derived from of Shell");
+
    public:
     ShellGLFW(Game& game) : T(game){};
     ~ShellGLFW(){};
 
     void run() override {
+        setupImGui();
+
+        double current_time = glfwGetTime();
+
+        // Main loop
+        while (!glfwWindowShouldClose(window_)) {
+            // Poll and handle events (inputs, window resize, etc.)
+            // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+            // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
+            // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
+            // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+            glfwPollEvents();
+
+            acquire_back_buffer();
+
+            double now = glfwGetTime();
+            double elapsed = now - current_time;
+
+            InputHandler::updateInput(static_cast<float>(elapsed));
+            add_game_time(static_cast<float>(elapsed));
+
+            present_back_buffer();
+
+            current_time = now;
+        }
+
+        vkDeviceWaitIdle(context().dev);
+
+        ImGui_ImplVulkan_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
+        ImGui::DestroyContext();
+
+        destroy_context();
+
+        glfwDestroyWindow(window_);
+        glfwTerminate();
+    }
+
+    void updateUIResources(DescriptorResources& desRes, PipelineResources& plRes) override {
+        ImGui_ImplVulkan_InitInfo init_info = {};
+        init_info.Instance = context().instance;
+        init_info.PhysicalDevice = context().physical_dev;
+        init_info.Device = context().dev;
+        init_info.QueueFamily = context().graphics_index;
+        init_info.Queue = context().queues[context().graphics_index];
+        init_info.PipelineCache = PipelineHandler::getPipelineCache();
+        init_info.DescriptorPool = desRes.pool;
+        init_info.Allocator = nullptr;
+        init_info.CheckVkResultFn = (void (*)(VkResult))vk::assert_success;
+        init_info.Subpass = static_cast<uint32_t>(PIPELINE_TYPE::UI);
+        init_info.RasterizationSamples = context().num_samples;
+        init_info.SampleShadingEnable = settings_.enable_sample_shading;
+        init_info.MinSampleShading = settings_.enable_sample_shading ? MIN_SAMPLE_SHADING : 0.0f;
+
+        ImGui_ImplVulkan_Init(&init_info, plRes.renderPass);
+    }
+
+   private:
+    void setupImGui() {
         // Setup window
         glfwSetErrorCallback(glfw_error_callback);
         if (!glfwInit()) {
@@ -57,82 +124,50 @@ class ShellGLFW : public T {
         glfwGetFramebufferSize(window_, &w, &h);
         glfwSetFramebufferSizeCallback(window_, glfw_resize_callback);
 
-        resize_swapchain(settings_.initial_width, settings_.initial_height, false);
+        resize_swapchain(w, h, false);
 
-        // SetupVulkanWindowData(wd, surface, w, h);
+        ImGui_ImplVulkan_SetFrameCount(context().image_count);
 
-        // Win32Timer timer;
-        // double current_time = timer.get();
-        //
-        //        while (true) {
-        //            bool quit = false;
-        //
-        //            assert(settings_.animate);
-        //
-        //            // process all messages
-        //            MSG msg;
-        //            while (PeekMessage(&msg, nullptr, 0, 0, PM_REMOVE)) {
-        //                if (msg.message == WM_QUIT) {
-        //                    quit = true;
-        //                    break;
-        //                }
-        //
-        //                TranslateMessage(&msg);
-        //                DispatchMessage(&msg);
-        //            }
-        //
-        //            if (settings_.enable_directory_listener) CheckDirectories();
-        //
-        //            if (quit) {
-        //                break;
-        //            } else if (minimized_) {
-        //                // TODO: somehow pause...
-        //                // std::unique_lock<std::mutex> lock(mtx_);
-        //                // while (minimized_) pause_.wait(lock);
-        //            } else {
-        //                acquire_back_buffer();
-        //
-        //                // TODO: simplify this?
-        //                double now = timer.get();
-        //                double elapsed = now - current_time;
-        //                current_time = now;
-        //
-        //                InputHandler::updateInput(static_cast<float>(elapsed));
-        //                add_game_time(static_cast<float>(elapsed));
-        //
-        //                present_back_buffer();
-        //            }
-        //
-        //#ifdef LIMIT_FRAMERATE
-        //            // TODO: this is crude and inaccurate.
-        //            DWORD Hz = static_cast<DWORD>(1000 / 10);  // 30Hz
-        //            if (settings_.enable_directory_listener) AsyncAlert(Hz);
-        //#else
-        //            if (settings_.enable_directory_listener) AsyncAlert(0);
-        //#endif
-        //        }
-        //
-        //        // Free any directory listening handles
-        //        for (auto& dirInst : dirInsts_) {
-        //            CloseHandle(dirInst.hDir);
-        //        }
-        //
-        //        destroy_context();
-        //
-        //        DestroyWindow(hwnd_);
+        windowData_.Surface = context().surface;
+        windowData_.SurfaceFormat = context().surface_format;
+        windowData_.PresentMode = context().mode;
+        windowData_.PresentMode = context().mode;
+
+        // Setup Platform/Renderer bindings
+        ImGui_ImplGlfw_InitForVulkan(window_, true);
+
+        // Setup Style
+        ImGui::StyleColorsDark();
+        // ImGui::StyleColorsClassic();
+
+        uploadFonts();
     }
 
-   private:
-    // VkBool32 canPresent(VkPhysicalDevice phy, uint32_t queue_family) override { return sh_.canPresent(phy, queue_family); };
+    void createWindow() override {
+        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+        window_ = glfwCreateWindow(settings_.initial_width, settings_.initial_height, "Dear ImGui GLFW+Vulkan example", NULL, NULL);
+        glfwSetWindowUserPointer(window_, this);
+    }
+
+    void uploadFonts() {
+        ImGui_ImplVulkan_CreateFontsTexture(CmdBufHandler::graphics_cmd());
+        CmdBufHandler::endCmd(CmdBufHandler::graphics_cmd());
+
+        VkSubmitInfo end_info = {};
+        end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        end_info.commandBufferCount = 1;
+        end_info.pCommandBuffers = &CmdBufHandler::graphics_cmd();
+        vk::assert_success(vkQueueSubmit(CmdBufHandler::graphics_queue(), 1, &end_info, VK_NULL_HANDLE));
+
+        vk::assert_success(vkDeviceWaitIdle(context().dev));
+        ImGui_ImplVulkan_InvalidateFontUploadObjects();
+    }
+
     VkSurfaceKHR createSurface(VkInstance instance) override {
         VkSurfaceKHR surface;
         vk::assert_success(glfwCreateWindowSurface(instance, window_, nullptr, &surface));
         return surface;
     };
-    // PFN_vkGetInstanceProcAddr load_vk() override { return sh_.load_vk(); };
-    // void quit() override { sh_.run(); };
-    // void watchDirectory(std::string dir, std::function<void(std::string)> callback) override { sh_.watchDirectory(dir, callback);
-    // };
 
     void ShellGLFW::setPlatformSpecificExtensions() {
         uint32_t extensions_count = 0;
@@ -143,13 +178,8 @@ class ShellGLFW : public T {
         T::setPlatformSpecificExtensions();
     }
 
-    void createWindow() override {
-        glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        window_ = glfwCreateWindow(settings_.initial_width, settings_.initial_height, "Dear ImGui GLFW+Vulkan example", NULL, NULL);
-    }
-
     GLFWwindow* window_;
-    ImGui_ImplVulkanH_WindowData* windowData_;
+    ImGui_ImplVulkanH_WindowData windowData_;
 };
 
-#endif  // SHELL_GLFW_H
+#endif  // !SHELL_GLFW_H

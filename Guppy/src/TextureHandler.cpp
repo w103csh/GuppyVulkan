@@ -1,12 +1,12 @@
 
 #include <algorithm>
 
-#include "MyShell.h"
+#include "Shell.h"
 #include "TextureHandler.h"
 
 TextureHandler TextureHandler::inst_;
 
-void TextureHandler::init(MyShell* sh) {
+void TextureHandler::init(Shell* sh) {
     inst_.sh_ = sh;
 
     // Default textures
@@ -30,11 +30,11 @@ void TextureHandler::reset() {
 
 void TextureHandler::addTexture(std::string path, std::string normPath, std::string specPath) {
     for (auto& tex : inst_.pTextures_) {
-        if (tex->path == path) inst_.sh_->log(MyShell::LOG_WARN, "Texture with same path was already loaded.");
+        if (tex->path == path) inst_.sh_->log(Shell::LOG_WARN, "Texture with same path was already loaded.");
         if (!tex->normPath.empty() && tex->normPath == normPath)
-            inst_.sh_->log(MyShell::LOG_WARN, "Texture with same normal path was already loaded.");
+            inst_.sh_->log(Shell::LOG_WARN, "Texture with same normal path was already loaded.");
         if (!tex->specPath.empty() && tex->specPath == specPath)
-            inst_.sh_->log(MyShell::LOG_WARN, "Texture with same spectral path was already loaded.");
+            inst_.sh_->log(Shell::LOG_WARN, "Texture with same spectral path was already loaded.");
     }
     // make texture and a loading future
     auto pTexture = std::make_shared<Texture::Data>(inst_.pTextures_.size(), path, normPath, specPath);

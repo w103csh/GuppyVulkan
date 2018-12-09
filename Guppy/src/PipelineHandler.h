@@ -5,7 +5,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Material.h"
-#include "MyShell.h"
+#include "Shell.h"
 #include "Singleton.h"
 #include "Shader.h"
 #include "Vertex.h"
@@ -20,7 +20,6 @@ struct DescriptorResources {
     std::vector<VkDescriptorBufferInfo> dynUboInfos;
     std::vector<VkDescriptorSet> colorSets;
     std::vector<std::vector<VkDescriptorSet>> texSets;
-    std::shared_ptr<UniformBufferResources> pDynUBORes;  // only used for clean up
 };
 
 struct PipelineCreateInfoResources {
@@ -64,7 +63,7 @@ class Scene;
 
 class PipelineHandler : Singleton {
    public:
-    static void init(const MyShell::Context &ctx, const Game::Settings &settings);
+    static void init(Shell *sh, const Game::Settings &settings);
     static inline void destroy() {
         inst_.reset();
         inst_.cleanupOldResources();
@@ -86,6 +85,7 @@ class PipelineHandler : Singleton {
                                             std::unique_ptr<DescriptorResources> &pRes);
 
     static void createPipelineCache(VkPipelineCache &cache);
+    static VkPipelineCache &getPipelineCache() { return inst_.cache_; }
     // static VkSubpassDescription PipelineHandler::create_default_subpass();
     static void createPipelineResources(PipelineResources &resources);
     static void createRenderPass(PipelineResources &resources);
@@ -123,7 +123,8 @@ class PipelineHandler : Singleton {
                             const std::unique_ptr<Shader> &fs, PipelineCreateInfoResources &createRes,
                             PipelineResources &pipelineRes);
 
-    MyShell::Context ctx_;     // TODO: shared_ptr
+    Shell *sh_;
+    Shell::Context ctx_;     // TODO: shared_ptr
     Game::Settings settings_;  // TODO: shared_ptr
 
     std::vector<VkPushConstantRange> pushConstantRanges_;

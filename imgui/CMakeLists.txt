@@ -21,5 +21,8 @@ include_directories(${TARGET_NAME}
     ${GLFW_INCLUDE_DIR}
     )
 
-target_link_libraries(${TARGET_NAME} ${GLFW_LIBRARIES} ${VULKAN_LOADER})
+target_link_libraries(${TARGET_NAME}
+    ${GLFW_LIBRARIES}
+    # ${VULKAN_LOADER}
+    )
 
