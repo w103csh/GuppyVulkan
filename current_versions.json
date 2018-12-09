@@ -30,7 +30,7 @@
     {
       "name" : "ImGui",
       "version" : "125e62491eb29d4d91429ba7653a50714f9fe123",
-      "change_commits" : ["12/7/2018 Changed "]
+      "change_commits" : ["01a6f00164dbb97f7748393994f1201ada5be23b - Changed some things to get it to work with my frame data & descriptor pools."]
     },
     {
       "name" : "GLFW",
