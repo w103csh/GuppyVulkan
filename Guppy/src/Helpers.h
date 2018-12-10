@@ -54,6 +54,8 @@ enum class PIPELINE_TYPE {
     UI = 3,
 };
 
+enum class INPUT_TYPE { UP, DOWN, DBLCLK, UNKNOWN };
+
 namespace vk {
 inline VkResult assert_success(VkResult res) {
     if (res != VK_SUCCESS) {
@@ -181,8 +183,8 @@ static std::string makeVec3String(std::string prefix, glm::vec3 v) {
 
 bool hasStencilComponent(VkFormat format);
 
-VkFormat findSupportedFormat(const VkPhysicalDevice &phyDev, const std::vector<VkFormat> &candidates, const VkImageTiling tiling,
-                             const VkFormatFeatureFlags features);
+VkFormat findSupportedFormat(const VkPhysicalDevice &phyDev, const std::vector<VkFormat> &candidates,
+                             const VkImageTiling tiling, const VkFormatFeatureFlags features);
 
 VkFormat findDepthFormat(const VkPhysicalDevice &phyDev);
 
@@ -193,20 +195,21 @@ VkDeviceSize createBuffer(const VkDevice &dev, const VkDeviceSize &size, const V
 
 void copyBuffer(const VkCommandBuffer &cmd, const VkBuffer &srcBuff, const VkBuffer &dstBuff, const VkDeviceSize &size);
 
-void createImage(const VkDevice &dev, const std::vector<uint32_t> &queueFamilyIndices, const VkSampleCountFlagBits &numSamples,
-                 const VkFormat &format, const VkImageTiling &tiling, const VkImageUsageFlags &usage, const VkFlags &reqMask,
-                 uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t arrayLayers, VkImage &image, VkDeviceMemory &memory);
+void createImage(const VkDevice &dev, const std::vector<uint32_t> &queueFamilyIndices,
+                 const VkSampleCountFlagBits &numSamples, const VkFormat &format, const VkImageTiling &tiling,
+                 const VkImageUsageFlags &usage, const VkFlags &reqMask, uint32_t width, uint32_t height, uint32_t mipLevels,
+                 uint32_t arrayLayers, VkImage &image, VkDeviceMemory &memory);
 
-void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount, const VkBuffer &src_buf,
-                       const VkImage &dst_img);
+void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount,
+                       const VkBuffer &src_buf, const VkImage &dst_img);
 
 void createImageView(const VkDevice &device, const VkImage &image, const uint32_t &mipLevels, const VkFormat &format,
                      const VkImageAspectFlags &aspectFlags, const VkImageViewType &viewType, uint32_t layerCount,
                      VkImageView &view);
 
-void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, const VkFormat &format, const VkImageLayout &oldLayout,
-                           const VkImageLayout &newLayout, VkPipelineStageFlags srcStages, VkPipelineStageFlags dstStages,
-                           uint32_t mipLevels, uint32_t arrayLayers);
+void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, const VkFormat &format,
+                           const VkImageLayout &oldLayout, const VkImageLayout &newLayout, VkPipelineStageFlags srcStages,
+                           VkPipelineStageFlags dstStages, uint32_t mipLevels, uint32_t arrayLayers);
 
 }  // namespace helpers
 

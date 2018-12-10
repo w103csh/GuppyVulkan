@@ -55,7 +55,7 @@ class ShellWin32 : public Shell {
     void createWindow() override;
     VkSurfaceKHR createSurface(VkInstance instance);
 
-    Game::KEY getKey(WPARAM wParam, InputHandler::INPUT_TYPE type);
+    Game::KEY getKey(WPARAM wParam, INPUT_TYPE type);
     void getMouse(Game::MOUSE mouse, UINT uMsg, LPARAM lParam);
     void getMouseModifier(WPARAM wParam, LPARAM lParam);
 

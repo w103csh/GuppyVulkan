@@ -96,8 +96,8 @@ class Game {
         KEY_8,
         KEY_9,
         KEY_0,
-        KEY_PLUS,
         KEY_MINUS,
+        KEY_EQUAL,
         // function keys
         KEY_F1,
         KEY_F2,

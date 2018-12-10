@@ -52,6 +52,7 @@ set(SOURCE
 	shader.h
     Shell.cpp
     Shell.h
+    ShellGLFW.cpp
     ShellGLFW.h
     Singleton.h
     Texture.cpp

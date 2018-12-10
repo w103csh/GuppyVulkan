@@ -14,12 +14,6 @@ class InputHandler : Singleton {
    public:
     static void init(Shell* sh);
 
-    enum class INPUT_TYPE {
-        UP,
-        DOWN,
-        DBLCLK,
-    };
-
     static inline const glm::vec3& getPosDir() { return inst_.posDir_; }
     static inline const glm::vec3& getLookDir() { return inst_.lookDir_; }
 

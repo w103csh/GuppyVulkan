@@ -16,15 +16,11 @@
 #include "Shell.h"
 #include "PipelineHandler.h"
 
-static void glfw_error_callback(int error, const char* description) {
-    fprintf(stderr, "Glfw Error %d: %s\n", error, description);  // TODO: shell logging
-}
-
-static void glfw_resize_callback(GLFWwindow* window, int w, int h) {
-    fprintf(stderr, "Glfw resize\n");  //
-    auto pShell = reinterpret_cast<Shell*>(glfwGetWindowUserPointer(window));
-    pShell->resize_swapchain(w, h);
-}
+void glfw_error_callback(int error, const char* description);
+void glfw_resize_callback(GLFWwindow* window, int w, int h);
+void glfw_cursor_pos_callback(GLFWwindow* window, double xpos, double ypos);
+void glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
+void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
 template <class T>
 class ShellGLFW : public T {
@@ -35,6 +31,29 @@ class ShellGLFW : public T {
     ~ShellGLFW(){};
 
     void run() override {
+        // Setup window
+        glfwSetErrorCallback(glfw_error_callback);
+        if (!glfwInit()) {
+            log(LOG_ERR, "GLFW: Failed to initialize\n");
+            assert(false);
+        }
+
+        createWindow();
+
+        // Setup Vulkan
+        if (!glfwVulkanSupported()) {
+            log(LOG_ERR, "GLFW: Vulkan Not Supported\n");
+            assert(false);
+        }
+
+        setPlatformSpecificExtensions();
+        init_vk();
+
+        // input listeners (set before imgui init because it installs it own callbacks)
+        glfwSetCursorPosCallback(window_, glfw_cursor_pos_callback);
+        glfwSetMouseButtonCallback(window_, glfw_mouse_button_callback);
+        glfwSetKeyCallback(window_, glfw_key_callback);
+
         setupImGui();
 
         double current_time = glfwGetTime();
@@ -42,10 +61,12 @@ class ShellGLFW : public T {
         // Main loop
         while (!glfwWindowShouldClose(window_)) {
             // Poll and handle events (inputs, window resize, etc.)
-            // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+            // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your
+            // inputs.
             // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
             // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
-            // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+            // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those
+            // two flags.
             glfwPollEvents();
 
             acquire_back_buffer();
@@ -94,29 +115,9 @@ class ShellGLFW : public T {
 
    private:
     void setupImGui() {
-        // Setup window
-        glfwSetErrorCallback(glfw_error_callback);
-        if (!glfwInit()) {
-            log(LOG_ERR, "GLFW: Failed to initialize\n");
-            assert(false);
-        }
-
-        createWindow();
-
-        // Setup Vulkan
-        if (!glfwVulkanSupported()) {
-            log(LOG_ERR, "GLFW: Vulkan Not Supported\n");
-            assert(false);
-        }
-
-        setPlatformSpecificExtensions();
-        init_vk();
-
         // Setup Dear ImGui context
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
-        ImGuiIO& io = ImGui::GetIO();
-        (void)io;
 
         create_context();
 
@@ -145,7 +146,8 @@ class ShellGLFW : public T {
 
     void createWindow() override {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        window_ = glfwCreateWindow(settings_.initial_width, settings_.initial_height, "Dear ImGui GLFW+Vulkan example", NULL, NULL);
+        window_ = glfwCreateWindow(settings_.initial_width, settings_.initial_height, "Dear ImGui GLFW+Vulkan example", NULL,
+                                   NULL);
         glfwSetWindowUserPointer(window_, this);
     }
 

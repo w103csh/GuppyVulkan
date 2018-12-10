@@ -183,10 +183,10 @@ LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         } break;
             // KEYBOARD INPUT
         case WM_KEYUP: {
-            auto key = getKey(wParam, InputHandler::INPUT_TYPE::UP);
+            auto key = getKey(wParam, INPUT_TYPE::UP);
         } break;
         case WM_KEYDOWN: {
-            auto key = getKey(wParam, InputHandler::INPUT_TYPE::DOWN);
+            auto key = getKey(wParam, INPUT_TYPE::DOWN);
             game_.on_key(key);
         } break;
             // GENERAL
@@ -199,7 +199,7 @@ LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
     return 0;
 }
 
-Game::KEY ShellWin32::getKey(WPARAM wParam, InputHandler::INPUT_TYPE type) {
+Game::KEY ShellWin32::getKey(WPARAM wParam, INPUT_TYPE type) {
     Game::KEY key;
     switch (wParam) {
         case VK_ESCAPE:
@@ -287,7 +287,7 @@ Game::KEY ShellWin32::getKey(WPARAM wParam, InputHandler::INPUT_TYPE type) {
             key = Game::KEY::KEY_MINUS;
             break;
         case '=':
-            key = Game::KEY::KEY_PLUS;
+            key = Game::KEY::KEY_EQUAL;
             break;
         // FUNCTION KEYS
         case VK_F1:
