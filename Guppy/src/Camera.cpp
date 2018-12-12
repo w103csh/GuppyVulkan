@@ -25,6 +25,28 @@ Camera::Camera(const glm::vec3 &eye, const glm::vec3 &center, float aspect, floa
                       0.0f, 0.0f, 0.5f, 1.0f);  //
 }
 
+glm::vec3 Camera::getPickRay(glm::vec3 &&position, const VkExtent2D &extent) {
+    /*  Viewport appears to take x, y, w, h where:
+            w, y - lower left
+            w, h - width and height
+
+        This means that incoming position will need the y-value
+        inverted (Both windows & glfw).
+    */
+    glm::vec4 viewport(0.0f, 0.0f, extent.width, extent.height);
+
+    // It looks like this returns a good ray in world space...
+    // TODO: add model_ to this?
+    auto ray = glm::unProject(                                 //
+        {position.x, extent.height - position.y, position.z},  // win
+        view_,                                                 // model
+        proj_,                                                 // projection
+        viewport                                               // viewport
+    );
+
+    return glm::normalize(ray);
+}
+
 void Camera::update(const float aspect, const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
     // ASPECT
     if (!helpers::almost_equal(aspect, aspect_, 2)) {

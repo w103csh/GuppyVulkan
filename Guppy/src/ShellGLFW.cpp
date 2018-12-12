@@ -4,6 +4,7 @@
 #include "ShellGLFW.h"
 
 namespace {
+const bool NOTIFY_ON_KEY_UP = true;
 bool IS_LOOKING = false;
 }  // namespace
 
@@ -176,5 +177,10 @@ void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, in
                 break;
         }
         InputHandler::updateKeyInput(gKey, type);
+
+        if (NOTIFY_ON_KEY_UP && type == INPUT_TYPE::UP) {
+            auto pShell = reinterpret_cast<Shell*>(glfwGetWindowUserPointer(window));
+            pShell->onKey(gKey);
+        }
     }
 }

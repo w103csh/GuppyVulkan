@@ -4,6 +4,7 @@
 
 #include <glm/glm.hpp>
 #include <set>
+#include <vulkan/vulkan.h>
 
 #include "Helpers.h"
 #include "Singleton.h"
@@ -38,6 +39,10 @@ class InputHandler : Singleton {
     static inline void mouseLeave() { inst_.hasFocus_ = true; }
 
     static void updateInput(float elapsed);
+
+    static glm::vec3 getMousePosition() {
+        return {inst_.currMouseInput_.xPos, inst_.currMouseInput_.yPos, 0.0f};
+    }
 
    private:
     InputHandler()

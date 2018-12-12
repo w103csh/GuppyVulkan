@@ -25,6 +25,8 @@ class Face {
         return vertices_[index];
     }
 
+    static bool intersect(const glm::vec3 &ray, const glm::vec3 &v1, const glm::vec3 &v2, const glm::vec3 &v3);
+
     inline void reverse() { std::reverse(std::begin(vertices_), std::end(vertices_)); }
     inline void setSmoothingGroup(uint32_t id) {
         for (auto &v : vertices_) v.smoothingGroupId = id;
@@ -36,7 +38,8 @@ class Face {
     void indexVertices(unique_vertices_map &vertexMap, Mesh *pMesh, bool calcTangentSpace = true);
 
     template <class T>
-    void indexVertices(unique_vertices_map &vertexMap, std::vector<T> &pMeshes, size_t meshOffset, bool calcTangentSpace = true) {
+    void indexVertices(unique_vertices_map &vertexMap, std::vector<T> &pMeshes, size_t meshOffset,
+                       bool calcTangentSpace = true) {
         // Calculate per face data...
         calcNormal();
         if (calcTangentSpace) calcTangentSpaceVectors();

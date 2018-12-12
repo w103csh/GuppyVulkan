@@ -63,3 +63,8 @@ void Face::indexVertices(unique_vertices_map &uniqueVertices, Mesh *pMesh, bool 
     std::vector<Mesh *> pMeshes = {pMesh};
     indexVertices(uniqueVertices, pMeshes, 0, calcTangentSpace);
 }
+
+bool Face::intersect(const glm::vec3 &ray, const glm::vec3 &v1, const glm::vec3 &v2, const glm::vec3 &v3) {
+    // Do the intersect
+    return false;
+}

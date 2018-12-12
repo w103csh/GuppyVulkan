@@ -11,17 +11,18 @@
 // Mesh
 // **********************
 
-Mesh::Mesh(std::unique_ptr<Material> pMaterial, glm::mat4 model)
-    : Object3d(model),
+Mesh::Mesh(MeshCreateInfo* pCreateInfo)
+    : Object3d(pCreateInfo->model),
+      markerName_(pCreateInfo->markerName),
+      offset_(pCreateInfo->offset),
+      pickable_(pCreateInfo->pickable),
+      pMaterial_(pCreateInfo->pMaterial == nullptr ? std::make_unique<Material>() : std::move(pCreateInfo->pMaterial)),
       status_(STATUS::PENDING),
-      markerName_(),
-      vertexType_(),
-      pipelineType_(),
-      vertex_res_(),
+      vertex_res_{VK_NULL_HANDLE, VK_NULL_HANDLE},
       index_res_{VK_NULL_HANDLE, VK_NULL_HANDLE},
-      offset_(),
-      pMaterial_(std::move(pMaterial)),
-      pLdgRes_(LoadingResourceHandler::createLoadingResources()) {}
+      pLdgRes_(LoadingResourceHandler::createLoadingResources()),
+      vertexType_(),
+      pipelineType_() {}
 
 void Mesh::setSceneData(size_t offset) { offset_ = offset; }
 
@@ -98,14 +99,15 @@ void Mesh::createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cm
     // FAST VERTEX BUFFER
     helpers::createBuffer(dev,
                           bufferSize,  // TODO: probably don't need to check memory requirements again
-                          VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                          vertex_res_.buffer, vertex_res_.memory);
+                          VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_res_.buffer, vertex_res_.memory);
 
     // COPY FROM STAGING TO FAST
     helpers::copyBuffer(cmd, stg_res.buffer, vertex_res_.buffer, memReqsSize);
 
     // Name the buffers for debugging
-    ext::DebugMarkerSetObjectName(dev, (uint64_t)vertex_res_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, "Mesh vertex buffer");
+    ext::DebugMarkerSetObjectName(dev, (uint64_t)vertex_res_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                                  "Mesh vertex buffer");
 }
 
 void Mesh::createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res) {
@@ -156,11 +158,12 @@ void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout
         );
         vkCmdDrawIndexed(cmd, getIndexSize(), 1, 0, 0, 0);
     } else {
-        vkCmdDraw(cmd,
-                  getVertexCount(),  // vertexCount
-                  1,                 // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
-                  0,  // firstVertex - Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
-                  0   // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
+        vkCmdDraw(
+            cmd,
+            getVertexCount(),  // vertexCount
+            1,                 // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
+            0,  // firstVertex - Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
+            0   // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
         );
     }
 }
@@ -182,30 +185,31 @@ void Mesh::destroy(const VkDevice& dev) {
 // ColorMesh
 // **********************
 
-ColorMesh::ColorMesh(std::unique_ptr<Material> pMaterial, glm::mat4 model) : Mesh(std::move(pMaterial), model) {
-    vertexType_ = Vertex::TYPE::COLOR;
-    pipelineType_ = PIPELINE_TYPE::TRI_LIST_COLOR;
+ColorMesh::ColorMesh(MeshCreateInfo* pCreateInfo) : Mesh(pCreateInfo) {
     flags_ = FLAGS::POLY;
+    pipelineType_ = PIPELINE_TYPE::TRI_LIST_COLOR;
+    vertexType_ = Vertex::TYPE::COLOR;
 }
 
 // **********************
 // ColorMesh
 // **********************
 
-LineMesh::LineMesh() : ColorMesh(std::make_unique<Material>()) {
-    vertexType_ = Vertex::TYPE::COLOR;
-    pipelineType_ = PIPELINE_TYPE::LINE;
+LineMesh::LineMesh(MeshCreateInfo* pCreateInfo) : ColorMesh(pCreateInfo) {
     flags_ = FLAGS::LINE;
+    pipelineType_ = PIPELINE_TYPE::LINE;
+    vertexType_ = Vertex::TYPE::COLOR;
 }
 
 // **********************
 // TextureMesh
 // **********************
 
-TextureMesh::TextureMesh(std::unique_ptr<Material> pMaterial, glm::mat4 model) : Mesh(std::move(pMaterial), model) {
+TextureMesh::TextureMesh(MeshCreateInfo* pCreateInfo) : Mesh(pCreateInfo) {
     assert(pMaterial_->hasTexture());
-    vertexType_ = Vertex::TYPE::TEXTURE;
+    flags_ = FLAGS::POLY;
     pipelineType_ = PIPELINE_TYPE::TRI_LIST_TEX;
+    vertexType_ = Vertex::TYPE::TEXTURE;
 };
 
 void TextureMesh::setSceneData(const Shell::Context& ctx, size_t offset) {
@@ -226,9 +230,9 @@ void TextureMesh::prepare(const VkDevice& dev, std::unique_ptr<DescriptorResourc
 }
 
 void TextureMesh::drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                                const VkDescriptorSet& descSet, const std::array<uint32_t, 1>& dynUboOffsets, size_t frameIndex,
-                                const VkCommandBufferInheritanceInfo& inheritanceInfo, const VkViewport& viewport,
-                                const VkRect2D& scissor) const {
+                                const VkDescriptorSet& descSet, const std::array<uint32_t, 1>& dynUboOffsets,
+                                size_t frameIndex, const VkCommandBufferInheritanceInfo& inheritanceInfo,
+                                const VkViewport& viewport, const VkRect2D& scissor) const {
     assert(status_ == STATUS::READY);
     auto& secCmd = secCmds_[frameIndex];
 
@@ -263,7 +267,8 @@ void TextureMesh::drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayo
 
 void TextureMesh::tryCreateDescriptorSets(std::unique_ptr<DescriptorResources>& pRes) {
     if (pMaterial_->getStatus() == STATUS::READY) {
-        PipelineHandler::createTextureDescriptorSets(pMaterial_->getTexture().imgDescInfo, pMaterial_->getTexture().offset, pRes);
+        PipelineHandler::createTextureDescriptorSets(pMaterial_->getTexture().imgDescInfo, pMaterial_->getTexture().offset,
+                                                     pRes);
     }
     status_ = pMaterial_->getStatus();
 }

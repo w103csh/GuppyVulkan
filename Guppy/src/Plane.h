@@ -15,7 +15,7 @@ constexpr auto PLANE_INDEX_SIZE = 6;
 
 class Plane {
    protected:
-    void createVertices(Mesh *pMesh, bool doubleSided);
+    void createVertices(Mesh* pMesh, bool doubleSided);
 };
 
 // **********************
@@ -24,8 +24,7 @@ class Plane {
 
 class ColorPlane : public Plane, public ColorMesh {
    public:
-    ColorPlane(std::unique_ptr<Material> pMaterial = std::make_unique<Material>(), glm::mat4 rot = glm::mat4(1.0f),
-               bool doubleSided = false);
+    ColorPlane(MeshCreateInfo* pCreateInfo, bool doubleSided = false);
 };
 
 // **********************
@@ -34,6 +33,5 @@ class ColorPlane : public Plane, public ColorMesh {
 
 class TexturePlane : public Plane, public TextureMesh {
    public:
-    TexturePlane(std::shared_ptr<Texture::Data> pTexture, glm::mat4 model = glm::mat4(1.0f), bool doubleSided = false);
-    TexturePlane(std::unique_ptr<Material> pMaterial, glm::mat4 model = glm::mat4(1.0f), bool doubleSided = false);
+    TexturePlane(MeshCreateInfo* pCreateInfo, bool doubleSided = false);
 };

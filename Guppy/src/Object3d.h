@@ -9,6 +9,7 @@
 #include "Vertex.h"
 
 typedef std::array<glm::vec3, 6> BoundingBox;
+
 const BoundingBox DefaultBoundingBox = {
     glm::vec3(FLT_MAX, 0.0f, 0.0f),   // xMin
     glm::vec3(-FLT_MAX, 0.0f, 0.0f),  // xMax
@@ -17,6 +18,7 @@ const BoundingBox DefaultBoundingBox = {
     glm::vec3(0.0f, 0.0f, FLT_MAX),   // zMin
     glm::vec3(0.0f, 0.0f, -FLT_MAX)   // zMax
 };
+
 struct BoundingBoxMinMax {
     float xMin, xMax;
     float yMin, yMax;

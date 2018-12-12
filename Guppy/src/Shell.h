@@ -114,6 +114,7 @@ class Shell {
     };
 
     const Context &context() const { return ctx_; }
+    const Game &game() const { return game_; }
 
     enum LogPriority {
         LOG_DEBUG,
@@ -126,6 +127,7 @@ class Shell {
     virtual void run() = 0;
     virtual void quit() = 0;
     virtual void watchDirectory(std::string dir, std::function<void(std::string)> callback) = 0;
+    inline void onKey(Game::KEY key) { game_.on_key(key); }
     
     void resize_swapchain(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities = true);
 

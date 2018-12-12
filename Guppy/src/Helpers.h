@@ -54,7 +54,20 @@ enum class PIPELINE_TYPE {
     UI = 3,
 };
 
-enum class INPUT_TYPE { UP, DOWN, DBLCLK, UNKNOWN };
+typedef enum TOPOLOGY {
+    //
+    POLY = 0x00000001,
+    LINE = 0x00000002,
+    // THROUGH 0x00000008
+} FLAGS;
+
+enum class INPUT_TYPE {
+    //
+    UP,
+    DOWN,
+    DBLCLK,
+    UNKNOWN
+};
 
 namespace vk {
 inline VkResult assert_success(VkResult res) {

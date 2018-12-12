@@ -31,7 +31,7 @@ struct Base : public Object3d {
     inline FlagBits getFlags() const { return flags_; }
     inline void setFlags(FlagBits flags) { flags_ = flags; }
 
-    virtual void getData(T& data) = 0;
+    virtual void getLightData(T& data) = 0;
 
    protected:
     FlagBits flags_;
@@ -50,7 +50,7 @@ class Positional : public Base<PositionalData> {
    public:
     Positional() : Base(), La_(glm::vec3(0.1f)), L_(glm::vec3(0.6f)){};
 
-    void getData(PositionalData& data) override {
+    void getLightData(PositionalData& data) override {
         data.position = getWorldSpacePosition();
         data.flags = flags_;
         data.La = La_;
@@ -78,7 +78,7 @@ class Spot : public Base<SpotData> {
    public:
     Spot() : Base(), La_(glm::vec3(0.5f)), L_(glm::vec3(0.9f)), exponent_(50.0f), cutoff_(glm::radians(15.0f)){};
 
-    void getData(SpotData& data) override {
+    void getLightData(SpotData& data) override {
         data.flags = flags_;
         data.position = getWorldSpacePosition();
         data.direction = getWorldSpaceDirection();

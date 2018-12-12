@@ -317,6 +317,9 @@ void Guppy::on_key(KEY key) {
         } break;
         case KEY::KEY_8: {
             defUBO_.shaderData.flags ^= Shader::FLAGS::TOON_SHADE;
+            auto pickRay = camera_.getPickRay(InputHandler::getMousePosition(), extent_);
+            auto dir = camera_.getWorldSpaceDirection();
+            dir = dir;
         } break;
         default:
             break;
@@ -574,13 +577,13 @@ void Guppy::updateUniformBuffer() {
     for (size_t i = 0; i < positionalLights_.size(); i++) {
         auto& uboLight = defUBO_.positionalLightData[i];
         // set data (TODO: this is terrible)
-        positionalLights_[i].getData(uboLight);
+        positionalLights_[i].getLightData(uboLight);
         uboLight.position = camera_.getCameraSpacePosition(uboLight.position);
     }
     for (size_t i = 0; i < spotLights_.size(); i++) {
         auto& uboLight = defUBO_.spotLightData[i];
         // set data (TODO: this is terrible)
-        spotLights_[i].getData(defUBO_.spotLightData[i]);
+        spotLights_[i].getLightData(defUBO_.spotLightData[i]);
         uboLight.position = camera_.getCameraSpacePosition(uboLight.position);
         uboLight.direction = camera_.getCameraSpaceDirection(uboLight.direction);
     }
@@ -733,18 +736,24 @@ void Guppy::createLights() {
 void Guppy::createScenes() {
     SceneHandler::makeScene(UBOResource_, true);  // default active scene
 
+    MeshCreateInfo createInfo;
+
     // Add defaults
     if (true) {
         // GROUND PLANE
-        auto pMaterial = std::make_unique<Material>(TextureHandler::getTextureByPath(HARDWOOD_FLOOR_TEX_PATH));
-        pMaterial->setRepeat(800.0f);
-        glm::mat4 model = helpers::affine(glm::vec3(2000.0f), {}, -M_PI_2_FLT, CARDINAL_X);
-        auto pGroundPlane = std::make_unique<TexturePlane>(std::move(pMaterial), model);
+        createInfo = {};
+        createInfo.pMaterial = std::make_unique<Material>(TextureHandler::getTextureByPath(HARDWOOD_FLOOR_TEX_PATH));
+        createInfo.pMaterial->setRepeat(800.0f);
+        createInfo.model = helpers::affine(glm::vec3(2000.0f), {}, -M_PI_2_FLT, CARDINAL_X);
+        createInfo.pickable = false;
+
+        auto pGroundPlane = std::make_unique<TexturePlane>(&createInfo);
         auto groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
         SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(pGroundPlane));
 
         // ORIGIN AXES
-        std::unique_ptr<LineMesh> pDefaultAxes = std::make_unique<Axes>(glm::mat4(1.0f), AXES_MAX_SIZE, true);
+        createInfo = {};
+        std::unique_ptr<LineMesh> pDefaultAxes = std::make_unique<Axes>(&createInfo, AXES_MAX_SIZE, true);
         SceneHandler::getActiveScene()->moveMesh(shell_->context(), std::move(pDefaultAxes));
 
         // model = helpers::affine(glm::vec3(2.0f), (CARDINAL_Y * 0.1f), -M_PI_2_FLT, CARDINAL_X);
@@ -764,13 +773,13 @@ void Guppy::createScenes() {
         //                        [groundPlane_bbmm](auto pMesh) { pMesh->putOnTop(groundPlane_bbmm); });
 
         // ORANGE
-        model = helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f});
-        ModelHandler::makeModel(SceneHandler::getActiveScene(), ORANGE_MODEL_PATH, material, model, nullptr, true,
+        ModelHandler::makeModel(SceneHandler::getActiveScene(), ORANGE_MODEL_PATH, material,
+                                helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f}), nullptr, true,
                                 [groundPlane_bbmm](auto pmodel) { pmodel->putOnTop(groundPlane_bbmm); });
 
         // MEDIEVAL HOUSE
-        model = helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
-        ModelHandler::makeModel(SceneHandler::getActiveScene(), MED_H_MODEL_PATH, {}, model,
+        ModelHandler::makeModel(SceneHandler::getActiveScene(), MED_H_MODEL_PATH, {},
+                                helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y),
                                 TextureHandler::getTextureByPath(MED_H_DIFF_TEX_PATH), true,
                                 [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); });
     }
@@ -778,11 +787,15 @@ void Guppy::createScenes() {
     // Lights
     if (showLightHelpers_) {
         for (auto& light : positionalLights_) {
-            std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(light, 0.5f);
+            createInfo = {};
+            createInfo.model = light.getData().model;
+            std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(&createInfo, 0.5f);
             SceneHandler::getActiveScene()->moveMesh(shell_->context(), std::move(pHelper));
         }
         for (auto& light : spotLights_) {
-            std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(light, 0.5f);
+            createInfo = {};
+            createInfo.model = light.getData().model;
+            std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(&createInfo, 0.5f);
             SceneHandler::getActiveScene()->moveMesh(shell_->context(), std::move(pHelper));
         }
     }

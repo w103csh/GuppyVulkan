@@ -113,8 +113,7 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
 // ColorPlane
 // **********************
 
-ColorPlane::ColorPlane(std::unique_ptr<Material> pMaterial, glm::mat4 model, bool doubleSided)
-    : ColorMesh(std::move(pMaterial), model) {
+ColorPlane::ColorPlane(MeshCreateInfo* pCreateInfo, bool doubleSided) : ColorMesh(pCreateInfo) {
     markerName_ = "ColorPlane";
     createVertices(this, doubleSided);
     updateBoundingBox(vertices_);
@@ -158,16 +157,7 @@ ColorPlane::ColorPlane(std::unique_ptr<Material> pMaterial, glm::mat4 model, boo
 // TexturePlane
 // **********************
 
-TexturePlane::TexturePlane(std::shared_ptr<Texture::Data> pTexture, glm::mat4 model, bool doubleSided)
-    : TextureMesh(std::make_unique<Material>(pTexture), model) {
-    markerName_ = "TexturePlane";
-    createVertices(this, doubleSided);
-    updateBoundingBox(vertices_);
-    status_ = STATUS::PENDING;
-}
-
-TexturePlane::TexturePlane(std::unique_ptr<Material> pMaterial, glm::mat4 model, bool doubleSided)
-    : TextureMesh(std::move(pMaterial), model) {
+TexturePlane::TexturePlane(MeshCreateInfo* pCreateInfo, bool doubleSided) : TextureMesh(pCreateInfo) {
     markerName_ = "TexturePlane";
     createVertices(this, doubleSided);
     updateBoundingBox(vertices_);

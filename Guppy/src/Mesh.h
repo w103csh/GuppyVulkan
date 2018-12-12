@@ -19,9 +19,23 @@
 //  Mesh
 // **********************
 
+typedef struct MeshCreateInfo {
+    std::string markerName = "";
+    glm::mat4 model = glm::mat4(1.0f);
+    size_t offset = 0;
+    bool pickable = true;
+    std::unique_ptr<Material> pMaterial = nullptr;
+} MeshCreateInfo;
+
 class Mesh : public Object3d {
    public:
-    Mesh(std::unique_ptr<Material> pMaterial, glm::mat4 model = glm::mat4(1.0f));
+    typedef enum FLAGS {
+        POLY = 0x00000001,
+        LINE = 0x00000002,
+        // THROUGH 0x00000008
+    } FLAGS;
+
+    Mesh(MeshCreateInfo* pCreateInfo);
     /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTRs OF THIS CLASS.
         IF THIS IS REMOVED THE DESTRUCTOR HERE WILL BE CALLED INSTEAD OF THE DERIVED DESTRUCTOR.
         IT MIGHT JUST BE EASIER/SMARTER TO GET RID OF POLYMORPHISM AND DROP THE POINTERS. */
@@ -34,6 +48,7 @@ class Mesh : public Object3d {
     inline PIPELINE_TYPE getTopologyType() const { return pipelineType_; }
     inline Vertex::TYPE getVertexType() const { return vertexType_; }
     inline const Material& getMaterial() const { return std::cref(*pMaterial_); }
+    // inline MeshCreateInfo getCreateInfo() const { return {markerName_, model_, offset_, pickable_, nullptr}; }
 
     inline void setStatusPendingBuffers() {
         assert(status_ == STATUS::PENDING || status_ == STATUS::PENDING_TEXTURE);
@@ -63,9 +78,9 @@ class Mesh : public Object3d {
                     const VkDescriptorSet& descSet) const;
     // TODO: this shouldn't be virtual... its only for textures
     virtual void drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                               const VkDescriptorSet& descSet, const std::array<uint32_t, 1>& dynUboOffsets, size_t frameIndex,
-                               const VkCommandBufferInheritanceInfo& inheritanceInfo, const VkViewport& viewport,
-                               const VkRect2D& scissor) const {};
+                               const VkDescriptorSet& descSet, const std::array<uint32_t, 1>& dynUboOffsets,
+                               size_t frameIndex, const VkCommandBufferInheritanceInfo& inheritanceInfo,
+                               const VkViewport& viewport, const VkRect2D& scissor) const {};
 
     virtual void destroy(const VkDevice& dev);
 
@@ -86,15 +101,20 @@ class Mesh : public Object3d {
         return p_bufferSize;
     }
 
-    STATUS status_;
+    // create info
     std::string markerName_;
+    size_t offset_;
+    bool pickable_;
+    std::unique_ptr<Material> pMaterial_;
+    // derived class specific
+    FlagBits flags_;
     Vertex::TYPE vertexType_;
     PIPELINE_TYPE pipelineType_;
+    //
+    STATUS status_;
     BufferResource vertex_res_;
     std::vector<VB_INDEX_TYPE> indices_;
     BufferResource index_res_;
-    size_t offset_;
-    std::unique_ptr<Material> pMaterial_;
     std::unique_ptr<LoadingResources> pLdgRes_;
 
    private:
@@ -108,13 +128,7 @@ class Mesh : public Object3d {
 
 class ColorMesh : public Mesh {
    public:
-    ColorMesh(std::unique_ptr<Material> pMaterial, glm::mat4 model = glm::mat4(1.0f));
-
-    typedef enum FLAGS {
-        POLY = 0x00000001,
-        LINE = 0x00000002,
-        // THROUGH 0x00000008
-    } FLAGS;
+    ColorMesh(MeshCreateInfo* pCreateInfo);
 
     // VERTEX
     inline Vertex::Complete getVertexComplete(size_t index) override {
@@ -139,7 +153,6 @@ class ColorMesh : public Mesh {
 
    protected:
     std::vector<Vertex::Color> vertices_;
-    FlagBits flags_;
 };
 
 // **********************
@@ -148,7 +161,7 @@ class ColorMesh : public Mesh {
 
 class LineMesh : public ColorMesh {
    public:
-    LineMesh();
+    LineMesh(MeshCreateInfo* pCreateInfo);
 };
 
 // **********************
@@ -157,7 +170,7 @@ class LineMesh : public ColorMesh {
 
 class TextureMesh : public Mesh {
    public:
-    TextureMesh(std::unique_ptr<Material> pMaterial, glm::mat4 model = glm::mat4(1.0f));
+    TextureMesh(MeshCreateInfo* pCreateInfo);
 
     // INIT
     void setSceneData(const Shell::Context& ctx, size_t offset);

@@ -6,9 +6,7 @@ const glm::vec4 green(0.0f, 1.0f, 0.0f, 1.0f);
 const glm::vec4 blue(0.0f, 0.0f, 1.0f, 1.0f);
 const glm::vec4 white(1.0f);
 
-Axes::Axes(glm::mat4 model, float lineSize, bool showNegative) : LineMesh() {
-    model_ = model;  // TODO: move this to the constructors
-
+Axes::Axes(MeshCreateInfo* pCreateInfo, float lineSize, bool showNegative) : LineMesh(pCreateInfo) {
     float max_ = lineSize;
     float min_ = max_ * -1;
 

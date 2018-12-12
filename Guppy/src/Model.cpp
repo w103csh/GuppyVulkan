@@ -23,15 +23,24 @@ std::vector<ColorMesh *> Model::loadColor(Shell *sh, Material material) {
     FileLoader::getObjData(sh, data);
     assert(data.attrib.vertices.size());
 
+    MeshCreateInfo createInfo;
+
     // determine amount and type of meshes...
     std::vector<ColorMesh *> pMeshes;
     if (data.materials.empty()) {
-        pMeshes.push_back(new ColorMesh(std::make_unique<Material>(material), model_));
+        createInfo = {};
+        createInfo.pMaterial = std::make_unique<Material>(material);
+        createInfo.model = model_;
+
+        pMeshes.push_back(new ColorMesh(&createInfo));
     } else {
         for (auto &to_m : data.materials) {
-            auto pMaterial = std::make_unique<Material>(material);
-            pMaterial->setMaterialData(to_m);
-            pMeshes.push_back(new ColorMesh(std::move(pMaterial), model_));
+            createInfo = {};
+            createInfo.pMaterial = std::make_unique<Material>(material);
+            createInfo.pMaterial->setMaterialData(to_m);
+            createInfo.model = model_;
+
+            pMeshes.push_back(new ColorMesh(&createInfo));
         }
     }
 
@@ -52,14 +61,18 @@ std::vector<TextureMesh *> Model::loadTexture(Shell *sh, Material material, std:
 
     std::vector<TextureMesh *> pMeshes;
 
+    MeshCreateInfo createInfo;
+
     if (!data.materials.empty()) {
         /*  If there is a mtl file and materials get texture and material data
             from data object. One mesh per material.
         */
 
         for (auto &to_m : data.materials) {
-            auto pMaterial = std::make_unique<Material>(material);
-            pMaterial->setMaterialData(to_m);
+            createInfo = {};
+            createInfo.pMaterial = std::make_unique<Material>(material);
+            createInfo.pMaterial->setMaterialData(to_m);
+            createInfo.model = model_;
 
             if (!to_m.diffuse_texname.empty() /*|| !to_m.specular_texname.empty() || !to_m.bump_texname.empty()*/) {
                 std::string diff, spec, norm;
@@ -74,18 +87,23 @@ std::vector<TextureMesh *> Model::loadTexture(Shell *sh, Material material, std:
                     // TODO: deal with textures sharing some bitmap and not others...
                 }
 
-                pMaterial->setTexture(TextureHandler::getTextureByPath(diff));
-                pMeshes.push_back(new TextureMesh(std::move(pMaterial), model_));
+                createInfo.pMaterial->setTexture(TextureHandler::getTextureByPath(diff));
+
+                pMeshes.push_back(new TextureMesh(&createInfo));
 
             } else {
                 // TODO: deal with material that don't have a diffuse bitmap...
             }
         }
     } else {
-        auto pMaterial = std::make_unique<Material>(material);
-        pMaterial->setTexture(pTexture);
-        pMeshes.push_back(new TextureMesh(std::move(pMaterial), model_));
+        createInfo = {};
+        createInfo.pMaterial = std::make_unique<Material>(material);
+        createInfo.pMaterial->setTexture(pTexture);
+        createInfo.model = model_;
+
+        pMeshes.push_back(new TextureMesh(&createInfo));
     }
+
     // Load obj data into mesh...
     FileLoader::loadObjData(data, pMeshes);
     for (auto &pMesh : pMeshes) assert(pMesh->getVertexCount());
