@@ -40,6 +40,14 @@ struct Object3d {
         return isPosition ? local : glm::normalize(local);
     }
 
+    template <typename T>
+    void worldToLocal(T& vecs) const {
+        auto inverse = glm::inverse(model_);
+        for (auto& v : vecs) {
+            v = inverse * v;
+        }
+    }
+
     virtual inline glm::vec3 getWorldSpaceDirection(const glm::vec3& d = FORWARD_VECTOR) const {
         glm::vec3 direction = model_ * glm::vec4(d, 0.0f);
         return glm::normalize(direction);
@@ -54,6 +62,8 @@ struct Object3d {
     virtual inline void transform(const glm::mat4 t) { model_ = t * model_; }
 
     BoundingBoxMinMax getBoundingBoxMinMax(bool transform = true) const;
+
+    virtual bool testBoundingBox(const Ray& ray) const;
 
     virtual void putOnTop(const BoundingBoxMinMax& boundingBox);
 

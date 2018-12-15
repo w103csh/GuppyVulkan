@@ -318,8 +318,9 @@ void Guppy::on_key(KEY key) {
         case KEY::KEY_8: {
             defUBO_.shaderData.flags ^= Shader::FLAGS::TOON_SHADE;
             auto pickRay = camera_.getPickRay(InputHandler::getMousePosition(), extent_);
-            auto dir = camera_.getWorldSpaceDirection();
-            dir = dir;
+            if (SceneHandler::getActiveScene()->select(pickRay)) {
+                std::cout << "HIT!" << std::endl;
+            }
         } break;
         default:
             break;

@@ -37,9 +37,6 @@ class Scene {
 
     inline const VkRenderPass activeRenderPass() const { return plResources_.renderPass; }
 
-    void recordDrawCmds(const Shell::Context &ctx, const std::vector<FrameData> &frame_data,
-                        const std::vector<VkFramebuffer> &framebuffers, const VkViewport &viewport, const VkRect2D &scissor);
-
     void record(const Shell::Context &ctx, const VkFramebuffer &framebuffer, const VkFence &fence,
                 const VkViewport &viewport, const VkRect2D &scissor, uint8_t frameIndex, bool wait = false);
 
@@ -47,19 +44,7 @@ class Scene {
 
     const VkCommandBuffer &getDrawCmds(const uint8_t &frame_data_index, uint32_t &commandBufferCount);
 
-    // TODO: there must be a better way...
-    inline size_t readyCount() {
-        size_t count = 0;
-        for (auto &pMesh : colorMeshes_)
-            if (pMesh->getStatus() == STATUS::READY) count++;
-        // for (auto &pMesh : lineMeshes_)
-        //    if (pMesh->isReady()) count++;
-        for (auto &pMesh : texMeshes_) {
-            if (pMesh->getStatus() == STATUS::READY) count++;
-        }
-        return count;
-        // return std::count_if(meshes_.begin(), meshes_.end(), [](auto &mesh) { return mesh->isReady(); });
-    }
+    bool select(const Ray &ray);  // TODO: remove return type
 
     void destroy(const VkDevice &dev);
 

@@ -40,9 +40,7 @@ class InputHandler : Singleton {
 
     static void updateInput(float elapsed);
 
-    static glm::vec3 getMousePosition() {
-        return {inst_.currMouseInput_.xPos, inst_.currMouseInput_.yPos, 0.0f};
-    }
+    static glm::vec2 getMousePosition() { return {inst_.currMouseInput_.xPos, inst_.currMouseInput_.yPos}; }
 
    private:
     InputHandler()

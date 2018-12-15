@@ -13,8 +13,8 @@ bool hasStencilComponent(VkFormat format) {
            format == VK_FORMAT_D32_SFLOAT_S8_UINT;
 }
 
-VkFormat findSupportedFormat(const VkPhysicalDevice &phyDev, const std::vector<VkFormat> &candidates, const VkImageTiling tiling,
-                             const VkFormatFeatureFlags features) {
+VkFormat findSupportedFormat(const VkPhysicalDevice &phyDev, const std::vector<VkFormat> &candidates,
+                             const VkImageTiling tiling, const VkFormatFeatureFlags features) {
     VkFormat format = VK_FORMAT_UNDEFINED;
     for (VkFormat f : candidates) {
         VkFormatProperties props;
@@ -73,8 +73,9 @@ VkDeviceSize createBuffer(const VkDevice &dev, const VkDeviceSize &size, const V
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memReqs.size;
-    auto pass = getMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                              &allocInfo.memoryTypeIndex);
+    auto pass =
+        getMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                      &allocInfo.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
     /*
@@ -117,10 +118,10 @@ void copyBuffer(const VkCommandBuffer &cmd, const VkBuffer &srcBuff, const VkBuf
     vkCmdCopyBuffer(cmd, srcBuff, dstBuff, 1, &copyRegion);
 }
 
-void createImage(const VkDevice &dev, const std::vector<uint32_t> &queueFamilyIndices, const VkSampleCountFlagBits &numSamples,
-                 const VkFormat &format, const VkImageTiling &tiling, const VkImageUsageFlags &usage, const VkFlags &reqMask,
-                 uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t arrayLayers, VkImage &image,
-                 VkDeviceMemory &memory) {
+void createImage(const VkDevice &dev, const std::vector<uint32_t> &queueFamilyIndices,
+                 const VkSampleCountFlagBits &numSamples, const VkFormat &format, const VkImageTiling &tiling,
+                 const VkImageUsageFlags &usage, const VkFlags &reqMask, uint32_t width, uint32_t height, uint32_t mipLevels,
+                 uint32_t arrayLayers, VkImage &image, VkDeviceMemory &memory) {
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;  // param?
@@ -157,8 +158,8 @@ void createImage(const VkDevice &dev, const std::vector<uint32_t> &queueFamilyIn
     vk::assert_success(vkBindImageMemory(dev, image, memory, 0));
 }
 
-void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount, const VkBuffer &srcBuff,
-                       const VkImage &dstImg) {
+void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount,
+                       const VkBuffer &srcBuff, const VkImage &dstImg) {
     VkBufferImageCopy region = {};
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
@@ -208,9 +209,9 @@ void createImageView(const VkDevice &device, const VkImage &image, const uint32_
     vk::assert_success(vkCreateImageView(device, &viewInfo, nullptr, &view));
 }
 
-void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, const VkFormat &format, const VkImageLayout &oldLayout,
-                           const VkImageLayout &newLayout, VkPipelineStageFlags srcStages, VkPipelineStageFlags dstStages,
-                           uint32_t mipLevels, uint32_t layerCount) {
+void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, const VkFormat &format,
+                           const VkImageLayout &oldLayout, const VkImageLayout &newLayout, VkPipelineStageFlags srcStages,
+                           VkPipelineStageFlags dstStages, uint32_t mipLevels, uint32_t layerCount) {
     VkImageMemoryBarrier barrier;
     // for (uint32_t i = 0; i < arrayLayers; i++) {
 
@@ -265,7 +266,8 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
             barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;  // | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
             break;
         case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
-            barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;  // | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+            barrier.dstAccessMask =
+                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;  // | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
             break;
         default:
             layoutHandled = false;
@@ -277,7 +279,8 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
     //    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     //    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     //    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //} else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    //} else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout ==
+    //VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
     //    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     //    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     //    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -311,6 +314,31 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
 
     vkCmdPipelineBarrier(cmd, srcStages, dstStages, 0, 0, nullptr, 0, nullptr, 1, &barrier);
     //}
+}
+
+void cramers3(glm::vec3 &&c1, glm::vec3 &&c2, glm::vec3 &&c3, glm::vec3 &&c4) {
+    /*  Setup example (comes from barycentric intersection):
+
+        |a   d   g| |beta | = |j|
+        |b   e   h| |gamma| = |k|
+        |c   f   i| |t    | = |l|
+
+        M =      a(ei-hf) + b(gf-di) + c(dh-eg)
+        t =     (f(ak-jb) + e(jc-al) + d(bl-kc)) / M
+        gamma = (i(ak-jb) + h(jc-al) + g(bl-kc)) / M
+        beta =  (j(ei-hf) + k(gf-di) + l(dh-eg)) / M
+
+        This should be faster than using glm::determinant...
+        potentially. T
+    */
+    //glm::mat3 A(c1, c2, c3);
+    //auto M_ = glm::determinant(A);
+    //glm::mat3 BETA(c4, c2, c3);
+    //auto beta_ = glm::determinant(BETA) / M_;
+    //glm::mat3 GAMMA(c1, c4, c3);
+    //auto gamma_ = glm::determinant(GAMMA) / M_;
+    //glm::mat3 T(c1, c2, c4);
+    //auto t_ = glm::determinant(T) / M_;
 }
 
 }  // namespace helpers

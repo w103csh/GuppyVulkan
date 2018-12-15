@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
+#include "Helpers.h"
 #include "Object3d.h"
 
 class Camera : public Object3d {
@@ -47,7 +48,10 @@ class Camera : public Object3d {
         return glm::inverse(view_) * glm::vec4(p, 1.0f);
     }
 
-    glm::vec3 getPickRay(glm::vec3 &&position, const VkExtent2D &extent);
+    Ray getPickRay(glm::vec2 &&position, const VkExtent2D &extent) {
+        return getPickRay(std::forward<glm::vec2>(position), extent, far_);
+    }
+    Ray getPickRay(glm::vec2 &&position, const VkExtent2D &extent, float distance);
 
     void update(const float aspect, const glm::vec3 &pos_dir = {}, const glm::vec3 &look_dir = {});
 

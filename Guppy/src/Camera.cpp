@@ -3,7 +3,6 @@
 
 #include "Camera.h"
 #include "Constants.h"
-#include "Helpers.h"
 #include "InputHandler.h"
 
 Camera::Camera(const glm::vec3 &eye, const glm::vec3 &center, float aspect, float fov, float n, float f)
@@ -25,7 +24,7 @@ Camera::Camera(const glm::vec3 &eye, const glm::vec3 &center, float aspect, floa
                       0.0f, 0.0f, 0.5f, 1.0f);  //
 }
 
-glm::vec3 Camera::getPickRay(glm::vec3 &&position, const VkExtent2D &extent) {
+Ray Camera::getPickRay(glm::vec2 &&position, const VkExtent2D &extent, float distance) {
     /*  Viewport appears to take x, y, w, h where:
             w, y - lower left
             w, h - width and height
@@ -35,16 +34,23 @@ glm::vec3 Camera::getPickRay(glm::vec3 &&position, const VkExtent2D &extent) {
     */
     glm::vec4 viewport(0.0f, 0.0f, extent.width, extent.height);
 
-    // It looks like this returns a good ray in world space...
-    // TODO: add model_ to this?
-    auto ray = glm::unProject(                                 //
-        {position.x, extent.height - position.y, position.z},  // win
-        view_,                                                 // model
-        proj_,                                                 // projection
-        viewport                                               // viewport
+    glm::vec3 win = {position.x, extent.height - position.y, 0.0f};
+
+    // It looks like this returns a point in world space.
+    auto d = glm::unProject(  //
+        win,                  // win
+        view_,                // model (TODO: add model_ to this?)
+        proj_,                // projection
+        viewport              // viewport
     );
 
-    return glm::normalize(ray);
+    auto e = getWorldSpacePosition();
+    d = e + (glm::normalize(d - e) * distance);
+
+    // TODO: I am pretty sure that we shouldn't be picking things between
+    // the camera position and the near plane of the projection. I believe
+    // the world space position returned here is wrong then...
+    return {e, d};
 }
 
 void Camera::update(const float aspect, const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {

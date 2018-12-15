@@ -25,15 +25,16 @@ class Face {
         return vertices_[index];
     }
 
-    static bool intersect(const glm::vec3 &ray, const glm::vec3 &v1, const glm::vec3 &v2, const glm::vec3 &v3);
-
     inline void reverse() { std::reverse(std::begin(vertices_), std::end(vertices_)); }
     inline void setSmoothingGroup(uint32_t id) {
         for (auto &v : vertices_) v.smoothingGroupId = id;
     }
 
-    void calcNormal();
-    void calcTangentSpaceVectors();
+    void calculateCentroid();
+    int compareCentroids(const glm::vec3 &e, Face &other);
+
+    void calculateNormal();
+    void calculateTangentSpaceVectors();
 
     void indexVertices(unique_vertices_map &vertexMap, Mesh *pMesh, bool calcTangentSpace = true);
 
@@ -41,8 +42,8 @@ class Face {
     void indexVertices(unique_vertices_map &vertexMap, std::vector<T> &pMeshes, size_t meshOffset,
                        bool calcTangentSpace = true) {
         // Calculate per face data...
-        calcNormal();
-        if (calcTangentSpace) calcTangentSpaceVectors();
+        calculateNormal();
+        if (calcTangentSpace) calculateTangentSpaceVectors();
 
         std::map<float, int> m;
         m[1.02345f] = 1;
@@ -101,6 +102,7 @@ class Face {
     }
 
    private:
+    glm::vec3 centroid_;
     std::array<Vertex::Complete, 3> vertices_;
 };
 

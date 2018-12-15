@@ -224,6 +224,8 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
                            const VkImageLayout &oldLayout, const VkImageLayout &newLayout, VkPipelineStageFlags srcStages,
                            VkPipelineStageFlags dstStages, uint32_t mipLevels, uint32_t arrayLayers);
 
+void cramers3(glm::vec3 c1, glm::vec3 c2, glm::vec3 c3, glm::vec3 c4);
+
 }  // namespace helpers
 
 struct ImageResource {
@@ -266,6 +268,12 @@ struct DrawResources {
 template <typename T>
 struct SharedStruct : std::enable_shared_from_this<T> {
     const std::shared_ptr<const T> getPtr() const { return shared_from_this(); }
+};
+
+// Can't think of a better name atm
+struct Ray {
+    glm::vec3 e;  // start
+    glm::vec3 d;  // end
 };
 
 #endif  // !HELPERS_H

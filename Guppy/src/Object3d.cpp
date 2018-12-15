@@ -51,3 +51,49 @@ BoundingBox Object3d::getBoundingBox() const {
     }
     return bb;
 }
+
+bool Object3d::testBoundingBox(const Ray &ray) const {
+    float a;
+    auto bbmm = getBoundingBoxMinMax(true);
+
+    float t_xMin, t_xMax;
+    a = 1.0f / ray.d.x;
+    if (a >= 0.0f) {
+        t_xMin = a * (bbmm.xMin - ray.e.x);
+        t_xMax = a * (bbmm.xMax - ray.e.x);
+    } else {
+        t_xMin = a * (bbmm.xMax - ray.e.x);
+        t_xMax = a * (bbmm.xMin - ray.e.x);
+    }
+
+    float t_yMin, t_yMax;
+    a = 1.0f / ray.d.y;
+    if (a >= 0.0f) {
+        t_yMin = a * (bbmm.yMin - ray.e.y);
+        t_yMax = a * (bbmm.yMax - ray.e.y);
+    } else {
+        t_yMin = a * (bbmm.yMax - ray.e.y);
+        t_yMax = a * (bbmm.yMin - ray.e.y);
+    }
+
+    float t_zMin, t_zMax;
+    a = 1.0f / ray.d.z;
+    if (a >= 0.0f) {
+        t_zMin = a * (bbmm.zMin - ray.e.z);
+        t_zMax = a * (bbmm.zMax - ray.e.z);
+    } else {
+        t_zMin = a * (bbmm.zMax - ray.e.z);
+        t_zMax = a * (bbmm.zMin - ray.e.z);
+    }
+
+    if (t_xMin > t_yMax ||  // x test
+        t_xMin > t_zMax ||  // x test
+        t_yMin > t_xMax ||  // y test
+        t_yMin > t_zMax ||  // y test
+        t_zMin > t_xMax ||  // z test
+        t_zMin > t_yMax)    // z test
+    {
+        return false;
+    }
+    return true;
+}

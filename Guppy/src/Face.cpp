@@ -7,12 +7,12 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/normal.hpp>
 
-void Face::calcNormal() {
+void Face::calculateNormal() {
     glm::vec3 normal = glm::triangleNormal(vertices_[0].position, vertices_[1].position, vertices_[2].position);
     for (auto &v : vertices_) v.normal = normal;
 }
 
-void Face::calcTangentSpaceVectors() {
+void Face::calculateTangentSpaceVectors() {
     glm::vec3 t = {}, b = {};
     /*  Create a linear map from tangent space to model space. This is done using
         Cramer's rule.
@@ -64,7 +64,21 @@ void Face::indexVertices(unique_vertices_map &uniqueVertices, Mesh *pMesh, bool 
     indexVertices(uniqueVertices, pMeshes, 0, calcTangentSpace);
 }
 
-bool Face::intersect(const glm::vec3 &ray, const glm::vec3 &v1, const glm::vec3 &v2, const glm::vec3 &v3) {
-    // Do the intersect
-    return false;
+void Face::calculateCentroid() {
+    centroid_.x = (vertices_[0].position.x + vertices_[1].position.x + vertices_[2].position.x) / 3;
+    centroid_.y = (vertices_[0].position.y + vertices_[1].position.y + vertices_[2].position.y) / 3;
+    centroid_.z = (vertices_[0].position.z + vertices_[1].position.z + vertices_[2].position.z) / 3;
+}
+
+// Returns <0 if "this" is closer to "e" than "other"
+int Face::compareCentroids(const glm::vec3 &e, Face &other) {
+    calculateCentroid();
+    other.calculateCentroid();
+
+    auto dist = glm::distance(centroid_, e);
+    auto distOther = glm::distance(other.centroid_, e);
+    if (dist == distOther) {
+        return 0;
+    }
+    return dist < distOther ? -1 : 1;
 }
