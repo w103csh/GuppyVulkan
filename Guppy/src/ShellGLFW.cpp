@@ -69,6 +69,7 @@ void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, in
                 gKey = Game::KEY::KEY_TAB;
                 break;
             case GLFW_KEY_F:
+
                 gKey = Game::KEY::KEY_F;
                 break;
             case GLFW_KEY_W:

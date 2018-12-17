@@ -41,9 +41,9 @@ class ShellWin32 : public Shell {
     ShellWin32(Game &game);
     ~ShellWin32();
 
-    void watchDirectory(std::string dir, std::function<void(std::string)> callback) override;
     void run() override;
     void quit() override;
+    void watchDirectory(std::string dir, std::function<void(std::string)> callback) override;
 
    protected:
     virtual void setPlatformSpecificExtensions() override;

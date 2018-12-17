@@ -6,8 +6,8 @@ UIHandler UIHandler::inst_;
 
 UIHandler::UIHandler() {}
 
-void UIHandler::init(Shell* sh, const Game::Settings& settings, std::unique_ptr<UI> ui) {
-    inst_.ui_ = std::move(ui);
+void UIHandler::init(Shell* sh, const Game::Settings& settings, std::shared_ptr<UI> pUI) {
+    inst_.pUI_ = pUI == nullptr ? std::make_shared<DefaultUI>() : pUI;
 
     inst_.reset();
     inst_.sh_ = sh;

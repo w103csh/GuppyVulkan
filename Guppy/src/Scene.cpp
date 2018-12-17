@@ -407,6 +407,8 @@ bool Scene::select(const Ray& ray) {
         }
     }
 
+    return false;
+
     // TODO: lines
     // for (auto& pMesh : texMeshes_) {
     //}

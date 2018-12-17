@@ -111,7 +111,7 @@ void Guppy::attach_shell(Shell& sh) {
 
     CmdBufHandler::init(ctx);
 #ifdef USE_DEBUG_GUI
-    UIHandler::init(&sh, settings_, std::make_unique<ImGuiUI>());
+    UIHandler::init(&sh, settings_, sh.getUI());
 #else
     UIHandler::init(&sh, settings_);
 #endif

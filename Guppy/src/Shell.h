@@ -29,6 +29,7 @@
 class Game;
 struct DescriptorResources;  // UI only
 struct PipelineResources;    // UI only
+class UI;                    // UI only
 
 // structure for comparing char arrays
 struct less_str {
@@ -127,8 +128,9 @@ class Shell {
     virtual void run() = 0;
     virtual void quit() = 0;
     virtual void watchDirectory(std::string dir, std::function<void(std::string)> callback) = 0;
+    virtual std::shared_ptr<UI> getUI() const { return nullptr; };
     inline void onKey(Game::KEY key) { game_.on_key(key); }
-    
+
     void resize_swapchain(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities = true);
 
    protected:
@@ -159,11 +161,12 @@ class Shell {
     std::vector<VkExtensionProperties> instExtProps_;
 
    private:
-    bool debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT obj_type, uint64_t object, size_t location,
-                               int32_t msg_code, const char *layer_prefix, const char *msg);
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT obj_type,
-                                                                uint64_t object, size_t location, int32_t msg_code,
-                                                                const char *layer_prefix, const char *msg, void *user_data) {
+    bool debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT obj_type, uint64_t object,
+                               size_t location, int32_t msg_code, const char *layer_prefix, const char *msg);
+    static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report_callback(VkDebugReportFlagsEXT flags,
+                                                                VkDebugReportObjectTypeEXT obj_type, uint64_t object,
+                                                                size_t location, int32_t msg_code, const char *layer_prefix,
+                                                                const char *msg, void *user_data) {
         Shell *shell = reinterpret_cast<Shell *>(user_data);
         return shell->debug_report_callback(flags, obj_type, object, location, msg_code, layer_prefix, msg);
     }
@@ -196,7 +199,8 @@ class Shell {
     void pick_physical_dev();                                       // *
 
     // called by pick_device
-    bool is_dev_suitable(const PhysicalDeviceProperties &props, uint32_t &graphics_queue_index, uint32_t &present_queue_index,
+    bool is_dev_suitable(const PhysicalDeviceProperties &props, uint32_t &graphics_queue_index,
+                         uint32_t &present_queue_index,
                          uint32_t &transfer_queue_index);  // *
 
     // called by is_dev_suitable

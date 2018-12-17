@@ -1,59 +1,21 @@
 
-#include <imgui.h>
-#include <imgui_impl_glfw.h>
-#include <imgui_impl_vulkan.h>
 
 #include "ImGuiUI.h"
 
-void ImGuiUI::draw(VkCommandBuffer cmd, uint8_t frameIndex) {
-    bool show_demo_window = true;
-    bool show_another_window = false;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+ImGuiUI::ImGuiUI(GLFWwindow* window) : window_(window), showDemoWindow_(false), showSelectionInfoWindow_(false) {}
 
+void ImGuiUI::draw(VkCommandBuffer cmd, uint8_t frameIndex) {
     // Start the Dear ImGui frame
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
     ImGui::NewFrame();
 
-    // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn
-    // more about Dear ImGui!).
-    if (show_demo_window) ImGui::ShowDemoWindow(&show_demo_window);
-
-    // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-    {
-        static float f = 0.0f;
-        static int counter = 0;
-
-        ImGui::Begin("Hello, world!");  // Create a window called "Hello, world!" and append into it.
-
-        ImGui::Text("This is some useful text.");           // Display some text (you can use a format strings too)
-        ImGui::Checkbox("Demo Window", &show_demo_window);  // Edit bools storing our window open/close state
-        ImGui::Checkbox("Another Window", &show_another_window);
-
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);             // Edit 1 float using a slider from 0.0f to 1.0f
-        ImGui::ColorEdit3("clear color", (float*)&clear_color);  // Edit 3 floats representing a color
-
-        if (ImGui::Button("Button"))  // Buttons return true when clicked (most widgets return true when edited/activated)
-            counter++;
-        ImGui::SameLine();
-        ImGui::Text("counter = %d", counter);
-
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::End();
-    }
-
-    // 3. Show another simple window.
-    if (show_another_window) {
-        ImGui::Begin("Another Window", &show_another_window);  // Pass a pointer to our bool variable (the window will have
-                                                               // a closing button that will clear the bool when clicked)
-        ImGui::Text("Hello from another window!");
-        if (ImGui::Button("Close Me")) show_another_window = false;
-        ImGui::End();
-    }
+    appMainMenuBar();
+    if (showDemoWindow_) ImGui::ShowDemoWindow(&showDemoWindow_);
+    if (showSelectionInfoWindow_) showSelectionInfoWindow(&showSelectionInfoWindow_);
 
     // Rendering
     ImGui::Render();
-    // memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
 
     // Record Imgui Draw Data and draw funcs into command buffer
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd, frameIndex);
@@ -61,4 +23,86 @@ void ImGuiUI::draw(VkCommandBuffer cmd, uint8_t frameIndex) {
 
 void ImGuiUI::reset() {
     // vkFreeCommandBuffers(ctx_.dev, CmdBufHandler::present_cmd_pool(), 1, &inst_.cmd_);
+}
+
+void ImGuiUI::appMainMenuBar() {
+    if (ImGui::BeginMainMenuBar()) {
+        if (ImGui::BeginMenu("File")) {
+            menuFile();
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Edit")) {
+            if (ImGui::MenuItem("Undo", "CTRL+Z")) {
+            }
+            if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {
+            }  // Disabled item
+            ImGui::Separator();
+            if (ImGui::MenuItem("Cut", "CTRL+X")) {
+            }
+            if (ImGui::MenuItem("Copy", "CTRL+C")) {
+            }
+            if (ImGui::MenuItem("Paste", "CTRL+V")) {
+            }
+            ImGui::EndMenu();
+        }
+        if (ImGui::BeginMenu("Show Windows")) {
+            menuShowWindows();
+            ImGui::EndMenu();
+        }
+        ImGui::EndMainMenuBar();
+    }
+}
+
+void ImGuiUI::menuFile() {
+    // ImGui::MenuItem("(dummy menu)", NULL, false, false);
+    if (ImGui::MenuItem("New")) {
+    }
+    if (ImGui::MenuItem("Open", "Ctrl+O")) {
+    }
+    if (ImGui::BeginMenu("Open Recent")) {
+        // ImGui::MenuItem("fish_hat.c");
+        // ImGui::MenuItem("fish_hat.inl");
+        // ImGui::MenuItem("fish_hat.h");
+        // if (ImGui::BeginMenu("More..")) {
+        //    ImGui::MenuItem("Hello");
+        //    ImGui::MenuItem("Sailor");
+        //    if (ImGui::BeginMenu("Recurse..")) {
+        //        ShowExampleMenuFile();
+        //        ImGui::EndMenu();
+        //    }
+        //    ImGui::EndMenu();
+        //}
+        ImGui::EndMenu();
+    }
+    if (ImGui::MenuItem("Save", "Ctrl+S")) {
+    }
+    if (ImGui::MenuItem("Save As..")) {
+    }
+    if (ImGui::MenuItem("Quit", "Alt+F4")) {
+        glfwSetWindowShouldClose(window_, GLFW_TRUE);
+    }
+}
+
+void ImGuiUI::menuShowWindows() {
+    if (ImGui::MenuItem("Selection Information", nullptr, &showSelectionInfoWindow_)) {
+    }
+    if (ImGui::MenuItem("Demo Window", nullptr, &showDemoWindow_)) {
+    }
+}
+
+void ImGuiUI::showSelectionInfoWindow(bool* p_open) {
+
+    // We specify a default position/size in case there's no data in the .ini file. Typically this isn't required! We only do
+    // it to make the Demo applications a little more welcoming.
+    ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
+    ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
+
+    if (!ImGui::Begin("Selection Information", p_open, 0)) {
+        // Early out if the window is collapsed, as an optimization.
+        ImGui::End();
+        return;
+    }
+
+    // End of showSelectionInfoWindow()
+    ImGui::End();
 }

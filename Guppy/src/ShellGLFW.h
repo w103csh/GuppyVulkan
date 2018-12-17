@@ -12,7 +12,7 @@
 
 #include "CmdBufHandler.h"
 #include "Helpers.h"
-#include "UIHandler.h"
+#include "ImGuiUI.h"
 #include "Shell.h"
 #include "PipelineHandler.h"
 
@@ -39,6 +39,8 @@ class ShellGLFW : public T {
         }
 
         createWindow();
+        // After window is created instantiate the UI class
+        pUI_ = std::make_shared<ImGuiUI>(window_);
 
         // Setup Vulkan
         if (!glfwVulkanSupported()) {
@@ -113,6 +115,8 @@ class ShellGLFW : public T {
         ImGui_ImplVulkan_Init(&init_info, plRes.renderPass);
     }
 
+    std::shared_ptr<UI> getUI() const override { return static_cast<std::shared_ptr<UI>>(pUI_); }
+
    private:
     void setupImGui() {
         // Setup Dear ImGui context
@@ -182,6 +186,7 @@ class ShellGLFW : public T {
 
     GLFWwindow* window_;
     ImGui_ImplVulkanH_WindowData windowData_;
+    std::shared_ptr<ImGuiUI> pUI_;
 };
 
 #endif  // !SHELL_GLFW_H
