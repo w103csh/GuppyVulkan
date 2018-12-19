@@ -117,17 +117,15 @@ class Game {
         KEY_SHFT,
     };
 
-    enum class MOUSE {
-        LEFT,
-        RIGHT,
-        MIDDLE,
-        X,
+    struct MouseInput {
+        float xPos, yPos, zDelta;
+        bool moving, primary, secondary;
     };
 
-    virtual void on_key(KEY key) {}
     virtual void on_tick() {}
-
     virtual void on_frame(float framePred) {}
+    virtual void onKey(KEY key) {}                    // TODO: bad design
+    virtual void onMouse(const MouseInput &input){};  // TODO: bad design & misleading name
 
    protected:
     Game(const std::string &name, const std::vector<std::string> &args) : shell_(nullptr), settings_() {

@@ -17,6 +17,8 @@ struct InvalidSceneResources {
 };
 
 class SceneHandler : Singleton {
+    friend class Scene;
+
    public:
     static void init(Shell* sh, const Game::Settings& settings);
     static inline void destroy() {
@@ -45,6 +47,8 @@ class SceneHandler : Singleton {
     static void destroyDescriptorResources(std::unique_ptr<DescriptorResources>& pRes);
     static void cleanupInvalidResources();
 
+    static const std::unique_ptr<Face>& getSelectedFace() { return inst_.pSelectedFace_; }
+
    private:
     SceneHandler();     // Prevent construction
     ~SceneHandler(){};  // Prevent construction
@@ -52,11 +56,15 @@ class SceneHandler : Singleton {
     void reset() override;
 
     Shell* sh_;
-    Shell::Context ctx_;     // TODO: shared_ptr
+    Shell::Context ctx_;       // TODO: shared_ptr
     Game::Settings settings_;  // TODO: shared_ptr
+
+    static void setSelectedFace(std::unique_ptr<Face> pFace) { inst_.pSelectedFace_ = std::move(pFace); }
 
     uint8_t activeSceneIndex_;
     std::vector<std::unique_ptr<Scene>> pScenes_;
+
+    std::unique_ptr<Face> pSelectedFace_;
 
     // global storage for clean up
     std::vector<InvalidSceneResources> invalidRes_;

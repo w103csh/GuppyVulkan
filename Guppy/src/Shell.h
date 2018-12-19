@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef MY_SHELL_H
-#define MY_SHELL_H
+#ifndef SHELL_H
+#define SHELL_H
 
 #include <queue>
 #include <map>
@@ -129,7 +129,8 @@ class Shell {
     virtual void quit() = 0;
     virtual void watchDirectory(std::string dir, std::function<void(std::string)> callback) = 0;
     virtual std::shared_ptr<UI> getUI() const { return nullptr; };
-    inline void onKey(Game::KEY key) { game_.on_key(key); }
+    inline void onKey(Game::KEY key) { game_.onKey(key); }
+    inline void onMouse(const Game::MouseInput &input) { game_.onMouse(input); }
 
     void resize_swapchain(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities = true);
 

@@ -11,7 +11,7 @@
 
 class ImGuiUI : public UI {
    public:
-    ImGuiUI(GLFWwindow* window);
+    ImGuiUI(GLFWwindow* window) : window_(window), showDemoWindow_(false), showSelectionInfoWindow_(true) {}
 
     void draw(VkCommandBuffer cmd, uint8_t frameIndex) override;
     void reset() override;
@@ -23,8 +23,9 @@ class ImGuiUI : public UI {
     void showSelectionInfoWindow(bool* p_open);
 
    private:
-    GLFWwindow* window_;
+    void ImGuiUI::showFaceSelectionInfoText(const std::unique_ptr<Face>& pFace);
 
+    GLFWwindow* window_;
     bool showDemoWindow_;
     bool showSelectionInfoWindow_;
 };

@@ -77,11 +77,15 @@ class ShellGLFW : public T {
             double elapsed = now - current_time;
 
             InputHandler::updateInput(static_cast<float>(elapsed));
+            onMouse(InputHandler::getMouseInput());  // TODO: this stuff is all out of whack
+
             add_game_time(static_cast<float>(elapsed));
 
             present_back_buffer();
 
             current_time = now;
+
+            InputHandler::clear();
         }
 
         vkDeviceWaitIdle(context().dev);

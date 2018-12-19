@@ -44,7 +44,8 @@ class Scene {
 
     const VkCommandBuffer &getDrawCmds(const uint8_t &frame_data_index, uint32_t &commandBufferCount);
 
-    bool select(const Ray &ray);  // TODO: remove return type
+    // Selection
+    void select(const Ray &ray);
 
     void destroy(const VkDevice &dev);
 
@@ -92,6 +93,22 @@ class Scene {
                                        std::string markerName = "");
     void destroyUniforms(const VkDevice &dev);
     std::shared_ptr<UniformBufferResources> pDynUBOResource_;
+
+    // Selection
+    template <typename T>
+    void selectFace(const Ray &ray, T &pMeshes, std::unique_ptr<Face> &pSelection) {
+        Face face;
+        for (size_t offset = 0; offset < pMeshes.size(); offset++) {
+            const auto &pMesh = pMeshes[offset];
+            if (pMesh->testBoundingBox(ray)) {
+                if (pMesh->selectFace(ray, face, offset)) {
+                    if (pSelection == nullptr || pSelection->compareCentroids(ray.e, face)) {
+                        pSelection = std::make_unique<Face>(face);
+                    }
+                }
+            }
+        }
+    }
 };
 
 #endif  // !SCENE_H

@@ -11,6 +11,7 @@
 
 class Game;
 class Model;
+struct MouseInput;
 class Shell;
 
 class Guppy : public Game {
@@ -24,10 +25,11 @@ class Guppy : public Game {
     void attach_swapchain() override;
     void detach_swapchain() override;
 
-    void on_key(KEY key) override;
     void on_tick() override;
-
     void on_frame(float framePred) override;
+
+    void onKey(KEY key) override;
+    void onMouse(const MouseInput& input) override;
 
    private:
     bool multithread_;
@@ -125,6 +127,9 @@ class Guppy : public Game {
     std::vector<Light::Positional> positionalLights_;
     std::vector<Light::Spot> spotLights_;
     size_t lightHelperOffset_;
+
+    // input events
+    void onMouseInput(const MouseInput& input);
 };
 
 #endif  // !GUPPY_H

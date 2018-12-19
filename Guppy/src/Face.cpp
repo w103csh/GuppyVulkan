@@ -1,14 +1,14 @@
 
+#include <glm/glm.hpp>
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/projection.hpp>
+
 #include "Face.h"
+#include "Helpers.h"
 #include "Mesh.h"
 
-#include <glm/glm.hpp>
-#include <glm/gtx/projection.hpp>
-#define GLM_ENABLE_EXPERIMENTAL
-#include <glm/gtx/normal.hpp>
-
 void Face::calculateNormal() {
-    glm::vec3 normal = glm::triangleNormal(vertices_[0].position, vertices_[1].position, vertices_[2].position);
+    glm::vec3 normal = helpers::faceNormal(vertices_[0].position, vertices_[1].position, vertices_[2].position);
     for (auto &v : vertices_) v.normal = normal;
 }
 
@@ -77,6 +77,7 @@ int Face::compareCentroids(const glm::vec3 &e, Face &other) {
 
     auto dist = glm::distance(centroid_, e);
     auto distOther = glm::distance(other.centroid_, e);
+
     if (dist == distOther) {
         return 0;
     }

@@ -392,26 +392,14 @@ void Scene::record(const Shell::Context& ctx, const VkFramebuffer& framebuffer, 
     vk::assert_success(vkEndCommandBuffer(cmd));
 }
 
-bool Scene::select(const Ray& ray) {
-    size_t offset;
+void Scene::select(const Ray& ray) {
+    std::unique_ptr<Face> pSelection = nullptr;
+    selectFace(ray, colorMeshes_, pSelection);
+    selectFace(ray, texMeshes_, pSelection);
 
-    for (offset = 0; offset < colorMeshes_.size(); offset++) {
-        const auto& pMesh = colorMeshes_[offset];
-        if (pMesh->testBoundingBox(ray)) {
-            Face face;
-            if (pMesh->selectFace(ray, face)) {
-                // A face was found !!!!
-                auto x = 1;
-                x = x;
-            };
-        }
-    }
+    // TODO: draw selection things...
 
-    return false;
-
-    // TODO: lines
-    // for (auto& pMesh : texMeshes_) {
-    //}
+    SceneHandler::setSelectedFace(std::move(pSelection));
 }
 
 void Scene::destroyCmds(const VkDevice& dev) {

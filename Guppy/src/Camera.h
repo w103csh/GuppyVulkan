@@ -48,10 +48,10 @@ class Camera : public Object3d {
         return glm::inverse(view_) * glm::vec4(p, 1.0f);
     }
 
-    Ray getPickRay(glm::vec2 &&position, const VkExtent2D &extent) {
-        return getPickRay(std::forward<glm::vec2>(position), extent, far_);
+    Ray getRay(glm::vec2 &&position, const VkExtent2D &extent) {
+        return getRay(std::forward<glm::vec2>(position), extent, far_);
     }
-    Ray getPickRay(glm::vec2 &&position, const VkExtent2D &extent, float distance);
+    Ray getRay(glm::vec2 &&position, const VkExtent2D &extent, float distance);
 
     void update(const float aspect, const glm::vec3 &pos_dir = {}, const glm::vec3 &look_dir = {});
 

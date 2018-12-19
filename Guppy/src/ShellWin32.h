@@ -17,8 +17,6 @@
 #ifndef SHELL_WIN32_H
 #define SHELL_WIN32_H
 
-#include <condition_variable>
-#include <mutex>
 #include <windows.h>
 
 #include "InputHandler.h"
@@ -56,7 +54,7 @@ class ShellWin32 : public Shell {
     VkSurfaceKHR createSurface(VkInstance instance);
 
     Game::KEY getKey(WPARAM wParam, INPUT_TYPE type);
-    void getMouse(Game::MOUSE mouse, UINT uMsg, LPARAM lParam);
+    void getMouse(UINT uMsg, LPARAM lParam);
     void getMouseModifier(WPARAM wParam, LPARAM lParam);
 
     static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {

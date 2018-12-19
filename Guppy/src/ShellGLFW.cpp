@@ -6,6 +6,8 @@
 namespace {
 const bool NOTIFY_ON_KEY_UP = true;
 bool IS_LOOKING = false;
+bool MOUSE_PRIMARY = false;
+bool MOUSE_SECONDARY = false;
 }  // namespace
 
 void glfw_error_callback(int error, const char* description) {
@@ -18,15 +20,28 @@ void glfw_resize_callback(GLFWwindow* window, int w, int h) {
 }
 
 void glfw_cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
-    InputHandler::updateMousePosition(static_cast<float>(xpos), static_cast<float>(ypos), 0.0, IS_LOOKING);
+    InputHandler::updateMousePosition(static_cast<float>(xpos), static_cast<float>(ypos), 0.0, IS_LOOKING,
+                                      !ImGui::GetIO().WantCaptureMouse, MOUSE_PRIMARY, MOUSE_SECONDARY);
 }
 
 void glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
     ImGuiIO& io = ImGui::GetIO();
-    if (!io.WantCaptureMouse && action == GLFW_PRESS && button == GLFW_MOUSE_BUTTON_2) {
-        IS_LOOKING = true;
-    } else if (action == GLFW_RELEASE && button == GLFW_MOUSE_BUTTON_2) {
-        IS_LOOKING = false;
+    if (!io.WantCaptureMouse && action == GLFW_PRESS) {
+        if (button == GLFW_MOUSE_BUTTON_1) {
+            MOUSE_PRIMARY = true;
+        }
+        if (button == GLFW_MOUSE_BUTTON_2) {
+            MOUSE_SECONDARY = true;
+            IS_LOOKING = true;
+        }
+    } else if (action == GLFW_RELEASE) {
+        if (button == GLFW_MOUSE_BUTTON_1) {
+            MOUSE_PRIMARY = false;
+        }
+        if (button == GLFW_MOUSE_BUTTON_2) {
+            MOUSE_SECONDARY = false;
+            IS_LOOKING = false;
+        }
     }
 }
 

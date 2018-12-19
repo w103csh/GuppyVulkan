@@ -26,14 +26,14 @@ void InputHandler::init(Shell* sh) {
 }
 
 void InputHandler::updateInput(float elapsed) {
-    inst_.reset();
+    // inst_.reset();
 
     inst_.updateKeyInput();
     inst_.updateMouseInput();
 
     // account for time
     inst_.posDir_ *= elapsed;
-    //inst_.lookDir_ *= (0.001 / elapsed);
+    // inst_.lookDir_ *= (0.001 / elapsed);
 
     if (MY_DEBUG && glm::any(glm::notEqual(inst_.posDir_, glm::vec3(0.0f)))) {
         std::stringstream ss;
@@ -109,7 +109,7 @@ void InputHandler::updateMouseInput() {
     }
     if (currMouseInput_.zDelta) {
         posDir_.z += currMouseInput_.zDelta > 0 ? K_Z_MOVE_FACT * 6 : K_Z_MOVE_FACT * -6;
-        currMouseInput_.zDelta = 0; // reset zDelta here... this stuff is not great
+        currMouseInput_.zDelta = 0;  // reset zDelta here... this stuff is not great
 
         if (MY_DEBUG) {
             ss << helpers::makeVec3String("mouse wheel: ", posDir_);
@@ -127,4 +127,5 @@ void InputHandler::updateMouseInput() {
 void InputHandler::reset() {
     inst_.lookDir_ = {};
     inst_.posDir_ = {};
+    currMouseInput_.moving = false;
 }

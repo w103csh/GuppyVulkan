@@ -135,6 +135,134 @@ void Mesh::createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd
     }
 }
 
+bool Mesh::selectFace(const Ray& ray, Face& face, size_t offset) const {
+    if (!pickable_) return false;
+
+    // Declare some variables that will be reused
+    float a, b, c;
+    float d, e, f;
+    // float g, h, i;
+    float j, k, l;
+
+    float ei_hf;
+    float gf_di;
+    float dh_eg;
+    float ak_jb;
+    float jc_al;
+    float bl_kc;
+
+    float beta, gamma, t, M;
+
+    std::array<glm::vec4, 2> localRay = {glm::vec4(ray.e, 1.0f), glm::vec4(ray.d, 1.0f)};
+    worldToLocal(localRay);
+
+    float t0 = 0.0f, t1 = glm::distance(localRay[0], localRay[1]);  // TODO: like this???
+
+    bool faceFound = false;
+    for (size_t n = 0; n < indices_.size(); n += 3) {
+        // face indices
+        const auto& idx0 = indices_[n];
+        const auto& idx1 = indices_[n + 1];
+        const auto& idx2 = indices_[n + 2];
+        // face vertex positions (faces are only triangles for now)
+        const auto& pa = getVertexPositionAtOffset(idx0);
+        const auto& pb = getVertexPositionAtOffset(idx1);
+        const auto& pc = getVertexPositionAtOffset(idx2);
+
+        /*  This is solved using barycentric coordinates, and
+            Cramer's rule.
+
+            e + td = a + beta(b-a) + gamma(c-a)
+
+            |xa-xb   xa-xc   xd| |b| = |xa-xe|
+            |ya-yb   ya-yc   yd| |g| = |ya-ye|
+            |za-zb   za-zc   zd| |t| = |za-ze|
+
+            |a   d   g| |beta | = |j|
+            |b   e   h| |gamma| = |k|
+            |c   f   i| |t    | = |l|
+
+            M =       a(ei-hf) + b(gf-di) + c(dh-eg)
+            t =     (f(ak-jb) + e(jc-al) + d(bl-kc)) / -M
+            gamma = (i(ak-jb) + h(jc-al) + g(bl-kc)) /  M
+            beta =  (j(ei-hf) + k(gf-di) + l(dh-eg)) /  M
+        */
+
+        a = pa.x - pb.x;
+        b = pa.y - pb.y;
+        c = pa.z - pb.z;
+        d = pa.x - pc.x;
+        e = pa.y - pc.y;
+        f = pa.z - pc.z;
+        const auto& g = localRay[1].x;
+        const auto& h = localRay[1].y;
+        const auto& i = localRay[1].z;
+        j = pa.x - localRay[0].x;
+        k = pa.y - localRay[0].y;
+        l = pa.z - localRay[0].z;
+
+        ei_hf = (e * i) - (h * f);
+        gf_di = (g * f) - (d * i);
+        dh_eg = (d * h) - (e * g);
+        ak_jb = (a * k) - (j * b);
+        jc_al = (j * c) - (a * l);
+        bl_kc = (b * l) - (k * c);
+
+        glm::vec3 c1 = {a, b, c};
+        glm::vec3 c2 = {d, e, f};
+        glm::vec3 c3 = {g, h, i};
+        glm::vec3 c4 = {j, k, l};
+
+        glm::mat3 A(c1, c2, c3);
+        auto M_ = glm::determinant(A);
+        glm::mat3 BETA(c4, c2, c3);
+        auto beta_ = glm::determinant(BETA) / M_;
+        glm::mat3 GAMMA(c1, c4, c3);
+        auto gamma_ = glm::determinant(GAMMA) / M_;
+        glm::mat3 T(c1, c2, c4);
+        auto t_ = glm::determinant(T) / M_;
+
+        auto t_test = t_ < t0 || t_ > t1;
+        auto gamma_test = gamma_ < 0 || gamma_ > 1;
+        auto beta_test = beta_ < 0 || beta_ > (1 - gamma_);
+
+        M = (a * ei_hf) + (b * gf_di) + (c * dh_eg);
+        // assert(glm::epsilonEqual(M, M_, glm::epsilon<float>()));
+
+        t = ((f * ak_jb) + (e * jc_al) + (d * bl_kc)) / -M;
+        // assert(glm::epsilonEqual(t, t_, glm::epsilon<float>()));
+        // test t
+        if (t < t0 || t > t1) continue;
+
+        gamma = ((i * ak_jb) + (h * jc_al) + (g * bl_kc)) / M;
+        // assert(glm::epsilonEqual(gamma, gamma_, glm::epsilon<float>()));
+        // test gamma
+        if (gamma < 0 || gamma > 1) continue;
+
+        beta = ((j * ei_hf) + (k * gf_di) + (l * dh_eg)) / M;
+        // assert(glm::epsilonEqual(beta, beta_, glm::epsilon<float>()));
+        // test beta
+        if (beta < 0 || beta > (1 - gamma)) continue;
+
+        auto vc_a = getVertexComplete(idx0);
+        auto vc_b = getVertexComplete(idx1);
+        auto vc_c = getVertexComplete(idx2);
+
+        // test face
+        if (!faceFound) {
+            faceFound = true;
+            face = {vc_a, vc_b, vc_c, idx0, idx1, idx2, offset};
+        } else {
+            Face tmp = {vc_a, vc_b, vc_c, idx0, idx1, idx2, offset};
+            if (face.compareCentroids(localRay[0], tmp)) {
+                face = tmp;
+            }
+        }
+    }
+
+    return faceFound;
+}
+
 void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
                       const VkDescriptorSet& descSet) const {
     assert(status_ == STATUS::READY);

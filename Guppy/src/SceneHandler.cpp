@@ -1,4 +1,5 @@
 
+#include "InputHandler.h"
 #include "Shell.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
@@ -45,7 +46,8 @@ void SceneHandler::updateDescriptorResources(uint8_t offset, bool isUpdate) {
 
     // destroy old uniforms first
     if (isUpdate) {
-        inst_.invalidRes_.push_back({pScene->pDescResources_->pool, pScene->pDescResources_->texSets, pScene->pDynUBOResource_});
+        inst_.invalidRes_.push_back(
+            {pScene->pDescResources_->pool, pScene->pDescResources_->texSets, pScene->pDynUBOResource_});
         pScene->pDynUBOResource_ = nullptr;
         pScene->pDescResources_->texSets.clear();
 
@@ -78,7 +80,8 @@ void SceneHandler::cleanupInvalidResources() {
         if (!res.texSets.empty()) assert(res.pool != VK_NULL_HANDLE);
         for (auto& sets : res.texSets) {
             if (!sets.empty()) {
-                vk::assert_success(vkFreeDescriptorSets(inst_.ctx_.dev, res.pool, static_cast<uint32_t>(sets.size()), sets.data()));
+                vk::assert_success(
+                    vkFreeDescriptorSets(inst_.ctx_.dev, res.pool, static_cast<uint32_t>(sets.size()), sets.data()));
             }
             sets.clear();
         }

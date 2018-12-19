@@ -24,7 +24,7 @@ Camera::Camera(const glm::vec3 &eye, const glm::vec3 &center, float aspect, floa
                       0.0f, 0.0f, 0.5f, 1.0f);  //
 }
 
-Ray Camera::getPickRay(glm::vec2 &&position, const VkExtent2D &extent, float distance) {
+Ray Camera::getRay(glm::vec2 &&position, const VkExtent2D &extent, float distance) {
     /*  Viewport appears to take x, y, w, h where:
             w, y - lower left
             w, h - width and height

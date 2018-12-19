@@ -29,18 +29,23 @@ class InputHandler : Singleton {
         }
     }
 
-    static inline void updateMousePosition(float xPos, float yPos, float zDelta, bool isLooking) {
+    static inline void updateMousePosition(float xPos, float yPos, float zDelta, bool isLooking, bool move = false,
+                                           bool primary = false, bool secondary = false) {
         inst_.currMouseInput_.xPos = xPos;
         inst_.currMouseInput_.yPos = yPos;
         inst_.currMouseInput_.zDelta = zDelta;
+        inst_.currMouseInput_.moving = move;
+        inst_.currMouseInput_.primary = primary;
+        inst_.currMouseInput_.secondary = secondary;
         inst_.isLooking_ = isLooking;
     }
 
     static inline void mouseLeave() { inst_.hasFocus_ = true; }
-
     static void updateInput(float elapsed);
+    static void clear() { inst_.reset(); }
 
-    static glm::vec2 getMousePosition() { return {inst_.currMouseInput_.xPos, inst_.currMouseInput_.yPos}; }
+    // TODO: all this stuff is garbage
+    static const Game::MouseInput& getMouseInput() { return inst_.currMouseInput_; }
 
    private:
     InputHandler()
@@ -72,15 +77,10 @@ class InputHandler : Singleton {
     */
     glm::vec3 posDir_;
 
-    struct MouseInput {
-        float xPos, yPos, zDelta;
-        // std::set<Game::MOUSE> inputs;
-        // std::set<Game::MOUSE> type;
-    };
     bool isLooking_;
     bool hasFocus_;
-    MouseInput currMouseInput_;
-    MouseInput prevMouseInput_;
+    Game::MouseInput currMouseInput_;
+    Game::MouseInput prevMouseInput_;
     glm::vec3 lookDir_;
 };
 

@@ -56,7 +56,8 @@ class Win32Timer {
 
 }  // namespace
 
-ShellWin32::ShellWin32(Game& game) : Shell(game), hinstance_(nullptr), hwnd_(nullptr), hmodule_(nullptr), minimized_(false) {}
+ShellWin32::ShellWin32(Game& game)
+    : Shell(game), hinstance_(nullptr), hwnd_(nullptr), hmodule_(nullptr), minimized_(false) {}
 
 ShellWin32::~ShellWin32() {
     cleanup_vk();
@@ -86,7 +87,8 @@ void ShellWin32::createWindow() {
     AdjustWindowRect(&win_rect, win_style, false);
 
     hwnd_ = CreateWindowEx(WS_EX_APPWINDOW, class_name.c_str(), settings_.name.c_str(), win_style, 0, 0,
-                           win_rect.right - win_rect.left, win_rect.bottom - win_rect.top, nullptr, nullptr, hinstance_, nullptr);
+                           win_rect.right - win_rect.left, win_rect.bottom - win_rect.top, nullptr, nullptr, hinstance_,
+                           nullptr);
 
     SetForegroundWindow(hwnd_);
     SetWindowLongPtr(hwnd_, GWLP_USERDATA, (LONG_PTR)this);
@@ -151,7 +153,7 @@ LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
             }
         } break;
         case WM_CLOSE: {
-            game_.on_key(Game::KEY::KEY_SHUTDOWN);
+            game_.onKey(Game::KEY::KEY_SHUTDOWN);
         } break;
             // MOUSE INPUT
         case WM_MOUSEWHEEL:
@@ -187,7 +189,7 @@ LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         } break;
         case WM_KEYDOWN: {
             auto key = getKey(wParam, INPUT_TYPE::DOWN);
-            game_.on_key(key);
+            game_.onKey(key);
         } break;
             // GENERAL
         case WM_DESTROY: {
@@ -343,7 +345,7 @@ Game::KEY ShellWin32::getKey(WPARAM wParam, INPUT_TYPE type) {
     return key;
 }
 
-void ShellWin32::getMouse(Game::MOUSE mouse, UINT uMsg, LPARAM lParam) {
+void ShellWin32::getMouse(UINT uMsg, LPARAM lParam) {
     switch (uMsg) {
             // UP
         case WM_LBUTTONUP:
@@ -453,6 +455,8 @@ void ShellWin32::run() {
 #else
         if (settings_.enable_directory_listener) AsyncAlert(0);
 #endif
+
+        InputHandler::clear();
     }
 
     // Free any directory listening handles
@@ -480,8 +484,9 @@ void ShellWin32::watchDirectory(std::string dir, std::function<void(std::string)
         dirInsts_.back().firstComp = true;
         dirInsts_.back().callback = callback;
         // Create directory listener handle
-        dirInsts_.back().hDir = CreateFile(dir.c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_WRITE | FILE_SHARE_READ | FILE_SHARE_DELETE,
-                                           NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
+        dirInsts_.back().hDir =
+            CreateFile(dir.c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_WRITE | FILE_SHARE_READ | FILE_SHARE_DELETE, NULL,
+                       OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
         // hEvent is not used by completion function so store the listener object for use.
         dirInsts_.back().oOverlap.hEvent = &dirInsts_.back();
     }
@@ -495,9 +500,9 @@ std::string ShellWin32::GetWorkingDirectory() {
 
 void ShellWin32::CheckDirectories() {
     for (auto& dirInst : dirInsts_) {
-        BOOL result =
-            ReadDirectoryChangesW(dirInst.hDir, dirInst.lpBuffer, sizeof(dirInst.lpBuffer), FALSE, FILE_NOTIFY_CHANGE_LAST_WRITE,
-                                  dirInst.lpBytesReturned, &dirInst.oOverlap, &FileIOCompletionRoutine);
+        BOOL result = ReadDirectoryChangesW(dirInst.hDir, dirInst.lpBuffer, sizeof(dirInst.lpBuffer), FALSE,
+                                            FILE_NOTIFY_CHANGE_LAST_WRITE, dirInst.lpBytesReturned, &dirInst.oOverlap,
+                                            &FileIOCompletionRoutine);
         if (result == 0) {
             _tprintf(TEXT("\n ERROR: (%s)"), GetLastErrorAsString().c_str());
         }
@@ -522,8 +527,9 @@ std::string ShellWin32::GetLastErrorAsString() {
     if (errorMessageID == 0) return std::string();  // No error message has been recorded
 
     LPSTR messageBuffer = nullptr;
-    size_t size = FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
-                                 errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
+    size_t size =
+        FormatMessageA(FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, NULL,
+                       errorMessageID, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&messageBuffer, 0, NULL);
 
     std::string message(messageBuffer, size);
 

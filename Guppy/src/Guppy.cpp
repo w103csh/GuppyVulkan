@@ -126,6 +126,7 @@ void Guppy::attach_shell(Shell& sh) {
     ModelHandler::init(&sh);
 
     SceneHandler::init(&sh, settings_);
+
     createScenes();
 
     // render_pass_begin_info_.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -200,7 +201,7 @@ void Guppy::detach_swapchain() {
     CmdBufHandler::resetCmdBuffers();
 }
 
-void Guppy::on_key(KEY key) {
+void Guppy::onKey(KEY key) {
     switch (key) {
         case KEY::KEY_SHUTDOWN:
         case KEY::KEY_ESC:
@@ -317,13 +318,17 @@ void Guppy::on_key(KEY key) {
         } break;
         case KEY::KEY_8: {
             defUBO_.shaderData.flags ^= Shader::FLAGS::TOON_SHADE;
-            auto pickRay = camera_.getPickRay(InputHandler::getMousePosition(), extent_);
-            if (SceneHandler::getActiveScene()->select(pickRay)) {
-                std::cout << "HIT!" << std::endl;
-            }
         } break;
         default:
             break;
+    }
+}
+
+void Guppy::onMouse(const MouseInput& input) {
+    if (input.moving) {
+        const Shell::Context& ctx = shell_->context();
+        auto ray = camera_.getRay({input.xPos, input.yPos}, ctx.extent);
+        SceneHandler::getActiveScene()->select(ray);
     }
 }
 

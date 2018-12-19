@@ -226,6 +226,8 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
 
 void cramers3(glm::vec3 c1, glm::vec3 c2, glm::vec3 c3, glm::vec3 c4);
 
+static glm::vec3 faceNormal(glm::vec3 a, glm::vec3 b, glm::vec3 c) { return glm::normalize(glm::cross(a - b, a - c)); }
+
 }  // namespace helpers
 
 struct ImageResource {
