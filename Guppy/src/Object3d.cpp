@@ -52,7 +52,7 @@ BoundingBox Object3d::getBoundingBox() const {
     return bb;
 }
 
-bool Object3d::testBoundingBox(const glm::vec3 &e, const glm::vec3 &d, const float &tMin, bool useDirection) const {
+bool Object3d::testBoundingBox(const Ray &ray, const float &tMin, bool useDirection) const {
     // Numbers are ransformed into world space
     auto bbmm = getBoundingBoxMinMax(true);
 
@@ -65,30 +65,30 @@ bool Object3d::testBoundingBox(const glm::vec3 &e, const glm::vec3 &d, const flo
        intersection process should use be relevant to the initial values of "e", and "d" of the ray.
     */
     // This gives the proper signs for testing in right direction.
-    auto dir = useDirection ? d - e : d;
+    const auto &d = useDirection ? ray.direction : ray.d;
 
     float a, t_min,      //
         t_min1, t_max1,  //
         t_min2, t_max2;
 
     // X interval
-    a = 1.0f / dir.x;
+    a = 1.0f / d.x;
     if (a >= 0.0f) {
-        t_min1 = a * (bbmm.xMin - e.x);
-        t_max1 = a * (bbmm.xMax - e.x);
+        t_min1 = a * (bbmm.xMin - ray.e.x);
+        t_max1 = a * (bbmm.xMax - ray.e.x);
     } else {
-        t_min1 = a * (bbmm.xMax - e.x);
-        t_max1 = a * (bbmm.xMin - e.x);
+        t_min1 = a * (bbmm.xMax - ray.e.x);
+        t_max1 = a * (bbmm.xMin - ray.e.x);
     }
 
     // Y interval
-    a = 1.0f / dir.y;
+    a = 1.0f / d.y;
     if (a >= 0.0f) {
-        t_min2 = a * (bbmm.yMin - e.y);
-        t_max2 = a * (bbmm.yMax - e.y);
+        t_min2 = a * (bbmm.yMin - ray.e.y);
+        t_max2 = a * (bbmm.yMax - ray.e.y);
     } else {
-        t_min2 = a * (bbmm.yMax - e.y);
-        t_max2 = a * (bbmm.yMin - e.y);
+        t_min2 = a * (bbmm.yMax - ray.e.y);
+        t_max2 = a * (bbmm.yMin - ray.e.y);
     }
 
     // Test for an intersection of X & Y intervals
@@ -98,13 +98,13 @@ bool Object3d::testBoundingBox(const glm::vec3 &e, const glm::vec3 &d, const flo
     t_min1 = (std::max)(t_min1, t_min2);
     t_max1 = (std::min)(t_max1, t_max2);
 
-    a = 1.0f / dir.z;
+    a = 1.0f / d.z;
     if (a >= 0.0f) {
-        t_min2 = a * (bbmm.zMin - e.z);
-        t_max2 = a * (bbmm.zMax - e.z);
+        t_min2 = a * (bbmm.zMin - ray.e.z);
+        t_max2 = a * (bbmm.zMax - ray.e.z);
     } else {
-        t_min2 = a * (bbmm.zMax - e.z);
-        t_max2 = a * (bbmm.zMin - e.z);
+        t_min2 = a * (bbmm.zMax - ray.e.z);
+        t_max2 = a * (bbmm.zMin - ray.e.z);
     }
 
     // Test for an intersection of X & Y & Z intervals

@@ -100,7 +100,7 @@ class Scene {
         for (size_t offset = 0; offset < pMeshes.size(); offset++) {
             const auto &pMesh = pMeshes[offset];
             if (pMesh->isSelectable()) {
-                if (pMesh->testBoundingBox(ray.e, ray.d, tMin)) {
+                if (pMesh->testBoundingBox(ray, tMin)) {
                     pMesh->selectFace(ray, tMin, face, offset);
                 }
             }

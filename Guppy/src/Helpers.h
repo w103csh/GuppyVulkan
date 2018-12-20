@@ -276,10 +276,11 @@ struct SharedStruct : std::enable_shared_from_this<T> {
     const std::shared_ptr<const T> getPtr() const { return shared_from_this(); }
 };
 
-// Can't think of a better name atm
 struct Ray {
-    glm::vec3 e;  // start
-    glm::vec3 d;  // end
+    glm::vec3 e;              // start
+    glm::vec3 d;              // end
+    glm::vec3 direction;      // non-normalized direction vector from "e" to "d"
+    glm::vec3 directionUnit;  // normalized "direction"
 };
 
 #endif  // !HELPERS_H

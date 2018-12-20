@@ -63,7 +63,7 @@ struct Object3d {
 
     BoundingBoxMinMax getBoundingBoxMinMax(bool transform = true) const;
 
-    virtual bool testBoundingBox(const glm::vec3& e, const glm::vec3& d, const float& tMin, bool useDirection = true) const;
+    virtual bool testBoundingBox(const Ray& ray, const float& tMin, bool useDirection = true) const;
 
     virtual void putOnTop(const BoundingBoxMinMax& boundingBox);
 

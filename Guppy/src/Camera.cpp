@@ -45,12 +45,15 @@ Ray Camera::getRay(glm::vec2 &&position, const VkExtent2D &extent, float distanc
     );
 
     auto e = getWorldSpacePosition();
-    d = e + (glm::normalize(d - e) * distance);
+
+    // TODO: what really is "d" after unproject???
+    auto directionUnit = glm::normalize(d - e);
+    d = e + (directionUnit * distance);
 
     // TODO: I am pretty sure that we shouldn't be picking things between
     // the camera position and the near plane of the projection. I believe
     // the world space position returned here is wrong then...
-    return {e, d};
+    return {e, d, d - e, directionUnit};
 }
 
 void Camera::update(const float aspect, const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
