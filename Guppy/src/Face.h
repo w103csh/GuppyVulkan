@@ -20,10 +20,10 @@ typedef std::unordered_multimap<Vertex::Complete, std::pair<size_t, VB_INDEX_TYP
 
 class Face {
    public:
-    Face() : centroid_(), indices_(), meshOffset_(), vertices_() {}
+    Face() : indices_(), meshOffset_(), vertices_() {}
     Face(Vertex::Complete va, Vertex::Complete vb, Vertex::Complete vc, VB_INDEX_TYPE ia, VB_INDEX_TYPE ib, VB_INDEX_TYPE ic,
          size_t meshOffset)
-        : centroid_(), indices_{ia, ib, ic}, meshOffset_(meshOffset), vertices_{va, vb, vc} {}
+        : indices_{ia, ib, ic}, meshOffset_(meshOffset), vertices_{va, vb, vc} {}
 
     Vertex::Complete &operator[](uint8_t index) {
         assert(index >= 0 && index < 3);
@@ -36,9 +36,6 @@ class Face {
     }
 
     inline VB_INDEX_TYPE getIndex(uint8_t offset) { return indices_[offset]; }
-
-    void calculateCentroid();
-    int compareCentroids(const glm::vec3 &e, Face &other);
 
     void calculateNormal();
     void calculateTangentSpaceVectors();
@@ -109,7 +106,6 @@ class Face {
     }
 
    private:
-    glm::vec3 centroid_;
     std::array<VB_INDEX_TYPE, 3> indices_;
     size_t meshOffset_;
     std::array<Vertex::Complete, 3> vertices_;

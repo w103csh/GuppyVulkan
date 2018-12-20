@@ -76,7 +76,8 @@ class Mesh : public Object3d {
     inline void addIndex(VB_INDEX_TYPE index) { indices_.push_back(index); }
 
     // FACE
-    bool selectFace(const Ray& ray, Face& face, size_t offset) const;
+    inline bool isSelectable() { return selectable_; }
+    void selectFace(const Ray& ray, float& tMin, Face& face, size_t offset) const;
 
     // DRAWING
     void drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
@@ -109,7 +110,7 @@ class Mesh : public Object3d {
     // create info
     std::string markerName_;
     size_t offset_;
-    bool pickable_;
+    bool selectable_;
     std::unique_ptr<Material> pMaterial_;
     // derived class specific
     FlagBits flags_;

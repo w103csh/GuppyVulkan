@@ -1,7 +1,7 @@
 
 #include "Object3d.h"
 
-void Object3d::putOnTop(const BoundingBoxMinMax& inBoundingBoxMinMax) {
+void Object3d::putOnTop(const BoundingBoxMinMax &inBoundingBoxMinMax) {
     auto myBoundingBoxMinMax = getBoundingBoxMinMax();
 
     // TODO: account for UP_VECTOR
@@ -52,48 +52,74 @@ BoundingBox Object3d::getBoundingBox() const {
     return bb;
 }
 
-bool Object3d::testBoundingBox(const Ray &ray) const {
-    float a;
+bool Object3d::testBoundingBox(const glm::vec3 &e, const glm::vec3 &d, const float &tMin, bool useDirection) const {
+    // Numbers are ransformed into world space
     auto bbmm = getBoundingBoxMinMax(true);
 
-    float t_xMin, t_xMax;
-    a = 1.0f / ray.d.x;
+    /* TODO: this is potential a step that could be done outside of this function to save time.
+
+       TODO: test "useDirection" to see if it is functioning correctly. Also, maybe a separate function would be smart to
+       save 3 steps.
+
+       Also, in order to get accurate values for "t", this and eany other functions used to determine "t" during the
+       intersection process should use be relevant to the initial values of "e", and "d" of the ray.
+    */
+    // This gives the proper signs for testing in right direction.
+    auto dir = useDirection ? d - e : d;
+
+    float a, t_min,      //
+        t_min1, t_max1,  //
+        t_min2, t_max2;
+
+    // X interval
+    a = 1.0f / dir.x;
     if (a >= 0.0f) {
-        t_xMin = a * (bbmm.xMin - ray.e.x);
-        t_xMax = a * (bbmm.xMax - ray.e.x);
+        t_min1 = a * (bbmm.xMin - e.x);
+        t_max1 = a * (bbmm.xMax - e.x);
     } else {
-        t_xMin = a * (bbmm.xMax - ray.e.x);
-        t_xMax = a * (bbmm.xMin - ray.e.x);
+        t_min1 = a * (bbmm.xMax - e.x);
+        t_max1 = a * (bbmm.xMin - e.x);
     }
 
-    float t_yMin, t_yMax;
-    a = 1.0f / ray.d.y;
+    // Y interval
+    a = 1.0f / dir.y;
     if (a >= 0.0f) {
-        t_yMin = a * (bbmm.yMin - ray.e.y);
-        t_yMax = a * (bbmm.yMax - ray.e.y);
+        t_min2 = a * (bbmm.yMin - e.y);
+        t_max2 = a * (bbmm.yMax - e.y);
     } else {
-        t_yMin = a * (bbmm.yMax - ray.e.y);
-        t_yMax = a * (bbmm.yMin - ray.e.y);
+        t_min2 = a * (bbmm.yMax - e.y);
+        t_max2 = a * (bbmm.yMin - e.y);
     }
 
-    float t_zMin, t_zMax;
-    a = 1.0f / ray.d.z;
+    // Test for an intersection of X & Y intervals
+    if (t_min1 > tMin || t_min1 > t_max2 || t_min2 > t_max1) return false;
+
+    // Update "t_min1" & "t_max2" to have the intersection of X & Y
+    t_min1 = (std::max)(t_min1, t_min2);
+    t_max1 = (std::min)(t_max1, t_max2);
+
+    a = 1.0f / dir.z;
     if (a >= 0.0f) {
-        t_zMin = a * (bbmm.zMin - ray.e.z);
-        t_zMax = a * (bbmm.zMax - ray.e.z);
+        t_min2 = a * (bbmm.zMin - e.z);
+        t_max2 = a * (bbmm.zMax - e.z);
     } else {
-        t_zMin = a * (bbmm.zMax - ray.e.z);
-        t_zMax = a * (bbmm.zMin - ray.e.z);
+        t_min2 = a * (bbmm.zMax - e.z);
+        t_max2 = a * (bbmm.zMin - e.z);
     }
 
-    if (t_xMin > t_yMax ||  // x test
-        t_xMin > t_zMax ||  // x test
-        t_yMin > t_xMax ||  // y test
-        t_yMin > t_zMax ||  // y test
-        t_zMin > t_xMax ||  // z test
-        t_zMin > t_yMax)    // z test
-    {
-        return false;
+    // Test for an intersection of X & Y & Z intervals
+    if (t_min1 > tMin || t_min1 > t_max2 || t_min2 > t_max1) return false;
+
+    // Update "t_min1" & "t_max2" to have the intersection of X & Y & Z
+    t_min1 = (std::max)(t_min1, t_min2);
+    t_max1 = (std::min)(t_max1, t_max2);
+
+    if (useDirection) {
+        // Test against incoming "tMin" to see if entire bounding box is behind
+        // the previous closest intersection.
+        t_min = (std::min)(t_min1, t_max1);
+        if (t_min > tMin || t_min < 0) return false;
     }
+
     return true;
 }

@@ -12,6 +12,8 @@ struct UBOTag {
     const char name[17] = "ubo tag";
 } uboTag;
 
+const float T_MAX = 1.0f;
+
 }  // namespace
 
 Scene::Scene(size_t offset) : offset_(offset), pDescResources_(nullptr) {}
@@ -393,13 +395,15 @@ void Scene::record(const Shell::Context& ctx, const VkFramebuffer& framebuffer, 
 }
 
 void Scene::select(const Ray& ray) {
-    std::unique_ptr<Face> pSelection = nullptr;
-    selectFace(ray, colorMeshes_, pSelection);
-    selectFace(ray, texMeshes_, pSelection);
+    float tMin = T_MAX;  // This is relative to the distance between ray.e & ray.d
+    Face face;
+
+    selectFace(ray, tMin, colorMeshes_, face);
+    selectFace(ray, tMin, texMeshes_, face);
 
     // TODO: draw selection things...
 
-    SceneHandler::setSelectedFace(std::move(pSelection));
+    SceneHandler::setSelectedFace((tMin < T_MAX) ? std::make_unique<Face>(face) : nullptr);
 }
 
 void Scene::destroyCmds(const VkDevice& dev) {

@@ -126,7 +126,7 @@ void ImGuiUI::showFaceSelectionInfoText(const std::unique_ptr<Face>& pFace) {
     ImGui::Columns(2, "vertex_misc_columns", false);  // 2-ways, no border
     ImGui::SetColumnWidth(0, 200.0f), ImGui::Indent();
 
-    auto calcNormal = helpers::faceNormal((*pFace)[0].position, (*pFace)[1].position, (*pFace)[2].position);
+    auto calcNormal = helpers::triangleNormal((*pFace)[0].position, (*pFace)[1].position, (*pFace)[2].position);
     ImGui::Text("Calculated normal:"), ImGui::NextColumn();
     ImGui::Text("(%.5f, %.5f, %.5f)", calcNormal.x, calcNormal.y, calcNormal.z), ImGui::NextColumn();
 

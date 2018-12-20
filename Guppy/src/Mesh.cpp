@@ -15,7 +15,7 @@ Mesh::Mesh(MeshCreateInfo* pCreateInfo)
     : Object3d(pCreateInfo->model),
       markerName_(pCreateInfo->markerName),
       offset_(pCreateInfo->offset),
-      pickable_(pCreateInfo->pickable),
+      selectable_(pCreateInfo->pickable),
       pMaterial_(pCreateInfo->pMaterial == nullptr ? std::make_unique<Material>() : std::move(pCreateInfo->pMaterial)),
       status_(STATUS::PENDING),
       vertex_res_{VK_NULL_HANDLE, VK_NULL_HANDLE},
@@ -135,8 +135,8 @@ void Mesh::createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd
     }
 }
 
-bool Mesh::selectFace(const Ray& ray, Face& face, size_t offset) const {
-    if (!pickable_) return false;
+void Mesh::selectFace(const Ray& ray, float& tMin, Face& face, size_t offset) const {
+    // bool hit = false;
 
     // Declare some variables that will be reused
     float a, b, c;
@@ -156,7 +156,7 @@ bool Mesh::selectFace(const Ray& ray, Face& face, size_t offset) const {
     std::array<glm::vec4, 2> localRay = {glm::vec4(ray.e, 1.0f), glm::vec4(ray.d, 1.0f)};
     worldToLocal(localRay);
 
-    float t0 = 0.0f, t1 = glm::distance(localRay[0], localRay[1]);  // TODO: like this???
+    float t0 = 0.0f;  //, t1 = glm::distance(localRay[0], localRay[1]);  // TODO: like this???
 
     bool faceFound = false;
     for (size_t n = 0; n < indices_.size(); n += 3) {
@@ -208,23 +208,23 @@ bool Mesh::selectFace(const Ray& ray, Face& face, size_t offset) const {
         jc_al = (j * c) - (a * l);
         bl_kc = (b * l) - (k * c);
 
-        glm::vec3 c1 = {a, b, c};
-        glm::vec3 c2 = {d, e, f};
-        glm::vec3 c3 = {g, h, i};
-        glm::vec3 c4 = {j, k, l};
+        // glm::vec3 c1 = {a, b, c};
+        // glm::vec3 c2 = {d, e, f};
+        // glm::vec3 c3 = {g, h, i};
+        // glm::vec3 c4 = {j, k, l};
 
-        glm::mat3 A(c1, c2, c3);
-        auto M_ = glm::determinant(A);
-        glm::mat3 BETA(c4, c2, c3);
-        auto beta_ = glm::determinant(BETA) / M_;
-        glm::mat3 GAMMA(c1, c4, c3);
-        auto gamma_ = glm::determinant(GAMMA) / M_;
-        glm::mat3 T(c1, c2, c4);
-        auto t_ = glm::determinant(T) / M_;
+        // glm::mat3 A(c1, c2, c3);
+        // auto M_ = glm::determinant(A);
+        // glm::mat3 BETA(c4, c2, c3);
+        // auto beta_ = glm::determinant(BETA) / M_;
+        // glm::mat3 GAMMA(c1, c4, c3);
+        // auto gamma_ = glm::determinant(GAMMA) / M_;
+        // glm::mat3 T(c1, c2, c4);
+        // auto t_ = glm::determinant(T) / M_;
 
-        auto t_test = t_ < t0 || t_ > t1;
-        auto gamma_test = gamma_ < 0 || gamma_ > 1;
-        auto beta_test = beta_ < 0 || beta_ > (1 - gamma_);
+        // auto t_test = t_ < t0 || t_ > tMin;
+        // auto gamma_test = gamma_ < 0 || gamma_ > 1;
+        // auto beta_test = beta_ < 0 || beta_ > (1 - gamma_);
 
         M = (a * ei_hf) + (b * gf_di) + (c * dh_eg);
         // assert(glm::epsilonEqual(M, M_, glm::epsilon<float>()));
@@ -232,7 +232,7 @@ bool Mesh::selectFace(const Ray& ray, Face& face, size_t offset) const {
         t = ((f * ak_jb) + (e * jc_al) + (d * bl_kc)) / -M;
         // assert(glm::epsilonEqual(t, t_, glm::epsilon<float>()));
         // test t
-        if (t < t0 || t > t1) continue;
+        if (t < t0 || t > tMin) continue;
 
         gamma = ((i * ak_jb) + (h * jc_al) + (g * bl_kc)) / M;
         // assert(glm::epsilonEqual(gamma, gamma_, glm::epsilon<float>()));
@@ -244,23 +244,14 @@ bool Mesh::selectFace(const Ray& ray, Face& face, size_t offset) const {
         // test beta
         if (beta < 0 || beta > (1 - gamma)) continue;
 
-        auto vc_a = getVertexComplete(idx0);
-        auto vc_b = getVertexComplete(idx1);
-        auto vc_c = getVertexComplete(idx2);
+        tMin = t;
+        // hit = true;
 
-        // test face
-        if (!faceFound) {
-            faceFound = true;
-            face = {vc_a, vc_b, vc_c, idx0, idx1, idx2, offset};
-        } else {
-            Face tmp = {vc_a, vc_b, vc_c, idx0, idx1, idx2, offset};
-            if (face.compareCentroids(localRay[0], tmp)) {
-                face = tmp;
-            }
-        }
+        // TODO: delay this step until after loop maybe?...
+        face = {getVertexComplete(idx0), getVertexComplete(idx1), getVertexComplete(idx2), idx0, idx1, idx2, offset};
     }
 
-    return faceFound;
+    // return hit;
 }
 
 void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,

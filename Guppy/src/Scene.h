@@ -96,15 +96,12 @@ class Scene {
 
     // Selection
     template <typename T>
-    void selectFace(const Ray &ray, T &pMeshes, std::unique_ptr<Face> &pSelection) {
-        Face face;
+    void selectFace(const Ray &ray, float &tMin, T &pMeshes, Face &face) {
         for (size_t offset = 0; offset < pMeshes.size(); offset++) {
             const auto &pMesh = pMeshes[offset];
-            if (pMesh->testBoundingBox(ray)) {
-                if (pMesh->selectFace(ray, face, offset)) {
-                    if (pSelection == nullptr || pSelection->compareCentroids(ray.e, face)) {
-                        pSelection = std::make_unique<Face>(face);
-                    }
+            if (pMesh->isSelectable()) {
+                if (pMesh->testBoundingBox(ray.e, ray.d, tMin)) {
+                    pMesh->selectFace(ray, tMin, face, offset);
                 }
             }
         }

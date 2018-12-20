@@ -762,10 +762,6 @@ void Guppy::createScenes() {
         std::unique_ptr<LineMesh> pDefaultAxes = std::make_unique<Axes>(&createInfo, AXES_MAX_SIZE, true);
         SceneHandler::getActiveScene()->moveMesh(shell_->context(), std::move(pDefaultAxes));
 
-        // model = helpers::affine(glm::vec3(2.0f), (CARDINAL_Y * 0.1f), -M_PI_2_FLT, CARDINAL_X);
-        // auto p1 = std::make_unique<TexturePlane>(getTextureByPath(WOOD_007_DIFF_TEX_PATH), model, true);
-        // SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(p1));
-
         // BURNT ORANGE TORUS
         Material material;
         material.setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
@@ -773,10 +769,6 @@ void Guppy::createScenes() {
         ModelHandler::makeModel(SceneHandler::getActiveScene(), TORUS_MODEL_PATH, material,
                                 helpers::affine(glm::vec3(0.07f)), false,
                                 [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); });
-
-        // auto pTorus = std::make_unique<ColorMesh>(std::move(pMaterial), TORUS_MODEL_PATH, model);
-        // SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(pTorus), true,
-        //                        [groundPlane_bbmm](auto pMesh) { pMesh->putOnTop(groundPlane_bbmm); });
 
         // ORANGE
         ModelHandler::makeModel(SceneHandler::getActiveScene(), ORANGE_MODEL_PATH, material,
