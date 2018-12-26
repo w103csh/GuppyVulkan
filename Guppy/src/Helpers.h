@@ -34,6 +34,7 @@ enum class STATUS {
     PENDING_BUFFERS,
     PENDING_TEXTURE,
     REDRAW,
+    UPDATE_BUFFERS,
 };
 
 enum class SHADER_TYPE {
@@ -252,6 +253,7 @@ struct UniformBufferResources {
 struct BufferResource {
     VkBuffer buffer;
     VkDeviceMemory memory;
+    VkDeviceSize memoryRequirementsSize;
 };
 
 struct FrameData {

@@ -58,8 +58,3 @@ void Face::calculateTangentSpaceVectors() {
         v.binormal = b;
     }
 }
-
-void Face::indexVertices(unique_vertices_map &uniqueVertices, Mesh *pMesh, bool calcTangentSpace) {
-    std::vector<Mesh *> pMeshes = {pMesh};
-    indexVertices(uniqueVertices, pMeshes, 0, calcTangentSpace);
-}

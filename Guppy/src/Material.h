@@ -14,10 +14,12 @@ class Material {
         PER_MATERIAL_COLOR = 0x00000001,
         PER_VERTEX_COLOR = 0x00000002,
         PER_TEXTURE_COLOR = 0x00000004,
-        // through 0x00000008
+        // THROUGH 0x00000008
         MODE_LAMERTIAN = 0x00000010,
         MODE_BLINN_PHONG = 0x00000020,
         // THROUGH 0x00000080
+        HIDE = 0x00000100,
+        // THROUGH 0x00000800
         BITS_MAX_ENUM = 0x7FFFFFFF
     } FLAGS;
 
@@ -67,7 +69,8 @@ class Material {
           shininess_(MILDLY_SHINY),
           pTexture_(pTexture){};
 
-    STATUS getStatus();
+    STATUS getStatus() const;
+    inline FlagBits getFlags() const { return flags_; }
     Data getData() const;
     inline const Texture::Data& getTexture() const { return (*pTexture_); }
 
@@ -85,7 +88,7 @@ class Material {
     // inline void setXRepeat(float r) { xRepeat_ = r; }
     // inline void setYRepeat(float r) { yRepeat_ = r; }
     inline void setShininess(float s) { shininess_ = s; }
-    inline void setMaterialData(const tinyobj::material_t &m) {
+    inline void setMaterialData(const tinyobj::material_t& m) {
         shininess_ = m.shininess;
         ambientCoeff_ = {m.ambient[0], m.ambient[1], m.ambient[2]};
         diffuseCoeff_ = {m.diffuse[0], m.diffuse[1], m.diffuse[2]};

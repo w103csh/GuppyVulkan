@@ -16,10 +16,20 @@ class Mesh;
     creating more than one mesh based on the vertices, you can smooth vertices and attempt to
     index as many of the vertices as possible.
 */
-typedef std::unordered_multimap<Vertex::Complete, std::pair<size_t, VB_INDEX_TYPE>> unique_vertices_map;
+typedef std::unordered_multimap<Vertex::Complete, std::pair<size_t, VB_INDEX_TYPE>,
+                                Vertex::Complete::hash_vertex_complete_smoothing,
+                                Vertex::Complete::hash_vertex_complete_smoothing>
+    unique_vertices_map_smoothing;
+
+typedef std::unordered_multimap<Vertex::Complete, std::pair<size_t, VB_INDEX_TYPE>,
+                                Vertex::Complete::hash_vertex_complete_non_smoothing,
+                                Vertex::Complete::hash_vertex_complete_non_smoothing>
+    unique_vertices_map_non_smoothing;
 
 class Face {
    public:
+    static const uint8_t NUM_VERTICES = 3;
+
     Face() : indices_(), meshOffset_(), vertices_() {}
     Face(Vertex::Complete va, Vertex::Complete vb, Vertex::Complete vc, VB_INDEX_TYPE ia, VB_INDEX_TYPE ib, VB_INDEX_TYPE ic,
          size_t meshOffset)
@@ -40,18 +50,17 @@ class Face {
     void calculateNormal();
     void calculateTangentSpaceVectors();
 
-    void indexVertices(unique_vertices_map &vertexMap, Mesh *pMesh, bool calcTangentSpace = true);
+    template <typename TMap>
+    void indexVertices(TMap &vertexMap, Mesh *pMesh, bool calcTangentSpace = true) {
+        std::vector<Mesh *> pMeshes = {pMesh};
+        indexVertices(vertexMap, pMeshes, 0, calcTangentSpace);
+    }
 
-    template <class T>
-    void indexVertices(unique_vertices_map &vertexMap, std::vector<T> &pMeshes, size_t meshOffset,
-                       bool calcTangentSpace = true) {
+    template <typename TMap, class TVertex>
+    void indexVertices(TMap &vertexMap, std::vector<TVertex> &pMeshes, size_t meshOffset, bool calcTangentSpace = true) {
         // Calculate per face data...
         calculateNormal();
         if (calcTangentSpace) calculateTangentSpaceVectors();
-
-        std::map<float, int> m;
-        m[1.02345f] = 1;
-        m[1.02345f] = 2;
 
         for (size_t i = 0; i < 3; ++i) {
             long index = -1;

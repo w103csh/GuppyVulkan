@@ -6,7 +6,9 @@ const glm::vec4 green(0.0f, 1.0f, 0.0f, 1.0f);
 const glm::vec4 blue(0.0f, 0.0f, 1.0f, 1.0f);
 const glm::vec4 white(1.0f);
 
-Axes::Axes(MeshCreateInfo* pCreateInfo, float lineSize, bool showNegative) : LineMesh(pCreateInfo) {
+Axes::Axes(MeshCreateInfo *pCreateInfo, float lineSize, bool showNegative) : LineMesh(pCreateInfo) {
+    isIndexed_ = false;
+
     float max_ = lineSize;
     float min_ = max_ * -1;
 

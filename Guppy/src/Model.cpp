@@ -9,12 +9,15 @@
 #include "SceneHandler.h"
 #include "TextureHandler.h"
 
-Model::Model(Model::IDX handlerOffset, std::unique_ptr<Scene> &pScene, std::string modelPath, glm::mat4 model)
-    : Object3d(model),
+Model::Model(ModelCreateInfo *pCreateInfo, MODEL_INDEX sceneOffset)
+    : Object3d(pCreateInfo->model),
       status(STATUS::PENDING),
-      handlerOffset_(handlerOffset),
-      modelPath_(modelPath),
-      sceneOffset_(pScene->getOffset()) {}
+      handlerOffset_(pCreateInfo->handlerOffset),
+      modelPath_(pCreateInfo->modelPath),
+      sceneOffset_(sceneOffset),
+      smoothNormals_(pCreateInfo->smoothNormals) {
+    assert(sceneOffset_ < MODEL_INDEX_MAX);
+}
 
 std::vector<ColorMesh *> Model::loadColor(Shell *sh, Material material) {
     FileLoader::tinyobj_data data = {modelPath_, ""};
@@ -45,7 +48,11 @@ std::vector<ColorMesh *> Model::loadColor(Shell *sh, Material material) {
     }
 
     // Load obj data into mesh...
-    FileLoader::loadObjData(data, pMeshes);
+    if (smoothNormals_) {
+        FileLoader::loadObjData<unique_vertices_map_smoothing>(data, pMeshes);
+    } else {
+        FileLoader::loadObjData<unique_vertices_map_non_smoothing>(data, pMeshes);
+    }
     for (auto &pMesh : pMeshes) assert(pMesh->getVertexCount());
 
     return pMeshes;
@@ -105,13 +112,17 @@ std::vector<TextureMesh *> Model::loadTexture(Shell *sh, Material material, std:
     }
 
     // Load obj data into mesh...
-    FileLoader::loadObjData(data, pMeshes);
+    if (smoothNormals_) {
+        FileLoader::loadObjData<unique_vertices_map_smoothing>(data, pMeshes);
+    } else {
+        FileLoader::loadObjData<unique_vertices_map_non_smoothing>(data, pMeshes);
+    }
     for (auto &pMesh : pMeshes) assert(pMesh->getVertexCount());
 
     return pMeshes;
 }
 
-void Model::postLoad(Model::CALLBK callback) {
+void Model::postLoad(MODEL_CALLBACK callback) {
     allMeshAction([this](Mesh *pMesh) { updateAggregateBoundingBox(pMesh); });
     // Invoke callback for say... model transformations. This is a pain in the ass.
     if (callback) callback(this);

@@ -51,6 +51,28 @@ class Complete {
              const glm::vec3 &t, const glm::vec3 &b)
         : position(p), normal(n), smoothingGroupId(sgi), color(c), texCoord(tc), tangent(t), binormal(b){};
 
+    struct hash_vertex_complete_smoothing {
+        bool operator()(const Vertex::Complete &a, const Vertex::Complete &b) const {
+            return                                                                   //
+                glm::all(glm::epsilonEqual(a.position, b.position, FLT_EPSILON)) &&  //
+                a.smoothingGroupId == b.smoothingGroupId;
+        }
+        size_t operator()(const Vertex::Complete &vertex) const {
+            return ((std::hash<glm::vec3>()(vertex.position) ^ (std::hash<int>()(vertex.smoothingGroupId) << 1)) >> 1);
+        }
+    };
+
+    struct hash_vertex_complete_non_smoothing {
+        bool operator()(const Vertex::Complete &a, const Vertex::Complete &b) const {
+            return                                                                   //
+                glm::all(glm::epsilonEqual(a.position, b.position, FLT_EPSILON)) &&  //
+                glm::all(glm::epsilonEqual(a.normal, b.normal, FLT_EPSILON));
+        }
+        size_t operator()(const Vertex::Complete &vertex) const {
+            return ((std::hash<glm::vec3>()(vertex.position) ^ (std::hash<glm::vec3>()(vertex.normal) << 1)) >> 1);
+        }
+    };
+
     bool operator==(const Complete &other) const {
         return                                                                  //
             glm::all(glm::epsilonEqual(position, other.position, FLT_EPSILON))  //
@@ -101,7 +123,7 @@ namespace std {
 // Hash function for Complete
 template <>
 struct hash<Vertex::Complete> {
-    size_t operator()(Vertex::Complete const &vertex) const {
+    size_t operator()(const Vertex::Complete &vertex) const {
         // TODO: wtf is this doing?
         return ((hash<glm::vec3>()(vertex.position) ^ (hash<int>()(vertex.smoothingGroupId) << 1)) >> 1);
     }

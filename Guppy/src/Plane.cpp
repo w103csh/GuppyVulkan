@@ -15,7 +15,7 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
 
     // Mimic approach in loadObj in FileLoader. This way everything is
     // using the same ideas (for testing)...
-    unique_vertices_map vertexMap = {};
+    unique_vertices_map_smoothing vertexMap = {};
     Face face;
 
     // bottom left

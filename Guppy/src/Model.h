@@ -15,25 +15,37 @@
 
 class ColorMesh;
 class Mesh;
+class Model;
 class Shell;
 class Scene;
 class TextureMesh;
 
+typedef uint32_t MODEL_INDEX;
+#define MODEL_INDEX_MAX UINT32_MAX
+typedef std::function<void(Model *)> MODEL_CALLBACK;
+
+typedef struct ModelCreateInfo {
+    bool async = true;
+    MODEL_CALLBACK callback = nullptr;
+    MODEL_INDEX handlerOffset = MODEL_INDEX_MAX;  // TODO: this should only be set by the handler...
+    Material material = {};                       // TODO: unique_ptr instead of copying evertything
+    glm::mat4 model = glm::mat4(1.0f);
+    std::string modelPath = "";
+    // std::shared_ptr<Texture::Data> pTexture = nullptr; // TODO: add this here and simplify "makeModel"
+    bool smoothNormals = false;
+} ModelCreateInfo;
+
 class Model : public Object3d {
    public:
-    typedef uint32_t IDX;
-    typedef std::function<void(Model *)> CALLBK;
+    Model::Model(ModelCreateInfo *pCreateInfo, MODEL_INDEX sceneOffset);
 
-    Model::Model(Model::IDX handlerOffset, std::unique_ptr<Scene> &pScene, std::string modelPath,
-                 glm::mat4 model = glm::mat4(1.0f));
-
-    inline Model::IDX getHandlerOffset() const { return handlerOffset_; }
-    inline Model::IDX getSceneOffset() const { return sceneOffset_; }
+    inline MODEL_INDEX getHandlerOffset() const { return handlerOffset_; }
+    inline MODEL_INDEX getSceneOffset() const { return sceneOffset_; }
 
     std::vector<ColorMesh *> loadColor(Shell *sh, Material material);
     std::vector<TextureMesh *> loadTexture(Shell *sh, Material material, std::shared_ptr<Texture::Data> pTexture);
 
-    void postLoad(Model::CALLBK callback);
+    void postLoad(MODEL_CALLBACK callback);
 
     virtual inline void transform(const glm::mat4 t) override;
     // void updateAggregateBoundingBox(std::unique_ptr<Scene> &pScene);
@@ -48,12 +60,14 @@ class Model : public Object3d {
     void allMeshAction(std::function<void(Mesh *)> action);
     void updateAggregateBoundingBox(Mesh *pMesh);
 
-    Model::IDX handlerOffset_;
+    MODEL_INDEX handlerOffset_;
     std::string modelPath_;
-    Model::IDX sceneOffset_;
-    std::vector<Model::IDX> colorOffsets_;
-    std::vector<Model::IDX> lineOffsets_;
-    std::vector<Model::IDX> texOffsets_;
+    MODEL_INDEX sceneOffset_;
+    bool smoothNormals_;
+
+    std::vector<MODEL_INDEX> colorOffsets_;
+    std::vector<MODEL_INDEX> lineOffsets_;
+    std::vector<MODEL_INDEX> texOffsets_;
 };
 
 #endif  // !MODEL_H

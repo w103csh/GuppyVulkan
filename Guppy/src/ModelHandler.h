@@ -15,17 +15,16 @@ class TextureMesh;
 
 class ModelHandler : Singleton {
    public:
-    static void init(Shell* sh);
+    static void init(Shell* sh, const Game::Settings& settings);
     static inline void destroy() { inst_.reset(); }
 
     // color
-    static void makeModel(std::unique_ptr<Scene>& pScene, std::string modelPath, Material material, glm::mat4 model,
-                          bool async = true, Model::CALLBK callback = nullptr);
+    static void makeModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene);
     // texture
-    static void makeModel(std::unique_ptr<Scene>& pScene, std::string modelPath, Material material, glm::mat4 model,
-                          std::shared_ptr<Texture::Data> pTexture = nullptr, bool async = true, Model::CALLBK callback = nullptr);
+    static void makeModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene,
+                          std::shared_ptr<Texture::Data> pTexture);
 
-    static std::unique_ptr<Model>& getModel(Model::IDX offset) {
+    static std::unique_ptr<Model>& getModel(MODEL_INDEX offset) {
         assert(offset < inst_.pModels_.size());
         return inst_.pModels_[offset];
     }
@@ -38,11 +37,12 @@ class ModelHandler : Singleton {
     static ModelHandler inst_;
     void reset() override{};
 
-    Shell* sh_;  // TODO: shared_ptr
+    Shell* sh_;                // TODO: shared_ptr
+    Game::Settings settings_;  // TODO: shared_ptr
 
     // Mesh futures
     template <typename T>
-    void checkFutures(std::unique_ptr<Scene>& pScene, std::unordered_map<Model::IDX, T>& futuresMap) {
+    void checkFutures(std::unique_ptr<Scene>& pScene, std::unordered_map<MODEL_INDEX, T>& futuresMap) {
         // Check futures
         if (!futuresMap.empty()) {
             for (auto it = futuresMap.begin(); it != futuresMap.end();) {
@@ -78,15 +78,15 @@ class ModelHandler : Singleton {
     void handleMeshes(std::unique_ptr<Scene>& pScene, std::unique_ptr<Model>& pModel, std::vector<T*>&& pMeshes) {
         for (auto& pMesh : pMeshes) {
             // Add mesh to scene
-            auto& rp = pScene->moveMesh(sh_->context(), std::unique_ptr<T>(pMesh));
+            auto& rp = pScene->moveMesh(inst_.settings_, sh_->context(), std::unique_ptr<T>(pMesh));
             // Store the offset of the mesh into the scene buffers on the model after moving.
             pModel->addOffset(rp);
         }
     }
 
     std::vector<std::unique_ptr<Model>> pModels_;
-    std::unordered_map<Model::IDX, std::pair<std::future<std::vector<ColorMesh*>>, Model::CALLBK>> ldgColorFutures_;
-    std::unordered_map<Model::IDX, std::pair<std::future<std::vector<TextureMesh*>>, Model::CALLBK>> ldgTexFutures_;
+    std::unordered_map<MODEL_INDEX, std::pair<std::future<std::vector<ColorMesh*>>, MODEL_CALLBACK>> ldgColorFutures_;
+    std::unordered_map<MODEL_INDEX, std::pair<std::future<std::vector<TextureMesh*>>, MODEL_CALLBACK>> ldgTexFutures_;
 };
 
 #endif  // !MODEL_HANDLER_H

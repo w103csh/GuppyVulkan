@@ -109,7 +109,7 @@ void ImGuiUI::showSelectionInfoWindow(bool* p_open) {
 
     ImGui::Text("FACES:");
     ImGui::Separator();
-    showFaceSelectionInfoText(SceneHandler::getSelectedFace());
+    showFaceSelectionInfoText(SceneHandler::getFaceSelectionFace());
 
     // End of showSelectionInfoWindow()
     ImGui::End();

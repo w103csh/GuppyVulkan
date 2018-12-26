@@ -26,10 +26,10 @@ typedef struct {
 void getObjData(Shell *sh, tinyobj_data &data);
 
 /* BECUASE TEMPLATES ARE STUPID ALL OF THIS CODE NEEDS TO BE IN THE HEADER */
-template <class T>
-void loadObjData(const tinyobj_data &data, std::vector<T *> &pMeshes) {
+template <typename TMap, class TVertex>
+void loadObjData(const tinyobj_data &data, std::vector<TVertex *> &pMeshes) {
     // Map of unique vertices for indexed drawing, and calculating smoothing groups.
-    unique_vertices_map vertexMap;
+    TMap vertexMap;
     // std::vector<std::pair<Vertex::Complete, size_t>> uniqueVertices1;
     // std::vector<std::pair<Vertex::Complete, size_t>> uniqueVertices2;
 

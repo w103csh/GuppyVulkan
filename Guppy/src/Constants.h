@@ -20,6 +20,7 @@ const std::string ROOT_PATH = "..\\..\\..\\";  // TODO: this should come from so
 const int WIDTH = 800;
 const int HEIGHT = 600;
 const int MAX_FRAMES_IN_FLIGHT = 2;
+const float T_MAX = 1.0f;
 
 #ifdef NDEBUG
 const bool ENABLE_VALIDATION_LAYERS = false;
@@ -54,6 +55,7 @@ const VkClearColorValue CLEAR_VALUE = {};
 
 // Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)
 typedef uint32_t VB_INDEX_TYPE;
+typedef uint8_t SCENE_INDEX_TYPE;
 
 // X
 const glm::vec3 CARDINAL_X = glm::vec3(1.0f, 0.0f, 0.0f);

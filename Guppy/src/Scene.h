@@ -21,17 +21,18 @@ class Scene {
 
     inline size_t getOffset() { return offset_; }
 
-    // TODO: there is too much redundancy here...
-
-    std::unique_ptr<ColorMesh> &moveMesh(const Shell::Context &ctx, std::unique_ptr<ColorMesh> pMesh);
-    std::unique_ptr<ColorMesh> &moveMesh(const Shell::Context &ctx, std::unique_ptr<LineMesh> pMesh);
-    std::unique_ptr<TextureMesh> &moveMesh(const Shell::Context &ctx, std::unique_ptr<TextureMesh> pMesh);
-    size_t addMesh(const Shell::Context &ctx, std::unique_ptr<ColorMesh> pMesh, bool async = true,
-                   std::function<void(Mesh *)> callback = nullptr);
-    size_t addMesh(const Shell::Context &ctx, std::unique_ptr<LineMesh> pMesh, bool async = true,
-                   std::function<void(Mesh *)> callback = nullptr);
-    size_t addMesh(const Shell::Context &ctx, std::unique_ptr<TextureMesh> pMesh, bool async = true,
-                   std::function<void(Mesh *)> callback = nullptr);
+    std::unique_ptr<ColorMesh> &moveMesh(const Game::Settings &settings, const Shell::Context &ctx,
+                                         std::unique_ptr<ColorMesh> pMesh);
+    std::unique_ptr<ColorMesh> &moveMesh(const Game::Settings &settings, const Shell::Context &ctx,
+                                         std::unique_ptr<LineMesh> pMesh);
+    std::unique_ptr<TextureMesh> &moveMesh(const Game::Settings &settings, const Shell::Context &ctx,
+                                           std::unique_ptr<TextureMesh> pMesh);
+    size_t addMesh(const Game::Settings &settings, const Shell::Context &ctx, std::unique_ptr<ColorMesh> pMesh,
+                   bool async = true, std::function<void(Mesh *)> callback = nullptr);
+    size_t addMesh(const Game::Settings &settings, const Shell::Context &ctx, std::unique_ptr<LineMesh> pMesh,
+                   bool async = true, std::function<void(Mesh *)> callback = nullptr);
+    size_t addMesh(const Game::Settings &settings, const Shell::Context &ctx, std::unique_ptr<TextureMesh> pMesh,
+                   bool async = true, std::function<void(Mesh *)> callback = nullptr);
 
     void removeMesh(std::unique_ptr<Mesh> &pMesh);
 
@@ -40,12 +41,9 @@ class Scene {
     void record(const Shell::Context &ctx, const VkFramebuffer &framebuffer, const VkFence &fence,
                 const VkViewport &viewport, const VkRect2D &scissor, uint8_t frameIndex, bool wait = false);
 
-    void update(const Shell::Context &ctx);
+    void update(const Game::Settings &settings, const Shell::Context &ctx);
 
     const VkCommandBuffer &getDrawCmds(const uint8_t &frame_data_index, uint32_t &commandBufferCount);
-
-    // Selection
-    void select(const Ray &ray);
 
     void destroy(const VkDevice &dev);
 
@@ -75,7 +73,7 @@ class Scene {
     // Draw commands
     void createDrawCmds(const Shell::Context &ctx);
     void destroyCmds(const VkDevice &dev);
-    std::vector<DrawResources> draw_resources_;
+    std::vector<DrawResources> drawResources_;
 
     // Meshes
     // color
@@ -93,19 +91,6 @@ class Scene {
                                        std::string markerName = "");
     void destroyUniforms(const VkDevice &dev);
     std::shared_ptr<UniformBufferResources> pDynUBOResource_;
-
-    // Selection
-    template <typename T>
-    void selectFace(const Ray &ray, float &tMin, T &pMeshes, Face &face) {
-        for (size_t offset = 0; offset < pMeshes.size(); offset++) {
-            const auto &pMesh = pMeshes[offset];
-            if (pMesh->isSelectable()) {
-                if (pMesh->testBoundingBox(ray, tMin)) {
-                    pMesh->selectFace(ray, tMin, face, offset);
-                }
-            }
-        }
-    }
 };
 
 #endif  // !SCENE_H

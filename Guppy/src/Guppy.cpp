@@ -123,7 +123,7 @@ void Guppy::attach_shell(Shell& sh) {
     ShaderHandler::init(sh, settings_, defUBO_.positionalLightData.size(), defUBO_.spotLightData.size());
     PipelineHandler::init(&sh, settings_);
     TextureHandler::init(&sh);
-    ModelHandler::init(&sh);
+    ModelHandler::init(&sh, settings_);
 
     SceneHandler::init(&sh, settings_);
 
@@ -328,7 +328,7 @@ void Guppy::onMouse(const MouseInput& input) {
     if (input.moving) {
         const Shell::Context& ctx = shell_->context();
         auto ray = camera_.getRay({input.xPos, input.yPos}, ctx.extent);
-        SceneHandler::getActiveScene()->select(ray);
+        SceneHandler::select(ctx.dev, ray);
     }
 }
 
@@ -355,7 +355,7 @@ void Guppy::on_tick() {
         ShaderHandler::update(pScene);
     }
 
-    pScene->update(shell_->context());
+    pScene->update(settings_, shell_->context());
 
     // for (auto &worker : workers_) worker->update_simulation();
 }
@@ -740,61 +740,75 @@ void Guppy::createLights() {
 }
 
 void Guppy::createScenes() {
-    SceneHandler::makeScene(UBOResource_, true);  // default active scene
+    // default active scene
+    SceneHandler::makeScene(UBOResource_, true);
 
-    MeshCreateInfo createInfo;
+    MeshCreateInfo meshCreateInfo;
+    ModelCreateInfo modelCreateInfo;
 
     // Add defaults
     if (true) {
         // GROUND PLANE
-        createInfo = {};
-        createInfo.pMaterial = std::make_unique<Material>(TextureHandler::getTextureByPath(HARDWOOD_FLOOR_TEX_PATH));
-        createInfo.pMaterial->setRepeat(800.0f);
-        createInfo.model = helpers::affine(glm::vec3(2000.0f), {}, -M_PI_2_FLT, CARDINAL_X);
-        createInfo.pickable = false;
+        meshCreateInfo = {};
+        meshCreateInfo.pMaterial = std::make_unique<Material>(TextureHandler::getTextureByPath(HARDWOOD_FLOOR_TEX_PATH));
+        meshCreateInfo.pMaterial->setRepeat(800.0f);
+        meshCreateInfo.model = helpers::affine(glm::vec3(2000.0f), {}, -M_PI_2_FLT, CARDINAL_X);
+        meshCreateInfo.selectable = false;
 
-        auto pGroundPlane = std::make_unique<TexturePlane>(&createInfo);
+        auto pGroundPlane = std::make_unique<TexturePlane>(&meshCreateInfo);
         auto groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
-        SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(pGroundPlane));
+        SceneHandler::getActiveScene()->addMesh(settings_, shell_->context(), std::move(pGroundPlane));
 
         // ORIGIN AXES
-        createInfo = {};
-        std::unique_ptr<LineMesh> pDefaultAxes = std::make_unique<Axes>(&createInfo, AXES_MAX_SIZE, true);
-        SceneHandler::getActiveScene()->moveMesh(shell_->context(), std::move(pDefaultAxes));
+        meshCreateInfo = {};
+        meshCreateInfo.isIndexed = false;
+        std::unique_ptr<LineMesh> pDefaultAxes = std::make_unique<Axes>(&meshCreateInfo, AXES_MAX_SIZE, true);
+        SceneHandler::getActiveScene()->moveMesh(settings_, shell_->context(), std::move(pDefaultAxes));
 
         // BURNT ORANGE TORUS
-        Material material;
-        material.setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
-        material.setColor({0.8f, 0.3f, 0.0f});
-        ModelHandler::makeModel(SceneHandler::getActiveScene(), TORUS_MODEL_PATH, material,
-                                helpers::affine(glm::vec3(0.07f)), false,
-                                [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); });
+        modelCreateInfo = {};
+        modelCreateInfo.async = false;
+        modelCreateInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
+        modelCreateInfo.material.setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
+        modelCreateInfo.material.setColor({0.8f, 0.3f, 0.0f});
+        modelCreateInfo.model = helpers::affine(glm::vec3(0.07f));
+        modelCreateInfo.modelPath = TORUS_MODEL_PATH;
+        modelCreateInfo.smoothNormals = true;
+        ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene());
 
         // ORANGE
-        ModelHandler::makeModel(SceneHandler::getActiveScene(), ORANGE_MODEL_PATH, material,
-                                helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f}), nullptr, true,
-                                [groundPlane_bbmm](auto pmodel) { pmodel->putOnTop(groundPlane_bbmm); });
+        modelCreateInfo.async = true;
+        modelCreateInfo.material = {};
+        modelCreateInfo.modelPath = ORANGE_MODEL_PATH;
+        modelCreateInfo.model = helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f});
+        ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene(), nullptr);
 
         // MEDIEVAL HOUSE
-        ModelHandler::makeModel(SceneHandler::getActiveScene(), MED_H_MODEL_PATH, {},
-                                helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y),
-                                TextureHandler::getTextureByPath(MED_H_DIFF_TEX_PATH), true,
-                                [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); });
+        modelCreateInfo.material = {};
+        modelCreateInfo.model = helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
+        modelCreateInfo.modelPath = MED_H_MODEL_PATH;
+        modelCreateInfo.smoothNormals = false;
+        ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene(),
+                                TextureHandler::getTextureByPath(MED_H_DIFF_TEX_PATH));
     }
 
     // Lights
     if (showLightHelpers_) {
         for (auto& light : positionalLights_) {
-            createInfo = {};
-            createInfo.model = light.getData().model;
-            std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(&createInfo, 0.5f);
-            SceneHandler::getActiveScene()->moveMesh(shell_->context(), std::move(pHelper));
+            meshCreateInfo = {};
+            meshCreateInfo.isIndexed = false;
+            meshCreateInfo.model = light.getData().model;
+
+            std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(&meshCreateInfo, 0.5f);
+            SceneHandler::getActiveScene()->moveMesh(settings_, shell_->context(), std::move(pHelper));
         }
         for (auto& light : spotLights_) {
-            createInfo = {};
-            createInfo.model = light.getData().model;
-            std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(&createInfo, 0.5f);
-            SceneHandler::getActiveScene()->moveMesh(shell_->context(), std::move(pHelper));
+            meshCreateInfo = {};
+            meshCreateInfo.isIndexed = false;
+            meshCreateInfo.model = light.getData().model;
+
+            std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(&meshCreateInfo, 0.5f);
+            SceneHandler::getActiveScene()->moveMesh(settings_, shell_->context(), std::move(pHelper));
         }
     }
 }

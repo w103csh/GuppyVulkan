@@ -21,10 +21,11 @@
 // **********************
 
 typedef struct MeshCreateInfo {
+    bool isIndexed = true;
     std::string markerName = "";
     glm::mat4 model = glm::mat4(1.0f);
     size_t offset = 0;
-    bool pickable = true;
+    bool selectable = true;
     std::unique_ptr<Material> pMaterial = nullptr;
 } MeshCreateInfo;
 
@@ -48,7 +49,7 @@ class Mesh : public Object3d {
     inline STATUS getStatus() const { return status_; }
     inline PIPELINE_TYPE getTopologyType() const { return pipelineType_; }
     inline Vertex::TYPE getVertexType() const { return vertexType_; }
-    inline const Material& getMaterial() const { return std::cref(*pMaterial_); }
+    inline Material& getMaterial() const { return std::ref(*pMaterial_); }
     // inline MeshCreateInfo getCreateInfo() const { return {markerName_, model_, offset_, pickable_, nullptr}; }
 
     inline void setStatusPendingBuffers() {
@@ -61,13 +62,14 @@ class Mesh : public Object3d {
 
     // LOADING
     virtual std::future<Mesh*> load(const Shell::Context& ctx, std::function<void(Mesh*)> callbacak = nullptr);
-    virtual void prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes);
+    virtual void prepare(const Game::Settings settings, const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes);
 
     // VERTEX
     virtual Vertex::Complete getVertexComplete(size_t index) const = 0;
     virtual void addVertex(const Vertex::Complete& v, int32_t index = -1) = 0;
     virtual inline uint32_t getVertexCount() const = 0;  // TODO: this shouldn't be public
     virtual const glm::vec3& getVertexPositionAtOffset(size_t offset) const = 0;
+    void updateBuffers(const VkDevice& dev);
 
     // INDEX
     inline void addIndices(std::vector<VB_INDEX_TYPE>& is) {
@@ -95,7 +97,7 @@ class Mesh : public Object3d {
     Mesh* async_load(const Shell::Context& ctx, std::function<void(Mesh*)> callbacak = nullptr);
 
     // VERTEX
-    void loadVertexBuffers(const VkDevice& dev);
+    void loadBuffers(const Game::Settings& settings, const VkDevice& dev);
     virtual inline const void* getVertexData() const = 0;
     virtual inline VkDeviceSize getVertexBufferSize() const = 0;
 
@@ -108,24 +110,26 @@ class Mesh : public Object3d {
     }
 
     // create info
+    bool isIndexed_;
     std::string markerName_;
     size_t offset_;
-    bool selectable_;
     std::unique_ptr<Material> pMaterial_;
+    bool selectable_;
     // derived class specific
     FlagBits flags_;
     Vertex::TYPE vertexType_;
     PIPELINE_TYPE pipelineType_;
     //
     STATUS status_;
-    BufferResource vertex_res_;
+    BufferResource vertexRes_;
     std::vector<VB_INDEX_TYPE> indices_;
-    BufferResource index_res_;
+    BufferResource indexRes_;
     std::unique_ptr<LoadingResources> pLdgRes_;
 
    private:
-    void createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res);
-    void createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res);
+    void createBufferData(const Game::Settings& settings, const VkDevice& dev, const VkCommandBuffer& cmd,
+                          BufferResource& stg_res, VkDeviceSize bufferSize, const void* data, BufferResource& res,
+                          VkBufferUsageFlagBits usage, std::string markerName);
 };
 
 // **********************
@@ -182,7 +186,7 @@ class TextureMesh : public Mesh {
     // INIT
     void setSceneData(const Shell::Context& ctx, size_t offset);
 
-    void prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) override;
+    void prepare(const Game::Settings settings, const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) override;
     void drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
                        const VkDescriptorSet& descSet, const std::array<uint32_t, 1>& dynUboOffsets, size_t frameIndex,
                        const VkCommandBufferInheritanceInfo& inheritanceInfo, const VkViewport& viewport,

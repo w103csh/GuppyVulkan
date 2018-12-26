@@ -2,11 +2,14 @@
 #include "InputHandler.h"
 #include "Shell.h"
 #include "SceneHandler.h"
+#include "SelectionManager.h"
 #include "TextureHandler.h"
 
 SceneHandler SceneHandler::inst_;
 
-SceneHandler::SceneHandler() : activeSceneIndex_() {}
+SceneHandler::SceneHandler() : activeSceneIndex_(), pSelectionManager_(std::make_unique<SelectionManager>()) {}
+
+SceneHandler::~SceneHandler() = default;  // Required in this file for inner-class forward declaration of "SelectionManager"
 
 void SceneHandler::init(Shell* sh, const Game::Settings& settings) {
     inst_.reset();
@@ -20,9 +23,9 @@ void SceneHandler::reset() {
     pScenes_.clear();
 }
 
-uint8_t SceneHandler::makeScene(const UniformBufferResources& uboResource, bool setActive) {
+SCENE_INDEX_TYPE SceneHandler::makeScene(const UniformBufferResources& uboResource, bool setActive) {
     assert(inst_.pScenes_.size() < UINT8_MAX);
-    uint8_t offset = inst_.pScenes_.size();
+    SCENE_INDEX_TYPE offset = inst_.pScenes_.size();
 
     inst_.pScenes_.emplace_back(std::unique_ptr<Scene>(new Scene(offset)));
     if (setActive) inst_.activeSceneIndex_ = offset;
@@ -38,10 +41,36 @@ uint8_t SceneHandler::makeScene(const UniformBufferResources& uboResource, bool 
 
     inst_.pScenes_.back()->createDrawCmds(inst_.ctx_);
 
+    // Selection
+    if (inst_.pSelectionManager_->pFace_ == nullptr) {
+        // Face selection
+        MeshCreateInfo createInfo = {};
+        createInfo.isIndexed = false;
+        createInfo.pMaterial = std::make_unique<Material>(Material::FLAGS::HIDE);
+
+        std::unique_ptr<LineMesh> pFaceSelection = std::make_unique<FaceSelection>(&createInfo);
+        inst_.pSelectionManager_->faceSelectionOffset_ =
+            inst_.getActiveScene()->moveMesh(inst_.settings_, inst_.ctx_, std::move(pFaceSelection))->getOffset();
+    }
+
+    // TODO: move selection meshes...
+
     return offset;
 }
 
-void SceneHandler::updateDescriptorResources(uint8_t offset, bool isUpdate) {
+const std::unique_ptr<Face>& SceneHandler::getFaceSelectionFace() { return inst_.pSelectionManager_->pFace_; }
+
+void SceneHandler::select(const VkDevice& dev, const Ray& ray) {
+    float tMin = T_MAX;  // This is relative to the distance between ray.e & ray.d
+    Face face;
+
+    inst_.pSelectionManager_->selectFace(ray, tMin, getActiveScene()->colorMeshes_, face);
+    inst_.pSelectionManager_->selectFace(ray, tMin, getActiveScene()->texMeshes_, face);
+
+    inst_.pSelectionManager_->updateFaceSelection(dev, (tMin < T_MAX) ? std::make_unique<Face>(face) : nullptr);
+}
+
+void SceneHandler::updateDescriptorResources(SCENE_INDEX_TYPE offset, bool isUpdate) {
     auto& pScene = inst_.pScenes_[offset];
 
     // destroy old uniforms first

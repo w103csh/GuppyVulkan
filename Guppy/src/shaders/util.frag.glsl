@@ -148,7 +148,7 @@ vec3 getColor(float shininess) {
 #if HAS_SPOT_LIGHTS
     for (int i = 0; i < ubo.spotLights.length(); i++) {
         if ((ubo.spotLights[i].flags & LIGHT_SHOW) > 0) {
-            // color += blinnPhongSpot(ubo.spotLights[i], shininess, ++lightCount);
+            color += blinnPhongSpot(ubo.spotLights[i], shininess, ++lightCount);
         }
     }
 #endif

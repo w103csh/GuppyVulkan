@@ -13,13 +13,14 @@
 
 Mesh::Mesh(MeshCreateInfo* pCreateInfo)
     : Object3d(pCreateInfo->model),
+      isIndexed_(pCreateInfo->isIndexed),
       markerName_(pCreateInfo->markerName),
       offset_(pCreateInfo->offset),
-      selectable_(pCreateInfo->pickable),
+      selectable_(pCreateInfo->selectable),
       pMaterial_(pCreateInfo->pMaterial == nullptr ? std::make_unique<Material>() : std::move(pCreateInfo->pMaterial)),
       status_(STATUS::PENDING),
-      vertex_res_{VK_NULL_HANDLE, VK_NULL_HANDLE},
-      index_res_{VK_NULL_HANDLE, VK_NULL_HANDLE},
+      vertexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
+      indexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
       pLdgRes_(LoadingResourceHandler::createLoadingResources()),
       vertexType_(),
       pipelineType_() {}
@@ -49,38 +50,48 @@ Mesh* Mesh::async_load(const Shell::Context& ctx, std::function<void(Mesh*)> cal
     return this;
 }
 
-void Mesh::prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) {
-    loadVertexBuffers(dev);
+void Mesh::prepare(const Game::Settings settings, const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) {
+    loadBuffers(settings, dev);
     // Submit vertex loading commands...
     LoadingResourceHandler::loadSubmit(std::move(pLdgRes_));
     status_ = STATUS::READY;
 }
 
-void Mesh::loadVertexBuffers(const VkDevice& dev) {
+void Mesh::loadBuffers(const Game::Settings& settings, const VkDevice& dev) {
     assert(getVertexCount());
 
     // Vertex buffer
     BufferResource vertexStgRes = {};
-    createVertexBufferData(dev, pLdgRes_->transferCmd, vertexStgRes);
+    createBufferData(
+        settings, dev, pLdgRes_->transferCmd, vertexStgRes, getVertexBufferSize(), getVertexData(), vertexRes_,
+        static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), "vertex");
     pLdgRes_->stgResources.push_back(std::move(vertexStgRes));
 
     // Index buffer
-    BufferResource indexStgRes = {};
-    createIndexBufferData(dev, pLdgRes_->transferCmd, indexStgRes);
-    pLdgRes_->stgResources.push_back(std::move(indexStgRes));
+    if (isIndexed_) {
+        assert(!indices_.empty());
+        BufferResource indexStgRes = {};
+        createBufferData(
+            settings, dev, pLdgRes_->transferCmd, vertexStgRes, getIndexBufferSize(), getIndexData(), indexRes_,
+            static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
+            "index");
+        pLdgRes_->stgResources.push_back(std::move(indexStgRes));
+    } else {
+        assert(indices_.empty());
+    }
 }
 
-void Mesh::createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res) {
-    // STAGING BUFFER
-    VkDeviceSize bufferSize = getVertexBufferSize();
-
-    auto memReqsSize = helpers::createBuffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                             stg_res.buffer, stg_res.memory);
+void Mesh::createBufferData(const Game::Settings& settings, const VkDevice& dev, const VkCommandBuffer& cmd,
+                            BufferResource& stg_res, VkDeviceSize bufferSize, const void* data, BufferResource& res,
+                            VkBufferUsageFlagBits usage, std::string markerName) {
+    // STAGING RESOURCE
+    res.memoryRequirementsSize = helpers::createBuffer(
+        dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stg_res.buffer, stg_res.memory);
 
     // FILL STAGING BUFFER ON DEVICE
     void* pData;
-    vkMapMemory(dev, stg_res.memory, 0, memReqsSize, 0, &pData);
+    vkMapMemory(dev, stg_res.memory, 0, res.memoryRequirementsSize, 0, &pData);
     /*
         You can now simply memcpy the vertex data to the mapped memory and unmap it again using vkUnmapMemory.
         Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
@@ -93,50 +104,51 @@ void Mesh::createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cm
         allocated memory. Do keep in mind that this may lead to slightly worse performance than explicit flushing,
         but we'll see why that doesn't matter in the next chapter.
     */
-    memcpy(pData, getVertexData(), static_cast<size_t>(bufferSize));
+    memcpy(pData, data, static_cast<size_t>(bufferSize));
     vkUnmapMemory(dev, stg_res.memory);
 
     // FAST VERTEX BUFFER
     helpers::createBuffer(dev,
                           bufferSize,  // TODO: probably don't need to check memory requirements again
-                          VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_res_.buffer, vertex_res_.memory);
+                          usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, res.buffer, res.memory);
 
     // COPY FROM STAGING TO FAST
-    helpers::copyBuffer(cmd, stg_res.buffer, vertex_res_.buffer, memReqsSize);
+    helpers::copyBuffer(cmd, stg_res.buffer, res.buffer, res.memoryRequirementsSize);
 
     // Name the buffers for debugging
-    ext::DebugMarkerSetObjectName(dev, (uint64_t)vertex_res_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                  "Mesh vertex buffer");
+    if (settings.enable_debug_markers) {
+        markerName = "Mesh " + markerName + " buffer";
+        ext::DebugMarkerSetObjectName(dev, (uint64_t)res.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, markerName.c_str());
+    }
 }
 
-void Mesh::createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res) {
-    VkDeviceSize bufferSize = getIndexBufferSize();
+void Mesh::updateBuffers(const VkDevice& dev) {
+    VkDeviceSize bufferSize;
+    void* pData;
 
-    // TODO: more checking around this scenario...
-    if (bufferSize) {
-        auto memReqsSize = helpers::createBuffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                                 stg_res.buffer, stg_res.memory);
+    // VERTEX BUFFER
+    // TODO: if this assert fails more work needs to be done.
+    assert(getVertexBufferSize() == vertexRes_.memoryRequirementsSize);
+    pData = nullptr;
+    bufferSize = getVertexBufferSize();
+    vkMapMemory(dev, vertexRes_.memory, 0, vertexRes_.memoryRequirementsSize, 0, &pData);
+    memcpy(pData, getVertexData(), static_cast<size_t>(bufferSize));
+    vkUnmapMemory(dev, vertexRes_.memory);
 
-        void* pData;
-        vkMapMemory(dev, stg_res.memory, 0, memReqsSize, 0, &pData);
-        memcpy(pData, getIndexData(), static_cast<size_t>(bufferSize));
-        vkUnmapMemory(dev, stg_res.memory);
-
-        helpers::createBuffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_res_.buffer, index_res_.memory);
-
-        helpers::copyBuffer(cmd, stg_res.buffer, index_res_.buffer, memReqsSize);
-
-        // Name the buffers for debugging
-        ext::DebugMarkerSetObjectName(dev, (uint64_t)index_res_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                      "Mesh index buffer");
+    // INDEX BUFFER
+    if (isIndexed_) {
+        // TODO: if this assert fails more work needs to be done.
+        assert(getIndexBufferSize() == indexRes_.memoryRequirementsSize);
+        pData = nullptr;
+        vkMapMemory(dev, indexRes_.memory, 0, indexRes_.memoryRequirementsSize, 0, &pData);
+        memcpy(pData, getVertexData(), static_cast<size_t>(bufferSize));
+        vkUnmapMemory(dev, indexRes_.memory);
     }
 }
 
 void Mesh::selectFace(const Ray& ray, float& tMin, Face& face, size_t offset) const {
-    // bool hit = false;
+    bool hit = false;
+    VB_INDEX_TYPE idx0_hit = 0, idx1_hit = 0, idx2_hit = 0;
 
     // Declare some variables that will be reused
     float a, b, c;
@@ -245,20 +257,30 @@ void Mesh::selectFace(const Ray& ray, float& tMin, Face& face, size_t offset) co
         if (beta < 0 || beta > (1 - gamma)) continue;
 
         tMin = t;
-        // hit = true;
 
-        // TODO: delay this step until after loop maybe?...
-        face = {getVertexComplete(idx0), getVertexComplete(idx1), getVertexComplete(idx2), idx0, idx1, idx2, offset};
+        // TODO: below could be cleaner...
+        hit = true;
+        idx0_hit = idx0;
+        idx1_hit = idx1;
+        idx2_hit = idx2;
     }
 
-    // return hit;
+    if (hit) {
+        auto v0 = getVertexComplete(idx0_hit);
+        auto v1 = getVertexComplete(idx1_hit);
+        auto v2 = getVertexComplete(idx2_hit);
+        v0.position = getWorldSpacePosition(v0.position);
+        v1.position = getWorldSpacePosition(v1.position);
+        v2.position = getWorldSpacePosition(v2.position);
+        face = {v0, v1, v2, idx0_hit, idx1_hit, idx2_hit, offset};
+    }
 }
 
 void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
                       const VkDescriptorSet& descSet) const {
     assert(status_ == STATUS::READY);
 
-    VkBuffer vertex_buffers[] = {vertex_res_.buffer};
+    VkBuffer vertex_buffers[] = {vertexRes_.buffer};
     VkDeviceSize offsets[] = {0};
 
     vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
@@ -272,7 +294,7 @@ void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout
 
     // TODO: clean these up!!
     if (indices_.size()) {
-        vkCmdBindIndexBuffer(cmd, index_res_.buffer, 0,
+        vkCmdBindIndexBuffer(cmd, indexRes_.buffer, 0,
                              VK_INDEX_TYPE_UINT32  // TODO: Figure out how to make the type dynamic
         );
         vkCmdDrawIndexed(cmd, getIndexSize(), 1, 0, 0, 0);
@@ -289,14 +311,14 @@ void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout
 
 void Mesh::destroy(const VkDevice& dev) {
     // vertex
-    vkDestroyBuffer(dev, vertex_res_.buffer, nullptr);
-    vkFreeMemory(dev, vertex_res_.memory, nullptr);
+    vkDestroyBuffer(dev, vertexRes_.buffer, nullptr);
+    vkFreeMemory(dev, vertexRes_.memory, nullptr);
     // index
-    if (index_res_.buffer != VK_NULL_HANDLE) {
-        vkDestroyBuffer(dev, index_res_.buffer, nullptr);
+    if (indexRes_.buffer != VK_NULL_HANDLE) {
+        vkDestroyBuffer(dev, indexRes_.buffer, nullptr);
     }
-    if (index_res_.memory != VK_NULL_HANDLE) {
-        vkFreeMemory(dev, index_res_.memory, nullptr);
+    if (indexRes_.memory != VK_NULL_HANDLE) {
+        vkFreeMemory(dev, indexRes_.memory, nullptr);
     }
 }
 
@@ -340,8 +362,8 @@ void TextureMesh::setSceneData(const Shell::Context& ctx, size_t offset) {
     Mesh::setSceneData(offset);
 }
 
-void TextureMesh::prepare(const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) {
-    loadVertexBuffers(dev);
+void TextureMesh::prepare(const Game::Settings settings, const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) {
+    loadBuffers(settings, dev);
     // Submit vertex loading commands...
     LoadingResourceHandler::loadSubmit(std::move(pLdgRes_));
     // See if the descriptor sets for the texture(s) can be made...
@@ -369,12 +391,12 @@ void TextureMesh::drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayo
     vkCmdBindDescriptorSets(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet,
                             static_cast<uint32_t>(dynUboOffsets.size()), dynUboOffsets.data());
 
-    VkBuffer vertexBuffs[] = {vertex_res_.buffer};
+    VkBuffer vertexBuffs[] = {vertexRes_.buffer};
     VkDeviceSize vertexOffs[] = {0};
     vkCmdBindVertexBuffers(secCmd, 0, 1, vertexBuffs, vertexOffs);
 
     if (indices_.size()) {
-        vkCmdBindIndexBuffer(secCmd, index_res_.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdBindIndexBuffer(secCmd, indexRes_.buffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexed(secCmd, getIndexSize(), 1, 0, 0, 0);
     } else {
         vkCmdDraw(secCmd, getVertexCount(), 1, 0, 0);

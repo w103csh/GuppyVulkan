@@ -12,11 +12,13 @@ struct UBOTag {
     const char name[17] = "ubo tag";
 } uboTag;
 
-const float T_MAX = 1.0f;
-
 }  // namespace
 
-Scene::Scene(size_t offset) : offset_(offset), pDescResources_(nullptr) {}
+Scene::Scene(size_t offset)
+    : offset_(offset),
+      pDescResources_(nullptr),
+      plResources_(),
+      pDynUBOResource_(nullptr) {}
 
 void Scene::createDynamicTexUniformBuffer(const Shell::Context& ctx, const Game::Settings& settings,
                                           std::string markerName) {
@@ -62,31 +64,34 @@ void Scene::createDynamicTexUniformBuffer(const Shell::Context& ctx, const Game:
     }
 }
 
-std::unique_ptr<ColorMesh>& Scene::moveMesh(const Shell::Context& ctx, std::unique_ptr<ColorMesh> pMesh) {
+std::unique_ptr<ColorMesh>& Scene::moveMesh(const Game::Settings& settings, const Shell::Context& ctx,
+                                            std::unique_ptr<ColorMesh> pMesh) {
     assert(pMesh->getStatus() == STATUS::PENDING_BUFFERS);
 
     auto offset = colorMeshes_.size();
     pMesh->setSceneData(offset);
 
     colorMeshes_.push_back(std::move(pMesh));
-    colorMeshes_.back()->prepare(ctx.dev, pDescResources_);
+    colorMeshes_.back()->prepare(settings, ctx.dev, pDescResources_);
 
     return colorMeshes_.back();
 }
 
-std::unique_ptr<ColorMesh>& Scene::moveMesh(const Shell::Context& ctx, std::unique_ptr<LineMesh> pMesh) {
+std::unique_ptr<ColorMesh>& Scene::moveMesh(const Game::Settings& settings, const Shell::Context& ctx,
+                                            std::unique_ptr<LineMesh> pMesh) {
     assert(pMesh->getStatus() == STATUS::PENDING_BUFFERS);
 
     auto offset = lineMeshes_.size();
     pMesh->setSceneData(offset);
 
     lineMeshes_.push_back(std::move(pMesh));
-    lineMeshes_.back()->prepare(ctx.dev, pDescResources_);
+    lineMeshes_.back()->prepare(settings, ctx.dev, pDescResources_);
 
     return lineMeshes_.back();
 }
 
-std::unique_ptr<TextureMesh>& Scene::moveMesh(const Shell::Context& ctx, std::unique_ptr<TextureMesh> pMesh) {
+std::unique_ptr<TextureMesh>& Scene::moveMesh(const Game::Settings& settings, const Shell::Context& ctx,
+                                              std::unique_ptr<TextureMesh> pMesh) {
     assert(pMesh->getStatus() == STATUS::PENDING_BUFFERS);
 
     auto offset = texMeshes_.size();
@@ -98,20 +103,20 @@ std::unique_ptr<TextureMesh>& Scene::moveMesh(const Shell::Context& ctx, std::un
         SceneHandler::updateDescriptorResources(offset_);
     }
 
-    texMeshes_.back()->prepare(ctx.dev, pDescResources_);
+    texMeshes_.back()->prepare(settings, ctx.dev, pDescResources_);
 
     return texMeshes_.back();
 }
 
-size_t Scene::addMesh(const Shell::Context& ctx, std::unique_ptr<ColorMesh> pMesh, bool async,
-                      std::function<void(Mesh*)> callback) {
+size_t Scene::addMesh(const Game::Settings& settings, const Shell::Context& ctx, std::unique_ptr<ColorMesh> pMesh,
+                      bool async, std::function<void(Mesh*)> callback) {
     auto offset = colorMeshes_.size();
 
     pMesh->setSceneData(offset);
     colorMeshes_.push_back(std::move(pMesh));
 
     if (colorMeshes_.back()->getStatus() == STATUS::READY) {
-        colorMeshes_.back()->prepare(ctx.dev, pDescResources_);
+        colorMeshes_.back()->prepare(settings, ctx.dev, pDescResources_);
     } else {
         auto fut = colorMeshes_.back()->load(ctx, callback);
 
@@ -119,14 +124,14 @@ size_t Scene::addMesh(const Shell::Context& ctx, std::unique_ptr<ColorMesh> pMes
         if (async) {
             ldgFutures_.emplace_back(std::move(fut));
         } else {
-            fut.get()->prepare(ctx.dev, pDescResources_);
+            fut.get()->prepare(settings, ctx.dev, pDescResources_);
         }
     }
 
     return offset;
 }
 
-size_t Scene::addMesh(const Shell::Context& ctx, std::unique_ptr<LineMesh> pMesh, bool async,
+size_t Scene::addMesh(const Game::Settings& settings, const Shell::Context& ctx, std::unique_ptr<LineMesh> pMesh, bool async,
                       std::function<void(Mesh*)> callback) {
     auto offset = lineMeshes_.size();
 
@@ -134,7 +139,7 @@ size_t Scene::addMesh(const Shell::Context& ctx, std::unique_ptr<LineMesh> pMesh
     lineMeshes_.push_back(std::move(pMesh));
 
     if (lineMeshes_.back()->getStatus() == STATUS::READY) {
-        lineMeshes_.back()->prepare(ctx.dev, pDescResources_);
+        lineMeshes_.back()->prepare(settings, ctx.dev, pDescResources_);
     } else {
         auto fut = lineMeshes_.back()->load(ctx, callback);
 
@@ -142,15 +147,15 @@ size_t Scene::addMesh(const Shell::Context& ctx, std::unique_ptr<LineMesh> pMesh
         if (async) {
             ldgFutures_.emplace_back(std::move(fut));
         } else {
-            fut.get()->prepare(ctx.dev, pDescResources_);
+            fut.get()->prepare(settings, ctx.dev, pDescResources_);
         }
     }
 
     return offset;
 }
 
-size_t Scene::addMesh(const Shell::Context& ctx, std::unique_ptr<TextureMesh> pMesh, bool async,
-                      std::function<void(Mesh*)> callback) {
+size_t Scene::addMesh(const Game::Settings& settings, const Shell::Context& ctx, std::unique_ptr<TextureMesh> pMesh,
+                      bool async, std::function<void(Mesh*)> callback) {
     auto offset = texMeshes_.size();
 
     // Set values based on scene, and move pointer onto scene
@@ -165,7 +170,7 @@ size_t Scene::addMesh(const Shell::Context& ctx, std::unique_ptr<TextureMesh> pM
 
     // Check mesh loading status
     if (texMeshes_.back()->getStatus() == STATUS::READY) {
-        texMeshes_.back()->prepare(ctx.dev, pDescResources_);
+        texMeshes_.back()->prepare(settings, ctx.dev, pDescResources_);
     } else {
         auto fut = texMeshes_.back()->load(ctx, callback);
 
@@ -173,7 +178,7 @@ size_t Scene::addMesh(const Shell::Context& ctx, std::unique_ptr<TextureMesh> pM
         if (async) {
             ldgFutures_.emplace_back(std::move(fut));
         } else {
-            fut.get()->prepare(ctx.dev, pDescResources_);
+            fut.get()->prepare(settings, ctx.dev, pDescResources_);
         }
     }
 
@@ -185,7 +190,7 @@ void Scene::removeMesh(std::unique_ptr<Mesh>& pMesh) {
     assert(false);
 }
 
-void Scene::update(const Shell::Context& ctx) {
+void Scene::update(const Game::Settings& settings, const Shell::Context& ctx) {
     // Check loading futures
     if (!ldgFutures_.empty()) {
         auto itFut = ldgFutures_.begin();
@@ -199,7 +204,7 @@ void Scene::update(const Shell::Context& ctx) {
             if (status == std::future_status::ready) {
                 auto pMesh = fut.get();
                 // Future is ready so prepare the mesh...
-                pMesh->prepare(ctx.dev, pDescResources_);
+                pMesh->prepare(settings, ctx.dev, pDescResources_);
 
                 // Remove the future from the list if all goes well.
                 itFut = ldgFutures_.erase(itFut);
@@ -222,14 +227,14 @@ void Scene::updatePipeline(PIPELINE_TYPE type) { PipelineHandler::createPipeline
 
 // TODO: make cmd amount dynamic
 const VkCommandBuffer& Scene::getDrawCmds(const uint8_t& frame_data_index, uint32_t& commandBufferCount) {
-    auto& res = draw_resources_[frame_data_index];
+    auto& res = drawResources_[frame_data_index];
     if (res.thread.joinable()) res.thread.join();
     commandBufferCount = 1;  // !hardcode
     return res.cmd;
 }
 
 void Scene::createDrawCmds(const Shell::Context& ctx) {
-    draw_resources_.resize(ctx.image_count);
+    drawResources_.resize(ctx.image_count);
 
     VkCommandBufferAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -237,14 +242,14 @@ void Scene::createDrawCmds(const Shell::Context& ctx) {
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     alloc_info.commandBufferCount = 1;
 
-    for (auto& res : draw_resources_) {
+    for (auto& res : drawResources_) {
         vk::assert_success(vkAllocateCommandBuffers(ctx.dev, &alloc_info, &res.cmd));
     }
 }
 
 void Scene::record(const Shell::Context& ctx, const VkFramebuffer& framebuffer, const VkFence& fence,
                    const VkViewport& viewport, const VkRect2D& scissor, uint8_t frameIndex, bool wait) {
-    auto& cmd = draw_resources_[frameIndex].cmd;
+    auto& cmd = drawResources_[frameIndex].cmd;
 
     if (wait) {
         // Wait for fences
@@ -394,24 +399,12 @@ void Scene::record(const Shell::Context& ctx, const VkFramebuffer& framebuffer, 
     vk::assert_success(vkEndCommandBuffer(cmd));
 }
 
-void Scene::select(const Ray& ray) {
-    float tMin = T_MAX;  // This is relative to the distance between ray.e & ray.d
-    Face face;
-
-    selectFace(ray, tMin, colorMeshes_, face);
-    selectFace(ray, tMin, texMeshes_, face);
-
-    // TODO: draw selection things...
-
-    SceneHandler::setSelectedFace((tMin < T_MAX) ? std::make_unique<Face>(face) : nullptr);
-}
-
 void Scene::destroyCmds(const VkDevice& dev) {
-    for (auto& res : draw_resources_) {
+    for (auto& res : drawResources_) {
         if (res.thread.joinable()) res.thread.join();
         vkFreeCommandBuffers(dev, CmdBufHandler::graphics_cmd_pool(), 1, &res.cmd);
     }
-    draw_resources_.clear();
+    drawResources_.clear();
 }
 
 void Scene::destroyUniforms(const VkDevice& dev) {

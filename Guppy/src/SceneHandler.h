@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 
+#include "Constants.h"
 #include "Helpers.h"
 #include "Singleton.h"
 #include "Scene.h"
@@ -20,13 +21,15 @@ class SceneHandler : Singleton {
     friend class Scene;
 
    public:
+    class SelectionManager;
+
     static void init(Shell* sh, const Game::Settings& settings);
     static inline void destroy() {
         inst_.reset();
         inst_.cleanupInvalidResources();
     }
 
-    static uint8_t makeScene(const UniformBufferResources& uboResource, bool setActive = false);
+    static SCENE_INDEX_TYPE makeScene(const UniformBufferResources& uboResource, bool setActive = false);
 
     static std::unique_ptr<Scene>& getActiveScene() {
         assert(inst_.activeSceneIndex_ < inst_.pScenes_.size());
@@ -43,15 +46,17 @@ class SceneHandler : Singleton {
         return inst_.pScenes_[sceneOffset]->getTextureMesh(meshOffset);
     }
 
-    static void updateDescriptorResources(uint8_t offset, bool isUpdate = true);
+    // Selection
+    static const std::unique_ptr<Face>& getFaceSelectionFace();
+    static void select(const VkDevice& dev, const Ray& ray);
+
+    static void updateDescriptorResources(SCENE_INDEX_TYPE offset, bool isUpdate = true);
     static void destroyDescriptorResources(std::unique_ptr<DescriptorResources>& pRes);
     static void cleanupInvalidResources();
 
-    static const std::unique_ptr<Face>& getSelectedFace() { return inst_.pSelectedFace_; }
-
    private:
-    SceneHandler();     // Prevent construction
-    ~SceneHandler(){};  // Prevent construction
+    SceneHandler();   // Prevent construction
+    ~SceneHandler();  // Prevent construction
     static SceneHandler inst_;
     void reset() override;
 
@@ -59,15 +64,14 @@ class SceneHandler : Singleton {
     Shell::Context ctx_;       // TODO: shared_ptr
     Game::Settings settings_;  // TODO: shared_ptr
 
-    static void setSelectedFace(std::unique_ptr<Face> pFace) { inst_.pSelectedFace_ = std::move(pFace); }
-
-    uint8_t activeSceneIndex_;
+    SCENE_INDEX_TYPE activeSceneIndex_;
     std::vector<std::unique_ptr<Scene>> pScenes_;
-
-    std::unique_ptr<Face> pSelectedFace_;
 
     // global storage for clean up
     std::vector<InvalidSceneResources> invalidRes_;
+
+    // Selection
+    std::unique_ptr<SelectionManager> pSelectionManager_;
 };
 
 #endif  // !SCENE_HANDLER_H

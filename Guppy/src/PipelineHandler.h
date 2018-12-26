@@ -124,7 +124,7 @@ class PipelineHandler : Singleton {
                             PipelineResources &pipelineRes);
 
     Shell *sh_;
-    Shell::Context ctx_;     // TODO: shared_ptr
+    Shell::Context ctx_;       // TODO: shared_ptr
     Game::Settings settings_;  // TODO: shared_ptr
 
     std::vector<VkPushConstantRange> pushConstantRanges_;

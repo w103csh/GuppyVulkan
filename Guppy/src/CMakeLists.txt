@@ -47,7 +47,9 @@ set(SOURCE
 	Scene.cpp
 	Scene.h
 	SceneHandler.cpp
-	SceneHandler.h
+    SceneHandler.h
+    SelectionManager.cpp
+    SelectionManager.h
 	Shader.cpp
 	shader.h
     Shell.cpp

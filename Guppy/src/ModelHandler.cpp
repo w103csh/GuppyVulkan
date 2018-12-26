@@ -6,35 +6,42 @@
 
 ModelHandler ModelHandler::inst_;
 
-void ModelHandler::init(Shell* sh) { inst_.sh_ = sh; }
+void ModelHandler::init(Shell* sh, const Game::Settings& settings) {
+    inst_.sh_ = sh;
+    inst_.settings_ = settings;
+}
 
-void ModelHandler::makeModel(std::unique_ptr<Scene>& pScene, std::string modelPath, Material material, glm::mat4 model, bool async,
-                             Model::CALLBK callback) {
+void ModelHandler::makeModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene) {
     // Add a new model instance
-    inst_.pModels_.emplace_back(std::make_unique<Model>(inst_.pModels_.size(), pScene, modelPath, model));
+    pCreateInfo->handlerOffset = inst_.pModels_.size();
+    inst_.pModels_.emplace_back(std::make_unique<Model>(pCreateInfo, pScene->getOffset()));
 
-    if (async) {
-        inst_.ldgColorFutures_[inst_.pModels_.back()->getHandlerOffset()] =
-            std::make_pair(std::async(std::launch::async, &Model::loadColor, inst_.pModels_.back().get(), inst_.sh_, material),
-                           std::move(callback));
+    if (pCreateInfo->async) {
+        inst_.ldgColorFutures_[inst_.pModels_.back()->getHandlerOffset()] = std::make_pair(
+            std::async(std::launch::async, &Model::loadColor, inst_.pModels_.back().get(), inst_.sh_, pCreateInfo->material),
+            std::move(pCreateInfo->callback));
     } else {
-        inst_.handleMeshes(pScene, inst_.pModels_.back(), inst_.pModels_.back()->loadColor(inst_.sh_, material));
-        inst_.pModels_.back()->postLoad(callback);
+        inst_.handleMeshes(pScene, inst_.pModels_.back(),
+                           inst_.pModels_.back()->loadColor(inst_.sh_, pCreateInfo->material));
+        inst_.pModels_.back()->postLoad(pCreateInfo->callback);
     }
 }
 
-void ModelHandler::makeModel(std::unique_ptr<Scene>& pScene, std::string modelPath, Material material, glm::mat4 model,
-                             std::shared_ptr<Texture::Data> pTexture, bool async, Model::CALLBK callback) {
+void ModelHandler::makeModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene,
+                             std::shared_ptr<Texture::Data> pTexture) {
     // Add a new model instance
-    inst_.pModels_.emplace_back(std::make_unique<Model>(inst_.pModels_.size(), pScene, modelPath, model));
+    pCreateInfo->handlerOffset = inst_.pModels_.size();
+    inst_.pModels_.emplace_back(std::make_unique<Model>(pCreateInfo, pScene->getOffset()));
 
-    if (async) {
-        inst_.ldgTexFutures_[inst_.pModels_.back()->getHandlerOffset()] = std::make_pair(
-            std::async(std::launch::async, &Model::loadTexture, inst_.pModels_.back().get(), inst_.sh_, material, pTexture),
-            std::move(callback));
+    if (pCreateInfo->async) {
+        inst_.ldgTexFutures_[inst_.pModels_.back()->getHandlerOffset()] =
+            std::make_pair(std::async(std::launch::async, &Model::loadTexture, inst_.pModels_.back().get(), inst_.sh_,
+                                      pCreateInfo->material, pTexture),
+                           std::move(pCreateInfo->callback));
     } else {
-        inst_.handleMeshes(pScene, inst_.pModels_.back(), inst_.pModels_.back()->loadTexture(inst_.sh_, material, pTexture));
-        inst_.pModels_.back()->postLoad(callback);
+        inst_.handleMeshes(pScene, inst_.pModels_.back(),
+                           inst_.pModels_.back()->loadTexture(inst_.sh_, pCreateInfo->material, pTexture));
+        inst_.pModels_.back()->postLoad(pCreateInfo->callback);
     }
 }
 

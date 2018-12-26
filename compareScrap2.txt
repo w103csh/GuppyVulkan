@@ -1,13 +1,25 @@
-            for (size_t i = 0; i < 3; ++i) {
-                if (uniqueVertices.count(face[i]) == 0) {
-                    uniqueVertices[face[i]] = static_cast<uint32_t>(pMesh->getVertexCount());
-                    pMesh->addVertex(std::move(face[i]));
-                } else {
-                    // Averge vertex attributes
-                    auto vertex = pMesh->getVertexComplete(uniqueVertices[face[i]]);
-                    vertex.normal = glm::normalize(vertex.normal + face[i].normal);
-                    vertex.tangent += face[i].tangent;
-                    vertex.binormal += face[i].binormal;
-                }
-                pMesh->addIndex(uniqueVertices[face[i]]);
-            }
+void Mesh::createIndexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res) {
+    VkDeviceSize bufferSize = getIndexBufferSize();
+
+    // TODO: more checking around this scenario...
+    if (bufferSize) {
+        auto memReqsSize = helpers::createBuffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                                 stg_res.buffer, stg_res.memory);
+
+        void* pData;
+        vkMapMemory(dev, stg_res.memory, 0, memReqsSize, 0, &pData);
+        memcpy(pData, getIndexData(), static_cast<size_t>(bufferSize));
+        vkUnmapMemory(dev, stg_res.memory);
+
+        helpers::createBuffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, index_res_.buffer, index_res_.memory);
+
+        helpers::copyBuffer(cmd, stg_res.buffer, index_res_.buffer, memReqsSize);
+
+        // Name the buffers for debugging
+        // TODO: optional
+        ext::DebugMarkerSetObjectName(dev, (uint64_t)index_res_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                                      "Mesh index buffer");
+    }
+}

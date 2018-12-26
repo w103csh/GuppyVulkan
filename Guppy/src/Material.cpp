@@ -1,7 +1,7 @@
 
 #include "Material.h"
 
-STATUS Material::getStatus() {
+STATUS Material::getStatus() const {
     if (hasTexture() && pTexture_->status != STATUS::READY) {
         return STATUS::PENDING_TEXTURE;
     }
