@@ -9,6 +9,7 @@
 
 #include "Vertex.h"
 
+#define LIMIT_FRAMERATE
 #define USE_DEBUG_GUI
 
 typedef uint32_t FlagBits;
@@ -78,6 +79,7 @@ const float MIN_SAMPLE_SHADING = 0.2f;
 
 // DATA
 const std::string DATA_PATH = ROOT_PATH + "data\\";
+
 // MODELS
 const std::string MODEL_PATH = DATA_PATH + "models\\";
 // chalet
@@ -92,10 +94,13 @@ const std::string MED_H_SPEC_TEX_PATH = MODEL_PATH + "Medieval_House_obj\\Mediev
 const std::string ORANGE_MODEL_PATH = MODEL_PATH + "Orange_obj\\Orange.obj";
 const std::string ORANGE_DIFF_TEX_PATH = MODEL_PATH + "Orange_obj\\Color.jpg";
 const std::string ORANGE_NORM_TEX_PATH = MODEL_PATH + "Orange_obj\\Normal.jpg";
+// pear
+const std::string PEAR_MODEL_PATH = MODEL_PATH + "pear_export_obj\\pear_export.obj";
 // general
 const std::string SPHERE_MODEL_PATH = MODEL_PATH + "sphere.obj";
 const std::string TORUS_MODEL_PATH = MODEL_PATH + "torus.obj";
 const std::string SOMETHING_MODEL_PATH = MODEL_PATH + "pig_triangulated.obj";
+
 // IMAGES
 const std::string IMG_PATH = DATA_PATH + "images\\";
 const std::string STATUE_TEX_PATH = IMG_PATH + "texture.jpg";

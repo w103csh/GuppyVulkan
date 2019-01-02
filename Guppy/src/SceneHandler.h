@@ -39,7 +39,7 @@ class SceneHandler : Singleton {
     static std::unique_ptr<ColorMesh>& getColorMesh(size_t sceneOffset, size_t meshOffset) {
         return inst_.pScenes_[sceneOffset]->getColorMesh(meshOffset);
     }
-    static std::unique_ptr<ColorMesh>& getLineMesh(size_t sceneOffset, size_t meshOffset) {
+    static std::unique_ptr<LineMesh>& getLineMesh(size_t sceneOffset, size_t meshOffset) {
         return inst_.pScenes_[sceneOffset]->getLineMesh(meshOffset);
     }
     static std::unique_ptr<TextureMesh>& getTextureMesh(size_t sceneOffset, size_t meshOffset) {

@@ -8,12 +8,15 @@
 #include "Mesh.h"
 
 void Face::calculateNormal() {
-    glm::vec3 normal = helpers::triangleNormal(vertices_[0].position, vertices_[1].position, vertices_[2].position);
-    for (auto &v : vertices_) v.normal = normal;
+    glm::vec3 n = helpers::triangleNormal(vertices_[0].position, vertices_[1].position, vertices_[2].position);
+    for (auto &v : vertices_) v.normal = n;
 }
 
 void Face::calculateTangentSpaceVectors() {
     glm::vec3 t = {}, b = {};
+    // glm::vec3 n = glm::normalize(vertices_[0].normal);
+    glm::vec3 n = vertices_[0].normal;
+
     /*  Create a linear map from tangent space to model space. This is done using
         Cramer's rule.
 
@@ -30,6 +33,7 @@ void Face::calculateTangentSpaceVectors() {
                 | deltaUV1.x deltaUV1.y |      | deltaUV1.x deltaUV1.y |
                 | deltaUV2.x deltaUV2.y |      | deltaUV2.x deltaUV2.y |
     */
+
     auto deltaPos1 = vertices_[1].position - vertices_[0].position;
     auto deltaPos2 = vertices_[2].position - vertices_[0].position;
 
@@ -43,15 +47,15 @@ void Face::calculateTangentSpaceVectors() {
 
     // Make orthogonal (I think that doing both makes sense...
     // I should probably add some kind of test.)
-    auto proj_t_onto_n = glm::proj(t, vertices_[0].normal);
+    auto proj_t_onto_n = glm::proj(t, n);
     t = glm::normalize(t - proj_t_onto_n);
-    auto proj_b_onto_n = glm::proj(b, vertices_[0].normal);
+    auto proj_b_onto_n = glm::proj(b, n);
     b = glm::normalize(b - proj_b_onto_n);
 
-    // Make right-handed
-    if (glm::dot(glm::cross(vertices_[0].normal, t), b) < 0.0f) {
-        t *= -1.0f;
-    }
+    //// Make right-handed
+    // if (glm::dot(glm::cross(n, t), b) > 0.0f) {
+    //    t *= -1.0f;
+    //}
 
     for (auto &v : vertices_) {
         v.tangent = t;

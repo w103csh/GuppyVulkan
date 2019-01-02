@@ -48,7 +48,7 @@ struct PositionalData {
 
 class Positional : public Base<PositionalData> {
    public:
-    Positional() : Base(), La_(glm::vec3(0.1f)), L_(glm::vec3(0.6f)){};
+    Positional(glm::vec3 La = glm::vec3(0.1f), glm::vec3 L = glm::vec3(0.6f)) : Base(), La_(La), L_(L){};
 
     void getLightData(PositionalData& data) override {
         data.position = getWorldSpacePosition();
@@ -76,7 +76,7 @@ struct SpotData {
 
 class Spot : public Base<SpotData> {
    public:
-    Spot() : Base(), La_(glm::vec3(0.5f)), L_(glm::vec3(0.9f)), exponent_(50.0f), cutoff_(glm::radians(15.0f)){};
+    Spot() : Base(), La_(glm::vec3(0.0f/*0.5f*/)), L_(glm::vec3(0.9f)), exponent_(50.0f), cutoff_(glm::radians(15.0f)){};
 
     void getLightData(SpotData& data) override {
         data.flags = flags_;

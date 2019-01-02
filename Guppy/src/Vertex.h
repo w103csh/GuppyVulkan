@@ -73,20 +73,14 @@ class Complete {
         }
     };
 
-    bool operator==(const Complete &other) const {
-        return                                                                  //
-            glm::all(glm::epsilonEqual(position, other.position, FLT_EPSILON))  //
-            && other.smoothingGroupId == smoothingGroupId;
-    }
+    // bool operator==(const Complete &other) const {
+    //    return                                                                  //
+    //        glm::all(glm::epsilonEqual(position, other.position, FLT_EPSILON))  //
+    //        && other.smoothingGroupId == smoothingGroupId;
+    //}
 
     inline bool compareTexCoords(const Complete &other) const {
         return glm::all(glm::epsilonEqual(texCoord, other.texCoord, FLT_EPSILON));
-    }
-
-    inline void setNormalData(const Complete &other) {
-        normal = other.normal;
-        tangent = other.tangent;
-        binormal = other.binormal;
     }
 
     inline Color getColorVertex() const { return {position, normal, color}; }
@@ -119,15 +113,15 @@ std::string getTypeName(TYPE type);
 // Hash functions
 // **********************
 
-namespace std {
-// Hash function for Complete
-template <>
-struct hash<Vertex::Complete> {
-    size_t operator()(const Vertex::Complete &vertex) const {
-        // TODO: wtf is this doing?
-        return ((hash<glm::vec3>()(vertex.position) ^ (hash<int>()(vertex.smoothingGroupId) << 1)) >> 1);
-    }
-};
-}  // namespace std
+// namespace std {
+// // Hash function for Complete
+// template <>
+// struct hash<Vertex::Complete> {
+//     size_t operator()(const Vertex::Complete &vertex) const {
+//         // TODO: wtf is this doing?
+//         return ((hash<glm::vec3>()(vertex.position) ^ (hash<int>()(vertex.smoothingGroupId) << 1)) >> 1);
+//     }
+// };
+// }  // namespace std
 
 #endif  // !VERTEX_H

@@ -14,10 +14,11 @@
 #include "Object3d.h"
 
 class ColorMesh;
+class LineMesh;
 class Mesh;
 class Model;
-class Shell;
 class Scene;
+class Shell;
 class TextureMesh;
 
 typedef uint32_t MODEL_INDEX;
@@ -33,9 +34,12 @@ typedef struct ModelCreateInfo {
     std::string modelPath = "";
     // std::shared_ptr<Texture::Data> pTexture = nullptr; // TODO: add this here and simplify "makeModel"
     bool smoothNormals = false;
+    bool visualHelper = false;
 } ModelCreateInfo;
 
 class Model : public Object3d {
+    friend class ModelHandler;
+
    public:
     Model::Model(ModelCreateInfo *pCreateInfo, MODEL_INDEX sceneOffset);
 
@@ -53,7 +57,7 @@ class Model : public Object3d {
     STATUS status;
 
     void addOffset(std::unique_ptr<ColorMesh> &pMesh);
-    // void addOffset(std::unique_ptr<LineMesh> &pMesh);
+    void addOffset(std::unique_ptr<LineMesh> &pMesh);
     void addOffset(std::unique_ptr<TextureMesh> &pMesh);
 
    private:
@@ -64,6 +68,7 @@ class Model : public Object3d {
     std::string modelPath_;
     MODEL_INDEX sceneOffset_;
     bool smoothNormals_;
+    bool visualHelper_;
 
     std::vector<MODEL_INDEX> colorOffsets_;
     std::vector<MODEL_INDEX> lineOffsets_;

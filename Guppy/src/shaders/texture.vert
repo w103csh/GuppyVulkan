@@ -42,14 +42,16 @@ layout(location = 3) out mat3 TBN;
 void main() {
 	// Camera space transforms
 	mat4 viewModel = ubo.camera.view * pushConstantsBlock.model;
-	vec3 CS_normal = normalize(mat3(viewModel) * inNormal);
-	vec3 CS_tangent = normalize(mat3(viewModel) * inTangent);
-	vec3 CS_binormal = normalize(mat3(viewModel) * inBinormal);
+	mat3 viewModel3 = mat3(viewModel);
+	vec3 CS_normal = normalize(viewModel3 * inNormal);
+	vec3 CS_tangent = normalize(viewModel3 * inTangent);
+	vec3 CS_binormal = normalize(viewModel3 * inBinormal);
 
 	gl_Position = ubo.camera.viewProjection * pushConstantsBlock.model * vec4(inPosition, 1.0);
 
-	// camera space to tangent space
-	TBN = transpose(mat3(CS_tangent, CS_binormal, CS_normal));
+	// Camera space to tangent space
+	// TBN = inverse(mat3(CS_binormal, CS_tangent, CS_normal));
+	TBN = transpose(mat3(CS_binormal, CS_tangent, CS_normal));
 
 	CS_position = (viewModel * vec4(inPosition, 1.0)).xyz;
     TS_normal = TBN * CS_normal;

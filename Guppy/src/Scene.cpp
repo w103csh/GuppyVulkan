@@ -77,7 +77,7 @@ std::unique_ptr<ColorMesh>& Scene::moveMesh(const Game::Settings& settings, cons
     return colorMeshes_.back();
 }
 
-std::unique_ptr<ColorMesh>& Scene::moveMesh(const Game::Settings& settings, const Shell::Context& ctx,
+std::unique_ptr<LineMesh>& Scene::moveMesh(const Game::Settings& settings, const Shell::Context& ctx,
                                             std::unique_ptr<LineMesh> pMesh) {
     assert(pMesh->getStatus() == STATUS::PENDING_BUFFERS);
 

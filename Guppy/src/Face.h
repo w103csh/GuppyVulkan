@@ -57,10 +57,14 @@ class Face {
     }
 
     template <typename TMap, class TVertex>
-    void indexVertices(TMap &vertexMap, std::vector<TVertex> &pMeshes, size_t meshOffset, bool calcTangentSpace = true) {
-        // Calculate per face data...
-        calculateNormal();
-        if (calcTangentSpace) calculateTangentSpaceVectors();
+    void indexVertices(TMap &vertexMap, std::vector<TVertex> &pMeshes, uint8_t meshOffset, bool calcNormals = true) {
+        // Calculate per face data.
+        if (calcNormals) calculateNormal();
+        // Check if there is a normal map...
+        bool normalMapped = false;
+        for (auto &pMesh : pMeshes)
+            if (pMesh->getMaterial().getFlags() & Texture::FLAGS::NORMAL) normalMapped = true;
+        if (normalMapped) calculateTangentSpaceVectors();
 
         for (size_t i = 0; i < 3; ++i) {
             long index = -1;
@@ -81,17 +85,34 @@ class Face {
 
                     // Averge the vertex attributes
                     vertex = pMeshes[mOffset]->getVertexComplete(vIndex);
-                    vertex.normal = glm::normalize(vertex.normal + vertices_[i].normal);
+
+                    /*  Below was an attempt to fix bad orange smoothing. I decided
+                        that the problem was probably coming from the obj's having
+                        faces with 4 vertices. tiny_obj can spit out 4 vertex faces
+                        so I should try that at some point instead...
+                    */
+                    // if (glm::dot(vertices_[i].binormal, vertex.binormal) < 0.0f ||
+                    //    glm::dot(vertices_[i].tangent, vertex.tangent) < 0.0f) {
+                    //    // This is shitty...
+                    //    auto r = glm::rotate(glm::mat4(1.0f), M_PI_FLT, vertices_[i].normal);
+                    //    vertices_[i].binormal = r * glm::vec4(vertices_[i].binormal, 0.0f);
+                    //    vertices_[i].tangent = r * glm::vec4(vertices_[i].tangent, 0.0f);
+                    //}
+
+                    vertex.normal += vertices_[i].normal;
                     vertex.tangent += vertices_[i].tangent;
                     vertex.binormal += vertices_[i].binormal;
 
                     // If the vertex already exists in the current mesh then use the existing index.
-                    if (mOffset == meshOffset
+                    if (mOffset == meshOffset &&
                         //
-                        && vertex.compareTexCoords(vertices_[i])
+                        (pMeshes[mOffset]->getVertexType() == Vertex::TYPE::COLOR ||
+                         // If the vertex is in going to be in a texture mesh then check tex coords
+                         (pMeshes[mOffset]->getVertexType() == Vertex::TYPE::TEXTURE &&
+                          vertex.compareTexCoords(vertices_[i])))
                         //
                     ) {
-                        vIndex = vIndex;
+                        index = vIndex;
                     }
 
                     // Update the vertex for all meshes.
@@ -103,8 +124,12 @@ class Face {
                 if (index < 0) {
                     index = static_cast<VB_INDEX_TYPE>(pMeshes[meshOffset]->getVertexCount());
                     vertexMap.insert({{vertices_[i], {meshOffset, index}}});
+
                     // this vertex should retain non-normal data (such as texture coords)
-                    vertices_[i].setNormalData(vertex);
+                    vertices_[i].normal = vertex.normal;
+                    vertices_[i].tangent = vertex.tangent;
+                    vertices_[i].binormal = vertex.binormal;
+
                     pMeshes[meshOffset]->addVertex(std::move(vertices_[i]));
                 }
             }

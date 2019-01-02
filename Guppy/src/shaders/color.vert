@@ -23,7 +23,7 @@ layout(binding = 0) uniform DefaultUniformBuffer {
 layout(location = 0) out vec3 fragPos;
 layout(location = 1) out vec3 fragNormal;
 layout(location = 2) out vec4 fragColor;
-layout(location = 3) out int fragVertexIndex;
+// layout(location = 3) out int fragVertexIndex;
 
 void main() {
 	// This obviously can be much more efficient
@@ -32,7 +32,7 @@ void main() {
 	vec3 cameraSpaceNormal = normalize(mat3(viewModel) * inNormal);
 
 	gl_Position = ubo.camera.viewProjection * pushConstantsBlock.model * vec4(inPosition, 1.0);
-	fragVertexIndex = gl_VertexIndex;
+	// fragVertexIndex = gl_VertexIndex;
 
 	fragPos = cameraSpacePosition;
     fragNormal = cameraSpaceNormal;

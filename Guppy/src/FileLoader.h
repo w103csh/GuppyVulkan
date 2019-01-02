@@ -126,11 +126,9 @@ void loadObjData(const tinyobj_data &data, std::vector<TVertex *> &pMeshes) {
                     }
                 }
             }
-
             face.indexVertices(vertexMap, pMeshes, materialOffset);
         }
     }
-
     for (auto &pMesh : pMeshes) pMesh->setStatusPendingBuffers();
 }
 

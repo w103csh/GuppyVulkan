@@ -16,17 +16,18 @@ class Scene {
 
    public:
     std::unique_ptr<ColorMesh> &getColorMesh(size_t index) { return colorMeshes_[index]; }
-    std::unique_ptr<ColorMesh> &getLineMesh(size_t index) { return lineMeshes_[index]; }
+    std::unique_ptr<LineMesh> &getLineMesh(size_t index) { return lineMeshes_[index]; }
     std::unique_ptr<TextureMesh> &getTextureMesh(size_t index) { return texMeshes_[index]; }
 
     inline size_t getOffset() { return offset_; }
 
     std::unique_ptr<ColorMesh> &moveMesh(const Game::Settings &settings, const Shell::Context &ctx,
                                          std::unique_ptr<ColorMesh> pMesh);
-    std::unique_ptr<ColorMesh> &moveMesh(const Game::Settings &settings, const Shell::Context &ctx,
-                                         std::unique_ptr<LineMesh> pMesh);
+    std::unique_ptr<LineMesh> &moveMesh(const Game::Settings &settings, const Shell::Context &ctx,
+                                        std::unique_ptr<LineMesh> pMesh);
     std::unique_ptr<TextureMesh> &moveMesh(const Game::Settings &settings, const Shell::Context &ctx,
                                            std::unique_ptr<TextureMesh> pMesh);
+
     size_t addMesh(const Game::Settings &settings, const Shell::Context &ctx, std::unique_ptr<ColorMesh> pMesh,
                    bool async = true, std::function<void(Mesh *)> callback = nullptr);
     size_t addMesh(const Game::Settings &settings, const Shell::Context &ctx, std::unique_ptr<LineMesh> pMesh,
@@ -78,7 +79,7 @@ class Scene {
     // Meshes
     // color
     std::vector<std::unique_ptr<ColorMesh>> colorMeshes_;  // Vertex::TYPE::COLOR, PIPELINE_TYPE::TRI_LIST_COLOR
-    std::vector<std::unique_ptr<ColorMesh>> lineMeshes_;   // Vertex::TYPE::COLOR, PIPELINE_TYPE::LINE
+    std::vector<std::unique_ptr<LineMesh>> lineMeshes_;    // Vertex::TYPE::COLOR, PIPELINE_TYPE::LINE
     // texture
     std::vector<std::unique_ptr<TextureMesh>> texMeshes_;  // Vertex::TYPE::TEX, PIPELINE_TYPE::TRI_LIST_TEX
 

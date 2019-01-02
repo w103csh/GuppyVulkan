@@ -26,7 +26,7 @@ class SceneHandler::SelectionManager {
     void updateFaceSelection(const VkDevice &dev, std::unique_ptr<Face> pFace = nullptr);
 
    private:
-    std::unique_ptr<ColorMesh> &getFaceSelection();
+    std::unique_ptr<LineMesh> &getFaceSelection();
 
     template <typename T>
     void selectFace(const Ray &ray, float &tMin, T &pMeshes, Face &face) {

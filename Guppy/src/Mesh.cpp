@@ -122,6 +122,15 @@ void Mesh::createBufferData(const Game::Settings& settings, const VkDevice& dev,
     }
 }
 
+inline void Mesh::addVertex(const Face& face) {
+    // currently not used
+    for (uint8_t i = 0; i < Face::NUM_VERTICES; i++) {
+        auto face = getFace(i);
+        face.calculateTangentSpaceVectors();
+        addVertex(face[i], face.getIndex(i));
+    }
+}
+
 void Mesh::updateBuffers(const VkDevice& dev) {
     VkDeviceSize bufferSize;
     void* pData;
@@ -276,6 +285,15 @@ void Mesh::selectFace(const Ray& ray, float& tMin, Face& face, size_t offset) co
     }
 }
 
+void Mesh::updateTangentSpaceData() {
+    // currently not used
+    for (size_t i = 0; i < getFaceCount(); i++) {
+        auto face = getFace(i);
+        face.calculateTangentSpaceVectors();
+        addVertex(face);
+    }
+}
+
 void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
                       const VkDescriptorSet& descSet) const {
     assert(status_ == STATUS::READY);
@@ -297,7 +315,7 @@ void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout
         vkCmdBindIndexBuffer(cmd, indexRes_.buffer, 0,
                              VK_INDEX_TYPE_UINT32  // TODO: Figure out how to make the type dynamic
         );
-        vkCmdDrawIndexed(cmd, getIndexSize(), 1, 0, 0, 0);
+        vkCmdDrawIndexed(cmd, getIndexCount(), 1, 0, 0, 0);
     } else {
         vkCmdDraw(
             cmd,
@@ -397,7 +415,7 @@ void TextureMesh::drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayo
 
     if (indices_.size()) {
         vkCmdBindIndexBuffer(secCmd, indexRes_.buffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(secCmd, getIndexSize(), 1, 0, 0, 0);
+        vkCmdDrawIndexed(secCmd, getIndexCount(), 1, 0, 0, 0);
     } else {
         vkCmdDraw(secCmd, getVertexCount(), 1, 0, 0);
     }

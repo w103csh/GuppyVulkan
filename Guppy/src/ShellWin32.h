@@ -41,6 +41,8 @@ class ShellWin32 : public Shell {
 
     void run() override;
     void quit() override;
+    void asyncAlert(uint64_t milliseconds) override;
+    void checkDirectories() override;
     void watchDirectory(std::string dir, std::function<void(std::string)> callback) override;
 
    protected:
@@ -68,10 +70,8 @@ class ShellWin32 : public Shell {
     LRESULT handleMessage(UINT msg, WPARAM wparam, LPARAM lparam);
 
     // Directory listener
-    void AsyncAlert(DWORD);
     std::string GetWorkingDirectory();
     std::string GetLastErrorAsString();
-    void CheckDirectories();
     std::vector<DIR_INST> dirInsts_;
 
     HINSTANCE hinstance_;

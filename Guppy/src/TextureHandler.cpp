@@ -45,7 +45,8 @@ void TextureHandler::addTexture(std::string path, std::string normPath, std::str
 }
 
 std::shared_ptr<Texture::Data> TextureHandler::getTextureByPath(std::string path) {
-    auto it = std::find_if(inst_.pTextures_.begin(), inst_.pTextures_.end(), [&path](auto& pTex) { return pTex->path == path; });
+    auto it =
+        std::find_if(inst_.pTextures_.begin(), inst_.pTextures_.end(), [&path](auto& pTex) { return pTex->path == path; });
     return it == inst_.pTextures_.end() ? nullptr : (*it);
 }
 

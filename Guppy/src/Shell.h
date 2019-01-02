@@ -127,7 +127,9 @@ class Shell {
 
     virtual void run() = 0;
     virtual void quit() = 0;
-    virtual void watchDirectory(std::string dir, std::function<void(std::string)> callback) = 0;
+    virtual void asyncAlert(uint64_t milliseconds) = 0;                                           // TODO: think this through
+    virtual void checkDirectories() = 0;                                                          // TODO: think this through
+    virtual void watchDirectory(std::string dir, std::function<void(std::string)> callback) = 0;  // TODO: think this through
     virtual std::shared_ptr<UI> getUI() const { return nullptr; };
     inline void onKey(Game::KEY key) { game_.onKey(key); }
     inline void onMouse(const Game::MouseInput &input) { game_.onMouse(input); }

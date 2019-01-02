@@ -27,8 +27,6 @@
 #include "Helpers.h"
 #include "ShellWin32.h"
 
-#define LIMIT_FRAMERATE
-
 VOID WINAPI FileIOCompletionRoutine(DWORD, DWORD, LPOVERLAPPED);
 
 namespace {
@@ -426,7 +424,7 @@ void ShellWin32::run() {
             DispatchMessage(&msg);
         }
 
-        if (settings_.enable_directory_listener) CheckDirectories();
+        if (settings_.enable_directory_listener) checkDirectories();
 
         if (quit) {
             break;
@@ -451,9 +449,9 @@ void ShellWin32::run() {
 #ifdef LIMIT_FRAMERATE
         // TODO: this is crude and inaccurate.
         DWORD Hz = static_cast<DWORD>(1000 / 10);  // 30Hz
-        if (settings_.enable_directory_listener) AsyncAlert(Hz);
+        if (settings_.enable_directory_listener) asyncAlert(Hz);
 #else
-        if (settings_.enable_directory_listener) AsyncAlert(0);
+        if (settings_.enable_directory_listener) asyncAlert(0);
 #endif
 
         InputHandler::clear();
@@ -469,9 +467,9 @@ void ShellWin32::run() {
     DestroyWindow(hwnd_);
 }
 
-void ShellWin32::AsyncAlert(DWORD milliseconds) {
+void ShellWin32::asyncAlert(uint64_t milliseconds) {
     // Watch directory FileIOCompletionRoutine requires alertable thread wait.
-    SleepEx(milliseconds, TRUE);
+    SleepEx(static_cast<DWORD>(milliseconds), TRUE);
 }
 
 void ShellWin32::watchDirectory(std::string dir, std::function<void(std::string)> callback) {
@@ -498,7 +496,7 @@ std::string ShellWin32::GetWorkingDirectory() {
     return helpers::getFilePath(fileName) + "..\\";
 }
 
-void ShellWin32::CheckDirectories() {
+void ShellWin32::checkDirectories() {
     for (auto& dirInst : dirInsts_) {
         BOOL result = ReadDirectoryChangesW(dirInst.hDir, dirInst.lpBuffer, sizeof(dirInst.lpBuffer), FALSE,
                                             FILE_NOTIFY_CHANGE_LAST_WRITE, dirInst.lpBytesReturned, &dirInst.oOverlap,

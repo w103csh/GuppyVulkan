@@ -79,8 +79,6 @@ vec3 phongModel(PositionalLight light, float shininess, uint lightCount) {
     vec3 s = getDirToPos(light.position);
     float sDotN = max(dot(s, n), 0.0);
 
-    // return TS_normals;
-
     // Skip the rest if toon shading
     if ((ubo.shaderFlags & SHADER_TOON_SHADE) > 0) {
         diff = toonShade(sDotN);
@@ -127,7 +125,7 @@ vec3 blinnPhongSpot(SpotLight light, float shininess, uint lightCount) {
                 pow(max(dot(h, n), 0.0), shininess);
         }
     }
-    
+
     return ambient + spotScale * light.L * (diff + spec);
 }
 #endif
@@ -140,7 +138,6 @@ vec3 getColor(float shininess) {
     for (int i = 0; i < ubo.positionLights.length(); i++) {
         if ((ubo.positionLights[i].flags & LIGHT_SHOW) > 0) {
             color += phongModel(ubo.positionLights[i], shininess, ++lightCount);
-            break;
         }
     }
 #endif

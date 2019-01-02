@@ -13,14 +13,12 @@ void SceneHandler::SelectionManager::updateFaceSelection(const VkDevice& dev, st
     if (pFace_ != nullptr) {
         getFaceSelection()->getMaterial().setFlags(0);
 
-        glm::vec4 color = {1.0f, 1.0f, 0.0f, 1.0f};
-
         auto v0 = (*pFace_)[0].getColorVertex();
-        v0.color = color;
+        v0.color = {1.0f, 0.0f, 0.0f, 1.0f};  // red
         auto v1 = (*pFace_)[1].getColorVertex();
-        v1.color = color;
+        v1.color = {0.0f, 1.0f, 0.0f, 1.0f};  // green
         auto v2 = (*pFace_)[2].getColorVertex();
-        v2.color = color;
+        v2.color = {0.0f, 0.0f, 1.0f, 1.0f};  // blue
 
         getFaceSelection()->addVertex(v0, 0);
         getFaceSelection()->addVertex(v1, 1);
@@ -35,7 +33,7 @@ void SceneHandler::SelectionManager::updateFaceSelection(const VkDevice& dev, st
     }
 }
 
-std::unique_ptr<ColorMesh>& SceneHandler::SelectionManager::getFaceSelection() {
+std::unique_ptr<LineMesh>& SceneHandler::SelectionManager::getFaceSelection() {
     /*  TODO: this is a crazy pattern. Rethink this at some point.
         the "this" pointer inside the function is a pointer that exists
         on the "inst_" SceneHandler instance. Move SelectionManager

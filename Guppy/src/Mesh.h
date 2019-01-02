@@ -67,11 +67,22 @@ class Mesh : public Object3d {
     // VERTEX
     virtual Vertex::Complete getVertexComplete(size_t index) const = 0;
     virtual void addVertex(const Vertex::Complete& v, int32_t index = -1) = 0;
+    virtual inline void addVertex(const Face& face);
     virtual inline uint32_t getVertexCount() const = 0;  // TODO: this shouldn't be public
     virtual const glm::vec3& getVertexPositionAtOffset(size_t offset) const = 0;
     void updateBuffers(const VkDevice& dev);
 
     // INDEX
+    inline uint32_t getFaceCount() const {
+        assert(indices_.size() % Face::NUM_VERTICES == 0);
+        return static_cast<uint32_t>(indices_.size()) / Face::NUM_VERTICES;
+    }
+    inline Face getFace(size_t faceIndex) {
+        VB_INDEX_TYPE idx0 = indices_[faceIndex + 0];
+        VB_INDEX_TYPE idx1 = indices_[faceIndex + 1];
+        VB_INDEX_TYPE idx2 = indices_[faceIndex + 2];
+        return {getVertexComplete(idx0), getVertexComplete(idx1), getVertexComplete(idx2), idx0, idx1, idx2, 0};
+    }
     inline void addIndices(std::vector<VB_INDEX_TYPE>& is) {
         for (auto i : is) indices_.push_back(i);
     }
@@ -80,6 +91,7 @@ class Mesh : public Object3d {
     // FACE
     inline bool isSelectable() { return selectable_; }
     void selectFace(const Ray& ray, float& tMin, Face& face, size_t offset) const;
+    void updateTangentSpaceData();
 
     // DRAWING
     void drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
@@ -103,7 +115,7 @@ class Mesh : public Object3d {
 
     // INDEX
     inline VB_INDEX_TYPE* getIndexData() { return indices_.data(); }
-    inline uint32_t getIndexSize() const { return static_cast<uint32_t>(indices_.size()); }
+    inline uint32_t getIndexCount() const { return static_cast<uint32_t>(indices_.size()); }
     inline VkDeviceSize getIndexBufferSize() const {
         VkDeviceSize p_bufferSize = sizeof(indices_[0]) * indices_.size();
         return p_bufferSize;

@@ -25,7 +25,6 @@ struct Material {
 layout(location = 0) in vec3 fragPos;
 layout(location = 1) in vec3 fragNormal;
 layout(location = 2) in vec4 fragColor;
-layout(location = 3) in flat int fragVertexIndex;
 // PUSH CONSTANTS
 layout(push_constant) uniform PushBlock {
     mat4 model;
@@ -42,10 +41,8 @@ vec3 n, Ka, Kd, Ks;
 void main() {
     float opacity;
 
-    if (fragVertexIndex == 0) {
-        outColor = vec4(1.0, 0.0, 0.0, 1.0);
-        return;
-    }
+    // outColor = vec4(1.0, 1.0, 1.0, 1.0);
+    // return;
 
     // Get the colors per vertex
     if ((pushConstantsBlock.material.flags & PER_VERTEX_COLOR) > 0) {

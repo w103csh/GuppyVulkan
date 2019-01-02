@@ -15,7 +15,8 @@ Model::Model(ModelCreateInfo *pCreateInfo, MODEL_INDEX sceneOffset)
       handlerOffset_(pCreateInfo->handlerOffset),
       modelPath_(pCreateInfo->modelPath),
       sceneOffset_(sceneOffset),
-      smoothNormals_(pCreateInfo->smoothNormals) {
+      smoothNormals_(pCreateInfo->smoothNormals),
+      visualHelper_(pCreateInfo->visualHelper) {
     assert(sceneOffset_ < MODEL_INDEX_MAX);
 }
 
@@ -47,13 +48,15 @@ std::vector<ColorMesh *> Model::loadColor(Shell *sh, Material material) {
         }
     }
 
-    // Load obj data into mesh...
+    // Load obj data into mesh... (The map types have comparison predicates that
+    // smooth or not)
     if (smoothNormals_) {
         FileLoader::loadObjData<unique_vertices_map_smoothing>(data, pMeshes);
     } else {
         FileLoader::loadObjData<unique_vertices_map_non_smoothing>(data, pMeshes);
     }
-    for (auto &pMesh : pMeshes) assert(pMesh->getVertexCount());
+
+    for (auto &pMesh : pMeshes) assert(pMesh->getVertexCount());  // ensure something was loaded
 
     return pMeshes;
 }
@@ -75,21 +78,21 @@ std::vector<TextureMesh *> Model::loadTexture(Shell *sh, Material material, std:
             from data object. One mesh per material.
         */
 
-        for (auto &to_m : data.materials) {
+        for (auto &tinyobj_mat : data.materials) {
             createInfo = {};
             createInfo.pMaterial = std::make_unique<Material>(material);
-            createInfo.pMaterial->setMaterialData(to_m);
+            createInfo.pMaterial->setMaterialData(tinyobj_mat);
             createInfo.model = model_;
 
-            if (!to_m.diffuse_texname.empty() /*|| !to_m.specular_texname.empty() || !to_m.bump_texname.empty()*/) {
+            if (!tinyobj_mat.diffuse_texname.empty() /*|| !to_m.specular_texname.empty() || !to_m.bump_texname.empty()*/) {
                 std::string diff, spec, norm;
-                if (!to_m.diffuse_texname.empty()) diff = modelDirectory + to_m.diffuse_texname;
+                if (!tinyobj_mat.diffuse_texname.empty()) diff = modelDirectory + tinyobj_mat.diffuse_texname;
 
                 // Check if the texture already exists (TODO: better check)
                 if (!TextureHandler::getTextureByPath(diff)) {
-                    if (!to_m.specular_texname.empty()) spec = modelDirectory + to_m.specular_texname;
-                    if (!to_m.bump_texname.empty()) norm = modelDirectory + to_m.bump_texname;
-                    TextureHandler::addTexture(diff, spec, norm);
+                    if (!tinyobj_mat.specular_texname.empty()) spec = modelDirectory + tinyobj_mat.specular_texname;
+                    if (!tinyobj_mat.bump_texname.empty()) norm = modelDirectory + tinyobj_mat.bump_texname;
+                    TextureHandler::addTexture(diff, norm, spec);
                 } else {
                     // TODO: deal with textures sharing some bitmap and not others...
                 }
@@ -111,13 +114,15 @@ std::vector<TextureMesh *> Model::loadTexture(Shell *sh, Material material, std:
         pMeshes.push_back(new TextureMesh(&createInfo));
     }
 
-    // Load obj data into mesh...
+    // Load obj data into mesh... (The map types have comparison predicates that
+    // smooth or not)
     if (smoothNormals_) {
         FileLoader::loadObjData<unique_vertices_map_smoothing>(data, pMeshes);
     } else {
         FileLoader::loadObjData<unique_vertices_map_non_smoothing>(data, pMeshes);
     }
-    for (auto &pMesh : pMeshes) assert(pMesh->getVertexCount());
+
+    for (auto &pMesh : pMeshes) assert(pMesh->getVertexCount());  // ensure something was loaded
 
     return pMeshes;
 }
@@ -129,7 +134,7 @@ void Model::postLoad(MODEL_CALLBACK callback) {
 }
 
 void Model::addOffset(std::unique_ptr<ColorMesh> &pMesh) { colorOffsets_.push_back(pMesh->getOffset()); }
-// void addOffset(std::unique_ptr<LineMesh> &pMesh) { lineOffsets_.push_back(pMesh->getOffset()); }
+void Model::addOffset(std::unique_ptr<LineMesh> &pMesh) { lineOffsets_.push_back(pMesh->getOffset()); }
 void Model::addOffset(std::unique_ptr<TextureMesh> &pMesh) { texOffsets_.push_back(pMesh->getOffset()); }
 
 void Model::allMeshAction(std::function<void(Mesh *)> action) {

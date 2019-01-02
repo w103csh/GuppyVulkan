@@ -5,6 +5,7 @@
 #include <unordered_map>
 #include <vector>
 
+#include "Axes.h"
 #include "Model.h"
 #include "Singleton.h"
 #include "Vertex.h"
@@ -77,9 +78,23 @@ class ModelHandler : Singleton {
     template <typename T>
     void handleMeshes(std::unique_ptr<Scene>& pScene, std::unique_ptr<Model>& pModel, std::vector<T*>&& pMeshes) {
         for (auto& pMesh : pMeshes) {
+            // Turn mesh into a unique pointer
+            auto p = std::unique_ptr<T>(pMesh);
+
+            // Add a visual helper mesh
+            if (pModel->visualHelper_) {
+                MeshCreateInfo meshCreateInfo = {};
+                meshCreateInfo.isIndexed = false;
+                meshCreateInfo.model = p->getData().model;
+                std::unique_ptr<LineMesh> pVH = std::make_unique<VisualHelper>(&meshCreateInfo, p);
+
+                auto& rp = pScene->moveMesh(inst_.settings_, sh_->context(), std::move(pVH));
+                pModel->addOffset(rp);  // Separate visual helper offset???
+            }
+
             // Add mesh to scene
-            auto& rp = pScene->moveMesh(inst_.settings_, sh_->context(), std::unique_ptr<T>(pMesh));
-            // Store the offset of the mesh into the scene buffers on the model after moving.
+            auto& rp = pScene->moveMesh(inst_.settings_, sh_->context(), std::move(p));
+            // Store the offset of the mesh into the scene buffers after moving.
             pModel->addOffset(rp);
         }
     }

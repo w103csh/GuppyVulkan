@@ -1,23 +1,20 @@
-void Mesh::createVertexBufferData(const VkDevice& dev, const VkCommandBuffer& cmd, BufferResource& stg_res) {
-    VkDeviceSize bufferSize = getVertexBufferSize();
 
-    auto memReqsSize = helpers::createBuffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                             stg_res.buffer, stg_res.memory);
+{x=0.295241833 y=0.295241416 z=-0.908661008 ...}
+{x=0.295241803 y=0.295241475 z=-0.908661008 ...}
 
-    void* pData;
-    vkMapMemory(dev, stg_res.memory, 0, memReqsSize, 0, &pData);
-    memcpy(pData, getVertexData(), static_cast<size_t>(bufferSize));
-    vkUnmapMemory(dev, stg_res.memory);
 
-    helpers::createBuffer(dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-                          VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, vertex_res_.buffer, vertex_res_.memory);
+{x=0.0295633543 y=-0.00374868698 z=0.0242619775 ...}
 
-    // COPY FROM STAGING TO FAST
-    helpers::copyBuffer(cmd, stg_res.buffer, vertex_res_.buffer, memReqsSize);
 
-    // Name the buffers for debugging
-    // TODO: optional
-    ext::DebugMarkerSetObjectName(dev, (uint64_t)vertex_res_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                  "Mesh vertex buffer");
-}
+
+
+
+
+
+
+
+
+
+
+
+

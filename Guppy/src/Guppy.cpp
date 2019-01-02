@@ -326,6 +326,11 @@ void Guppy::onKey(KEY key) {
 
 void Guppy::onMouse(const MouseInput& input) {
     if (input.moving) {
+        // const Shell::Context& ctx = shell_->context();
+        // auto ray = camera_.getRay({input.xPos, input.yPos}, ctx.extent);
+        // SceneHandler::select(ctx.dev, ray);
+    }
+    if (input.primary) {
         const Shell::Context& ctx = shell_->context();
         auto ray = camera_.getRay({input.xPos, input.yPos}, ctx.extent);
         SceneHandler::select(ctx.dev, ray);
@@ -777,11 +782,22 @@ void Guppy::createScenes() {
         ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene());
 
         // ORANGE
+        modelCreateInfo = {};
         modelCreateInfo.async = true;
+        modelCreateInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
         modelCreateInfo.material = {};
         modelCreateInfo.modelPath = ORANGE_MODEL_PATH;
-        modelCreateInfo.model = helpers::affine(glm::vec3(1.0f), {6.0f, 0.0f, 0.0f});
+        modelCreateInfo.model = helpers::affine(glm::vec3(1.0f), {4.0f, 0.0f, -2.0f});
+        modelCreateInfo.smoothNormals = true;
+        // modelCreateInfo.visualHelper = true;
         ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene(), nullptr);
+
+        // PEAR
+        // modelCreateInfo.async = true;
+        // modelCreateInfo.material = {};
+        // modelCreateInfo.modelPath = PEAR_MODEL_PATH;
+        // modelCreateInfo.model = helpers::affine();
+        // ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene(), nullptr);
 
         // MEDIEVAL HOUSE
         modelCreateInfo.material = {};

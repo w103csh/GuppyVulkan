@@ -24,7 +24,7 @@ void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, in
 
 template <class T>
 class ShellGLFW : public T {
-    static_assert(std::is_base_of<Shell, T>::value, "T must be a derived from of Shell");
+    static_assert(std::is_base_of<Shell, T>::value, "T must be derived from of Shell");
 
    public:
     ShellGLFW(Game& game) : T(game){};
@@ -71,6 +71,8 @@ class ShellGLFW : public T {
             // two flags.
             glfwPollEvents();
 
+            if (settings_.enable_directory_listener) checkDirectories();
+
             acquire_back_buffer();
 
             double now = glfwGetTime();
@@ -84,6 +86,14 @@ class ShellGLFW : public T {
             present_back_buffer();
 
             current_time = now;
+
+#ifdef LIMIT_FRAMERATE
+            // TODO: this is crude and inaccurate.
+            DWORD Hz = static_cast<DWORD>(1000 / 10);  // Hz
+            if (settings_.enable_directory_listener) asyncAlert(Hz);
+#else
+            if (settings_.enable_directory_listener) asyncAlert(0);
+#endif
 
             InputHandler::clear();
         }
@@ -154,8 +164,7 @@ class ShellGLFW : public T {
 
     void createWindow() override {
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        window_ = glfwCreateWindow(settings_.initial_width, settings_.initial_height, "Dear ImGui GLFW+Vulkan example", NULL,
-                                   NULL);
+        window_ = glfwCreateWindow(settings_.initial_width, settings_.initial_height, settings_.name.c_str(), NULL, NULL);
         glfwSetWindowUserPointer(window_, this);
     }
 
