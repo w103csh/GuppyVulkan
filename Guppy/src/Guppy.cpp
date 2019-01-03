@@ -308,9 +308,6 @@ void Guppy::onKey(KEY key) {
             // SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(p1));
         } break;
         case KEY::KEY_7: {
-            if ((defUBO_.shaderData.flags & Shader::FLAGS::FOG_MAX) > 0) {
-                auto x = 1;
-            }
             // Cycle through fog types
             if (defUBO_.shaderData.flags & Shader::FLAGS::FOG_EXP) {
                 defUBO_.shaderData.flags ^= Shader::FLAGS::FOG_EXP;
