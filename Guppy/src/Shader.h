@@ -21,7 +21,11 @@ class Shader {
         // Should this be on the "Dynamic" uniform buffer? Now its on "Default". If it stays then
         // move it to Scene.
         TOON_SHADE = 0x00000001,
-        // THROUGH 0x00000008
+        // THROUGH 0x0000000F
+        FOG_LINEAR = 0x00000010,
+        FOG_EXP = 0x00000020,
+        FOG_EXP2 = 0x00000040,
+        // THROUGH 0x0000000F (used by shader)
         BITS_MAX_ENUM = 0x7FFFFFFF
     } FLAGS;
 
@@ -32,8 +36,8 @@ class Shader {
     VkPipelineShaderStageCreateInfo info;
     VkShaderModule module;
 
-    void init(const VkDevice dev, std::vector<const char *> pLinkTexts, bool doAssert, std::vector<VkShaderModule> &oldModules,
-              bool updateTextFromFile = true);
+    void init(const VkDevice dev, std::vector<const char *> pLinkTexts, bool doAssert,
+              std::vector<VkShaderModule> &oldModules, bool updateTextFromFile = true);
 
    private:
     std::string fileName_;
@@ -52,6 +56,13 @@ struct DefaultUniformBuffer {
     struct ShaderData {
         alignas(16) FlagBits flags = Shader::FLAGS::DEFAULT;
         // 12 rem
+        struct Fog {
+            float minDistance = 0.0f;
+            float maxDistance = 40.0f;
+            float density = 0.05f;
+            alignas(4) float __padding1;                // rem 4
+            alignas(16) glm::vec3 color = CLEAR_COLOR;  // rem 4
+        } fog;
     } shaderData;
     std::vector<Light::PositionalData> positionalLightData;
     std::vector<Light::SpotData> spotLightData;
@@ -71,7 +82,9 @@ class ShaderHandler : Singleton {
     ShaderHandler(const ShaderHandler &) = delete;             // Prevent construction by copying
     ShaderHandler &operator=(const ShaderHandler &) = delete;  // Prevent assignment
 
-    static inline const std::unique_ptr<Shader> &getShader(SHADER_TYPE type) { return inst_.shaders_[static_cast<int>(type)]; }
+    static inline const std::unique_ptr<Shader> &getShader(SHADER_TYPE type) {
+        return inst_.shaders_[static_cast<int>(type)];
+    }
     static inline void setNumPosLights(uint32_t numPosLights) { inst_.numPosLights_ = numPosLights; }
 
     static void update(std::unique_ptr<Scene> &pScene);
@@ -91,7 +104,7 @@ class ShaderHandler : Singleton {
     template <typename T1, typename T2>
     static std::string textReplace(std::string text, std::string s1, std::string s2, T1 r1, T2 r2);
 
-    Shell::Context ctx_;     // TODO: shared_ptr
+    Shell::Context ctx_;       // TODO: shared_ptr
     Game::Settings settings_;  // TODO: shared_ptr
 
     std::vector<std::unique_ptr<Shader>> shaders_;

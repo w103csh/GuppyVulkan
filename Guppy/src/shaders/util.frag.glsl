@@ -41,6 +41,10 @@ struct SpotLight {
 // SHADER flags
 const uint SHADER_DEFAULT       = 0x00000000u;
 const uint SHADER_TOON_SHADE    = 0x00000001u;
+const uint SHADER_FOG_LINEAR    = 0x00000010u;
+const uint SHADER_FOG_EXP       = 0x00000020u;
+const uint SHADER_FOG_EXP2      = 0x00000040u;
+const uint SHADER_FOG_SHOW      = 0x000000F0u;
 // SHADER variables
 const int ts_levels = 3;
 const float ts_scaleFactor = 1.0 / ts_levels;
@@ -50,12 +54,20 @@ struct Camera {
 	mat4 view;
 };
 
+struct Fog {
+    float minDistance;
+    float maxDistance; 
+    float density; // rem 4
+    vec3 color; // rem 4
+};
+
 layout(location = 0) in vec3 CS_position;
 layout(location = 1) in vec3 TS_normal;
 // UNIFORM buffer
 layout(binding = 0) uniform DefaultUniformBuffer {
 	Camera camera;
     uint shaderFlags; // 12 rem
+    Fog fog;
 #if HAS_POS_LIGHTS
 	PositionalLight positionLights[NUM_POS_LIGHTS];
 #endif
@@ -68,6 +80,25 @@ vec3 n, Ka, Kd, Ks;
 
 vec3 toonShade(float sDotN) {
     return Kd * floor(sDotN * ts_levels) * ts_scaleFactor;
+}
+
+float fogFactor() {
+    float f = 0.0f;
+    // float dist = abs(CS_position.z); // faster version
+    float z = length(CS_position.xyz);
+
+    // Each of below has slightly different properties. Read
+    // the book again if you want to hear their explanation.
+    if ((ubo.shaderFlags & SHADER_FOG_LINEAR) > 0) {
+        f = (ubo.fog.maxDistance - z) / (ubo.fog.maxDistance - ubo.fog.minDistance);
+    }
+    else if ((ubo.shaderFlags & SHADER_FOG_EXP) > 0) {
+        f = exp(-ubo.fog.density * z);
+    }
+    else if ((ubo.shaderFlags & SHADER_FOG_EXP2) > 0) {
+        f = exp(-pow((ubo.fog.density * z), 2));
+    }
+    return clamp(f, 0.0, 1.0);
 }
 
 #if HAS_POS_LIGHTS
@@ -134,6 +165,7 @@ vec3 getColor(float shininess) {
     vec3 color = vec3(0.0);
     uint lightCount = 0;
 
+    // POSITION LIGHTS
 #if HAS_POS_LIGHTS
     for (int i = 0; i < ubo.positionLights.length(); i++) {
         if ((ubo.positionLights[i].flags & LIGHT_SHOW) > 0) {
@@ -142,6 +174,7 @@ vec3 getColor(float shininess) {
     }
 #endif
 
+    // SPOT LIGHTS
 #if HAS_SPOT_LIGHTS
     for (int i = 0; i < ubo.spotLights.length(); i++) {
         if ((ubo.spotLights[i].flags & LIGHT_SHOW) > 0) {
@@ -149,6 +182,11 @@ vec3 getColor(float shininess) {
         }
     }
 #endif
+
+    // FOG
+    if ((ubo.shaderFlags & SHADER_FOG_SHOW) > 0) {
+        color = mix(ubo.fog.color, color, fogFactor());
+    }
 
     return color;
 }

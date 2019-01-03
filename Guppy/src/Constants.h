@@ -51,8 +51,9 @@ const std::vector<const char*> DEVICE_EXTENSIONS = {
     // VK_KHR_SWAPCHAIN_EXTENSION_NAME, in init_swapchain_extension now
 };
 
-// const VkClearColorValue CLEAR_VALUE = {0.5f, 0.5f, 0.5f, 0.5f};
-const VkClearColorValue CLEAR_VALUE = {};
+const glm::vec4 CLEAR_COLOR = {190.0f / 256.0f, 223.0f / 256.0f, 246.0f / 256.0f, 1.0f};
+const VkClearColorValue CLEAR_VALUE = {CLEAR_COLOR.x, CLEAR_COLOR.y, CLEAR_COLOR.z, CLEAR_COLOR.w};
+// const VkClearColorValue CLEAR_VALUE = {};
 
 // Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)
 typedef uint32_t VB_INDEX_TYPE;
@@ -99,7 +100,7 @@ const std::string PEAR_MODEL_PATH = MODEL_PATH + "pear_export_obj\\pear_export.o
 // general
 const std::string SPHERE_MODEL_PATH = MODEL_PATH + "sphere.obj";
 const std::string TORUS_MODEL_PATH = MODEL_PATH + "torus.obj";
-const std::string SOMETHING_MODEL_PATH = MODEL_PATH + "pig_triangulated.obj";
+const std::string PIG_MODEL_PATH = MODEL_PATH + "pig_triangulated.obj";
 
 // IMAGES
 const std::string IMG_PATH = DATA_PATH + "images\\";

@@ -308,13 +308,21 @@ void Guppy::onKey(KEY key) {
             // SceneHandler::getActiveScene()->addMesh(shell_->context(), std::move(p1));
         } break;
         case KEY::KEY_7: {
-            if (spotLights_.size() > 0) {
-                auto& light = spotLights_[0];
-                auto worldY = light.worldToLocal(CARDINAL_Y);
-                light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_X * -2.0f), M_PI_FLT, worldY));
-                light.setCutoff(glm::radians(25.0f));
-                light.setExponent(25.0f);
+            if ((defUBO_.shaderData.flags & Shader::FLAGS::FOG_MAX) > 0) {
+                auto x = 1;
             }
+            // Cycle through fog types
+            if (defUBO_.shaderData.flags & Shader::FLAGS::FOG_EXP) {
+                defUBO_.shaderData.flags ^= Shader::FLAGS::FOG_EXP;
+                defUBO_.shaderData.flags = Shader::FLAGS::FOG_EXP2;
+            } else if (defUBO_.shaderData.flags & Shader::FLAGS::FOG_EXP2) {
+                defUBO_.shaderData.flags ^= Shader::FLAGS::FOG_EXP2;
+                defUBO_.shaderData.flags = Shader::FLAGS::FOG_LINEAR;
+            } else {
+                defUBO_.shaderData.flags ^= Shader::FLAGS::FOG_LINEAR;
+                defUBO_.shaderData.flags = Shader::FLAGS::FOG_EXP;
+            }
+            // defUBO_.shaderData.fog.maxDistance += 10.0f;
         } break;
         case KEY::KEY_8: {
             defUBO_.shaderData.flags ^= Shader::FLAGS::TOON_SHADE;
@@ -772,7 +780,7 @@ void Guppy::createScenes() {
 
         // BURNT ORANGE TORUS
         modelCreateInfo = {};
-        modelCreateInfo.async = false;
+        modelCreateInfo.async = true;
         modelCreateInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
         modelCreateInfo.material.setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
         modelCreateInfo.material.setColor({0.8f, 0.3f, 0.0f});
@@ -801,11 +809,23 @@ void Guppy::createScenes() {
 
         // MEDIEVAL HOUSE
         modelCreateInfo.material = {};
+        modelCreateInfo.async = true;
         modelCreateInfo.model = helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
         modelCreateInfo.modelPath = MED_H_MODEL_PATH;
         modelCreateInfo.smoothNormals = false;
         ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene(),
                                 TextureHandler::getTextureByPath(MED_H_DIFF_TEX_PATH));
+
+        // PIG
+        modelCreateInfo = {};
+        modelCreateInfo.async = true;
+        // modelCreateInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
+        modelCreateInfo.material.setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
+        modelCreateInfo.material.setColor({0.8f, 0.8f, 0.8f});
+        modelCreateInfo.model = helpers::affine(glm::vec3(2.0f), {0.0f, 0.0f, -4.0f});
+        modelCreateInfo.modelPath = PIG_MODEL_PATH;
+        modelCreateInfo.smoothNormals = true;
+        ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene());
     }
 
     // Lights
