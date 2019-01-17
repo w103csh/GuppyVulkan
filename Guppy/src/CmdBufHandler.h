@@ -4,10 +4,10 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "Shell.h"
 #include "Singleton.h"
+#include "Shell.h"
 
-class CmdBufHandler : Singleton {
+class CmdBufHandler : public Singleton {
    public:
     static void init(const Shell::Context &ctx);
     static void destroy() { inst_.reset(); }
@@ -16,7 +16,7 @@ class CmdBufHandler : Singleton {
 
     static void createCmdPool(const uint32_t queueFamilyIndex, VkCommandPool &cmdPool);
     static void createCmdBuffers(const VkCommandPool &cmdPool, VkCommandBuffer *pCommandBuffers,
-                                VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY, uint32_t count = 1);
+                                 VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY, uint32_t count = 1);
     static void resetCmdBuffers();
 
     // indices

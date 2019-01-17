@@ -157,4 +157,20 @@ void Model::transform(const glm::mat4 t) {
     allMeshAction([&t](Mesh *pMesh) { pMesh->transform(t); });
 }
 
+MODEL_INDEX Model::getMeshOffset(MESH_TYPE type, uint8_t offset) {
+    switch (type) {
+        case MESH_TYPE::COLOR:
+            assert(offset < colorOffsets_.size());
+            return colorOffsets_[offset];
+        case MESH_TYPE::LINE:
+            assert(offset < lineOffsets_.size());
+            return lineOffsets_[offset];
+        case MESH_TYPE::TEXTURE:
+            assert(offset < texOffsets_.size());
+            return texOffsets_[offset];
+        default:
+            throw std::runtime_error("Unhandled mesh type.");
+    }
+}
+
 void Model::updateAggregateBoundingBox(Mesh *pMesh) { updateBoundingBox(pMesh->getBoundingBoxMinMax(false)); }

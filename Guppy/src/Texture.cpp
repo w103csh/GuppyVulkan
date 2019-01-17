@@ -9,66 +9,7 @@
 
 #define STB_FORMAT VK_FORMAT_R8G8B8A8_UNORM
 
-std::future<std::shared_ptr<Texture::Data>> Texture::loadTexture(const VkDevice& dev, const bool makeMipmaps,
-                                                                 std::shared_ptr<Data> pTexture) {
-    pTexture->pLdgRes = LoadingResourceHandler::createLoadingResources();
-
-    return std::async(std::launch::async, [&dev, &makeMipmaps, pTexture]() {
-        int width, height, channels;
-
-        // Diffuse map (default)
-        // TODO: make this dynamic like the others...
-        pTexture->pixels = stbi_load(pTexture->path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-
-        if (!pTexture->pixels) {
-            throw std::runtime_error("failed to load texture map!");
-        }
-
-        pTexture->width = static_cast<uint32_t>(width);
-        pTexture->height = static_cast<uint32_t>(height);
-        pTexture->channels = static_cast<uint32_t>(channels);
-        pTexture->mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(pTexture->width, pTexture->height)))) + 1;
-        pTexture->aspect = static_cast<float>(width) / static_cast<float>(height);
-
-        // Normal map
-        if (!pTexture->normPath.empty()) {
-            pTexture->normPixels = stbi_load(pTexture->normPath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-
-            if (!pTexture->normPixels) {
-                throw std::runtime_error("failed to load normal map!");
-            }
-
-            std::stringstream ss;
-            if (width != pTexture->width) ss << "invalid normal map (width)! ";
-            if (height != pTexture->height) ss << "invalid normal map (height)! ";
-            if (channels != pTexture->channels) ss << "invalid normal map (channels)! ";  // TODO: not sure about this
-            if (!ss.str().empty()) {
-                throw std::runtime_error(ss.str());
-            }
-        }
-
-        // Spectral map
-        if (!pTexture->specPath.empty()) {
-            pTexture->specPixels = stbi_load(pTexture->specPath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-
-            if (!pTexture->specPixels) {
-                throw std::runtime_error("failed to load spectral map!");
-            }
-
-            std::stringstream ss;
-            if (width != pTexture->width) ss << "invalid spectral map (width)! ";
-            if (height != pTexture->height) ss << "invalid spectral map (height)! ";
-            if (channels != pTexture->channels) ss << "invalid spectral map (channels)! ";  // TODO: not sure about this
-            if (!ss.str().empty()) {
-                throw std::runtime_error(ss.str());
-            }
-        }
-
-        return std::move(pTexture);
-    });
-}
-
-void Texture::createTexture(const VkDevice& dev, const bool makeMipmaps, std::shared_ptr<Data> pTexture) {
+void Texture::createTexture(const VkDevice& dev, const bool makeMipmaps, std::shared_ptr<Texture::Data> pTexture) {
     auto& tex = (*pTexture);
     uint32_t layerCount = getArrayLayerCount(tex);
 
@@ -124,8 +65,8 @@ void Texture::createImage(const VkDevice& dev, Data& tex, uint32_t layerCount) {
     helpers::createImage(dev, CmdBufHandler::getUniqueQueueFamilies(true, false, true), VK_SAMPLE_COUNT_1_BIT, STB_FORMAT,
                          VK_IMAGE_TILING_OPTIMAL,
                          VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, static_cast<uint32_t>(tex.width), static_cast<uint32_t>(tex.height),
-                         tex.mipLevels, layerCount, tex.image, tex.memory);
+                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, static_cast<uint32_t>(tex.width),
+                         static_cast<uint32_t>(tex.height), tex.mipLevels, layerCount, tex.image, tex.memory);
 
     helpers::transitionImageLayout(tex.pLdgRes->transferCmd, tex.image, STB_FORMAT, VK_IMAGE_LAYOUT_UNDEFINED,
                                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
@@ -202,8 +143,8 @@ void Texture::generateMipmaps(const Data& tex, uint32_t layerCount) {
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-        vkCmdPipelineBarrier(tex.pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
-                             nullptr, 0, nullptr, 1, &barrier);
+        vkCmdPipelineBarrier(tex.pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                             0, 0, nullptr, 0, nullptr, 1, &barrier);
 
         // This is a bit wonky methinks (non-sqaure is the case for this)
         if (mipWidth > 1) mipWidth /= 2;
@@ -219,13 +160,13 @@ void Texture::generateMipmaps(const Data& tex, uint32_t layerCount) {
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-    vkCmdPipelineBarrier(tex.pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &barrier);
+    vkCmdPipelineBarrier(tex.pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+                         0, nullptr, 0, nullptr, 1, &barrier);
 }
 
 void Texture::createImageView(const VkDevice& dev, Data& tex, uint32_t layerCount) {
-    helpers::createImageView(dev, tex.image, tex.mipLevels, STB_FORMAT, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-                             layerCount, tex.view);
+    helpers::createImageView(dev, tex.image, tex.mipLevels, STB_FORMAT, VK_IMAGE_ASPECT_COLOR_BIT,
+                             VK_IMAGE_VIEW_TYPE_2D_ARRAY, layerCount, tex.view);
 }
 
 void Texture::createSampler(const VkDevice& dev, Data& tex) {
@@ -240,8 +181,6 @@ void Texture::createSampler(const VkDevice& dev, Data& tex) {
     samplerInfo.maxAnisotropy = 16;
     samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     samplerInfo.unnormalizedCoordinates = VK_FALSE;  // test this out for fun
-    samplerInfo.compareEnable = VK_FALSE;
-    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
     samplerInfo.compareEnable = VK_FALSE;
     samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;

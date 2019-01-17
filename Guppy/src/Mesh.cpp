@@ -1,10 +1,11 @@
 
 #include <unordered_map>
 
-#include "CmdBufHandler.h"
-#include "FileLoader.h"
 #include "Mesh.h"
 
+#include "CmdBufHandler.h"
+#include "FileLoader.h"
+#include "PipelineHandler.h"
 #include "TextureHandler.h"
 
 // **********************
@@ -17,81 +18,75 @@ Mesh::Mesh(MeshCreateInfo* pCreateInfo)
       markerName_(pCreateInfo->markerName),
       offset_(pCreateInfo->offset),
       selectable_(pCreateInfo->selectable),
-      pMaterial_(pCreateInfo->pMaterial == nullptr ? std::make_unique<Material>() : std::move(pCreateInfo->pMaterial)),
+      pMaterial_(nullptr),
       status_(STATUS::PENDING),
       vertexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
       indexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
-      pLdgRes_(LoadingResourceHandler::createLoadingResources()),
+      pLdgRes_(nullptr),
       vertexType_(),
-      pipelineType_() {}
+      pipelineType_() {
+    pMaterial_ = (pCreateInfo->pMaterial == nullptr) ? std::make_unique<Material>() : std::move(pCreateInfo->pMaterial);
+}
 
 void Mesh::setSceneData(size_t offset) { offset_ = offset; }
 
-std::future<Mesh*> Mesh::load(const Shell::Context& ctx, std::function<void(Mesh*)> callback) {
-    return std::async(std::launch::async, &Mesh::async_load, this, ctx, callback);
+void Mesh::prepare(const VkDevice& dev, const Game::Settings& settings, bool load) {
+    if (load) {  // TODO: THIS AIN'T GREAT
+        loadBuffers(dev, settings);
+        // Submit vertex loading commands...
+        LoadingResourceHandler::loadSubmit(std::move(pLdgRes_));
+    }
+
+    // Get descriptor sets for the drawing command...
+    /*  TODO: apparently you can allocate the descriptor sets immediately, and then
+        you just need to not use the sets until they have updated with valid
+        resources... I should implement this. As of now we will just wait until we
+        can allocate and update all at once.
+    */
+    if (pMaterial_->getStatus() == STATUS::READY)
+        Pipeline::Handler::makeDescriptorSets(pipelineType_, descReference_, pMaterial_->getTexture());
+
+    status_ = pMaterial_->getStatus();
 }
 
-Mesh* Mesh::async_load(const Shell::Context& ctx, std::function<void(Mesh*)> callback) {
-    // if (!modelPath_.empty()) {
-    //    switch (helpers::getModelFileType(modelPath_)) {
-    //        case MODEL_FILE_TYPE::OBJ: {
-    //            FileLoader::loadObj(this);
-    //        } break;
-    //        default: { throw std::runtime_error("file type not handled!"); } break;
-    //    }
-    //} else {
-    //    // Vertices should have been created elsewhere then ...
-    //    assert(getVertexCount());
-    //}
-    // status_ = STATUS::VERTICES_LOADED;
-
-    // if (callback != nullptr) callback(this);
-
-    return this;
-}
-
-void Mesh::prepare(const Game::Settings settings, const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) {
-    loadBuffers(settings, dev);
-    // Submit vertex loading commands...
-    LoadingResourceHandler::loadSubmit(std::move(pLdgRes_));
-    status_ = STATUS::READY;
-}
-
-void Mesh::loadBuffers(const Game::Settings& settings, const VkDevice& dev) {
+// thread sync
+void Mesh::loadBuffers(const VkDevice& dev, const Game::Settings& settings) {
     assert(getVertexCount());
 
+    pLdgRes_ = LoadingResourceHandler::createLoadingResources();
+
     // Vertex buffer
-    BufferResource vertexStgRes = {};
+    BufferResource stgRes = {};
     createBufferData(
-        settings, dev, pLdgRes_->transferCmd, vertexStgRes, getVertexBufferSize(), getVertexData(), vertexRes_,
+        settings, dev, pLdgRes_->transferCmd, stgRes, getVertexBufferSize(), getVertexData(), vertexRes_,
         static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), "vertex");
-    pLdgRes_->stgResources.push_back(std::move(vertexStgRes));
+    pLdgRes_->stgResources.push_back(std::move(stgRes));
 
     // Index buffer
     if (isIndexed_) {
         assert(!indices_.empty());
-        BufferResource indexStgRes = {};
+        stgRes = {};
         createBufferData(
-            settings, dev, pLdgRes_->transferCmd, vertexStgRes, getIndexBufferSize(), getIndexData(), indexRes_,
+            settings, dev, pLdgRes_->transferCmd, stgRes, getIndexBufferSize(), getIndexData(), indexRes_,
             static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
             "index");
-        pLdgRes_->stgResources.push_back(std::move(indexStgRes));
+        pLdgRes_->stgResources.push_back(std::move(stgRes));
     } else {
         assert(indices_.empty());
     }
 }
 
 void Mesh::createBufferData(const Game::Settings& settings, const VkDevice& dev, const VkCommandBuffer& cmd,
-                            BufferResource& stg_res, VkDeviceSize bufferSize, const void* data, BufferResource& res,
+                            BufferResource& stgRes, VkDeviceSize bufferSize, const void* data, BufferResource& res,
                             VkBufferUsageFlagBits usage, std::string markerName) {
     // STAGING RESOURCE
     res.memoryRequirementsSize = helpers::createBuffer(
         dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stg_res.buffer, stg_res.memory);
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stgRes.buffer, stgRes.memory);
 
     // FILL STAGING BUFFER ON DEVICE
     void* pData;
-    vkMapMemory(dev, stg_res.memory, 0, res.memoryRequirementsSize, 0, &pData);
+    vkMapMemory(dev, stgRes.memory, 0, res.memoryRequirementsSize, 0, &pData);
     /*
         You can now simply memcpy the vertex data to the mapped memory and unmap it again using vkUnmapMemory.
         Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
@@ -105,7 +100,7 @@ void Mesh::createBufferData(const Game::Settings& settings, const VkDevice& dev,
         but we'll see why that doesn't matter in the next chapter.
     */
     memcpy(pData, data, static_cast<size_t>(bufferSize));
-    vkUnmapMemory(dev, stg_res.memory);
+    vkUnmapMemory(dev, stgRes.memory);
 
     // FAST VERTEX BUFFER
     helpers::createBuffer(dev,
@@ -113,7 +108,7 @@ void Mesh::createBufferData(const Game::Settings& settings, const VkDevice& dev,
                           usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, res.buffer, res.memory);
 
     // COPY FROM STAGING TO FAST
-    helpers::copyBuffer(cmd, stg_res.buffer, res.buffer, res.memoryRequirementsSize);
+    helpers::copyBuffer(cmd, stgRes.buffer, res.buffer, res.memoryRequirementsSize);
 
     // Name the buffers for debugging
     if (settings.enable_debug_markers) {
@@ -294,20 +289,21 @@ void Mesh::updateTangentSpaceData() {
     }
 }
 
-void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                      const VkDescriptorSet& descSet) const {
-    assert(status_ == STATUS::READY);
-
+void Mesh::draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) const {
     VkBuffer vertex_buffers[] = {vertexRes_.buffer};
     VkDeviceSize offsets[] = {0};
 
-    vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
+    vkCmdBindPipeline(cmd, descReference_.bindPoint, descReference_.pipeline);
 
-    PushConstants pushConstants = {getData().model, pMaterial_->getData()};
-    vkCmdPushConstants(cmd, layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pushConstants),
-                       &pushConstants);
+    Pipeline::DefaultPushConstants pushConstants = {getData().model, pMaterial_->getData()};
+    vkCmdPushConstants(cmd, descReference_.layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
+                       static_cast<uint32_t>(sizeof(Pipeline::DefaultPushConstants)), &pushConstants);
 
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet, 0, nullptr);
+    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, descReference_.layout, descReference_.firstSet,
+                            descReference_.descriptorSetCount, &descReference_.pDescriptorSets[frameIndex],
+                            static_cast<uint32_t>(descReference_.dynamicOffsets.size()),
+                            descReference_.dynamicOffsets.data());
+
     vkCmdBindVertexBuffers(cmd, 0, 1, vertex_buffers, offsets);
 
     // TODO: clean these up!!
@@ -315,7 +311,7 @@ void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout
         vkCmdBindIndexBuffer(cmd, indexRes_.buffer, 0,
                              VK_INDEX_TYPE_UINT32  // TODO: Figure out how to make the type dynamic
         );
-        vkCmdDrawIndexed(cmd, getIndexCount(), 1, 0, 0, 0);
+        vkCmdDrawIndexed(cmd, getIndexCount(), getInstanceCount(), 0, 0, 0);
     } else {
         vkCmdDraw(
             cmd,
@@ -325,6 +321,10 @@ void Mesh::drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout
             0   // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
         );
     }
+}
+
+void Mesh::updatePipelineReferences(const PIPELINE_TYPE& type, const VkPipeline& pipeline) {
+    if (type == pipelineType_) descReference_.pipeline = pipeline;
 }
 
 void Mesh::destroy(const VkDevice& dev) {
@@ -371,68 +371,23 @@ TextureMesh::TextureMesh(MeshCreateInfo* pCreateInfo) : Mesh(pCreateInfo) {
     vertexType_ = Vertex::TYPE::TEXTURE;
 };
 
-void TextureMesh::setSceneData(const Shell::Context& ctx, size_t offset) {
-    // Only texture meshes are draw on a secondary command buffer atm...
-    secCmds_.resize(ctx.image_count);
-    CmdBufHandler::createCmdBuffers(CmdBufHandler::graphics_cmd_pool(), secCmds_.data(), VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-                                    ctx.image_count);
-    // call override
-    Mesh::setSceneData(offset);
-}
-
-void TextureMesh::prepare(const Game::Settings settings, const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) {
-    loadBuffers(settings, dev);
-    // Submit vertex loading commands...
-    LoadingResourceHandler::loadSubmit(std::move(pLdgRes_));
-    // See if the descriptor sets for the texture(s) can be made...
-    tryCreateDescriptorSets(pRes);
-}
-
-void TextureMesh::drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                                const VkDescriptorSet& descSet, const std::array<uint32_t, 1>& dynUboOffsets,
-                                size_t frameIndex, const VkCommandBufferInheritanceInfo& inheritanceInfo,
-                                const VkViewport& viewport, const VkRect2D& scissor) const {
-    assert(status_ == STATUS::READY);
-    auto& secCmd = secCmds_[frameIndex];
-
-    CmdBufHandler::beginCmd(secCmd, &inheritanceInfo);
-
-    vkCmdSetViewport(secCmd, 0, 1, &viewport);
-    vkCmdSetScissor(secCmd, 0, 1, &scissor);
-
-    vkCmdBindPipeline(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline);
-
-    PushConstants pushConstants = {getData().model, pMaterial_->getData()};
-    vkCmdPushConstants(secCmd, layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(pushConstants),
-                       &pushConstants);
-
-    vkCmdBindDescriptorSets(secCmd, VK_PIPELINE_BIND_POINT_GRAPHICS, layout, 0, 1, &descSet,
-                            static_cast<uint32_t>(dynUboOffsets.size()), dynUboOffsets.data());
-
-    VkBuffer vertexBuffs[] = {vertexRes_.buffer};
-    VkDeviceSize vertexOffs[] = {0};
-    vkCmdBindVertexBuffers(secCmd, 0, 1, vertexBuffs, vertexOffs);
-
-    if (indices_.size()) {
-        vkCmdBindIndexBuffer(secCmd, indexRes_.buffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(secCmd, getIndexCount(), 1, 0, 0, 0);
-    } else {
-        vkCmdDraw(secCmd, getVertexCount(), 1, 0, 0);
+void TextureMesh::prepare(const VkDevice& dev, const Game::Settings& settings, bool load) {
+    if (load) {  // TODO: THIS AIN'T GREAT
+        loadBuffers(dev, settings);
+        // Submit vertex loading commands...
+        LoadingResourceHandler::loadSubmit(std::move(pLdgRes_));
     }
 
-    CmdBufHandler::endCmd(secCmd);
-    vkCmdExecuteCommands(cmd, 1, &secCmd);
-}
-
-void TextureMesh::tryCreateDescriptorSets(std::unique_ptr<DescriptorResources>& pRes) {
+    // Get descriptor sets for the drawing command...
+    /*  TODO: apparently you can allocate the descriptor sets immediately, and then
+        you just need to not use the sets until they have updated with valid
+        resources... I should implement this. As of now we will just wait until we
+        can allocate and update all at once.
+    */
     if (pMaterial_->getStatus() == STATUS::READY) {
-        PipelineHandler::createTextureDescriptorSets(pMaterial_->getTexture().imgDescInfo, pMaterial_->getTexture().offset,
-                                                     pRes);
+        Pipeline::Handler::makeDescriptorSets(pipelineType_, descReference_, pMaterial_->getTexture());
+        descReference_.dynamicOffsets[0] *= pMaterial_->getTexture()->offset;
     }
-    status_ = pMaterial_->getStatus();
-}
 
-void TextureMesh::destroy(const VkDevice& dev) {
-    vkFreeCommandBuffers(dev, CmdBufHandler::graphics_cmd_pool(), static_cast<uint32_t>(secCmds_.size()), secCmds_.data());
-    Mesh::destroy(dev);
+    status_ = pMaterial_->getStatus();
 }

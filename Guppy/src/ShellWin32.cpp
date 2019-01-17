@@ -146,12 +146,12 @@ LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
                 default: {
                     UINT w = LOWORD(lParam);
                     UINT h = HIWORD(lParam);
-                    resize_swapchain(w, h);
+                    resizeSwapchain(w, h);
                 } break;
             }
         } break;
         case WM_CLOSE: {
-            game_.onKey(Game::KEY::KEY_SHUTDOWN);
+            game_.onKey(GAME_KEY::KEY_SHUTDOWN);
         } break;
             // MOUSE INPUT
         case WM_MOUSEWHEEL:
@@ -199,144 +199,144 @@ LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
     return 0;
 }
 
-Game::KEY ShellWin32::getKey(WPARAM wParam, INPUT_TYPE type) {
-    Game::KEY key;
+GAME_KEY ShellWin32::getKey(WPARAM wParam, INPUT_TYPE type) {
+    GAME_KEY key;
     switch (wParam) {
         case VK_ESCAPE:
-            key = Game::KEY::KEY_ESC;
+            key = GAME_KEY::KEY_ESC;
             break;
         case VK_UP:
-            key = Game::KEY::KEY_UP;
+            key = GAME_KEY::KEY_UP;
             break;
         case VK_DOWN:
-            key = Game::KEY::KEY_DOWN;
+            key = GAME_KEY::KEY_DOWN;
             break;
         case VK_LEFT:
-            key = Game::KEY::KEY_LEFT;
+            key = GAME_KEY::KEY_LEFT;
             break;
         case VK_RIGHT:
-            key = Game::KEY::KEY_RIGHT;
+            key = GAME_KEY::KEY_RIGHT;
             break;
         case VK_SPACE:
-            key = Game::KEY::KEY_SPACE;
+            key = GAME_KEY::KEY_SPACE;
             break;
         case VK_TAB:
-            key = Game::KEY::KEY_TAB;
+            key = GAME_KEY::KEY_TAB;
             break;
         case 'F':
         case 'f':
-            key = Game::KEY::KEY_F;
+            key = GAME_KEY::KEY_F;
             break;
         case 'W':
         case 'w':
-            key = Game::KEY::KEY_W;
+            key = GAME_KEY::KEY_W;
             break;
             break;
         case 'A':
         case 'a':
-            key = Game::KEY::KEY_A;
+            key = GAME_KEY::KEY_A;
             break;
         case 'S':
         case 's':
-            key = Game::KEY::KEY_S;
+            key = GAME_KEY::KEY_S;
             break;
         case 'D':
         case 'd':
-            key = Game::KEY::KEY_D;
+            key = GAME_KEY::KEY_D;
             break;
         case 'E':
         case 'e':
-            key = Game::KEY::KEY_E;
+            key = GAME_KEY::KEY_E;
             break;
         case 'Q':
         case 'q':
-            key = Game::KEY::KEY_Q;
+            key = GAME_KEY::KEY_Q;
             break;
         // NUMBER KEYS
         case '1':
-            key = Game::KEY::KEY_1;
+            key = GAME_KEY::KEY_1;
             break;
         case '2':
-            key = Game::KEY::KEY_2;
+            key = GAME_KEY::KEY_2;
             break;
         case '3':
-            key = Game::KEY::KEY_3;
+            key = GAME_KEY::KEY_3;
             break;
         case '4':
-            key = Game::KEY::KEY_4;
+            key = GAME_KEY::KEY_4;
             break;
         case '5':
-            key = Game::KEY::KEY_5;
+            key = GAME_KEY::KEY_5;
             break;
         case '6':
-            key = Game::KEY::KEY_6;
+            key = GAME_KEY::KEY_6;
             break;
         case '7':
-            key = Game::KEY::KEY_7;
+            key = GAME_KEY::KEY_7;
             break;
         case '8':
-            key = Game::KEY::KEY_8;
+            key = GAME_KEY::KEY_8;
             break;
         case '9':
-            key = Game::KEY::KEY_9;
+            key = GAME_KEY::KEY_9;
             break;
         case '0':
-            key = Game::KEY::KEY_0;
+            key = GAME_KEY::KEY_0;
             break;
         case '-':
-            key = Game::KEY::KEY_MINUS;
+            key = GAME_KEY::KEY_MINUS;
             break;
         case '=':
-            key = Game::KEY::KEY_EQUAL;
+            key = GAME_KEY::KEY_EQUAL;
             break;
         // FUNCTION KEYS
         case VK_F1:
-            key = Game::KEY::KEY_F1;
+            key = GAME_KEY::KEY_F1;
             break;
             // case VK_F2:
-            //    key = Game::KEY::KEY_F2;
+            //    key = GAME_KEY::KEY_F2;
             // break;
         case VK_F3:
-            key = Game::KEY::KEY_F3;
+            key = GAME_KEY::KEY_F3;
             break;
             // case VK_F4:
-            //    key = Game::KEY::KEY_F4;
+            //    key = GAME_KEY::KEY_F4;
             //    break;
         case VK_F5:
-            key = Game::KEY::KEY_F5;
+            key = GAME_KEY::KEY_F5;
             break;
         case VK_F6:
-            key = Game::KEY::KEY_F6;
+            key = GAME_KEY::KEY_F6;
             break;
         case VK_F7:
-            key = Game::KEY::KEY_F7;
+            key = GAME_KEY::KEY_F7;
             break;
             // case VK_F8:
-            //    key = Game::KEY::KEY_F8;
+            //    key = GAME_KEY::KEY_F8;
             //    break;
         case VK_F9:
-            key = Game::KEY::KEY_F9;
+            key = GAME_KEY::KEY_F9;
             break;
         case VK_F10:
-            key = Game::KEY::KEY_F10;
+            key = GAME_KEY::KEY_F10;
             break;
         case VK_F11:
-            key = Game::KEY::KEY_F11;
+            key = GAME_KEY::KEY_F11;
             break;
         case VK_F12:
-            key = Game::KEY::KEY_F12;
+            key = GAME_KEY::KEY_F12;
             break;
             // case MOD_ALT:
-            //    key = Game::KEY::KEY_CTRL;
+            //    key = GAME_KEY::KEY_CTRL;
             //    break;
             // case MOD_CONTROL:
-            //    key = Game::KEY::KEY_CTRL;
+            //    key = GAME_KEY::KEY_CTRL;
             //    break;
             // case MOD_SHIFT:
-            //    key = Game::KEY::KEY_CTRL;
+            //    key = GAME_KEY::KEY_CTRL;
             //    break;
         default:
-            key = Game::KEY::KEY_UNKNOWN;
+            key = GAME_KEY::KEY_UNKNOWN;
             break;
     }
     InputHandler::updateKeyInput(key, type);
@@ -402,7 +402,7 @@ void ShellWin32::run() {
     createWindow();
 
     create_context();
-    resize_swapchain(settings_.initial_width, settings_.initial_height, false);
+    resizeSwapchain(settings_.initial_width, settings_.initial_height, false);
 
     Win32Timer timer;
     double current_time = timer.get();
@@ -433,7 +433,7 @@ void ShellWin32::run() {
             // std::unique_lock<std::mutex> lock(mtx_);
             // while (minimized_) pause_.wait(lock);
         } else {
-            acquire_back_buffer();
+            acquireBackBuffer();
 
             // TODO: simplify this?
             double now = timer.get();
@@ -441,9 +441,9 @@ void ShellWin32::run() {
             current_time = now;
 
             InputHandler::updateInput(static_cast<float>(elapsed));
-            add_game_time(static_cast<float>(elapsed));
+            addGameTime(static_cast<float>(elapsed));
 
-            present_back_buffer();
+            presentBackBuffer();
         }
 
 #ifdef LIMIT_FRAMERATE

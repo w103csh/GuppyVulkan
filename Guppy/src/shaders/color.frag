@@ -16,7 +16,7 @@ struct Material {
     vec3 Kd;            // Diffuse reflectivity
     float opacity;      // Overall opacity
     vec3 Ks;            // Specular reflectivity
-    float shininess;     // Specular shininess factor
+    float shininess;    // Specular shininess factor
 	float xRepeat;		// Texture xRepeat
 	float yRepeat;		// Texture yRepeat
 };
@@ -40,10 +40,7 @@ vec3 n, Ka, Kd, Ks;
 
 void main() {
     float opacity;
-
-    // outColor = vec4(1.0, 1.0, 1.0, 1.0);
-    // return;
-
+    
     // Get the colors per vertex
     if ((pushConstantsBlock.material.flags & PER_VERTEX_COLOR) > 0) {
         Ka = vec3(fragColor);

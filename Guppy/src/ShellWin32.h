@@ -23,7 +23,7 @@
 #include "Shell.h"
 #include "ShellGLFW.h"
 
-#define BUFSIZE 8
+constexpr auto BUFSIZE = 8;
 
 typedef struct _DIR_INST {
     OVERLAPPED oOverlap;
@@ -41,6 +41,8 @@ class ShellWin32 : public Shell {
 
     void run() override;
     void quit() override;
+
+    // SHADER RECOMPILING
     void asyncAlert(uint64_t milliseconds) override;
     void checkDirectories() override;
     void watchDirectory(std::string dir, std::function<void(std::string)> callback) override;
@@ -55,7 +57,7 @@ class ShellWin32 : public Shell {
     void createWindow() override;
     VkSurfaceKHR createSurface(VkInstance instance);
 
-    Game::KEY getKey(WPARAM wParam, INPUT_TYPE type);
+    GAME_KEY getKey(WPARAM wParam, INPUT_TYPE type);
     void getMouse(UINT uMsg, LPARAM lParam);
     void getMouseModifier(WPARAM wParam, LPARAM lParam);
 

@@ -7,6 +7,7 @@
 
 #include "Axes.h"
 #include "Model.h"
+#include "Shell.h"
 #include "Singleton.h"
 #include "Vertex.h"
 
@@ -14,7 +15,7 @@ class ColorMesh;
 class Shell;
 class TextureMesh;
 
-class ModelHandler : Singleton {
+class ModelHandler : public Singleton {
    public:
     static void init(Shell* sh, const Game::Settings& settings);
     static inline void destroy() { inst_.reset(); }
@@ -75,6 +76,7 @@ class ModelHandler : Singleton {
         }
     }
 
+    // thread sync
     template <typename T>
     void handleMeshes(std::unique_ptr<Scene>& pScene, std::unique_ptr<Model>& pModel, std::vector<T*>&& pMeshes) {
         for (auto& pMesh : pMeshes) {

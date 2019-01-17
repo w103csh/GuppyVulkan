@@ -25,8 +25,8 @@ typedef struct MeshCreateInfo {
     std::string markerName = "";
     glm::mat4 model = glm::mat4(1.0f);
     size_t offset = 0;
-    bool selectable = true;
     std::unique_ptr<Material> pMaterial = nullptr;
+    bool selectable = true;
 } MeshCreateInfo;
 
 class Mesh : public Object3d {
@@ -47,7 +47,6 @@ class Mesh : public Object3d {
     inline std::string getMarkerName() const { return markerName_; }
     inline size_t getOffset() const { return offset_; }
     inline STATUS getStatus() const { return status_; }
-    inline PIPELINE_TYPE getTopologyType() const { return pipelineType_; }
     inline Vertex::TYPE getVertexType() const { return vertexType_; }
     inline Material& getMaterial() const { return std::ref(*pMaterial_); }
     // inline MeshCreateInfo getCreateInfo() const { return {markerName_, model_, offset_, pickable_, nullptr}; }
@@ -61,8 +60,7 @@ class Mesh : public Object3d {
     void setSceneData(size_t offset);
 
     // LOADING
-    virtual std::future<Mesh*> load(const Shell::Context& ctx, std::function<void(Mesh*)> callbacak = nullptr);
-    virtual void prepare(const Game::Settings settings, const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes);
+    virtual void prepare(const VkDevice& dev, const Game::Settings& settings, bool load);
 
     // VERTEX
     virtual Vertex::Complete getVertexComplete(size_t index) const = 0;
@@ -71,6 +69,7 @@ class Mesh : public Object3d {
     virtual inline uint32_t getVertexCount() const = 0;  // TODO: this shouldn't be public
     virtual const glm::vec3& getVertexPositionAtOffset(size_t offset) const = 0;
     void updateBuffers(const VkDevice& dev);
+    inline VkBuffer& getVertexBuffer() { return vertexRes_.buffer; }
 
     // INDEX
     inline uint32_t getFaceCount() const {
@@ -88,28 +87,35 @@ class Mesh : public Object3d {
     }
     inline void addIndex(VB_INDEX_TYPE index) { indices_.push_back(index); }
 
+    //// INSTANCE
+    // inline void addInstance(glm::mat4 model, std::unique_ptr<Material> pMaterial) {
+    //    instances_.push_back({std::move(model), std::move(pMaterial)});
+    //}
+    inline uint32_t getInstanceCount() const { return instances_.size() + 1; }
+    // inline uint32_t getInstanceSize() const { return static_cast<uint32_t>(sizeof(PushConstants) * getInstanceCount()); }
+    // inline void getInstanceData(std::vector<PushConstants>& pushConstants) const {
+    //    pushConstants.push_back({getData().model, pMaterial_->getData()});
+    //    for (auto& instance : instances_) {
+    //        pushConstants.push_back({instance.first, instance.second->getData()});
+    //    }
+    //}
+
     // FACE
     inline bool isSelectable() { return selectable_; }
     void selectFace(const Ray& ray, float& tMin, Face& face, size_t offset) const;
     void updateTangentSpaceData();
 
     // DRAWING
-    void drawInline(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                    const VkDescriptorSet& descSet) const;
-    // TODO: this shouldn't be virtual... its only for textures
-    virtual void drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                               const VkDescriptorSet& descSet, const std::array<uint32_t, 1>& dynUboOffsets,
-                               size_t frameIndex, const VkCommandBufferInheritanceInfo& inheritanceInfo,
-                               const VkViewport& viewport, const VkRect2D& scissor) const {};
+    void draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) const;
+
+    // PIPELINE
+    void updatePipelineReferences(const PIPELINE_TYPE& type, const VkPipeline& pipeline);
 
     virtual void destroy(const VkDevice& dev);
 
    protected:
-    // LOADING
-    Mesh* async_load(const Shell::Context& ctx, std::function<void(Mesh*)> callbacak = nullptr);
-
     // VERTEX
-    void loadBuffers(const Game::Settings& settings, const VkDevice& dev);
+    void loadBuffers(const VkDevice& dev, const Game::Settings& settings);
     virtual inline const void* getVertexData() const = 0;
     virtual inline VkDeviceSize getVertexBufferSize() const = 0;
 
@@ -121,6 +127,10 @@ class Mesh : public Object3d {
         return p_bufferSize;
     }
 
+    // PIPELINE
+    PIPELINE_TYPE pipelineType_;
+    Pipeline::DescriptorSetsReference descReference_;
+
     // create info
     bool isIndexed_;
     std::string markerName_;
@@ -130,8 +140,9 @@ class Mesh : public Object3d {
     // derived class specific
     FlagBits flags_;
     Vertex::TYPE vertexType_;
-    PIPELINE_TYPE pipelineType_;
-    //
+    // INSTANCE
+    std::vector<std::pair<glm::mat4, std::unique_ptr<Material>>> instances_;
+
     STATUS status_;
     BufferResource vertexRes_;
     std::vector<VB_INDEX_TYPE> indices_;
@@ -140,7 +151,7 @@ class Mesh : public Object3d {
 
    private:
     void createBufferData(const Game::Settings& settings, const VkDevice& dev, const VkCommandBuffer& cmd,
-                          BufferResource& stg_res, VkDeviceSize bufferSize, const void* data, BufferResource& res,
+                          BufferResource& stgRes, VkDeviceSize bufferSize, const void* data, BufferResource& res,
                           VkBufferUsageFlagBits usage, std::string markerName);
 };
 
@@ -195,15 +206,6 @@ class TextureMesh : public Mesh {
    public:
     TextureMesh(MeshCreateInfo* pCreateInfo);
 
-    // INIT
-    void setSceneData(const Shell::Context& ctx, size_t offset);
-
-    void prepare(const Game::Settings settings, const VkDevice& dev, std::unique_ptr<DescriptorResources>& pRes) override;
-    void drawSecondary(const VkCommandBuffer& cmd, const VkPipelineLayout& layout, const VkPipeline& pipeline,
-                       const VkDescriptorSet& descSet, const std::array<uint32_t, 1>& dynUboOffsets, size_t frameIndex,
-                       const VkCommandBufferInheritanceInfo& inheritanceInfo, const VkViewport& viewport,
-                       const VkRect2D& scissor) const override;
-
     // VERTEX
     inline Vertex::Complete getVertexComplete(size_t index) const override {
         assert(index < vertices_.size());
@@ -226,18 +228,11 @@ class TextureMesh : public Mesh {
     }
     const glm::vec3& getVertexPositionAtOffset(size_t offset) const override { return vertices_[offset].position; }
 
-    // TEXTURE
-    inline uint32_t getTextureOffset() const { return pMaterial_->getTexture().offset; }
-    void tryCreateDescriptorSets(std::unique_ptr<DescriptorResources>& pRes);
-
-    void destroy(const VkDevice& dev) override;
+    // LOADING
+    void prepare(const VkDevice& dev, const Game::Settings& settings, bool load) override;
 
    protected:
     std::vector<Vertex::Texture> vertices_;
-
-   private:
-    std::vector<VkDescriptorSet> descSets_;
-    std::vector<VkCommandBuffer> secCmds_;
 };
 
 #endif  // !MESH_H

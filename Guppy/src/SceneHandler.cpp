@@ -1,6 +1,5 @@
 
 #include "InputHandler.h"
-#include "Shell.h"
 #include "SceneHandler.h"
 #include "SelectionManager.h"
 #include "TextureHandler.h"
@@ -23,32 +22,22 @@ void SceneHandler::reset() {
     pScenes_.clear();
 }
 
-SCENE_INDEX_TYPE SceneHandler::makeScene(const UniformBufferResources& uboResource, bool setActive) {
+SCENE_INDEX_TYPE SceneHandler::makeScene(bool setActive, bool makeFaceSelection) {
     assert(inst_.pScenes_.size() < UINT8_MAX);
     SCENE_INDEX_TYPE offset = inst_.pScenes_.size();
 
     inst_.pScenes_.emplace_back(std::unique_ptr<Scene>(new Scene(offset)));
     if (setActive) inst_.activeSceneIndex_ = offset;
 
-    // External sync: TextureHandler (starting descriptor set size, texture flags)
-    inst_.pScenes_.back()->createDynamicTexUniformBuffer(inst_.ctx_, inst_.settings_);
-    inst_.pScenes_.back()->pDescResources_ = PipelineHandler::createDescriptorResources(
-        {uboResource.info}, {inst_.pScenes_.back()->pDynUBOResource_->info}, 1, TextureHandler::getCount());
-    updateDescriptorResources(offset, false);
-
-    PipelineHandler::createPipelineResources(inst_.pScenes_.back()->plResources_);
-    inst_.sh_->updateUIResources((*inst_.pScenes_.back()->pDescResources_), inst_.pScenes_.back()->plResources_);
-
-    inst_.pScenes_.back()->createDrawCmds(inst_.ctx_);
-
     // Selection
-    if (inst_.pSelectionManager_->pFace_ == nullptr) {
+    if (makeFaceSelection && inst_.pSelectionManager_->pFace_ == nullptr) {
         // Face selection
         MeshCreateInfo createInfo = {};
         createInfo.isIndexed = false;
         createInfo.pMaterial = std::make_unique<Material>(Material::FLAGS::HIDE);
 
         std::unique_ptr<LineMesh> pFaceSelection = std::make_unique<FaceSelection>(&createInfo);
+        // thread sync
         inst_.pSelectionManager_->faceSelectionOffset_ =
             inst_.getActiveScene()->moveMesh(inst_.settings_, inst_.ctx_, std::move(pFaceSelection))->getOffset();
     }
@@ -56,6 +45,22 @@ SCENE_INDEX_TYPE SceneHandler::makeScene(const UniformBufferResources& uboResour
     // TODO: move selection meshes...
 
     return offset;
+}
+
+void SceneHandler::updatePipelineReferences(const PIPELINE_TYPE& type, const VkPipeline& pipeline) {
+    for (auto& pScene : inst_.pScenes_) {
+        switch (type) {
+            case PIPELINE_TYPE::TRI_LIST_COLOR:
+                for (auto& pMesh : pScene->colorMeshes_) pMesh->updatePipelineReferences(type, pipeline);
+                break;
+            case PIPELINE_TYPE::LINE:
+                for (auto& pMesh : pScene->lineMeshes_) pMesh->updatePipelineReferences(type, pipeline);
+                break;
+            case PIPELINE_TYPE::TRI_LIST_TEX:
+                for (auto& pMesh : pScene->texMeshes_) pMesh->updatePipelineReferences(type, pipeline);
+                break;
+        }
+    }
 }
 
 const std::unique_ptr<Face>& SceneHandler::getFaceSelectionFace() { return inst_.pSelectionManager_->pFace_; }
@@ -70,32 +75,28 @@ void SceneHandler::select(const VkDevice& dev, const Ray& ray) {
     inst_.pSelectionManager_->updateFaceSelection(dev, (tMin < T_MAX) ? std::make_unique<Face>(face) : nullptr);
 }
 
-void SceneHandler::updateDescriptorResources(SCENE_INDEX_TYPE offset, bool isUpdate) {
-    auto& pScene = inst_.pScenes_[offset];
+void SceneHandler::updateDescriptorSets(SCENE_INDEX_TYPE offset, bool isUpdate) {
+    // auto& pScene = inst_.pScenes_[offset];
 
-    // destroy old uniforms first
-    if (isUpdate) {
-        inst_.invalidRes_.push_back(
-            {pScene->pDescResources_->pool, pScene->pDescResources_->texSets, pScene->pDynUBOResource_});
-        pScene->pDynUBOResource_ = nullptr;
-        pScene->pDescResources_->texSets.clear();
+    //// destroy old uniforms first
+    // if (isUpdate) {
+    //    inst_.invalidRes_.push_back(
+    //        {pScene->pDescResources_->pool, pScene->pDescResources_->texSets, pScene->pDynUBOResource_});
+    //    pScene->pDynUBOResource_ = nullptr;
+    //    pScene->pDescResources_->texSets.clear();
 
-        pScene->createDynamicTexUniformBuffer(inst_.ctx_, inst_.settings_);
-        pScene->pDescResources_->dynUboInfos = {pScene->pDynUBOResource_->info};
-        pScene->pDescResources_->texCount = pScene->pDynUBOResource_->count;
-        pScene->pDescResources_->texSets.resize(pScene->pDynUBOResource_->count);
-    }
+    //    pScene->createDynamicTexUniformBuffer(inst_.ctx_, inst_.settings_);
+    //    pScene->pDescResources_->dynUboInfos = {pScene->pDynUBOResource_->info};
+    //    pScene->pDescResources_->texCount = pScene->pDynUBOResource_->count;
+    //    pScene->pDescResources_->texSets.resize(pScene->pDynUBOResource_->count);
+    //}
 
-    // Allocate descriptor sets for meshes that are ready ...
-    for (auto& pMesh : pScene->texMeshes_) {
-        if (pMesh->getStatus() == STATUS::READY) {
-            pMesh->tryCreateDescriptorSets(pScene->pDescResources_);
-        }
-    }
-}
-
-void SceneHandler::destroyDescriptorResources(std::unique_ptr<DescriptorResources>& pRes) {
-    vkDestroyDescriptorPool(inst_.ctx_.dev, pRes->pool, nullptr);
+    //// Allocate descriptor sets for meshes that are ready ...
+    // for (auto& pMesh : pScene->texMeshes_) {
+    //    if (pMesh->getStatus() == STATUS::READY) {
+    //        pMesh->tryCreateDescriptorSets(pScene->pDescResources_);
+    //    }
+    //}
 }
 
 void SceneHandler::cleanupInvalidResources() {

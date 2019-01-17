@@ -9,7 +9,8 @@
 #include "Singleton.h"
 
 struct LoadingResources {
-    LoadingResources() : shouldWait(false), graphicsCmd(VK_NULL_HANDLE), transferCmd(VK_NULL_HANDLE), semaphore(VK_NULL_HANDLE){};
+    LoadingResources()
+        : shouldWait(false), graphicsCmd(VK_NULL_HANDLE), transferCmd(VK_NULL_HANDLE), semaphore(VK_NULL_HANDLE){};
     bool shouldWait;
     VkCommandBuffer graphicsCmd, transferCmd;
     std::vector<BufferResource> stgResources;
@@ -18,13 +19,13 @@ struct LoadingResources {
     bool cleanup(const VkDevice &dev);
 };
 
-class LoadingResourceHandler : Singleton {
+class LoadingResourceHandler : public Singleton {
    public:
     static void init(const Shell::Context &ctx);
 
     static std::unique_ptr<LoadingResources> createLoadingResources();
     static void loadSubmit(std::unique_ptr<LoadingResources> pLdgRes);
-    static void cleanupResources();
+    static void cleanup();
 
    private:
     LoadingResourceHandler(){};   // Prevent construction

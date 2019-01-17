@@ -1,8 +1,6 @@
 #ifndef SINGLETON_H
 #define SINGLETON_H
 
-#include "Shell.h"
-
 class Singleton {
    public:
     Singleton(Singleton const &) = delete;             // Copy construct
@@ -13,7 +11,7 @@ class Singleton {
    protected:
     Singleton(){};   // Prevent construction
     ~Singleton(){};  // Prevent destruction
-    
+
     virtual void reset() = 0;
 };
 

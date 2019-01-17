@@ -3,7 +3,6 @@
 #include <sstream>
 
 #include "InputHandler.h"
-#include "Shell.h"
 
 const bool MY_DEBUG = false;
 
@@ -48,36 +47,36 @@ void InputHandler::updateKeyInput() {
     for (auto& key : currKeyInput_) {
         switch (key) {
                 // FORWARD
-            case Game::KEY::KEY_UP:
-            case Game::KEY::KEY_W: {
+            case GAME_KEY::KEY_UP:
+            case GAME_KEY::KEY_W: {
                 if (MY_DEBUG) ss << " FORWARD ";
                 posDir_.z += K_Z_MOVE_FACT;
             } break;
                 // BACK
-            case Game::KEY::KEY_DOWN:
-            case Game::KEY::KEY_S: {
+            case GAME_KEY::KEY_DOWN:
+            case GAME_KEY::KEY_S: {
                 if (MY_DEBUG) ss << " BACK ";
                 posDir_.z += K_Z_MOVE_FACT * -1;
             } break;
                 // RIGHT
-            case Game::KEY::KEY_RIGHT:
-            case Game::KEY::KEY_D: {
+            case GAME_KEY::KEY_RIGHT:
+            case GAME_KEY::KEY_D: {
                 if (MY_DEBUG) ss << " RIGHT ";
                 posDir_.x += K_X_MOVE_FACT;
             } break;
                 // LEFT
-            case Game::KEY::KEY_LEFT:
-            case Game::KEY::KEY_A: {
+            case GAME_KEY::KEY_LEFT:
+            case GAME_KEY::KEY_A: {
                 if (MY_DEBUG) ss << " LEFT ";
                 posDir_.x += K_X_MOVE_FACT * -1;
             } break;
                 // UP
-            case Game::KEY::KEY_E: {
+            case GAME_KEY::KEY_E: {
                 if (MY_DEBUG) ss << " UP ";
                 posDir_.y += K_Y_MOVE_FACT;
             } break;
                 // DOWN
-            case Game::KEY::KEY_Q: {
+            case GAME_KEY::KEY_Q: {
                 if (MY_DEBUG) ss << " DOWN ";
                 posDir_.y += K_Y_MOVE_FACT * -1;
             } break;

@@ -6,7 +6,7 @@
 #include <array>
 #include <unordered_map>
 
-#include "Constants.h"
+#include "Helpers.h"
 #include "Vertex.h"
 
 class Mesh;

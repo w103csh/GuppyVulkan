@@ -17,19 +17,25 @@
 #ifndef SHELL_H
 #define SHELL_H
 
-#include <queue>
+#include <functional>
 #include <map>
+#include <queue>
 #include <vector>
 #include <stdexcept>
 #include <vulkan/vulkan.h>
 
 #include "Game.h"
-#include "Helpers.h"
 
-class Game;
-struct DescriptorResources;  // UI only
-struct PipelineResources;    // UI only
-class UI;                    // UI only
+namespace RenderPass {
+class Base;
+}
+
+class UI {
+   public:
+    virtual std::unique_ptr<RenderPass::Base> &getRenderPass() = 0;
+    virtual void draw(VkCommandBuffer cmd, uint8_t frameIndex) = 0;
+    virtual void reset() = 0;
+};
 
 // structure for comparing char arrays
 struct less_str {
@@ -42,14 +48,12 @@ class Shell {
     Shell &operator=(const Shell &sh) = delete;
     virtual ~Shell() {}
 
-    virtual void updateUIResources(DescriptorResources &desRes, PipelineResources &plRes){};  // UI only
-
     struct BackBuffer {
-        uint32_t image_index;
-        VkSemaphore acquire_semaphore;
-        VkSemaphore render_semaphore;
+        uint32_t imageIndex;
+        VkSemaphore acquireSemaphore;
+        VkSemaphore renderSemaphore;
         // signaled when this struct is ready for reuse
-        VkFence present_fence;
+        VkFence presentFence;
     };
 
     struct LayerProperties {
@@ -98,25 +102,28 @@ class Shell {
         // VkQueue game_queue;
         // VkQueue present_queue;
 
-        std::queue<BackBuffer> back_buffers;
-
-        SurfaceProperties surface_props = {};  // *
+        // SURFACE (TODO: figure out what is what)
+        SurfaceProperties surfaceProps = {};
+        VkSurfaceFormatKHR surfaceFormat = {};
         VkSurfaceKHR surface = VK_NULL_HANDLE;
-        VkSurfaceFormatKHR surface_format = {};
-        VkPresentModeKHR mode = {};              // *
-        uint32_t image_count = 0;                // *
-        VkFormat depth_format = {};              // *
-        VkSampleCountFlagBits num_samples = {};  // *
-
-        VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+        VkPresentModeKHR mode = {};
+        VkSampleCountFlagBits samples = {};
+        uint32_t imageCount = 0;
         VkExtent2D extent = {};
 
-        BackBuffer acquired_back_buffer = {};
+        // DEPTH
+        VkFormat depthFormat = {};
+
+        // SWAPCHAIN (TODO: figure out what is what)
+        VkSwapchainKHR swapchain = VK_NULL_HANDLE;
+        std::queue<BackBuffer> backBuffers;
+        BackBuffer acquiredBackBuffer = {};
     };
 
     const Context &context() const { return ctx_; }
     const Game &game() const { return game_; }
 
+    // LOGGING
     enum LogPriority {
         LOG_DEBUG,
         LOG_INFO,
@@ -127,14 +134,22 @@ class Shell {
 
     virtual void run() = 0;
     virtual void quit() = 0;
+
+    // SHADER RECOMPILING
     virtual void asyncAlert(uint64_t milliseconds) = 0;                                           // TODO: think this through
     virtual void checkDirectories() = 0;                                                          // TODO: think this through
     virtual void watchDirectory(std::string dir, std::function<void(std::string)> callback) = 0;  // TODO: think this through
-    virtual std::shared_ptr<UI> getUI() const { return nullptr; };
-    inline void onKey(Game::KEY key) { game_.onKey(key); }
-    inline void onMouse(const Game::MouseInput &input) { game_.onMouse(input); }
 
-    void resize_swapchain(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities = true);
+    inline void onKey(GAME_KEY key) { game_.onKey(key); }                   // TODO: think this through
+    inline void onMouse(const MouseInput &input) { game_.onMouse(input); }  // TODO: think this through
+
+    // SWAPCHAIN
+    void resizeSwapchain(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities = true);
+
+    // UI
+    virtual std::shared_ptr<UI> getUI() const { return nullptr; };  // TODO: think this through
+    virtual void initUI(VkRenderPass pass){};                       // TODO: think this through
+    virtual void updateRenderPass(){};                              // TODO: think this through
 
    protected:
     Shell(Game &game);
@@ -146,10 +161,11 @@ class Shell {
     void create_context();
     void destroy_context();
 
-    void add_game_time(float time);
+    void addGameTime(float time);
 
-    void acquire_back_buffer();
-    void present_back_buffer();
+    // SWAPCHAIN
+    void acquireBackBuffer();
+    void presentBackBuffer();
 
     Game &game_;
     const Game::Settings &settings_;
@@ -159,9 +175,8 @@ class Shell {
 
     std::vector<const char *> device_extensions_;
 
-    // NEW
-    std::vector<LayerProperties> layerProps_;
-    std::vector<VkExtensionProperties> instExtProps_;
+    std::vector<LayerProperties> layerProps_;          // *
+    std::vector<VkExtensionProperties> instExtProps_;  // *
 
    private:
     bool debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT obj_type, uint64_t object,
@@ -231,7 +246,7 @@ class Shell {
     void determine_swapchain_present_mode();    // *
     void determine_swapchain_image_count();     // *
 
-    // called by resize_swapchain
+    // called by resizeSwapchain
     bool Shell::determine_swapchain_extent(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities);  // *
 
     // called by cleanup_vk

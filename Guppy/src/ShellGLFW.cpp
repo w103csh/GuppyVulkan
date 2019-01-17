@@ -16,7 +16,7 @@ void glfw_error_callback(int error, const char* description) {
 
 void glfw_resize_callback(GLFWwindow* window, int w, int h) {
     auto pShell = reinterpret_cast<Shell*>(glfwGetWindowUserPointer(window));
-    pShell->resize_swapchain(w, h);
+    pShell->resizeSwapchain(w, h);
 }
 
 void glfw_cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
@@ -60,136 +60,136 @@ void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, in
 
     ImGuiIO& io = ImGui::GetIO();
     if (!io.WantCaptureKeyboard || type != INPUT_TYPE::DOWN) {
-        Game::KEY gKey;
+        GAME_KEY gKey;
         switch (key) {
             case GLFW_KEY_ESCAPE:
-                gKey = Game::KEY::KEY_ESC;
+                gKey = GAME_KEY::KEY_ESC;
                 break;
             case GLFW_KEY_UP:
-                gKey = Game::KEY::KEY_UP;
+                gKey = GAME_KEY::KEY_UP;
                 break;
             case GLFW_KEY_DOWN:
-                gKey = Game::KEY::KEY_DOWN;
+                gKey = GAME_KEY::KEY_DOWN;
                 break;
             case GLFW_KEY_LEFT:
-                gKey = Game::KEY::KEY_LEFT;
+                gKey = GAME_KEY::KEY_LEFT;
                 break;
             case GLFW_KEY_RIGHT:
-                gKey = Game::KEY::KEY_RIGHT;
+                gKey = GAME_KEY::KEY_RIGHT;
                 break;
             case GLFW_KEY_SPACE:
-                gKey = Game::KEY::KEY_SPACE;
+                gKey = GAME_KEY::KEY_SPACE;
                 break;
             case GLFW_KEY_TAB:
-                gKey = Game::KEY::KEY_TAB;
+                gKey = GAME_KEY::KEY_TAB;
                 break;
             case GLFW_KEY_F:
 
-                gKey = Game::KEY::KEY_F;
+                gKey = GAME_KEY::KEY_F;
                 break;
             case GLFW_KEY_W:
-                gKey = Game::KEY::KEY_W;
+                gKey = GAME_KEY::KEY_W;
                 break;
             case GLFW_KEY_A:
-                gKey = Game::KEY::KEY_A;
+                gKey = GAME_KEY::KEY_A;
                 break;
             case GLFW_KEY_S:
-                gKey = Game::KEY::KEY_S;
+                gKey = GAME_KEY::KEY_S;
                 break;
             case GLFW_KEY_D:
-                gKey = Game::KEY::KEY_D;
+                gKey = GAME_KEY::KEY_D;
                 break;
             case GLFW_KEY_E:
-                gKey = Game::KEY::KEY_E;
+                gKey = GAME_KEY::KEY_E;
                 break;
             case GLFW_KEY_Q:
-                gKey = Game::KEY::KEY_Q;
+                gKey = GAME_KEY::KEY_Q;
                 break;
             // NUMBER KEYS
             case GLFW_KEY_1:
-                gKey = Game::KEY::KEY_1;
+                gKey = GAME_KEY::KEY_1;
                 break;
             case GLFW_KEY_2:
-                gKey = Game::KEY::KEY_2;
+                gKey = GAME_KEY::KEY_2;
                 break;
             case GLFW_KEY_3:
-                gKey = Game::KEY::KEY_3;
+                gKey = GAME_KEY::KEY_3;
                 break;
             case GLFW_KEY_4:
-                gKey = Game::KEY::KEY_4;
+                gKey = GAME_KEY::KEY_4;
                 break;
             case GLFW_KEY_5:
-                gKey = Game::KEY::KEY_5;
+                gKey = GAME_KEY::KEY_5;
                 break;
             case GLFW_KEY_6:
-                gKey = Game::KEY::KEY_6;
+                gKey = GAME_KEY::KEY_6;
                 break;
             case GLFW_KEY_7:
-                gKey = Game::KEY::KEY_7;
+                gKey = GAME_KEY::KEY_7;
                 break;
             case GLFW_KEY_8:
-                gKey = Game::KEY::KEY_8;
+                gKey = GAME_KEY::KEY_8;
                 break;
             case GLFW_KEY_9:
-                gKey = Game::KEY::KEY_9;
+                gKey = GAME_KEY::KEY_9;
                 break;
             case GLFW_KEY_0:
-                gKey = Game::KEY::KEY_0;
+                gKey = GAME_KEY::KEY_0;
                 break;
             case GLFW_KEY_MINUS:
-                gKey = Game::KEY::KEY_MINUS;
+                gKey = GAME_KEY::KEY_MINUS;
                 break;
             case GLFW_KEY_EQUAL:
-                gKey = Game::KEY::KEY_EQUAL;
+                gKey = GAME_KEY::KEY_EQUAL;
                 break;
             // FUNCTION KEYS
             case GLFW_KEY_F1:
-                gKey = Game::KEY::KEY_F1;
+                gKey = GAME_KEY::KEY_F1;
                 break;
             case GLFW_KEY_F2:
-                gKey = Game::KEY::KEY_F2;
+                gKey = GAME_KEY::KEY_F2;
                 break;
             case GLFW_KEY_F3:
-                gKey = Game::KEY::KEY_F3;
+                gKey = GAME_KEY::KEY_F3;
                 break;
             case GLFW_KEY_F4:
-                gKey = Game::KEY::KEY_F4;
+                gKey = GAME_KEY::KEY_F4;
                 break;
             case GLFW_KEY_F5:
-                gKey = Game::KEY::KEY_F5;
+                gKey = GAME_KEY::KEY_F5;
                 break;
             case GLFW_KEY_F6:
-                gKey = Game::KEY::KEY_F6;
+                gKey = GAME_KEY::KEY_F6;
                 break;
             case GLFW_KEY_F7:
-                gKey = Game::KEY::KEY_F7;
+                gKey = GAME_KEY::KEY_F7;
                 break;
             case GLFW_KEY_F8:
-                gKey = Game::KEY::KEY_F8;
+                gKey = GAME_KEY::KEY_F8;
                 break;
             case GLFW_KEY_F9:
-                gKey = Game::KEY::KEY_F9;
+                gKey = GAME_KEY::KEY_F9;
                 break;
             case GLFW_KEY_F10:
-                gKey = Game::KEY::KEY_F10;
+                gKey = GAME_KEY::KEY_F10;
                 break;
             case GLFW_KEY_F11:
-                gKey = Game::KEY::KEY_F11;
+                gKey = GAME_KEY::KEY_F11;
                 break;
             case GLFW_KEY_F12:
-                gKey = Game::KEY::KEY_F12;
+                gKey = GAME_KEY::KEY_F12;
                 break;
             // case MOD_ALT:
-            //    gKey = Game::KEY::KEY_CTRL;
+            //    gKey = GAME_KEY::KEY_CTRL;
             //    break;
             // case MOD_CONTROL:
-            //    gKey = Game::KEY::KEY_CTRL;
+            //    gKey = GAME_KEY::KEY_CTRL;
             //    break;
             // case MOD_SHIFT:
-            //    gKey = Game::KEY::KEY_CTRL;
+            //    gKey = GAME_KEY::KEY_CTRL;
             //    break;
             default:
-                gKey = Game::KEY::KEY_UNKNOWN;
+                gKey = GAME_KEY::KEY_UNKNOWN;
                 break;
         }
         InputHandler::updateKeyInput(gKey, type);

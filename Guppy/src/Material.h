@@ -69,10 +69,34 @@ class Material {
           shininess_(MILDLY_SHINY),
           pTexture_(pTexture){};
 
+    Material(const std::unique_ptr<Material>& pMaterial)
+        : flags_(pMaterial->flags_),
+          ambientCoeff_(pMaterial->ambientCoeff_),
+          diffuseCoeff_(pMaterial->diffuseCoeff_),
+          specularCoeff_(pMaterial->specularCoeff_),
+          opacity_(pMaterial->opacity_),
+          repeat_(pMaterial->repeat_),
+          // xRepeat_(pMaterial->xRepeat_),
+          // yRepeat_(pMaterial->yRepeat_),
+          shininess_(pMaterial->shininess_),
+          pTexture_(pMaterial->pTexture_) {}
+
+    Material(const Material& material)
+        : flags_(material.flags_),
+          ambientCoeff_(material.ambientCoeff_),
+          diffuseCoeff_(material.diffuseCoeff_),
+          specularCoeff_(material.specularCoeff_),
+          opacity_(material.opacity_),
+          repeat_(material.repeat_),
+          // xRepeat_(material.xRepeat_),
+          // yRepeat_(material.yRepeat_),
+          shininess_(material.shininess_),
+          pTexture_(material.pTexture_) {}
+
     STATUS getStatus() const;
     inline FlagBits getFlags() const { return flags_; }
     Data getData() const;
-    inline const Texture::Data& getTexture() const { return (*pTexture_); }
+    inline const std::shared_ptr<Texture::Data>& getTexture() const { return pTexture_; }
 
     inline void setFlags(FlagBits flags) { flags_ = flags; }
     inline void setColor(glm::vec3 c) { ambientCoeff_ = diffuseCoeff_ = c; }

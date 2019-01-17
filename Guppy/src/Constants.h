@@ -7,16 +7,21 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "Vertex.h"
-
 #define LIMIT_FRAMERATE
 #define USE_DEBUG_GUI
 
-typedef uint32_t FlagBits;
-
+constexpr bool PRIMARY_MONITOR = 0;
+// TODO: a proper dynamic buffer allocator.
+/*  I am using this for the mean time to restrict the number of textures, so
+    that I don't have to write an allocator before I know what is necessary. The limit
+    is for the dynamic offest uniform that has texture flags. The flags indicate the
+    number of sampler array layers. Setting a limit let me just create the dynamic
+    uniform buffer size out of the gate, and then refer to offsets without ... an
+    allocator.
+*/
+constexpr uint32_t TEXTURE_LIMIT = 30;
 constexpr auto APP_SHORT_NAME = "Guppy Application";
-constexpr auto DEPTH_PRESENT = true;
-const std::string ROOT_PATH = "..\\..\\..\\";  // TODO: this should come from something meaningful ...
+constexpr bool DEPTH_PRESENT = true;
 
 const int WIDTH = 800;
 const int HEIGHT = 600;
@@ -51,13 +56,10 @@ const std::vector<const char*> DEVICE_EXTENSIONS = {
     // VK_KHR_SWAPCHAIN_EXTENSION_NAME, in init_swapchain_extension now
 };
 
-const glm::vec4 CLEAR_COLOR = {190.0f / 256.0f, 223.0f / 256.0f, 246.0f / 256.0f, 1.0f};
-const VkClearColorValue CLEAR_VALUE = {CLEAR_COLOR.x, CLEAR_COLOR.y, CLEAR_COLOR.z, CLEAR_COLOR.w};
-// const VkClearColorValue CLEAR_VALUE = {};
-
-// Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)
-typedef uint32_t VB_INDEX_TYPE;
-typedef uint8_t SCENE_INDEX_TYPE;
+// const glm::vec4 CLEAR_COLOR = {190.0f / 256.0f, 223.0f / 256.0f, 246.0f / 256.0f, 1.0f};
+// const VkClearColorValue CLEAR_VALUE = {CLEAR_COLOR.x, CLEAR_COLOR.y, CLEAR_COLOR.z, CLEAR_COLOR.w};
+const glm::vec4 CLEAR_COLOR = {};
+const VkClearColorValue CLEAR_VALUE = {};
 
 // X
 const glm::vec3 CARDINAL_X = glm::vec3(1.0f, 0.0f, 0.0f);
@@ -77,6 +79,9 @@ const glm::vec3 FORWARD_VECTOR = CARDINAL_Z;
 
 const auto ENABLE_SAMPLE_SHADING = VK_TRUE;
 const float MIN_SAMPLE_SHADING = 0.2f;
+
+// ROOT
+const std::string ROOT_PATH = "..\\..\\..\\";  // TODO: this should come from something meaningful ...
 
 // DATA
 const std::string DATA_PATH = ROOT_PATH + "data\\";

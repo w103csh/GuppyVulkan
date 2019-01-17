@@ -26,7 +26,7 @@ typedef uint32_t MODEL_INDEX;
 typedef std::function<void(Model *)> MODEL_CALLBACK;
 
 typedef struct ModelCreateInfo {
-    bool async = true;
+    bool async = false;
     MODEL_CALLBACK callback = nullptr;
     MODEL_INDEX handlerOffset = MODEL_INDEX_MAX;  // TODO: this should only be set by the handler...
     Material material = {};                       // TODO: unique_ptr instead of copying evertything
@@ -54,11 +54,10 @@ class Model : public Object3d {
     virtual inline void transform(const glm::mat4 t) override;
     // void updateAggregateBoundingBox(std::unique_ptr<Scene> &pScene);
 
-    STATUS status;
+    // TODO: use a conditional template argument
+    MODEL_INDEX getMeshOffset(MESH_TYPE type, uint8_t offset);
 
-    void addOffset(std::unique_ptr<ColorMesh> &pMesh);
-    void addOffset(std::unique_ptr<LineMesh> &pMesh);
-    void addOffset(std::unique_ptr<TextureMesh> &pMesh);
+    STATUS status;
 
    private:
     void allMeshAction(std::function<void(Mesh *)> action);
@@ -69,6 +68,10 @@ class Model : public Object3d {
     MODEL_INDEX sceneOffset_;
     bool smoothNormals_;
     bool visualHelper_;
+
+    void addOffset(std::unique_ptr<ColorMesh> &pMesh);
+    void addOffset(std::unique_ptr<LineMesh> &pMesh);
+    void addOffset(std::unique_ptr<TextureMesh> &pMesh);
 
     std::vector<MODEL_INDEX> colorOffsets_;
     std::vector<MODEL_INDEX> lineOffsets_;

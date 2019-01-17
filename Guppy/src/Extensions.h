@@ -40,7 +40,8 @@ static void CreateDebugMarkerEXTs(VkDevice device, VkPhysicalDevice physicalDevi
 
     if (extensionPresent) {
         // The debug marker extension is not part of the core, so function pointers need to be loaded manually
-        vkDebugMarkerSetObjectTag = (PFN_vkDebugMarkerSetObjectTagEXT)vkGetDeviceProcAddr(device, "vkDebugMarkerSetObjectTagEXT");
+        vkDebugMarkerSetObjectTag =
+            (PFN_vkDebugMarkerSetObjectTagEXT)vkGetDeviceProcAddr(device, "vkDebugMarkerSetObjectTagEXT");
         vkDebugMarkerSetObjectName =
             (PFN_vkDebugMarkerSetObjectNameEXT)vkGetDeviceProcAddr(device, "vkDebugMarkerSetObjectNameEXT");
         vkCmdDebugMarkerBegin = (PFN_vkCmdDebugMarkerBeginEXT)vkGetDeviceProcAddr(device, "vkCmdDebugMarkerBeginEXT");
@@ -73,7 +74,8 @@ static void CreateDebugMarkerEXTs(VkDevice device, VkPhysicalDevice physicalDevi
 //                (PFN_vkCmdDebugMarkerBeginEXT)vkGetDeviceProcAddr(device, "vkCmdDebugMarkerBeginEXT");
 //        }
 //        if (vkCmdDebugMarkerEnd != VK_NULL_HANDLE) {
-//            auto func = vkCmdDebugMarkerEnd = (PFN_vkCmdDebugMarkerEndEXT)vkGetDeviceProcAddr(device, "vkCmdDebugMarkerEndEXT");
+//            auto func = vkCmdDebugMarkerEnd = (PFN_vkCmdDebugMarkerEndEXT)vkGetDeviceProcAddr(device,
+//            "vkCmdDebugMarkerEndEXT");
 //        }
 //        if (vkCmdDebugMarkerInsert != VK_NULL_HANDLE) {
 //            auto func = vkCmdDebugMarkerInsert =
@@ -96,8 +98,9 @@ static void DebugMarkerSetObjectName(const VkDevice& dev, const uint64_t& object
     }
 }
 
-static void DebugMarkerSetObjectTag(const VkDevice& dev, const uint64_t& object, const VkDebugReportObjectTypeEXT& objectType,
-                                    const uint64_t& tagName, const size_t& tagSize, const void* tag) {
+static void DebugMarkerSetObjectTag(const VkDevice& dev, const uint64_t& object,
+                                    const VkDebugReportObjectTypeEXT& objectType, const uint64_t& tagName,
+                                    const size_t& tagSize, const void* tag) {
     VkResult res = VK_INCOMPLETE;
     if (active) {
         VkDebugMarkerObjectTagInfoEXT tagInfo = {};
@@ -148,8 +151,10 @@ static void DebugMarkerEnd(const VkCommandBuffer& cmdBuffer) {
 }
 
 // Unfortunately, because this function is an extension function, it is not automatically loaded. We have to look up
-// its address ourselves using vkGetInstanceProcAddr. (https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Validation_layers)
-static VkResult CreateDebugReportCallbackEXT(const VkInstance instance, const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
+// its address ourselves using vkGetInstanceProcAddr.
+// (https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Validation_layers)
+static VkResult CreateDebugReportCallbackEXT(const VkInstance instance,
+                                             const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
                                              const VkAllocationCallbacks* pAllocator, VkDebugReportCallbackEXT* pCallback) {
     auto func = (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
     if (func != nullptr) {
@@ -168,8 +173,10 @@ static void DestoryDebugReportCallbackEXT(const VkInstance instance, VkDebugRepo
 }
 
 // Unfortunately, because this function is an extension function, it is not automatically loaded. We have to look up
-// its address ourselves using vkGetInstanceProcAddr. (https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Validation_layers)
-static VkResult CreateDebugUtilsMessengerEXT(const VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
+// its address ourselves using vkGetInstanceProcAddr.
+// (https://vulkan-tutorial.com/Drawing_a_triangle/Setup/Validation_layers)
+static VkResult CreateDebugUtilsMessengerEXT(const VkInstance instance,
+                                             const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
                                              const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pCallback) {
     auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
     if (func != nullptr) {

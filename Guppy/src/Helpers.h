@@ -8,18 +8,21 @@
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <limits>
+#include <set>
 #include <sstream>
 #include <thread>
 #include <type_traits>
 #include <vector>
 #include <vulkan/vulkan.h>
+#include <unordered_map>
 
 #include "Constants.h"
-// This is here for convenience
-#include "Extensions.h"
+#include "Extensions.h"  // This is here for convenience
 
-class Face;  // indexVertices
-class Mesh;  // indexVertices
+typedef uint32_t FlagBits;
+// Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)
+typedef uint32_t VB_INDEX_TYPE;
+typedef uint8_t SCENE_INDEX_TYPE;
 
 enum class MODEL_FILE_TYPE {
     //
@@ -38,29 +41,43 @@ enum class STATUS {
 };
 
 enum class SHADER_TYPE {
-    //
+    // DEFAULT
     COLOR_VERT = 0,
     TEX_VERT,
     COLOR_FRAG,
     LINE_FRAG,
     TEX_FRAG,
     UTIL_FRAG,
+    // PBR
+    PBR_COLOR_FRAG,
 };
 
 enum class PIPELINE_TYPE {
-    // These numbers are used as indices
+    //
+    DONT_CARE = -1,
     TRI_LIST_COLOR = 0,
     LINE = 1,
     TRI_LIST_TEX = 2,
-    UI = 3,
 };
 
-typedef enum TOPOLOGY {
+enum class PUSH_CONSTANT_TYPE {
     //
-    POLY = 0x00000001,
-    LINE = 0x00000002,
-    // THROUGH 0x00000008
-} FLAGS;
+    DEFAULT = 0,
+};
+
+enum class DESCRIPTOR_TYPE {
+    //
+    /*  Currently this reflects unique descriptor bindings
+        for the shaders. As of now the bindings are hardcoded
+        and each descriptor type only has one each. (And line
+        up with the enum values...).
+        TODO: This could  easily become more dynamic once I wrap
+        my head around how it should work with an allocator.
+    */
+    DEFAULT_UNIFORM = 0,
+    DEFAULT_SAMPLER = 1,
+    DEFAULT_DYNAMIC_UNIFORM = 2
+};
 
 enum class INPUT_TYPE {
     //
@@ -68,6 +85,13 @@ enum class INPUT_TYPE {
     DOWN,
     DBLCLK,
     UNKNOWN
+};
+
+enum class MESH_TYPE {
+    //
+    COLOR = 0,
+    LINE,
+    TEXTURE
 };
 
 namespace vk {
@@ -233,30 +257,41 @@ static glm::vec3 triangleNormal(const glm::vec3 &a, const glm::vec3 &b, const gl
 
 static glm::vec3 positionOnLine(const glm::vec3 &a, const glm::vec3 &b, float t) { return a + ((b - a) * t); }
 
+//// This is super simple... add to it if necessary
+// template <typename TKey, typename TValue>
+// struct simple_container_key_map {
+//    void set(TKey key, TValue value) {
+//        for (auto &keyValue_ : container_)
+//            if (std::equal(key.begin(), key.end(), keyValue_.first.begin())) return;
+//        container_.push_back({key, value});
+//    }
+//
+//    std::pair<TKey, TValue> get(const TKey &key) {
+//        for (auto &keyValue_ : container_)
+//            if (std::equal(key.begin(), key.end(), keyValue_.first.begin())) return keyValue;
+//        return {};
+//    }
+//
+//   private:
+//    std::vector<std::pair<TKey, TValue>> container_;
+//};
+
 }  // namespace helpers
 
 struct ImageResource {
     VkFormat format;
-    VkImage image;
-    VkDeviceMemory memory;
-    VkImageView view;
-};
-
-struct UniformBufferResources {
-    uint32_t count;
-    VkDeviceSize size;
-    VkDescriptorBufferInfo info;
-    VkBuffer buffer = VK_NULL_HANDLE;
+    VkImage image = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
+    VkImageView view = VK_NULL_HANDLE;
 };
 
 struct BufferResource {
-    VkBuffer buffer;
-    VkDeviceMemory memory;
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
     VkDeviceSize memoryRequirementsSize;
 };
 
-struct FrameData {
+struct FrameDataHologram {
     // signaled when this struct is ready for reuse
     VkFence fence = VK_NULL_HANDLE;
 
@@ -269,8 +304,8 @@ struct FrameData {
 };
 
 struct DrawResources {
-    std::thread thread;
-    VkCommandBuffer cmd;
+    std::vector<VkCommandBuffer> priCmds;
+    std::vector<VkCommandBuffer> secCmds;
 };
 
 template <typename T>
@@ -284,5 +319,37 @@ struct Ray {
     glm::vec3 direction;      // non-normalized direction vector from "e" to "d"
     glm::vec3 directionUnit;  // normalized "direction"
 };
+
+struct DescriptorBufferResources {
+    uint32_t count;
+    VkDeviceSize size;
+    VkDescriptorBufferInfo info;
+    VkBuffer buffer = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+};
+
+// These are basically a unit. Maybe move this into a full on data structure.
+struct DescriptorMapItem {
+    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+    struct Resource {
+        STATUS status = STATUS::PENDING;
+        std::vector<VkDescriptorSet> sets;
+    };
+    std::vector<Resource> resources;
+};
+struct hash_descriptor_resource_map {
+    size_t operator()(const std::set<DESCRIPTOR_TYPE> &s) const {
+        size_t value = 0;
+        auto x = 1;
+        for (const auto &i : s)
+            if (value)
+                value ^= ((std::hash<DESCRIPTOR_TYPE>()(i)) << 1) >> 1;
+            else
+                value = (std::hash<DESCRIPTOR_TYPE>()(i));
+        return value;
+    }
+};
+typedef std::unordered_map<const std::set<DESCRIPTOR_TYPE>, DescriptorMapItem, hash_descriptor_resource_map>
+    descriptor_resource_map;
 
 #endif  // !HELPERS_H

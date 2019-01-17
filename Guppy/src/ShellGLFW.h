@@ -58,7 +58,7 @@ class ShellGLFW : public T {
 
         setupImGui();
 
-        double current_time = glfwGetTime();
+        double currentTime = glfwGetTime();
 
         // Main loop
         while (!glfwWindowShouldClose(window_)) {
@@ -73,19 +73,19 @@ class ShellGLFW : public T {
 
             if (settings_.enable_directory_listener) checkDirectories();
 
-            acquire_back_buffer();
+            acquireBackBuffer();
 
             double now = glfwGetTime();
-            double elapsed = now - current_time;
+            double elapsed = now - currentTime;
 
             InputHandler::updateInput(static_cast<float>(elapsed));
             onMouse(InputHandler::getMouseInput());  // TODO: this stuff is all out of whack
 
-            add_game_time(static_cast<float>(elapsed));
+            addGameTime(static_cast<float>(elapsed));
 
-            present_back_buffer();
+            presentBackBuffer();
 
-            current_time = now;
+            currentTime = now;
 
 #ifdef LIMIT_FRAMERATE
             // TODO: this is crude and inaccurate.
@@ -110,26 +110,31 @@ class ShellGLFW : public T {
         glfwTerminate();
     }
 
-    void updateUIResources(DescriptorResources& desRes, PipelineResources& plRes) override {
+    void initUI(VkRenderPass pass) override {
         ImGui_ImplVulkan_InitInfo init_info = {};
         init_info.Instance = context().instance;
         init_info.PhysicalDevice = context().physical_dev;
         init_info.Device = context().dev;
         init_info.QueueFamily = context().graphics_index;
         init_info.Queue = context().queues[context().graphics_index];
-        init_info.PipelineCache = PipelineHandler::getPipelineCache();
-        init_info.DescriptorPool = desRes.pool;
+        init_info.PipelineCache = Pipeline::Handler::getPipelineCache();
+        init_info.DescriptorPool = Pipeline::Handler::getDescriptorPool();
         init_info.Allocator = nullptr;
         init_info.CheckVkResultFn = (void (*)(VkResult))vk::assert_success;
-        init_info.Subpass = static_cast<uint32_t>(PIPELINE_TYPE::UI);
-        init_info.RasterizationSamples = context().num_samples;
+        init_info.Subpass = 2;
+        init_info.RasterizationSamples = context().samples;
         init_info.SampleShadingEnable = settings_.enable_sample_shading;
         init_info.MinSampleShading = settings_.enable_sample_shading ? MIN_SAMPLE_SHADING : 0.0f;
 
-        ImGui_ImplVulkan_Init(&init_info, plRes.renderPass);
+        ImGui_ImplVulkan_Init(&init_info, pass);
     }
 
     std::shared_ptr<UI> getUI() const override { return static_cast<std::shared_ptr<UI>>(pUI_); }
+
+    void updateRenderPass() override {
+        //
+        assert(false);
+    }
 
    private:
     void setupImGui() {
@@ -143,12 +148,18 @@ class ShellGLFW : public T {
         glfwGetFramebufferSize(window_, &w, &h);
         glfwSetFramebufferSizeCallback(window_, glfw_resize_callback);
 
-        resize_swapchain(w, h, false);
+        resizeSwapchain(w, h, false);
 
-        ImGui_ImplVulkan_SetFrameCount(context().image_count);
+        ImGui_ImplVulkan_SetFrameCount(context().imageCount);  // Remove this?
+
+        const auto& ctx = context();
+        // getUI()->getRenderPass()->init(ctx, settings_);
+
+        // ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(ctx.physical_dev, ctx.dev, &getUI()->getRenderPass(),
+        //                                                          nullptr, w, h);
 
         windowData_.Surface = context().surface;
-        windowData_.SurfaceFormat = context().surface_format;
+        windowData_.SurfaceFormat = context().surfaceFormat;
         windowData_.PresentMode = context().mode;
         windowData_.PresentMode = context().mode;
 
@@ -163,6 +174,18 @@ class ShellGLFW : public T {
     }
 
     void createWindow() override {
+        // GLFWmonitor* monitor = glfwGetPrimaryMonitor();
+        // if (!PRIMARY_MONITOR) {
+        //    int count;
+        //    GLFWmonitor** monitors = glfwGetMonitors(&count);
+        //    for (int i = 0; i < count; i++) {
+        //        if (monitors[i] != monitor) {
+        //            monitor = monitors[i];
+        //            break;
+        //        }
+        //    }
+        //}
+
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         window_ = glfwCreateWindow(settings_.initial_width, settings_.initial_height, settings_.name.c_str(), NULL, NULL);
         glfwSetWindowUserPointer(window_, this);

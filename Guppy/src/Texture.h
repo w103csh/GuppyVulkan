@@ -16,6 +16,7 @@
 class Texture {
    public:
     typedef enum FLAGS {
+        NONE = 0x00000000,
         DIFFUSE = 0x00000001,
         // THROUGH 0x00000008
         NORMAL = 0x00000010,
@@ -37,7 +38,7 @@ class Texture {
               height(0),
               channels(0),
               mipLevels(0),
-              aspect(4.0f/3.0f),
+              aspect(4.0f / 3.0f),
               name(helpers::getFileName(path)),
               path(path),
               normPath(normPath),
@@ -65,8 +66,6 @@ class Texture {
         stbi_uc *pixels, *normPixels, *specPixels;
     };
 
-    static std::future<std::shared_ptr<Texture::Data>> loadTexture(const VkDevice& dev, const bool makeMipmaps,
-                                                                   std::shared_ptr<Data> pTexture);
     static void createTexture(const VkDevice& dev, const bool makeMipmaps, std::shared_ptr<Data> pTexture);
 
    private:

@@ -1,11 +1,12 @@
 
-#include "CmdBufHandler.h"
 #include "LoadingResourceHandler.h"
+
+#include "CmdBufHandler.h"
 
 LoadingResourceHandler LoadingResourceHandler::inst_;
 
 void LoadingResourceHandler::init(const Shell::Context& ctx) {
-    inst_.cleanupResources();
+    inst_.cleanup();
     inst_.ctx_ = ctx;
 }
 
@@ -101,7 +102,7 @@ void LoadingResourceHandler::loadSubmit(std::unique_ptr<LoadingResources> pLdgRe
     inst_.ldgResources_.push_back(std::move(pLdgRes));
 }
 
-void LoadingResourceHandler::cleanupResources() {
+void LoadingResourceHandler::cleanup() {
     // Check loading resources for cleanup
     if (!inst_.ldgResources_.empty()) {
         auto itRes = inst_.ldgResources_.begin();

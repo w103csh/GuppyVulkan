@@ -3,6 +3,8 @@
 
 #include "CmdBufHandler.h"
 
+#include "Helpers.h"
+
 CmdBufHandler CmdBufHandler::inst_;
 
 void CmdBufHandler::reset() {

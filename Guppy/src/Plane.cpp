@@ -161,7 +161,7 @@ TexturePlane::TexturePlane(MeshCreateInfo* pCreateInfo, bool doubleSided) : Text
     markerName_ = "TexturePlane";
     createVertices(this, doubleSided);
     updateBoundingBox(vertices_);
-    status_ = STATUS::PENDING;
+    status_ = STATUS::PENDING_BUFFERS;
 }
 
 // void TexturePlane::createVertices() {

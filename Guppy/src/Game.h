@@ -23,6 +23,62 @@
 
 class Shell;
 
+enum class GAME_KEY {
+    // virtual keys
+    KEY_SHUTDOWN,
+    // physical keys
+    KEY_UNKNOWN,
+    KEY_ESC,
+    KEY_UP,
+    KEY_DOWN,
+    KEY_LEFT,
+    KEY_RIGHT,
+    KEY_SPACE,
+    KEY_TAB,
+    KEY_F,
+    KEY_W,
+    KEY_A,
+    KEY_S,
+    KEY_D,
+    KEY_E,
+    KEY_Q,
+    // number keys
+    KEY_1,
+    KEY_2,
+    KEY_3,
+    KEY_4,
+    KEY_5,
+    KEY_6,
+    KEY_7,
+    KEY_8,
+    KEY_9,
+    KEY_0,
+    KEY_MINUS,
+    KEY_EQUAL,
+    // function keys
+    KEY_F1,
+    KEY_F2,
+    KEY_F3,
+    KEY_F4,
+    KEY_F5,
+    KEY_F6,
+    KEY_F7,
+    KEY_F8,
+    KEY_F9,
+    KEY_F10,
+    KEY_F11,
+    KEY_F12,
+    // modifiers
+    KEY_ALT,
+    KEY_CTRL,
+    KEY_SHFT,
+};
+
+struct MouseInput {
+    float xPos, yPos, zDelta;
+    bool moving, primary, secondary;
+};
+
 class Game {
    public:
     Game(const Game &game) = delete;
@@ -60,71 +116,17 @@ class Game {
     const Settings &settings() const { return settings_; }
     Shell &shell() const { return (*shell_); }  // TODO: maybe don't do this??? (Used for listening to shader changes)
 
-    virtual void attach_shell(Shell &shell) { shell_ = &shell; }
-    virtual void detach_shell() { shell_ = nullptr; }
+    // SHELL
+    virtual void attachShell(Shell &shell) { shell_ = &shell; }
+    virtual void detachShell() { shell_ = nullptr; }
 
-    virtual void attach_swapchain() {}
-    virtual void detach_swapchain() {}
+    // SWAPCHAIN
+    virtual void attachSwapchain() = 0;
+    virtual void detachSwapchain() = 0;
 
-    enum class KEY {
-        // virtual keys
-        KEY_SHUTDOWN,
-        // physical keys
-        KEY_UNKNOWN,
-        KEY_ESC,
-        KEY_UP,
-        KEY_DOWN,
-        KEY_LEFT,
-        KEY_RIGHT,
-        KEY_SPACE,
-        KEY_TAB,
-        KEY_F,
-        KEY_W,
-        KEY_A,
-        KEY_S,
-        KEY_D,
-        KEY_E,
-        KEY_Q,
-        // number keys
-        KEY_1,
-        KEY_2,
-        KEY_3,
-        KEY_4,
-        KEY_5,
-        KEY_6,
-        KEY_7,
-        KEY_8,
-        KEY_9,
-        KEY_0,
-        KEY_MINUS,
-        KEY_EQUAL,
-        // function keys
-        KEY_F1,
-        KEY_F2,
-        KEY_F3,
-        KEY_F4,
-        KEY_F5,
-        KEY_F6,
-        KEY_F7,
-        KEY_F8,
-        KEY_F9,
-        KEY_F10,
-        KEY_F11,
-        KEY_F12,
-        // modifiers
-        KEY_ALT,
-        KEY_CTRL,
-        KEY_SHFT,
-    };
-
-    struct MouseInput {
-        float xPos, yPos, zDelta;
-        bool moving, primary, secondary;
-    };
-
-    virtual void on_tick() {}
-    virtual void on_frame(float framePred) {}
-    virtual void onKey(KEY key) {}                    // TODO: bad design
+    virtual void onTick() {}
+    virtual void onFrame(float framePred) {}
+    virtual void onKey(GAME_KEY key) {}               // TODO: bad design
     virtual void onMouse(const MouseInput &input){};  // TODO: bad design & misleading name
 
    protected:

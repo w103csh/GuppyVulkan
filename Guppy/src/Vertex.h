@@ -11,6 +11,8 @@
 
 namespace Vertex {
 
+const uint32_t BINDING = 0;
+
 enum class TYPE { COLOR = 0, TEXTURE };
 
 struct Color {

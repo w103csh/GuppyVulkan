@@ -8,17 +8,16 @@
 
 #include "Helpers.h"
 #include "Singleton.h"
+#include "Shell.h"
 
-class Shell;
-
-class InputHandler : Singleton {
+class InputHandler : public Singleton {
    public:
     static void init(Shell* sh);
 
     static inline const glm::vec3& getPosDir() { return inst_.posDir_; }
     static inline const glm::vec3& getLookDir() { return inst_.lookDir_; }
 
-    static inline void updateKeyInput(Game::KEY key, INPUT_TYPE type) {
+    static inline void updateKeyInput(GAME_KEY key, INPUT_TYPE type) {
         switch (type) {
             case INPUT_TYPE::UP:
                 inst_.currKeyInput_.erase(key);
@@ -45,7 +44,7 @@ class InputHandler : Singleton {
     static void clear() { inst_.reset(); }
 
     // TODO: all this stuff is garbage
-    static const Game::MouseInput& getMouseInput() { return inst_.currMouseInput_; }
+    static const MouseInput& getMouseInput() { return inst_.currMouseInput_; }
 
    private:
     InputHandler()
@@ -67,7 +66,7 @@ class InputHandler : Singleton {
 
     Shell* sh_;
 
-    std::set<Game::KEY> currKeyInput_;
+    std::set<GAME_KEY> currKeyInput_;
     /*  This is not really a position direction vector. Its a holder for how much
         the object should move in each direction.
 
@@ -79,8 +78,8 @@ class InputHandler : Singleton {
 
     bool isLooking_;
     bool hasFocus_;
-    Game::MouseInput currMouseInput_;
-    Game::MouseInput prevMouseInput_;
+    MouseInput currMouseInput_;
+    MouseInput prevMouseInput_;
     glm::vec3 lookDir_;
 };
 

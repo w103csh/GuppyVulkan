@@ -1,144 +1,162 @@
-#ifndef PIPELINE_RESOURCES_H
-#define PIPELINE_RESOURCES_H
+#ifndef PIPELINE_HANDLER_H
+#define PIPELINE_HANDLER_H
 
 #include <vector>
 #include <vulkan/vulkan.h>
 
 #include "Material.h"
-#include "Shell.h"
+#include "Pipeline.h"
 #include "Singleton.h"
 #include "Shader.h"
 #include "Vertex.h"
 
-struct DescriptorResources {
-    DescriptorResources(std::vector<VkDescriptorBufferInfo> uboInfos, std::vector<VkDescriptorBufferInfo> dynUboInfos,
-                        size_t colorCount, size_t texCount)
-        : pool(nullptr), uboInfos(uboInfos), dynUboInfos(dynUboInfos), colorCount(colorCount), texCount(texCount) {}
-    VkDescriptorPool pool;
-    size_t colorCount, texCount;
-    std::vector<VkDescriptorBufferInfo> uboInfos;
-    std::vector<VkDescriptorBufferInfo> dynUboInfos;
-    std::vector<VkDescriptorSet> colorSets;
-    std::vector<std::vector<VkDescriptorSet>> texSets;
+namespace Pipeline {
+
+struct DefaultPushConstants {
+    glm::mat4 model;
+    Material::Data material;
 };
 
-struct PipelineCreateInfoResources {
-    // shader
-    std::array<VkPipelineShaderStageCreateInfo, 2> stagesInfo;
-    // vertex
+struct DescriptorSetsReference {
+    VkPipeline pipeline;
+    VkPipelineBindPoint bindPoint;
+    VkPipelineLayout layout;
+    uint32_t firstSet;
+    uint32_t descriptorSetCount;
+    VkDescriptorSet *pDescriptorSets;
+    std::vector<uint32_t> dynamicOffsets;
+};
+
+struct CreateInfoResources {
+    // GENERAL (this is just for convenience...)
+    const Shell::Context *pCtx;
+    const Game::Settings *pSettings;
+    // BLENDING
+    VkPipelineColorBlendAttachmentState blendAttach;
+    VkPipelineColorBlendStateCreateInfo colorBlendStateInfo;
+    // DYNAMIC
+    VkDynamicState dynamicStates[VK_DYNAMIC_STATE_RANGE_SIZE];
+    VkPipelineDynamicStateCreateInfo dynamicStateInfo;
+    // INPUT ASSEMBLY
     VkVertexInputBindingDescription bindingDesc;
     std::vector<VkVertexInputAttributeDescription> attrDesc;
     VkPipelineVertexInputStateCreateInfo vertexInputStateInfo;
-    //
+    // FIXED FUNCTION
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo;
     VkPipelineTessellationStateCreateInfo tessellationStateInfo;
     VkPipelineViewportStateCreateInfo viewportStateInfo;
     VkPipelineRasterizationStateCreateInfo rasterizationStateInfo;
     VkPipelineMultisampleStateCreateInfo multisampleStateInfo;
     VkPipelineDepthStencilStateCreateInfo depthStencilStateInfo;
-    // blending
-    VkPipelineColorBlendAttachmentState blendAttach;
-    VkPipelineColorBlendStateCreateInfo colorBlendStateInfo;
-    // dynamic
-    VkDynamicState dynamicStates[VK_DYNAMIC_STATE_RANGE_SIZE];
-    VkPipelineDynamicStateCreateInfo dynamicStateInfo;
+    // SHADER
+    std::vector<VkPipelineShaderStageCreateInfo> stagesInfo;
 };
 
-struct PipelineResources {
-    std::string markerName;
-    std::vector<VkSubpassDescription> subpasses;
-    std::vector<VkSubpassDependency> dependencies;
-    VkRenderPass renderPass;
-    VkGraphicsPipelineCreateInfo pipelineInfo;
-    // TRI_LIST_COLOR, TRI_LIST_TEX, COLOR
-    std::array<VkPipeline, 3> pipelines{VK_NULL_HANDLE, VK_NULL_HANDLE, VK_NULL_HANDLE};
-};
-
-struct PushConstants {
-    glm::mat4 model;
-    Material::Data material;
-};
-
-class Scene;
-
-class PipelineHandler : Singleton {
+class Handler : public Singleton {
    public:
     static void init(Shell *sh, const Game::Settings &settings);
     static inline void destroy() {
         inst_.reset();
-        inst_.cleanupOldResources();
+        inst_.cleanup();
     }
 
-    PipelineHandler(const PipelineHandler &) = delete;             // Prevent construction by copying
-    PipelineHandler &operator=(const PipelineHandler &) = delete;  // Prevent assignment
+    Handler(const Handler &) = delete;             // Prevent construction by copying
+    Handler &operator=(const Handler &) = delete;  // Prevent assignment
 
-    struct DefaultAttachementReferences {
-        VkAttachmentReference color;
-        VkAttachmentReference colorResolve;
-        VkAttachmentReference depth;
-    };
+    // GENERAL
+    static const VkPipelineCache &getPipelineCache() { return inst_.cache_; }
 
-    static std::unique_ptr<DescriptorResources> createDescriptorResources(std::vector<VkDescriptorBufferInfo> uboInfos,
-                                                                          std::vector<VkDescriptorBufferInfo> dynUboInfos,
-                                                                          size_t colorCount, size_t texCount);
-    static void createTextureDescriptorSets(const VkDescriptorImageInfo &info, int offset,
-                                            std::unique_ptr<DescriptorResources> &pRes);
-
-    static void createPipelineCache(VkPipelineCache &cache);
-    static VkPipelineCache &getPipelineCache() { return inst_.cache_; }
-    // static VkSubpassDescription PipelineHandler::create_default_subpass();
-    static void createPipelineResources(PipelineResources &resources);
-    static void createRenderPass(PipelineResources &resources);
-    static void createPipeline(PIPELINE_TYPE type, PipelineResources &resources);
-
-    static inline const DefaultAttachementReferences &get_def_attach_refs() { return inst_.defAttachRefs_; }
-    static void PipelineHandler::getDescriptorLayouts(uint32_t image_count, Vertex::TYPE type,
-                                                      std::vector<VkDescriptorSetLayout> &layouts);
-    // static inline VkPipelineLayout &get_default_pipeline_layout() { return inst_.layout_; }
-    static inline const VkPipelineLayout &getPipelineLayout(Vertex::TYPE type) {
-        return inst_.pipelineLayouts_[static_cast<int>(type)];
+    // PUSH CONSTANT
+    static const std::vector<VkPushConstantRange> getPushConstantRanges(PUSH_CONSTANT_TYPE &&type) {
+        // TODO: this need more thought
+        return inst_.pushConstantRanges_;  // Just return the whole thing for now.
     }
 
-    static void destroyPipelineResources(PipelineResources &resources);
+    // DESCRIPTOR
+    static const VkDescriptorPool &getDescriptorPool() { return inst_.descPool_; }
+    static const VkDescriptorSetLayout &getDescriptorSetLayouts(const std::set<DESCRIPTOR_TYPE> descTypeSet) {
+        return inst_.descriptorMap_[descTypeSet].layout;
+    }
+    static void makeDescriptorSets(const PIPELINE_TYPE &type, DescriptorSetsReference &descSetsRef,
+                                   const std::shared_ptr<Texture::Data> &pTexture = nullptr);
 
-    // old resources
-    static void cleanupOldResources();
+    // PIPELINES
+    static void createPipelines(const std::unique_ptr<RenderPass::Base> &pPass, bool remake = false);
+    static const VkPipeline &createPipeline(const PIPELINE_TYPE &type,
+                                            const std::unique_ptr<RenderPass::Base> &pPass = nullptr, bool setBase = false);
+    static inline const std::unique_ptr<Pipeline::Base> &getPipeline(const PIPELINE_TYPE &type) {
+        return inst_.getPipelineInternal(type);
+    }
+    static inline const std::unique_ptr<Pipeline::Base> &getPipeline(PIPELINE_TYPE &&type) {
+        return inst_.getPipelineInternal(std::forward<PIPELINE_TYPE>(type));
+    }
+
+    static void cleanup(int frameIndex = -1);
 
    private:
-    PipelineHandler();     // Prevent construction
-    ~PipelineHandler(){};  // Prevent destruction
-    static PipelineHandler inst_;
+    Handler();     // Prevent construction
+    ~Handler(){};  // Prevent destruction
+    static Handler inst_;
     void reset() override;
-
-    void createPushConstantRange();
-    void createDescriptorPool(std::unique_ptr<DescriptorResources> &pDescResources);
-    void createDescriptorSetLayout(Vertex::TYPE type, VkDescriptorSetLayout &setLayout);
-    void createDefaultAttachments(bool clear = true, VkImageLayout finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
-    void createSubpasses(PipelineResources &resources);
-    void createDependencies(PipelineResources &resources);
-    void createPipelineLayout(Vertex::TYPE type, const VkDescriptorSetLayout &setLayout, std::string markerName = "");
-    // maybe make something like below public ...
-    void createInputStateCreateInfo(Vertex::TYPE type, PipelineCreateInfoResources &resources);
-    void createBasePipeline(Vertex::TYPE vertexType, PIPELINE_TYPE pipelineType, const std::unique_ptr<Shader> &vs,
-                            const std::unique_ptr<Shader> &fs, PipelineCreateInfoResources &createRes,
-                            PipelineResources &pipelineRes);
 
     Shell *sh_;
     Shell::Context ctx_;       // TODO: shared_ptr
     Game::Settings settings_;  // TODO: shared_ptr
 
-    std::vector<VkPushConstantRange> pushConstantRanges_;
-    // Default instances ... (so that users can make pipeline derivatives from these)
-    std::array<VkDescriptorSetLayout, 2> setLayouts_;  // COLOR, TEXTURE
-    VkPipelineCache cache_;                            // TODO: what is this for???
-    std::array<VkPipelineLayout, 2> pipelineLayouts_;  // COLOR, TEXTURE
-    // attachments
-    DefaultAttachementReferences defAttachRefs_;
-    std::vector<VkAttachmentDescription> attachments_;
-    // create info
-    PipelineCreateInfoResources createResources_;
+    // GENERAL
+    VkPipelineCache cache_;  // TODO: what is this for???
+
+    // PUSH CONSTANT
+    void createDefaultPushConstantRange(const Shell::Context &ctx);
+    std::vector<VkPushConstantRange> pushConstantRanges_;  // This is just one thing atm.
+
+    // DESCRIPTOR
+    void createDescriptorPool();
+    void createDescriptorSetLayouts();
+    void allocateDescriptorSets(const std::set<DESCRIPTOR_TYPE> types, const VkDescriptorSetLayout &layout,
+                                DescriptorMapItem::Resource &resource, const std::shared_ptr<Texture::Data> &pTexture,
+                                uint32_t count = 1);
+    void validateDescriptorTypeKey(const std::set<DESCRIPTOR_TYPE> descTypes,
+                                   const std::shared_ptr<Texture::Data> &pTexture);
+    VkDescriptorPool descPool_;
+    descriptor_resource_map descriptorMap_;
+
+    // PIPELINES
+    void createPipelineCache(VkPipelineCache &cache);
+
+    inline VkGraphicsPipelineCreateInfo &getPipelineCreateInfo(const PIPELINE_TYPE &type) {
+        switch (type) {
+            case PIPELINE_TYPE::TRI_LIST_COLOR:
+            case PIPELINE_TYPE::LINE:
+            case PIPELINE_TYPE::TRI_LIST_TEX:
+            default:
+                return defaultPipelineInfo_;
+        }
+    }
+
+    inline std::unique_ptr<Pipeline::Base> &getPipelineInternal(const PIPELINE_TYPE &type) {
+        switch (type) {
+            case PIPELINE_TYPE::TRI_LIST_COLOR:
+                return pDefaultTriListColor_;
+            case PIPELINE_TYPE::LINE:
+                return pDefaultLine_;
+            case PIPELINE_TYPE::TRI_LIST_TEX:
+                return pDefaultTriListTex_;
+            default:
+                throw std::runtime_error("pipeline type not handled!");
+        }
+    }
+
+    // DEFAULT
+    VkGraphicsPipelineCreateInfo defaultPipelineInfo_;  // TODO: use this better through creation...
+    CreateInfoResources defaultCreateInfoResources_;    // TODO: use this better through creation...
+    std::unique_ptr<Pipeline::Base> pDefaultTriListColor_;
+    std::unique_ptr<Pipeline::Base> pDefaultLine_;
+    std::unique_ptr<Pipeline::Base> pDefaultTriListTex_;
     // global storage for clean up
-    std::vector<VkPipeline> oldPipelines_;
+    std::vector<std::pair<int, VkPipeline>> oldPipelines_;
 };
 
-#endif  // !PIPELINE_RESOURCES_H
+}  // namespace Pipeline
+
+#endif  // !PIPELINE_HANDLER_H

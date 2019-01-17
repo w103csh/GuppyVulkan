@@ -21,10 +21,10 @@ set(SOURCE
     Guppy.h
 	Helpers.cpp
     Helpers.h
-    ImGuiUI.cpp
-    ImGuiUI.h
     InputHandler.cpp
     InputHandler.h
+    InstanceData.cpp
+    InstanceData.h
     Light.cpp
     Light.h
     LoadingResourceHandler.cpp
@@ -40,8 +40,6 @@ set(SOURCE
     ModelHandler.h
     Object3d.cpp
     Object3d.h
-	PipelineHandler.cpp
-	PipelineHandler.h
     Plane.cpp
     Plane.h
 	Scene.cpp
@@ -50,21 +48,44 @@ set(SOURCE
     SceneHandler.h
     SelectionManager.cpp
     SelectionManager.h
-	Shader.cpp
-	shader.h
+    Singleton.h
+    Vertex.cpp
+    Vertex.h
+    # Shell
     Shell.cpp
     Shell.h
     ShellGLFW.cpp
     ShellGLFW.h
-    Singleton.h
+    # Pipeline
+	Pipeline.cpp
+	Pipeline.h
+	PipelineHandler.cpp
+    PipelineHandler.h
+    RenderPass.cpp
+    RenderPass.h
+    # Shader
+    PBRShader.cpp
+    PBRShader.h
+	Shader.cpp
+    Shader.h
+    ShaderHandler.cpp
+    ShaderHandler.h
+    UniformBuffer.cpp
+    UniformBuffer.h
+    # Texture
+    Sampler.cpp
+    Sampler.h
     Texture.cpp
     Texture.h
     TextureHandler.cpp
     TextureHandler.h
+    # UI
+    ImGuiUI.cpp
+    ImGuiUI.h
+    ImGuiRenderPass.cpp
+    ImGuiRenderPass.h
     UIHandler.cpp
     UIHandler.h
-    Vertex.cpp
-    Vertex.h
     )
 
 # shader folder
