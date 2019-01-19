@@ -1,4 +1,4 @@
-# Vulkan Test
+# Guppy (Vulkan)
   - This repository is a basic game engine using Vulkan C++. It borrows heavily from
     the [Vulkan Samples repository](https://github.com/LunarG/VulkanSamples),
     which was used as a starting point - more specifically the
