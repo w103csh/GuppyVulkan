@@ -16,17 +16,16 @@ class Base;
 namespace RenderPass {
 
 struct InitInfo {
-    // MULTI-SAMPLE (TODO: attachment vectors?)
-    bool hasColor = false;
-    VkClearColorValue colorClearColorValue = {};
-    // DEPTH (TODO: attachment vectors?)
-    bool hasDepth = false;
-    VkClearDepthStencilValue depthClearValue = {};
-    VkFormat depthFormat = {};
-
+    bool clearColor = false;
+    bool clearDepth = false;
     VkFormat format = {};
-    VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
+    VkFormat depthFormat = {};
     VkImageLayout finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
+    uint32_t commandCount = 0;
+    uint32_t fenceCount = 0;
+    uint32_t semaphoreCount = 0;
+    VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 };
 
 struct FrameInfo {
@@ -35,20 +34,13 @@ struct FrameInfo {
     VkImageView *pViews = nullptr;
 };
 
-struct FrameData {
-    // MULTI-SAMPLE
-    ImageResource colorResource = {};
-    // DEPTH
-    ImageResource depthResource = {};
-
-    VkViewport viewport;
-    VkRect2D scissor;
-
-    // Signaled when this struct is ready for reuse.
+struct Data {
     std::vector<VkFence> fences;
     std::vector<VkFramebuffer> framebuffers;
     std::vector<VkCommandBuffer> priCmds;
     std::vector<VkCommandBuffer> secCmds;
+    std::vector<VkSemaphore> semaphores;
+    std::vector<int> tests;
 };
 
 struct SubpassResources {
@@ -72,13 +64,17 @@ class Base {
     friend class Pipeline::Base;
 
    public:
-    void init(const Shell::Context &ctx, const Game::Settings &settings, RenderPass::InitInfo *pInfo);
+    void init(const Shell::Context &ctx, const Game::Settings &settings, RenderPass::InitInfo *pInfo,
+              SubpassResources *pSubpassResources = nullptr);
+
     virtual void createTarget(const Shell::Context &ctx, const Game::Settings &settings, RenderPass::FrameInfo *pInfo);
 
     virtual inline void beginPass(
         const uint8_t &frameIndex,
         VkCommandBufferUsageFlags &&primaryCommandUsage = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
         VkSubpassContents &&subpassContents = VK_SUBPASS_CONTENTS_INLINE) {
+        if (data.tests[frameIndex]) data.tests[frameIndex] = 0;
+
         // FRAME UPDATE
         beginInfo_.framebuffer = data.framebuffers[frameIndex];
         auto &priCmd = data.priCmds[frameIndex];
@@ -95,8 +91,8 @@ class Base {
         vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
 
         // FRAME COMMANDS
-        vkCmdSetViewport(priCmd, 0, 1, &data.viewport);
-        vkCmdSetScissor(priCmd, 0, 1, &data.scissor);
+        vkCmdSetScissor(priCmd, 0, 1, &scissor_);
+        vkCmdSetViewport(priCmd, 0, 1, &viewport_);
 
         //// Start a new debug marker region
         // ext::DebugMarkerBegin(primaryCmd, "Render x scene", glm::vec4(0.2f, 0.3f, 0.4f, 1.0f));
@@ -111,10 +107,10 @@ class Base {
         vk::assert_success(vkEndCommandBuffer(primaryCmd));
     }
 
-    virtual void beginSecondary(const uint8_t &frameIndex) = 0;
-    virtual void endSecondary(const uint8_t &frameIndex, const VkCommandBuffer &priCmd) = 0;
+    virtual void beginSecondary(const uint8_t &frameIndex) {}
+    virtual void endSecondary(const uint8_t &frameIndex, const VkCommandBuffer &priCmd) {}
 
-    virtual void getSubmitCommands(const uint8_t &frameIndex, std::vector<VkCommandBuffer> &cmds) = 0;
+    virtual void getSubmitResource(const uint8_t &frameIndex, SubmitResource &resource) = 0;
 
     std::unordered_set<PIPELINE_TYPE> PIPELINE_TYPES;
 
@@ -133,46 +129,47 @@ class Base {
     };
 
     virtual void destroy(const VkDevice &dev);  // calls destroyFrameData
-    virtual void destroyTarget(const VkDevice &dev);
+    virtual void destroyTargetResources(const VkDevice &dev);
 
     // TODO: Scene as friend?
     VkRenderPass pass;
-    FrameData data;
+    Data data;
 
    protected:
     Base(std::string &&name, std::unordered_set<PIPELINE_TYPE> &&types)
-        : PIPELINE_TYPES(types), initInfo(), frameInfo(), pass(VK_NULL_HANDLE), attachmentCount_(0), name_(name){};
+        : PIPELINE_TYPES(types), initInfo(), frameInfo(), pass(VK_NULL_HANDLE), name_(name) {}
 
     // RENDER PASS
     virtual void createPass(const VkDevice &dev);
     virtual void createClearValues(const Shell::Context &ctx, const Game::Settings &settings) {}
-    std::vector<VkClearValue> clearValues_;
     virtual void createBeginInfo(const Shell::Context &ctx, const Game::Settings &settings);
+    virtual void updateBeginInfo(const Shell::Context &ctx, const Game::Settings &settings);  // TODO: what should this be?
+    virtual void createViewport();
+    std::vector<VkClearValue> clearValues_;
+    VkRect2D scissor_;
+    VkViewport viewport_;
     VkRenderPassBeginInfo beginInfo_;
 
     // SUBPASS
-    void createSubpassResources(const Shell::Context &ctx, const Game::Settings &settings);
-    virtual void createSubpassesAndAttachments(const Shell::Context &ctx, const Game::Settings &settings) = 0;
+    virtual void createAttachmentsAndSubpasses(const Shell::Context &ctx, const Game::Settings &settings) = 0;
     virtual void createDependencies(const Shell::Context &ctx, const Game::Settings &settings) = 0;
     SubpassResources subpassResources_;
 
     // FRAME DATA
-    void createFrameData(const Shell::Context &ctx, const Game::Settings &settings);
     virtual void createCommandBuffers(const Shell::Context &ctx);
-    virtual void createImages(const Shell::Context &ctx, const Game::Settings &settings);  // TODO: bad name
-    virtual void createColorResources(const Shell::Context &ctx);                          // TODO: bad name
-    virtual void createDepthResources(const Shell::Context &ctx);                          // TODO: bad name
-    virtual void createViewport();
-    virtual void createImageViews(const Shell::Context &ctx) = 0;
-    virtual void createFramebuffers(const Shell::Context &ctx) = 0;  // TODO: Pure virtual or empty?
-    virtual void createFences(const Shell::Context &ctx,
-                              VkFenceCreateFlags flags = VK_FENCE_CREATE_SIGNALED_BIT) = 0;  // TODO: Pure virtual or empty?
-    virtual void updateBeginInfo(const Shell::Context &ctx, const Game::Settings &settings);
+    virtual void createColorResources(const Shell::Context &ctx, const Game::Settings &settings) {}
+    virtual void createDepthResource(const Shell::Context &ctx, const Game::Settings &settings) {}
+    virtual void createFramebuffers(const Shell::Context &ctx, const Game::Settings &settings) {}
+    virtual void createFences(const Shell::Context &ctx, VkFenceCreateFlags flags = VK_FENCE_CREATE_SIGNALED_BIT);
 
-    // ATTACHMENTS
-    uint32_t attachmentCount_;
+    // ATTACHMENT
+    std::vector<ImageResource> colors_;
+    ImageResource depth_;
 
    private:
+    void createSemaphores(const Shell::Context &ctx);
+    void RenderPass::Base::createAttachmentDebugMarkers(const Shell::Context &ctx, const Game::Settings &settings);
+
     std::string name_;
 };
 
@@ -200,8 +197,8 @@ class Default : public Base {
         vkResetCommandBuffer(secCmd, 0);
         vk::assert_success(vkBeginCommandBuffer(secCmd, &secCmdBeginInfo_));
         // FRAME COMMANDS
-        vkCmdSetViewport(secCmd, 0, 1, &data.viewport);
-        vkCmdSetScissor(secCmd, 0, 1, &data.scissor);
+        vkCmdSetScissor(secCmd, 0, 1, &scissor_);
+        vkCmdSetViewport(secCmd, 0, 1, &viewport_);
 
         secCmdFlag_ = true;
     }
@@ -216,10 +213,7 @@ class Default : public Base {
         secCmdFlag_ = false;
     }
 
-    void getSubmitCommands(const uint8_t &frameIndex, std::vector<VkCommandBuffer> &cmds) override {
-        cmds.push_back(data.priCmds[frameIndex]);
-        // if (secCmdFlag_) cmds.push_back(data.secCmds[frameIndex]);
-    };
+    void getSubmitResource(const uint8_t &frameIndex, SubmitResource &resource) override;
 
    private:
     void createClearValues(const Shell::Context &ctx, const Game::Settings &settings) override;
@@ -229,11 +223,11 @@ class Default : public Base {
     bool secCmdFlag_;
 
     void createCommandBuffers(const Shell::Context &ctx) override;
-    void createSubpassesAndAttachments(const Shell::Context &ctx, const Game::Settings &settings) override;
+    void createColorResources(const Shell::Context &ctx, const Game::Settings &settings) override;
+    void createDepthResource(const Shell::Context &ctx, const Game::Settings &settings) override;
+    void createAttachmentsAndSubpasses(const Shell::Context &ctx, const Game::Settings &settings) override;
     void createDependencies(const Shell::Context &ctx, const Game::Settings &settings) override;
-    void createFences(const Shell::Context &ctx, VkFenceCreateFlags flags = VK_FENCE_CREATE_SIGNALED_BIT) override;
-    void createImageViews(const Shell::Context &ctx) override{};
-    void createFramebuffers(const Shell::Context &ctx) override;
+    void createFramebuffers(const Shell::Context &ctx, const Game::Settings &settings) override;
 };
 
 }  // namespace RenderPass

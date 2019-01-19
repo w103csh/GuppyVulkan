@@ -55,7 +55,10 @@ class Guppy : public Game {
     std::vector<VkFramebuffer> framebuffers_;
 
     // RENDER PASS
+    void initRenderPasses();
+    void submitRenderPasses(const std::vector<SubmitResource>& resources, VkFence fence = VK_NULL_HANDLE);
     std::unique_ptr<RenderPass::Base> pDefaultRenderPass_;
+    std::unique_ptr<RenderPass::Base> pUIRenderPass_;
 
     // SCENE
     void createScenes();

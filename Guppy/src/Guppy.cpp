@@ -21,6 +21,7 @@
 
 #ifdef USE_DEBUG_GUI
 #include "ImGuiUI.h"
+#include "ImGuiRenderPass.h"
 #endif
 
 Guppy::Guppy(const std::vector<std::string>& args)
@@ -33,6 +34,11 @@ Guppy::Guppy(const std::vector<std::string>& args)
       // sim_(5000),
       frameIndex_(0),
       pDefaultRenderPass_(std::make_unique<RenderPass::Default>()),
+#ifdef USE_DEBUG_GUI
+      pUIRenderPass_(std::make_unique<ImGuiRenderPass>()),
+#else
+      pUIRenderPass_(std::make_unique<RenderPass::Default>()),
+#endif
       camera_(glm::vec3(2.0f, 2.0f, 4.0f), glm::vec3(0.0f, 0.0f, 0.0f),
               static_cast<float>(settings_.initial_width) / static_cast<float>(settings_.initial_height)) {
     // ARGS
@@ -71,19 +77,7 @@ void Guppy::attachShell(Shell& sh) {
     Shader::Handler::init(sh, settings_, camera_);
     Pipeline::Handler::init(&sh, settings_);
 
-    // DEFAULT RENDER PASS
-    RenderPass::InitInfo initInfo = {};
-    initInfo.hasColor = settings_.include_color;
-    initInfo.colorClearColorValue = CLEAR_VALUE;
-    initInfo.hasDepth = settings_.include_depth;
-    initInfo.depthClearValue = {1.0f, 0};
-    initInfo.depthFormat = ctx.depthFormat;
-    initInfo.format = ctx.surfaceFormat.format;
-    initInfo.samples = ctx.samples;
-    pDefaultRenderPass_->init(ctx, settings_, &initInfo);
-
-    Pipeline::Handler::createPipelines(pDefaultRenderPass_);
-    shell_->initUI(pDefaultRenderPass_->pass);
+    initRenderPasses();
 
     ModelHandler::init(&sh, settings_);
     SceneHandler::init(&sh, settings_);
@@ -95,32 +89,10 @@ void Guppy::attachShell(Shell& sh) {
     }
 }
 
-void Guppy::detachShell() {
-    const auto& ctx = shell_->context();
-
-    // TODO: kill futures !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
-    if (multithread_) {
-        // for (auto &worker : workers_) worker->stop();
-    }
-
-    SceneHandler::destroy();
-    CmdBufHandler::destroy();
-    Pipeline::Handler::destroy();
-    Shader::Handler::destroy();
-    TextureHandler::destroy();
-
-    // RENDER PASS
-    if (pDefaultRenderPass_ != nullptr) pDefaultRenderPass_->destroy(ctx.dev);
-
-    LoadingResourceHandler::cleanup();
-
-    Game::detachShell();
-}
-
 void Guppy::attachSwapchain() {
     const auto& ctx = shell_->context();
 
+    // SWAPCHAIN
     createSwapchainResources(ctx);
 
     // DEFAULT RENDER PASS
@@ -129,6 +101,9 @@ void Guppy::attachSwapchain() {
     frameInfo.viewCount = static_cast<uint32_t>(swapchainResources_.views.size());
     frameInfo.pViews = swapchainResources_.views.data();
     pDefaultRenderPass_->createTarget(ctx, settings_, &frameInfo);
+
+    // IMGUI RENDER PASS
+    pUIRenderPass_->createTarget(ctx, settings_, &frameInfo);
 }
 
 void Guppy::createSwapchainResources(const Shell::Context& ctx) {
@@ -146,209 +121,37 @@ void Guppy::createSwapchainResources(const Shell::Context& ctx) {
     }
 }
 
-void Guppy::detachSwapchain() {
+void Guppy::initRenderPasses() {
     const auto& ctx = shell_->context();
 
-    // RENDER PASSES
-    pDefaultRenderPass_->destroyTarget(ctx.dev);
-    // SWAPCHAIN
-    destroySwapchainResources(ctx);
+    RenderPass::InitInfo initInfo;
+    // DEFAULT RENDER PASS
+    initInfo = {};
+    initInfo.clearColor = true;
+    initInfo.clearDepth = true;
+    initInfo.format = ctx.surfaceFormat.format;
+    initInfo.depthFormat = ctx.depthFormat;
+#ifdef USE_DEBUG_GUI
+    initInfo.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+#endif
+    initInfo.samples = ctx.samples;
+    initInfo.commandCount = ctx.imageCount;
+    initInfo.fenceCount = ctx.imageCount;
+    initInfo.semaphoreCount = ctx.imageCount * 2;
+    pDefaultRenderPass_->init(ctx, settings_, &initInfo);
 
-    CmdBufHandler::resetCmdBuffers();
-}
+    Pipeline::Handler::createPipelines(pDefaultRenderPass_);
 
-void Guppy::destroySwapchainResources(const Shell::Context& ctx) {
-    for (auto& view : swapchainResources_.views) vkDestroyImageView(ctx.dev, view, nullptr);
-    swapchainResources_.views.clear();
-    // Images are destoryed by vkDestroySwapchainKHR
-    swapchainResources_.images.clear();
-}
+#ifdef USE_DEBUG_GUI
+    // IMGUI RENDER PASS
+    initInfo = {};
+    initInfo.format = ctx.surfaceFormat.format;
+    initInfo.commandCount = ctx.imageCount;
+    initInfo.waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    pUIRenderPass_->init(ctx, settings_, &initInfo);
 
-void Guppy::onKey(GAME_KEY key) {
-    switch (key) {
-        case GAME_KEY::KEY_SHUTDOWN:
-        case GAME_KEY::KEY_ESC:
-            shell_->quit();
-            break;
-        case GAME_KEY::KEY_SPACE:
-            // sim_paused_ = !sim_paused_;
-            break;
-        case GAME_KEY::KEY_F:
-            // sim_fade_ = !sim_fade_;
-            break;
-        case GAME_KEY::KEY_1: {
-            Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
-                if (posLights.size() > 1) {
-                    auto& light = posLights[1];
-                    light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_X * -2.0f)));
-                }
-            });
-        } break;
-        case GAME_KEY::KEY_2: {
-            Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
-                if (posLights.size() > 1) {
-                    auto& light = posLights[1];
-                    light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_X * 2.0f)));
-                }
-            });
-        } break;
-        case GAME_KEY::KEY_3: {
-            Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
-                if (posLights.size() > 1) {
-                    auto& light = posLights[1];
-                    light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Z * 2.0f)));
-                }
-            });
-        } break;
-        case GAME_KEY::KEY_4: {
-            Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
-                if (posLights.size() > 1) {
-                    auto& light = posLights[1];
-                    light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Z * -2.0f)));
-                }
-            });
-        } break;
-        case GAME_KEY::KEY_5: {
-            Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
-                if (posLights.size() > 1) {
-                    auto& light = posLights[1];
-                    light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Y * 2.0f)));
-                }
-            });
-        } break;
-        case GAME_KEY::KEY_6: {
-            Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
-                if (posLights.size() > 1) {
-                    auto& light = posLights[1];
-                    light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Y * -2.0f)));
-                }
-            });
-        } break;
-        case GAME_KEY::KEY_7: {
-            Shader::Handler::defaultUniformAction([](auto& defUBO) {
-                // Cycle through fog types
-                if (defUBO.shaderData.flags & Uniform::Default::FLAGS::FOG_EXP) {
-                    defUBO.shaderData.flags ^= Uniform::Default::FLAGS::FOG_EXP;
-                    defUBO.shaderData.flags = Uniform::Default::FLAGS::FOG_EXP2;
-                } else if (defUBO.shaderData.flags & Uniform::Default::FLAGS::FOG_EXP2) {
-                    defUBO.shaderData.flags ^= Uniform::Default::FLAGS::FOG_EXP2;
-                    defUBO.shaderData.flags = Uniform::Default::FLAGS::FOG_LINEAR;
-                } else {
-                    defUBO.shaderData.flags ^= Uniform::Default::FLAGS::FOG_LINEAR;
-                    defUBO.shaderData.flags = Uniform::Default::FLAGS::FOG_EXP;
-                }
-                // defUBO_.shaderData.fog.maxDistance += 10.0f;
-            });
-        } break;
-        case GAME_KEY::KEY_8: {
-            Shader::Handler::defaultUniformAction(
-                [](auto& defUBO) { defUBO.shaderData.flags ^= Uniform::Default::FLAGS::TOON_SHADE; });
-        } break;
-        default:
-            break;
-    }
-}
-
-void Guppy::onMouse(const MouseInput& input) {
-    if (input.moving) {
-        // const Shell::Context& ctx = shell_->context();
-        // auto ray = camera_.getRay({input.xPos, input.yPos}, ctx.extent);
-        // SceneHandler::select(ctx.dev, ray);
-    }
-    if (input.primary) {
-        const Shell::Context& ctx = shell_->context();
-        auto ray = camera_.getRay({input.xPos, input.yPos}, ctx.extent);
-        SceneHandler::select(ctx.dev, ray);
-    }
-}
-
-/*  This function is for updating things regardless of framerate. It is based on settings.ticks_per_second,
-    and should be called that many times per second. add_game_time is weird and appears to limit the amount
-    of ticks per second arbitrarily, so this in reality could do anything.
-    NOTE: Things like input should not used here since this is not guaranteed to be called each time input
-    is collected. This function could be called as many as
-*/
-void Guppy::onTick() {
-    if (sim_paused_) return;
-
-    auto& pScene = SceneHandler::getActiveScene();
-
-    // TODO: Should this be "on_frame"? every other frame? async? ... I have no clue yet.
-    LoadingResourceHandler::cleanup();
-    TextureHandler::update();
-
-    // TODO: move to SceneHandler::update or something!
-    ModelHandler::update(pScene);
-
-    // TODO: ifdef this stuff out
-    if (settings_.enable_directory_listener) {
-        Shader::Handler::update(pScene);
-    }
-
-    pScene->update(settings_, shell_->context());
-
-    // for (auto &worker : workers_) worker->update_simulation();
-}
-
-void Guppy::onFrame(float framePred) {
-    const auto& ctx = shell_->context();
-    auto& fence = pDefaultRenderPass_->data.fences[frameIndex_];
-    auto& pScene = SceneHandler::getActiveScene();
-
-    // wait for the last submission since we reuse frame data
-    vk::assert_success(vkWaitForFences(ctx.dev, 1, &fence, true, UINT64_MAX));
-    vk::assert_success(vkResetFences(ctx.dev, 1, &fence));
-
-    const Shell::BackBuffer& back = ctx.acquiredBackBuffer;
-
-    // **********************
-    // Pre-record tasks
-    // **********************
-
-    // Surface changed
-    auto aspect = static_cast<float>(ctx.extent.width) / static_cast<float>(ctx.extent.height);
-    // Update the camera...
-    auto pos_dir = InputHandler::getPosDir();
-    auto look_dir = InputHandler::getLookDir();
-    camera_.update(aspect, pos_dir, look_dir);
-
-    Shader::Handler::updateDefaultUniform(camera_);
-
-    // **********************
-    // Record
-    // **********************
-
-    pScene->record(ctx, frameIndex_, pDefaultRenderPass_);
-    // pScene->record(ctx, framebuffers_[frameIndex_], data.fence, viewport_, scissor_, frameIndex_, false);
-
-    // **********************
-    // Post-record tasks
-    // **********************
-
-    Shader::Handler::cleanup();
-    Pipeline::Handler::cleanup(frameIndex_);
-    SceneHandler::cleanupInvalidResources();
-
-    // **********************
-
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.pWaitSemaphores = &back.acquireSemaphore;
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = &back.renderSemaphore;
-
-    VkPipelineStageFlags waitStages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitDstStageMask = waitStages;
-
-    std::vector<VkCommandBuffer> cmds;
-    pDefaultRenderPass_->getSubmitCommands(frameIndex_, cmds);
-    submitInfo.commandBufferCount = static_cast<uint32_t>(cmds.size());
-    submitInfo.pCommandBuffers = cmds.data();
-
-    vk::assert_success(vkQueueSubmit(CmdBufHandler::graphics_queue(), 1, &submitInfo, fence));
-
-    frameIndex_ = (frameIndex_ + 1) % static_cast<uint8_t>(ctx.imageCount);
+    shell_->initUI(pUIRenderPass_->pass);
+#endif
 }
 
 void Guppy::createScenes() {
@@ -456,4 +259,262 @@ void Guppy::createScenes() {
             }
         });
     }
+}
+
+/*  This function is for updating things regardless of framerate. It is based on settings.ticks_per_second,
+    and should be called that many times per second. add_game_time is weird and appears to limit the amount
+    of ticks per second arbitrarily, so this in reality could do anything.
+    NOTE: Things like input should not used here since this is not guaranteed to be called each time input
+    is collected. This function could be called as many as
+*/
+void Guppy::onTick() {
+    if (sim_paused_) return;
+
+    auto& pScene = SceneHandler::getActiveScene();
+
+    // TODO: Should this be "on_frame"? every other frame? async? ... I have no clue yet.
+    LoadingResourceHandler::cleanup();
+    TextureHandler::update();
+
+    // TODO: move to SceneHandler::update or something!
+    ModelHandler::update(pScene);
+
+    // TODO: ifdef this stuff out
+    if (settings_.enable_directory_listener) {
+        Shader::Handler::update(pScene);
+    }
+
+    pScene->update(settings_, shell_->context());
+
+    // for (auto &worker : workers_) worker->update_simulation();
+}
+
+void Guppy::onFrame(float framePred) {
+    const auto& ctx = shell_->context();
+
+    auto& fence = pDefaultRenderPass_->data.fences[frameIndex_];
+    // wait for the last submission since we reuse frame data
+    vk::assert_success(vkWaitForFences(ctx.dev, 1, &fence, true, UINT64_MAX));
+    vk::assert_success(vkResetFences(ctx.dev, 1, &fence));
+
+    const Shell::BackBuffer& back = ctx.acquiredBackBuffer;
+
+    // **********************
+    //  Pre-draw
+    // **********************
+
+    // Surface changed
+    float aspect = 1.0f;
+    if (ctx.extent.width && ctx.extent.height)
+        aspect = static_cast<float>(ctx.extent.width) / static_cast<float>(ctx.extent.height);
+    // Update the camera...
+    auto pos_dir = InputHandler::getPosDir();
+    auto look_dir = InputHandler::getLookDir();
+    camera_.update(aspect, pos_dir, look_dir);
+
+    Shader::Handler::updateDefaultUniform(camera_);
+
+    // **********************
+    //  Draw
+    // **********************
+
+    std::vector<SubmitResource> resources;
+    SubmitResource resource;
+
+    // SCENE
+    SceneHandler::getActiveScene()->record(ctx, frameIndex_, pDefaultRenderPass_);
+
+    resource = {};
+    resource.waitSemaphores.push_back(back.acquireSemaphore);    // wait for back buffer...
+    resource.waitDstStageMasks.push_back(ctx.waitDstStageMask);  // back buffer flags...
+    pDefaultRenderPass_->getSubmitResource(frameIndex_, resource);
+    resources.push_back(resource);
+
+    // UI
+    shell_->getUI()->draw(pUIRenderPass_, frameIndex_);
+
+    resource = {};
+    resource.waitSemaphores.push_back(pDefaultRenderPass_->data.semaphores[frameIndex_]);  // wait on scene...
+    resource.signalSemaphores.push_back(back.renderSemaphore);                             // signal back buffer...
+    pUIRenderPass_->getSubmitResource(frameIndex_, resource);
+    resources.push_back(resource);
+
+    submitRenderPasses(resources, fence);
+
+    // **********************
+    //  Post-draw
+    // **********************
+
+    Shader::Handler::cleanup();
+    Pipeline::Handler::cleanup(frameIndex_);
+    SceneHandler::cleanupInvalidResources();
+
+    // **********************
+
+    frameIndex_ = (frameIndex_ + 1) % static_cast<uint8_t>(ctx.imageCount);
+}
+
+void Guppy::onKey(GAME_KEY key) {
+    switch (key) {
+        case GAME_KEY::KEY_SHUTDOWN:
+        case GAME_KEY::KEY_ESC:
+            shell_->quit();
+            break;
+        case GAME_KEY::KEY_SPACE:
+            // sim_paused_ = !sim_paused_;
+            break;
+        case GAME_KEY::KEY_F:
+            // sim_fade_ = !sim_fade_;
+            break;
+        case GAME_KEY::KEY_1: {
+            Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
+                if (posLights.size() > 1) {
+                    auto& light = posLights[1];
+                    light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_X * -2.0f)));
+                }
+            });
+        } break;
+        case GAME_KEY::KEY_2: {
+            Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
+                if (posLights.size() > 1) {
+                    auto& light = posLights[1];
+                    light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_X * 2.0f)));
+                }
+            });
+        } break;
+        case GAME_KEY::KEY_3: {
+            Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
+                if (posLights.size() > 1) {
+                    auto& light = posLights[1];
+                    light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Z * 2.0f)));
+                }
+            });
+        } break;
+        case GAME_KEY::KEY_4: {
+            Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
+                if (posLights.size() > 1) {
+                    auto& light = posLights[1];
+                    light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Z * -2.0f)));
+                }
+            });
+        } break;
+        case GAME_KEY::KEY_5: {
+            Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
+                if (posLights.size() > 1) {
+                    auto& light = posLights[1];
+                    light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Y * 2.0f)));
+                }
+            });
+        } break;
+        case GAME_KEY::KEY_6: {
+            Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
+                if (posLights.size() > 1) {
+                    auto& light = posLights[1];
+                    light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Y * -2.0f)));
+                }
+            });
+        } break;
+        case GAME_KEY::KEY_7: {
+            Shader::Handler::defaultUniformAction([](auto& defUBO) {
+                // Cycle through fog types
+                if (defUBO.shaderData.flags & Uniform::Default::FLAGS::FOG_EXP) {
+                    defUBO.shaderData.flags ^= Uniform::Default::FLAGS::FOG_EXP;
+                    defUBO.shaderData.flags = Uniform::Default::FLAGS::FOG_EXP2;
+                } else if (defUBO.shaderData.flags & Uniform::Default::FLAGS::FOG_EXP2) {
+                    defUBO.shaderData.flags ^= Uniform::Default::FLAGS::FOG_EXP2;
+                    defUBO.shaderData.flags = Uniform::Default::FLAGS::FOG_LINEAR;
+                } else {
+                    defUBO.shaderData.flags ^= Uniform::Default::FLAGS::FOG_LINEAR;
+                    defUBO.shaderData.flags = Uniform::Default::FLAGS::FOG_EXP;
+                }
+                // defUBO_.shaderData.fog.maxDistance += 10.0f;
+            });
+        } break;
+        case GAME_KEY::KEY_8: {
+            Shader::Handler::defaultUniformAction(
+                [](auto& defUBO) { defUBO.shaderData.flags ^= Uniform::Default::FLAGS::TOON_SHADE; });
+        } break;
+        default:
+            break;
+    }
+}
+
+void Guppy::onMouse(const MouseInput& input) {
+    if (input.moving) {
+        // const Shell::Context& ctx = shell_->context();
+        // auto ray = camera_.getRay({input.xPos, input.yPos}, ctx.extent);
+        // SceneHandler::select(ctx.dev, ray);
+    }
+    if (input.primary) {
+        const Shell::Context& ctx = shell_->context();
+        auto ray = camera_.getRay({input.xPos, input.yPos}, ctx.extent);
+        SceneHandler::select(ctx.dev, ray);
+    }
+}
+
+void Guppy::detachShell() {
+    const auto& ctx = shell_->context();
+
+    // TODO: kill futures !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+    if (multithread_) {
+        // for (auto &worker : workers_) worker->stop();
+    }
+
+    SceneHandler::destroy();
+    CmdBufHandler::destroy();
+    Pipeline::Handler::destroy();
+    Shader::Handler::destroy();
+    TextureHandler::destroy();
+
+    // RENDER PASS
+    if (pDefaultRenderPass_ != nullptr) pDefaultRenderPass_->destroy(ctx.dev);
+    if (pUIRenderPass_ != nullptr) pUIRenderPass_->destroy(ctx.dev);
+
+    LoadingResourceHandler::cleanup();
+
+    Game::detachShell();
+}
+
+void Guppy::detachSwapchain() {
+    const auto& ctx = shell_->context();
+
+    // RENDER PASSES
+    pDefaultRenderPass_->destroyTargetResources(ctx.dev);
+    pUIRenderPass_->destroyTargetResources(ctx.dev);
+
+    // SWAPCHAIN
+    destroySwapchainResources(ctx);
+
+    CmdBufHandler::resetCmdBuffers();
+}
+
+void Guppy::destroySwapchainResources(const Shell::Context& ctx) {
+    for (auto& view : swapchainResources_.views) vkDestroyImageView(ctx.dev, view, nullptr);
+    swapchainResources_.views.clear();
+    // Images are destoryed by vkDestroySwapchainKHR
+    swapchainResources_.images.clear();
+}
+
+void Guppy::submitRenderPasses(const std::vector<SubmitResource>& resources, VkFence fence) {
+    std::vector<VkSubmitInfo> infos;
+    infos.reserve(resources.size());
+
+    for (const auto& resource : resources) {
+        assert(resource.waitSemaphores.size() == resource.waitDstStageMasks.size());
+
+        VkSubmitInfo submitInfo = {};
+        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+        submitInfo.waitSemaphoreCount = static_cast<uint32_t>(resource.waitSemaphores.size());
+        submitInfo.pWaitSemaphores = resource.waitSemaphores.data();
+        submitInfo.pWaitDstStageMask = resource.waitDstStageMasks.data();
+        submitInfo.commandBufferCount = static_cast<uint32_t>(resource.commandBuffers.size());
+        submitInfo.pCommandBuffers = resource.commandBuffers.data();
+        submitInfo.signalSemaphoreCount = static_cast<uint32_t>(resource.signalSemaphores.size());
+        submitInfo.pSignalSemaphores = resource.signalSemaphores.data();
+        infos.push_back(submitInfo);
+    }
+
+    vk::assert_success(
+        vkQueueSubmit(CmdBufHandler::graphics_queue(), static_cast<uint32_t>(infos.size()), infos.data(), fence));
 }

@@ -1,3 +1,4 @@
+
 // dear imgui: Renderer for Vulkan
 // This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
 
@@ -43,10 +44,6 @@ static VkPipelineCache              g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool             g_DescriptorPool = VK_NULL_HANDLE;
 static VkRenderPass                 g_RenderPass = VK_NULL_HANDLE;
 static void                         (*g_CheckVkResultFn)(VkResult err) = NULL;
-static uint32_t                     g_Subpass = (uint32_t)-1;
-static VkSampleCountFlagBits        g_RasterizationSamples;
-static VkBool32                     g_SampleShadingEnable;
-static float                        g_MinSampleShading;
 
 static VkDeviceSize                 g_BufferMemoryAlignment = 256;
 static VkPipelineCreateFlags        g_PipelineCreateFlags = 0;
@@ -65,7 +62,7 @@ struct FrameDataForRender {
     VkBuffer VertexBuffer;
     VkBuffer IndexBuffer;
 };
-static int                              g_FrameIndex = 0;
+static int g_FrameIndex = 0;
 static std::vector<FrameDataForRender>  g_FramesDataBuffers;
 
 // Font data
@@ -613,9 +610,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
 
     VkPipelineMultisampleStateCreateInfo ms_info = {};
     ms_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    ms_info.rasterizationSamples = g_RasterizationSamples;
-    ms_info.sampleShadingEnable = g_SampleShadingEnable;
-    ms_info.minSampleShading = g_MinSampleShading;
+    ms_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
     VkPipelineColorBlendAttachmentState color_attachment[1] = {};
     color_attachment[0].blendEnable = VK_TRUE;
@@ -656,7 +651,6 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     info.pDynamicState = &dynamic_state;
     info.layout = g_PipelineLayout;
     info.renderPass = g_RenderPass;
-    info.subpass = g_Subpass;
     err = vkCreateGraphicsPipelines(g_Device, g_PipelineCache, 1, &info, g_Allocator, &g_Pipeline);
     check_vk_result(err);
 
@@ -724,10 +718,6 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     g_DescriptorPool = info->DescriptorPool;
     g_Allocator = info->Allocator;
     g_CheckVkResultFn = info->CheckVkResultFn;
-    g_Subpass = info->Subpass;
-    g_RasterizationSamples = info->RasterizationSamples;
-    g_SampleShadingEnable = info->SampleShadingEnable;
-    g_MinSampleShading = info->MinSampleShading;
 
     ImGui_ImplVulkan_CreateDeviceObjects();
 

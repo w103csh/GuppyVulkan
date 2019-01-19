@@ -8,7 +8,11 @@
 #include "Helpers.h"
 #include "SceneHandler.h"
 
-void ImGuiUI::draw(VkCommandBuffer cmd, uint8_t frameIndex) {
+void ImGuiUI::draw(std::unique_ptr<RenderPass::Base>& pPass, uint8_t frameIndex) {
+    // if (pPass->data.tests[frameIndex] == 0) {
+    //    return;
+    //}
+
     // Start the Dear ImGui frame
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -21,8 +25,13 @@ void ImGuiUI::draw(VkCommandBuffer cmd, uint8_t frameIndex) {
     // Rendering
     ImGui::Render();
 
+    auto& cmd = pPass->data.priCmds[frameIndex];
+    pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
+
     // Record Imgui Draw Data and draw funcs into command buffer
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd, frameIndex);
+
+    pPass->endPass(frameIndex);
 }
 
 void ImGuiUI::reset() {

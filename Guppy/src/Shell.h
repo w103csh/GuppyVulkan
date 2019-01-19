@@ -32,8 +32,7 @@ class Base;
 
 class UI {
    public:
-    virtual std::unique_ptr<RenderPass::Base> &getRenderPass() = 0;
-    virtual void draw(VkCommandBuffer cmd, uint8_t frameIndex) = 0;
+    virtual void draw(std::unique_ptr<RenderPass::Base> &pPass, uint8_t frameIndex) = 0;
     virtual void reset() = 0;
 };
 
@@ -118,6 +117,7 @@ class Shell {
         VkSwapchainKHR swapchain = VK_NULL_HANDLE;
         std::queue<BackBuffer> backBuffers;
         BackBuffer acquiredBackBuffer = {};
+        VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     };
 
     const Context &context() const { return ctx_; }

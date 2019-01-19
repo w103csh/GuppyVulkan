@@ -7,16 +7,17 @@
 //      Base
 // **********************
 
-void RenderPass::Base::init(const Shell::Context& ctx, const Game::Settings& settings, RenderPass::InitInfo* pInfo) {
-    // Set values from params
+void RenderPass::Base::init(const Shell::Context& ctx, const Game::Settings& settings, RenderPass::InitInfo* pInfo,
+                            SubpassResources* pSubpassResources) {
+    // Set values from params.
     memcpy(&initInfo, pInfo, sizeof(RenderPass::InitInfo));
 
-    createSubpassResources(ctx, settings);
+    createAttachmentsAndSubpasses(ctx, settings);
+    createDependencies(ctx, settings);
 
     createPass(ctx.dev);
     assert(pass != VK_NULL_HANDLE);
 
-    createClearValues(ctx, settings);
     createBeginInfo(ctx, settings);
 
     if (settings.enable_debug_markers) {
@@ -31,7 +32,21 @@ void RenderPass::Base::createTarget(const Shell::Context& ctx, const Game::Setti
     // Set info values
     memcpy(&frameInfo, pInfo, sizeof(RenderPass::FrameInfo));
 
-    createFrameData(ctx, settings);
+    // FRAME
+    createColorResources(ctx, settings);
+    createDepthResource(ctx, settings);
+    createAttachmentDebugMarkers(ctx, settings);
+    createClearValues(ctx, settings);
+    createFramebuffers(ctx, settings);
+
+    // RENDER PASS
+    createCommandBuffers(ctx);
+    createViewport();
+    updateBeginInfo(ctx, settings);
+
+    // SYNC
+    createFences(ctx);
+    createSemaphores(ctx);
 }
 
 void RenderPass::Base::createPass(const VkDevice& dev) {
@@ -55,141 +70,60 @@ void RenderPass::Base::createBeginInfo(const Shell::Context& ctx, const Game::Se
     beginInfo_ = {};
     beginInfo_.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     beginInfo_.renderPass = pass;
-    beginInfo_.clearValueCount = static_cast<uint32_t>(clearValues_.size());
-    beginInfo_.pClearValues = clearValues_.data();
-}
-
-void RenderPass::Base::createSubpassResources(const Shell::Context& ctx, const Game::Settings& settings) {
-    createSubpassesAndAttachments(ctx, settings);
-    createDependencies(ctx, settings);
-}
-
-void RenderPass::Base::createFrameData(const Shell::Context& ctx, const Game::Settings& settings) {
-    createCommandBuffers(ctx);
-    createImages(ctx, settings);
-    createImageViews(ctx);
-    createViewport();
-    createFramebuffers(ctx);
-    updateBeginInfo(ctx, settings);
-    createFences(ctx);
 }
 
 void RenderPass::Base::createCommandBuffers(const Shell::Context& ctx) {
-    data.priCmds.resize(ctx.imageCount);
+    data.priCmds.resize(initInfo.commandCount);
     CmdBufHandler::createCmdBuffers(CmdBufHandler::graphics_cmd_pool(), data.priCmds.data(), VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                                     ctx.imageCount);
 }
 
-void RenderPass::Base::createImages(const Shell::Context& ctx, const Game::Settings& settings) {
-    if (initInfo.hasColor) createColorResources(ctx);
-    if (initInfo.hasDepth) createDepthResources(ctx);
-
-    if (settings.enable_debug_markers) {
-        std::string markerName;
-        if (settings.include_color) {
-            markerName = name_ + " color framebuffer image";
-            ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)data.colorResource.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                          markerName.c_str());
-        }
-        if (settings.include_depth) {
-            markerName = name_ + " depth framebuffer image";
-            ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)data.depthResource.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
-                                          markerName.c_str());
-        }
-    }
-}
-
-void RenderPass::Base::createColorResources(const Shell::Context& ctx) {
-    auto& colorResource = data.colorResource;
-
-    helpers::createImage(ctx.dev, CmdBufHandler::getUniqueQueueFamilies(true, false, true), initInfo.samples,
-                         initInfo.format, VK_IMAGE_TILING_OPTIMAL,
-                         VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, frameInfo.extent.width, frameInfo.extent.height, 1, 1,
-                         colorResource.image, colorResource.memory);
-
-    helpers::createImageView(ctx.dev, colorResource.image, 1, initInfo.format, VK_IMAGE_ASPECT_COLOR_BIT,
-                             VK_IMAGE_VIEW_TYPE_2D, 1, colorResource.view);
-
-    helpers::transitionImageLayout(CmdBufHandler::graphics_cmd(), colorResource.image, initInfo.format,
-                                   VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                   VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 1, 1);
-}
-
-void RenderPass::Base::createDepthResources(const Shell::Context& ctx) {
-    VkImageTiling tiling;
-    VkFormatProperties props;
-    vkGetPhysicalDeviceFormatProperties(ctx.physical_dev, initInfo.depthFormat, &props);
-
-    if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-        tiling = VK_IMAGE_TILING_LINEAR;
-    } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-        tiling = VK_IMAGE_TILING_OPTIMAL;
-    } else {
-        // Try other depth formats
-        throw std::runtime_error(("depth format unsupported"));
-    }
-
-    auto& depthResource = data.depthResource;
-
-    helpers::createImage(ctx.dev, CmdBufHandler::getUniqueQueueFamilies(true, false, true), initInfo.samples,
-                         initInfo.depthFormat, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, frameInfo.extent.width, frameInfo.extent.height, 1, 1,
-                         depthResource.image, depthResource.memory);
-
-    VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
-    if (helpers::hasStencilComponent(initInfo.depthFormat)) {
-        aspectFlags |= VK_IMAGE_ASPECT_STENCIL_BIT;
-    }
-
-    helpers::createImageView(ctx.dev, depthResource.image, 1, initInfo.depthFormat, aspectFlags, VK_IMAGE_VIEW_TYPE_2D, 1,
-                             depthResource.view);
-
-    helpers::transitionImageLayout(CmdBufHandler::graphics_cmd(), depthResource.image, initInfo.depthFormat,
-                                   VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
-                                   VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 1, 1);
+void RenderPass::Base::createFences(const Shell::Context& ctx, VkFenceCreateFlags flags) {
+    VkFenceCreateInfo fenceInfo = {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = flags;
+    data.fences.resize(initInfo.fenceCount);
+    for (auto& fence : data.fences) vk::assert_success(vkCreateFence(ctx.dev, &fenceInfo, nullptr, &fence));
 }
 
 void RenderPass::Base::createViewport() {
     // VIEWPORT
-    data.viewport.x = 0.0f;
-    data.viewport.y = 0.0f;
-    data.viewport.width = static_cast<float>(frameInfo.extent.width);
-    data.viewport.height = static_cast<float>(frameInfo.extent.height);
-    data.viewport.minDepth = 0.0f;
-    data.viewport.maxDepth = 1.0f;
+    viewport_.x = 0.0f;
+    viewport_.y = 0.0f;
+    viewport_.width = static_cast<float>(frameInfo.extent.width);
+    viewport_.height = static_cast<float>(frameInfo.extent.height);
+    viewport_.minDepth = 0.0f;
+    viewport_.maxDepth = 1.0f;
     // SCISSOR
-    data.scissor.offset = {0, 0};
-    data.scissor.extent = frameInfo.extent;
+    scissor_.offset = {0, 0};
+    scissor_.extent = frameInfo.extent;
 }
 
 void RenderPass::Base::updateBeginInfo(const Shell::Context& ctx, const Game::Settings& settings) {
+    beginInfo_.clearValueCount = static_cast<uint32_t>(clearValues_.size());
+    beginInfo_.pClearValues = clearValues_.data();
     beginInfo_.renderArea.offset = {0, 0};
     beginInfo_.renderArea.extent = frameInfo.extent;
 }
 
-void RenderPass::Base::destroyTarget(const VkDevice& dev) {
-    // color
-    if (data.colorResource.view != VK_NULL_HANDLE) vkDestroyImageView(dev, data.colorResource.view, nullptr);
-    if (data.colorResource.image != VK_NULL_HANDLE) vkDestroyImage(dev, data.colorResource.image, nullptr);
-    if (data.colorResource.memory != VK_NULL_HANDLE) vkFreeMemory(dev, data.colorResource.memory, nullptr);
-    // depth
-    if (data.depthResource.view != VK_NULL_HANDLE) vkDestroyImageView(dev, data.depthResource.view, nullptr);
-    if (data.depthResource.image != VK_NULL_HANDLE) vkDestroyImage(dev, data.depthResource.image, nullptr);
-    if (data.depthResource.memory != VK_NULL_HANDLE) vkFreeMemory(dev, data.depthResource.memory, nullptr);
-    // framebuffer
+void RenderPass::Base::destroyTargetResources(const VkDevice& dev) {
+    // COLOR
+    for (auto& color : colors_) helpers::destroyImageResource(dev, color);
+    colors_.clear();
+    // DEPTH
+    helpers::destroyImageResource(dev, depth_);
+    // FRAMEBUFFER
     for (auto& framebuffer : data.framebuffers) vkDestroyFramebuffer(dev, framebuffer, nullptr);
-    // fences
+    data.framebuffers.clear();
+    // COMMAND
+    helpers::destroyCommandBuffers(dev, CmdBufHandler::graphics_cmd_pool(), data.priCmds);
+    helpers::destroyCommandBuffers(dev, CmdBufHandler::graphics_cmd_pool(), data.secCmds);
+    // FENCE
     for (auto& fence : data.fences) vkDestroyFence(dev, fence, nullptr);
-    // command
-    if (!data.priCmds.empty()) {
-        vkFreeCommandBuffers(dev, CmdBufHandler::graphics_cmd_pool(), static_cast<uint32_t>(data.priCmds.size()),
-                             data.priCmds.data());
-    }
-    if (!data.secCmds.empty()) {
-        vkFreeCommandBuffers(dev, CmdBufHandler::graphics_cmd_pool(), static_cast<uint32_t>(data.secCmds.size()),
-                             data.secCmds.data());
-    }
+    data.fences.clear();
+    // SEMAPHORE
+    for (auto& semaphore : data.semaphores) vkDestroySemaphore(dev, semaphore, nullptr);
+    data.semaphores.clear();
 }
 
 void RenderPass::Base::destroy(const VkDevice& dev) {
@@ -197,19 +131,44 @@ void RenderPass::Base::destroy(const VkDevice& dev) {
     if (pass != VK_NULL_HANDLE) vkDestroyRenderPass(dev, pass, nullptr);
 }
 
+void RenderPass::Base::createSemaphores(const Shell::Context& ctx) {
+    VkSemaphoreCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    data.semaphores.resize(initInfo.semaphoreCount);
+    for (uint32_t i = 0; i < initInfo.semaphoreCount; i++) {
+        vk::assert_success(vkCreateSemaphore(ctx.dev, &createInfo, nullptr, &data.semaphores[i]));
+    }
+}
+
+void RenderPass::Base::createAttachmentDebugMarkers(const Shell::Context& ctx, const Game::Settings& settings) {
+    if (settings.enable_debug_markers) {
+        std::string markerName;
+        uint32_t count = 0;
+        for (auto& color : colors_) {
+            if (color.image != VK_NULL_HANDLE) {
+                markerName = name_ + " color framebuffer image (" + std::to_string(count++) + ")";
+                ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)color.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                              markerName.c_str());
+            }
+        }
+        if (depth_.image != VK_NULL_HANDLE) {
+            markerName = name_ + " depth framebuffer image";
+            ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)depth_.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
+                                          markerName.c_str());
+        }
+    }
+}
+
 // **********************
 //      Default
 // **********************
 
-void RenderPass::Default::createClearValues(const Shell::Context& ctx, const Game::Settings& settings) {
-    /*
-        These indices need to be the same for the attachment
-        references and descriptions for the render pass!
-    */
-    attachmentCount_ = 1;  // TODO: this logic needs a home with the other attachment stuff
-    if (initInfo.hasColor) attachmentCount_++;
-    if (initInfo.hasDepth) attachmentCount_++;
+void RenderPass::Default::getSubmitResource(const uint8_t& frameIndex, SubmitResource& resource) {
+    resource.signalSemaphores.push_back(data.semaphores[frameIndex]);
+    resource.commandBuffers.push_back(data.priCmds[frameIndex]);
+}
 
+void RenderPass::Default::createClearValues(const Shell::Context& ctx, const Game::Settings& settings) {
     /*  Need to pad this here because:
 
         In vkCmdBeginRenderPass() the VkRenderPassBeginInfo struct has a clearValueCount
@@ -223,10 +182,17 @@ void RenderPass::Default::createClearValues(const Shell::Context& ctx, const Gam
         VK_ATTACHMENT_LOAD_OP_CLEAR'
         (https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#VUID-VkRenderPassBeginInfo-clearValueCount-00902)
     */
-    clearValues_.resize(attachmentCount_);
+    clearValues_.resize(1);  // pad for framebuffer view
     // clearValuues[0] = final layout is in this spot; // pad this spot
-    clearValues_[1].color = initInfo.colorClearColorValue;
-    clearValues_[2].depthStencil = initInfo.depthClearValue;
+
+    for (auto& color : colors_) {
+        VkClearValue value = {CLEAR_VALUE};
+        clearValues_.push_back(value);
+    }
+    if (depth_.view != VK_NULL_HANDLE) {
+        VkClearValue value = {1.0f, 0};
+        clearValues_.push_back(value);
+    }
 }
 
 void RenderPass::Default::createBeginInfo(const Shell::Context& ctx, const Game::Settings& settings) {
@@ -259,7 +225,62 @@ void RenderPass::Default::createCommandBuffers(const Shell::Context& ctx) {
                                     VK_COMMAND_BUFFER_LEVEL_SECONDARY, ctx.imageCount);
 }
 
-void RenderPass::Default::createSubpassesAndAttachments(const Shell::Context& ctx, const Game::Settings& settings) {
+void RenderPass::Default::createColorResources(const Shell::Context& ctx, const Game::Settings& settings) {
+    if (settings.include_color) {  // TODO: is this still something?
+        colors_.resize(1);
+        auto& res = colors_.back();
+
+        helpers::createImage(ctx.dev, CmdBufHandler::getUniqueQueueFamilies(true, false, true), initInfo.samples,
+                             initInfo.format, VK_IMAGE_TILING_OPTIMAL,
+                             VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, frameInfo.extent.width, frameInfo.extent.height, 1, 1,
+                             colors_.back().image, colors_.back().memory);
+
+        helpers::createImageView(ctx.dev, colors_.back().image, 1, initInfo.format, VK_IMAGE_ASPECT_COLOR_BIT,
+                                 VK_IMAGE_VIEW_TYPE_2D, 1, colors_.back().view);
+
+        helpers::transitionImageLayout(CmdBufHandler::graphics_cmd(), colors_.back().image, initInfo.format,
+                                       VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                                       VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 1,
+                                       1);
+    }
+}
+
+void RenderPass::Default::createDepthResource(const Shell::Context& ctx, const Game::Settings& settings) {
+    if (settings.include_depth) {  // TODO: is this still something?
+        VkImageTiling tiling;
+        VkFormatProperties props;
+        vkGetPhysicalDeviceFormatProperties(ctx.physical_dev, initInfo.depthFormat, &props);
+
+        if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+            tiling = VK_IMAGE_TILING_LINEAR;
+        } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+            tiling = VK_IMAGE_TILING_OPTIMAL;
+        } else {
+            // Try other depth formats
+            throw std::runtime_error(("depth format unsupported"));
+        }
+
+        helpers::createImage(ctx.dev, CmdBufHandler::getUniqueQueueFamilies(true, false, true), initInfo.samples,
+                             initInfo.depthFormat, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, frameInfo.extent.width, frameInfo.extent.height, 1, 1,
+                             depth_.image, depth_.memory);
+
+        VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
+        if (helpers::hasStencilComponent(initInfo.depthFormat)) {
+            aspectFlags |= VK_IMAGE_ASPECT_STENCIL_BIT;
+        }
+
+        helpers::createImageView(ctx.dev, depth_.image, 1, initInfo.depthFormat, aspectFlags, VK_IMAGE_VIEW_TYPE_2D, 1,
+                                 depth_.view);
+
+        helpers::transitionImageLayout(CmdBufHandler::graphics_cmd(), depth_.image, initInfo.depthFormat,
+                                       VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+                                       VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 1, 1);
+    }
+}
+
+void RenderPass::Default::createAttachmentsAndSubpasses(const Shell::Context& ctx, const Game::Settings& settings) {
     auto& resources = subpassResources_;
     VkAttachmentDescription attachemnt = {};
 
@@ -267,39 +288,41 @@ void RenderPass::Default::createSubpassesAndAttachments(const Shell::Context& ct
     attachemnt = {};
     attachemnt.format = initInfo.format;
     attachemnt.samples = VK_SAMPLE_COUNT_1_BIT;
-    attachemnt.loadOp =
-        VK_ATTACHMENT_LOAD_OP_DONT_CARE;  // clear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    attachemnt.loadOp = initInfo.clearColor ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
     attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     attachemnt.finalLayout = initInfo.finalLayout;
     attachemnt.flags = 0;
+
     resources.attachments.push_back(attachemnt);
+
     // REFERENCE
     resources.colorAttachments.resize(1);
     resources.colorAttachments.back().attachment = static_cast<uint32_t>(resources.attachments.size() - 1);
     resources.colorAttachments.back().layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
     // COLOR ATTACHMENT RESOLVE (MULTI-SAMPLE)
-    if (initInfo.hasColor) {
+    if (settings.include_color) {
         attachemnt = {};
         attachemnt.format = initInfo.format;
         attachemnt.samples = initInfo.samples;
-        attachemnt.loadOp = initInfo.hasDepth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachemnt.loadOp = initInfo.clearColor ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
         attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
         attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         attachemnt.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         attachemnt.flags = 0;
-        // REFERENCE
-        // point to swapchain attachment
+
+        // REFERENCE (point to swapchain attachment)
         resources.resolveAttachments.resize(1);
         resources.resolveAttachments.back().attachment = static_cast<uint32_t>(resources.attachments.size() - 1);
         resources.resolveAttachments.back().layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
         resources.attachments.push_back(attachemnt);
+
         // point to multi-sample attachment
         resources.colorAttachments.back().attachment = static_cast<uint32_t>(resources.attachments.size() - 1);
     }
@@ -307,17 +330,21 @@ void RenderPass::Default::createSubpassesAndAttachments(const Shell::Context& ct
     // TODO: this depth attachment shouldn't be added if there is no depth
 
     // DEPTH ATTACHMENT
-    attachemnt = {};
-    attachemnt.format = initInfo.depthFormat;
-    attachemnt.samples = initInfo.samples;
-    attachemnt.loadOp = initInfo.hasDepth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-    attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-    attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachemnt.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-    attachemnt.flags = 0;
+    if (settings.include_depth) {
+        attachemnt = {};
+        attachemnt.format = initInfo.depthFormat;
+        attachemnt.samples = initInfo.samples;
+        attachemnt.loadOp = initInfo.clearDepth ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+        attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        attachemnt.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        attachemnt.flags = 0;
+    }
+
     resources.attachments.push_back(attachemnt);
+
     // REFERENCE
     resources.depthStencilAttachment = {};
     resources.depthStencilAttachment.attachment = static_cast<uint32_t>(resources.attachments.size() - 1);
@@ -379,15 +406,7 @@ void RenderPass::Default::createDependencies(const Shell::Context& ctx, const Ga
     // dependencyTuples_.push_back({PIPELINE_TYPE::TRI_LIST_COLOR, SUBPASS_TYPE::UI, dependency});
 }
 
-void RenderPass::Default::createFences(const Shell::Context& ctx, VkFenceCreateFlags flags) {
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = flags;
-    data.fences.resize(ctx.imageCount);
-    for (auto& fence : data.fences) vk::assert_success(vkCreateFence(ctx.dev, &fenceInfo, nullptr, &fence));
-}
-
-void RenderPass::Default::createFramebuffers(const Shell::Context& ctx) {
+void RenderPass::Default::createFramebuffers(const Shell::Context& ctx, const Game::Settings& settings) {
     /*  These are the views for framebuffer.
 
         view[0] is swapchain
@@ -396,9 +415,14 @@ void RenderPass::Default::createFramebuffers(const Shell::Context& ctx) {
 
         The incoming "views" param are the swapchain views.
     */
-    std::vector<VkImageView> attachmentViews(attachmentCount_);
-    if (initInfo.hasColor) attachmentViews[1] = data.colorResource.view;
-    if (initInfo.hasDepth) attachmentViews[2] = data.depthResource.view;
+    std::vector<VkImageView> attachmentViews(1);
+
+    // colors
+    for (const auto& color : colors_)
+        if (color.view != VK_NULL_HANDLE) attachmentViews.push_back(color.view);
+
+    // depth
+    if (depth_.view != VK_NULL_HANDLE) attachmentViews.push_back(depth_.view);
 
     VkFramebufferCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -416,5 +440,6 @@ void RenderPass::Default::createFramebuffers(const Shell::Context& ctx) {
         attachmentViews[0] = frameInfo.pViews[i];
         // Create the framebuffer...
         vk::assert_success(vkCreateFramebuffer(ctx.dev, &createInfo, nullptr, &data.framebuffers[i]));
+        data.tests.push_back(1);
     }
 }

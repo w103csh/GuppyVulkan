@@ -12,8 +12,7 @@ class DefaultUI : public UI {
    public:
     DefaultUI() : pRenderPass_(nullptr){};
 
-    std::unique_ptr<RenderPass::Base>& getRenderPass() override { return pRenderPass_; }
-    void draw(VkCommandBuffer cmd, uint8_t frameIndex) override{};
+    void draw(std::unique_ptr<RenderPass::Base>& pPass, uint8_t frameIndex) override{};
     void reset() override{};
 
    private:
@@ -25,7 +24,7 @@ class UIHandler : public Singleton {
     static void init(Shell* sh, const Game::Settings& settings, std::shared_ptr<UI> pUI = nullptr);
     static inline void destroy() { inst_.reset(); };
 
-    static void draw(VkCommandBuffer cmd, uint8_t frameIndex) { inst_.pUI_->draw(cmd, frameIndex); };
+    static void draw(std::unique_ptr<RenderPass::Base>& pPass, uint8_t frameIndex) { inst_.pUI_->draw(pPass, frameIndex); };
 
    private:
     UIHandler(){};   // Prevent construction

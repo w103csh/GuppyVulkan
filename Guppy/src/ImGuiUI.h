@@ -11,12 +11,12 @@
 #include "Shell.h"
 
 class Face;
+
 class ImGuiUI : public UI {
    public:
     ImGuiUI(GLFWwindow* window) : window_(window), showDemoWindow_(false), showSelectionInfoWindow_(true) {}
 
-    void draw(VkCommandBuffer cmd, uint8_t frameIndex) override;
-    inline std::unique_ptr<RenderPass::Base>& getRenderPass() override { return pRenderPass_; }
+    void draw(std::unique_ptr<RenderPass::Base>& pPass, uint8_t frameIndex) override;
     void reset() override;
 
     // Application main menu

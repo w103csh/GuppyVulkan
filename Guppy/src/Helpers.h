@@ -303,9 +303,13 @@ struct FrameDataHologram {
     VkDescriptorSet desc_set = VK_NULL_HANDLE;
 };
 
-struct DrawResources {
-    std::vector<VkCommandBuffer> priCmds;
-    std::vector<VkCommandBuffer> secCmds;
+// TODO: check other places like LoadingResourceHandler to see if this
+// could be used.
+struct SubmitResource {
+    std::vector<VkSemaphore> waitSemaphores;
+    std::vector<VkPipelineStageFlags> waitDstStageMasks;
+    std::vector<VkCommandBuffer> commandBuffers;
+    std::vector<VkSemaphore> signalSemaphores;
 };
 
 template <typename T>
@@ -351,5 +355,25 @@ struct hash_descriptor_resource_map {
 };
 typedef std::unordered_map<const std::set<DESCRIPTOR_TYPE>, DescriptorMapItem, hash_descriptor_resource_map>
     descriptor_resource_map;
+
+namespace helpers {
+
+static void destroyImageResource(const VkDevice &dev, ImageResource &res) {
+    if (res.view != VK_NULL_HANDLE) vkDestroyImageView(dev, res.view, nullptr);
+    res.view = VK_NULL_HANDLE;
+    if (res.image != VK_NULL_HANDLE) vkDestroyImage(dev, res.image, nullptr);
+    res.image = VK_NULL_HANDLE;
+    if (res.memory != VK_NULL_HANDLE) vkFreeMemory(dev, res.memory, nullptr);
+    res.memory = VK_NULL_HANDLE;
+}
+
+static void destroyCommandBuffers(const VkDevice &dev, const VkCommandPool &pool, std::vector<VkCommandBuffer> &cmds) {
+    if (!cmds.empty()) {
+        vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(cmds.size()), cmds.data());
+        cmds.clear();
+    }
+}
+
+}  // namespace helpers
 
 #endif  // !HELPERS_H

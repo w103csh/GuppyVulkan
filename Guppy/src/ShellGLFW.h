@@ -121,10 +121,6 @@ class ShellGLFW : public T {
         init_info.DescriptorPool = Pipeline::Handler::getDescriptorPool();
         init_info.Allocator = nullptr;
         init_info.CheckVkResultFn = (void (*)(VkResult))vk::assert_success;
-        init_info.Subpass = 2;
-        init_info.RasterizationSamples = context().samples;
-        init_info.SampleShadingEnable = settings_.enable_sample_shading;
-        init_info.MinSampleShading = settings_.enable_sample_shading ? MIN_SAMPLE_SHADING : 0.0f;
 
         ImGui_ImplVulkan_Init(&init_info, pass);
     }

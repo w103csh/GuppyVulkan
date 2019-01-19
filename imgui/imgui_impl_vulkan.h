@@ -29,10 +29,6 @@ struct ImGui_ImplVulkan_InitInfo
     VkDescriptorPool                DescriptorPool;
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
-    uint32_t                        Subpass;
-    VkSampleCountFlagBits           RasterizationSamples;
-    VkBool32                        SampleShadingEnable;
-    float                           MinSampleShading;
 };
 
 // Called by user code

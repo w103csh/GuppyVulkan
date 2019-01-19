@@ -63,7 +63,11 @@ void Scene::removeMesh(std::unique_ptr<Mesh>& pMesh) {
 }
 
 void Scene::record(const Shell::Context& ctx, const uint8_t& frameIndex, std::unique_ptr<RenderPass::Base>& pPass) {
-    pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT | VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
+    // if (pPass->data.tests[frameIndex] == 0) {
+    //    return;
+    //}
+
+    pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
                      VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
     auto& priCmd = pPass->data.priCmds[frameIndex];
@@ -104,8 +108,6 @@ void Scene::record(const Shell::Context& ctx, const uint8_t& frameIndex, std::un
             pMesh->draw(priCmd, frameIndex);
         }
     }
-
-    UIHandler::draw(priCmd, frameIndex);
 
     pPass->endPass(frameIndex);
 }
