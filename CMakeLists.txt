@@ -1,8 +1,8 @@
-# The name of our project is "VULKAN_TEST". CMakeLists files in this project can
+# The name of our project is "GuppyVulkan". CMakeLists files in this project can
 # refer to the root source directory of the project as ${GUPPY_SOURCE_DIR} and
 # to the root binary directory of the project as ${GUPPY_BINARY_DIR}.
 cmake_minimum_required(VERSION 2.8.11)
-project (VULKAN_TEST)
+project (GuppyVulkan)
 # set (CMAKE_VERBOSE_MAKEFILE 1)
 
 # The API_NAME allows renaming builds to avoid conflicts with installed SDKs
