@@ -67,45 +67,39 @@ void Scene::record(const Shell::Context& ctx, const uint8_t& frameIndex, std::un
     //    return;
     //}
 
-    pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT,
-                     VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+    pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    // pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    // VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
     auto& priCmd = pPass->data.priCmds[frameIndex];
     auto& secCmd = pPass->data.secCmds[frameIndex];
 
-    // **********************
-    //  TRI_LIST_TEX PIPELINE
-    // **********************
+    auto penultimate = std::prev(pPass->PIPELINE_TYPES.end());
+    for (auto it = pPass->PIPELINE_TYPES.begin(); it != pPass->PIPELINE_TYPES.end(); std::advance(it, 1)) {
+        const auto& pipelineType = (*it);
 
-    for (auto& pMesh : texMeshes_) {
-        if (pMesh->getStatus() == STATUS::READY) {
-            pPass->beginSecondary(frameIndex);
-            pMesh->draw(secCmd, frameIndex);
+        switch (pipelineType) {
+            case PIPELINE::LINE: {
+                for (auto& pMesh : lineMeshes_)
+                    if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
+                        pMesh->draw(priCmd, frameIndex);
+            } break;
+            case PIPELINE::TRI_LIST_COLOR:
+            case PIPELINE::PBR_COLOR: {
+                for (auto& pMesh : colorMeshes_)
+                    if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
+                        pMesh->draw(priCmd, frameIndex);
+            } break;
+            case PIPELINE::TRI_LIST_TEX: {
+                for (auto& pMesh : texMeshes_)
+                    if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
+                        pMesh->draw(priCmd, frameIndex);
+            } break;
         }
-    }
-    pPass->endSecondary(frameIndex, priCmd);
 
-    vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
-
-    // **********************
-    //  LINE PIPELINE
-    // **********************
-
-    for (auto& pMesh : lineMeshes_) {
-        if (pMesh->getStatus() == STATUS::READY) {
-            pMesh->draw(priCmd, frameIndex);
-        }
-    }
-
-    vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
-
-    // **********************
-    //  TRI_LIST_COLOR PIPELINE
-    // **********************
-
-    for (auto& pMesh : colorMeshes_) {
-        if (pMesh->getStatus() == STATUS::READY) {
-            pMesh->draw(priCmd, frameIndex);
+        if (it != penultimate) {
+            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+            // vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
         }
     }
 

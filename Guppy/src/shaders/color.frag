@@ -25,6 +25,7 @@ struct Material {
 layout(location = 0) in vec3 fragPos;
 layout(location = 1) in vec3 fragNormal;
 layout(location = 2) in vec4 fragColor;
+// layout(location = 3) in flat int fragVertexIndex;
 // PUSH CONSTANTS
 layout(push_constant) uniform PushBlock {
     mat4 model;

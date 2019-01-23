@@ -10,7 +10,7 @@
 #include "Shader.h"
 #include "Shell.h"
 #include "Texture.h"
-#include "UniformBuffer.h"
+#include "Uniform.h"
 
 class Camera;
 class Scene;
@@ -29,20 +29,20 @@ class Handler : public Singleton {
     Handler(const Handler &) = delete;             // Prevent construction by copying
     Handler &operator=(const Handler &) = delete;  // Prevent assignment
 
-    static std::unique_ptr<Shader::Base> &getShader(SHADER_TYPE &&type);
-    static std::unique_ptr<Shader::Base> &getShader(const SHADER_TYPE &type);
+    static std::unique_ptr<Shader::Base> &getShader(const SHADER &type);
+    static std::unique_ptr<Shader::Link> &getLinkShader(const SHADER_LINK &type);
 
-    static void getStagesInfo(std::vector<SHADER_TYPE> &&types, std::vector<VkPipelineShaderStageCreateInfo> &stagesInfo);
+    static void getStagesInfo(const std::set<SHADER> &types, std::vector<VkPipelineShaderStageCreateInfo> &stagesInfo);
+    static VkShaderStageFlags getStageFlags(const std::set<SHADER> &shaderTypes);
 
-    static void update(std::unique_ptr<Scene> &pScene);
     static void lightMacroReplace(std::string &&macroVariable, uint16_t &&numLights, std::string &text);
     static void recompileShader(std::string);
-    static void appendLinkTexts(Shader::Base *pShader, std::vector<const char *> &texts);
+    static void appendLinkTexts(const std::set<SHADER_LINK> &linkTypes, std::vector<const char *> &texts);
 
     // DESCRIPTOR
-    static void updateDescriptorSets(const std::set<DESCRIPTOR_TYPE> types, std::vector<VkDescriptorSet> &sets,
-                                     uint32_t setCount, const std::shared_ptr<Texture::Data> &pTexture = nullptr);
-    static std::vector<uint32_t> getDynamicOffsets(const std::set<DESCRIPTOR_TYPE> types);
+    static void updateDescriptorSets(const std::set<DESCRIPTOR> types, std::vector<VkDescriptorSet> &sets, uint32_t setCount,
+                                     const std::shared_ptr<Texture::Data> &pTexture = nullptr);
+    static std::vector<uint32_t> getDynamicOffsets(const std::set<DESCRIPTOR> types);
 
     static void cleanup();
 
@@ -52,7 +52,7 @@ class Handler : public Singleton {
     static Handler inst_;
     void reset() override;
 
-    bool loadShaders(std::vector<SHADER_TYPE> types, bool doAssert, bool load = true);
+    bool loadShaders(const std::vector<SHADER> &types, bool doAssert, bool load = true);
 
     template <typename T1, typename T2>
     static std::string textReplace(std::string text, std::string s1, std::string s2, T1 r1, T2 r2);
@@ -61,15 +61,11 @@ class Handler : public Singleton {
     Game::Settings settings_;  // TODO: shared_ptr
 
     // SHADERS
-    std::unique_ptr<Shader::Base> pDefColorVertShader_;
-    std::unique_ptr<Shader::Base> pDefColorFragShader_;
-    std::unique_ptr<Shader::Base> pDefLineFragShader_;
-    std::unique_ptr<Shader::Base> pDefTexVertShader_;
-    std::unique_ptr<Shader::Base> pDefTexFragShader_;
-    // link
-    std::unique_ptr<Shader::Base> pUtilFragShader_;
+    void getShaderTypes(const SHADER_LINK &linkType, std::vector<SHADER> &types);
+    std::vector<std::unique_ptr<Shader::Base>> pShaders_;
+    std::vector<std::unique_ptr<Shader::Link>> pLinkShaders_;
 
-    std::queue<PIPELINE_TYPE> updateQueue_;
+    std::queue<PIPELINE> updateQueue_;
     std::vector<VkShaderModule> oldModules_;
 
     // **********************
@@ -80,8 +76,8 @@ class Handler : public Singleton {
     static void updateDefaultDynamicUniform();
 
     // DESCRIPTOR
-    static VkDescriptorSetLayoutBinding getDescriptorLayoutBinding(const DESCRIPTOR_TYPE &type);
-    static void getDescriptorSetTypes(const SHADER_TYPE &type, std::set<DESCRIPTOR_TYPE> &set) {
+    static VkDescriptorSetLayoutBinding getDescriptorLayoutBinding(const DESCRIPTOR &type);
+    static void getDescriptorSetTypes(const SHADER &type, std::set<DESCRIPTOR> &set) {
         inst_.getShader(type)->getDescriptorTypes(set);
     }
 

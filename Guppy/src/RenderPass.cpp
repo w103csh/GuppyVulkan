@@ -3,6 +3,27 @@
 
 #include "CmdBufHandler.h"
 
+namespace {
+
+void addDefaultSubpasses(RenderPass::SubpassResources& resources, uint64_t count) {
+    VkSubpassDependency dependency = {};
+    for (uint32_t i = 0; i < count - 1; i++) {
+        dependency = {};
+        dependency.srcSubpass = i;
+        dependency.dstSubpass = i + 1;
+        dependency.dependencyFlags = 0;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+        dependency.dstAccessMask =
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+        dependency.srcAccessMask =
+            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+        resources.dependencies.push_back(dependency);
+    }
+}
+
+}  // namespace
+
 // **********************
 //      Base
 // **********************
@@ -21,7 +42,7 @@ void RenderPass::Base::init(const Shell::Context& ctx, const Game::Settings& set
     createBeginInfo(ctx, settings);
 
     if (settings.enable_debug_markers) {
-        std::string markerName = name_ + " render pass";
+        std::string markerName = NAME + " render pass";
         ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)pass, VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT,
                                       markerName.c_str());
     }
@@ -146,13 +167,13 @@ void RenderPass::Base::createAttachmentDebugMarkers(const Shell::Context& ctx, c
         uint32_t count = 0;
         for (auto& color : colors_) {
             if (color.image != VK_NULL_HANDLE) {
-                markerName = name_ + " color framebuffer image (" + std::to_string(count++) + ")";
+                markerName = NAME + " color framebuffer image (" + std::to_string(count++) + ")";
                 ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)color.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                                               markerName.c_str());
             }
         }
         if (depth_.image != VK_NULL_HANDLE) {
-            markerName = name_ + " depth framebuffer image";
+            markerName = NAME + " depth framebuffer image";
             ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)depth_.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,
                                           markerName.c_str());
         }
@@ -202,7 +223,7 @@ void RenderPass::Default::createBeginInfo(const Shell::Context& ctx, const Game:
     inheritInfo_ = {};
     inheritInfo_.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
     inheritInfo_.renderPass = pass;
-    inheritInfo_.subpass = getSubpassId(PIPELINE_TYPE::TRI_LIST_TEX);
+    inheritInfo_.subpass = getSubpassId(PIPELINE::TRI_LIST_TEX);
     // Validation layer: Cannot set inherited occlusionQueryEnable in vkBeginCommandBuffer() when device does not support
     // inheritedQueries.
     inheritInfo_.occlusionQueryEnable = VK_FALSE;  // TODO: not sure
@@ -363,47 +384,31 @@ void RenderPass::Default::createAttachmentsAndSubpasses(const Shell::Context& ct
 
 void RenderPass::Default::createDependencies(const Shell::Context& ctx, const Game::Settings& settings) {
     auto& resources = subpassResources_;
-    VkSubpassDependency dependency = {};
 
-    // TODO: fix this...
-    dependency = {};
-    dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    resources.dependencies.push_back(dependency);
+    addDefaultSubpasses(resources, PIPELINE_TYPES.size());
 
-    // TODO: fix this...
-    dependency = {};
-    dependency.srcSubpass = 0;
-    dependency.dstSubpass = 1;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-    dependency.dstAccessMask = 0;
-    resources.dependencies.push_back(dependency);
+    //// Desparate attempt to understand the pipline ordering issue below...
+    // VkSubpassDependency dependency = {};
 
-    // TODO: fix this...
-    dependency = {};
-    dependency.srcSubpass = 1;
-    dependency.dstSubpass = 2;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    resources.dependencies.push_back(dependency);
-
-    //// TODO: fix this...
     // dependency = {};
-    // dependency.srcSubpass = static_cast<uint32_t>(dependencyTuples_.size()) - 1;
-    // dependency.dstSubpass = static_cast<uint32_t>(dependencyTuples_.size());
-    // dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    // dependency.srcAccessMask = 0;
-    // dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    // dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    // dependencyTuples_.push_back({PIPELINE_TYPE::TRI_LIST_COLOR, SUBPASS_TYPE::UI, dependency});
+    // dependency.srcSubpass = 0;
+    // dependency.dstSubpass = 2;
+    // dependency.dependencyFlags = 0;
+    // dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    // dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    // dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    // dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    // resources.dependencies.push_back(dependency);
+
+    // dependency = {};
+    // dependency.srcSubpass = 1;
+    // dependency.dstSubpass = 2;
+    // dependency.dependencyFlags = 0;
+    // dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    // dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
+    // dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    // dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    // resources.dependencies.push_back(dependency);
 }
 
 void RenderPass::Default::createFramebuffers(const Shell::Context& ctx, const Game::Settings& settings) {

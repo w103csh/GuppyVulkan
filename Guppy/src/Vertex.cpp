@@ -81,13 +81,13 @@ std::vector<VkVertexInputAttributeDescription> Vertex::getTexAttrDesc() {
     return attributeDescriptions;
 }
 
-std::string Vertex::getTypeName(TYPE type) {
+std::string Vertex::getTypeName(VERTEX type) {
     std::string name;
     switch (type) {
-        case Vertex::TYPE::COLOR:
+        case VERTEX::COLOR:
             name = "COLOR";
             break;
-        case Vertex::TYPE::TEXTURE:
+        case VERTEX::TEXTURE:
             name = "TEXTURE";
             break;
     }

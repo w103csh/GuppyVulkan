@@ -1,5 +1,5 @@
 
-#include "UniformBuffer.h"
+#include "Uniform.h"
 
 #include "PipelineHandler.h"
 #include "TextureHandler.h"
@@ -44,7 +44,7 @@ void Uniform::Base::init(const VkDevice& dev, const Game::Settings& settings, Vk
     resources_.info.buffer = resources_.buffer;
 
     if (settings.enable_debug_markers) {
-        std::string markerName = name_ + " uniform buffer block";
+        std::string markerName = name + " uniform buffer block";
         ext::DebugMarkerSetObjectName(dev, (uint64_t)resources_.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                       markerName.c_str());
         // TODO: what should this be???
@@ -156,7 +156,7 @@ VkDescriptorSetLayoutBinding Uniform::Default::getDecriptorLayoutBinding(uint32_
 VkWriteDescriptorSet Uniform::Default::getWrite() {
     VkWriteDescriptorSet write = {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.dstBinding = static_cast<uint32_t>(DESCRIPTOR_TYPE::DEFAULT_UNIFORM);
+    write.dstBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_UNIFORM);
     write.dstArrayElement = ARRAY_ELEMENT;
     write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
     write.pBufferInfo = &getBufferInfo();
@@ -171,9 +171,9 @@ VkCopyDescriptorSet Uniform::Default::getCopy() {
     */
     VkCopyDescriptorSet copy = {};
     copy.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
-    copy.srcBinding = static_cast<uint32_t>(DESCRIPTOR_TYPE::DEFAULT_UNIFORM);
+    copy.srcBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_UNIFORM);
     copy.srcArrayElement = ARRAY_ELEMENT;
-    copy.dstBinding = static_cast<uint32_t>(DESCRIPTOR_TYPE::DEFAULT_UNIFORM);
+    copy.dstBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_UNIFORM);
     copy.dstArrayElement = ARRAY_ELEMENT;
     return copy;
 }
@@ -199,7 +199,7 @@ void Uniform::DefaultDynamic::update(const VkDevice& dev) {
 
     size_t offset = 0;
     for (uint32_t i = 0; i < textureFlags_.size(); i++) {
-        textureFlags_[i] = Texture::FLAGS::NONE;
+        textureFlags_[i] = Texture::FLAG::NONE;
         if (const auto pTexture = TextureHandler::getTexture(i)) {
             textureFlags_[i] = pTexture->flags;
         }
@@ -223,7 +223,7 @@ VkDescriptorSetLayoutBinding Uniform::DefaultDynamic::getDecriptorLayoutBinding(
 VkWriteDescriptorSet Uniform::DefaultDynamic::getWrite() {
     VkWriteDescriptorSet write = {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.dstBinding = static_cast<uint32_t>(DESCRIPTOR_TYPE::DEFAULT_DYNAMIC_UNIFORM);
+    write.dstBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_DYNAMIC_UNIFORM);
     write.dstArrayElement = ARRAY_ELEMENT;
     write.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
     write.pBufferInfo = &getBufferInfo();
@@ -238,9 +238,9 @@ VkCopyDescriptorSet Uniform::DefaultDynamic::getCopy() {
     */
     VkCopyDescriptorSet copy = {};
     copy.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
-    copy.srcBinding = static_cast<uint32_t>(DESCRIPTOR_TYPE::DEFAULT_DYNAMIC_UNIFORM);
+    copy.srcBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_DYNAMIC_UNIFORM);
     copy.srcArrayElement = ARRAY_ELEMENT;
-    copy.dstBinding = static_cast<uint32_t>(DESCRIPTOR_TYPE::DEFAULT_DYNAMIC_UNIFORM);
+    copy.dstBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_DYNAMIC_UNIFORM);
     copy.dstArrayElement = ARRAY_ELEMENT;
     return copy;
 }

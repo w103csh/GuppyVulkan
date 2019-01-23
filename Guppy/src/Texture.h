@@ -15,7 +15,7 @@
 // TODO: hold the data on the class. This is getting stupid.
 class Texture {
    public:
-    typedef enum FLAGS {
+    typedef enum FLAG {
         NONE = 0x00000000,
         DIFFUSE = 0x00000001,
         // THROUGH 0x00000008
@@ -23,7 +23,8 @@ class Texture {
         // THROUGH 0x00000080
         SPECULAR = 0x00000100,
         // THROUGH 0x00000800
-    } FLAGS;
+    } FLAG;
+    
     struct Data {
         Data(uint32_t offset, std::string path, std::string normPath = "", std::string specPath = "")
             : status(STATUS::PENDING),
@@ -47,9 +48,9 @@ class Texture {
               normPixels(nullptr),
               specPixels(nullptr) {
             // Make sure we have valid flags
-            if (!path.empty()) flags |= FLAGS::DIFFUSE;
-            if (!normPath.empty()) flags |= FLAGS::NORMAL;
-            if (!specPath.empty()) flags |= FLAGS::SPECULAR;
+            if (!path.empty()) flags |= FLAG::DIFFUSE;
+            if (!normPath.empty()) flags |= FLAG::NORMAL;
+            if (!specPath.empty()) flags |= FLAG::SPECULAR;
             assert(flags);
         };
         STATUS status;

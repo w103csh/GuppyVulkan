@@ -8,29 +8,55 @@
 
 #include "Texture.h"
 
-class Material {
+namespace Material {
+
+enum SHININESS {
+    EGGSHELL = 10,
+    MILDLY_SHINY = 100,
+    GLOSSY = 1000,
+    MIRROR_LIKE = 10000,
+};
+
+typedef enum FLAG {
+    PER_MATERIAL_COLOR = 0x00000001,
+    PER_VERTEX_COLOR = 0x00000002,
+    PER_TEXTURE_COLOR = 0x00000004,
+    // THROUGH 0x00000008
+    MODE_LAMERTIAN = 0x00000010,
+    MODE_BLINN_PHONG = 0x00000020,
+    // THROUGH 0x00000080
+    HIDE = 0x00000100,
+    // THROUGH 0x00000800
+    METAL = 0x00001000,
+    // THROUGH 0x00008000
+    BITS_MAX_ENUM = 0x7FFFFFFF
+} FLAG;
+
+struct Info {
+    // DEFAULT
+    FlagBits flags = PER_MATERIAL_COLOR | MODE_LAMERTIAN;
+    glm::vec3 ambientCoeff{0.1f};
+    glm::vec3 diffuseCoeff{1.0f};
+    glm::vec3 specularCoeff{0.9f};
+    float opacity = 1.0f;
+    float repeat = 1.0f;
+    float shininess = SHININESS::MILDLY_SHINY;
+    std::shared_ptr<Texture::Data> pTexture = nullptr;
+    // PBR
+    float roughness = 0.0f;
+    bool metal = false;
+};
+
+static void copyTinyobjData(const tinyobj::material_t& m, Material::Info& materialInfo) {
+    materialInfo.shininess = m.shininess;
+    materialInfo.ambientCoeff = {m.ambient[0], m.ambient[1], m.ambient[2]};
+    materialInfo.diffuseCoeff = {m.diffuse[0], m.diffuse[1], m.diffuse[2]};
+    materialInfo.specularCoeff = {m.specular[0], m.specular[1], m.specular[2]};
+}
+
+class Base {
    public:
-    typedef enum FLAGS {
-        PER_MATERIAL_COLOR = 0x00000001,
-        PER_VERTEX_COLOR = 0x00000002,
-        PER_TEXTURE_COLOR = 0x00000004,
-        // THROUGH 0x00000008
-        MODE_LAMERTIAN = 0x00000010,
-        MODE_BLINN_PHONG = 0x00000020,
-        // THROUGH 0x00000080
-        HIDE = 0x00000100,
-        // THROUGH 0x00000800
-        BITS_MAX_ENUM = 0x7FFFFFFF
-    } FLAGS;
-
-    enum SHININESS {
-        EGGSHELL = 10,
-        MILDLY_SHINY = 100,
-        GLOSSY = 1000,
-        MIRROR_LIKE = 10000,
-    };
-
-    struct Data {
+    struct DATA {
         glm::vec3 Ka;
         FlagBits flags;
         // 16
@@ -45,58 +71,35 @@ class Material {
         // 8 (8 rem)
     };
 
-    Material(FlagBits flags = PER_MATERIAL_COLOR | MODE_LAMERTIAN)
-        : flags_(flags),
-          ambientCoeff_(0.1f),
-          diffuseCoeff_(1.0f),
-          specularCoeff_(0.9f),
-          opacity_(1.0f),
-          repeat_(1.0f),
-          // xRepeat_(1.0f),
-          // yRepeat_(1.0f),
-          shininess_(MILDLY_SHINY),
-          pTexture_(nullptr){};
+    static Material::Base::DATA getData(const std::unique_ptr<Material::Base>& pMaterial);
 
-    Material(std::shared_ptr<Texture::Data> pTexture)
-        : flags_(PER_TEXTURE_COLOR | MODE_LAMERTIAN),
-          ambientCoeff_(0.1f),
-          diffuseCoeff_(1.0f),
-          specularCoeff_(0.9f),
-          opacity_(1.0f),
-          repeat_(1.0f),
-          // xRepeat_(1.0f),
-          // yRepeat_(1.0f),
-          shininess_(MILDLY_SHINY),
-          pTexture_(pTexture){};
-
-    Material(const std::unique_ptr<Material>& pMaterial)
-        : flags_(pMaterial->flags_),
-          ambientCoeff_(pMaterial->ambientCoeff_),
-          diffuseCoeff_(pMaterial->diffuseCoeff_),
-          specularCoeff_(pMaterial->specularCoeff_),
-          opacity_(pMaterial->opacity_),
-          repeat_(pMaterial->repeat_),
-          // xRepeat_(pMaterial->xRepeat_),
-          // yRepeat_(pMaterial->yRepeat_),
-          shininess_(pMaterial->shininess_),
-          pTexture_(pMaterial->pTexture_) {}
-
-    Material(const Material& material)
-        : flags_(material.flags_),
-          ambientCoeff_(material.ambientCoeff_),
-          diffuseCoeff_(material.diffuseCoeff_),
-          specularCoeff_(material.specularCoeff_),
-          opacity_(material.opacity_),
-          repeat_(material.repeat_),
-          // xRepeat_(material.xRepeat_),
-          // yRepeat_(material.yRepeat_),
-          shininess_(material.shininess_),
-          pTexture_(material.pTexture_) {}
+    Base(Material::Info* pCreateInfo)
+        : flags_(pCreateInfo->flags),
+          ambientCoeff_(pCreateInfo->ambientCoeff),
+          diffuseCoeff_(pCreateInfo->diffuseCoeff),
+          specularCoeff_(pCreateInfo->specularCoeff),
+          opacity_(pCreateInfo->opacity),
+          repeat_(pCreateInfo->repeat),
+          // xRepeat_(pCreateInfo->xRepeat),
+          // yRepeat_(pCreateInfo->yRepeat),
+          shininess_(pCreateInfo->shininess),
+          pTexture_(pCreateInfo->pTexture),
+          // PBR
+          roughness_(pCreateInfo->roughness)
+    //
+    {}
 
     STATUS getStatus() const;
+
     inline FlagBits getFlags() const { return flags_; }
-    Data getData() const;
+    inline glm::vec3 getAmbientCoeff() const { return ambientCoeff_; }
+    inline glm::vec3 getDiffuseCoeff() const { return diffuseCoeff_; }
+    inline glm::vec3 getSpecularCoeff() const { return specularCoeff_; }
+    inline float getOpacity() const { return opacity_; }
+    inline float getRepeat() const { return repeat_; }
+    inline float getShininess() const { return shininess_; }
     inline const std::shared_ptr<Texture::Data>& getTexture() const { return pTexture_; }
+    inline float getRoughness() const { return roughness_; }
 
     inline void setFlags(FlagBits flags) { flags_ = flags; }
     inline void setColor(glm::vec3 c) { ambientCoeff_ = diffuseCoeff_ = c; }
@@ -104,29 +107,29 @@ class Material {
     inline void setDiffuseColor(glm::vec3 c) { diffuseCoeff_ = c; }
     inline void setSpecularColor(glm::vec3 c) { specularCoeff_ = c; }
     inline void setOpacity(float o) { opacity_ = o; }
-    inline void setTexture(std::shared_ptr<Texture::Data> pTexture) {
-        flags_ = flags_ | (BITS_MAX_ENUM & PER_TEXTURE_COLOR);
-        pTexture_ = pTexture;
-    }
     inline void setRepeat(float r) { repeat_ = r; }
     // inline void setXRepeat(float r) { xRepeat_ = r; }
     // inline void setYRepeat(float r) { yRepeat_ = r; }
     inline void setShininess(float s) { shininess_ = s; }
-    inline void setMaterialData(const tinyobj::material_t& m) {
-        shininess_ = m.shininess;
-        ambientCoeff_ = {m.ambient[0], m.ambient[1], m.ambient[2]};
-        diffuseCoeff_ = {m.diffuse[0], m.diffuse[1], m.diffuse[2]};
-        specularCoeff_ = {m.specular[0], m.specular[1], m.specular[2]};
+    inline void setTexture(std::shared_ptr<Texture::Data> pTexture) {
+        flags_ = flags_ | (BITS_MAX_ENUM & PER_TEXTURE_COLOR);
+        pTexture_ = pTexture;
     }
+    inline void setRoughness(float r) { roughness_ = r; }
 
     inline bool hasTexture() const { return pTexture_.get() != nullptr; }
 
    private:
+    // DEFAULT
     FlagBits flags_;
     glm::vec3 ambientCoeff_, diffuseCoeff_, specularCoeff_;
     float opacity_, repeat_;  //, xRepeat_, yRepeat_;
     float shininess_;         // phong exponent
     std::shared_ptr<Texture::Data> pTexture_;
+    // PBR
+    float roughness_;
 };
+
+};  // namespace Material
 
 #endif  // !MATERIAL_H

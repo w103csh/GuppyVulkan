@@ -13,7 +13,7 @@ void Pipeline::Base::init(const Shell::Context& ctx, const Game::Settings& setti
     createPipelineLayout(ctx.dev, settings);
 }
 
-const std::set<DESCRIPTOR_TYPE> Pipeline::Base::getDescriptorTypeSet() {
+const std::set<DESCRIPTOR> Pipeline::Base::getDescriptorTypeSet() {
     if (!descSetTypeInit_) {
         for (const auto& shaderType : SHADER_TYPES) Shader::Handler::getDescriptorSetTypes(shaderType, descTypeSet_);
         descSetTypeInit_ = true;
@@ -22,21 +22,22 @@ const std::set<DESCRIPTOR_TYPE> Pipeline::Base::getDescriptorTypeSet() {
 }
 
 void Pipeline::Base::createPipelineLayout(const VkDevice& dev, const Game::Settings& settings) {
-    VkPipelineLayoutCreateInfo layoutInfo = {};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
     // push constants
-    const auto& pushConstantRanges = Pipeline::Handler::getPushConstantRanges(PUSH_CONSTANT_TYPE::DEFAULT);
-    layoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges.size());
-    layoutInfo.pPushConstantRanges = pushConstantRanges.data();
+    pushConstantRanges_ = Pipeline::Handler::getPushConstantRanges(TYPE, PUSH_CONSTANT_TYPES);
     // descriptor layouts
     const auto& descSetLayout = Pipeline::Handler::getDescriptorSetLayouts(descTypeSet_);
+
+    VkPipelineLayoutCreateInfo layoutInfo = {};
+    layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    layoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges_.size());
+    layoutInfo.pPushConstantRanges = pushConstantRanges_.data();
     layoutInfo.setLayoutCount = 1;
     layoutInfo.pSetLayouts = &descSetLayout;
 
     vk::assert_success(vkCreatePipelineLayout(dev, &layoutInfo, nullptr, &layout_));
 
     if (settings.enable_debug_markers) {
-        std::string markerName = name_ + " pipeline layout";
+        std::string markerName = NAME + " pipeline layout";
         ext::DebugMarkerSetObjectName(dev, (uint64_t)layout_, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT,
                                       markerName.c_str());
     }
@@ -97,7 +98,7 @@ const VkPipeline& Pipeline::Base::create(const Shell::Context& ctx, const Game::
     vk::assert_success(vkCreateGraphicsPipelines(ctx.dev, cache, 1, &pipelineCreateInfo, nullptr, &pipeline_));
 
     if (settings.enable_debug_markers) {
-        std::string markerName = name_ + " pipline";
+        std::string markerName = NAME + " pipline";
         ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)pipeline_, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT,
                                       markerName.c_str());
     }
@@ -256,13 +257,11 @@ void Pipeline::Base::getTesselationInfoResources(CreateInfoResources& createInfo
     createInfoRes.tessellationStateInfo = {};
 }
 
-using namespace Pipeline;
-
 // **********************
 //      Default Triangle List Color
 // **********************
 
-void DefaultTriListColor::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Default::TriListColor::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     // color vertex
     createInfoRes.bindingDesc = Vertex::getColorBindDesc();
     createInfoRes.attrDesc = Vertex::getColorAttrDesc();
@@ -282,16 +281,16 @@ void DefaultTriListColor::getInputAssemblyInfoResources(CreateInfoResources& cre
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 }
 
-void DefaultTriListColor::getShaderInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Default::TriListColor::getShaderInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.stagesInfo.clear();  // TODO: faster way?
-    Shader::Handler::getStagesInfo({SHADER_TYPE::COLOR_VERT, SHADER_TYPE::COLOR_FRAG}, createInfoRes.stagesInfo);
+    Shader::Handler::getStagesInfo(SHADER_TYPES, createInfoRes.stagesInfo);
 }
 
 // **********************
 //      Default Line
 // **********************
 
-void DefaultLine::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Default::Line::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     // color vertex
     createInfoRes.bindingDesc = Vertex::getColorBindDesc();
     createInfoRes.attrDesc = Vertex::getColorAttrDesc();
@@ -311,16 +310,16 @@ void DefaultLine::getInputAssemblyInfoResources(CreateInfoResources& createInfoR
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 }
 
-void DefaultLine::getShaderInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Default::Line::getShaderInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.stagesInfo.clear();  // TODO: faster way?
-    Shader::Handler::getStagesInfo({SHADER_TYPE::COLOR_VERT, SHADER_TYPE::LINE_FRAG}, createInfoRes.stagesInfo);
+    Shader::Handler::getStagesInfo(SHADER_TYPES, createInfoRes.stagesInfo);
 }
 
 // **********************
 //      Default Triangle List Texture
 // **********************
 
-void DefaultTriListTexture::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Default::TriListTexture::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     // texture vertex
     createInfoRes.bindingDesc = Vertex::getTexBindDesc();
     createInfoRes.attrDesc = Vertex::getTexAttrDesc();
@@ -340,7 +339,7 @@ void DefaultTriListTexture::getInputAssemblyInfoResources(CreateInfoResources& c
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 }
 
-void DefaultTriListTexture::getShaderInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Default::TriListTexture::getShaderInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.stagesInfo.clear();  // TODO: faster way?
-    Shader::Handler::getStagesInfo({SHADER_TYPE::TEX_VERT, SHADER_TYPE::TEX_FRAG}, createInfoRes.stagesInfo);
+    Shader::Handler::getStagesInfo(SHADER_TYPES, createInfoRes.stagesInfo);
 }

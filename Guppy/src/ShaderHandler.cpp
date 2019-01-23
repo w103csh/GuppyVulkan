@@ -1,14 +1,15 @@
 
 #include <sstream>
-#include <unordered_set>
 
 #include "ShaderHandler.h"
 
 #include "Camera.h"
 #include "FileLoader.h"
 #include "InputHandler.h"
+#include "Material.h"
+#include "Object3d.h"
+#include "PBR.h"
 #include "Scene.h"
-#include "SceneHandler.h"
 #include "TextureHandler.h"
 #include "util.hpp"
 
@@ -20,14 +21,50 @@ Shader::Handler Shader::Handler::inst_;
 Shader::Handler::Handler()
     :  // UNIFORMS
       pDefaultUniform_(std::make_unique<Uniform::Default>()),
-      pDefaultDynamicUniform_(std::make_unique<Uniform::DefaultDynamic>()),
-      // SHADERS
-      pUtilFragShader_(std::make_unique<UtilityFragment>()),
-      pDefColorVertShader_(std::make_unique<DefaultColorVertex>()),
-      pDefColorFragShader_(std::make_unique<DefaultColorFragment>()),
-      pDefLineFragShader_(std::make_unique<DefaultLineFragment>()),
-      pDefTexVertShader_(std::make_unique<DefaultTextureVertex>()),
-      pDefTexFragShader_(std::make_unique<DefaultTextureFragment>()) {}
+      pDefaultDynamicUniform_(std::make_unique<Uniform::DefaultDynamic>()) {
+    // SHADERS (main)
+    for (const auto& type : SHADER_ALL) {
+        switch (type) {
+            case SHADER::COLOR_VERT:
+                pShaders_.emplace_back(std::make_unique<Default::ColorVertex>());
+                break;
+            case SHADER::COLOR_FRAG:
+                pShaders_.emplace_back(std::make_unique<Default::ColorFragment>());
+                break;
+            case SHADER::LINE_FRAG:
+                pShaders_.emplace_back(std::make_unique<Default::LineFragment>());
+                break;
+            case SHADER::TEX_VERT:
+                pShaders_.emplace_back(std::make_unique<Default::TextureVertex>());
+                break;
+            case SHADER::TEX_FRAG:
+                pShaders_.emplace_back(std::make_unique<Default::TextureFragment>());
+                break;
+            case SHADER::PBR_COLOR_FRAG:
+                pShaders_.emplace_back(std::make_unique<PBR::ColorFrag>());
+                break;
+            default:
+                assert(false);  // add new ones here...
+        }
+    }
+    // Validate the list.
+    assert(pShaders_.size() == SHADER_ALL.size());
+    for (const auto& pShader : pShaders_) assert(pShader != nullptr);
+
+    // SHADERS (link)
+    for (const auto& type : SHADER_LINK_ALL) {
+        switch (type) {
+            case SHADER_LINK::UTIL_FRAG:
+                pLinkShaders_.emplace_back(std::make_unique<UtilityFragment>());
+                break;
+            default:
+                assert(false);  // add new ones here...
+        }
+    }
+    // Validate the list.
+    assert(pLinkShaders_.size() == SHADER_LINK_ALL.size());
+    for (const auto& pLinkShader : pLinkShaders_) assert(pLinkShader != nullptr);
+}
 
 void Shader::Handler::init(Shell& sh, const Game::Settings& settings, const Camera& camera) {
     inst_.reset();
@@ -40,16 +77,12 @@ void Shader::Handler::init(Shell& sh, const Game::Settings& settings, const Came
     inst_.pDefaultDynamicUniform_->init(inst_.ctx_, settings, TEXTURE_LIMIT);
 
     // LINK SHADERS
-    inst_.pUtilFragShader_->init(inst_.ctx_.dev, inst_.settings_, inst_.oldModules_);
+    for (auto& pLinkShader : inst_.pLinkShaders_) pLinkShader->init(inst_.ctx_.dev, inst_.settings_, inst_.oldModules_);
 
     init_glslang();
 
     // MAIN SHADERS
-    inst_.pDefColorVertShader_->init(inst_.ctx_.dev, inst_.settings_, inst_.oldModules_);
-    inst_.pDefLineFragShader_->init(inst_.ctx_.dev, inst_.settings_, inst_.oldModules_);
-    inst_.pDefTexVertShader_->init(inst_.ctx_.dev, inst_.settings_, inst_.oldModules_);
-    inst_.pDefColorFragShader_->init(inst_.ctx_.dev, inst_.settings_, inst_.oldModules_);
-    inst_.pDefTexFragShader_->init(inst_.ctx_.dev, inst_.settings_, inst_.oldModules_);
+    for (auto& pShader : inst_.pShaders_) pShader->init(inst_.ctx_.dev, inst_.settings_, inst_.oldModules_);
 
     finalize_glslang();
 
@@ -61,137 +94,118 @@ void Shader::Handler::init(Shell& sh, const Game::Settings& settings, const Came
 
 void Shader::Handler::reset() {
     // SHADERS
-    pDefColorVertShader_->destroy(inst_.ctx_.dev);
-    pDefColorFragShader_->destroy(inst_.ctx_.dev);
-    pDefLineFragShader_->destroy(inst_.ctx_.dev);
-    pDefTexVertShader_->destroy(inst_.ctx_.dev);
-    pDefTexFragShader_->destroy(inst_.ctx_.dev);
+    for (auto& pShader : pShaders_) pShader->destroy(inst_.ctx_.dev);
 
-    inst_.cleanup();
+    cleanup();
 
     // UNIFORMS
     pDefaultUniform_->destroy(ctx_.dev);
     pDefaultDynamicUniform_->destroy(ctx_.dev);
 }
 
-std::unique_ptr<Shader::Base>& Shader::Handler::getShader(const SHADER_TYPE& type) {
-    switch (type) {
-        // LINKS
-        case SHADER_TYPE::UTIL_FRAG:
-            return inst_.pUtilFragShader_;
-        // DEFAULTS
-        case SHADER_TYPE::COLOR_VERT:
-            return inst_.pDefColorVertShader_;
-        case SHADER_TYPE::TEX_VERT:
-            return inst_.pDefTexVertShader_;
-        case SHADER_TYPE::COLOR_FRAG:
-            return inst_.pDefColorFragShader_;
-        case SHADER_TYPE::TEX_FRAG:
-            return inst_.pDefTexFragShader_;
-        case SHADER_TYPE::LINE_FRAG:
-            return inst_.pDefLineFragShader_;
-        default:
-            throw std::runtime_error("Unhandled shader type.");
-    }
+std::unique_ptr<Shader::Base>& Shader::Handler::getShader(const SHADER& type) {
+    assert(type != SHADER::LINK);  // TODO: this ain't great...
+    return inst_.pShaders_[static_cast<uint32_t>(type)];
 }
 
-std::unique_ptr<Shader::Base>& Shader::Handler::getShader(SHADER_TYPE&& type) {
-    return getShader(std::forward<const SHADER_TYPE&>(type));
+std::unique_ptr<Shader::Link>& Shader::Handler::getLinkShader(const SHADER_LINK& type) {
+    return inst_.pLinkShaders_[static_cast<uint32_t>(type)];
 }
 
-void Shader::Handler::getStagesInfo(std::vector<SHADER_TYPE>&& types,
+void Shader::Handler::getStagesInfo(const std::set<SHADER>& shaderTypes,
                                     std::vector<VkPipelineShaderStageCreateInfo>& stagesInfo) {
-    for (auto& type : types) stagesInfo.push_back(inst_.getShader(type)->info);
+    for (auto& shaderType : shaderTypes) stagesInfo.push_back(inst_.getShader(shaderType)->info);
 }
 
-void Shader::Handler::update(std::unique_ptr<Scene>& pScene) {
-    for (; !inst_.updateQueue_.empty(); inst_.updateQueue_.pop()) {
-        auto type = inst_.updateQueue_.front();
-        // Create any new pipelines that have need an updated shader module.
-        const auto& pipeline = Pipeline::Handler::createPipeline(type);
-        // Notify scenes that the old pipeline is going to be invalid...
-        SceneHandler::updatePipelineReferences(type, pipeline);
-    }
+VkShaderStageFlags Shader::Handler::getStageFlags(const std::set<SHADER>& shaderTypes) {
+    VkShaderStageFlags stages = 0;
+    for (const auto& shaderType : shaderTypes) stages |= inst_.getShader(shaderType)->STAGE;
+    return stages;
 }
 
 void Shader::Handler::recompileShader(std::string fileName) {
     bool assert = inst_.settings_.assert_on_recompile_shader;
-    if (fileName == UTIL_FRAG_FILENAME) {
-        if (inst_.loadShaders({SHADER_TYPE::COLOR_FRAG, SHADER_TYPE::TEX_FRAG}, assert)) {
-            inst_.updateQueue_.push(PIPELINE_TYPE::TRI_LIST_COLOR);
-            inst_.updateQueue_.push(PIPELINE_TYPE::TRI_LIST_TEX);
-        };
 
-    } else if (fileName == DEFAULT_COLOR_FRAG_FILENAME) {
-        if (inst_.loadShaders({SHADER_TYPE::COLOR_FRAG}, assert)) {
-            inst_.updateQueue_.push(PIPELINE_TYPE::TRI_LIST_COLOR);
+    // Check for main shader
+    for (auto& pShader : inst_.pShaders_) {
+        if (pShader->FILE_NAME.compare(fileName) == 0) {
+            if (inst_.loadShaders({pShader->TYPE}, assert)) {
+                Pipeline::Handler::needsUpdate({pShader->TYPE});
+                return;
+            };
         }
+    }
 
-    } else if (fileName == DEFAULT_TEX_FRAG_FILENAME) {
-        if (inst_.loadShaders({SHADER_TYPE::TEX_FRAG}, assert)) {
-            inst_.updateQueue_.push(PIPELINE_TYPE::TRI_LIST_TEX);
-        }
+    // Check for link shader.
+    for (auto& pLinkShader : inst_.pLinkShaders_) {
+        if (pLinkShader->FILE_NAME.compare(fileName) == 0) {
+            // Get the mains mapped to this link shader...
+            std::vector<SHADER> types;
+            inst_.getShaderTypes(pLinkShader->LINK_TYPE, types);
 
-    } else if (fileName == DEFAULT_LINE_FRAG_FILENAME) {
-        if (inst_.loadShaders({SHADER_TYPE::LINE_FRAG}, assert)) {
-            inst_.updateQueue_.push(PIPELINE_TYPE::LINE);
-        }
-
-    } else if (fileName == DEFAULT_COLOR_VERT_FILENAME) {
-        if (inst_.loadShaders({SHADER_TYPE::COLOR_VERT}, assert)) {
-            inst_.updateQueue_.push(PIPELINE_TYPE::TRI_LIST_COLOR);
-        }
-
-    } else if (fileName == DEFAULT_TEX_VERT_FILENAME) {
-        if (inst_.loadShaders({SHADER_TYPE::TEX_VERT}, assert)) {
-            inst_.updateQueue_.push(PIPELINE_TYPE::TRI_LIST_TEX);
+            if (inst_.loadShaders(types, assert)) {
+                Pipeline::Handler::needsUpdate(types);
+                return;
+            };
         }
     }
 }
 
-void Shader::Handler::appendLinkTexts(Shader::Base* pShader, std::vector<const char*>& texts) {
-    for (auto& type : pShader->LINK_TYPES) texts.push_back(getShader(type)->loadText(false));
+void Shader::Handler::appendLinkTexts(const std::set<SHADER_LINK>& linkTypes, std::vector<const char*>& texts) {
+    for (auto& type : linkTypes) texts.push_back(getLinkShader(type)->loadText(false));
 }
 
-bool Shader::Handler::loadShaders(std::vector<SHADER_TYPE> types, bool doAssert, bool load) {
+bool Shader::Handler::loadShaders(const std::vector<SHADER>& types, bool doAssert, bool load) {
     // For cleanup
     auto numOldResources = inst_.oldModules_.size();
 
     // Load link shaders
     if (load) {
-        std::unordered_set<SHADER_TYPE> linkTypes;
+        std::set<SHADER_LINK> linkTypes;
         // Gather unique list of link shaders...
-        for (auto& type : types) {
-            for (auto& linkType : getShader(type)->LINK_TYPES) linkTypes.insert(linkType);
+        for (const auto& type : types) {
+            if (SHADER_LINK_MAP.count(type)) {
+                for (const auto& linkType : SHADER_LINK_MAP.at(type)) {
+                    linkTypes.insert(linkType);
+                }
+            }
         }
         // Only load from file once.
-        for (auto it = linkTypes.begin(); it != linkTypes.end(); ++it) getShader((*it))->loadText(load);
+        for (const auto& linkType : linkTypes) getLinkShader(linkType)->loadText(load);
     }
 
     init_glslang();
 
-    for (auto& type : types) getShader(type)->init(inst_.ctx_.dev, inst_.settings_, inst_.oldModules_, load, doAssert);
+    for (const auto& type : types) getShader(type)->init(inst_.ctx_.dev, inst_.settings_, inst_.oldModules_, load, doAssert);
 
     finalize_glslang();
 
     return numOldResources < inst_.oldModules_.size();
 }
 
-void Shader::Handler::updateDescriptorSets(const std::set<DESCRIPTOR_TYPE> types, std::vector<VkDescriptorSet>& sets,
+void Shader::Handler::getShaderTypes(const SHADER_LINK& linkType, std::vector<SHADER>& types) {
+    for (const auto& keyValue : SHADER_LINK_MAP) {
+        for (const auto& setItem : keyValue.second) {
+            if (setItem == linkType) types.push_back(keyValue.first);
+        }
+    }
+}
+
+void Shader::Handler::updateDescriptorSets(const std::set<DESCRIPTOR> types, std::vector<VkDescriptorSet>& sets,
                                            uint32_t setCount, const std::shared_ptr<Texture::Data>& pTexture) {
     std::vector<VkWriteDescriptorSet> writes;
     for (uint32_t i = 0; i < setCount; i++) {
         for (const auto& type : types) {
             switch (type) {
-                case DESCRIPTOR_TYPE::DEFAULT_UNIFORM: {
+                case DESCRIPTOR::DEFAULT_UNIFORM: {
                     writes.push_back(inst_.pDefaultUniform_->getWrite());
                     writes.back().dstSet = sets[i];
                 } break;
-                case DESCRIPTOR_TYPE::DEFAULT_DYNAMIC_UNIFORM: {
+                case DESCRIPTOR::DEFAULT_DYNAMIC_UNIFORM: {
                     writes.push_back(inst_.pDefaultDynamicUniform_->getWrite());
                     writes.back().dstSet = sets[i];
                 } break;
-                case DESCRIPTOR_TYPE::DEFAULT_SAMPLER: {
+                case DESCRIPTOR::DEFAULT_SAMPLER: {
                     writes.push_back(TextureHandler::getDescriptorWrite(type));
                     writes.back().dstSet = sets[i];
                     writes.back().pImageInfo = &pTexture->imgDescInfo;
@@ -204,10 +218,10 @@ void Shader::Handler::updateDescriptorSets(const std::set<DESCRIPTOR_TYPE> types
 }
 
 // TODO: This was done hastily and needs to be redone
-std::vector<uint32_t> Shader::Handler::getDynamicOffsets(const std::set<DESCRIPTOR_TYPE> types) {
+std::vector<uint32_t> Shader::Handler::getDynamicOffsets(const std::set<DESCRIPTOR> types) {
     for (const auto& type : types) {
         switch (type) {
-            case DESCRIPTOR_TYPE::DEFAULT_DYNAMIC_UNIFORM:
+            case DESCRIPTOR::DEFAULT_DYNAMIC_UNIFORM:
                 return {static_cast<uint32_t>(inst_.pDefaultDynamicUniform_->getInfo()->range)};
         }
     }
@@ -245,11 +259,11 @@ void Shader::Handler::updateDefaultUniform(Camera& camera) { inst_.pDefaultUnifo
 
 void Shader::Handler::updateDefaultDynamicUniform() { inst_.pDefaultDynamicUniform_->update(inst_.ctx_.dev); }
 
-VkDescriptorSetLayoutBinding Shader::Handler::getDescriptorLayoutBinding(const DESCRIPTOR_TYPE& type) {
+VkDescriptorSetLayoutBinding Shader::Handler::getDescriptorLayoutBinding(const DESCRIPTOR& type) {
     switch (type) {
-        case DESCRIPTOR_TYPE::DEFAULT_UNIFORM:
+        case DESCRIPTOR::DEFAULT_UNIFORM:
             return inst_.pDefaultUniform_->getDecriptorLayoutBinding();
-        case DESCRIPTOR_TYPE::DEFAULT_DYNAMIC_UNIFORM:
+        case DESCRIPTOR::DEFAULT_DYNAMIC_UNIFORM:
             return inst_.pDefaultDynamicUniform_->getDecriptorLayoutBinding();
         default:
             throw std::runtime_error("descriptor type not handled!");

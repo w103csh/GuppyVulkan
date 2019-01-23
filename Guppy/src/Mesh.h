@@ -25,31 +25,35 @@ typedef struct MeshCreateInfo {
     std::string markerName = "";
     glm::mat4 model = glm::mat4(1.0f);
     size_t offset = 0;
-    std::unique_ptr<Material> pMaterial = nullptr;
+    PIPELINE pipelineType = PIPELINE::DONT_CARE;
+    Material::Info materialInfo = {};
     bool selectable = true;
 } MeshCreateInfo;
 
 class Mesh : public Object3d {
    public:
-    typedef enum FLAGS {
+    typedef enum FLAG {
         POLY = 0x00000001,
         LINE = 0x00000002,
         // THROUGH 0x00000008
-    } FLAGS;
+    } FLAG;
 
-    Mesh(MeshCreateInfo* pCreateInfo);
+    Mesh(const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags, MeshCreateInfo* pCreateInfo);
     /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTRs OF THIS CLASS.
         IF THIS IS REMOVED THE DESTRUCTOR HERE WILL BE CALLED INSTEAD OF THE DERIVED DESTRUCTOR.
         IT MIGHT JUST BE EASIER/SMARTER TO GET RID OF POLYMORPHISM AND DROP THE POINTERS. */
     virtual ~Mesh() = default;
 
+    const MESH TYPE;
+    const VERTEX VERTEX_TYPE;
+    const PIPELINE PIPELINE_TYPE;
+    const FlagBits FLAGS;
+
     // GETTERS
     inline std::string getMarkerName() const { return markerName_; }
     inline size_t getOffset() const { return offset_; }
     inline STATUS getStatus() const { return status_; }
-    inline Vertex::TYPE getVertexType() const { return vertexType_; }
-    inline Material& getMaterial() const { return std::ref(*pMaterial_); }
-    // inline MeshCreateInfo getCreateInfo() const { return {markerName_, model_, offset_, pickable_, nullptr}; }
+    inline Material::Base& getMaterial() const { return std::ref(*pMaterial_); }
 
     inline void setStatusPendingBuffers() {
         assert(status_ == STATUS::PENDING || status_ == STATUS::PENDING_TEXTURE);
@@ -109,7 +113,7 @@ class Mesh : public Object3d {
     void draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) const;
 
     // PIPELINE
-    void updatePipelineReferences(const PIPELINE_TYPE& type, const VkPipeline& pipeline);
+    void updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline);
 
     virtual void destroy(const VkDevice& dev);
 
@@ -127,32 +131,29 @@ class Mesh : public Object3d {
         return p_bufferSize;
     }
 
-    // PIPELINE
-    PIPELINE_TYPE pipelineType_;
-    Pipeline::DescriptorSetsReference descReference_;
-
-    // create info
+    // INFO
     bool isIndexed_;
     std::string markerName_;
     size_t offset_;
-    std::unique_ptr<Material> pMaterial_;
     bool selectable_;
-    // derived class specific
-    FlagBits flags_;
-    Vertex::TYPE vertexType_;
     // INSTANCE
-    std::vector<std::pair<glm::mat4, std::unique_ptr<Material>>> instances_;
+    std::vector<std::pair<glm::mat4, std::unique_ptr<Material::Base>>> instances_;
+    // PIPELINE
+    Pipeline::DescriptorSetsReference descReference_;
 
     STATUS status_;
     BufferResource vertexRes_;
     std::vector<VB_INDEX_TYPE> indices_;
     BufferResource indexRes_;
     std::unique_ptr<LoadingResources> pLdgRes_;
+    std::unique_ptr<Material::Base> pMaterial_;
 
    private:
     void createBufferData(const Game::Settings& settings, const VkDevice& dev, const VkCommandBuffer& cmd,
                           BufferResource& stgRes, VkDeviceSize bufferSize, const void* data, BufferResource& res,
                           VkBufferUsageFlagBits usage, std::string markerName);
+
+    void bindPushConstants(VkCommandBuffer cmd) const;  // TODO: I hate this...
 };
 
 // **********************
@@ -161,7 +162,7 @@ class Mesh : public Object3d {
 
 class ColorMesh : public Mesh {
    public:
-    ColorMesh(MeshCreateInfo* pCreateInfo);
+    ColorMesh(MeshCreateInfo* pCreateInfo) : Mesh{MESH::COLOR, VERTEX::COLOR, FLAG::POLY, pCreateInfo} {}
 
     // VERTEX
     inline Vertex::Complete getVertexComplete(size_t index) const override {
@@ -186,6 +187,9 @@ class ColorMesh : public Mesh {
     const glm::vec3& getVertexPositionAtOffset(size_t offset) const override { return vertices_[offset].position; }
 
    protected:
+    ColorMesh(const FLAG&& flags, MeshCreateInfo* pCreateInfo)
+        : Mesh{MESH::COLOR, VERTEX::COLOR, std::forward<const FLAG>(flags), pCreateInfo} {}
+
     std::vector<Vertex::Color> vertices_;
 };
 
@@ -195,7 +199,7 @@ class ColorMesh : public Mesh {
 
 class LineMesh : public ColorMesh {
    public:
-    LineMesh(MeshCreateInfo* pCreateInfo);
+    LineMesh(MeshCreateInfo* pCreateInfo) : ColorMesh(FLAG::LINE, pCreateInfo) {}
 };
 
 // **********************
@@ -204,7 +208,7 @@ class LineMesh : public ColorMesh {
 
 class TextureMesh : public Mesh {
    public:
-    TextureMesh(MeshCreateInfo* pCreateInfo);
+    TextureMesh(MeshCreateInfo* pCreateInfo) : Mesh{MESH::COLOR, VERTEX::TEXTURE, FLAG::POLY, pCreateInfo} {}
 
     // VERTEX
     inline Vertex::Complete getVertexComplete(size_t index) const override {

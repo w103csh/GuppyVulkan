@@ -2,6 +2,7 @@
 #ifndef HELPERS_H
 #define HELPERS_H
 
+#include <array>
 #include <assert.h>
 #include <cstring>
 #include <glm/glm.hpp>
@@ -40,32 +41,109 @@ enum class STATUS {
     UPDATE_BUFFERS,
 };
 
-enum class SHADER_TYPE {
+enum class VERTEX {
+    //
+    COLOR = 0,
+    TEXTURE
+};
+
+// **********************
+//      Shader
+// **********************
+
+enum class SHADER {
+    LINK = -1,
+    // These are index values...
     // DEFAULT
     COLOR_VERT = 0,
-    TEX_VERT,
     COLOR_FRAG,
     LINE_FRAG,
+    TEX_VERT,
     TEX_FRAG,
-    UTIL_FRAG,
     // PBR
     PBR_COLOR_FRAG,
 };
 
-enum class PIPELINE_TYPE {
+const std::array<SHADER, 7> SHADER_ALL = {
+    // DEFAULT
+    SHADER::COLOR_VERT,  //
+    SHADER::COLOR_FRAG,  //
+    SHADER::LINE_FRAG,   //
+    SHADER::TEX_VERT,    //
+    SHADER::TEX_FRAG,    //
+    // PBR
+    SHADER::PBR_COLOR_FRAG,  //
+};
+
+enum class SHADER_LINK {
     //
+    UTIL_FRAG,
+};
+
+const std::array<SHADER_LINK, 1> SHADER_LINK_ALL = {
+    //
+    SHADER_LINK::UTIL_FRAG,  //
+};
+
+const std::map<SHADER, std::set<SHADER_LINK>> SHADER_LINK_MAP = {
+    //
+    {SHADER::COLOR_FRAG, {SHADER_LINK::UTIL_FRAG}},
+    {SHADER::TEX_FRAG, {SHADER_LINK::UTIL_FRAG}},
+};
+
+// **********************
+//      Pipeline
+// **********************
+
+enum class PIPELINE {
     DONT_CARE = -1,
+    // These are index values...
     TRI_LIST_COLOR = 0,
     LINE = 1,
     TRI_LIST_TEX = 2,
+    PBR_COLOR = 3,
+    // Add new ones to PIPELINE_ALL below.
 };
 
-enum class PUSH_CONSTANT_TYPE {
+const std::array<PIPELINE, 4> PIPELINE_ALL = {
+    PIPELINE::TRI_LIST_COLOR,  //
+    PIPELINE::LINE,            //
+    PIPELINE::TRI_LIST_TEX,    //
+    PIPELINE::PBR_COLOR,       //
+};
+
+const std::map<VERTEX, std::set<PIPELINE>> VERTEX_PIPELINE_MAP = {
+    //
+    {
+        VERTEX::COLOR,
+        {
+            //
+            PIPELINE::TRI_LIST_COLOR,  //
+            PIPELINE::LINE,            //
+            PIPELINE::PBR_COLOR        //
+        }                              //
+    },
+    {
+        VERTEX::TEXTURE,
+        {
+            //
+            PIPELINE::TRI_LIST_TEX,  //
+        },
+    }  //
+};
+
+// **********************
+//
+// **********************
+
+enum class PUSH_CONSTANT {
+    DONT_CARE = -1,
     //
     DEFAULT = 0,
+    PBR,
 };
 
-enum class DESCRIPTOR_TYPE {
+enum class DESCRIPTOR {
     //
     /*  Currently this reflects unique descriptor bindings
         for the shaders. As of now the bindings are hardcoded
@@ -76,10 +154,10 @@ enum class DESCRIPTOR_TYPE {
     */
     DEFAULT_UNIFORM = 0,
     DEFAULT_SAMPLER = 1,
-    DEFAULT_DYNAMIC_UNIFORM = 2
+    DEFAULT_DYNAMIC_UNIFORM = 2,
 };
 
-enum class INPUT_TYPE {
+enum class INPUT_ACTION {
     //
     UP,
     DOWN,
@@ -87,7 +165,7 @@ enum class INPUT_TYPE {
     UNKNOWN
 };
 
-enum class MESH_TYPE {
+enum class MESH {
     //
     COLOR = 0,
     LINE,
@@ -163,6 +241,13 @@ static MODEL_FILE_TYPE getModelFileType(std::string s) {
         return MODEL_FILE_TYPE::OBJ;
     }
     return MODEL_FILE_TYPE::UNKNOWN;
+}
+
+static bool checkVertexPipelineMap(VERTEX key, PIPELINE value) {
+    for (const auto &type : VERTEX_PIPELINE_MAP.at(key)) {
+        if (type == value) return true;
+    }
+    return false;
 }
 
 // The point of this is to turn the glm::lookAt into an affine transform for
@@ -342,18 +427,18 @@ struct DescriptorMapItem {
     std::vector<Resource> resources;
 };
 struct hash_descriptor_resource_map {
-    size_t operator()(const std::set<DESCRIPTOR_TYPE> &s) const {
+    size_t operator()(const std::set<DESCRIPTOR> &s) const {
         size_t value = 0;
         auto x = 1;
         for (const auto &i : s)
             if (value)
-                value ^= ((std::hash<DESCRIPTOR_TYPE>()(i)) << 1) >> 1;
+                value ^= ((std::hash<DESCRIPTOR>()(i)) << 1) >> 1;
             else
-                value = (std::hash<DESCRIPTOR_TYPE>()(i));
+                value = (std::hash<DESCRIPTOR>()(i));
         return value;
     }
 };
-typedef std::unordered_map<const std::set<DESCRIPTOR_TYPE>, DescriptorMapItem, hash_descriptor_resource_map>
+typedef std::unordered_map<const std::set<DESCRIPTOR>, DescriptorMapItem, hash_descriptor_resource_map>
     descriptor_resource_map;
 
 namespace helpers {

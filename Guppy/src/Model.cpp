@@ -11,7 +11,7 @@
 
 Model::Model(ModelCreateInfo *pCreateInfo, MODEL_INDEX sceneOffset)
     : Object3d(pCreateInfo->model),
-      status(STATUS::PENDING),
+      PIPELINE_TYPE(pCreateInfo->pipelineType),
       handlerOffset_(pCreateInfo->handlerOffset),
       modelPath_(pCreateInfo->modelPath),
       sceneOffset_(sceneOffset),
@@ -20,7 +20,7 @@ Model::Model(ModelCreateInfo *pCreateInfo, MODEL_INDEX sceneOffset)
     assert(sceneOffset_ < MODEL_INDEX_MAX);
 }
 
-std::vector<ColorMesh *> Model::loadColor(Shell *sh, Material material) {
+std::vector<ColorMesh *> Model::loadColor(Shell *sh, const Material::Info &materialInfo) {
     FileLoader::tinyobj_data data = {modelPath_, ""};
 
     // Get obj data from the file loader...
@@ -33,15 +33,20 @@ std::vector<ColorMesh *> Model::loadColor(Shell *sh, Material material) {
     std::vector<ColorMesh *> pMeshes;
     if (data.materials.empty()) {
         createInfo = {};
-        createInfo.pMaterial = std::make_unique<Material>(material);
+        createInfo.pipelineType = PIPELINE_TYPE;
+        createInfo.materialInfo = materialInfo;
         createInfo.model = model_;
 
         pMeshes.push_back(new ColorMesh(&createInfo));
     } else {
-        for (auto &to_m : data.materials) {
+        for (auto &tinyobj_mat : data.materials) {
+            // Material
+            Material::Info materialInfoCopy = materialInfo;
+            Material::copyTinyobjData(tinyobj_mat, materialInfoCopy);
+            // Mesh
             createInfo = {};
-            createInfo.pMaterial = std::make_unique<Material>(material);
-            createInfo.pMaterial->setMaterialData(to_m);
+            createInfo.pipelineType = PIPELINE_TYPE;
+            createInfo.materialInfo = materialInfoCopy;
             createInfo.model = model_;
 
             pMeshes.push_back(new ColorMesh(&createInfo));
@@ -61,7 +66,7 @@ std::vector<ColorMesh *> Model::loadColor(Shell *sh, Material material) {
     return pMeshes;
 }
 
-std::vector<TextureMesh *> Model::loadTexture(Shell *sh, Material material, std::shared_ptr<Texture::Data> pTexture) {
+std::vector<TextureMesh *> Model::loadTexture(Shell *sh, const Material::Info &materialInfo) {
     std::string modelDirectory = helpers::getFilePath(modelPath_);
     FileLoader::tinyobj_data data = {modelPath_, modelDirectory.c_str()};
 
@@ -79,9 +84,13 @@ std::vector<TextureMesh *> Model::loadTexture(Shell *sh, Material material, std:
         */
 
         for (auto &tinyobj_mat : data.materials) {
+            // Material
+            Material::Info materialInfoCopy = materialInfo;
+            Material::copyTinyobjData(tinyobj_mat, materialInfoCopy);
+            // Mesh
             createInfo = {};
-            createInfo.pMaterial = std::make_unique<Material>(material);
-            createInfo.pMaterial->setMaterialData(tinyobj_mat);
+            createInfo.pipelineType = PIPELINE_TYPE;
+            createInfo.materialInfo = materialInfoCopy;
             createInfo.model = model_;
 
             if (!tinyobj_mat.diffuse_texname.empty() /*|| !to_m.specular_texname.empty() || !to_m.bump_texname.empty()*/) {
@@ -97,7 +106,7 @@ std::vector<TextureMesh *> Model::loadTexture(Shell *sh, Material material, std:
                     // TODO: deal with textures sharing some bitmap and not others...
                 }
 
-                createInfo.pMaterial->setTexture(TextureHandler::getTextureByPath(diff));
+                createInfo.materialInfo.pTexture = TextureHandler::getTextureByPath(diff);
 
                 pMeshes.push_back(new TextureMesh(&createInfo));
 
@@ -107,8 +116,8 @@ std::vector<TextureMesh *> Model::loadTexture(Shell *sh, Material material, std:
         }
     } else {
         createInfo = {};
-        createInfo.pMaterial = std::make_unique<Material>(material);
-        createInfo.pMaterial->setTexture(pTexture);
+        createInfo.pipelineType = PIPELINE_TYPE;
+        createInfo.materialInfo = materialInfo;
         createInfo.model = model_;
 
         pMeshes.push_back(new TextureMesh(&createInfo));
@@ -157,15 +166,15 @@ void Model::transform(const glm::mat4 t) {
     allMeshAction([&t](Mesh *pMesh) { pMesh->transform(t); });
 }
 
-MODEL_INDEX Model::getMeshOffset(MESH_TYPE type, uint8_t offset) {
+MODEL_INDEX Model::getMeshOffset(MESH type, uint8_t offset) {
     switch (type) {
-        case MESH_TYPE::COLOR:
+        case MESH::COLOR:
             assert(offset < colorOffsets_.size());
             return colorOffsets_[offset];
-        case MESH_TYPE::LINE:
+        case MESH::LINE:
             assert(offset < lineOffsets_.size());
             return lineOffsets_[offset];
-        case MESH_TYPE::TEXTURE:
+        case MESH::TEXTURE:
             assert(offset < texOffsets_.size());
             return texOffsets_[offset];
         default:

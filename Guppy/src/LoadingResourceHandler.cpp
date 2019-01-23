@@ -10,6 +10,7 @@ void LoadingResourceHandler::init(const Shell::Context& ctx) {
     inst_.ctx_ = ctx;
 }
 
+// thread sync
 std::unique_ptr<LoadingResources> LoadingResourceHandler::createLoadingResources() {
     auto pLdgRes = std::make_unique<LoadingResources>();
 

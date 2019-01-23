@@ -22,16 +22,17 @@ namespace Uniform {
 
 class Base {
    public:
+    const DESCRIPTOR TYPE;
+    const std::string name;
+
     virtual VkDescriptorSetLayoutBinding getDecriptorLayoutBinding(uint32_t binding, uint32_t count) const = 0;
 
     inline const VkDescriptorBufferInfo *getInfo() { return &resources_.info; }
 
     void destroy(const VkDevice &dev);
 
-    DESCRIPTOR_TYPE TYPE;
-
    protected:
-    Base(DESCRIPTOR_TYPE &&type, std::string &&name) : TYPE(type), resources_(), name_(name){};
+    Base(DESCRIPTOR &&type, std::string &&name) : TYPE(type), resources_(), name(name){};
 
     void init(const VkDevice &dev, const Game::Settings &settings, VkDeviceSize &size, uint32_t count = 1);
 
@@ -47,7 +48,6 @@ class Base {
     virtual VkCopyDescriptorSet getCopy() = 0;
 
    private:
-    std::string name_;
     DescriptorBufferResources resources_;
 };
 
@@ -57,9 +57,9 @@ class Base {
 
 class Default : public Base {
    public:
-    Default::Default() : Base(DESCRIPTOR_TYPE::DEFAULT_UNIFORM, "Default"){};
+    Default::Default() : Base{DESCRIPTOR::DEFAULT_UNIFORM, "Default"} {};
 
-    typedef enum FLAGS {
+    typedef enum FLAG {
         DEFAULT = 0x00000000,
         // Should this be on the "Dynamic" uniform buffer? Now its on "Default". If it stays then
         // move it to Scene.
@@ -70,11 +70,12 @@ class Default : public Base {
         FOG_EXP2 = 0x00000040,
         // THROUGH 0x0000000F (used by shader)
         BITS_MAX_ENUM = 0x7FFFFFFF
-    } FLAGS;
+    } FLAG;
+
     struct DATA {
         const Camera::Data *pCamera = nullptr;
         struct ShaderData {
-            alignas(16) FlagBits flags = FLAGS::DEFAULT;
+            alignas(16) FlagBits flags = FLAG::DEFAULT;
             // 12 rem
             struct Fog {
                 float minDistance = 0.0f;
@@ -94,7 +95,7 @@ class Default : public Base {
     void update(const VkDevice &dev, Camera &camera);
 
     VkDescriptorSetLayoutBinding getDecriptorLayoutBinding(
-        uint32_t binding = static_cast<uint32_t>(DESCRIPTOR_TYPE::DEFAULT_UNIFORM), uint32_t count = 1) const override;
+        uint32_t binding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_UNIFORM), uint32_t count = 1) const override;
 
     VkWriteDescriptorSet getWrite() override;
     VkCopyDescriptorSet getCopy() override;
@@ -122,7 +123,7 @@ class Default : public Base {
 
 class DefaultDynamic : public Base {
    public:
-    DefaultDynamic() : Base(DESCRIPTOR_TYPE::DEFAULT_DYNAMIC_UNIFORM, "Default Dynamic"){};
+    DefaultDynamic() : Base{DESCRIPTOR::DEFAULT_DYNAMIC_UNIFORM, "Default Dynamic"} {};
 
     const uint32_t ARRAY_ELEMENT = 0;  // Force any shaders that use this uniform to use array element 0. For now...
 
@@ -130,7 +131,7 @@ class DefaultDynamic : public Base {
     void update(const VkDevice &dev);
 
     VkDescriptorSetLayoutBinding getDecriptorLayoutBinding(
-        uint32_t binding = static_cast<uint32_t>(DESCRIPTOR_TYPE::DEFAULT_DYNAMIC_UNIFORM),
+        uint32_t binding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_DYNAMIC_UNIFORM),
         uint32_t count = 1) const override;
 
     VkWriteDescriptorSet getWrite() override;

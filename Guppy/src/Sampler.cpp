@@ -57,7 +57,7 @@
 //    // assert(setCount > 0);
 //
 //    // std::vector<VkDescriptorSetLayout> layouts;
-//    ////Pipeline::Handler::getDescriptorLayouts(imageCount, Vertex::TYPE::TEXTURE, layouts);
+//    ////Pipeline::Handler::getDescriptorLayouts(imageCount, VERTEX_TYPE::TEXTURE, layouts);
 //
 //    // VkDescriptorSetAllocateInfo alloc_info;
 //    // alloc_info = {};

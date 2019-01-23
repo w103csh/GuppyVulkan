@@ -1,27 +1,33 @@
 
 #include "Material.h"
 
-STATUS Material::getStatus() const {
+STATUS Material::Base::getStatus() const {
     if (hasTexture() && pTexture_->status != STATUS::READY) {
         return STATUS::PENDING_TEXTURE;
     }
     return STATUS::READY;
 }
 
-Material::Data Material::getData() const {
+Material::Base::DATA Material::Base::getData(const std::unique_ptr<Material::Base> &pMaterial) {
     float xRepeat, yRepeat;
-    xRepeat = yRepeat = repeat_;
+    xRepeat = yRepeat = pMaterial->getRepeat();
 
     // Deal with non-square images
-    if (hasTexture()) {
-        if (pTexture_->aspect > 1.0f) {
-            yRepeat *= pTexture_->aspect;
-        } else if (pTexture_->aspect < 1.0f) {
-            xRepeat *= (1 / pTexture_->aspect);
+    if (pMaterial->hasTexture()) {
+        auto aspect = pMaterial->getTexture()->aspect;
+        if (aspect > 1.0f) {
+            yRepeat *= aspect;
+        } else if (aspect < 1.0f) {
+            xRepeat *= (1 / aspect);
         }
     }
 
-    return {
-        ambientCoeff_, flags_, diffuseCoeff_, opacity_, specularCoeff_, shininess_, xRepeat, yRepeat,
-    };
+    return {pMaterial->getAmbientCoeff(),
+            pMaterial->getFlags(),
+            pMaterial->getDiffuseCoeff(),
+            pMaterial->getOpacity(),
+            pMaterial->getSpecularCoeff(),
+            pMaterial->getShininess(),
+            xRepeat,
+            yRepeat};
 }

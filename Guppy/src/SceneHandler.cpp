@@ -33,8 +33,9 @@ SCENE_INDEX_TYPE SceneHandler::makeScene(bool setActive, bool makeFaceSelection)
     if (makeFaceSelection && inst_.pSelectionManager_->pFace_ == nullptr) {
         // Face selection
         MeshCreateInfo createInfo = {};
+        createInfo.pipelineType = PIPELINE::LINE;
         createInfo.isIndexed = false;
-        createInfo.pMaterial = std::make_unique<Material>(Material::FLAGS::HIDE);
+        createInfo.materialInfo.flags = Material::FLAG::HIDE;
 
         std::unique_ptr<LineMesh> pFaceSelection = std::make_unique<FaceSelection>(&createInfo);
         // thread sync
@@ -47,19 +48,16 @@ SCENE_INDEX_TYPE SceneHandler::makeScene(bool setActive, bool makeFaceSelection)
     return offset;
 }
 
-void SceneHandler::updatePipelineReferences(const PIPELINE_TYPE& type, const VkPipeline& pipeline) {
+void SceneHandler::updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline) {
+    // Not concerned with speed here at the moment. If recreating pipelines
+    // becomes something that is needed a lot then this is not great.
     for (auto& pScene : inst_.pScenes_) {
-        switch (type) {
-            case PIPELINE_TYPE::TRI_LIST_COLOR:
-                for (auto& pMesh : pScene->colorMeshes_) pMesh->updatePipelineReferences(type, pipeline);
-                break;
-            case PIPELINE_TYPE::LINE:
-                for (auto& pMesh : pScene->lineMeshes_) pMesh->updatePipelineReferences(type, pipeline);
-                break;
-            case PIPELINE_TYPE::TRI_LIST_TEX:
-                for (auto& pMesh : pScene->texMeshes_) pMesh->updatePipelineReferences(type, pipeline);
-                break;
-        }
+        for (auto& pMesh : pScene->colorMeshes_)
+            if (pMesh->PIPELINE_TYPE == type) pMesh->updatePipelineReferences(type, pipeline);
+        for (auto& pMesh : pScene->lineMeshes_)
+            if (pMesh->PIPELINE_TYPE == type) pMesh->updatePipelineReferences(type, pipeline);
+        for (auto& pMesh : pScene->texMeshes_)
+            if (pMesh->PIPELINE_TYPE == type) pMesh->updatePipelineReferences(type, pipeline);
     }
 }
 

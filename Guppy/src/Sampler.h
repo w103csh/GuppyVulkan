@@ -46,7 +46,7 @@
 //   public:
 //    Default::Default() : Base(DESCRIPTOR_TYPE::DEFAULT_UNIFORM, "Default"){};
 //
-//    typedef enum FLAGS {
+//    typedef enum FLAG {
 //        DEFAULT = 0x00000000,
 //        // Should this be on the "Dynamic" uniform buffer? Now its on "Default". If it stays then
 //        // move it to Scene.
@@ -57,7 +57,7 @@
 //        FOG_EXP2 = 0x00000040,
 //        // THROUGH 0x0000000F (used by shader)
 //        BITS_MAX_ENUM = 0x7FFFFFFF
-//    } FLAGS;
+//    } FLAG;
 //    struct DATA {
 //        const Camera::Data *pCamera = nullptr;
 //        struct ShaderData {

@@ -3,8 +3,8 @@
 
 #include "Mesh.h"
 
-#include "CmdBufHandler.h"
 #include "FileLoader.h"
+#include "PBR.h"  // TODO: this is bad
 #include "PipelineHandler.h"
 #include "TextureHandler.h"
 
@@ -12,20 +12,25 @@
 // Mesh
 // **********************
 
-Mesh::Mesh(MeshCreateInfo* pCreateInfo)
+Mesh::Mesh(const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags, MeshCreateInfo* pCreateInfo)
     : Object3d(pCreateInfo->model),
+      TYPE(type),
+      VERTEX_TYPE(vertexType),
+      FLAGS(flags),
       isIndexed_(pCreateInfo->isIndexed),
       markerName_(pCreateInfo->markerName),
       offset_(pCreateInfo->offset),
+      PIPELINE_TYPE(pCreateInfo->pipelineType),
+      pMaterial_(std::make_unique<Material::Base>(&pCreateInfo->materialInfo)),
       selectable_(pCreateInfo->selectable),
-      pMaterial_(nullptr),
       status_(STATUS::PENDING),
       vertexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
       indexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
-      pLdgRes_(nullptr),
-      vertexType_(),
-      pipelineType_() {
-    pMaterial_ = (pCreateInfo->pMaterial == nullptr) ? std::make_unique<Material>() : std::move(pCreateInfo->pMaterial);
+      pLdgRes_(nullptr) {
+    // PIPLINE
+    assert(helpers::checkVertexPipelineMap(VERTEX_TYPE, PIPELINE_TYPE));  // checks the vertex to pipeline type map...
+    // MATERIAL
+    if (VERTEX_TYPE == VERTEX::TEXTURE) assert(pMaterial_->hasTexture());
 }
 
 void Mesh::setSceneData(size_t offset) { offset_ = offset; }
@@ -39,12 +44,13 @@ void Mesh::prepare(const VkDevice& dev, const Game::Settings& settings, bool loa
 
     // Get descriptor sets for the drawing command...
     /*  TODO: apparently you can allocate the descriptor sets immediately, and then
-        you just need to not use the sets until they have updated with valid
-        resources... I should implement this. As of now we will just wait until we
+        you just need to wait to use the sets until they have been updated with valid
+        resources... I should implement this. As of now just wait until we
         can allocate and update all at once.
     */
-    if (pMaterial_->getStatus() == STATUS::READY)
-        Pipeline::Handler::makeDescriptorSets(pipelineType_, descReference_, pMaterial_->getTexture());
+    if (pMaterial_->getStatus() == STATUS::READY) {
+        Pipeline::Handler::makeDescriptorSets(PIPELINE_TYPE, descReference_, pMaterial_->getTexture());
+    }
 
     status_ = pMaterial_->getStatus();
 }
@@ -114,6 +120,28 @@ void Mesh::createBufferData(const Game::Settings& settings, const VkDevice& dev,
     if (settings.enable_debug_markers) {
         markerName = "Mesh " + markerName + " buffer";
         ext::DebugMarkerSetObjectName(dev, (uint64_t)res.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, markerName.c_str());
+    }
+}
+
+// TODO: I hate this...
+void Mesh::bindPushConstants(VkCommandBuffer cmd) const {
+    if (descReference_.pushConstantTypes.empty()) return;
+    assert(descReference_.pushConstantTypes.size() == 1 && "Cannot handle multiple push constants");
+
+    // TODO: MATERIAL INFO SHOULD PROBABLY BE A DYNAMIC UNIFORM (since it doesn't change constantly)
+
+    switch (descReference_.pushConstantTypes[0]) {
+        case PUSH_CONSTANT::DEFAULT: {
+            Pipeline::Default::PushConstant pushConstant = {getData(), Material::Base::getData(pMaterial_)};
+            vkCmdPushConstants(cmd, descReference_.layout, descReference_.pushConstantStages, 0,
+                               static_cast<uint32_t>(sizeof Pipeline::Default::PushConstant), &pushConstant);
+        } break;
+        case PUSH_CONSTANT::PBR: {
+            Pipeline::PBR::PushConstant pushConstant = {getData(), Material::PBR::getData(pMaterial_)};
+            vkCmdPushConstants(cmd, descReference_.layout, descReference_.pushConstantStages, 0,
+                               static_cast<uint32_t>(sizeof Pipeline::PBR::PushConstant), &pushConstant);
+        } break;
+        default: { assert(false && "Add new push constant"); } break;
     }
 }
 
@@ -295,9 +323,7 @@ void Mesh::draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) const {
 
     vkCmdBindPipeline(cmd, descReference_.bindPoint, descReference_.pipeline);
 
-    Pipeline::DefaultPushConstants pushConstants = {getData().model, pMaterial_->getData()};
-    vkCmdPushConstants(cmd, descReference_.layout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0,
-                       static_cast<uint32_t>(sizeof(Pipeline::DefaultPushConstants)), &pushConstants);
+    bindPushConstants(cmd);
 
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, descReference_.layout, descReference_.firstSet,
                             descReference_.descriptorSetCount, &descReference_.pDescriptorSets[frameIndex],
@@ -323,8 +349,10 @@ void Mesh::draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) const {
     }
 }
 
-void Mesh::updatePipelineReferences(const PIPELINE_TYPE& type, const VkPipeline& pipeline) {
-    if (type == pipelineType_) descReference_.pipeline = pipeline;
+void Mesh::updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline) {
+    if (type == PIPELINE_TYPE) {
+        descReference_.pipeline = pipeline;
+    }
 }
 
 void Mesh::destroy(const VkDevice& dev) {
@@ -341,35 +369,16 @@ void Mesh::destroy(const VkDevice& dev) {
 }
 
 // **********************
-// ColorMesh
+//      ColorMesh
 // **********************
 
-ColorMesh::ColorMesh(MeshCreateInfo* pCreateInfo) : Mesh(pCreateInfo) {
-    flags_ = FLAGS::POLY;
-    pipelineType_ = PIPELINE_TYPE::TRI_LIST_COLOR;
-    vertexType_ = Vertex::TYPE::COLOR;
-}
-
 // **********************
-// ColorMesh
+//      LineMesh
 // **********************
 
-LineMesh::LineMesh(MeshCreateInfo* pCreateInfo) : ColorMesh(pCreateInfo) {
-    flags_ = FLAGS::LINE;
-    pipelineType_ = PIPELINE_TYPE::LINE;
-    vertexType_ = Vertex::TYPE::COLOR;
-}
-
 // **********************
-// TextureMesh
+//      TextureMesh
 // **********************
-
-TextureMesh::TextureMesh(MeshCreateInfo* pCreateInfo) : Mesh(pCreateInfo) {
-    assert(pMaterial_->hasTexture());
-    flags_ = FLAGS::POLY;
-    pipelineType_ = PIPELINE_TYPE::TRI_LIST_TEX;
-    vertexType_ = Vertex::TYPE::TEXTURE;
-};
 
 void TextureMesh::prepare(const VkDevice& dev, const Game::Settings& settings, bool load) {
     if (load) {  // TODO: THIS AIN'T GREAT
@@ -385,7 +394,7 @@ void TextureMesh::prepare(const VkDevice& dev, const Game::Settings& settings, b
         can allocate and update all at once.
     */
     if (pMaterial_->getStatus() == STATUS::READY) {
-        Pipeline::Handler::makeDescriptorSets(pipelineType_, descReference_, pMaterial_->getTexture());
+        Pipeline::Handler::makeDescriptorSets(PIPELINE_TYPE, descReference_, pMaterial_->getTexture());
         descReference_.dynamicOffsets[0] *= pMaterial_->getTexture()->offset;
     }
 

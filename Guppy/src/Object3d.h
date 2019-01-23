@@ -27,13 +27,13 @@ struct BoundingBoxMinMax {
 
 struct Object3d {
    public:
-    struct Data {
+    struct DATA {
         glm::mat4 model = glm::mat4(1.0f);
     };
 
     Object3d(glm::mat4 model = glm::mat4(1.0f)) : model_{model}, boundingBox_(DefaultBoundingBox){};
 
-    inline Data getData() const { return {model_}; }
+    inline DATA getData() const { return {model_}; }
 
     virtual inline glm::vec3 worldToLocal(const glm::vec3& v, bool isPosition = false) const {
         glm::vec3 local = glm::inverse(model_) * glm::vec4(v, isPosition ? 1.0f : 0.0f);

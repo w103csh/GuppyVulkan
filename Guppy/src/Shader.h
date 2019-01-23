@@ -3,6 +3,7 @@
 
 #include <set>
 #include <string>
+#include <unordered_set>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -12,7 +13,7 @@
 namespace Shader {
 
 // directory of shader files relative to the root of the repo
-static const std::string BASE_DIRNAME = "Guppy\\src\\shaders\\";
+const std::string BASE_DIRNAME = "Guppy\\src\\shaders\\";
 
 // **********************
 //      Base
@@ -20,28 +21,31 @@ static const std::string BASE_DIRNAME = "Guppy\\src\\shaders\\";
 
 class Base {
    public:
-    Base(SHADER_TYPE &&type, const std::string &fileName, VkShaderStageFlagBits &&stage, std::string &&name,
-         std::vector<DESCRIPTOR_TYPE> &&descTypes = {}, std::vector<SHADER_TYPE> &&linkTypes = {})
-        : info(),
+    Base(const SHADER &&type, const std::string &fileName, const VkShaderStageFlagBits &&stage, const std::string &&name,
+         const std::vector<DESCRIPTOR> &&descTypes = {}, const std::set<SHADER_LINK> &&linkTypes = {})
+        : TYPE(type),
+          info(),
           module(VK_NULL_HANDLE),
           DESCRIPTOR_TYPES(descTypes),
           LINK_TYPES(linkTypes),
-          TYPE(type),
-          fileName_(fileName),
-          name_(name),
-          stage_(stage){};
+          FILE_NAME(fileName),
+          NAME(name),
+          STAGE(stage){};
+
+    const SHADER TYPE;
+    const std::string FILE_NAME;
+    const VkShaderStageFlagBits STAGE;
+    const std::string NAME;
+    const std::vector<DESCRIPTOR> DESCRIPTOR_TYPES;
+    const std::set<SHADER_LINK> LINK_TYPES;
 
     virtual void init(const VkDevice &dev, const Game::Settings &settings, std::vector<VkShaderModule> &oldModules,
                       bool load = true, bool doAssert = true);
 
     virtual const char *loadText(bool load);
 
-    const std::vector<SHADER_TYPE> LINK_TYPES;
-    const std::vector<DESCRIPTOR_TYPE> DESCRIPTOR_TYPES;  // TODO: this naming convention is confusing
-    const SHADER_TYPE TYPE;
-
     // DESCRIPTOR
-    void getDescriptorTypes(std::set<DESCRIPTOR_TYPE> &set) {
+    void getDescriptorTypes(std::set<DESCRIPTOR> &set) {
         for (const auto &descType : DESCRIPTOR_TYPES) set.insert(descType);
     }
 
@@ -54,25 +58,39 @@ class Base {
 
    protected:
     std::string text_;
-
-   private:
-    std::vector<SHADER_TYPE> linkShaders_;
-    std::string fileName_;
-    std::string name_;
-    VkShaderStageFlagBits stage_;
 };
 
 // **********************
 //      Link Shaders
 // **********************
 
+class Link : public Base {
+   public:
+    const SHADER_LINK LINK_TYPE;
+
+   protected:
+    Link(const SHADER_LINK &&type, const std::string &fileName, const VkShaderStageFlagBits &&stage,
+         const std::string &&name, const std::vector<DESCRIPTOR> &&descTypes = {},
+         const std::set<SHADER_LINK> &&linkTypes = {})
+        : Base{SHADER::LINK,
+               fileName,
+               std::forward<const VkShaderStageFlagBits>(stage),
+               std::forward<const std::string>(name),
+               std::forward<const std::vector<DESCRIPTOR>>(descTypes),
+               std::forward<const std::set<SHADER_LINK>>(linkTypes)},
+          LINK_TYPE(type) {}
+};
+
 // Utility Fragement Shader
 const std::string UTIL_FRAG_FILENAME = "util.frag.glsl";
-class UtilityFragment : public Base {
+class UtilityFragment : public Link {
    public:
     UtilityFragment()
-        : Base(SHADER_TYPE::UTIL_FRAG, UTIL_FRAG_FILENAME, VK_SHADER_STAGE_FRAGMENT_BIT, "Utility Fragement Shader",
-               {DESCRIPTOR_TYPE::DEFAULT_UNIFORM}) {}
+        : Link{SHADER_LINK::UTIL_FRAG,
+               UTIL_FRAG_FILENAME,
+               VK_SHADER_STAGE_FRAGMENT_BIT,
+               "Utility Fragement Shader",
+               {DESCRIPTOR::DEFAULT_UNIFORM}} {}
 
     void init(const VkDevice &dev, const Game::Settings &settings, std::vector<VkShaderModule> &oldModules, bool load = true,
               bool doAssert = true) override {
@@ -86,51 +104,65 @@ class UtilityFragment : public Base {
 //      Default Shaders
 // **********************
 
-// Default Color Vertex
-const std::string DEFAULT_COLOR_VERT_FILENAME = "color.vert";
-class DefaultColorVertex : public Base {
+namespace Default {
+
+class ColorVertex : public Base {
    public:
-    DefaultColorVertex()
-        : Base(SHADER_TYPE::COLOR_VERT, DEFAULT_COLOR_VERT_FILENAME, VK_SHADER_STAGE_VERTEX_BIT,
-               "Default Color Vertex Shader", {DESCRIPTOR_TYPE::DEFAULT_UNIFORM}) {}
+    ColorVertex()
+        : Base{//
+               SHADER::COLOR_VERT,
+               "color.vert",
+               VK_SHADER_STAGE_VERTEX_BIT,
+               "Default Color Vertex Shader",
+               {DESCRIPTOR::DEFAULT_UNIFORM}} {}
 };
 
-// Default Color Fragment
-const std::string DEFAULT_COLOR_FRAG_FILENAME = "color.frag";
-class DefaultColorFragment : public Base {
+class ColorFragment : public Base {
    public:
-    DefaultColorFragment()
-        : Base(SHADER_TYPE::COLOR_FRAG, DEFAULT_COLOR_FRAG_FILENAME, VK_SHADER_STAGE_FRAGMENT_BIT,
-               "Default Color Fragment Shader", {}, {SHADER_TYPE::UTIL_FRAG}) {}
+    ColorFragment()
+        : Base{                     //
+               SHADER::COLOR_FRAG,  //
+               "color.frag",
+               VK_SHADER_STAGE_FRAGMENT_BIT,
+               "Default Color Fragment Shader",
+               {},
+               {SHADER_LINK::UTIL_FRAG}} {}
 };
 
-// Default Line Fragment
-const std::string DEFAULT_LINE_FRAG_FILENAME = "line.frag";
-class DefaultLineFragment : public Base {
+class LineFragment : public Base {
    public:
-    DefaultLineFragment()
-        : Base(SHADER_TYPE::LINE_FRAG, DEFAULT_LINE_FRAG_FILENAME, VK_SHADER_STAGE_FRAGMENT_BIT,
-               "Default Line Fragment Shader", {}) {}
+    LineFragment()
+        : Base{//
+               SHADER::LINE_FRAG,
+               "line.frag",
+               VK_SHADER_STAGE_FRAGMENT_BIT,
+               "Default Line Fragment Shader",
+               {}} {}
 };
 
-// Default Texture Vertex
-const std::string DEFAULT_TEX_VERT_FILENAME = "texture.vert";
-class DefaultTextureVertex : public Base {
+class TextureVertex : public Base {
    public:
-    DefaultTextureVertex()
-        : Base(SHADER_TYPE::TEX_VERT, DEFAULT_TEX_VERT_FILENAME, VK_SHADER_STAGE_VERTEX_BIT, "Default Texture Vertex Shader",
-               {DESCRIPTOR_TYPE::DEFAULT_UNIFORM}) {}
+    TextureVertex()
+        : Base{//
+               SHADER::TEX_VERT,
+               "texture.vert",
+               VK_SHADER_STAGE_VERTEX_BIT,
+               "Default Texture Vertex Shader",
+               {DESCRIPTOR::DEFAULT_UNIFORM}} {}
 };
 
-// Default Texture Fragment
-const std::string DEFAULT_TEX_FRAG_FILENAME = "texture.frag";
-class DefaultTextureFragment : public Base {
+class TextureFragment : public Base {
    public:
-    DefaultTextureFragment()
-        : Base(SHADER_TYPE::TEX_FRAG, DEFAULT_TEX_FRAG_FILENAME, VK_SHADER_STAGE_FRAGMENT_BIT,
+    TextureFragment()
+        : Base{//
+               SHADER::TEX_FRAG,
+               "texture.frag",
+               VK_SHADER_STAGE_FRAGMENT_BIT,
                "Default Texture Fragment Shader",
-               {DESCRIPTOR_TYPE::DEFAULT_SAMPLER, DESCRIPTOR_TYPE::DEFAULT_DYNAMIC_UNIFORM}, {SHADER_TYPE::UTIL_FRAG}) {}
+               {DESCRIPTOR::DEFAULT_SAMPLER, DESCRIPTOR::DEFAULT_DYNAMIC_UNIFORM},
+               {SHADER_LINK::UTIL_FRAG}} {}
 };
+}  // namespace Default
 
 }  // namespace Shader
 

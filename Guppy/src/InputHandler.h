@@ -17,12 +17,12 @@ class InputHandler : public Singleton {
     static inline const glm::vec3& getPosDir() { return inst_.posDir_; }
     static inline const glm::vec3& getLookDir() { return inst_.lookDir_; }
 
-    static inline void updateKeyInput(GAME_KEY key, INPUT_TYPE type) {
+    static inline void updateKeyInput(GAME_KEY key, INPUT_ACTION type) {
         switch (type) {
-            case INPUT_TYPE::UP:
+            case INPUT_ACTION::UP:
                 inst_.currKeyInput_.erase(key);
                 break;
-            case INPUT_TYPE::DOWN:
+            case INPUT_ACTION::DOWN:
                 inst_.currKeyInput_.insert(key);
                 break;
         }

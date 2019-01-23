@@ -64,6 +64,9 @@ class Base {
     friend class Pipeline::Base;
 
    public:
+    const std::unordered_set<PIPELINE> PIPELINE_TYPES;
+    const std::string NAME;
+
     void init(const Shell::Context &ctx, const Game::Settings &settings, RenderPass::InitInfo *pInfo,
               SubpassResources *pSubpassResources = nullptr);
 
@@ -112,14 +115,12 @@ class Base {
 
     virtual void getSubmitResource(const uint8_t &frameIndex, SubmitResource &resource) = 0;
 
-    std::unordered_set<PIPELINE_TYPE> PIPELINE_TYPES;
-
     // SETTINGS
     InitInfo initInfo;
     FrameInfo frameInfo;
 
     // SUBPASS
-    inline uint32_t getSubpassId(const PIPELINE_TYPE &type) const {
+    inline uint32_t getSubpassId(const PIPELINE &type) const {
         uint32_t id = 0;
         for (const auto &pipelineType : PIPELINE_TYPES) {
             if (pipelineType == type) break;
@@ -136,12 +137,15 @@ class Base {
     Data data;
 
    protected:
-    Base(std::string &&name, std::unordered_set<PIPELINE_TYPE> &&types)
-        : PIPELINE_TYPES(types), initInfo(), frameInfo(), pass(VK_NULL_HANDLE), name_(name) {}
+    Base(std::string &&name, std::unordered_set<PIPELINE> &&types)
+        : PIPELINE_TYPES(types), initInfo(), frameInfo(), pass(VK_NULL_HANDLE), NAME(name) {}
 
     // RENDER PASS
     virtual void createPass(const VkDevice &dev);
-    virtual void createClearValues(const Shell::Context &ctx, const Game::Settings &settings) {}
+    virtual void createClearValues(const Shell::Context &ctx, const Game::Settings &settings) {
+        // TODO: some default behavior when "clearColor" or "clearDefault" is set.
+        assert(!initInfo.clearColor && !initInfo.clearDepth);
+    }
     virtual void createBeginInfo(const Shell::Context &ctx, const Game::Settings &settings);
     virtual void updateBeginInfo(const Shell::Context &ctx, const Game::Settings &settings);  // TODO: what should this be?
     virtual void createViewport();
@@ -169,8 +173,6 @@ class Base {
    private:
     void createSemaphores(const Shell::Context &ctx);
     void RenderPass::Base::createAttachmentDebugMarkers(const Shell::Context &ctx, const Game::Settings &settings);
-
-    std::string name_;
 };
 
 // **********************
@@ -180,16 +182,18 @@ class Base {
 class Default : public Base {
    public:
     Default()
-        : Base("Default",
+        : Base{"Default",
                {
                    // Order of the subpasses
-                   PIPELINE_TYPE::TRI_LIST_TEX,
-                   PIPELINE_TYPE::LINE,
-                   PIPELINE_TYPE::TRI_LIST_COLOR,
-               }),
+                   PIPELINE::PBR_COLOR,
+                   PIPELINE::TRI_LIST_COLOR,
+                   PIPELINE::LINE,
+                   PIPELINE::TRI_LIST_TEX,
+               }},
           secCmdFlag_(false) {}
 
     inline void beginSecondary(const uint8_t &frameIndex) override {
+        if (secCmdFlag_) return;
         // FRAME UPDATE
         auto &secCmd = data.secCmds[frameIndex];
         inheritInfo_.framebuffer = data.framebuffers[frameIndex];

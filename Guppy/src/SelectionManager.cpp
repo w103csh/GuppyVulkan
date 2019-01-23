@@ -29,7 +29,7 @@ void SceneHandler::SelectionManager::updateFaceSelection(const VkDevice& dev, st
 
         getFaceSelection()->updateBuffers(dev);
     } else {
-        getFaceSelection()->getMaterial().setFlags(Material::FLAGS::HIDE);
+        getFaceSelection()->getMaterial().setFlags(Material::FLAG::HIDE);
     }
 }
 

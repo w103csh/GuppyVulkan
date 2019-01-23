@@ -9,7 +9,10 @@
 
 #define STB_FORMAT VK_FORMAT_R8G8B8A8_UNORM
 
+// thread sync
 void Texture::createTexture(const VkDevice& dev, const bool makeMipmaps, std::shared_ptr<Texture::Data> pTexture) {
+    pTexture->pLdgRes = LoadingResourceHandler::createLoadingResources();
+
     auto& tex = (*pTexture);
     uint32_t layerCount = getArrayLayerCount(tex);
 
@@ -41,15 +44,15 @@ void Texture::createImage(const VkDevice& dev, Data& tex, uint32_t layerCount) {
     size_t offset = 0, size = static_cast<size_t>(imageSize);
     vkMapMemory(dev, stgRes.memory, 0, memReqsSize, 0, &pData);
 
-    if (tex.flags & FLAGS::DIFFUSE) {
+    if (tex.flags & FLAG::DIFFUSE) {
         memcpy(static_cast<char*>(pData) + offset, tex.pixels, size);
         offset += size;
     }
-    if (tex.flags & FLAGS::NORMAL) {
+    if (tex.flags & FLAG::NORMAL) {
         memcpy(static_cast<char*>(pData) + offset, tex.normPixels, size);
         offset += size;  // TODO: same size for all?
     }
-    if (tex.flags & FLAGS::SPECULAR) {
+    if (tex.flags & FLAG::SPECULAR) {
         memcpy(static_cast<char*>(pData) + offset, tex.specPixels, size);
         offset += size;  // TODO: same size for all?
     }
@@ -203,8 +206,8 @@ void Texture::createDescInfo(Data& tex) {
 
 uint32_t Texture::getArrayLayerCount(const Data& tex) {
     uint32_t count = 0;
-    if (tex.flags & FLAGS::DIFFUSE) count++;
-    if (tex.flags & FLAGS::NORMAL) count++;
-    if (tex.flags & FLAGS::SPECULAR) count++;
+    if (tex.flags & FLAG::DIFFUSE) count++;
+    if (tex.flags & FLAG::NORMAL) count++;
+    if (tex.flags & FLAG::SPECULAR) count++;
     return count;
 }

@@ -137,7 +137,7 @@ void Guppy::initRenderPasses() {
     initInfo.samples = ctx.samples;
     initInfo.commandCount = ctx.imageCount;
     initInfo.fenceCount = ctx.imageCount;
-    initInfo.semaphoreCount = ctx.imageCount * 2;
+    initInfo.semaphoreCount = ctx.imageCount;
     pDefaultRenderPass_->init(ctx, settings_, &initInfo);
 
     Pipeline::Handler::createPipelines(pDefaultRenderPass_);
@@ -152,141 +152,6 @@ void Guppy::initRenderPasses() {
 
     shell_->initUI(pUIRenderPass_->pass);
 #endif
-}
-
-void Guppy::createScenes() {
-    // default active scene
-    SceneHandler::makeScene(true, true);
-
-    MeshCreateInfo meshCreateInfo;
-    ModelCreateInfo modelCreateInfo;
-
-    // Add defaults
-    if (true) {
-        // GROUND PLANE
-        meshCreateInfo = {};
-        meshCreateInfo.pMaterial = std::make_unique<Material>(TextureHandler::getTextureByPath(HARDWOOD_FLOOR_TEX_PATH));
-        meshCreateInfo.pMaterial->setRepeat(800.0f);
-        meshCreateInfo.model = helpers::affine(glm::vec3(2000.0f), {}, -M_PI_2_FLT, CARDINAL_X);
-        meshCreateInfo.selectable = false;
-
-        auto pGroundPlane = std::make_unique<TexturePlane>(&meshCreateInfo);
-        auto groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
-        SceneHandler::getActiveScene()->moveMesh(settings_, shell_->context(), std::move(pGroundPlane));
-
-        // ORIGIN AXES
-        meshCreateInfo = {};
-        meshCreateInfo.isIndexed = false;
-        std::unique_ptr<LineMesh> pDefaultAxes = std::make_unique<Axes>(&meshCreateInfo, AXES_MAX_SIZE, true);
-        SceneHandler::getActiveScene()->moveMesh(settings_, shell_->context(), std::move(pDefaultAxes));
-
-        // BURNT ORANGE TORUS
-        modelCreateInfo = {};
-        modelCreateInfo.async = true;
-        // modelCreateInfo.callback = [groundPlane_bbmm](Model* pModel) {
-        //    pModel->putOnTop(groundPlane_bbmm);
-        //    // This is shitty, and was unforseen when I made the Model/ModelHandler
-        ////    auto& pMesh = SceneHandler::getColorMesh(pModel->getSceneOffset(), pModel->getMeshOffset(MESH_TYPE::COLOR,
-        // 0));
-        // auto model = helpers::affine(glm::vec3(1.0f), {0.0f, 6.0f, 0.0f}) * pMesh->getData().model;
-        // pMesh->addInstance(model, std::make_unique<Material>(pMesh->getMaterial()));
-        //};
-        modelCreateInfo.material.setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
-        modelCreateInfo.material.setColor({0.8f, 0.3f, 0.0f});
-        modelCreateInfo.model = helpers::affine(glm::vec3(0.07f));
-        modelCreateInfo.modelPath = TORUS_MODEL_PATH;
-        modelCreateInfo.smoothNormals = true;
-        ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene());
-
-        //// ORANGE
-        // modelCreateInfo = {};
-        // modelCreateInfo.async = true;
-        //// modelCreateInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
-        // modelCreateInfo.material = {};
-        // modelCreateInfo.modelPath = ORANGE_MODEL_PATH;
-        // modelCreateInfo.model = helpers::affine(glm::vec3(1.0f), {4.0f, 0.0f, -2.0f});
-        // modelCreateInfo.smoothNormals = true;
-        //// modelCreateInfo.visualHelper = true;
-        // ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene(), nullptr);
-
-        ////// PEAR
-        //// modelCreateInfo.async = true;
-        //// modelCreateInfo.material = {};
-        //// modelCreateInfo.modelPath = PEAR_MODEL_PATH;
-        //// modelCreateInfo.model = helpers::affine();
-        //// ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene(), nullptr);
-
-        // MEDIEVAL HOUSE
-        modelCreateInfo.material = {};
-        modelCreateInfo.async = true;
-        modelCreateInfo.model = helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
-        modelCreateInfo.modelPath = MED_H_MODEL_PATH;
-        modelCreateInfo.smoothNormals = false;
-        ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene(),
-                                TextureHandler::getTextureByPath(MED_H_DIFF_TEX_PATH));
-
-        //// PIG
-        // modelCreateInfo = {};
-        // modelCreateInfo.async = true;
-        //// modelCreateInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
-        // modelCreateInfo.material.setFlags(Material::FLAGS::PER_MATERIAL_COLOR | Material::FLAGS::MODE_BLINN_PHONG);
-        // modelCreateInfo.material.setColor({0.8f, 0.8f, 0.8f});
-        // modelCreateInfo.model = helpers::affine(glm::vec3(2.0f), {0.0f, 0.0f, -4.0f});
-        // modelCreateInfo.modelPath = PIG_MODEL_PATH;
-        // modelCreateInfo.smoothNormals = true;
-        // ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene());
-    }
-
-    // Lights
-    if (false) {
-        Shader::Handler::defaultLightsAction([this](auto& posLights, auto& spotLights) {
-            MeshCreateInfo meshCreateInfo;
-            for (auto& light : posLights) {
-                meshCreateInfo = {};
-                meshCreateInfo.isIndexed = false;
-                meshCreateInfo.model = light.getData().model;
-
-                std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(&meshCreateInfo, 0.5f);
-                SceneHandler::getActiveScene()->moveMesh(settings_, shell_->context(), std::move(pHelper));
-            }
-            for (auto& light : spotLights) {
-                meshCreateInfo = {};
-                meshCreateInfo.isIndexed = false;
-                meshCreateInfo.model = light.getData().model;
-
-                std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(&meshCreateInfo, 0.5f);
-                SceneHandler::getActiveScene()->moveMesh(settings_, shell_->context(), std::move(pHelper));
-            }
-        });
-    }
-}
-
-/*  This function is for updating things regardless of framerate. It is based on settings.ticks_per_second,
-    and should be called that many times per second. add_game_time is weird and appears to limit the amount
-    of ticks per second arbitrarily, so this in reality could do anything.
-    NOTE: Things like input should not used here since this is not guaranteed to be called each time input
-    is collected. This function could be called as many as
-*/
-void Guppy::onTick() {
-    if (sim_paused_) return;
-
-    auto& pScene = SceneHandler::getActiveScene();
-
-    // TODO: Should this be "on_frame"? every other frame? async? ... I have no clue yet.
-    LoadingResourceHandler::cleanup();
-    TextureHandler::update();
-
-    // TODO: move to SceneHandler::update or something!
-    ModelHandler::update(pScene);
-
-    // TODO: ifdef this stuff out
-    if (settings_.enable_directory_listener) {
-        Shader::Handler::update(pScene);
-    }
-
-    pScene->update(settings_, shell_->context());
-
-    // for (auto &worker : workers_) worker->update_simulation();
 }
 
 void Guppy::onFrame(float framePred) {
@@ -334,8 +199,9 @@ void Guppy::onFrame(float framePred) {
     shell_->getUI()->draw(pUIRenderPass_, frameIndex_);
 
     resource = {};
-    resource.waitSemaphores.push_back(pDefaultRenderPass_->data.semaphores[frameIndex_]);  // wait on scene...
-    resource.signalSemaphores.push_back(back.renderSemaphore);                             // signal back buffer...
+    resource.waitSemaphores.push_back(
+        pDefaultRenderPass_->data.semaphores[frameIndex_]);     // wait on scene... (must be earlier in submission scope)
+    resource.signalSemaphores.push_back(back.renderSemaphore);  // signal back buffer...
     pUIRenderPass_->getSubmitResource(frameIndex_, resource);
     resources.push_back(resource);
 
@@ -352,6 +218,148 @@ void Guppy::onFrame(float framePred) {
     // **********************
 
     frameIndex_ = (frameIndex_ + 1) % static_cast<uint8_t>(ctx.imageCount);
+}
+
+/*  This function is for updating things regardless of framerate. It is based on settings.ticks_per_second,
+    and should be called that many times per second. add_game_time is weird and appears to limit the amount
+    of ticks per second arbitrarily, so this in reality could do anything.
+    NOTE: Things like input should not used here since this is not guaranteed to be called each time input
+    is collected. This function could be called as many as
+*/
+void Guppy::onTick() {
+    if (sim_paused_) return;
+
+    auto& pScene = SceneHandler::getActiveScene();
+
+    // TODO: Should this be "on_frame"? every other frame? async? ... I have no clue yet.
+    LoadingResourceHandler::cleanup();
+    TextureHandler::update();
+
+    // TODO: move to SceneHandler::update or something!
+    ModelHandler::update(pScene);
+
+    Pipeline::Handler::update();
+
+    pScene->update(settings_, shell_->context());
+
+    // for (auto &worker : workers_) worker->update_simulation();
+}
+
+void Guppy::createScenes() {
+    // default active scene
+    SceneHandler::makeScene(true, true);
+
+    MeshCreateInfo meshCreateInfo;
+    ModelCreateInfo modelCreateInfo;
+
+    // Add defaults
+    if (true) {
+        // GROUND PLANE
+        meshCreateInfo = {};
+        meshCreateInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+        meshCreateInfo.materialInfo.pTexture = TextureHandler::getTextureByPath(HARDWOOD_FLOOR_TEX_PATH);
+        meshCreateInfo.materialInfo.repeat = 800.0f;
+        meshCreateInfo.model = helpers::affine(glm::vec3(2000.0f), {}, -M_PI_2_FLT, CARDINAL_X);
+        meshCreateInfo.selectable = false;
+
+        auto pGroundPlane = std::make_unique<TexturePlane>(&meshCreateInfo);
+        auto groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
+        SceneHandler::getActiveScene()->moveMesh(settings_, shell_->context(), std::move(pGroundPlane));
+
+        // ORIGIN AXES
+        meshCreateInfo = {};
+        meshCreateInfo.pipelineType = PIPELINE::LINE;
+        meshCreateInfo.isIndexed = false;
+        std::unique_ptr<LineMesh> pDefaultAxes = std::make_unique<Axes>(&meshCreateInfo, AXES_MAX_SIZE, true);
+        SceneHandler::getActiveScene()->moveMesh(settings_, shell_->context(), std::move(pDefaultAxes));
+
+        // BURNT ORANGE TORUS
+        modelCreateInfo = {};
+        modelCreateInfo.pipelineType = PIPELINE::PBR_COLOR;
+        // modelCreateInfo.pipelineType = PIPELINE_TYPE::TRI_LIST_COLOR;
+        modelCreateInfo.async = true;
+        modelCreateInfo.callback = [groundPlane_bbmm](Model* pModel) {
+            pModel->putOnTop(groundPlane_bbmm);
+            //// This is shitty, and was unforseen when I made the Model/ModelHandler
+            // auto& pMesh = SceneHandler::getColorMesh(pModel->getSceneOffset(), pModel->getMeshOffset(MESH_TYPE::COLOR,
+            // 0)); auto model = helpers::affine(glm::vec3(1.0f), {0.0f, 6.0f, 0.0f}) * pMesh->getData().model;
+            // pMesh->addInstance(model, std::make_unique<Material>(pMesh->getMaterial()));
+        };
+        modelCreateInfo.materialInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::MODE_BLINN_PHONG | Material::FLAG::METAL;
+        modelCreateInfo.materialInfo.ambientCoeff = {0.8f, 0.3f, 0.0f};
+        modelCreateInfo.materialInfo.diffuseCoeff = {0.8f, 0.3f, 0.0f};
+        modelCreateInfo.materialInfo.roughness = 0.5f;
+        modelCreateInfo.model = helpers::affine(glm::vec3(0.07f));
+        modelCreateInfo.modelPath = TORUS_MODEL_PATH;
+        modelCreateInfo.smoothNormals = true;
+        ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene());
+
+        // ORANGE
+        modelCreateInfo = {};
+        modelCreateInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+        modelCreateInfo.async = true;
+        modelCreateInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
+        modelCreateInfo.needsTexture = true;
+        modelCreateInfo.modelPath = ORANGE_MODEL_PATH;
+        modelCreateInfo.model = helpers::affine(glm::vec3(1.0f), {4.0f, 0.0f, -2.0f});
+        modelCreateInfo.smoothNormals = true;
+        // modelCreateInfo.visualHelper = true;
+        ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene());
+
+        ////// PEAR
+        //// modelCreateInfo.pipelineType = PIPELINE_TYPE::TRI_LIST_TEX;
+        //// modelCreateInfo.async = true;
+        //// modelCreateInfo.material = {};
+        //// modelCreateInfo.modelPath = PEAR_MODEL_PATH;
+        //// modelCreateInfo.model = helpers::affine();
+        //// ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene(), nullptr);
+
+        // MEDIEVAL HOUSE
+        modelCreateInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+        modelCreateInfo.async = true;
+        modelCreateInfo.model = helpers::affine(glm::vec3(0.0175f), {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
+        modelCreateInfo.modelPath = MED_H_MODEL_PATH;
+        modelCreateInfo.materialInfo.pTexture = TextureHandler::getTextureByPath(MED_H_DIFF_TEX_PATH);
+        modelCreateInfo.smoothNormals = false;
+        ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene());
+
+        // PIG
+        modelCreateInfo = {};
+        // modelCreateInfo.pipelineType = PIPELINE_TYPE::WHATEVER;
+        modelCreateInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+        modelCreateInfo.async = true;
+        modelCreateInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
+        modelCreateInfo.materialInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::MODE_BLINN_PHONG;
+        modelCreateInfo.materialInfo.ambientCoeff = {0.8f, 0.8f, 0.8f};
+        modelCreateInfo.materialInfo.diffuseCoeff = {0.8f, 0.8f, 0.8f};
+        modelCreateInfo.model = helpers::affine(glm::vec3(2.0f), {0.0f, 0.0f, -4.0f});
+        modelCreateInfo.modelPath = PIG_MODEL_PATH;
+        modelCreateInfo.smoothNormals = true;
+        ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene());
+    }
+
+    // Lights
+    if (false) {
+        Shader::Handler::defaultLightsAction([this](auto& posLights, auto& spotLights) {
+            MeshCreateInfo meshCreateInfo;
+            for (auto& light : posLights) {
+                meshCreateInfo = {};
+                meshCreateInfo.isIndexed = false;
+                meshCreateInfo.model = light.getData().model;
+
+                std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(&meshCreateInfo, 0.5f);
+                SceneHandler::getActiveScene()->moveMesh(settings_, shell_->context(), std::move(pHelper));
+            }
+            for (auto& light : spotLights) {
+                meshCreateInfo = {};
+                meshCreateInfo.isIndexed = false;
+                meshCreateInfo.model = light.getData().model;
+
+                std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(&meshCreateInfo, 0.5f);
+                SceneHandler::getActiveScene()->moveMesh(settings_, shell_->context(), std::move(pHelper));
+            }
+        });
+    }
 }
 
 void Guppy::onKey(GAME_KEY key) {
@@ -417,22 +425,22 @@ void Guppy::onKey(GAME_KEY key) {
         case GAME_KEY::KEY_7: {
             Shader::Handler::defaultUniformAction([](auto& defUBO) {
                 // Cycle through fog types
-                if (defUBO.shaderData.flags & Uniform::Default::FLAGS::FOG_EXP) {
-                    defUBO.shaderData.flags ^= Uniform::Default::FLAGS::FOG_EXP;
-                    defUBO.shaderData.flags = Uniform::Default::FLAGS::FOG_EXP2;
-                } else if (defUBO.shaderData.flags & Uniform::Default::FLAGS::FOG_EXP2) {
-                    defUBO.shaderData.flags ^= Uniform::Default::FLAGS::FOG_EXP2;
-                    defUBO.shaderData.flags = Uniform::Default::FLAGS::FOG_LINEAR;
+                if (defUBO.shaderData.flags & Uniform::Default::FLAG::FOG_EXP) {
+                    defUBO.shaderData.flags ^= Uniform::Default::FLAG::FOG_EXP;
+                    defUBO.shaderData.flags = Uniform::Default::FLAG::FOG_EXP2;
+                } else if (defUBO.shaderData.flags & Uniform::Default::FLAG::FOG_EXP2) {
+                    defUBO.shaderData.flags ^= Uniform::Default::FLAG::FOG_EXP2;
+                    defUBO.shaderData.flags = Uniform::Default::FLAG::FOG_LINEAR;
                 } else {
-                    defUBO.shaderData.flags ^= Uniform::Default::FLAGS::FOG_LINEAR;
-                    defUBO.shaderData.flags = Uniform::Default::FLAGS::FOG_EXP;
+                    defUBO.shaderData.flags ^= Uniform::Default::FLAG::FOG_LINEAR;
+                    defUBO.shaderData.flags = Uniform::Default::FLAG::FOG_EXP;
                 }
                 // defUBO_.shaderData.fog.maxDistance += 10.0f;
             });
         } break;
         case GAME_KEY::KEY_8: {
             Shader::Handler::defaultUniformAction(
-                [](auto& defUBO) { defUBO.shaderData.flags ^= Uniform::Default::FLAGS::TOON_SHADE; });
+                [](auto& defUBO) { defUBO.shaderData.flags ^= Uniform::Default::FLAG::TOON_SHADE; });
         } break;
         default:
             break;

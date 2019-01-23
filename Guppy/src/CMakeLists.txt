@@ -40,6 +40,8 @@ set(SOURCE
     ModelHandler.h
     Object3d.cpp
     Object3d.h
+    PBR.cpp
+    PBR.h
     Plane.cpp
     Plane.h
 	Scene.cpp
@@ -64,14 +66,12 @@ set(SOURCE
     RenderPass.cpp
     RenderPass.h
     # Shader
-    PBRShader.cpp
-    PBRShader.h
 	Shader.cpp
     Shader.h
     ShaderHandler.cpp
     ShaderHandler.h
-    UniformBuffer.cpp
-    UniformBuffer.h
+    Uniform.cpp
+    Uniform.h
     # Texture
     Sampler.cpp
     Sampler.h

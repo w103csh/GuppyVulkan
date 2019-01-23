@@ -46,20 +46,20 @@ void glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int 
 }
 
 void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    INPUT_TYPE type;
+    INPUT_ACTION type;
     switch (action) {
         case GLFW_PRESS:
-            type = INPUT_TYPE::DOWN;
+            type = INPUT_ACTION::DOWN;
             break;
         case GLFW_RELEASE:
-            type = INPUT_TYPE::UP;
+            type = INPUT_ACTION::UP;
             break;
         default:
-            type = INPUT_TYPE::UNKNOWN;
+            type = INPUT_ACTION::UNKNOWN;
     }
 
     ImGuiIO& io = ImGui::GetIO();
-    if (!io.WantCaptureKeyboard || type != INPUT_TYPE::DOWN) {
+    if (!io.WantCaptureKeyboard || type != INPUT_ACTION::DOWN) {
         GAME_KEY gKey;
         switch (key) {
             case GLFW_KEY_ESCAPE:
@@ -194,7 +194,7 @@ void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, in
         }
         InputHandler::updateKeyInput(gKey, type);
 
-        if (NOTIFY_ON_KEY_UP && type == INPUT_TYPE::UP) {
+        if (NOTIFY_ON_KEY_UP && type == INPUT_ACTION::UP) {
             auto pShell = reinterpret_cast<Shell*>(glfwGetWindowUserPointer(window));
             pShell->onKey(gKey);
         }

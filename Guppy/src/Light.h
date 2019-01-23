@@ -12,19 +12,19 @@ namespace Light {
 
 enum class TYPE { BASE = 0 };
 
-typedef enum FLAGS {
+typedef enum FLAG {
     SHOW = 0x00000001,
     // THROUGH 0x00000008
     MODE_LAMERTIAN = 0x00000010,
     MODE_BLINN_PHONG = 0x00000020,
     // THROUGH 0x00000080
     BITS_MAX_ENUM = 0x7FFFFFFF
-} FLAGS;
+} FLAG;
 
 template <class T>
 struct Base : public Object3d {
    public:
-    Base() : flags_(FLAGS::SHOW){};
+    Base() : flags_(FLAG::SHOW){};
 
     // bool operator==(const Base& other) const { return pos == other.pos && normal == other.normal; }
 

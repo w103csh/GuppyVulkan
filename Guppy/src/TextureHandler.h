@@ -25,9 +25,9 @@ class TextureHandler : public Singleton {
     static uint32_t getCount() { return static_cast<uint32_t>(inst_.pTextures_.size()); }
 
     // DESCRIPTOR
-    static VkDescriptorSetLayoutBinding getDescriptorLayoutBinding(const DESCRIPTOR_TYPE& type);
-    static VkWriteDescriptorSet getDescriptorWrite(const DESCRIPTOR_TYPE& type);
-    static VkCopyDescriptorSet getDescriptorCopy(const DESCRIPTOR_TYPE& type);
+    static VkDescriptorSetLayoutBinding getDescriptorLayoutBinding(const DESCRIPTOR& type);
+    static VkWriteDescriptorSet getDescriptorWrite(const DESCRIPTOR& type);
+    static VkCopyDescriptorSet getDescriptorCopy(const DESCRIPTOR& type);
 
    private:
     TextureHandler() : sh_(nullptr){};  // Prevent construction

@@ -12,36 +12,40 @@ void ModelHandler::init(Shell* sh, const Game::Settings& settings) {
 }
 
 void ModelHandler::makeModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene) {
-    // Add a new model instance
-    pCreateInfo->handlerOffset = inst_.pModels_.size();
-    inst_.pModels_.emplace_back(std::make_unique<Model>(pCreateInfo, pScene->getOffset()));
-
-    if (pCreateInfo->async) {
-        inst_.ldgColorFutures_[inst_.pModels_.back()->getHandlerOffset()] = std::make_pair(
-            std::async(std::launch::async, &Model::loadColor, inst_.pModels_.back().get(), inst_.sh_, pCreateInfo->material),
-            std::move(pCreateInfo->callback));
+    if (pCreateInfo->needsTexture) {
+        inst_.makeTextureModel(pCreateInfo, pScene);
     } else {
-        inst_.handleMeshes(pScene, inst_.pModels_.back(),
-                           inst_.pModels_.back()->loadColor(inst_.sh_, pCreateInfo->material));
-        inst_.pModels_.back()->postLoad(pCreateInfo->callback);
+        inst_.makeColorModel(pCreateInfo, pScene);
     }
 }
 
-void ModelHandler::makeModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene,
-                             std::shared_ptr<Texture::Data> pTexture) {
+void ModelHandler::makeColorModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene) {
     // Add a new model instance
-    pCreateInfo->handlerOffset = inst_.pModels_.size();
-    inst_.pModels_.emplace_back(std::make_unique<Model>(pCreateInfo, pScene->getOffset()));
+    pCreateInfo->handlerOffset = pModels_.size();
+    pModels_.emplace_back(std::make_unique<Model>(pCreateInfo, pScene->getOffset()));
 
     if (pCreateInfo->async) {
-        inst_.ldgTexFutures_[inst_.pModels_.back()->getHandlerOffset()] =
-            std::make_pair(std::async(std::launch::async, &Model::loadTexture, inst_.pModels_.back().get(), inst_.sh_,
-                                      pCreateInfo->material, pTexture),
-                           std::move(pCreateInfo->callback));
+        ldgColorFutures_[pModels_.back()->getHandlerOffset()] = std::make_pair(
+            std::async(std::launch::async, &Model::loadColor, pModels_.back().get(), sh_, pCreateInfo->materialInfo),
+            std::move(pCreateInfo->callback));
     } else {
-        inst_.handleMeshes(pScene, inst_.pModels_.back(),
-                           inst_.pModels_.back()->loadTexture(inst_.sh_, pCreateInfo->material, pTexture));
-        inst_.pModels_.back()->postLoad(pCreateInfo->callback);
+        handleMeshes(pScene, pModels_.back(), pModels_.back()->loadColor(sh_, pCreateInfo->materialInfo));
+        pModels_.back()->postLoad(pCreateInfo->callback);
+    }
+}
+
+void ModelHandler::makeTextureModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene) {
+    // Add a new model instance
+    pCreateInfo->handlerOffset = pModels_.size();
+    pModels_.emplace_back(std::make_unique<Model>(pCreateInfo, pScene->getOffset()));
+
+    if (pCreateInfo->async) {
+        ldgTexFutures_[pModels_.back()->getHandlerOffset()] = std::make_pair(
+            std::async(std::launch::async, &Model::loadTexture, pModels_.back().get(), sh_, pCreateInfo->materialInfo),
+            std::move(pCreateInfo->callback));
+    } else {
+        handleMeshes(pScene, pModels_.back(), pModels_.back()->loadTexture(sh_, pCreateInfo->materialInfo));
+        pModels_.back()->postLoad(pCreateInfo->callback);
     }
 }
 

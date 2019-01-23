@@ -8,11 +8,12 @@
 
 class ImGuiRenderPass : public RenderPass::Base {
    public:
-    ImGuiRenderPass() : RenderPass::Base("ImGui", {}) {}
+    ImGuiRenderPass() : RenderPass::Base{"ImGui", {}} {}
 
     void getSubmitResource(const uint8_t& frameIndex, SubmitResource& resource) override;
 
    private:
+    void createClearValues(const Shell::Context& ctx, const Game::Settings& settings) override;
     void createAttachmentsAndSubpasses(const Shell::Context& ctx, const Game::Settings& settings) override;
     void createDependencies(const Shell::Context& ctx, const Game::Settings& settings) override;
     void createFramebuffers(const Shell::Context& ctx, const Game::Settings& settings) override;

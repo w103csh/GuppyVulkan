@@ -10,7 +10,7 @@
 #include "Helpers.h"
 #include "Mesh.h"
 #include "Shell.h"
-#include "UniformBuffer.h"
+#include "Uniform.h"
 
 namespace RenderPass {
 class Base;
@@ -49,10 +49,10 @@ class Scene {
 
     // Meshes
     // color
-    std::vector<std::unique_ptr<ColorMesh>> colorMeshes_;  // Vertex::TYPE::COLOR, PIPELINE_TYPE::TRI_LIST_COLOR
-    std::vector<std::unique_ptr<LineMesh>> lineMeshes_;    // Vertex::TYPE::COLOR, PIPELINE_TYPE::LINE
+    std::vector<std::unique_ptr<ColorMesh>> colorMeshes_;
+    std::vector<std::unique_ptr<LineMesh>> lineMeshes_;
     // texture
-    std::vector<std::unique_ptr<TextureMesh>> texMeshes_;  // Vertex::TYPE::TEX, PIPELINE_TYPE::TRI_LIST_TEX
+    std::vector<std::unique_ptr<TextureMesh>> texMeshes_;
 
     // Loading
     std::vector<std::future<Mesh *>> ldgFutures_;

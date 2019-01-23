@@ -9,6 +9,10 @@ void ImGuiRenderPass::getSubmitResource(const uint8_t& frameIndex, SubmitResourc
     resource.commandBuffers.push_back(data.priCmds[frameIndex]);
 }
 
+void ImGuiRenderPass::createClearValues(const Shell::Context& ctx, const Game::Settings& settings) {
+    if (initInfo.clearColor) clearValues_.push_back({CLEAR_VALUE});
+}
+
 void ImGuiRenderPass::createAttachmentsAndSubpasses(const Shell::Context& ctx, const Game::Settings& settings) {
     auto& resources = subpassResources_;
     /*

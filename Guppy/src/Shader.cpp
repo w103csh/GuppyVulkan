@@ -16,11 +16,11 @@ void Shader::Base::init(const VkDevice& dev, const Game::Settings& settings, std
     // Check if shader needs to be (re)compiled
     std::vector<const char*> shaderTexts = {loadText(load)};
 
-    Shader::Handler::appendLinkTexts(this, shaderTexts);
+    Shader::Handler::appendLinkTexts(LINK_TYPES, shaderTexts);
     // pShaderTexts.insert(pShaderTexts.end(), pLinkTexts.begin(), pLinkTexts.end());
 
     std::vector<unsigned int> spv;
-    bool success = GLSLtoSPV(stage_, shaderTexts, spv);
+    bool success = GLSLtoSPV(STAGE, shaderTexts, spv);
 
     // Return or assert on fail
     if (!success) {
@@ -42,20 +42,20 @@ void Shader::Base::init(const VkDevice& dev, const Game::Settings& settings, std
 
     VkPipelineShaderStageCreateInfo stageInfo = {};
     stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    stageInfo.stage = stage_;
+    stageInfo.stage = STAGE;
     stageInfo.pName = "main";
     stageInfo.module = module;
     info = std::move(stageInfo);
 
     if (settings.enable_debug_markers) {
-        std::string markerName = name_ + "shader module";
+        std::string markerName = NAME + "shader module";
         ext::DebugMarkerSetObjectName(dev, (uint64_t)module, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT,
                                       markerName.c_str());
     }
 }
 
 const char* Shader::Base::loadText(bool load) {
-    if (load) text_ = FileLoader::readFile(BASE_DIRNAME + fileName_);
+    if (load) text_ = FileLoader::readFile(BASE_DIRNAME + FILE_NAME);
     return text_.c_str();
 }
 

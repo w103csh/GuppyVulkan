@@ -9,11 +9,11 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "Helpers.h"
+
 namespace Vertex {
 
 const uint32_t BINDING = 0;
-
-enum class TYPE { COLOR = 0, TEXTURE };
 
 struct Color {
     glm::vec3 position;
@@ -107,7 +107,7 @@ std::vector<VkVertexInputAttributeDescription> getColorAttrDesc();
 VkVertexInputBindingDescription getTexBindDesc();
 std::vector<VkVertexInputAttributeDescription> getTexAttrDesc();
 
-std::string getTypeName(TYPE type);
+std::string getTypeName(VERTEX type);
 
 }  // namespace Vertex
 

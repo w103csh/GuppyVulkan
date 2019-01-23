@@ -65,7 +65,7 @@ void loadObjData(const tinyobj_data &data, std::vector<TVertex *> &pMeshes) {
             auto &pMesh = pMeshes[materialOffset];
 
             // TODO: bring back the model class that loads all of these things in the right order...
-            if (pMesh->getMaterial().hasTexture() && pMesh->getMaterial().getTexture()->flags & Texture::FLAGS::NORMAL) {
+            if (pMesh->getMaterial().hasTexture() && pMesh->getMaterial().getTexture()->flags & Texture::FLAG::NORMAL) {
                 hasNormalMap = true;
             } else if (!data.materials.empty()) {
                 // TODO: do this right...

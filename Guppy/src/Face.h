@@ -63,7 +63,7 @@ class Face {
         // Check if there is a normal map...
         bool normalMapped = false;
         for (auto &pMesh : pMeshes)
-            if (pMesh->getMaterial().getFlags() & Texture::FLAGS::NORMAL) normalMapped = true;
+            if (pMesh->getMaterial().getFlags() & Texture::FLAG::NORMAL) normalMapped = true;
         if (normalMapped) calculateTangentSpaceVectors();
 
         for (size_t i = 0; i < 3; ++i) {
@@ -106,9 +106,9 @@ class Face {
                     // If the vertex already exists in the current mesh then use the existing index.
                     if (mOffset == meshOffset &&
                         //
-                        (pMeshes[mOffset]->getVertexType() == Vertex::TYPE::COLOR ||
+                        (pMeshes[mOffset]->VERTEX_TYPE == VERTEX::COLOR ||
                          // If the vertex is in going to be in a texture mesh then check tex coords
-                         (pMeshes[mOffset]->getVertexType() == Vertex::TYPE::TEXTURE &&
+                         (pMeshes[mOffset]->VERTEX_TYPE == VERTEX::TEXTURE &&
                           vertex.compareTexCoords(vertices_[i])))
                         //
                     ) {

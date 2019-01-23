@@ -20,11 +20,7 @@ class ModelHandler : public Singleton {
     static void init(Shell* sh, const Game::Settings& settings);
     static inline void destroy() { inst_.reset(); }
 
-    // color
     static void makeModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene);
-    // texture
-    static void makeModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene,
-                          std::shared_ptr<Texture::Data> pTexture);
 
     static std::unique_ptr<Model>& getModel(MODEL_INDEX offset) {
         assert(offset < inst_.pModels_.size());
@@ -41,6 +37,9 @@ class ModelHandler : public Singleton {
 
     Shell* sh_;                // TODO: shared_ptr
     Game::Settings settings_;  // TODO: shared_ptr
+
+    void makeColorModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene);
+    void makeTextureModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene);
 
     // Mesh futures
     template <typename T>
@@ -88,6 +87,7 @@ class ModelHandler : public Singleton {
                 MeshCreateInfo meshCreateInfo = {};
                 meshCreateInfo.isIndexed = false;
                 meshCreateInfo.model = p->getData().model;
+                meshCreateInfo.pipelineType = pModel->PIPELINE_TYPE;
                 std::unique_ptr<LineMesh> pVH = std::make_unique<VisualHelper>(&meshCreateInfo, p);
 
                 auto& rp = pScene->moveMesh(inst_.settings_, sh_->context(), std::move(pVH));

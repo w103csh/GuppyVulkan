@@ -27,14 +27,15 @@ typedef std::function<void(Model *)> MODEL_CALLBACK;
 
 typedef struct ModelCreateInfo {
     bool async = false;
-    MODEL_CALLBACK callback = nullptr;
-    MODEL_INDEX handlerOffset = MODEL_INDEX_MAX;  // TODO: this should only be set by the handler...
-    Material material = {};                       // TODO: unique_ptr instead of copying evertything
-    glm::mat4 model = glm::mat4(1.0f);
-    std::string modelPath = "";
-    // std::shared_ptr<Texture::Data> pTexture = nullptr; // TODO: add this here and simplify "makeModel"
+    bool needsTexture = false;
     bool smoothNormals = false;
     bool visualHelper = false;
+    MODEL_CALLBACK callback = nullptr;
+    MODEL_INDEX handlerOffset = MODEL_INDEX_MAX;  // TODO: this should only be set by the handler...
+    Material::Info materialInfo = {};
+    glm::mat4 model = glm::mat4(1.0f);
+    std::string modelPath = "";
+    PIPELINE pipelineType = PIPELINE::DONT_CARE;
 } ModelCreateInfo;
 
 class Model : public Object3d {
@@ -43,11 +44,13 @@ class Model : public Object3d {
    public:
     Model::Model(ModelCreateInfo *pCreateInfo, MODEL_INDEX sceneOffset);
 
+    const PIPELINE PIPELINE_TYPE;
+
     inline MODEL_INDEX getHandlerOffset() const { return handlerOffset_; }
     inline MODEL_INDEX getSceneOffset() const { return sceneOffset_; }
 
-    std::vector<ColorMesh *> loadColor(Shell *sh, Material material);
-    std::vector<TextureMesh *> loadTexture(Shell *sh, Material material, std::shared_ptr<Texture::Data> pTexture);
+    std::vector<ColorMesh *> loadColor(Shell *sh, const Material::Info &materialInfo);
+    std::vector<TextureMesh *> loadTexture(Shell *sh, const Material::Info &materialInfo);
 
     void postLoad(MODEL_CALLBACK callback);
 
@@ -55,7 +58,7 @@ class Model : public Object3d {
     // void updateAggregateBoundingBox(std::unique_ptr<Scene> &pScene);
 
     // TODO: use a conditional template argument
-    MODEL_INDEX getMeshOffset(MESH_TYPE type, uint8_t offset);
+    MODEL_INDEX getMeshOffset(MESH type, uint8_t offset);
 
     STATUS status;
 

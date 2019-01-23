@@ -11,7 +11,7 @@ namespace {
 // TODO: move to a Sampler class if I need a bunch of these...
 
 VkDescriptorSetLayoutBinding&& getDefaultSamplerBindings(
-    uint32_t binding = static_cast<uint32_t>(DESCRIPTOR_TYPE::DEFAULT_SAMPLER), uint32_t count = 1) {
+    uint32_t binding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_SAMPLER), uint32_t count = 1) {
     VkDescriptorSetLayoutBinding layoutBinding = {};
     layoutBinding.binding = binding;
     layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -24,7 +24,7 @@ VkDescriptorSetLayoutBinding&& getDefaultSamplerBindings(
 VkWriteDescriptorSet getDefaultWrite() {
     VkWriteDescriptorSet write = {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.dstBinding = static_cast<uint32_t>(DESCRIPTOR_TYPE::DEFAULT_SAMPLER);
+    write.dstBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_SAMPLER);
     write.dstArrayElement = 0;
     write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     write.descriptorCount = 1;
@@ -38,9 +38,9 @@ VkCopyDescriptorSet getDefaultCopy() {
     */
     VkCopyDescriptorSet copy = {};
     copy.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
-    copy.srcBinding = static_cast<uint32_t>(DESCRIPTOR_TYPE::DEFAULT_UNIFORM);
+    copy.srcBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_UNIFORM);
     copy.srcArrayElement = 0;
-    copy.dstBinding = static_cast<uint32_t>(DESCRIPTOR_TYPE::DEFAULT_UNIFORM);
+    copy.dstBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_UNIFORM);
     copy.dstArrayElement = 0;
     return copy;
 }
@@ -133,27 +133,27 @@ void TextureHandler::update() {
     }
 }
 
-VkDescriptorSetLayoutBinding TextureHandler::getDescriptorLayoutBinding(const DESCRIPTOR_TYPE& type) {
+VkDescriptorSetLayoutBinding TextureHandler::getDescriptorLayoutBinding(const DESCRIPTOR& type) {
     switch (type) {
-        case DESCRIPTOR_TYPE::DEFAULT_SAMPLER:
+        case DESCRIPTOR::DEFAULT_SAMPLER:
             return getDefaultSamplerBindings();
         default:
             throw std::runtime_error("descriptor type not handled!");
     }
 }
 
-VkWriteDescriptorSet TextureHandler::getDescriptorWrite(const DESCRIPTOR_TYPE& type) {
+VkWriteDescriptorSet TextureHandler::getDescriptorWrite(const DESCRIPTOR& type) {
     switch (type) {
-        case DESCRIPTOR_TYPE::DEFAULT_SAMPLER:
+        case DESCRIPTOR::DEFAULT_SAMPLER:
             return getDefaultWrite();
         default:
             throw std::runtime_error("descriptor type not handled!");
     }
 }
 
-VkCopyDescriptorSet TextureHandler::getDescriptorCopy(const DESCRIPTOR_TYPE& type) {
+VkCopyDescriptorSet TextureHandler::getDescriptorCopy(const DESCRIPTOR& type) {
     switch (type) {
-        case DESCRIPTOR_TYPE::DEFAULT_SAMPLER:
+        case DESCRIPTOR::DEFAULT_SAMPLER:
             return getDefaultCopy();
         default:
             throw std::runtime_error("descriptor type not handled!");
@@ -162,8 +162,6 @@ VkCopyDescriptorSet TextureHandler::getDescriptorCopy(const DESCRIPTOR_TYPE& typ
 
 std::future<std::shared_ptr<Texture::Data>> TextureHandler::loadTexture(const VkDevice& dev, const bool makeMipmaps,
                                                                         std::shared_ptr<Texture::Data>& pTexture) {
-    pTexture->pLdgRes = LoadingResourceHandler::createLoadingResources();
-
     return std::async(std::launch::async, [&dev, &makeMipmaps, pTexture]() {
         int width, height, channels;
 

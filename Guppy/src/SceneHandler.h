@@ -9,7 +9,7 @@
 #include "Singleton.h"
 #include "Scene.h"
 #include "Shell.h"
-#include "UniformBuffer.h"
+#include "Uniform.h"
 
 class ColorMesh;
 class LineMesh;
@@ -51,7 +51,7 @@ class SceneHandler : public Singleton {
     }
 
     // PIPELINE
-    static void updatePipelineReferences(const PIPELINE_TYPE& type, const VkPipeline& pipeline);
+    static void updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline);
 
     // SELECTION
     static const std::unique_ptr<Face>& getFaceSelectionFace();
