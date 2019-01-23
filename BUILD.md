@@ -231,7 +231,7 @@ case, the variable should point to the installation directory of a glslang
 repository built with the install target.
 
 The above steps create a Windows solution file named
-`VULKAN_TEST.sln` in the build directory.
+`GuppyVulkan.sln` in the build directory.
 
 At this point, you can build the solution from the command line or open the
 generated solution with Visual Studio.
@@ -250,7 +250,7 @@ to make a Release build.
 
 #### Build the Solution With Visual Studio
 
-Launch Visual Studio and open the "VULKAN_TEST.sln" solution file
+Launch Visual Studio and open the "GuppyVulkan.sln" solution file
 in the build folder. You may select "Debug" or "Release" from the Solution
 Configurations drop-down list. Start a build by selecting the Build->Build
 Solution menu item.
