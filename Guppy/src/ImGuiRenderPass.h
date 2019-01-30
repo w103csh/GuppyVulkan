@@ -10,7 +10,7 @@ class ImGuiRenderPass : public RenderPass::Base {
    public:
     ImGuiRenderPass() : RenderPass::Base{"ImGui", {}} {}
 
-    void getSubmitResource(const uint8_t& frameIndex, SubmitResource& resource) override;
+    void getSubmitResource(const uint8_t& frameIndex, SubmitResource& resource) const override;
 
    private:
     void createClearValues(const Shell::Context& ctx, const Game::Settings& settings) override;

@@ -1,62 +1,63 @@
 
-#include "LoadingResourceHandler.h"
+#include "LoadingHandler.h"
 
-#include "CmdBufHandler.h"
+#include "Shell.h"
+#include "CommandHandler.h"
 
-LoadingResourceHandler LoadingResourceHandler::inst_;
+Loading::Handler::Handler(Game* pGame) : Game::Handler(pGame){};
 
-void LoadingResourceHandler::init(const Shell::Context& ctx) {
-    inst_.cleanup();
-    inst_.ctx_ = ctx;
+void Loading::Handler::init() {
+    reset();
+    cleanup();
 }
 
 // thread sync
-std::unique_ptr<LoadingResources> LoadingResourceHandler::createLoadingResources() {
-    auto pLdgRes = std::make_unique<LoadingResources>();
+std::unique_ptr<Loading::Resources> Loading::Handler::createLoadingResources() const {
+    auto pLdgRes = std::make_unique<Loading::Resources>();
 
     // There should always be at least a graphics queue...
     VkCommandBufferAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     alloc_info.pNext = nullptr;
-    alloc_info.commandPool = CmdBufHandler::graphics_cmd_pool();
+    alloc_info.commandPool = commandHandler().graphicsCmdPool();
     alloc_info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
     alloc_info.commandBufferCount = 1;
-    vk::assert_success(vkAllocateCommandBuffers(inst_.ctx_.dev, &alloc_info, &pLdgRes->graphicsCmd));
+    vk::assert_success(vkAllocateCommandBuffers(shell().context().dev, &alloc_info, &pLdgRes->graphicsCmd));
     // being recording
-    CmdBufHandler::beginCmd(pLdgRes->graphicsCmd);
+    commandHandler().beginCmd(pLdgRes->graphicsCmd);
 
     // There might not be a dedicated transfer queue...
-    if (CmdBufHandler::graphics_index() != CmdBufHandler::transfer_index()) {
-        alloc_info.commandPool = CmdBufHandler::transfer_cmd_pool();
-        vk::assert_success(vkAllocateCommandBuffers(inst_.ctx_.dev, &alloc_info, &pLdgRes->transferCmd));
+    if (commandHandler().graphicsIndex() != commandHandler().transferIndex()) {
+        alloc_info.commandPool = commandHandler().transferCmdPool();
+        vk::assert_success(vkAllocateCommandBuffers(shell().context().dev, &alloc_info, &pLdgRes->transferCmd));
         // being recording
-        CmdBufHandler::beginCmd(pLdgRes->transferCmd);
+        commandHandler().beginCmd(pLdgRes->transferCmd);
     }
 
     return std::move(pLdgRes);
 }
 
-void LoadingResourceHandler::loadSubmit(std::unique_ptr<LoadingResources> pLdgRes) {
-    auto queueFamilyIndices = CmdBufHandler::getUniqueQueueFamilies(true, false, true);
+void Loading::Handler::loadSubmit(std::unique_ptr<Loading::Resources> pLdgRes) {
+    auto queueFamilyIndices = commandHandler().getUniqueQueueFamilies(true, false, true);
     pLdgRes->shouldWait = queueFamilyIndices.size() > 1;
 
     // End buffer recording
-    CmdBufHandler::endCmd(pLdgRes->graphicsCmd);
-    if (pLdgRes->shouldWait) CmdBufHandler::endCmd(pLdgRes->transferCmd);
+    commandHandler().endCmd(pLdgRes->graphicsCmd);
+    if (pLdgRes->shouldWait) commandHandler().endCmd(pLdgRes->transferCmd);
 
     // Fences for cleanup ...
     for (int i = 0; i < queueFamilyIndices.size(); i++) {
         VkFence fence;
         VkFenceCreateInfo fence_info = {};
         fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        vk::assert_success(vkCreateFence(inst_.ctx_.dev, &fence_info, nullptr, &fence));
+        vk::assert_success(vkCreateFence(shell().context().dev, &fence_info, nullptr, &fence));
         pLdgRes->fences.push_back(fence);
     }
 
     // Semaphore
     VkSemaphoreCreateInfo semaphore_info = {};
     semaphore_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-    vk::assert_success(vkCreateSemaphore(inst_.ctx_.dev, &semaphore_info, nullptr, &pLdgRes->semaphore));
+    vk::assert_success(vkCreateSemaphore(shell().context().dev, &semaphore_info, nullptr, &pLdgRes->semaphore));
 
     // Wait stages
     VkPipelineStageFlags wait_stages[] = {VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL};
@@ -96,23 +97,23 @@ void LoadingResourceHandler::loadSubmit(std::unique_ptr<LoadingResources> pLdgRe
 
     // Sumbit ...
     if (pLdgRes->shouldWait) {
-        vk::assert_success(vkQueueSubmit(CmdBufHandler::transfer_queue(), 1, &stag_sub_info, pLdgRes->fences[0]));
+        vk::assert_success(vkQueueSubmit(commandHandler().transferQueue(), 1, &stag_sub_info, pLdgRes->fences[0]));
     }
-    vk::assert_success(vkQueueSubmit(CmdBufHandler::graphics_queue(), 1, &wait_sub_info, pLdgRes->fences[1]));
+    vk::assert_success(vkQueueSubmit(commandHandler().graphicsQueue(), 1, &wait_sub_info, pLdgRes->fences[1]));
 
-    inst_.ldgResources_.push_back(std::move(pLdgRes));
+    ldgResources_.push_back(std::move(pLdgRes));
 }
 
-void LoadingResourceHandler::cleanup() {
+void Loading::Handler::cleanup() {
     // Check loading resources for cleanup
-    if (!inst_.ldgResources_.empty()) {
-        auto itRes = inst_.ldgResources_.begin();
-        while (itRes != inst_.ldgResources_.end()) {
+    if (!ldgResources_.empty()) {
+        auto itRes = ldgResources_.begin();
+        while (itRes != ldgResources_.end()) {
             auto& pRes = (*itRes);
             // Check if mesh loading resources can be cleaned up.
-            if (pRes->cleanup(inst_.ctx_.dev)) {
+            if (destroyResource(*pRes)) {
                 // Remove the resources from the list if all goes well.
-                itRes = inst_.ldgResources_.erase(itRes);
+                itRes = ldgResources_.erase(itRes);
             } else {
                 ++itRes;
             }
@@ -120,30 +121,30 @@ void LoadingResourceHandler::cleanup() {
     }
 }
 
-bool LoadingResources::cleanup(const VkDevice& dev) {
+bool Loading::Handler::destroyResource(Loading::Resources& resource) const {
     // Check fences for cleanup
     bool ready = true;
-    for (auto& fence : fences) ready &= vkGetFenceStatus(dev, fence) == VK_SUCCESS;
+    for (auto& fence : resource.fences) ready &= vkGetFenceStatus(shell().context().dev, fence) == VK_SUCCESS;
 
     if (ready) {
         // Free stating resources
-        for (auto& res : stgResources) {
-            vkDestroyBuffer(dev, res.buffer, nullptr);
-            vkFreeMemory(dev, res.memory, nullptr);
+        for (auto& res : resource.stgResources) {
+            vkDestroyBuffer(shell().context().dev, res.buffer, nullptr);
+            vkFreeMemory(shell().context().dev, res.memory, nullptr);
         }
-        stgResources.clear();
+        resource.stgResources.clear();
 
         // Free fences
-        for (auto& fence : fences) vkDestroyFence(dev, fence, nullptr);
-        fences.clear();
+        for (auto& fence : resource.fences) vkDestroyFence(shell().context().dev, fence, nullptr);
+        resource.fences.clear();
 
         // Free semaphores
-        vkDestroySemaphore(dev, semaphore, nullptr);
+        vkDestroySemaphore(shell().context().dev, resource.semaphore, nullptr);
 
         // Free command buffers
-        vkFreeCommandBuffers(dev, CmdBufHandler::graphics_cmd_pool(), 1, &graphicsCmd);
-        if (shouldWait) {
-            vkFreeCommandBuffers(dev, CmdBufHandler::transfer_cmd_pool(), 1, &transferCmd);
+        vkFreeCommandBuffers(shell().context().dev, commandHandler().graphicsCmdPool(), 1, &resource.graphicsCmd);
+        if (resource.shouldWait) {
+            vkFreeCommandBuffers(shell().context().dev, commandHandler().transferCmdPool(), 1, &resource.transferCmd);
         }
 
         return true;

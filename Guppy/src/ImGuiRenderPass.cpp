@@ -1,10 +1,9 @@
 
 #include "ImGuiRenderPass.h"
 
-#include "CmdBufHandler.h"
 #include "Helpers.h"
 
-void ImGuiRenderPass::getSubmitResource(const uint8_t& frameIndex, SubmitResource& resource) {
+void ImGuiRenderPass::getSubmitResource(const uint8_t& frameIndex, SubmitResource& resource) const {
     resource.waitDstStageMasks.push_back({VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT});
     resource.commandBuffers.push_back(data.priCmds[frameIndex]);
 }

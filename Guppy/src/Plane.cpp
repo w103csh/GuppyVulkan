@@ -113,8 +113,7 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
 // ColorPlane
 // **********************
 
-ColorPlane::ColorPlane(MeshCreateInfo* pCreateInfo, bool doubleSided) : ColorMesh(pCreateInfo) {
-    markerName_ = "ColorPlane";
+ColorPlane::ColorPlane(MeshCreateInfo* pCreateInfo, bool doubleSided) : ColorMesh("ColorPlane", pCreateInfo) {
     createVertices(this, doubleSided);
     updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
@@ -157,8 +156,7 @@ ColorPlane::ColorPlane(MeshCreateInfo* pCreateInfo, bool doubleSided) : ColorMes
 // TexturePlane
 // **********************
 
-TexturePlane::TexturePlane(MeshCreateInfo* pCreateInfo, bool doubleSided) : TextureMesh(pCreateInfo) {
-    markerName_ = "TexturePlane";
+TexturePlane::TexturePlane(MeshCreateInfo* pCreateInfo, bool doubleSided) : TextureMesh("TexturePlane", pCreateInfo) {
     createVertices(this, doubleSided);
     updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;

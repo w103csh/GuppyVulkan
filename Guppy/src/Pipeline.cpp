@@ -9,23 +9,24 @@
 //      BASE
 // **********************
 
-void Pipeline::Base::init(const Shell::Context& ctx, const Game::Settings& settings) {
-    createPipelineLayout(ctx.dev, settings);
-}
+void Pipeline::Base::init() { createPipelineLayout(); }
 
 const std::set<DESCRIPTOR> Pipeline::Base::getDescriptorTypeSet() {
     if (!descSetTypeInit_) {
-        for (const auto& shaderType : SHADER_TYPES) Shader::Handler::getDescriptorSetTypes(shaderType, descTypeSet_);
+        assert(false);
+        // for (const auto& shaderType : SHADER_TYPES) handler_.shaderHandler().getDescriptorSetTypes(shaderType,
+        // descTypeSet_);
         descSetTypeInit_ = true;
     }
     return descTypeSet_;
 }
 
-void Pipeline::Base::createPipelineLayout(const VkDevice& dev, const Game::Settings& settings) {
+void Pipeline::Base::createPipelineLayout() {
+    const auto& x = handler_;
     // push constants
-    pushConstantRanges_ = Pipeline::Handler::getPushConstantRanges(TYPE, PUSH_CONSTANT_TYPES);
+    pushConstantRanges_ = handler_.getPushConstantRanges(TYPE, PUSH_CONSTANT_TYPES);
     // descriptor layouts
-    const auto& descSetLayout = Pipeline::Handler::getDescriptorSetLayouts(descTypeSet_);
+    const auto& descSetLayout = handler_.getDescriptorSetLayouts(descTypeSet_);
 
     VkPipelineLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -34,17 +35,16 @@ void Pipeline::Base::createPipelineLayout(const VkDevice& dev, const Game::Setti
     layoutInfo.setLayoutCount = 1;
     layoutInfo.pSetLayouts = &descSetLayout;
 
-    vk::assert_success(vkCreatePipelineLayout(dev, &layoutInfo, nullptr, &layout_));
+    vk::assert_success(vkCreatePipelineLayout(handler_.shell().context().dev, &layoutInfo, nullptr, &layout_));
 
-    if (settings.enable_debug_markers) {
+    if (handler_.settings().enable_debug_markers) {
         std::string markerName = NAME + " pipeline layout";
-        ext::DebugMarkerSetObjectName(dev, (uint64_t)layout_, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT,
-                                      markerName.c_str());
+        ext::DebugMarkerSetObjectName(handler_.shell().context().dev, (uint64_t)layout_,
+                                      VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, markerName.c_str());
     }
 }
 
-const VkPipeline& Pipeline::Base::create(const Shell::Context& ctx, const Game::Settings& settings,
-                                         const VkPipelineCache& cache, CreateInfoResources& createInfoRes,
+const VkPipeline& Pipeline::Base::create(const VkPipelineCache& cache, CreateInfoResources& createInfoRes,
                                          VkGraphicsPipelineCreateInfo& pipelineCreateInfo,
                                          const VkPipeline& basePipelineHandle, const int32_t basePipelineIndex) {
     /*
@@ -52,9 +52,6 @@ const VkPipeline& Pipeline::Base::create(const Shell::Context& ctx, const Game::
         can just use the easier and slower way of calling this function from
         derivers.
     */
-
-    createInfoRes.pCtx = &ctx;
-    createInfoRes.pSettings = &settings;
 
     // Gather info from derived classes...
     getBlendInfoResources(createInfoRes);
@@ -95,18 +92,20 @@ const VkPipeline& Pipeline::Base::create(const Shell::Context& ctx, const Game::
     // pipelineCreateInfo.subpass = subpass;
 
     auto& oldPipeline = pipeline_;  // Save old handler for clean up if rebuilding
-    vk::assert_success(vkCreateGraphicsPipelines(ctx.dev, cache, 1, &pipelineCreateInfo, nullptr, &pipeline_));
+    vk::assert_success(
+        vkCreateGraphicsPipelines(handler_.shell().context().dev, cache, 1, &pipelineCreateInfo, nullptr, &pipeline_));
 
-    if (settings.enable_debug_markers) {
+    if (handler_.settings().enable_debug_markers) {
         std::string markerName = NAME + " pipline";
-        ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)pipeline_, VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT,
-                                      markerName.c_str());
+        ext::DebugMarkerSetObjectName(handler_.shell().context().dev, (uint64_t)pipeline_,
+                                      VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, markerName.c_str());
     }
 
     return oldPipeline;
 }
 
-void Pipeline::Base::destroy(const VkDevice& dev) {
+void Pipeline::Base::destroy() {
+    const auto& dev = handler_.shell().context().dev;
     if (layout_ != VK_NULL_HANDLE) vkDestroyPipelineLayout(dev, layout_, nullptr);
     if (pipeline_ != VK_NULL_HANDLE) vkDestroyPipeline(dev, pipeline_, nullptr);
 }
@@ -147,14 +146,14 @@ void Pipeline::Base::getRasterizationStateInfoResources(CreateInfoResources& cre
 void Pipeline::Base::getMultisampleStateInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.multisampleStateInfo = {};
     createInfoRes.multisampleStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    createInfoRes.multisampleStateInfo.rasterizationSamples = createInfoRes.pCtx->samples;
+    createInfoRes.multisampleStateInfo.rasterizationSamples = handler_.shell().context().samples;
     createInfoRes.multisampleStateInfo.sampleShadingEnable =
-        createInfoRes.pSettings
-            ->enable_sample_shading;  // enable sample shading in the pipeline (sampling for fragment interiors)
+        handler_.settings()
+            .enable_sample_shading;  // enable sample shading in the pipeline (sampling for fragment interiors)
     createInfoRes.multisampleStateInfo.minSampleShading =
-        createInfoRes.pSettings->enable_sample_shading ? MIN_SAMPLE_SHADING
-                                                       : 0.0f;  // min fraction for sample shading; closer to one is smooth
-    createInfoRes.multisampleStateInfo.pSampleMask = nullptr;   // Optional
+        handler_.settings().enable_sample_shading ? MIN_SAMPLE_SHADING
+                                                  : 0.0f;      // min fraction for sample shading; closer to one is smooth
+    createInfoRes.multisampleStateInfo.pSampleMask = nullptr;  // Optional
     createInfoRes.multisampleStateInfo.alphaToCoverageEnable = VK_FALSE;  // Optional
     createInfoRes.multisampleStateInfo.alphaToOneEnable = VK_FALSE;       // Optional
 }
@@ -234,8 +233,8 @@ void Pipeline::Base::getDepthInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.depthStencilStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     createInfoRes.depthStencilStateInfo.pNext = nullptr;
     createInfoRes.depthStencilStateInfo.flags = 0;
-    createInfoRes.depthStencilStateInfo.depthTestEnable = createInfoRes.pSettings->include_depth;
-    createInfoRes.depthStencilStateInfo.depthWriteEnable = createInfoRes.pSettings->include_depth;
+    createInfoRes.depthStencilStateInfo.depthTestEnable = handler_.settings().include_depth;
+    createInfoRes.depthStencilStateInfo.depthWriteEnable = handler_.settings().include_depth;
     createInfoRes.depthStencilStateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
     createInfoRes.depthStencilStateInfo.depthBoundsTestEnable = VK_FALSE;
     createInfoRes.depthStencilStateInfo.minDepthBounds = 0;
@@ -283,7 +282,7 @@ void Pipeline::Default::TriListColor::getInputAssemblyInfoResources(CreateInfoRe
 
 void Pipeline::Default::TriListColor::getShaderInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.stagesInfo.clear();  // TODO: faster way?
-    Shader::Handler::getStagesInfo(SHADER_TYPES, createInfoRes.stagesInfo);
+    handler_.shaderHandler().getStagesInfo(SHADER_TYPES, createInfoRes.stagesInfo);
 }
 
 // **********************
@@ -312,7 +311,7 @@ void Pipeline::Default::Line::getInputAssemblyInfoResources(CreateInfoResources&
 
 void Pipeline::Default::Line::getShaderInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.stagesInfo.clear();  // TODO: faster way?
-    Shader::Handler::getStagesInfo(SHADER_TYPES, createInfoRes.stagesInfo);
+    handler_.shaderHandler().getStagesInfo(SHADER_TYPES, createInfoRes.stagesInfo);
 }
 
 // **********************
@@ -341,5 +340,5 @@ void Pipeline::Default::TriListTexture::getInputAssemblyInfoResources(CreateInfo
 
 void Pipeline::Default::TriListTexture::getShaderInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.stagesInfo.clear();  // TODO: faster way?
-    Shader::Handler::getStagesInfo(SHADER_TYPES, createInfoRes.stagesInfo);
+    handler_.shaderHandler().getStagesInfo(SHADER_TYPES, createInfoRes.stagesInfo);
 }

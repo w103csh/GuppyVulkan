@@ -1,42 +1,27 @@
 #ifndef UI_HANDLER_H
 #define UI_HANDLER_H
 
-#include <vulkan/vulkan.h>
-
+#include "Game.h"
 #include "RenderPass.h"
-#include "Singleton.h"
-#include "Shell.h"
 
-// This is an empty shell that hopefully just does nothing until I figure out what to do.
-class DefaultUI : public UI {
+namespace UI {
+
+class Handler : public Game::Handler {
    public:
-    DefaultUI() : pRenderPass_(nullptr){};
+    Handler(Game* pGame, std::unique_ptr<RenderPass::Base>&& pPass = nullptr);
 
-    void draw(std::unique_ptr<RenderPass::Base>& pPass, uint8_t frameIndex) override{};
+    // Default behaviour is to do nothing.
+    void init() override {}
+    virtual void updateRenderPass(RenderPass::FrameInfo* pFrameInfo){};
+    virtual void draw(uint8_t frameIndex){};
     void reset() override{};
 
-   private:
-    std::unique_ptr<RenderPass::Base> pRenderPass_;
+    inline const std::unique_ptr<RenderPass::Base>& getPass() const { return pPass_; }
+
+   protected:
+    std::unique_ptr<RenderPass::Base> pPass_;
 };
 
-class UIHandler : public Singleton {
-   public:
-    static void init(Shell* sh, const Game::Settings& settings, std::shared_ptr<UI> pUI = nullptr);
-    static inline void destroy() { inst_.reset(); };
-
-    static void draw(std::unique_ptr<RenderPass::Base>& pPass, uint8_t frameIndex) { inst_.pUI_->draw(pPass, frameIndex); };
-
-   private:
-    UIHandler(){};   // Prevent construction
-    ~UIHandler(){};  // Prevent construction
-    static UIHandler inst_;
-    void reset() override { inst_.pUI_->reset(); };
-
-    Shell* sh_;                // TODO: shared_ptr
-    Shell::Context ctx_;       // TODO: shared_ptr
-    Game::Settings settings_;  // TODO: shared_ptr
-
-    std::shared_ptr<UI> pUI_;
-};
+}  // namespace UI
 
 #endif  // !UI_HANDLER_H

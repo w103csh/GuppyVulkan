@@ -393,7 +393,7 @@ void ShellWin32::getMouseModifier(WPARAM wParam, LPARAM lParam) {
     InputHandler::updateMousePosition(xPos, yPos, zDelta, isLooking);
 }
 
-void ShellWin32::quit() { PostQuitMessage(0); }
+void ShellWin32::quit() const { PostQuitMessage(0); }
 
 void ShellWin32::run() {
     setPlatformSpecificExtensions();
@@ -472,10 +472,10 @@ void ShellWin32::asyncAlert(uint64_t milliseconds) {
     SleepEx(static_cast<DWORD>(milliseconds), TRUE);
 }
 
-void ShellWin32::watchDirectory(std::string dir, std::function<void(std::string)> callback) {
+void ShellWin32::watchDirectory(const std::string& directory, std::function<void(std::string)> callback) {
     if (settings_.enable_directory_listener) {
         // build absolute path
-        dir = GetWorkingDirectory() + ROOT_PATH + dir;
+        auto fullPath = GetWorkingDirectory() + ROOT_PATH + directory;
         dirInsts_.push_back({});
         // Completion routine gets called twice for some reason so I use
         // this flag instead of spending another night on this...
@@ -483,7 +483,7 @@ void ShellWin32::watchDirectory(std::string dir, std::function<void(std::string)
         dirInsts_.back().callback = callback;
         // Create directory listener handle
         dirInsts_.back().hDir =
-            CreateFile(dir.c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_WRITE | FILE_SHARE_READ | FILE_SHARE_DELETE, NULL,
+            CreateFile(fullPath.c_str(), FILE_LIST_DIRECTORY, FILE_SHARE_WRITE | FILE_SHARE_READ | FILE_SHARE_DELETE, NULL,
                        OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS | FILE_FLAG_OVERLAPPED, NULL);
         // hEvent is not used by completion function so store the listener object for use.
         dirInsts_.back().oOverlap.hEvent = &dirInsts_.back();

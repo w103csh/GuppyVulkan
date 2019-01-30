@@ -6,6 +6,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "Handlee.h"
 #include "Helpers.h"
 #include "Object3d.h"
 #include "Material.h"
@@ -14,12 +15,13 @@
 namespace Pipeline {
 
 struct CreateInfoResources;
+class Handler;
 
 // **********************
 //      BASE
 // **********************
 
-class Base {
+class Base : public Handlee<Pipeline::Handler> {
     friend class Handler;
 
    public:
@@ -31,7 +33,7 @@ class Base {
 
     uint32_t SUBPASS_ID;
 
-    virtual void init(const Shell::Context &ctx, const Game::Settings &settings);
+    virtual void init();
 
     inline const VkPipelineLayout &getLayout() const { return layout_; }
     inline const VkPipeline &getPipeline() const { return pipeline_; }
@@ -39,12 +41,14 @@ class Base {
     // DESCRIPTOR
     const std::set<DESCRIPTOR> getDescriptorTypeSet();
     // TODO: if this ever gets overriden then this should take a struct
-    virtual inline uint32_t getDescriptorSetOffset(const std::shared_ptr<Texture::Data> &pTexture) const { return 0; }
+    virtual inline uint32_t getDescriptorSetOffset(const std::shared_ptr<Texture::DATA> &pTexture) const { return 0; }
 
    protected:
-    Base(const PIPELINE &&type, const std::set<SHADER> &&shaderTypes, const std::vector<PUSH_CONSTANT> &&pushConstantTypes,
-         const VkPipelineBindPoint &&bindPoint, const std::string &&name)
-        : TYPE(type),
+    Base(const Pipeline::Handler &handler, const PIPELINE &&type, const std::set<SHADER> &&shaderTypes,
+         const std::vector<PUSH_CONSTANT> &&pushConstantTypes, const VkPipelineBindPoint &&bindPoint,
+         const std::string &&name)
+        : Handlee(handler),
+          TYPE(type),
           SHADER_TYPES(shaderTypes),
           PUSH_CONSTANT_TYPES(pushConstantTypes),
           BIND_POINT(bindPoint),
@@ -67,21 +71,22 @@ class Base {
     virtual void getTesselationInfoResources(CreateInfoResources &createInfoRes);
     virtual void getViewportStateInfoResources(CreateInfoResources &createInfoRes);
 
-    virtual const VkPipeline &create(const Shell::Context &ctx, const Game::Settings &settings, const VkPipelineCache &cache,
-                                     CreateInfoResources &createInfoRes, VkGraphicsPipelineCreateInfo &pipelineCreateInfo,
+    virtual const VkPipeline &create(const VkPipelineCache &cache, CreateInfoResources &createInfoRes,
+                                     VkGraphicsPipelineCreateInfo &pipelineCreateInfo,
                                      const VkPipeline &basePipelineHandle = VK_NULL_HANDLE,
                                      const int32_t basePipelineIndex = -1);
 
-    virtual void createPipelineLayout(const VkDevice &dev, const Game::Settings &settings);
+    virtual void createPipelineLayout();
     VkPipelineLayout layout_;
     VkPipeline pipeline_;
 
-    void destroy(const VkDevice &dev);
+    void destroy();
 
    private:
     // DESCRIPTOR
     bool descSetTypeInit_;              // TODO: initialize value???
     std::set<DESCRIPTOR> descTypeSet_;  // TODO: initialize value???
+    std::vector<VkDescriptorSet> descriptorSets_;
     // PUSH CONSTANT
     std::vector<VkPushConstantRange> pushConstantRanges_;
 };
@@ -90,7 +95,7 @@ namespace Default {
 
 struct PushConstant {
     Object3d::DATA obj3d;
-    Material::Base::DATA material;
+    Material::Default::DATA material;
 };
 
 // **********************
@@ -98,8 +103,9 @@ struct PushConstant {
 // **********************
 class TriListColor : public Base {
    public:
-    TriListColor()
-        : Base{PIPELINE::TRI_LIST_COLOR,
+    TriListColor(const Pipeline::Handler &handler)
+        : Base{handler,  //
+               PIPELINE::TRI_LIST_COLOR,
                {SHADER::COLOR_VERT, SHADER::COLOR_FRAG},
                {PUSH_CONSTANT::DEFAULT},
                VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -115,8 +121,9 @@ class TriListColor : public Base {
 // **********************
 class Line : public Base {
    public:
-    Line()
-        : Base{PIPELINE::LINE,  //
+    Line(const Pipeline::Handler &handler)
+        : Base{handler,  //
+               PIPELINE::LINE,
                {SHADER::COLOR_VERT, SHADER::LINE_FRAG},
                {PUSH_CONSTANT::DEFAULT},
                VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -132,8 +139,9 @@ class Line : public Base {
 // **********************
 class TriListTexture : public Base {
    public:
-    TriListTexture()
-        : Base{PIPELINE::TRI_LIST_TEX,
+    TriListTexture(const Pipeline::Handler &handler)
+        : Base{handler,  //
+               PIPELINE::TRI_LIST_TEX,
                {SHADER::TEX_VERT, SHADER::TEX_FRAG},
                {PUSH_CONSTANT::DEFAULT},
                VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -144,7 +152,7 @@ class TriListTexture : public Base {
     void getShaderInfoResources(CreateInfoResources &createInfoRes) override;
 
     // DESCRIPTOR
-    inline uint32_t getDescriptorSetOffset(const std::shared_ptr<Texture::Data> &pTexture) const override {
+    inline uint32_t getDescriptorSetOffset(const std::shared_ptr<Texture::DATA> &pTexture) const override {
         return pTexture->offset;
     }
 };

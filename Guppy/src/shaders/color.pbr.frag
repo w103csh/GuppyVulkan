@@ -3,7 +3,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 // MATERIAL FLAGS
-const uint METAL   = 0x00001000u;
+const uint METAL   = 0x00001000u;   
 
 struct PBRMaterial {
     vec3 color;         // Diffuse color for dielectrics, f0 for metallic
@@ -29,5 +29,4 @@ void main() {
         outColor = vec4(1.0, 0.7, 0.7, 1.0);
         return;
     }
-    outColor = vec4(pushConstantsBlock.material.color.xyz, 1.0);
 }

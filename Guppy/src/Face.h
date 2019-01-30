@@ -61,9 +61,9 @@ class Face {
         // Calculate per face data.
         if (calcNormals) calculateNormal();
         // Check if there is a normal map...
-        bool normalMapped = false;
-        for (auto &pMesh : pMeshes)
-            if (pMesh->getMaterial().getFlags() & Texture::FLAG::NORMAL) normalMapped = true;
+        bool normalMapped =
+            std::any_of(pMeshes.begin(), pMeshes.end(), [](const auto &pMesh) { return pMesh->hasNormalMap(); });
+
         if (normalMapped) calculateTangentSpaceVectors();
 
         for (size_t i = 0; i < 3; ++i) {
@@ -108,8 +108,7 @@ class Face {
                         //
                         (pMeshes[mOffset]->VERTEX_TYPE == VERTEX::COLOR ||
                          // If the vertex is in going to be in a texture mesh then check tex coords
-                         (pMeshes[mOffset]->VERTEX_TYPE == VERTEX::TEXTURE &&
-                          vertex.compareTexCoords(vertices_[i])))
+                         (pMeshes[mOffset]->VERTEX_TYPE == VERTEX::TEXTURE && vertex.compareTexCoords(vertices_[i])))
                         //
                     ) {
                         index = vIndex;

@@ -3,11 +3,13 @@
 
 #include <set>
 #include <string>
-#include <unordered_set>
+#include <map>
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "Handlee.h"
 #include "Helpers.h"
+#include "Game.h"
 #include "Shell.h"
 
 namespace Shader {
@@ -19,14 +21,16 @@ const std::string BASE_DIRNAME = "Guppy\\src\\shaders\\";
 //      Base
 // **********************
 
-class Base {
+class Base : public Handlee<Shader::Handler> {
    public:
-    Base(const SHADER &&type, const std::string &fileName, const VkShaderStageFlagBits &&stage, const std::string &&name,
-         const std::vector<DESCRIPTOR> &&descTypes = {}, const std::set<SHADER_LINK> &&linkTypes = {})
-        : TYPE(type),
+    Base(const Shader::Handler &handler, const SHADER &&type, const std::string &fileName,
+         const VkShaderStageFlagBits &&stage, const std::string &&name,
+         const std::map<uint32_t, UNIFORM> &&bindingUniformMap = {}, const std::set<SHADER_LINK> &&linkTypes = {})
+        : Handlee(handler),
+          TYPE(type),
           info(),
           module(VK_NULL_HANDLE),
-          DESCRIPTOR_TYPES(descTypes),
+          BINDING_UNIFORM_MAP(bindingUniformMap),
           LINK_TYPES(linkTypes),
           FILE_NAME(fileName),
           NAME(name),
@@ -37,6 +41,7 @@ class Base {
     const VkShaderStageFlagBits STAGE;
     const std::string NAME;
     const std::vector<DESCRIPTOR> DESCRIPTOR_TYPES;
+    const std::map<uint32_t, UNIFORM> BINDING_UNIFORM_MAP;
     const std::set<SHADER_LINK> LINK_TYPES;
 
     virtual void init(const VkDevice &dev, const Game::Settings &settings, std::vector<VkShaderModule> &oldModules,
@@ -69,14 +74,15 @@ class Link : public Base {
     const SHADER_LINK LINK_TYPE;
 
    protected:
-    Link(const SHADER_LINK &&type, const std::string &fileName, const VkShaderStageFlagBits &&stage,
-         const std::string &&name, const std::vector<DESCRIPTOR> &&descTypes = {},
-         const std::set<SHADER_LINK> &&linkTypes = {})
-        : Base{SHADER::LINK,
+    Link(const Shader::Handler &handler, const SHADER_LINK &&type, const std::string &fileName,
+         const VkShaderStageFlagBits &&stage, const std::string &&name,
+         const std::map<uint32_t, UNIFORM> &&bindingUniformMap = {}, const std::set<SHADER_LINK> &&linkTypes = {})
+        : Base{handler,
+               SHADER::LINK,
                fileName,
                std::forward<const VkShaderStageFlagBits>(stage),
                std::forward<const std::string>(name),
-               std::forward<const std::vector<DESCRIPTOR>>(descTypes),
+               std::forward<const std::map<uint32_t, UNIFORM>>(bindingUniformMap),
                std::forward<const std::set<SHADER_LINK>>(linkTypes)},
           LINK_TYPE(type) {}
 };
@@ -85,12 +91,17 @@ class Link : public Base {
 const std::string UTIL_FRAG_FILENAME = "util.frag.glsl";
 class UtilityFragment : public Link {
    public:
-    UtilityFragment()
-        : Link{SHADER_LINK::UTIL_FRAG,
+    UtilityFragment(const Shader::Handler &handler)
+        : Link{handler,
+               SHADER_LINK::UTIL_FRAG,
                UTIL_FRAG_FILENAME,
                VK_SHADER_STAGE_FRAGMENT_BIT,
                "Utility Fragement Shader",
-               {DESCRIPTOR::DEFAULT_UNIFORM}} {}
+               {{0, UNIFORM::CAMERA_PERSPECTIVE_DEFAULT},
+                {1, UNIFORM::MATERIAL_DEFAULT},
+                {2, UNIFORM::FOG_DEFAULT},
+                {3, UNIFORM::LIGHT_POSITIONAL_DEFAULT},
+                {4, UNIFORM::LIGHT_SPOT_DEFAULT}}} {}
 
     void init(const VkDevice &dev, const Game::Settings &settings, std::vector<VkShaderModule> &oldModules, bool load = true,
               bool doAssert = true) override {
@@ -108,19 +119,19 @@ namespace Default {
 
 class ColorVertex : public Base {
    public:
-    ColorVertex()
-        : Base{//
+    ColorVertex(const Shader::Handler &handler)
+        : Base{handler,  //
                SHADER::COLOR_VERT,
                "color.vert",
                VK_SHADER_STAGE_VERTEX_BIT,
                "Default Color Vertex Shader",
-               {DESCRIPTOR::DEFAULT_UNIFORM}} {}
+               {{0, UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}}} {}
 };
 
 class ColorFragment : public Base {
    public:
-    ColorFragment()
-        : Base{                     //
+    ColorFragment(const Shader::Handler &handler)
+        : Base{handler,             //
                SHADER::COLOR_FRAG,  //
                "color.frag",
                VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -131,37 +142,34 @@ class ColorFragment : public Base {
 
 class LineFragment : public Base {
    public:
-    LineFragment()
-        : Base{//
-               SHADER::LINE_FRAG,
-               "line.frag",
-               VK_SHADER_STAGE_FRAGMENT_BIT,
-               "Default Line Fragment Shader",
-               {}} {}
+    LineFragment(const Shader::Handler &handler)
+        : Base{handler,  //
+               SHADER::LINE_FRAG, "line.frag", VK_SHADER_STAGE_FRAGMENT_BIT, "Default Line Fragment Shader", {}} {}
 };
 
 class TextureVertex : public Base {
    public:
-    TextureVertex()
-        : Base{//
+    TextureVertex(const Shader::Handler &handler)
+        : Base{handler,  //
                SHADER::TEX_VERT,
                "texture.vert",
                VK_SHADER_STAGE_VERTEX_BIT,
                "Default Texture Vertex Shader",
-               {DESCRIPTOR::DEFAULT_UNIFORM}} {}
+               {{0, UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}}} {}
 };
 
 class TextureFragment : public Base {
    public:
-    TextureFragment()
-        : Base{//
+    TextureFragment(const Shader::Handler &handler)
+        : Base{handler,  //
                SHADER::TEX_FRAG,
                "texture.frag",
                VK_SHADER_STAGE_FRAGMENT_BIT,
                "Default Texture Fragment Shader",
-               {DESCRIPTOR::DEFAULT_SAMPLER, DESCRIPTOR::DEFAULT_DYNAMIC_UNIFORM},
+               {{1, UNIFORM::SAMPLER_DEFAULT}, {2, UNIFORM::MATERIAL_DEFAULT}},
                {SHADER_LINK::UTIL_FRAG}} {}
 };
+
 }  // namespace Default
 
 }  // namespace Shader

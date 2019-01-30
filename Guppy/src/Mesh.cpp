@@ -6,19 +6,21 @@
 #include "FileLoader.h"
 #include "PBR.h"  // TODO: this is bad
 #include "PipelineHandler.h"
+#include "SceneHandler.h"
 #include "TextureHandler.h"
 
 // **********************
 // Mesh
 // **********************
 
-Mesh::Mesh(const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags, MeshCreateInfo* pCreateInfo)
+Mesh::Mesh(const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags, const std::string& name,
+           MeshCreateInfo* pCreateInfo)
     : Object3d(pCreateInfo->model),
       TYPE(type),
       VERTEX_TYPE(vertexType),
       FLAGS(flags),
+      NAME(name),
       isIndexed_(pCreateInfo->isIndexed),
-      markerName_(pCreateInfo->markerName),
       offset_(pCreateInfo->offset),
       PIPELINE_TYPE(pCreateInfo->pipelineType),
       pMaterial_(std::make_unique<Material::Base>(&pCreateInfo->materialInfo)),
@@ -35,11 +37,11 @@ Mesh::Mesh(const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags, Mes
 
 void Mesh::setSceneData(size_t offset) { offset_ = offset; }
 
-void Mesh::prepare(const VkDevice& dev, const Game::Settings& settings, bool load) {
+void Mesh::prepare(const Scene::Handler& sceneHandler, bool load) {
     if (load) {  // TODO: THIS AIN'T GREAT
-        loadBuffers(dev, settings);
+        loadBuffers(sceneHandler);
         // Submit vertex loading commands...
-        LoadingResourceHandler::loadSubmit(std::move(pLdgRes_));
+        sceneHandler.loadingHandler().loadSubmit(std::move(pLdgRes_));
     }
 
     // Get descriptor sets for the drawing command...
@@ -49,22 +51,23 @@ void Mesh::prepare(const VkDevice& dev, const Game::Settings& settings, bool loa
         can allocate and update all at once.
     */
     if (pMaterial_->getStatus() == STATUS::READY) {
-        Pipeline::Handler::makeDescriptorSets(PIPELINE_TYPE, descReference_, pMaterial_->getTexture());
+        // Pipeline::Handler::makeDescriptorSets(PIPELINE_TYPE, descReference_, pMaterial_->getTexture());
     }
 
     status_ = pMaterial_->getStatus();
 }
 
 // thread sync
-void Mesh::loadBuffers(const VkDevice& dev, const Game::Settings& settings) {
+void Mesh::loadBuffers(const Scene::Handler& sceneHandler) {
     assert(getVertexCount());
 
-    pLdgRes_ = LoadingResourceHandler::createLoadingResources();
+    pLdgRes_ = sceneHandler.loadingHandler().createLoadingResources();
 
     // Vertex buffer
     BufferResource stgRes = {};
     createBufferData(
-        settings, dev, pLdgRes_->transferCmd, stgRes, getVertexBufferSize(), getVertexData(), vertexRes_,
+        sceneHandler.shell().context(), sceneHandler.settings(), pLdgRes_->transferCmd, stgRes, getVertexBufferSize(),
+        getVertexData(), vertexRes_,
         static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), "vertex");
     pLdgRes_->stgResources.push_back(std::move(stgRes));
 
@@ -73,7 +76,8 @@ void Mesh::loadBuffers(const VkDevice& dev, const Game::Settings& settings) {
         assert(!indices_.empty());
         stgRes = {};
         createBufferData(
-            settings, dev, pLdgRes_->transferCmd, stgRes, getIndexBufferSize(), getIndexData(), indexRes_,
+            sceneHandler.shell().context(), sceneHandler.settings(), pLdgRes_->transferCmd, stgRes, getIndexBufferSize(),
+            getIndexData(), indexRes_,
             static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
             "index");
         pLdgRes_->stgResources.push_back(std::move(stgRes));
@@ -82,17 +86,18 @@ void Mesh::loadBuffers(const VkDevice& dev, const Game::Settings& settings) {
     }
 }
 
-void Mesh::createBufferData(const Game::Settings& settings, const VkDevice& dev, const VkCommandBuffer& cmd,
+void Mesh::createBufferData(const Shell::Context& ctx, const Game::Settings& settings, const VkCommandBuffer& cmd,
                             BufferResource& stgRes, VkDeviceSize bufferSize, const void* data, BufferResource& res,
-                            VkBufferUsageFlagBits usage, std::string markerName) {
+                            VkBufferUsageFlagBits usage, std::string bufferType) {
     // STAGING RESOURCE
-    res.memoryRequirementsSize = helpers::createBuffer(
-        dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stgRes.buffer, stgRes.memory);
+    res.memoryRequirementsSize =
+        helpers::createBuffer(ctx.dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ctx.mem_props,
+                              stgRes.buffer, stgRes.memory);
 
     // FILL STAGING BUFFER ON DEVICE
     void* pData;
-    vkMapMemory(dev, stgRes.memory, 0, res.memoryRequirementsSize, 0, &pData);
+    vkMapMemory(ctx.dev, stgRes.memory, 0, res.memoryRequirementsSize, 0, &pData);
     /*
         You can now simply memcpy the vertex data to the mapped memory and unmap it again using vkUnmapMemory.
         Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
@@ -106,20 +111,21 @@ void Mesh::createBufferData(const Game::Settings& settings, const VkDevice& dev,
         but we'll see why that doesn't matter in the next chapter.
     */
     memcpy(pData, data, static_cast<size_t>(bufferSize));
-    vkUnmapMemory(dev, stgRes.memory);
+    vkUnmapMemory(ctx.dev, stgRes.memory);
 
     // FAST VERTEX BUFFER
-    helpers::createBuffer(dev,
-                          bufferSize,  // TODO: probably don't need to check memory requirements again
-                          usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, res.buffer, res.memory);
+    helpers::createBuffer(ctx.dev, bufferSize,
+                          // TODO: probably don't need to check memory requirements again
+                          usage, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, ctx.mem_props, res.buffer, res.memory);
 
     // COPY FROM STAGING TO FAST
     helpers::copyBuffer(cmd, stgRes.buffer, res.buffer, res.memoryRequirementsSize);
 
     // Name the buffers for debugging
     if (settings.enable_debug_markers) {
-        markerName = "Mesh " + markerName + " buffer";
-        ext::DebugMarkerSetObjectName(dev, (uint64_t)res.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, markerName.c_str());
+        std::string markerName = NAME + " " + bufferType + " mesh buffer";
+        ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)res.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                                      markerName.c_str());
     }
 }
 
@@ -132,14 +138,14 @@ void Mesh::bindPushConstants(VkCommandBuffer cmd) const {
 
     switch (descReference_.pushConstantTypes[0]) {
         case PUSH_CONSTANT::DEFAULT: {
-            Pipeline::Default::PushConstant pushConstant = {getData(), Material::Base::getData(pMaterial_)};
-            vkCmdPushConstants(cmd, descReference_.layout, descReference_.pushConstantStages, 0,
-                               static_cast<uint32_t>(sizeof Pipeline::Default::PushConstant), &pushConstant);
+            // Pipeline::Default::PushConstant pushConstant = {getData(), Material::Base::getData(pMaterial_)};
+            // vkCmdPushConstants(cmd, descReference_.layout, descReference_.pushConstantStages, 0,
+            //                   static_cast<uint32_t>(sizeof Pipeline::Default::PushConstant), &pushConstant);
         } break;
         case PUSH_CONSTANT::PBR: {
-            Pipeline::PBR::PushConstant pushConstant = {getData(), Material::PBR::getData(pMaterial_)};
-            vkCmdPushConstants(cmd, descReference_.layout, descReference_.pushConstantStages, 0,
-                               static_cast<uint32_t>(sizeof Pipeline::PBR::PushConstant), &pushConstant);
+            // Pipeline::PBR::PushConstant pushConstant = {getData(), Material::PBR::getData(pMaterial_)};
+            // vkCmdPushConstants(cmd, descReference_.layout, descReference_.pushConstantStages, 0,
+            //                   static_cast<uint32_t>(sizeof Pipeline::PBR::PushConstant), &pushConstant);
         } break;
         default: { assert(false && "Add new push constant"); } break;
     }
@@ -380,11 +386,11 @@ void Mesh::destroy(const VkDevice& dev) {
 //      TextureMesh
 // **********************
 
-void TextureMesh::prepare(const VkDevice& dev, const Game::Settings& settings, bool load) {
+void TextureMesh::prepare(const Scene::Handler& sceneHandler, bool load) {
     if (load) {  // TODO: THIS AIN'T GREAT
-        loadBuffers(dev, settings);
+        loadBuffers(sceneHandler);
         // Submit vertex loading commands...
-        LoadingResourceHandler::loadSubmit(std::move(pLdgRes_));
+        sceneHandler.loadingHandler().loadSubmit(std::move(pLdgRes_));
     }
 
     // Get descriptor sets for the drawing command...
@@ -394,8 +400,8 @@ void TextureMesh::prepare(const VkDevice& dev, const Game::Settings& settings, b
         can allocate and update all at once.
     */
     if (pMaterial_->getStatus() == STATUS::READY) {
-        Pipeline::Handler::makeDescriptorSets(PIPELINE_TYPE, descReference_, pMaterial_->getTexture());
-        descReference_.dynamicOffsets[0] *= pMaterial_->getTexture()->offset;
+        // Pipeline::Handler::makeDescriptorSets(PIPELINE_TYPE, descReference_, pMaterial_->getTexture());
+        // descReference_.dynamicOffsets[0] *= pMaterial_->getTexture()->offset;
     }
 
     status_ = pMaterial_->getStatus();

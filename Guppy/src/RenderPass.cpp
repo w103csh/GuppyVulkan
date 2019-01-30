@@ -1,7 +1,7 @@
 
 #include "RenderPass.h"
 
-#include "CmdBufHandler.h"
+#include "CommandHandler.h"
 
 namespace {
 
@@ -49,19 +49,19 @@ void RenderPass::Base::init(const Shell::Context& ctx, const Game::Settings& set
 }
 
 void RenderPass::Base::createTarget(const Shell::Context& ctx, const Game::Settings& settings,
-                                    RenderPass::FrameInfo* pInfo) {
+                                    Command::Handler& cmdBuffHandler, RenderPass::FrameInfo* pInfo) {
     // Set info values
     memcpy(&frameInfo, pInfo, sizeof(RenderPass::FrameInfo));
 
     // FRAME
-    createColorResources(ctx, settings);
-    createDepthResource(ctx, settings);
+    createColorResources(ctx, settings, cmdBuffHandler);
+    createDepthResource(ctx, settings, cmdBuffHandler);
     createAttachmentDebugMarkers(ctx, settings);
     createClearValues(ctx, settings);
     createFramebuffers(ctx, settings);
 
     // RENDER PASS
-    createCommandBuffers(ctx);
+    createCommandBuffers(ctx, cmdBuffHandler);
     createViewport();
     updateBeginInfo(ctx, settings);
 
@@ -93,9 +93,9 @@ void RenderPass::Base::createBeginInfo(const Shell::Context& ctx, const Game::Se
     beginInfo_.renderPass = pass;
 }
 
-void RenderPass::Base::createCommandBuffers(const Shell::Context& ctx) {
+void RenderPass::Base::createCommandBuffers(const Shell::Context& ctx, Command::Handler& cmdBuffHandler) {
     data.priCmds.resize(initInfo.commandCount);
-    CmdBufHandler::createCmdBuffers(CmdBufHandler::graphics_cmd_pool(), data.priCmds.data(), VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+    cmdBuffHandler.createCmdBuffers(cmdBuffHandler.graphicsCmdPool(), data.priCmds.data(), VK_COMMAND_BUFFER_LEVEL_PRIMARY,
                                     ctx.imageCount);
 }
 
@@ -127,7 +127,7 @@ void RenderPass::Base::updateBeginInfo(const Shell::Context& ctx, const Game::Se
     beginInfo_.renderArea.extent = frameInfo.extent;
 }
 
-void RenderPass::Base::destroyTargetResources(const VkDevice& dev) {
+void RenderPass::Base::destroyTargetResources(const VkDevice& dev, Command::Handler& cmdBuffHandler) {
     // COLOR
     for (auto& color : colors_) helpers::destroyImageResource(dev, color);
     colors_.clear();
@@ -137,8 +137,8 @@ void RenderPass::Base::destroyTargetResources(const VkDevice& dev) {
     for (auto& framebuffer : data.framebuffers) vkDestroyFramebuffer(dev, framebuffer, nullptr);
     data.framebuffers.clear();
     // COMMAND
-    helpers::destroyCommandBuffers(dev, CmdBufHandler::graphics_cmd_pool(), data.priCmds);
-    helpers::destroyCommandBuffers(dev, CmdBufHandler::graphics_cmd_pool(), data.secCmds);
+    helpers::destroyCommandBuffers(dev, cmdBuffHandler.graphicsCmdPool(), data.priCmds);
+    helpers::destroyCommandBuffers(dev, cmdBuffHandler.graphicsCmdPool(), data.secCmds);
     // FENCE
     for (auto& fence : data.fences) vkDestroyFence(dev, fence, nullptr);
     data.fences.clear();
@@ -184,7 +184,7 @@ void RenderPass::Base::createAttachmentDebugMarkers(const Shell::Context& ctx, c
 //      Default
 // **********************
 
-void RenderPass::Default::getSubmitResource(const uint8_t& frameIndex, SubmitResource& resource) {
+void RenderPass::Default::getSubmitResource(const uint8_t& frameIndex, SubmitResource& resource) const {
     resource.signalSemaphores.push_back(data.semaphores[frameIndex]);
     resource.commandBuffers.push_back(data.priCmds[frameIndex]);
 }
@@ -238,21 +238,22 @@ void RenderPass::Default::createBeginInfo(const Shell::Context& ctx, const Game:
     secCmdBeginInfo_.pInheritanceInfo = &inheritInfo_;
 }
 
-void RenderPass::Default::createCommandBuffers(const Shell::Context& ctx) {
-    RenderPass::Base::createCommandBuffers(ctx);
+void RenderPass::Default::createCommandBuffers(const Shell::Context& ctx, Command::Handler& cmdBuffHandler) {
+    RenderPass::Base::createCommandBuffers(ctx, cmdBuffHandler);
     // SECONDARY
     data.secCmds.resize(ctx.imageCount);
-    CmdBufHandler::createCmdBuffers(CmdBufHandler::graphics_cmd_pool(), data.secCmds.data(),
-                                    VK_COMMAND_BUFFER_LEVEL_SECONDARY, ctx.imageCount);
+    cmdBuffHandler.createCmdBuffers(cmdBuffHandler.graphicsCmdPool(), data.secCmds.data(), VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+                                    ctx.imageCount);
 }
 
-void RenderPass::Default::createColorResources(const Shell::Context& ctx, const Game::Settings& settings) {
+void RenderPass::Default::createColorResources(const Shell::Context& ctx, const Game::Settings& settings,
+                                               Command::Handler& cmdBuffHandler) {
     if (settings.include_color) {  // TODO: is this still something?
         colors_.resize(1);
         auto& res = colors_.back();
 
-        helpers::createImage(ctx.dev, CmdBufHandler::getUniqueQueueFamilies(true, false, true), initInfo.samples,
-                             initInfo.format, VK_IMAGE_TILING_OPTIMAL,
+        helpers::createImage(ctx.dev, ctx.mem_props, cmdBuffHandler.getUniqueQueueFamilies(true, false, true),
+                             initInfo.samples, initInfo.format, VK_IMAGE_TILING_OPTIMAL,
                              VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, frameInfo.extent.width, frameInfo.extent.height, 1, 1,
                              colors_.back().image, colors_.back().memory);
@@ -260,14 +261,15 @@ void RenderPass::Default::createColorResources(const Shell::Context& ctx, const 
         helpers::createImageView(ctx.dev, colors_.back().image, 1, initInfo.format, VK_IMAGE_ASPECT_COLOR_BIT,
                                  VK_IMAGE_VIEW_TYPE_2D, 1, colors_.back().view);
 
-        helpers::transitionImageLayout(CmdBufHandler::graphics_cmd(), colors_.back().image, initInfo.format,
+        helpers::transitionImageLayout(cmdBuffHandler.graphicsCmd(), colors_.back().image, initInfo.format,
                                        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 1,
                                        1);
     }
 }
 
-void RenderPass::Default::createDepthResource(const Shell::Context& ctx, const Game::Settings& settings) {
+void RenderPass::Default::createDepthResource(const Shell::Context& ctx, const Game::Settings& settings,
+                                              Command::Handler& cmdBuffHandler) {
     if (settings.include_depth) {  // TODO: is this still something?
         VkImageTiling tiling;
         VkFormatProperties props;
@@ -282,8 +284,8 @@ void RenderPass::Default::createDepthResource(const Shell::Context& ctx, const G
             throw std::runtime_error(("depth format unsupported"));
         }
 
-        helpers::createImage(ctx.dev, CmdBufHandler::getUniqueQueueFamilies(true, false, true), initInfo.samples,
-                             initInfo.depthFormat, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+        helpers::createImage(ctx.dev, ctx.mem_props, cmdBuffHandler.getUniqueQueueFamilies(true, false, true),
+                             initInfo.samples, initInfo.depthFormat, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, frameInfo.extent.width, frameInfo.extent.height, 1, 1,
                              depth_.image, depth_.memory);
 
@@ -295,7 +297,7 @@ void RenderPass::Default::createDepthResource(const Shell::Context& ctx, const G
         helpers::createImageView(ctx.dev, depth_.image, 1, initInfo.depthFormat, aspectFlags, VK_IMAGE_VIEW_TYPE_2D, 1,
                                  depth_.view);
 
-        helpers::transitionImageLayout(CmdBufHandler::graphics_cmd(), depth_.image, initInfo.depthFormat,
+        helpers::transitionImageLayout(cmdBuffHandler.graphicsCmd(), depth_.image, initInfo.depthFormat,
                                        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
                                        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT, 1, 1);
     }

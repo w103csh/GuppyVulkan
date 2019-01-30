@@ -17,11 +17,25 @@
 #ifndef GAME_H
 #define GAME_H
 
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
 
 class Shell;
+
+// HANDLERS
+// clang-format off
+namespace Command   { class Handler; }
+namespace Loading   { class Handler; }
+namespace Material  { class Handler; }
+namespace Model     { class Handler; }
+namespace Pipeline  { class Handler; }
+namespace Scene     { class Handler; }
+namespace Shader    { class Handler; }
+namespace Texture   { class Handler; }
+namespace UI        { class Handler; }
+// clang-format on
 
 enum class GAME_KEY {
     // virtual keys
@@ -83,7 +97,7 @@ class Game {
    public:
     Game(const Game &game) = delete;
     Game &operator=(const Game &game) = delete;
-    virtual ~Game() {}
+    virtual ~Game();
 
     struct Settings {
         std::string name;
@@ -113,32 +127,87 @@ class Game {
         bool enable_directory_listener = true;
         bool assert_on_recompile_shader = false;
     };
-    const Settings &settings() const { return settings_; }
-    Shell &shell() const { return (*shell_); }  // TODO: maybe don't do this??? (Used for listening to shader changes)
+
+    // SETTINGS
+    inline const Settings &settings() const { return settings_; }
 
     // SHELL
     virtual void attachShell(Shell &shell) { shell_ = &shell; }
     virtual void detachShell() { shell_ = nullptr; }
+    inline const Shell &shell() const { return std::ref(*shell_); }
 
     // SWAPCHAIN
     virtual void attachSwapchain() = 0;
     virtual void detachSwapchain() = 0;
 
+    // LIFECYCLE
     virtual void onTick() {}
     virtual void onFrame(float framePred) {}
     virtual void onKey(GAME_KEY key) {}               // TODO: bad design
     virtual void onMouse(const MouseInput &input){};  // TODO: bad design & misleading name
 
-   protected:
-    Game(const std::string &name, const std::vector<std::string> &args) : shell_(nullptr), settings_() {
-        settings_.name = name;
-        parse_args(args);
-    }
+    // HANDLER
+    class Handler {
+       public:
+        Handler(const Handler &) = delete;             // Prevent construction by copying
+        Handler &operator=(const Handler &) = delete;  // Prevent assignment
 
+        virtual void init() = 0;
+        virtual void destroy() { reset(); };
+
+        inline const Settings &settings() const { return pGame_->settings(); }
+        inline const Shell &shell() const { return pGame_->shell(); }
+
+        inline Command::Handler &commandHandler() const { return std::ref(*pGame_->pCommandHandler_); }
+        inline Loading::Handler &loadingHandler() const { return std::ref(*pGame_->pLoadingHandler_); }
+        inline Material::Handler &materialHandler() const { return std::ref(*pGame_->pMaterialHandler_); }
+        inline Model::Handler &modelHandler() const { return std::ref(*pGame_->pModelHandler_); }
+        inline Pipeline::Handler &pipelineHandler() const { return std::ref(*pGame_->pPipelineHandler_); }
+        inline Scene::Handler &sceneHandler() const { return std::ref(*pGame_->pSceneHandler_); }
+        inline Shader::Handler &shaderHandler() const { return std::ref(*pGame_->pShaderHandler_); }
+        inline Texture::Handler &textureHandler() const { return std::ref(*pGame_->pTextureHandler_); }
+        inline UI::Handler &uiHandler() const { return std::ref(*pGame_->pUIHandler_); }
+
+       protected:
+        Handler(Game *pGame) : pGame_(pGame) {}
+
+        virtual void reset() = 0;
+
+        Game *pGame_;
+    };
+
+   protected:
+    Game(const std::string &name, const std::vector<std::string> &args,
+         std::unique_ptr<Command::Handler> &&pCommandHandler = nullptr,
+         std::unique_ptr<Loading::Handler> &&pLoadingHandler = nullptr,
+         std::unique_ptr<Material::Handler> &&pMaterialHandler = nullptr,
+         std::unique_ptr<Model::Handler> &&pModelHandler = nullptr,
+         std::unique_ptr<Pipeline::Handler> &&pPipelineHandler = nullptr,
+         std::unique_ptr<Scene::Handler> &&pSceneHandler = nullptr,
+         std::unique_ptr<Shader::Handler> &&pShaderHandler = nullptr,
+         std::unique_ptr<Texture::Handler> &&pTextureHandler = nullptr,  //
+         std::unique_ptr<UI::Handler> &&pUIHandler = nullptr
+         //
+    );
+
+    // LISTENERS
+    void watchDirectory(const std::string &directory, std::function<void(std::string)> callback);
+
+    // HANDLERS
+    std::unique_ptr<Command::Handler> pCommandHandler_;
+    std::unique_ptr<Loading::Handler> pLoadingHandler_;
+    std::unique_ptr<Material::Handler> pMaterialHandler_;
+    std::unique_ptr<Model::Handler> pModelHandler_;
+    std::unique_ptr<Pipeline::Handler> pPipelineHandler_;
+    std::unique_ptr<Scene::Handler> pSceneHandler_;
+    std::unique_ptr<Shader::Handler> pShaderHandler_;
+    std::unique_ptr<Texture::Handler> pTextureHandler_;
+    std::unique_ptr<UI::Handler> pUIHandler_;
+
+   private:
     Settings settings_;
     Shell *shell_;
 
-   private:
     void parse_args(const std::vector<std::string> &args) {
         for (auto it = args.begin(); it != args.end(); ++it) {
             if (*it == "-b") {

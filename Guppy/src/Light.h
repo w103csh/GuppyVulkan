@@ -6,11 +6,10 @@
 #include <vulkan/vulkan.h>
 
 #include "Constants.h"
+#include "Helpers.h"
 #include "Object3d.h"
 
 namespace Light {
-
-enum class TYPE { BASE = 0 };
 
 typedef enum FLAG {
     SHOW = 0x00000001,
@@ -21,83 +20,56 @@ typedef enum FLAG {
     BITS_MAX_ENUM = 0x7FFFFFFF
 } FLAG;
 
-template <class T>
-struct Base : public Object3d {
+class Base : public Object3d, public DataObject {};
+
+namespace Default {
+
+class Positional : public Base {
    public:
-    Base() : flags_(FLAG::SHOW){};
-
-    // bool operator==(const Base& other) const { return pos == other.pos && normal == other.normal; }
-
-    inline FlagBits getFlags() const { return flags_; }
-    inline void setFlags(FlagBits flags) { flags_ = flags; }
-
-    virtual void getLightData(T& data) = 0;
-
-   protected:
-    FlagBits flags_;
-};  // class Base
-
-struct PositionalData {
-    glm::vec3 position;        // 12
-    FlagBits flags;            // 4
-    alignas(16) glm::vec3 La;  // 12 (Ambient light intensity)
-    // 4 rem
-    alignas(16) glm::vec3 L;  // 12 Diffuse and specular light intensity
-    // 4 rem
-};  // struct BaseData
-
-class Positional : public Base<PositionalData> {
-   public:
-    Positional(glm::vec3 La = glm::vec3(0.1f), glm::vec3 L = glm::vec3(0.6f)) : Base(), La_(La), L_(L){};
-
-    void getLightData(PositionalData& data) override {
-        data.position = getWorldSpacePosition();
-        data.flags = flags_;
-        data.La = La_;
-        data.L = L_;
+    struct DATA {
+        glm::vec3 position{};            // 12
+        FlagBits flags{FLAG::SHOW};      // 4
+        alignas(16) glm::vec3 La{0.1f};  // 12 (Ambient light intensity)
+        // 4 rem
+        alignas(16) glm::vec3 L{0.6f};  // 12 Diffuse and specular light intensity
+        // 4 rem
     };
 
+    Positional(DATA data = {}) : Base(), data_(data){};
+
    private:
-    glm::vec3 La_;
-    glm::vec3 L_;
+    inline VkDeviceSize getDataSize() const { return sizeof DATA; }
+    inline const void* getData() { return &data_; }
 
-};  // class Positional
-
-struct SpotData {
-    glm::vec3 position;               // 12
-    FlagBits flags;                   // 4
-    glm::vec3 La;                     // 12 (Ambient light intensity)
-    float exponent;                   // 4
-    glm::vec3 L;                      // 12 Diffuse and specular light intensity
-    float cutoff;                     // 4
-    alignas(16) glm::vec3 direction;  // 12
-    // 4 rem
+    DATA data_;
 };
 
-class Spot : public Base<SpotData> {
+class Spot : public Base {
    public:
-    Spot() : Base(), La_(glm::vec3(0.0f/*0.5f*/)), L_(glm::vec3(0.9f)), exponent_(50.0f), cutoff_(glm::radians(15.0f)){};
-
-    void getLightData(SpotData& data) override {
-        data.flags = flags_;
-        data.position = getWorldSpacePosition();
-        data.direction = getWorldSpaceDirection();
-        data.La = La_;
-        data.L = L_;
-        data.exponent = exponent_;
-        data.cutoff = cutoff_;
+    struct DATA {
+        glm::vec3 position{};                         // 12
+        FlagBits flags{FLAG::SHOW};                   // 4
+        glm::vec3 La{0.0f};                           // 12 (Ambient light intensity)
+        float exponent{50.0f};                        // 4
+        glm::vec3 L{0.9f};                            // 12 Diffuse and specular light intensity
+        float cutoff{glm::radians(15.0f)};            // 4
+        alignas(16) glm::vec3 direction{CARDINAL_Z};  // 12
+        // 4 rem
     };
 
-    inline void setCutoff(float f) { cutoff_ = f; }
-    inline void setExponent(float f) { exponent_ = f; }
+    Spot(DATA data = {}) : Base(), data_(data){};
+
+    inline void setCutoff(float f) { data_.cutoff = f; }
+    inline void setExponent(float f) { data_.exponent = f; }
 
    private:
-    glm::vec3 La_;
-    glm::vec3 L_;
-    float exponent_;
-    float cutoff_;
+    inline VkDeviceSize getDataSize() const { return sizeof DATA; }
+    inline const void* getData() { return &data_; }
 
-};  // class Spot
+    DATA data_;
+};
+
+}  // namespace Default
 
 }  // namespace Light
 

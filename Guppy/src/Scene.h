@@ -7,55 +7,58 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "Handlee.h"
 #include "Helpers.h"
 #include "Mesh.h"
-#include "Shell.h"
-#include "Uniform.h"
 
-namespace RenderPass {
-class Base;
-}
+// clang-format off
+namespace RenderPass { class Base; }
+// clang-format on
 
-class Scene {
-    friend class SceneHandler;
+namespace Scene {
+
+class Handler;
+
+class Base : public Handlee<Scene::Handler> {
+    friend class Handler;
 
    public:
+    Base(const Scene::Handler &handler, size_t offset);
+    virtual ~Base();
+
     inline size_t getOffset() { return offset_; }
 
-    std::unique_ptr<ColorMesh> &getColorMesh(size_t index) { return colorMeshes_[index]; }
-    std::unique_ptr<LineMesh> &getLineMesh(size_t index) { return lineMeshes_[index]; }
-    std::unique_ptr<TextureMesh> &getTextureMesh(size_t index) { return texMeshes_[index]; }
+    inline std::unique_ptr<ColorMesh> &getColorMesh(const size_t &index) { return colorMeshes_[index]; }
+    inline std::unique_ptr<LineMesh> &getLineMesh(const size_t &index) { return lineMeshes_[index]; }
+    inline std::unique_ptr<TextureMesh> &getTextureMesh(const size_t &index) { return texMeshes_[index]; }
 
-    std::unique_ptr<ColorMesh> &moveMesh(const Game::Settings &settings, const Shell::Context &ctx,
-                                         std::unique_ptr<ColorMesh> pMesh);
-    std::unique_ptr<LineMesh> &moveMesh(const Game::Settings &settings, const Shell::Context &ctx,
-                                        std::unique_ptr<LineMesh> pMesh);
-    std::unique_ptr<TextureMesh> &moveMesh(const Game::Settings &settings, const Shell::Context &ctx,
-                                           std::unique_ptr<TextureMesh> pMesh);
+    std::unique_ptr<ColorMesh> &moveMesh(std::unique_ptr<ColorMesh> pMesh);
+    std::unique_ptr<LineMesh> &moveMesh(std::unique_ptr<LineMesh> pMesh);
+    std::unique_ptr<TextureMesh> &moveMesh(std::unique_ptr<TextureMesh> pMesh);
 
     void removeMesh(std::unique_ptr<Mesh> &pMesh);
 
-    void record(const Shell::Context &ctx, const uint8_t &frameIndex, std::unique_ptr<RenderPass::Base> &pPass);
+    void record(const uint8_t &frameIndex, std::unique_ptr<RenderPass::Base> &pPass);
 
-    void update(const Game::Settings &settings, const Shell::Context &ctx);
+    void update();
 
-    void destroy(const VkDevice &dev);
+    void destroy();
 
+   protected:
    private:
-    Scene() = delete;
-    Scene(size_t offset);
-
     size_t offset_;
 
-    // Meshes
-    // color
+    // MESH
+    // COLOR
     std::vector<std::unique_ptr<ColorMesh>> colorMeshes_;
     std::vector<std::unique_ptr<LineMesh>> lineMeshes_;
-    // texture
+    // TEXTURE
     std::vector<std::unique_ptr<TextureMesh>> texMeshes_;
 
-    // Loading
+    // LOADING
     std::vector<std::future<Mesh *>> ldgFutures_;
 };
+
+}  // namespace Scene
 
 #endif  // !SCENE_H

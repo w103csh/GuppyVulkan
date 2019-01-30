@@ -5,7 +5,7 @@
         "commandLine": "--dbg",
         "environment": [
         ],
-        "executable": "C:\\Users\\cloin\\source\\repos\\VulkanTest\\build\\Guppy\\src\\Debug\\Guppy.exe",
+        "executable": "C:\\Users\\cloin\\source\\repos\\GuppyVulkan\\build\\Guppy\\src\\Debug\\Guppy.exe",
         "inject": false,
         "options": {
             "allowFullscreen": true,
@@ -18,8 +18,8 @@
             "delayForDebugger": 0,
             "hookIntoChildren": false,
             "refAllResources": false,
-            "verifyMapWrites": false
+            "verifyBufferAccess": false
         },
-        "workingDir": "C:/Users/cloin/source/repos/VulkanTest/build/Guppy/src"
+        "workingDir": "C:/Users/cloin/source/repos/GuppyVulkan/build/Guppy/src"
     }
 }

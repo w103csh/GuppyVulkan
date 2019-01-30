@@ -3,30 +3,34 @@
 
 #include <memory>
 
-#include "Face.h"
+#include "Handlee.h"
 #include "Helpers.h"
 #include "SceneHandler.h"
 
-class LineMesh;
-struct MeshCreateInfo;
+class Face;
 
-class FaceSelection : public LineMesh {
-    friend class SelectionManager;
+namespace Selection {
 
+class FaceInfo {
    public:
-    FaceSelection(MeshCreateInfo *pCreateInfo);
-};
+    FaceInfo(std::unique_ptr<Scene::Base> &pScene, const size_t &offset);
 
-class SceneHandler::SelectionManager {
-    friend class SceneHandler;
-
-   public:
-    SelectionManager() : pFace_(nullptr) {}
-    inline std::unique_ptr<Face> &getFaceSelectionFace() { return pFace_; }
-    void updateFaceSelection(const VkDevice &dev, std::unique_ptr<Face> pFace = nullptr);
+    std::unique_ptr<Scene::Base> &pScene;
+    std::unique_ptr<Face> pFace;
+    inline size_t getOffset() { return offset_; }
 
    private:
-    std::unique_ptr<LineMesh> &getFaceSelection();
+    size_t offset_;
+};
+
+class Manager : public Handlee<Scene::Handler> {
+   public:
+    Manager(const Scene::Handler &handler);
+
+    void addFaceSelection(std::unique_ptr<Scene::Base> &pScene);
+    void updateFaceSelection(std::unique_ptr<Face> pFace = nullptr);
+
+    inline const std::unique_ptr<Face> &getFace() { return pFaceInfo_->pFace; }
 
     template <typename T>
     void selectFace(const Ray &ray, float &tMin, T &pMeshes, Face &face) {
@@ -40,8 +44,10 @@ class SceneHandler::SelectionManager {
         }
     }
 
-    size_t faceSelectionOffset_;
-    std::unique_ptr<Face> pFace_;
+   private:
+    std::unique_ptr<FaceInfo> pFaceInfo_;
 };
+
+}  // namespace Selection
 
 #endif  // !SELECTION_MANAGER_H

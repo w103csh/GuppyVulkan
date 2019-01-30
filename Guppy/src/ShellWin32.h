@@ -40,12 +40,12 @@ class ShellWin32 : public Shell {
     ~ShellWin32();
 
     void run() override;
-    void quit() override;
+    void quit() const override;
 
     // SHADER RECOMPILING
     void asyncAlert(uint64_t milliseconds) override;
     void checkDirectories() override;
-    void watchDirectory(std::string dir, std::function<void(std::string)> callback) override;
+    void watchDirectory(const std::string &directory, std::function<void(std::string)> callback) override;
 
    protected:
     virtual void setPlatformSpecificExtensions() override;

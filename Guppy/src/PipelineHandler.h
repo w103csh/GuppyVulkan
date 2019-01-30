@@ -5,9 +5,9 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "Game.h"
 #include "Material.h"
 #include "Pipeline.h"
-#include "Singleton.h"
 #include "Shader.h"
 #include "Vertex.h"
 
@@ -28,9 +28,6 @@ struct DescriptorSetsReference {
 };
 
 struct CreateInfoResources {
-    // GENERAL (this is just for convenience...)
-    const Shell::Context *pCtx;
-    const Game::Settings *pSettings;
     // BLENDING
     VkPipelineColorBlendAttachmentState blendAttach;
     VkPipelineColorBlendStateCreateInfo colorBlendStateInfo;
@@ -52,56 +49,50 @@ struct CreateInfoResources {
     std::vector<VkPipelineShaderStageCreateInfo> stagesInfo;
 };
 
-class Handler : public Singleton {
-   public:
-    static void init(Shell *sh, const Game::Settings &settings);
-    static inline void destroy() {
-        inst_.reset();
-        inst_.cleanup();
-    }
+class Handler : public Game::Handler {
+    friend class Base;
 
-    Handler(const Handler &) = delete;             // Prevent construction by copying
-    Handler &operator=(const Handler &) = delete;  // Prevent assignment
+   public:
+    Handler(Game *pGame);
+
+    void init() override;
+    inline void destroy() {
+        reset();
+        cleanup();
+    }
 
     // CACHE
-    static const VkPipelineCache &getPipelineCache() { return inst_.cache_; }
+    inline const VkPipelineCache &getPipelineCache() { return cache_; }
 
     // DESCRIPTOR
-    static const VkDescriptorPool &getDescriptorPool() { return inst_.descPool_; }
-    static const VkDescriptorSetLayout &getDescriptorSetLayouts(const std::set<DESCRIPTOR> descTypeSet) {
-        return inst_.descriptorMap_[descTypeSet].layout;
+    inline const VkDescriptorPool &getDescriptorPool() { return descPool_; }
+    inline const VkDescriptorSetLayout &getDescriptorSetLayouts(const std::set<DESCRIPTOR> descTypeSet) const {
+        return descriptorMap_.at(descTypeSet).layout;  // this can throw
     }
-    static void makeDescriptorSets(const PIPELINE &type, DescriptorSetsReference &descSetsRef,
-                                   const std::shared_ptr<Texture::Data> &pTexture = nullptr);
+    void makeDescriptorSets(const PIPELINE &type, DescriptorSetsReference &descSetsRef,
+                            const std::shared_ptr<Texture::DATA> &pTexture = nullptr);
 
     // PUSH CONSTANT
-    static std::vector<VkPushConstantRange> getPushConstantRanges(const PIPELINE &pipelineType,
-                                                                  const std::vector<PUSH_CONSTANT> &pushConstantTypes);
+    std::vector<VkPushConstantRange> getPushConstantRanges(const PIPELINE &pipelineType,
+                                                           const std::vector<PUSH_CONSTANT> &pushConstantTypes) const;
 
     // PIPELINES
-    static void createPipelines(const std::unique_ptr<RenderPass::Base> &pPass, bool remake = false);
-    static const VkPipeline &createPipeline(const PIPELINE &type, const std::unique_ptr<RenderPass::Base> &pPass = nullptr,
-                                            bool setBase = false);
+    void createPipelines(const std::unique_ptr<RenderPass::Base> &pPass, bool remake = false);
+    const VkPipeline &createPipeline(const PIPELINE &type, const std::unique_ptr<RenderPass::Base> &pPass = nullptr,
+                                     bool setBase = false);
 
-    static inline const std::unique_ptr<Pipeline::Base> &getPipeline(const PIPELINE &type) {
+    inline const std::unique_ptr<Pipeline::Base> &getPipeline(const PIPELINE &type) const {
         assert(type != PIPELINE::DONT_CARE);
-        return inst_.pPipelines_[static_cast<uint64_t>(type)];
+        return pPipelines_[static_cast<uint64_t>(type)];
     }
 
     // CLEAN UP
-    static void needsUpdate(const std::vector<SHADER> types);
-    static void cleanup(int frameIndex = -1);
-    static void update();
+    void needsUpdate(const std::vector<SHADER> types);
+    void cleanup(int frameIndex = -1);
+    void update();
 
    private:
-    Handler();     // Prevent construction
-    ~Handler(){};  // Prevent destruction
-    static Handler inst_;
     void reset() override;
-
-    Shell *sh_;
-    Shell::Context ctx_;       // TODO: shared_ptr
-    Game::Settings settings_;  // TODO: shared_ptr
 
     // CACHE
     VkPipelineCache cache_;  // TODO: what is this for???
@@ -110,11 +101,12 @@ class Handler : public Singleton {
     void createDescriptorPool();
     void createDescriptorSetLayouts();
     void allocateDescriptorSets(const std::set<DESCRIPTOR> types, const VkDescriptorSetLayout &layout,
-                                DescriptorMapItem::Resource &resource, const std::shared_ptr<Texture::Data> &pTexture,
+                                DescriptorMapItem::Resource &resource, const std::shared_ptr<Texture::DATA> &pTexture,
                                 uint32_t count = 1);
-    void validateDescriptorTypeKey(const std::set<DESCRIPTOR> descTypes, const std::shared_ptr<Texture::Data> &pTexture);
+    void validateDescriptorTypeKey(const std::set<DESCRIPTOR> descTypes, const std::shared_ptr<Texture::DATA> &pTexture);
     VkDescriptorPool descPool_;
     descriptor_resource_map descriptorMap_;
+    std::vector<std::pair<uint32_t, UNIFORM>> BINDING_UNIFORM_LIST;
 
     // PUSH CONSTANT
     uint32_t maxPushConstantsSize_;
@@ -132,7 +124,7 @@ class Handler : public Singleton {
         }
     }
 
-    // DEFAULT
+    // DEFAULT (TODO: remove default things...)
     VkGraphicsPipelineCreateInfo defaultPipelineInfo_;  // TODO: use this better through creation...
     CreateInfoResources defaultCreateInfoResources_;    // TODO: use this better through creation...
     std::vector<std::unique_ptr<Pipeline::Base>> pPipelines_;

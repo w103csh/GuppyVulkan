@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-#include "Constants.h" // for USE_DEBUG_GUI macro
+#include "Constants.h"  // for USE_DEBUG_GUI macro
 #include "Guppy.h"
 
 namespace {

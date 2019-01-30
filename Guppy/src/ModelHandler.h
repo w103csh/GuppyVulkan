@@ -6,44 +6,72 @@
 #include <vector>
 
 #include "Axes.h"
+#include "Game.h"
 #include "Model.h"
-#include "Shell.h"
-#include "Singleton.h"
+#include "Scene.h"
 #include "Vertex.h"
 
 class ColorMesh;
-class Shell;
 class TextureMesh;
 
-class ModelHandler : public Singleton {
+namespace Model {
+
+class Handler : public Game::Handler {
    public:
-    static void init(Shell* sh, const Game::Settings& settings);
-    static inline void destroy() { inst_.reset(); }
+    Handler(Game* pGame);
 
-    static void makeModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene);
+    void init() override{};
+    inline void destroy() { reset(); }
 
-    static std::unique_ptr<Model>& getModel(MODEL_INDEX offset) {
-        assert(offset < inst_.pModels_.size());
-        return inst_.pModels_[offset];
+    void makeModel(Model::CreateInfo* pCreateInfo, std::unique_ptr<Scene::Base>& pScene);
+
+    std::unique_ptr<Model::Base>& getModel(Model::INDEX offset) {
+        assert(offset < pModels_.size());
+        return pModels_[offset];
     }
 
-    static void update(std::unique_ptr<Scene>& pScene);
+    void update(std::unique_ptr<Scene::Base>& pScene);
 
    private:
-    ModelHandler() : sh_(nullptr){};  // Prevent construction
-    ~ModelHandler(){};                // Prevent construction
-    static ModelHandler inst_;
     void reset() override{};
 
-    Shell* sh_;                // TODO: shared_ptr
-    Game::Settings settings_;  // TODO: shared_ptr
+    void makeColorModel(Model::CreateInfo* pCreateInfo, std::unique_ptr<Scene::Base>& pScene);
+    void makeTextureModel(Model::CreateInfo* pCreateInfo, std::unique_ptr<Scene::Base>& pScene);
 
-    void makeColorModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene);
-    void makeTextureModel(ModelCreateInfo* pCreateInfo, std::unique_ptr<Scene>& pScene);
+    // LOADING
+    std::vector<ColorMesh*> loadColor(const Material::Info& materialInfo, Model::Base& model);
+    std::vector<TextureMesh*> loadTexture(const Material::Info& materialInfo, Model::Base& model);
+
+    // thread sync
+    template <typename T>
+    void handleMeshes(std::unique_ptr<Scene::Base>& pScene, std::unique_ptr<Model::Base>& pModel,
+                      std::vector<T*>&& pMeshes) {
+        for (auto& pMesh : pMeshes) {
+            // Turn mesh into a unique pointer
+            auto p = std::unique_ptr<T>(pMesh);
+
+            // Add a visual helper mesh
+            if (pModel->visualHelper_) {
+                MeshCreateInfo meshCreateInfo = {};
+                meshCreateInfo.isIndexed = false;
+                meshCreateInfo.model = p->getData().model;
+                meshCreateInfo.pipelineType = pModel->PIPELINE_TYPE;
+                std::unique_ptr<LineMesh> pVH = std::make_unique<VisualHelper>(&meshCreateInfo, p);
+
+                auto& rp = pScene->moveMesh(std::move(pVH));
+                pModel->addOffset(rp);  // Separate visual helper offset???
+            }
+
+            // Add mesh to scene
+            auto& rp = pScene->moveMesh(std::move(p));
+            // Store the offset of the mesh into the scene buffers after moving.
+            pModel->addOffset(rp);
+        }
+    }
 
     // Mesh futures
     template <typename T>
-    void checkFutures(std::unique_ptr<Scene>& pScene, std::unordered_map<MODEL_INDEX, T>& futuresMap) {
+    void checkFutures(std::unique_ptr<Scene::Base>& pScene, std::unordered_map<Model::INDEX, T>& futuresMap) {
         // Check futures
         if (!futuresMap.empty()) {
             for (auto it = futuresMap.begin(); it != futuresMap.end();) {
@@ -75,35 +103,11 @@ class ModelHandler : public Singleton {
         }
     }
 
-    // thread sync
-    template <typename T>
-    void handleMeshes(std::unique_ptr<Scene>& pScene, std::unique_ptr<Model>& pModel, std::vector<T*>&& pMeshes) {
-        for (auto& pMesh : pMeshes) {
-            // Turn mesh into a unique pointer
-            auto p = std::unique_ptr<T>(pMesh);
-
-            // Add a visual helper mesh
-            if (pModel->visualHelper_) {
-                MeshCreateInfo meshCreateInfo = {};
-                meshCreateInfo.isIndexed = false;
-                meshCreateInfo.model = p->getData().model;
-                meshCreateInfo.pipelineType = pModel->PIPELINE_TYPE;
-                std::unique_ptr<LineMesh> pVH = std::make_unique<VisualHelper>(&meshCreateInfo, p);
-
-                auto& rp = pScene->moveMesh(inst_.settings_, sh_->context(), std::move(pVH));
-                pModel->addOffset(rp);  // Separate visual helper offset???
-            }
-
-            // Add mesh to scene
-            auto& rp = pScene->moveMesh(inst_.settings_, sh_->context(), std::move(p));
-            // Store the offset of the mesh into the scene buffers after moving.
-            pModel->addOffset(rp);
-        }
-    }
-
-    std::vector<std::unique_ptr<Model>> pModels_;
-    std::unordered_map<MODEL_INDEX, std::pair<std::future<std::vector<ColorMesh*>>, MODEL_CALLBACK>> ldgColorFutures_;
-    std::unordered_map<MODEL_INDEX, std::pair<std::future<std::vector<TextureMesh*>>, MODEL_CALLBACK>> ldgTexFutures_;
+    std::vector<std::unique_ptr<Model::Base>> pModels_;
+    std::unordered_map<Model::INDEX, std::pair<std::future<std::vector<ColorMesh*>>, Model::CBACK>> ldgColorFutures_;
+    std::unordered_map<Model::INDEX, std::pair<std::future<std::vector<TextureMesh*>>, Model::CBACK>> ldgTexFutures_;
 };
+
+}  // namespace Model
 
 #endif  // !MODEL_HANDLER_H

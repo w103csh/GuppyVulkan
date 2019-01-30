@@ -26,16 +26,6 @@
 
 #include "Game.h"
 
-namespace RenderPass {
-class Base;
-}
-
-class UI {
-   public:
-    virtual void draw(std::unique_ptr<RenderPass::Base> &pPass, uint8_t frameIndex) = 0;
-    virtual void reset() = 0;
-};
-
 // structure for comparing char arrays
 struct less_str {
     bool operator()(char const *a, char const *b) const { return std::strcmp(a, b) < 0; }
@@ -120,8 +110,7 @@ class Shell {
         VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     };
 
-    const Context &context() const { return ctx_; }
-    const Game &game() const { return game_; }
+    inline const Context &context() const { return ctx_; }
 
     // LOGGING
     enum LogPriority {
@@ -133,23 +122,19 @@ class Shell {
     virtual void log(LogPriority priority, const char *msg) const;
 
     virtual void run() = 0;
-    virtual void quit() = 0;
+    virtual void quit() const = 0;
 
     // SHADER RECOMPILING
-    virtual void asyncAlert(uint64_t milliseconds) = 0;                                           // TODO: think this through
-    virtual void checkDirectories() = 0;                                                          // TODO: think this through
-    virtual void watchDirectory(std::string dir, std::function<void(std::string)> callback) = 0;  // TODO: think this through
+    virtual void asyncAlert(uint64_t milliseconds) = 0;  // TODO: think this through
+    virtual void checkDirectories() = 0;                 // TODO: think this through
+    virtual void watchDirectory(const std::string &directory,
+                                const std::function<void(std::string)> callback) = 0;  // TODO: think this through
 
     inline void onKey(GAME_KEY key) { game_.onKey(key); }                   // TODO: think this through
     inline void onMouse(const MouseInput &input) { game_.onMouse(input); }  // TODO: think this through
 
     // SWAPCHAIN
     void resizeSwapchain(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities = true);
-
-    // UI
-    virtual std::shared_ptr<UI> getUI() const { return nullptr; };  // TODO: think this through
-    virtual void initUI(VkRenderPass pass){};                       // TODO: think this through
-    virtual void updateRenderPass(){};                              // TODO: think this through
 
    protected:
     Shell(Game &game);

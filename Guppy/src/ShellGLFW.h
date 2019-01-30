@@ -10,11 +10,8 @@
 #include <type_traits>
 #include <vulkan/vulkan.h>
 
-#include "CmdBufHandler.h"
 #include "Helpers.h"
-#include "ImGuiUI.h"
 #include "Shell.h"
-#include "PipelineHandler.h"
 
 void glfw_error_callback(int error, const char* description);
 void glfw_resize_callback(GLFWwindow* window, int w, int h);
@@ -37,10 +34,7 @@ class ShellGLFW : public T {
             log(LOG_ERR, "GLFW: Failed to initialize\n");
             assert(false);
         }
-
         createWindow();
-        // After window is created instantiate the UI class
-        pUI_ = std::make_shared<ImGuiUI>(window_);
 
         // Setup Vulkan
         if (!glfwVulkanSupported()) {
@@ -110,28 +104,6 @@ class ShellGLFW : public T {
         glfwTerminate();
     }
 
-    void initUI(VkRenderPass pass) override {
-        ImGui_ImplVulkan_InitInfo init_info = {};
-        init_info.Instance = context().instance;
-        init_info.PhysicalDevice = context().physical_dev;
-        init_info.Device = context().dev;
-        init_info.QueueFamily = context().graphics_index;
-        init_info.Queue = context().queues[context().graphics_index];
-        init_info.PipelineCache = Pipeline::Handler::getPipelineCache();
-        init_info.DescriptorPool = Pipeline::Handler::getDescriptorPool();
-        init_info.Allocator = nullptr;
-        init_info.CheckVkResultFn = (void (*)(VkResult))vk::assert_success;
-
-        ImGui_ImplVulkan_Init(&init_info, pass);
-    }
-
-    std::shared_ptr<UI> getUI() const override { return static_cast<std::shared_ptr<UI>>(pUI_); }
-
-    void updateRenderPass() override {
-        //
-        assert(false);
-    }
-
    private:
     void setupImGui() {
         // Setup Dear ImGui context
@@ -165,8 +137,6 @@ class ShellGLFW : public T {
         // Setup Style
         ImGui::StyleColorsDark();
         // ImGui::StyleColorsClassic();
-
-        uploadFonts();
     }
 
     void createWindow() override {
@@ -187,20 +157,6 @@ class ShellGLFW : public T {
         glfwSetWindowUserPointer(window_, this);
     }
 
-    void uploadFonts() {
-        ImGui_ImplVulkan_CreateFontsTexture(CmdBufHandler::graphics_cmd());
-        CmdBufHandler::endCmd(CmdBufHandler::graphics_cmd());
-
-        VkSubmitInfo end_info = {};
-        end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        end_info.commandBufferCount = 1;
-        end_info.pCommandBuffers = &CmdBufHandler::graphics_cmd();
-        vk::assert_success(vkQueueSubmit(CmdBufHandler::graphics_queue(), 1, &end_info, VK_NULL_HANDLE));
-
-        vk::assert_success(vkDeviceWaitIdle(context().dev));
-        ImGui_ImplVulkan_InvalidateFontUploadObjects();
-    }
-
     VkSurfaceKHR createSurface(VkInstance instance) override {
         VkSurfaceKHR surface;
         vk::assert_success(glfwCreateWindowSurface(instance, window_, nullptr, &surface));
@@ -218,7 +174,6 @@ class ShellGLFW : public T {
 
     GLFWwindow* window_;
     ImGui_ImplVulkanH_WindowData windowData_;
-    std::shared_ptr<ImGuiUI> pUI_;
 };
 
 #endif  // !SHELL_GLFW_H
