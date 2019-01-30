@@ -1,57 +1,41 @@
 
-#include "InputHandler.h"
 #include "SceneHandler.h"
+
+#include "InputHandler.h"
 #include "SelectionManager.h"
+#include "Shell.h"
 #include "TextureHandler.h"
 
-SceneHandler SceneHandler::inst_;
+Scene::Handler::Handler(Game* pGame)
+    : Game::Handler(pGame), activeSceneIndex_(), pSelectionManager_(std::make_unique<Selection::Manager>(std::ref(*this))) {}
 
-SceneHandler::SceneHandler() : activeSceneIndex_(), pSelectionManager_(std::make_unique<SelectionManager>()) {}
+Scene::Handler::~Handler() = default;  // Required in this file for inner-class forward declaration of "SelectionManager"
 
-SceneHandler::~SceneHandler() = default;  // Required in this file for inner-class forward declaration of "SelectionManager"
+void Scene::Handler::init() { reset(); }
 
-void SceneHandler::init(Shell* sh, const Game::Settings& settings) {
-    inst_.reset();
-    inst_.sh_ = sh;
-    inst_.ctx_ = sh->context();
-    inst_.settings_ = settings;
-}
-
-void SceneHandler::reset() {
-    for (auto& scene : pScenes_) scene->destroy(ctx_.dev);
+void Scene::Handler::reset() {
+    for (auto& scene : pScenes_) scene->destroy();
     pScenes_.clear();
 }
 
-SCENE_INDEX_TYPE SceneHandler::makeScene(bool setActive, bool makeFaceSelection) {
-    assert(inst_.pScenes_.size() < UINT8_MAX);
-    SCENE_INDEX_TYPE offset = inst_.pScenes_.size();
+SCENE_INDEX_TYPE Scene::Handler::makeScene(bool setActive, bool makeFaceSelection) {
+    assert(pScenes_.size() < UINT8_MAX);
+    SCENE_INDEX_TYPE offset = pScenes_.size();
 
-    inst_.pScenes_.emplace_back(std::unique_ptr<Scene>(new Scene(offset)));
-    if (setActive) inst_.activeSceneIndex_ = offset;
+    pScenes_.push_back(std::make_unique<Scene::Base>(std::ref(*this), offset));
+    if (setActive) activeSceneIndex_ = offset;
 
     // Selection
-    if (makeFaceSelection && inst_.pSelectionManager_->pFace_ == nullptr) {
-        // Face selection
-        MeshCreateInfo createInfo = {};
-        createInfo.pipelineType = PIPELINE::LINE;
-        createInfo.isIndexed = false;
-        createInfo.materialInfo.flags = Material::FLAG::HIDE;
-
-        std::unique_ptr<LineMesh> pFaceSelection = std::make_unique<FaceSelection>(&createInfo);
-        // thread sync
-        inst_.pSelectionManager_->faceSelectionOffset_ =
-            inst_.getActiveScene()->moveMesh(inst_.settings_, inst_.ctx_, std::move(pFaceSelection))->getOffset();
-    }
-
+    if (makeFaceSelection) pSelectionManager_->addFaceSelection(getActiveScene());
     // TODO: move selection meshes...
 
     return offset;
 }
 
-void SceneHandler::updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline) {
+void Scene::Handler::updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline) {
     // Not concerned with speed here at the moment. If recreating pipelines
     // becomes something that is needed a lot then this is not great.
-    for (auto& pScene : inst_.pScenes_) {
+    for (auto& pScene : pScenes_) {
         for (auto& pMesh : pScene->colorMeshes_)
             if (pMesh->PIPELINE_TYPE == type) pMesh->updatePipelineReferences(type, pipeline);
         for (auto& pMesh : pScene->lineMeshes_)
@@ -61,29 +45,30 @@ void SceneHandler::updatePipelineReferences(const PIPELINE& type, const VkPipeli
     }
 }
 
-const std::unique_ptr<Face>& SceneHandler::getFaceSelectionFace() { return inst_.pSelectionManager_->pFace_; }
+const std::unique_ptr<Face>& Scene::Handler::getFaceSelection() { return pSelectionManager_->getFace(); }
 
-void SceneHandler::select(const VkDevice& dev, const Ray& ray) {
+void Scene::Handler::select(const Ray& ray) {
     float tMin = T_MAX;  // This is relative to the distance between ray.e & ray.d
     Face face;
 
-    inst_.pSelectionManager_->selectFace(ray, tMin, getActiveScene()->colorMeshes_, face);
-    inst_.pSelectionManager_->selectFace(ray, tMin, getActiveScene()->texMeshes_, face);
+    // TODO: pass the scene in, or better, fix it...
+    pSelectionManager_->selectFace(ray, tMin, getActiveScene()->colorMeshes_, face);
+    pSelectionManager_->selectFace(ray, tMin, getActiveScene()->texMeshes_, face);
 
-    inst_.pSelectionManager_->updateFaceSelection(dev, (tMin < T_MAX) ? std::make_unique<Face>(face) : nullptr);
+    pSelectionManager_->updateFaceSelection((tMin < T_MAX) ? std::make_unique<Face>(face) : nullptr);
 }
 
-void SceneHandler::updateDescriptorSets(SCENE_INDEX_TYPE offset, bool isUpdate) {
-    // auto& pScene = inst_.pScenes_[offset];
+void Scene::Handler::updateDescriptorSets(SCENE_INDEX_TYPE offset, bool isUpdate) {
+    // auto& pScene = pScenes_[offset];
 
     //// destroy old uniforms first
     // if (isUpdate) {
-    //    inst_.invalidRes_.push_back(
+    //    invalidRes_.push_back(
     //        {pScene->pDescResources_->pool, pScene->pDescResources_->texSets, pScene->pDynUBOResource_});
     //    pScene->pDynUBOResource_ = nullptr;
     //    pScene->pDescResources_->texSets.clear();
 
-    //    pScene->createDynamicTexUniformBuffer(inst_.ctx_, inst_.settings_);
+    //    pScene->createDynamicTexUniformBuffer(shell().context(), settings());
     //    pScene->pDescResources_->dynUboInfos = {pScene->pDynUBOResource_->info};
     //    pScene->pDescResources_->texCount = pScene->pDynUBOResource_->count;
     //    pScene->pDescResources_->texSets.resize(pScene->pDynUBOResource_->count);
@@ -97,22 +82,22 @@ void SceneHandler::updateDescriptorSets(SCENE_INDEX_TYPE offset, bool isUpdate) 
     //}
 }
 
-void SceneHandler::cleanupInvalidResources() {
-    for (auto& res : inst_.invalidRes_) {
+void Scene::Handler::cleanup() {
+    for (auto& res : invalidRes_) {
         // dynamic buffer
         if (res.pDynUBORes != nullptr) {
-            vkDestroyBuffer(inst_.ctx_.dev, res.pDynUBORes->buffer, nullptr);
-            vkFreeMemory(inst_.ctx_.dev, res.pDynUBORes->memory, nullptr);
+            vkDestroyBuffer(shell().context().dev, res.pDynUBORes->buffer, nullptr);
+            vkFreeMemory(shell().context().dev, res.pDynUBORes->memory, nullptr);
         }
         // descriptor sets
         if (!res.texSets.empty()) assert(res.pool != VK_NULL_HANDLE);
         for (auto& sets : res.texSets) {
             if (!sets.empty()) {
                 vk::assert_success(
-                    vkFreeDescriptorSets(inst_.ctx_.dev, res.pool, static_cast<uint32_t>(sets.size()), sets.data()));
+                    vkFreeDescriptorSets(shell().context().dev, res.pool, static_cast<uint32_t>(sets.size()), sets.data()));
             }
             sets.clear();
         }
     }
-    inst_.invalidRes_.clear();
+    invalidRes_.clear();
 }

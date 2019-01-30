@@ -36,6 +36,7 @@ enum class STATUS {
     PENDING = 0,
     READY,
     PENDING_BUFFERS,
+    PENDING_MATERIAL,
     PENDING_TEXTURE,
     REDRAW,
     UPDATE_BUFFERS,
@@ -155,6 +156,28 @@ enum class DESCRIPTOR {
     DEFAULT_UNIFORM = 0,
     DEFAULT_SAMPLER = 1,
     DEFAULT_DYNAMIC_UNIFORM = 2,
+};
+
+enum class UNIFORM {
+    // CAMERA
+    CAMERA_PERSPECTIVE_DEFAULT,
+    // LIGHT
+    LIGHT_POSITIONAL_DEFAULT,
+    LIGHT_POSITIONAL_PBR,
+    LIGHT_SPOT_DEFAULT,
+    // FOG,
+    FOG_DEFAULT,
+    // MATERIAL
+    MATERIAL_DEFAULT,
+    MATERIAL_PBR,
+    // SAMPLER
+    SAMPLER_DEFAULT,
+};
+
+enum class MATERIAL {
+    //
+    DEFAULT,
+    PBR,
 };
 
 enum class INPUT_ACTION {
@@ -311,17 +334,20 @@ VkFormat findSupportedFormat(const VkPhysicalDevice &phyDev, const std::vector<V
 
 VkFormat findDepthFormat(const VkPhysicalDevice &phyDev);
 
-bool getMemoryType(uint32_t typeBits, VkFlags reqMask, uint32_t *typeIndex);
+bool getMemoryType(const VkPhysicalDeviceMemoryProperties &memProps, uint32_t typeBits, VkMemoryPropertyFlags reqMask,
+                   uint32_t *typeIndex);
 
 VkDeviceSize createBuffer(const VkDevice &dev, const VkDeviceSize &size, const VkBufferUsageFlags &usage,
-                          const VkMemoryPropertyFlags &props, VkBuffer &buff, VkDeviceMemory &mem);
+                          const VkMemoryPropertyFlags &props, const VkPhysicalDeviceMemoryProperties &memProps,
+                          VkBuffer &buff, VkDeviceMemory &mem);
 
 void copyBuffer(const VkCommandBuffer &cmd, const VkBuffer &srcBuff, const VkBuffer &dstBuff, const VkDeviceSize &size);
 
-void createImage(const VkDevice &dev, const std::vector<uint32_t> &queueFamilyIndices,
-                 const VkSampleCountFlagBits &numSamples, const VkFormat &format, const VkImageTiling &tiling,
-                 const VkImageUsageFlags &usage, const VkFlags &reqMask, uint32_t width, uint32_t height, uint32_t mipLevels,
-                 uint32_t arrayLayers, VkImage &image, VkDeviceMemory &memory);
+void createImage(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps,
+                 const std::vector<uint32_t> &queueFamilyIndices, const VkSampleCountFlagBits &numSamples,
+                 const VkFormat &format, const VkImageTiling &tiling, const VkImageUsageFlags &usage, const VkFlags &reqMask,
+                 uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t arrayLayers, VkImage &image,
+                 VkDeviceMemory &memory);
 
 void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount,
                        const VkBuffer &src_buf, const VkImage &dst_img);
@@ -363,29 +389,17 @@ static glm::vec3 positionOnLine(const glm::vec3 &a, const glm::vec3 &b, float t)
 
 }  // namespace helpers
 
-struct ImageResource {
-    VkFormat format;
-    VkImage image = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
-    VkImageView view = VK_NULL_HANDLE;
-};
-
 struct BufferResource {
     VkBuffer buffer = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
     VkDeviceSize memoryRequirementsSize;
 };
 
-struct FrameDataHologram {
-    // signaled when this struct is ready for reuse
-    VkFence fence = VK_NULL_HANDLE;
-
-    VkCommandBuffer primary_cmd = VK_NULL_HANDLE;
-    std::vector<VkCommandBuffer> worker_cmds;
-
-    VkBuffer buf = VK_NULL_HANDLE;
-    uint8_t *base = nullptr;
-    VkDescriptorSet desc_set = VK_NULL_HANDLE;
+struct ImageResource {
+    VkFormat format;
+    VkImage image = VK_NULL_HANDLE;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    VkImageView view = VK_NULL_HANDLE;
 };
 
 // TODO: check other places like LoadingResourceHandler to see if this
@@ -415,6 +429,19 @@ struct DescriptorBufferResources {
     VkDescriptorBufferInfo info;
     VkBuffer buffer = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
+};
+
+struct DescriptorResource {
+    VkDescriptorBufferInfo info = {};
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+};
+
+class DataObject {
+   public:
+    virtual VkDeviceSize getDataSize() const = 0;
+
+   protected:
+    virtual const void *getData() = 0;
 };
 
 // These are basically a unit. Maybe move this into a full on data structure.

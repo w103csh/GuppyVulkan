@@ -1,14 +1,64 @@
 
+#include <imgui.h>
+#include <imgui_impl_glfw.h>
+#include <imgui_impl_vulkan.h>
 #include <glm/glm.hpp>
 
-#include "ImGuiUI.h"
+#include "ImGuiHandler.h"
 
-#include "CmdBufHandler.h"
+#include "CommandHandler.h"
 #include "Face.h"
 #include "Helpers.h"
 #include "SceneHandler.h"
 
-void ImGuiUI::draw(std::unique_ptr<RenderPass::Base>& pPass, uint8_t frameIndex) {
+void UI::ImGuiHandler::init() {
+    // if (pRenderPass != nullptr) pRenderPass->destroy(dev);
+    // pRenderPass = std::move(pPass);
+
+    // RENDER PASS
+    RenderPass::InitInfo initInfo = {};
+    initInfo = {};
+    initInfo.format = shell().context().surfaceFormat.format;
+    initInfo.commandCount = shell().context().imageCount;
+    initInfo.waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    pPass_->init(shell().context(), settings(), &initInfo);
+
+    // VULKAN INIT
+    ImGui_ImplVulkan_InitInfo init_info = {};
+    init_info.Instance = shell().context().instance;
+    init_info.PhysicalDevice = shell().context().physical_dev;
+    init_info.Device = shell().context().dev;
+    init_info.QueueFamily = shell().context().graphics_index;
+    init_info.Queue = shell().context().queues[shell().context().graphics_index];
+    init_info.PipelineCache = pipelineHandler().getPipelineCache();
+    init_info.DescriptorPool = pipelineHandler().getDescriptorPool();
+    init_info.Allocator = nullptr;
+    init_info.CheckVkResultFn = (void (*)(VkResult))vk::assert_success;
+
+    ImGui_ImplVulkan_Init(&init_info, pPass_->pass);
+
+    // FONTS
+    ImGui_ImplVulkan_CreateFontsTexture(commandHandler().graphicsCmd());
+    vkEndCommandBuffer(commandHandler().graphicsCmd());
+
+    VkSubmitInfo end_info = {};
+    end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    end_info.commandBufferCount = 1;
+    end_info.pCommandBuffers = &commandHandler().graphicsCmd();
+    vk::assert_success(
+        vkQueueSubmit(shell().context().queues[shell().context().graphics_index], 1, &end_info, VK_NULL_HANDLE));
+
+    vk::assert_success(vkDeviceWaitIdle(shell().context().dev));
+    ImGui_ImplVulkan_InvalidateFontUploadObjects();
+}
+
+void UI::ImGuiHandler::updateRenderPass(RenderPass::FrameInfo* pFrameInfo) {
+    pPass_->createTarget(shell().context(), settings(), commandHandler(), pFrameInfo);
+}
+
+void UI::ImGuiHandler::reset() { pPass_->destroyTargetResources(shell().context().dev, commandHandler()); }
+
+void UI::ImGuiHandler::draw(uint8_t frameIndex) {
     // if (pPass->data.tests[frameIndex] == 0) {
     //    return;
     //}
@@ -25,20 +75,16 @@ void ImGuiUI::draw(std::unique_ptr<RenderPass::Base>& pPass, uint8_t frameIndex)
     // Rendering
     ImGui::Render();
 
-    auto& cmd = pPass->data.priCmds[frameIndex];
-    pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
+    auto& cmd = pPass_->data.priCmds[frameIndex];
+    pPass_->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
 
     // Record Imgui Draw Data and draw funcs into command buffer
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd, frameIndex);
 
-    pPass->endPass(frameIndex);
+    pPass_->endPass(frameIndex);
 }
 
-void ImGuiUI::reset() {
-    // vkFreeCommandBuffers(ctx_.dev, CmdBufHandler::present_cmd_pool(), 1, &inst_.cmd_);
-}
-
-void ImGuiUI::appMainMenuBar() {
+void UI::ImGuiHandler::appMainMenuBar() {
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu("File")) {
             menuFile();
@@ -66,7 +112,7 @@ void ImGuiUI::appMainMenuBar() {
     }
 }
 
-void ImGuiUI::menuFile() {
+void UI::ImGuiHandler::menuFile() {
     // ImGui::MenuItem("(dummy menu)", NULL, false, false);
     if (ImGui::MenuItem("New")) {
     }
@@ -92,18 +138,19 @@ void ImGuiUI::menuFile() {
     if (ImGui::MenuItem("Save As..")) {
     }
     if (ImGui::MenuItem("Quit", "Alt+F4")) {
-        glfwSetWindowShouldClose(window_, GLFW_TRUE);
+        assert(false);
+        // glfwSetWindowShouldClose(window_, GLFW_TRUE);
     }
 }
 
-void ImGuiUI::menuShowWindows() {
+void UI::ImGuiHandler::menuShowWindows() {
     if (ImGui::MenuItem("Selection Information", nullptr, &showSelectionInfoWindow_)) {
     }
     if (ImGui::MenuItem("Demo Window", nullptr, &showDemoWindow_)) {
     }
 }
 
-void ImGuiUI::showSelectionInfoWindow(bool* p_open) {
+void UI::ImGuiHandler::showSelectionInfoWindow(bool* p_open) {
     // We specify a default position/size in case there's no data in the .ini file. Typically this isn't required! We only do
     // it to make the Demo applications a little more welcoming.
     ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
@@ -121,13 +168,13 @@ void ImGuiUI::showSelectionInfoWindow(bool* p_open) {
 
     ImGui::Text("FACES:");
     ImGui::Separator();
-    showFaceSelectionInfoText(SceneHandler::getFaceSelectionFace());
+    showFaceSelectionInfoText(sceneHandler().getFaceSelection());
 
     // End of showSelectionInfoWindow()
     ImGui::End();
 }
 
-void ImGuiUI::showFaceSelectionInfoText(const std::unique_ptr<Face>& pFace) {
+void UI::ImGuiHandler::showFaceSelectionInfoText(const std::unique_ptr<Face>& pFace) {
     if (pFace == nullptr) {
         ImGui::Text("No face...");
         return;

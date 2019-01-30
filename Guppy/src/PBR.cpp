@@ -34,5 +34,5 @@ void Pipeline::PBR::Color::getInputAssemblyInfoResources(Pipeline::CreateInfoRes
 
 void Pipeline::PBR::Color::getShaderInfoResources(Pipeline::CreateInfoResources& createInfoRes) {
     createInfoRes.stagesInfo.clear();  // TODO: faster way?
-    Shader::Handler::getStagesInfo({SHADER::COLOR_VERT, SHADER::PBR_COLOR_FRAG}, createInfoRes.stagesInfo);
+    handler_.shaderHandler().getStagesInfo({SHADER::COLOR_VERT, SHADER::PBR_COLOR_FRAG}, createInfoRes.stagesInfo);
 }

@@ -9,9 +9,10 @@
 #include "Helpers.h"
 #include "Shell.h"
 
-namespace Pipeline {
-class Base;
-}
+// clang-format off
+namespace Command   { class Handler; }
+namespace Pipeline  { class Base; }
+// clang-format on
 
 namespace RenderPass {
 
@@ -70,7 +71,8 @@ class Base {
     void init(const Shell::Context &ctx, const Game::Settings &settings, RenderPass::InitInfo *pInfo,
               SubpassResources *pSubpassResources = nullptr);
 
-    virtual void createTarget(const Shell::Context &ctx, const Game::Settings &settings, RenderPass::FrameInfo *pInfo);
+    virtual void createTarget(const Shell::Context &ctx, const Game::Settings &settings, Command::Handler &cmdBuffHandler,
+                              RenderPass::FrameInfo *pInfo);
 
     virtual inline void beginPass(
         const uint8_t &frameIndex,
@@ -113,7 +115,7 @@ class Base {
     virtual void beginSecondary(const uint8_t &frameIndex) {}
     virtual void endSecondary(const uint8_t &frameIndex, const VkCommandBuffer &priCmd) {}
 
-    virtual void getSubmitResource(const uint8_t &frameIndex, SubmitResource &resource) = 0;
+    virtual void getSubmitResource(const uint8_t &frameIndex, SubmitResource &resource) const = 0;
 
     // SETTINGS
     InitInfo initInfo;
@@ -130,7 +132,7 @@ class Base {
     };
 
     virtual void destroy(const VkDevice &dev);  // calls destroyFrameData
-    virtual void destroyTargetResources(const VkDevice &dev);
+    virtual void destroyTargetResources(const VkDevice &dev, Command::Handler &cmdBuffHandler);
 
     // TODO: Scene as friend?
     VkRenderPass pass;
@@ -160,9 +162,11 @@ class Base {
     SubpassResources subpassResources_;
 
     // FRAME DATA
-    virtual void createCommandBuffers(const Shell::Context &ctx);
-    virtual void createColorResources(const Shell::Context &ctx, const Game::Settings &settings) {}
-    virtual void createDepthResource(const Shell::Context &ctx, const Game::Settings &settings) {}
+    virtual void createCommandBuffers(const Shell::Context &ctx, Command::Handler &cmdBuffHandler);
+    virtual void createColorResources(const Shell::Context &ctx, const Game::Settings &settings,
+                                      Command::Handler &cmdBuffHandler) {}
+    virtual void createDepthResource(const Shell::Context &ctx, const Game::Settings &settings,
+                                     Command::Handler &cmdBuffHandler) {}
     virtual void createFramebuffers(const Shell::Context &ctx, const Game::Settings &settings) {}
     virtual void createFences(const Shell::Context &ctx, VkFenceCreateFlags flags = VK_FENCE_CREATE_SIGNALED_BIT);
 
@@ -217,7 +221,7 @@ class Default : public Base {
         secCmdFlag_ = false;
     }
 
-    void getSubmitResource(const uint8_t &frameIndex, SubmitResource &resource) override;
+    void getSubmitResource(const uint8_t &frameIndex, SubmitResource &resource) const override;
 
    private:
     void createClearValues(const Shell::Context &ctx, const Game::Settings &settings) override;
@@ -226,9 +230,11 @@ class Default : public Base {
     VkCommandBufferBeginInfo secCmdBeginInfo_;
     bool secCmdFlag_;
 
-    void createCommandBuffers(const Shell::Context &ctx) override;
-    void createColorResources(const Shell::Context &ctx, const Game::Settings &settings) override;
-    void createDepthResource(const Shell::Context &ctx, const Game::Settings &settings) override;
+    void createCommandBuffers(const Shell::Context &ctx, Command::Handler &cmdBuffHandler) override;
+    void createColorResources(const Shell::Context &ctx, const Game::Settings &settings,
+                              Command::Handler &cmdBuffHandler) override;
+    void createDepthResource(const Shell::Context &ctx, const Game::Settings &settings,
+                             Command::Handler &cmdBuffHandler) override;
     void createAttachmentsAndSubpasses(const Shell::Context &ctx, const Game::Settings &settings) override;
     void createDependencies(const Shell::Context &ctx, const Game::Settings &settings) override;
     void createFramebuffers(const Shell::Context &ctx, const Game::Settings &settings) override;

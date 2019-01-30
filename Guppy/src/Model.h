@@ -9,6 +9,7 @@
 #include <vulkan/vulkan.h>
 
 #include "FileLoader.h"
+#include "Handlee.h"
 #include "Helpers.h"
 #include "Material.h"
 #include "Object3d.h"
@@ -16,49 +17,49 @@
 class ColorMesh;
 class LineMesh;
 class Mesh;
-class Model;
-class Scene;
-class Shell;
 class TextureMesh;
 
-typedef uint32_t MODEL_INDEX;
-#define MODEL_INDEX_MAX UINT32_MAX
-typedef std::function<void(Model *)> MODEL_CALLBACK;
+namespace Model {
 
-typedef struct ModelCreateInfo {
+class Base;
+class Handler;
+
+typedef uint32_t INDEX;
+constexpr auto INDEX_MAX = UINT32_MAX;
+typedef std::function<void(Model::Base *)> CBACK;
+
+typedef struct CreateInfo {
     bool async = false;
     bool needsTexture = false;
     bool smoothNormals = false;
     bool visualHelper = false;
-    MODEL_CALLBACK callback = nullptr;
-    MODEL_INDEX handlerOffset = MODEL_INDEX_MAX;  // TODO: this should only be set by the handler...
+    Model::CBACK callback = nullptr;
+    Model::INDEX handlerOffset = Model::INDEX_MAX;  // TODO: this should only be set by the handler...
     Material::Info materialInfo = {};
     glm::mat4 model = glm::mat4(1.0f);
     std::string modelPath = "";
     PIPELINE pipelineType = PIPELINE::DONT_CARE;
-} ModelCreateInfo;
+} CreateInfo;
 
-class Model : public Object3d {
-    friend class ModelHandler;
+class Base : public Object3d, public Handlee<Model::Handler> {
+    friend class Model::Handler;
 
    public:
-    Model::Model(ModelCreateInfo *pCreateInfo, MODEL_INDEX sceneOffset);
+    Base(const Model::Handler &handler, Model::CreateInfo *pCreateInfo, Model::INDEX sceneOffset);
+    virtual ~Base();
 
     const PIPELINE PIPELINE_TYPE;
 
-    inline MODEL_INDEX getHandlerOffset() const { return handlerOffset_; }
-    inline MODEL_INDEX getSceneOffset() const { return sceneOffset_; }
+    inline Model::INDEX getHandlerOffset() const { return handlerOffset_; }
+    inline Model::INDEX getSceneOffset() const { return sceneOffset_; }
 
-    std::vector<ColorMesh *> loadColor(Shell *sh, const Material::Info &materialInfo);
-    std::vector<TextureMesh *> loadTexture(Shell *sh, const Material::Info &materialInfo);
-
-    void postLoad(MODEL_CALLBACK callback);
+    void postLoad(Model::CBACK callback);
 
     virtual inline void transform(const glm::mat4 t) override;
     // void updateAggregateBoundingBox(std::unique_ptr<Scene> &pScene);
 
     // TODO: use a conditional template argument
-    MODEL_INDEX getMeshOffset(MESH type, uint8_t offset);
+    Model::INDEX getMeshOffset(MESH type, uint8_t offset);
 
     STATUS status;
 
@@ -66,9 +67,9 @@ class Model : public Object3d {
     void allMeshAction(std::function<void(Mesh *)> action);
     void updateAggregateBoundingBox(Mesh *pMesh);
 
-    MODEL_INDEX handlerOffset_;
+    Model::INDEX handlerOffset_;
     std::string modelPath_;
-    MODEL_INDEX sceneOffset_;
+    Model::INDEX sceneOffset_;
     bool smoothNormals_;
     bool visualHelper_;
 
@@ -76,9 +77,11 @@ class Model : public Object3d {
     void addOffset(std::unique_ptr<LineMesh> &pMesh);
     void addOffset(std::unique_ptr<TextureMesh> &pMesh);
 
-    std::vector<MODEL_INDEX> colorOffsets_;
-    std::vector<MODEL_INDEX> lineOffsets_;
-    std::vector<MODEL_INDEX> texOffsets_;
+    std::vector<Model::INDEX> colorOffsets_;
+    std::vector<Model::INDEX> lineOffsets_;
+    std::vector<Model::INDEX> texOffsets_;
 };
+
+}  // namespace Model
 
 #endif  // !MODEL_H

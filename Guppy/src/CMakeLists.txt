@@ -1,24 +1,29 @@
-    
+
 set(SOURCE
     Axes.h
     Axes.cpp
     Box.cpp
     Box.h
+    BufferManager.h
     Camera.cpp
     Camera.h
-	CmdBufHandler.cpp
-	CmdBufHandler.h
+	CommandHandler.cpp
+	CommandHandler.h
     CMakeLists.txt
     Constants.h
     EventHandlers.h
     Extensions.h
     Face.cpp
     Face.h
+    FaceMesh.cpp
+    FaceMesh.h
 	FileLoader.cpp
     FileLoader.h
+    Game.cpp
     Game.h
     Guppy.cpp
     Guppy.h
+    Handlee.h
 	Helpers.cpp
     Helpers.h
     InputHandler.cpp
@@ -27,13 +32,13 @@ set(SOURCE
     InstanceData.h
     Light.cpp
     Light.h
-    LoadingResourceHandler.cpp
-    LoadingResourceHandler.h
+    LoadingHandler.cpp
+    LoadingHandler.h
     Main.cpp
 	Material.cpp
 	Material.h
-	Mesh.cpp
-	Mesh.h
+    MaterialHandler.cpp
+    MaterialHandler.h
     Model.cpp
     Model.h
     ModelHandler.cpp
@@ -53,6 +58,9 @@ set(SOURCE
     Singleton.h
     Vertex.cpp
     Vertex.h
+    # Mesh
+	Mesh.cpp
+	Mesh.h
     # Shell
     Shell.cpp
     Shell.h
@@ -72,6 +80,8 @@ set(SOURCE
     ShaderHandler.h
     Uniform.cpp
     Uniform.h
+    UniformHandler.cpp
+    UniformHandler.h
     # Texture
     Sampler.cpp
     Sampler.h
@@ -80,8 +90,8 @@ set(SOURCE
     TextureHandler.cpp
     TextureHandler.h
     # UI
-    ImGuiUI.cpp
-    ImGuiUI.h
+    ImGuiHandler.cpp
+    ImGuiHandler.h
     ImGuiRenderPass.cpp
     ImGuiRenderPass.h
     UIHandler.cpp

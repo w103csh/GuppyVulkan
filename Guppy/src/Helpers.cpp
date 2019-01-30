@@ -1,7 +1,6 @@
 
 #include <unordered_map>
 
-#include "CmdBufHandler.h"
 #include "Face.h"
 #include "Helpers.h"
 #include "Mesh.h"
@@ -35,12 +34,13 @@ VkFormat findDepthFormat(const VkPhysicalDevice &phyDev) {
                                VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
 }
 
-bool getMemoryType(uint32_t typeBits, VkFlags reqMask, uint32_t *typeIndex) {
+bool getMemoryType(const VkPhysicalDeviceMemoryProperties &memProps, uint32_t typeBits, VkMemoryPropertyFlags reqMask,
+                   uint32_t *typeIndex) {
     // Search memtypes to find first index with those properties
-    for (uint32_t i = 0; i < CmdBufHandler::mem_props().memoryTypeCount; i++) {
+    for (uint32_t i = 0; i < memProps.memoryTypeCount; i++) {
         if ((typeBits & 1) == 1) {
             // Type is available, does it match user properties?
-            if ((CmdBufHandler::mem_props().memoryTypes[i].propertyFlags & reqMask) == reqMask) {
+            if ((memProps.memoryTypes[i].propertyFlags & reqMask) == reqMask) {
                 *typeIndex = i;
                 return true;
             }
@@ -52,7 +52,8 @@ bool getMemoryType(uint32_t typeBits, VkFlags reqMask, uint32_t *typeIndex) {
 }
 
 VkDeviceSize createBuffer(const VkDevice &dev, const VkDeviceSize &size, const VkBufferUsageFlags &usage,
-                          const VkMemoryPropertyFlags &props, VkBuffer &buff, VkDeviceMemory &mem) {
+                          const VkMemoryPropertyFlags &props, const VkPhysicalDeviceMemoryProperties &memProps,
+                          VkBuffer &buff, VkDeviceMemory &mem) {
     VkBufferCreateInfo buffInfo = {};
     buffInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffInfo.size = size;
@@ -73,9 +74,7 @@ VkDeviceSize createBuffer(const VkDevice &dev, const VkDeviceSize &size, const V
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = memReqs.size;
-    auto pass =
-        getMemoryType(memReqs.memoryTypeBits, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                      &allocInfo.memoryTypeIndex);
+    auto pass = getMemoryType(memProps, memReqs.memoryTypeBits, props, &allocInfo.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
     /*
@@ -118,10 +117,11 @@ void copyBuffer(const VkCommandBuffer &cmd, const VkBuffer &srcBuff, const VkBuf
     vkCmdCopyBuffer(cmd, srcBuff, dstBuff, 1, &copyRegion);
 }
 
-void createImage(const VkDevice &dev, const std::vector<uint32_t> &queueFamilyIndices,
-                 const VkSampleCountFlagBits &numSamples, const VkFormat &format, const VkImageTiling &tiling,
-                 const VkImageUsageFlags &usage, const VkFlags &reqMask, uint32_t width, uint32_t height, uint32_t mipLevels,
-                 uint32_t arrayLayers, VkImage &image, VkDeviceMemory &memory) {
+void createImage(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps,
+                 const std::vector<uint32_t> &queueFamilyIndices, const VkSampleCountFlagBits &numSamples,
+                 const VkFormat &format, const VkImageTiling &tiling, const VkImageUsageFlags &usage, const VkFlags &reqMask,
+                 uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t arrayLayers, VkImage &image,
+                 VkDeviceMemory &memory) {
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;  // param?
@@ -149,7 +149,7 @@ void createImage(const VkDevice &dev, const std::vector<uint32_t> &queueFamilyIn
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     allocInfo.allocationSize = mem_reqs.size;
     /* Use the memory properties to determine the type of memory required */
-    auto pass = getMemoryType(mem_reqs.memoryTypeBits, reqMask, &allocInfo.memoryTypeIndex);
+    auto pass = getMemoryType(memProps, mem_reqs.memoryTypeBits, reqMask, &allocInfo.memoryTypeIndex);
     assert(pass);
 
     /* Allocate memory */
@@ -280,7 +280,7 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
     //    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
     //    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
     //} else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout ==
-    //VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
+    // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
     //    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     //    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     //    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
@@ -331,14 +331,14 @@ void cramers3(glm::vec3 &&c1, glm::vec3 &&c2, glm::vec3 &&c3, glm::vec3 &&c4) {
         This should be faster than using glm::determinant...
         potentially. T
     */
-    //glm::mat3 A(c1, c2, c3);
-    //auto M_ = glm::determinant(A);
-    //glm::mat3 BETA(c4, c2, c3);
-    //auto beta_ = glm::determinant(BETA) / M_;
-    //glm::mat3 GAMMA(c1, c4, c3);
-    //auto gamma_ = glm::determinant(GAMMA) / M_;
-    //glm::mat3 T(c1, c2, c4);
-    //auto t_ = glm::determinant(T) / M_;
+    // glm::mat3 A(c1, c2, c3);
+    // auto M_ = glm::determinant(A);
+    // glm::mat3 BETA(c4, c2, c3);
+    // auto beta_ = glm::determinant(BETA) / M_;
+    // glm::mat3 GAMMA(c1, c4, c3);
+    // auto gamma_ = glm::determinant(GAMMA) / M_;
+    // glm::mat3 T(c1, c2, c4);
+    // auto t_ = glm::determinant(T) / M_;
 }
 
 }  // namespace helpers

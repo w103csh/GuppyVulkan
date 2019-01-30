@@ -9,7 +9,7 @@
 #include "Helpers.h"
 #include "RenderPass.h"
 
-class Model;
+class Base;
 struct MouseInput;
 class Shell;
 
@@ -43,8 +43,8 @@ class Guppy : public Game {
     // Simulation sim_;
 
     // SWAPCHAIN
-    void createSwapchainResources(const Shell::Context& ctx);
-    void destroySwapchainResources(const Shell::Context& ctx);
+    void createSwapchainResources();
+    void destroySwapchainResources();
     struct SwapchainResources {
         std::vector<VkImage> images;
         std::vector<VkImageView> views;
@@ -56,9 +56,9 @@ class Guppy : public Game {
 
     // RENDER PASS
     void initRenderPasses();
+    void updateRenderPasses();
     void submitRenderPasses(const std::vector<SubmitResource>& resources, VkFence fence = VK_NULL_HANDLE);
     std::unique_ptr<RenderPass::Base> pDefaultRenderPass_;
-    std::unique_ptr<RenderPass::Base> pUIRenderPass_;
 
     // SCENE
     void createScenes();

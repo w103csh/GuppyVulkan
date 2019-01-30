@@ -1,12 +1,11 @@
 
 #include "Scene.h"
 
-#include "CmdBufHandler.h"
 #include "PipelineHandler.h"
 #include "RenderPass.h"
 #include "SceneHandler.h"
+#include "Shell.h"
 #include "TextureHandler.h"
-#include "UIHandler.h"
 
 namespace {
 
@@ -16,53 +15,52 @@ struct UBOTag {
 
 }  // namespace
 
-Scene::Scene(size_t offset) : offset_(offset) {}
+Scene::Base::Base(const Scene::Handler& handler, size_t offset) : Handlee(handler), offset_(offset) {}
 
-std::unique_ptr<ColorMesh>& Scene::moveMesh(const Game::Settings& settings, const Shell::Context& ctx,
-                                            std::unique_ptr<ColorMesh> pMesh) {
+Scene::Base::~Base() = default;
+
+std::unique_ptr<ColorMesh>& Scene::Base::moveMesh(std::unique_ptr<ColorMesh> pMesh) {
     assert(pMesh->getStatus() == STATUS::PENDING_BUFFERS);
 
     auto offset = colorMeshes_.size();
     pMesh->setSceneData(offset);
 
     colorMeshes_.push_back(std::move(pMesh));
-    colorMeshes_.back()->prepare(ctx.dev, settings, true);
+    colorMeshes_.back()->prepare(handler_, true);
 
     return colorMeshes_.back();
 }
 
-std::unique_ptr<LineMesh>& Scene::moveMesh(const Game::Settings& settings, const Shell::Context& ctx,
-                                           std::unique_ptr<LineMesh> pMesh) {
+std::unique_ptr<LineMesh>& Scene::Base::moveMesh(std::unique_ptr<LineMesh> pMesh) {
     assert(pMesh->getStatus() == STATUS::PENDING_BUFFERS);
 
     auto offset = lineMeshes_.size();
     pMesh->setSceneData(offset);
 
     lineMeshes_.push_back(std::move(pMesh));
-    lineMeshes_.back()->prepare(ctx.dev, settings, true);
+    lineMeshes_.back()->prepare(handler_, true);
 
     return lineMeshes_.back();
 }
 
-std::unique_ptr<TextureMesh>& Scene::moveMesh(const Game::Settings& settings, const Shell::Context& ctx,
-                                              std::unique_ptr<TextureMesh> pMesh) {
+std::unique_ptr<TextureMesh>& Scene::Base::moveMesh(std::unique_ptr<TextureMesh> pMesh) {
     assert(pMesh->getStatus() == STATUS::PENDING_BUFFERS);
 
     auto offset = texMeshes_.size();
     pMesh->setSceneData(offset);
 
     texMeshes_.push_back(std::move(pMesh));
-    texMeshes_.back()->prepare(ctx.dev, settings, true);
+    texMeshes_.back()->prepare(handler_, true);
 
     return texMeshes_.back();
 }
 
-void Scene::removeMesh(std::unique_ptr<Mesh>& pMesh) {
+void Scene::Base::removeMesh(std::unique_ptr<Mesh>& pMesh) {
     // TODO...
     assert(false);
 }
 
-void Scene::record(const Shell::Context& ctx, const uint8_t& frameIndex, std::unique_ptr<RenderPass::Base>& pPass) {
+void Scene::Base::record(const uint8_t& frameIndex, std::unique_ptr<RenderPass::Base>& pPass) {
     // if (pPass->data.tests[frameIndex] == 0) {
     //    return;
     //}
@@ -106,7 +104,7 @@ void Scene::record(const Shell::Context& ctx, const uint8_t& frameIndex, std::un
     pPass->endPass(frameIndex);
 }
 
-void Scene::update(const Game::Settings& settings, const Shell::Context& ctx) {
+void Scene::Base::update() {
     // Check loading futures
     if (!ldgFutures_.empty()) {
         auto itFut = ldgFutures_.begin();
@@ -120,7 +118,7 @@ void Scene::update(const Game::Settings& settings, const Shell::Context& ctx) {
             if (status == std::future_status::ready) {
                 auto pMesh = fut.get();
                 // Future is ready so prepare the mesh...
-                pMesh->prepare(ctx.dev, settings, true);
+                pMesh->prepare(handler_, true);
 
                 // Remove the future from the list if all goes well.
                 itFut = ldgFutures_.erase(itFut);
@@ -134,12 +132,13 @@ void Scene::update(const Game::Settings& settings, const Shell::Context& ctx) {
     // TODO: fix all this ready stuff
     for (auto& pMesh : texMeshes_) {
         if (pMesh->getStatus() == STATUS::PENDING_TEXTURE) {
-            pMesh->prepare(ctx.dev, settings, false);
+            pMesh->prepare(handler_, false);
         }
     }
 }
 
-void Scene::destroy(const VkDevice& dev) {
+void Scene::Base::destroy() {
+    const auto& dev = handler_.shell().context().dev;
     // mesh
     for (auto& pMesh : colorMeshes_) pMesh->destroy(dev);
     colorMeshes_.clear();

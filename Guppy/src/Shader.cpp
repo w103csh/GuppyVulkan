@@ -16,7 +16,7 @@ void Shader::Base::init(const VkDevice& dev, const Game::Settings& settings, std
     // Check if shader needs to be (re)compiled
     std::vector<const char*> shaderTexts = {loadText(load)};
 
-    Shader::Handler::appendLinkTexts(LINK_TYPES, shaderTexts);
+    handler_.appendLinkTexts(LINK_TYPES, shaderTexts);
     // pShaderTexts.insert(pShaderTexts.end(), pLinkTexts.begin(), pLinkTexts.end());
 
     std::vector<unsigned int> spv;
@@ -71,8 +71,9 @@ using namespace Shader;
 
 const char* UtilityFragment::loadText(bool load) {
     Base::loadText(load);
-    Shader::Handler::lightMacroReplace("NUM_POS_LIGHTS", Shader::Handler::getDefUniformPositionLightCount(), text_);
-    Shader::Handler::lightMacroReplace("NUM_SPOT_LIGHTS", Shader::Handler::getDefUniformSpotLightCount(), text_);
+    assert(false);
+    // Shader::Handler::lightMacroReplace("NUM_POS_LIGHTS", Shader::Handler::getDefUniformPositionLightCount(), text_);
+    // Shader::Handler::lightMacroReplace("NUM_SPOT_LIGHTS", Shader::Handler::getDefUniformSpotLightCount(), text_);
     return text_.c_str();
 }
 

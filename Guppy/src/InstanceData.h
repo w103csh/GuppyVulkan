@@ -15,7 +15,7 @@ const uint32_t BINDING = 1;
 
 struct Data {
     glm::mat4 model = glm::mat4(1.0f);
-    Material::Base::DATA materialData;
+    Material::Default::DATA materialData;
 };
 
 // color (instanced)

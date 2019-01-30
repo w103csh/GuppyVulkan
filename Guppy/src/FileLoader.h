@@ -23,7 +23,7 @@ typedef struct {
     std::vector<tinyobj::material_t> materials;
 } tinyobj_data;
 
-void getObjData(Shell *sh, tinyobj_data &data);
+void getObjData(const Shell &sh, tinyobj_data &data);
 
 /* BECUASE TEMPLATES ARE STUPID ALL OF THIS CODE NEEDS TO BE IN THE HEADER */
 template <typename TMap, class TVertex>
@@ -65,7 +65,7 @@ void loadObjData(const tinyobj_data &data, std::vector<TVertex *> &pMeshes) {
             auto &pMesh = pMeshes[materialOffset];
 
             // TODO: bring back the model class that loads all of these things in the right order...
-            if (pMesh->getMaterial().hasTexture() && pMesh->getMaterial().getTexture()->flags & Texture::FLAG::NORMAL) {
+            if (pMesh->hasNormalMap()) {
                 hasNormalMap = true;
             } else if (!data.materials.empty()) {
                 // TODO: do this right...
