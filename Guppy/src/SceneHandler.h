@@ -6,15 +6,9 @@
 
 #include "Constants.h"
 #include "Helpers.h"
+#include "Mesh.h"
 #include "Scene.h"
 #include "Game.h"
-
-class ColorMesh;
-class LineMesh;
-class TextureMesh;
-// clang-format off
-namespace Selection { class Manager; }
-// clang-format on
 
 namespace Scene {
 
@@ -46,22 +40,12 @@ class Handler : public Game::Handler {
         return pScenes_[activeSceneIndex_];
     }
 
-    inline std::unique_ptr<ColorMesh>& getColorMesh(size_t sceneOffset, size_t meshOffset) {
-        return pScenes_[sceneOffset]->getColorMesh(meshOffset);
-    }
-    inline std::unique_ptr<LineMesh>& getLineMesh(size_t sceneOffset, size_t meshOffset) {
-        return pScenes_[sceneOffset]->getLineMesh(meshOffset);
-    }
-    inline std::unique_ptr<TextureMesh>& getTextureMesh(size_t sceneOffset, size_t meshOffset) {
-        return pScenes_[sceneOffset]->getTextureMesh(meshOffset);
-    }
+    std::unique_ptr<Mesh::Color>& getColorMesh(size_t sceneOffset, size_t meshOffset);
+    std::unique_ptr<Mesh::Line>& getLineMesh(size_t sceneOffset, size_t meshOffset);
+    std::unique_ptr<Mesh::Texture>& getTextureMesh(size_t sceneOffset, size_t meshOffset);
 
     // PIPELINE
     void updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline);
-
-    // SELECTION
-    const std::unique_ptr<Face>& getFaceSelection();
-    void select(const Ray& ray);
 
     void updateDescriptorSets(SCENE_INDEX_TYPE offset, bool isUpdate = true);
     void cleanup();
@@ -74,9 +58,6 @@ class Handler : public Game::Handler {
 
     // global storage for clean up
     std::vector<InvalidSceneResources> invalidRes_;
-
-    // Selection
-    std::unique_ptr<Selection::Manager> pSelectionManager_;
 };
 
 }  // namespace Scene

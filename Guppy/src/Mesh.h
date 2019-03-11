@@ -7,33 +7,48 @@
 #include <vector>
 
 #include "Constants.h"
-#include "Face.h"
+#include "Handlee.h"
 #include "Helpers.h"
-#include "LoadingHandler.h"
 #include "Material.h"
 #include "Shell.h"
 #include "Object3d.h"
-#include "PipelineHandler.h"
 #include "Texture.h"
 
+#include "DescriptorHandler.h"  // TODO: why is this necessary?
+#include "PipelineHandler.h"    // TODO: why is this necessary?
+
 // clang-format off
-namespace Scene { class Handler; }
+class Face;
+//namespace Descriptor    { struct Reference; }
+namespace Loading       { struct Resource; }
+//namespace Pipeline      { struct Reference; }
+namespace Scene         { class Handler; }
 // clang-format on
 
-// **********************
-//  Mesh
-// **********************
+namespace Mesh {
 
-typedef struct MeshCreateInfo {
-    bool isIndexed = true;
+typedef uint32_t INDEX;
+constexpr Mesh::INDEX BAD_OFFSET = UINT32_MAX;
+
+class Handler;
+
+typedef struct CreateInfo {
+    bool isIndexed = true;  // This is dumb
     glm::mat4 model = glm::mat4(1.0f);
-    size_t offset = 0;
     PIPELINE pipelineType = PIPELINE::DONT_CARE;
-    Material::Info materialInfo = {};
     bool selectable = true;
-} MeshCreateInfo;
+    bool mappable = false;
+} CreateInfo;
 
-class Mesh : public Object3d {
+// **********************
+//      Base
+// **********************
+
+class Base : public Object3d, public Handlee<Mesh::Handler> {
+    friend class Mesh::Handler;
+    friend class Descriptor::Handler;  // Reference (TODO: get rid of this)
+    friend class Pipeline::Handler;    // Reference (TODO: get rid of this)
+
    public:
     typedef enum FLAG {
         POLY = 0x00000001,
@@ -41,38 +56,42 @@ class Mesh : public Object3d {
         // THROUGH 0x00000008
     } FLAG;
 
-    Mesh(const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags, const std::string& name,
-         MeshCreateInfo* pCreateInfo);
-    /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTRs OF THIS CLASS.
-        IF THIS IS REMOVED THE DESTRUCTOR HERE WILL BE CALLED INSTEAD OF THE DERIVED DESTRUCTOR.
-        IT MIGHT JUST BE EASIER/SMARTER TO GET RID OF POLYMORPHISM AND DROP THE POINTERS. */
-    virtual ~Mesh() = default;
+    Base() = delete;
+    Base(const Base&) = delete;
+    Base& operator=(const Base&) = delete;
+    Base(Base&&) = delete;
+    Base& operator=(Base&&) = delete;
 
+    const FlagBits FLAGS;
+    const bool MAPPABLE;
+    const std::string NAME;
+    const PIPELINE PIPELINE_TYPE;
     const MESH TYPE;
     const VERTEX VERTEX_TYPE;
-    const PIPELINE PIPELINE_TYPE;
-    const FlagBits FLAGS;
-    const std::string NAME;
 
-    inline size_t getOffset() const { return offset_; }
+    inline Mesh::INDEX getOffset() const { return offset_; }
     inline STATUS getStatus() const { return status_; }
 
     // MATERIAL
-    inline Material::Base& getMaterial() const { return std::ref(*pMaterial_); }
+    inline auto& getMaterial() { return pMaterial_; }
     inline bool hasNormalMap() const {
-        return pMaterial_->hasTexture() && pMaterial_->getTexture()->flags & Texture::FLAG::NORMAL;
+        return pMaterial_->hasTexture() && pMaterial_->getTexture()->flags & ::Texture::FLAG::NORMAL;
     }
 
-    inline void setStatusPendingBuffers() {
-        assert(status_ == STATUS::PENDING || status_ == STATUS::PENDING_TEXTURE);
-        status_ = STATUS::PENDING_BUFFERS;
+    inline void setStatus(const STATUS&& status) {
+        switch (status) {
+            case STATUS::PENDING_BUFFERS:
+                assert(status_ == STATUS::PENDING_VERTICES);
+                status_ = STATUS::PENDING_BUFFERS;
+                break;
+            default:
+                assert(false && "Unhandled case for mesh status");
+                break;
+        }
     }
-
-    // INIT
-    void setSceneData(size_t offset);
 
     // LOADING
-    virtual void prepare(const Scene::Handler& sceneHandler, bool load);
+    void prepare();
 
     // VERTEX
     virtual Vertex::Complete getVertexComplete(size_t index) const = 0;
@@ -80,20 +99,12 @@ class Mesh : public Object3d {
     virtual inline void addVertex(const Face& face);
     virtual inline uint32_t getVertexCount() const = 0;  // TODO: this shouldn't be public
     virtual const glm::vec3& getVertexPositionAtOffset(size_t offset) const = 0;
-    void updateBuffers(const VkDevice& dev);
+    void updateBuffers();
     inline VkBuffer& getVertexBuffer() { return vertexRes_.buffer; }
 
     // INDEX
-    inline uint32_t getFaceCount() const {
-        assert(indices_.size() % Face::NUM_VERTICES == 0);
-        return static_cast<uint32_t>(indices_.size()) / Face::NUM_VERTICES;
-    }
-    inline Face getFace(size_t faceIndex) {
-        VB_INDEX_TYPE idx0 = indices_[faceIndex + 0];
-        VB_INDEX_TYPE idx1 = indices_[faceIndex + 1];
-        VB_INDEX_TYPE idx2 = indices_[faceIndex + 2];
-        return {getVertexComplete(idx0), getVertexComplete(idx1), getVertexComplete(idx2), idx0, idx1, idx2, 0};
-    }
+    uint32_t getFaceCount() const;
+    Face getFace(size_t faceIndex);
     inline void addIndices(std::vector<VB_INDEX_TYPE>& is) {
         for (auto i : is) indices_.push_back(i);
     }
@@ -106,7 +117,7 @@ class Mesh : public Object3d {
     inline uint32_t getInstanceCount() const { return instances_.size() + 1; }
     // inline uint32_t getInstanceSize() const { return static_cast<uint32_t>(sizeof(PushConstants) * getInstanceCount()); }
     // inline void getInstanceData(std::vector<PushConstants>& pushConstants) const {
-    //    pushConstants.push_back({getData().model, pMaterial_->getData()});
+    //    pushConstants.push_back({getModel(), pMaterial_->getData()});
     //    for (auto& instance : instances_) {
     //        pushConstants.push_back({instance.first, instance.second->getData()});
     //    }
@@ -123,54 +134,65 @@ class Mesh : public Object3d {
     // PIPELINE
     void updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline);
 
-    virtual void destroy(const VkDevice& dev);
+    virtual void destroy();
 
    protected:
+    Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags, const std::string&& name,
+         CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial);
+    /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTRs OF THIS CLASS.
+        IF THIS IS REMOVED THE DESTRUCTOR HERE WILL BE CALLED INSTEAD OF THE DERIVED DESTRUCTOR.
+        IT MIGHT JUST BE EASIER/SMARTER TO GET RID OF POLYMORPHISM AND DROP THE POINTERS. */
+    virtual ~Base();
+
     // VERTEX
-    void loadBuffers(const Scene::Handler& sceneHandler);
+    void loadBuffers();
     virtual inline const void* getVertexData() const = 0;
-    virtual inline VkDeviceSize getVertexBufferSize() const = 0;
+    virtual inline VkDeviceSize getVertexBufferSize(bool assert = false) const = 0;
 
     // INDEX
     inline VB_INDEX_TYPE* getIndexData() { return indices_.data(); }
     inline uint32_t getIndexCount() const { return static_cast<uint32_t>(indices_.size()); }
-    inline VkDeviceSize getIndexBufferSize() const {
-        VkDeviceSize p_bufferSize = sizeof(indices_[0]) * indices_.size();
-        return p_bufferSize;
+    inline VkDeviceSize getIndexBufferSize(bool assert = false) const {
+        VkDeviceSize bufferSize = sizeof(indices_[0]) * indices_.size();
+        if (assert) assert(bufferSize == indexRes_.memoryRequirements.size);
+        return bufferSize;
     }
 
+    STATUS status_;
     // INFO
     bool isIndexed_;
-    size_t offset_;
     bool selectable_;
     // INSTANCE
     std::vector<std::pair<glm::mat4, std::unique_ptr<Material::Base>>> instances_;
     // PIPELINE
-    Pipeline::DescriptorSetsReference descReference_;
+    Pipeline::Reference pipelineReference_;
+    // DESCRIPTOR
+    Descriptor::Reference descriptorReference_;
 
-    STATUS status_;
     BufferResource vertexRes_;
     std::vector<VB_INDEX_TYPE> indices_;
     BufferResource indexRes_;
     std::unique_ptr<Loading::Resources> pLdgRes_;
-    std::unique_ptr<Material::Base> pMaterial_;
+    std::shared_ptr<Material::Base> pMaterial_;
 
    private:
-    void createBufferData(const Shell::Context& ctx, const Game::Settings& settings, const VkCommandBuffer& cmd,
-                          BufferResource& stgRes, VkDeviceSize bufferSize, const void* data, BufferResource& res,
-                          VkBufferUsageFlagBits usage, std::string bufferType);
+    void createBufferData(const VkCommandBuffer& cmd, BufferResource& stgRes, VkDeviceSize bufferSize, const void* data,
+                          BufferResource& res, VkBufferUsageFlagBits usage, std::string bufferType);
 
     void bindPushConstants(VkCommandBuffer cmd) const;  // TODO: I hate this...
+
+    Mesh::INDEX offset_;
 };
 
 // **********************
-// ColorMesh
+//      Color
 // **********************
 
-class ColorMesh : public Mesh {
+class Color : public Base {
+    friend class Mesh::Handler;
+
    public:
-    ColorMesh(const std::string&& name, MeshCreateInfo* pCreateInfo)
-        : Mesh{MESH::COLOR, VERTEX::COLOR, FLAG::POLY, name, pCreateInfo} {}
+    ~Color();
 
     // VERTEX
     inline Vertex::Complete getVertexComplete(size_t index) const override {
@@ -188,37 +210,46 @@ class ColorMesh : public Mesh {
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
     inline uint32_t getVertexCount() const { return vertices_.size(); }
-    inline VkDeviceSize getVertexBufferSize() const {
-        VkDeviceSize p_bufferSize = sizeof(Vertex::Color) * vertices_.size();
-        return p_bufferSize;
+    inline VkDeviceSize getVertexBufferSize(bool assert = false) const {
+        VkDeviceSize bufferSize = sizeof(Vertex::Color) * vertices_.size();
+        if (assert) assert(bufferSize == vertexRes_.memoryRequirements.size);
+        return bufferSize;
     }
     const glm::vec3& getVertexPositionAtOffset(size_t offset) const override { return vertices_[offset].position; }
 
    protected:
-    ColorMesh(const FLAG&& flags, const std::string&& name, MeshCreateInfo* pCreateInfo)
-        : Mesh{MESH::COLOR, VERTEX::COLOR, std::forward<const FLAG>(flags), name, pCreateInfo} {}
+    Color(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
+          std::shared_ptr<Material::Base>& pMaterial);
+    Color(Mesh::Handler& handler, const FLAG&& flags, const std::string&& name, CreateInfo* pCreateInfo,
+          std::shared_ptr<Material::Base>& pMaterial);
 
     std::vector<Vertex::Color> vertices_;
 };
 
 // **********************
-// LineMesh
+//      Line
 // **********************
 
-class LineMesh : public ColorMesh {
+class Line : public Color {
+    friend class Mesh::Handler;
+
    public:
-    LineMesh(const std::string&& name, MeshCreateInfo* pCreateInfo)
-        : ColorMesh(FLAG::LINE, std::forward<const std::string>(name), pCreateInfo) {}
+    ~Line();
+
+   protected:
+    Line(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
+         std::shared_ptr<Material::Base>& pMaterial);
 };
 
 // **********************
-// TextureMesh
+//      Texture
 // **********************
 
-class TextureMesh : public Mesh {
+class Texture : public Base {
+    friend class Mesh::Handler;
+
    public:
-    TextureMesh(const std::string&& name, MeshCreateInfo* pCreateInfo)
-        : Mesh{MESH::COLOR, VERTEX::TEXTURE, FLAG::POLY, name, pCreateInfo} {}
+    ~Texture();
 
     // VERTEX
     inline Vertex::Complete getVertexComplete(size_t index) const override {
@@ -236,17 +267,20 @@ class TextureMesh : public Mesh {
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
     inline uint32_t getVertexCount() const { return vertices_.size(); }
-    inline VkDeviceSize getVertexBufferSize() const {
-        VkDeviceSize p_bufferSize = sizeof(Vertex::Texture) * vertices_.size();
-        return p_bufferSize;
+    inline VkDeviceSize getVertexBufferSize(bool assert = false) const {
+        VkDeviceSize bufferSize = sizeof(Vertex::Texture) * vertices_.size();
+        if (assert) assert(bufferSize == vertexRes_.memoryRequirements.size);
+        return bufferSize;
     }
     const glm::vec3& getVertexPositionAtOffset(size_t offset) const override { return vertices_[offset].position; }
 
-    // LOADING
-    void prepare(const Scene::Handler& sceneHandler, bool load) override;
-
    protected:
+    Texture(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
+            std::shared_ptr<Material::Base>& pMaterial);
+
     std::vector<Vertex::Texture> vertices_;
 };
+
+}  // namespace Mesh
 
 #endif  // !MESH_H

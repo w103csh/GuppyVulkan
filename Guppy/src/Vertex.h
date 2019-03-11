@@ -6,6 +6,7 @@
 #include <glm/glm.hpp>
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
+#include <variant>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -28,6 +29,9 @@ struct Texture {
     glm::vec3 tangent;
     glm::vec3 bitangent;
 };
+
+using Variant = std::variant<Vertex::Color, Vertex::Texture>;
+using Vertices = std::variant<std::vector<Vertex::Color>, std::vector<Vertex::Texture>>;
 
 /*  This is used for .obj loading, and the Face class. At some point I might just use
     this instead of breaking the data up because its a pain.
@@ -87,6 +91,8 @@ class Complete {
 
     inline Color getColorVertex() const { return {position, normal, color}; }
     inline Texture getTextureVertex() const { return {position, normal, texCoord, tangent, binormal}; }
+
+    inline void transform(const glm::mat4 &t) { position = t * glm::vec4{position, 1.0f}; }
 
     // shared
     glm::vec3 position;

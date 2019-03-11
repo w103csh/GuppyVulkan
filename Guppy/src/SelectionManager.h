@@ -5,31 +5,29 @@
 
 #include "Handlee.h"
 #include "Helpers.h"
-#include "SceneHandler.h"
+#include "Mesh.h"
 
+// clang-format off
 class Face;
+namespace Scene { class Handler; }
+// clang-format on
 
 namespace Selection {
 
 class FaceInfo {
    public:
-    FaceInfo(std::unique_ptr<Scene::Base> &pScene, const size_t &offset);
-
-    std::unique_ptr<Scene::Base> &pScene;
-    std::unique_ptr<Face> pFace;
-    inline size_t getOffset() { return offset_; }
-
-   private:
-    size_t offset_;
+    std::unique_ptr<Face> pFace = nullptr;
+    Mesh::INDEX offset = Mesh::BAD_OFFSET;
 };
 
 class Manager : public Handlee<Scene::Handler> {
    public:
-    Manager(const Scene::Handler &handler);
+    Manager(Scene::Handler &handler, bool makeFaceSelection);
 
-    void addFaceSelection(std::unique_ptr<Scene::Base> &pScene);
-    void updateFaceSelection(std::unique_ptr<Face> pFace = nullptr);
+    void makeFace();
+    void updateFace(std::unique_ptr<Face> pFace = nullptr);
 
+    inline bool isEnabled() { return pFaceInfo_->offset != Mesh::BAD_OFFSET; }
     inline const std::unique_ptr<Face> &getFace() { return pFaceInfo_->pFace; }
 
     template <typename T>

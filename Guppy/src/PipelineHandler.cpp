@@ -2,7 +2,9 @@
 #include "PipelineHandler.h"
 
 #include "Constants.h"
+#include "DescriptorHandler.h"
 #include "Material.h"
+#include "Mesh.h"
 #include "PBR.h"
 #include "Pipeline.h"
 #include "SceneHandler.h"
@@ -12,10 +14,7 @@
 
 Pipeline::Handler::Handler(Game* pGame)
     : Game::Handler(pGame),
-      // GENERAL
       cache_(VK_NULL_HANDLE),
-      // DESCRIPTOR
-      descPool_(VK_NULL_HANDLE),
       // DEFAULT (TODO: remove default things...)
       defaultPipelineInfo_{}  //
 {
@@ -45,130 +44,36 @@ Pipeline::Handler::Handler(Game* pGame)
 void Pipeline::Handler::reset() {
     // PIPELINE
     for (auto& pPipeline : pPipelines_) pPipeline->destroy();
-    // DESCRIPTOR
-    for (const auto& keyValue : descriptorMap_)
-        if (keyValue.second.layout != VK_NULL_HANDLE)
-            vkDestroyDescriptorSetLayout(shell().context().dev, keyValue.second.layout, nullptr);
-    // HANDLER OWNED
+    // CACHE
     if (cache_ != VK_NULL_HANDLE) vkDestroyPipelineCache(shell().context().dev, cache_, nullptr);
-    if (descPool_ != VK_NULL_HANDLE) vkDestroyDescriptorPool(shell().context().dev, descPool_, nullptr);
 
     maxPushConstantsSize_ = 0;
 }
 
 void Pipeline::Handler::init() {
-    // Clean up owned memory...
     reset();
 
     // PUSH CONSTANT
     maxPushConstantsSize_ =
         shell().context().physical_dev_props[shell().context().physical_dev_index].properties.limits.maxPushConstantsSize;
 
-    // HANDLER OWNED
-    createDescriptorPool();
+    // CACHE
     createPipelineCache(cache_);
-    createDescriptorSetLayouts();
 
     // PIPELINES
     for (auto& pPipeline : pPipelines_) pPipeline->init();
 }
 
-void Pipeline::Handler::createDescriptorPool() {
-    // TODO: an actaul allocator that works, and doesn't waste a ton of memory
-    std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}};
-    VkDescriptorPoolCreateInfo pool_info = {};
-    pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-    pool_info.maxSets = 1000 * poolSizes.size();
-    pool_info.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-    pool_info.pPoolSizes = poolSizes.data();
-    vk::assert_success(vkCreateDescriptorPool(shell().context().dev, &pool_info, nullptr, &descPool_));
-}
-
-/* OLD POOL LOGIC THAT HAD A BAD ATTEMPT AT AN ALLOCATION STRATEGY
- */
-// void Pipeline::Handler::createDescriptorPool(std::unique_ptr<DescriptorResources> & pRes) {
-//    const auto& imageCount = shell().context().image_count;
-//    uint32_t maxSets = (pRes->colorCount * imageCount) + (pRes->texCount * imageCount);
-//
-//    std::vector<VkDescriptorPoolSize> poolSizes;
-//    VkDescriptorPoolSize poolSize;
-//
-//    poolSize = {};
-//    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-//    poolSize.descriptorCount = (pRes->colorCount + pRes->texCount) * imageCount;
-//    poolSizes.push_back(poolSize);
-//
-//    poolSize = {};
-//    poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-//    poolSize.descriptorCount = pRes->texCount * imageCount;
-//    poolSizes.push_back(poolSize);
-//
-//    poolSize = {};
-//    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-//    poolSize.descriptorCount = pRes->texCount * imageCount;
-//    poolSizes.push_back(poolSize);
-//
-//    VkDescriptorPoolCreateInfo desc_pool_info = {};
-//    desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-//    desc_pool_info.maxSets = maxSets;
-//    desc_pool_info.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
-//    desc_pool_info.pPoolSizes = poolSizes.data();
-//
-//    vk::assert_success(vkCreateDescriptorPool(shell().context().dev, &desc_pool_info, nullptr, &pRes->pool));
-//}
-
-void Pipeline::Handler::createDescriptorSetLayouts() {
-    for (const auto& pPipeline : pPipelines_) {
-        descriptorMap_[pPipeline->getDescriptorTypeSet()] = {};
-    }
-
-    for (auto const& keyValue : descriptorMap_) {
-        // Gather bindings...
-        std::vector<VkDescriptorSetLayoutBinding> bindings;
-
-        for (const auto& descType : keyValue.first) {
-            switch (descType) {
-                case DESCRIPTOR::DEFAULT_UNIFORM:
-                case DESCRIPTOR::DEFAULT_DYNAMIC_UNIFORM:
-                    // TODO: Should these functions be virtual ???
-                    // bindings.push_back(Shader::Handler::getDescriptorLayoutBinding(descType));
-                    break;
-                case DESCRIPTOR::DEFAULT_SAMPLER:
-                    // TODO: Should these functions be virtual ???
-                    // bindings.push_back(TextureHandler::getDescriptorLayoutBinding(descType));
-                    break;
-                default:
-                    throw std::runtime_error("descriptor type not handled!");
-            }
-        }
-
-        VkDescriptorSetLayoutCreateInfo layoutInfo = {};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-        layoutInfo.pBindings = bindings.data();
-
-        DescriptorMapItem resources = {};
-        vk::assert_success(vkCreateDescriptorSetLayout(shell().context().dev, &layoutInfo, nullptr, &resources.layout));
-
-        if (settings().enable_debug_markers) {
-            std::string markerName = " descriptor set layout";  // TODO: a meaningful name
-            ext::DebugMarkerSetObjectName(shell().context().dev, (uint64_t)resources.layout,
-                                          VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, markerName.c_str());
-        }
-
-        descriptorMap_[keyValue.first] = resources;
-    }
+void Pipeline::Handler::getReference(Mesh::Base& mesh) {
+    const auto& pPipeline = getPipeline(mesh.PIPELINE_TYPE);
+    auto reference = &mesh.pipelineReference_;
+    // PIPELINE
+    reference->pipeline = pPipeline->pipeline_;
+    reference->bindPoint = pPipeline->BIND_POINT;
+    reference->layout = pPipeline->layout_;
+    // PUSH CONSTANT
+    reference->pushConstantTypes = pPipeline->PUSH_CONSTANT_TYPES;
+    reference->pushConstantStages = shaderHandler().getStageFlags(pPipeline->SHADER_TYPES);
 }
 
 std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
@@ -231,86 +136,11 @@ void Pipeline::Handler::createPipelineCache(VkPipelineCache& cache) {
     vk::assert_success(vkCreatePipelineCache(shell().context().dev, &pipeline_cache_info, nullptr, &cache));
 }
 
-// TODO: add params that can indicate to free/reallocate
-void Pipeline::Handler::makeDescriptorSets(const PIPELINE& type, DescriptorSetsReference& descSetsRef,
-                                           const std::shared_ptr<Texture::DATA>& pTexture) {
-    const auto& pPipeline = getPipeline(type);
-    const auto& descTypeKey = pPipeline->getDescriptorTypeSet();
-    validateDescriptorTypeKey(descTypeKey, pTexture);
-
-    auto& item = descriptorMap_[descTypeKey];
-    auto offset = pPipeline->getDescriptorSetOffset(pTexture);
-
-    if (offset >= item.resources.size()) item.resources.resize(offset + 1);
-    auto& resource = item.resources[offset];
-
-    // If sets are not already created  then make them...
-    if (resource.status != STATUS::READY) {
-        allocateDescriptorSets(descTypeKey, item.layout, resource, pTexture);
-    } else if (resource.sets.size() != static_cast<size_t>(1 * shell().context().imageCount)) {
-        assert(false);  // I haven't dealt with this yet...
-    }
-
-    // Copy desc sets from the resouces for the meshse. (TODO: rethink this)
-
-    // PIPELINE
-    descSetsRef.pipeline = pPipeline->pipeline_;
-    descSetsRef.bindPoint = pPipeline->BIND_POINT;
-    descSetsRef.layout = pPipeline->layout_;
-
-    // DESCRIPTOR
-    descSetsRef.firstSet = 0;
-    descSetsRef.descriptorSetCount = 1;
-    descSetsRef.pDescriptorSets = resource.sets.data();
-    // TODO: this is not right...
-    descSetsRef.dynamicOffsets = shaderHandler().getDynamicOffsets(descTypeKey);
-
-    // PUSH CONSTANT
-    descSetsRef.pushConstantTypes = pPipeline->PUSH_CONSTANT_TYPES;
-    descSetsRef.pushConstantStages = shaderHandler().getStageFlags(pPipeline->SHADER_TYPES);
-}
-
-void Pipeline::Handler::allocateDescriptorSets(const std::set<DESCRIPTOR> types, const VkDescriptorSetLayout& layout,
-                                               DescriptorMapItem::Resource& resource,
-                                               const std::shared_ptr<Texture::DATA>& pTexture, uint32_t count) {
-    auto setCount = static_cast<uint32_t>(count * shell().context().imageCount);
-    assert(setCount > 0);
-
-    std::vector<VkDescriptorSetLayout> layouts(setCount, layout);
-
-    VkDescriptorSetAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-    allocInfo.descriptorPool = descPool_;
-    allocInfo.descriptorSetCount = setCount;
-    allocInfo.pSetLayouts = layouts.data();
-
-    resource.sets.resize(setCount);
-    vk::assert_success(vkAllocateDescriptorSets(shell().context().dev, &allocInfo, resource.sets.data()));
-
-    shaderHandler().updateDescriptorSets(types, resource.sets, setCount, pTexture);
-
-    resource.status = STATUS::READY;
-}
-
-void Pipeline::Handler::validateDescriptorTypeKey(const std::set<DESCRIPTOR> types,
-                                                  const std::shared_ptr<Texture::DATA>& pTexture = nullptr) {
-    bool isValid = false;
-    for (const auto& type : types) {
-        switch (type) {
-            case DESCRIPTOR::DEFAULT_SAMPLER:
-                // Ensure that the texture is ready before potentially creating a descriptor set from it.
-                assert(pTexture != nullptr && pTexture->status == STATUS::READY);
-                break;
-        }
-        if (isValid) return;
-    }
-}
-
 void Pipeline::Handler::createPipelines(const std::unique_ptr<RenderPass::Base>& pPass, bool remake) {
     for (const auto& type : pPass->PIPELINE_TYPES) {
         auto& pPipeline = getPipeline(type);
+        pPipeline->subpassId_ = pPass->getSubpassId(type);
         if (pPipeline->pipeline_ != VK_NULL_HANDLE && !remake) return;
-        pPipeline->SUBPASS_ID = pPass->getSubpassId(type);
         createPipeline(type, pPass, false);
     }
 }
@@ -323,7 +153,7 @@ const VkPipeline& Pipeline::Handler::createPipeline(const PIPELINE& type, const 
 
     // Store the render pass handle on first creation
     if (pPass != nullptr) createInfo.renderPass = pPass->pass;
-    createInfo.subpass = (pPass != nullptr) ? pPass->getSubpassId(type) : pPipeline->SUBPASS_ID;
+    createInfo.subpass = pPipeline->getSubpassId();
 
     // TODO: WHAT HAPPENS IF YOU DELETE THE BASE PIPELINE?????
     if (setBase) {

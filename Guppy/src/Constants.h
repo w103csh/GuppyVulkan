@@ -4,11 +4,12 @@
 
 #include <glm/glm.hpp>
 #include <map>
+#include <tiny_obj_loader.h>  // TODO: pre-compiled header file
 #include <vector>
 #include <vulkan/vulkan.h>
 
 #define LIMIT_FRAMERATE
-#define USE_DEBUG_GUI
+#define USE_DEBUG_UI
 
 constexpr bool PRIMARY_MONITOR = 0;
 // TODO: a proper dynamic buffer allocator.
@@ -20,12 +21,8 @@ constexpr bool PRIMARY_MONITOR = 0;
     allocator.
 */
 constexpr uint32_t TEXTURE_LIMIT = 30;
-constexpr auto APP_SHORT_NAME = "Guppy Application";
-constexpr bool DEPTH_PRESENT = true;
+constexpr auto APP_SHORT_NAME = "Guppy";
 
-const int WIDTH = 800;
-const int HEIGHT = 600;
-const int MAX_FRAMES_IN_FLIGHT = 2;
 const float T_MAX = 1.0f;
 
 #ifdef NDEBUG

@@ -9,6 +9,8 @@
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <limits>
+#include <map>
+#include <memory>
 #include <set>
 #include <sstream>
 #include <thread>
@@ -25,6 +27,10 @@ typedef uint32_t FlagBits;
 typedef uint32_t VB_INDEX_TYPE;
 typedef uint8_t SCENE_INDEX_TYPE;
 
+// TODO: make a data structure so this can be const in the handlers.
+template <typename TEnum, typename TType>
+using enumPointerTypeMap = std::map<TEnum, std::unique_ptr<TType>>;
+
 enum class MODEL_FILE_TYPE {
     //
     UNKNOWN = 0,
@@ -35,6 +41,7 @@ enum class STATUS {
     //
     PENDING = 0,
     READY,
+    PENDING_VERTICES,
     PENDING_BUFFERS,
     PENDING_MATERIAL,
     PENDING_TEXTURE,
@@ -145,20 +152,6 @@ enum class PUSH_CONSTANT {
 };
 
 enum class DESCRIPTOR {
-    //
-    /*  Currently this reflects unique descriptor bindings
-        for the shaders. As of now the bindings are hardcoded
-        and each descriptor type only has one each. (And line
-        up with the enum values...).
-        TODO: This could  easily become more dynamic once I wrap
-        my head around how it should work with an allocator.
-    */
-    DEFAULT_UNIFORM = 0,
-    DEFAULT_SAMPLER = 1,
-    DEFAULT_DYNAMIC_UNIFORM = 2,
-};
-
-enum class UNIFORM {
     // CAMERA
     CAMERA_PERSPECTIVE_DEFAULT,
     // LIGHT
@@ -172,6 +165,50 @@ enum class UNIFORM {
     MATERIAL_PBR,
     // SAMPLER
     SAMPLER_DEFAULT,
+};
+
+const std::map<DESCRIPTOR, VkDescriptorType> DESCRIPTOR_TYPE_MAP = {
+    // DEFAULT
+    {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER},
+    {DESCRIPTOR::FOG_DEFAULT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER},
+    {DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER},
+    {DESCRIPTOR::LIGHT_SPOT_DEFAULT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER},
+    {DESCRIPTOR::MATERIAL_DEFAULT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC},
+    {DESCRIPTOR::SAMPLER_DEFAULT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER},
+    // PBR
+    {DESCRIPTOR::LIGHT_POSITIONAL_PBR, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER},
+    {DESCRIPTOR::MATERIAL_PBR, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC}
+    //
+};
+
+const std::set<DESCRIPTOR> DESCRIPTOR_UNIFORM_ALL = {
+    DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT,
+    DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT,
+    DESCRIPTOR::LIGHT_POSITIONAL_PBR,
+    DESCRIPTOR::LIGHT_SPOT_DEFAULT,
+    DESCRIPTOR::FOG_DEFAULT,
+};
+
+const std::set<DESCRIPTOR> DESCRIPTOR_MATERIAL_ALL = {
+    DESCRIPTOR::MATERIAL_DEFAULT,
+    DESCRIPTOR::MATERIAL_PBR,
+};
+
+const std::set<DESCRIPTOR> DESCRIPTOR_SAMPLER_ALL = {
+    DESCRIPTOR::SAMPLER_DEFAULT,
+};
+
+enum class DESCRIPTOR_SET {
+    //
+    UNIFORM_DEFAULT,
+    SAMPLER_DEFAULT,
+};
+
+enum class HANDLER {
+    //
+    DESCRIPTOR,
+    MATERIAL,
+    TEXTURE,
 };
 
 enum class MATERIAL {
@@ -206,6 +243,18 @@ inline VkResult assert_success(VkResult res) {
 }
 }  // namespace vk
 
+class NonCopyable {
+   public:
+    NonCopyable() = default;
+    ~NonCopyable() = default;
+
+   private:
+    NonCopyable(const NonCopyable &) = delete;
+    NonCopyable &operator=(const NonCopyable &) = delete;
+    NonCopyable(NonCopyable &&) = delete;
+    NonCopyable &operator=(NonCopyable &&) = delete;
+};
+
 namespace helpers {
 
 // Epsilon compare for floating point. Taken from here https://en.cppreference.com/w/cpp/types/numeric_limits/epsilon
@@ -216,6 +265,23 @@ typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type almost_
     return std::abs(x - y) <= std::numeric_limits<T>::epsilon() * std::abs(x + y) * ulp
            // unless the result is subnormal
            || std::abs(x - y) < (std::numeric_limits<T>::min)();
+}
+
+static std::string replaceFirstOccurrence(const std::string &toReplace, const std::string &replaceWith, std::string &s) {
+    std::size_t pos = s.find(toReplace);
+    if (pos == std::string::npos) return s;
+    return s.replace(pos, toReplace.length(), replaceWith);
+}
+
+template <typename T1, typename T2>
+std::string textReplace(std::string text, std::string s1, std::string s2, T1 r1, T2 r2) {
+    std::string s = text;
+    std::stringstream rss, nss;
+    rss << s1 << r1 << s2;
+    nss << s1 << r2 << s2;
+    size_t f = s.find(rss.str());
+    if (f != std::string::npos) s.replace(f, rss.str().length(), nss.str());
+    return s;
 }
 
 template <typename T>
@@ -368,6 +434,15 @@ static glm::vec3 triangleNormal(const glm::vec3 &a, const glm::vec3 &b, const gl
 
 static glm::vec3 positionOnLine(const glm::vec3 &a, const glm::vec3 &b, float t) { return a + ((b - a) * t); }
 
+static void destroyCommandBuffers(const VkDevice &dev, const VkCommandPool &pool, std::vector<VkCommandBuffer> &cmds) {
+    if (!cmds.empty()) {
+        vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(cmds.size()), cmds.data());
+        cmds.clear();
+    }
+}
+
+void decomposeScale(const glm::mat4 &m, glm::vec3 &scale);
+
 //// This is super simple... add to it if necessary
 // template <typename TKey, typename TValue>
 // struct simple_container_key_map {
@@ -392,11 +467,11 @@ static glm::vec3 positionOnLine(const glm::vec3 &a, const glm::vec3 &b, float t)
 struct BufferResource {
     VkBuffer buffer = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
-    VkDeviceSize memoryRequirementsSize;
+    VkMemoryRequirements memoryRequirements{};
 };
 
 struct ImageResource {
-    VkFormat format;
+    VkFormat format{};
     VkImage image = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
     VkImageView view = VK_NULL_HANDLE;
@@ -436,39 +511,22 @@ struct DescriptorResource {
     VkDeviceMemory memory = VK_NULL_HANDLE;
 };
 
-class DataObject {
-   public:
-    virtual VkDeviceSize getDataSize() const = 0;
-
-   protected:
-    virtual const void *getData() = 0;
-};
-
-// These are basically a unit. Maybe move this into a full on data structure.
-struct DescriptorMapItem {
-    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
-    struct Resource {
-        STATUS status = STATUS::PENDING;
-        std::vector<VkDescriptorSet> sets;
-    };
-    std::vector<Resource> resources;
-};
-struct hash_descriptor_resource_map {
-    size_t operator()(const std::set<DESCRIPTOR> &s) const {
-        size_t value = 0;
-        auto x = 1;
-        for (const auto &i : s)
-            if (value)
-                value ^= ((std::hash<DESCRIPTOR>()(i)) << 1) >> 1;
-            else
-                value = (std::hash<DESCRIPTOR>()(i));
-        return value;
+template <typename TEnum>
+struct hash_pair_enum_size_t {
+    inline std::size_t operator()(const std::pair<TEnum, size_t> &p) const {
+        std::hash<int> int_hasher;
+        std::hash<size_t> size_t_hasher;
+        return int_hasher(static_cast<int>(p.first)) ^ size_t_hasher(p.second);
     }
 };
-typedef std::unordered_map<const std::set<DESCRIPTOR>, DescriptorMapItem, hash_descriptor_resource_map>
-    descriptor_resource_map;
 
 namespace helpers {
+
+static bool isDescriptorTypeDynamic(const DESCRIPTOR &type) {
+    const auto &descriptorType = DESCRIPTOR_TYPE_MAP.at(type);
+    return descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
+           descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
+}
 
 static void destroyImageResource(const VkDevice &dev, ImageResource &res) {
     if (res.view != VK_NULL_HANDLE) vkDestroyImageView(dev, res.view, nullptr);
@@ -477,13 +535,6 @@ static void destroyImageResource(const VkDevice &dev, ImageResource &res) {
     res.image = VK_NULL_HANDLE;
     if (res.memory != VK_NULL_HANDLE) vkFreeMemory(dev, res.memory, nullptr);
     res.memory = VK_NULL_HANDLE;
-}
-
-static void destroyCommandBuffers(const VkDevice &dev, const VkCommandPool &pool, std::vector<VkCommandBuffer> &cmds) {
-    if (!cmds.empty()) {
-        vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(cmds.size()), cmds.data());
-        cmds.clear();
-    }
 }
 
 }  // namespace helpers

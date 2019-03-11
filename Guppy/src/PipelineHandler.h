@@ -11,40 +11,38 @@
 #include "Shader.h"
 #include "Vertex.h"
 
+// clang-format off
+namespace Mesh { class Base; }
+// clang-format on
+
 namespace Pipeline {
 
-// Change name to pipeline reference or something...
-struct DescriptorSetsReference {
-    VkPipeline pipeline;
+struct Reference {
     VkPipelineBindPoint bindPoint;
     VkPipelineLayout layout;
-    uint32_t firstSet;
-    uint32_t descriptorSetCount;
-    VkDescriptorSet *pDescriptorSets;
-    std::vector<uint32_t> dynamicOffsets;
-    //
-    std::vector<PUSH_CONSTANT> pushConstantTypes;
+    VkPipeline pipeline;
     VkShaderStageFlags pushConstantStages;
+    std::vector<PUSH_CONSTANT> pushConstantTypes;
 };
 
 struct CreateInfoResources {
     // BLENDING
     VkPipelineColorBlendAttachmentState blendAttach;
-    VkPipelineColorBlendStateCreateInfo colorBlendStateInfo;
+    VkPipelineColorBlendStateCreateInfo colorBlendStateInfo = {};
     // DYNAMIC
     VkDynamicState dynamicStates[VK_DYNAMIC_STATE_RANGE_SIZE];
-    VkPipelineDynamicStateCreateInfo dynamicStateInfo;
+    VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
     // INPUT ASSEMBLY
     VkVertexInputBindingDescription bindingDesc;
     std::vector<VkVertexInputAttributeDescription> attrDesc;
-    VkPipelineVertexInputStateCreateInfo vertexInputStateInfo;
+    VkPipelineVertexInputStateCreateInfo vertexInputStateInfo = {};
     // FIXED FUNCTION
-    VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo;
-    VkPipelineTessellationStateCreateInfo tessellationStateInfo;
-    VkPipelineViewportStateCreateInfo viewportStateInfo;
-    VkPipelineRasterizationStateCreateInfo rasterizationStateInfo;
-    VkPipelineMultisampleStateCreateInfo multisampleStateInfo;
-    VkPipelineDepthStencilStateCreateInfo depthStencilStateInfo;
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo = {};
+    VkPipelineTessellationStateCreateInfo tessellationStateInfo = {};
+    VkPipelineViewportStateCreateInfo viewportStateInfo = {};
+    VkPipelineRasterizationStateCreateInfo rasterizationStateInfo = {};
+    VkPipelineMultisampleStateCreateInfo multisampleStateInfo = {};
+    VkPipelineDepthStencilStateCreateInfo depthStencilStateInfo = {};
     // SHADER
     std::vector<VkPipelineShaderStageCreateInfo> stagesInfo;
 };
@@ -64,13 +62,8 @@ class Handler : public Game::Handler {
     // CACHE
     inline const VkPipelineCache &getPipelineCache() { return cache_; }
 
-    // DESCRIPTOR
-    inline const VkDescriptorPool &getDescriptorPool() { return descPool_; }
-    inline const VkDescriptorSetLayout &getDescriptorSetLayouts(const std::set<DESCRIPTOR> descTypeSet) const {
-        return descriptorMap_.at(descTypeSet).layout;  // this can throw
-    }
-    void makeDescriptorSets(const PIPELINE &type, DescriptorSetsReference &descSetsRef,
-                            const std::shared_ptr<Texture::DATA> &pTexture = nullptr);
+    // REFERENCE
+    void getReference(Mesh::Base &mesh);
 
     // PUSH CONSTANT
     std::vector<VkPushConstantRange> getPushConstantRanges(const PIPELINE &pipelineType,
@@ -85,6 +78,7 @@ class Handler : public Game::Handler {
         assert(type != PIPELINE::DONT_CARE);
         return pPipelines_[static_cast<uint64_t>(type)];
     }
+    inline const std::vector<std::unique_ptr<Pipeline::Base>> &getPipelines() const { return pPipelines_; }
 
     // CLEAN UP
     void needsUpdate(const std::vector<SHADER> types);
@@ -96,17 +90,6 @@ class Handler : public Game::Handler {
 
     // CACHE
     VkPipelineCache cache_;  // TODO: what is this for???
-
-    // DESCRIPTOR
-    void createDescriptorPool();
-    void createDescriptorSetLayouts();
-    void allocateDescriptorSets(const std::set<DESCRIPTOR> types, const VkDescriptorSetLayout &layout,
-                                DescriptorMapItem::Resource &resource, const std::shared_ptr<Texture::DATA> &pTexture,
-                                uint32_t count = 1);
-    void validateDescriptorTypeKey(const std::set<DESCRIPTOR> descTypes, const std::shared_ptr<Texture::DATA> &pTexture);
-    VkDescriptorPool descPool_;
-    descriptor_resource_map descriptorMap_;
-    std::vector<std::pair<uint32_t, UNIFORM>> BINDING_UNIFORM_LIST;
 
     // PUSH CONSTANT
     uint32_t maxPushConstantsSize_;
@@ -127,6 +110,7 @@ class Handler : public Game::Handler {
     // DEFAULT (TODO: remove default things...)
     VkGraphicsPipelineCreateInfo defaultPipelineInfo_;  // TODO: use this better through creation...
     CreateInfoResources defaultCreateInfoResources_;    // TODO: use this better through creation...
+
     std::vector<std::unique_ptr<Pipeline::Base>> pPipelines_;
 
     // CLEAN UP

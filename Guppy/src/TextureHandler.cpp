@@ -16,22 +16,24 @@
 namespace {
 
 // TODO: move to a Sampler class if I need a bunch of these...
-
-VkDescriptorSetLayoutBinding&& getDefaultSamplerBindings(
-    uint32_t binding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_SAMPLER), uint32_t count = 1) {
+VkDescriptorSetLayoutBinding getDefaultSamplerBindings(uint32_t binding = 0, uint32_t count = 1) {
+    // VkDescriptorSetLayoutBinding&& getDefaultSamplerBindings(
+    // uint32_t binding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_SAMPLER), uint32_t count = 1) {
+    assert(false);
     VkDescriptorSetLayoutBinding layoutBinding = {};
     layoutBinding.binding = binding;
     layoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     layoutBinding.descriptorCount = count;
     layoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
     layoutBinding.pImmutableSamplers = nullptr;  // Optional
-    return std::move(layoutBinding);
+    return layoutBinding;
 }
 
 VkWriteDescriptorSet getDefaultWrite() {
+    assert(false);
     VkWriteDescriptorSet write = {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.dstBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_SAMPLER);
+    // write.dstBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_SAMPLER);
     write.dstArrayElement = 0;
     write.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
     write.descriptorCount = 1;
@@ -39,15 +41,16 @@ VkWriteDescriptorSet getDefaultWrite() {
 }
 
 VkCopyDescriptorSet getDefaultCopy() {
+    assert(false);
     /*  1/9/19 I am not using this code because I think that this is only really necessary
         if you want to reuse the writes but with different bindings... I am currently not
         to sure about any of this.
     */
     VkCopyDescriptorSet copy = {};
     copy.sType = VK_STRUCTURE_TYPE_COPY_DESCRIPTOR_SET;
-    copy.srcBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_UNIFORM);
+    // copy.srcBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_UNIFORM);
     copy.srcArrayElement = 0;
-    copy.dstBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_UNIFORM);
+    // copy.dstBinding = static_cast<uint32_t>(DESCRIPTOR::DEFAULT_UNIFORM);
     copy.dstArrayElement = 0;
     return copy;
 }
@@ -136,30 +139,36 @@ void Texture::Handler::update() {
 }
 
 VkDescriptorSetLayoutBinding Texture::Handler::getDescriptorLayoutBinding(const DESCRIPTOR& type) const {
-    switch (type) {
-        case DESCRIPTOR::DEFAULT_SAMPLER:
-            return getDefaultSamplerBindings();
-        default:
-            throw std::runtime_error("descriptor type not handled!");
-    }
+    assert(false);
+    // switch (type) {
+    //    case DESCRIPTOR::DEFAULT_SAMPLER:
+    //        return getDefaultSamplerBindings();
+    //    default:
+    //        throw std::runtime_error("descriptor type not handled!");
+    //}
+    return {};
 }
 
 VkWriteDescriptorSet Texture::Handler::getDescriptorWrite(const DESCRIPTOR& type) const {
-    switch (type) {
-        case DESCRIPTOR::DEFAULT_SAMPLER:
-            return getDefaultWrite();
-        default:
-            throw std::runtime_error("descriptor type not handled!");
-    }
+    assert(false);
+    // switch (type) {
+    //    case DESCRIPTOR::DEFAULT_SAMPLER:
+    //        return getDefaultWrite();
+    //    default:
+    //        throw std::runtime_error("descriptor type not handled!");
+    //}
+    return {};
 }
 
 VkCopyDescriptorSet Texture::Handler::getDescriptorCopy(const DESCRIPTOR& type) const {
-    switch (type) {
-        case DESCRIPTOR::DEFAULT_SAMPLER:
-            return getDefaultCopy();
-        default:
-            throw std::runtime_error("descriptor type not handled!");
-    }
+    assert(false);
+    // switch (type) {
+    //    case DESCRIPTOR::DEFAULT_SAMPLER:
+    //        return getDefaultCopy();
+    //    default:
+    //        throw std::runtime_error("descriptor type not handled!");
+    //}
+    return {};
 }
 
 std::future<std::shared_ptr<Texture::DATA>> Texture::Handler::loadTexture(const VkDevice& dev, const bool makeMipmaps,
@@ -253,7 +262,7 @@ void Texture::Handler::createImage(DATA& tex, uint32_t layerCount) {
 
     void* pData;
     size_t offset = 0, size = static_cast<size_t>(imageSize);
-    vkMapMemory(shell().context().dev, stgRes.memory, 0, memReqsSize, 0, &pData);
+    vk::assert_success(vkMapMemory(shell().context().dev, stgRes.memory, 0, memReqsSize, 0, &pData));
 
     if (tex.flags & FLAG::DIFFUSE) {
         memcpy(static_cast<char*>(pData) + offset, tex.pixels, size);

@@ -49,7 +49,6 @@ class ShellGLFW : public T {
         glfwSetCursorPosCallback(window_, glfw_cursor_pos_callback);
         glfwSetMouseButtonCallback(window_, glfw_mouse_button_callback);
         glfwSetKeyCallback(window_, glfw_key_callback);
-
         setupImGui();
 
         double currentTime = glfwGetTime();
@@ -98,9 +97,10 @@ class ShellGLFW : public T {
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
 
+        glfwDestroyWindow(window_);
+
         destroy_context();
 
-        glfwDestroyWindow(window_);
         glfwTerminate();
     }
 
@@ -171,6 +171,8 @@ class ShellGLFW : public T {
 
         T::setPlatformSpecificExtensions();
     }
+
+    void quit() const override { glfwSetWindowShouldClose(window_, GLFW_TRUE); }
 
     GLFWwindow* window_;
     ImGui_ImplVulkanH_WindowData windowData_;

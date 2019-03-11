@@ -6,13 +6,19 @@
 #include <vector>
 
 #include "Axes.h"
+#include "FileLoader.h"
 #include "Game.h"
+#include "Material.h"
+#include "Mesh.h"
+#include "MeshHandler.h"  // TODO: including this is sketchy
 #include "Model.h"
 #include "Scene.h"
 #include "Vertex.h"
 
-class ColorMesh;
-class TextureMesh;
+// clang-format off
+//namespace Mesh { class Color; }
+//namespace Material { struct CreateInfo; }
+// clang-format on
 
 namespace Model {
 
@@ -23,7 +29,39 @@ class Handler : public Game::Handler {
     void init() override{};
     inline void destroy() { reset(); }
 
-    void makeModel(Model::CreateInfo* pCreateInfo, std::unique_ptr<Scene::Base>& pScene);
+    template <typename TMaterialCreateInfo>
+    void makeColorModel(Model::CreateInfo* pCreateInfo, TMaterialCreateInfo* pMaterialCreateInfo) {
+        pCreateInfo->handlerOffset = pModels_.size();
+        pModels_.emplace_back(std::make_unique<Model::Base>(std::ref(*this), pCreateInfo));
+
+        if (pCreateInfo->async) {
+            ldgColorFutures_[pModels_.back()->getOffset()] = std::make_pair(  //
+                std::async(std::launch::async, &Handler::loadColor<TMaterialCreateInfo>, this, std::ref(*pModels_.back()),
+                           *pMaterialCreateInfo),
+                std::move(pCreateInfo->callback)  //
+            );
+        } else {
+            handleMeshes(pModels_.back(), loadColor(std::ref(*pModels_.back()), *pMaterialCreateInfo),
+                         pCreateInfo->callback);
+        }
+    }
+
+    template <typename TMaterialCreateInfo>
+    void makeTextureModel(Model::CreateInfo* pCreateInfo, TMaterialCreateInfo* pMaterialCreateInfo) {
+        pCreateInfo->handlerOffset = pModels_.size();
+        pModels_.emplace_back(std::make_unique<Model::Base>(std::ref(*this), pCreateInfo));
+
+        if (pCreateInfo->async) {
+            ldgTexFutures_[pModels_.back()->getOffset()] = std::make_pair(  //
+                std::async(std::launch::async, &Handler::loadTexture<TMaterialCreateInfo>, this, std::ref(*pModels_.back()),
+                           *pMaterialCreateInfo),
+                std::move(pCreateInfo->callback)  //
+            );
+        } else {
+            handleMeshes(pModels_.back(), loadTexture(std::ref(*pModels_.back()), *pMaterialCreateInfo),
+                         pCreateInfo->callback);
+        }
+    }
 
     std::unique_ptr<Model::Base>& getModel(Model::INDEX offset) {
         assert(offset < pModels_.size());
@@ -35,39 +73,106 @@ class Handler : public Game::Handler {
    private:
     void reset() override{};
 
-    void makeColorModel(Model::CreateInfo* pCreateInfo, std::unique_ptr<Scene::Base>& pScene);
-    void makeTextureModel(Model::CreateInfo* pCreateInfo, std::unique_ptr<Scene::Base>& pScene);
+    FileLoader::tinyobj_data loadData(Model::Base& model);
 
-    // LOADING
-    std::vector<ColorMesh*> loadColor(const Material::Info& materialInfo, Model::Base& model);
-    std::vector<TextureMesh*> loadTexture(const Material::Info& materialInfo, Model::Base& model);
+    template <typename TMaterialCreateInfo>
+    std::vector<Mesh::Color*> loadColor(Model::Base& model, TMaterialCreateInfo materialCreateInfo) {
+        auto data = loadData(model);
+        auto createInfo = model.getMeshCreateInfo();
+
+        // Determine amount and type of meshes
+        std::vector<Mesh::Color*> pMeshes;
+
+        if (data.materials.empty()) {
+            makeColorMesh(model, pMeshes, &materialCreateInfo);
+        } else {
+            for (auto& m : data.materials) {
+                makeColorMesh(model, pMeshes, &materialCreateInfo);
+                // TODO: Doing this after creation forces a second copy to device memory immediately
+                pMeshes.back()->getMaterial()->setTinyobjData(m);
+            }
+        }
+
+        // Load .obj data into mesh
+        // (The map types have comparison predicates that smooth or not)
+        if (model.smoothNormals_) {
+            FileLoader::loadObjData<unique_vertices_map_smoothing>(data, pMeshes);
+        } else {
+            FileLoader::loadObjData<unique_vertices_map_non_smoothing>(data, pMeshes);
+        }
+
+        for (auto& pMesh : pMeshes) assert(pMesh->getVertexCount());  // ensure something was loaded
+
+        return pMeshes;
+    }
+
+    template <typename TMaterialCreateInfo>
+    std::vector<Mesh::Texture*> loadTexture(Model::Base& model, TMaterialCreateInfo materialCreateInfo) {
+        auto data = loadData(model);
+        auto createInfo = model.getMeshCreateInfo();
+
+        // Determine amount and type of meshes
+        std::vector<Mesh::Texture*> pMeshes;
+
+        if (data.materials.empty()) {
+            makeTextureMesh(model, pMeshes, &materialCreateInfo);
+        } else {
+            auto modelDirectory = helpers::getFilePath(model.modelPath_);
+            for (auto& tinyobj_mat : data.materials) {
+                makeTexture(tinyobj_mat, modelDirectory, &materialCreateInfo);
+                makeTextureMesh(model, pMeshes, &materialCreateInfo);
+                materialCreateInfo.pTexture = nullptr;
+                // TODO: Doing this after creation forces a second copy to device memory immediately
+                pMeshes.back()->getMaterial()->setTinyobjData(tinyobj_mat);
+            }
+        }
+
+        // Load .obj data into mesh
+        // (The map types have comparison predicates that smooth or not)
+        if (model.smoothNormals_) {
+            FileLoader::loadObjData<unique_vertices_map_smoothing>(data, pMeshes);
+        } else {
+            FileLoader::loadObjData<unique_vertices_map_non_smoothing>(data, pMeshes);
+        }
+
+        for (auto& pMesh : pMeshes) assert(pMesh->getVertexCount());  // ensure something was loaded
+
+        return pMeshes;
+    }
+
+    template <typename TMaterialCreateInfo>
+    void makeColorMesh(Model::Base& model, std::vector<Mesh::Color*>& pMeshes, TMaterialCreateInfo* pMaterialCreateInfo) {
+        auto createInfo = model.getMeshCreateInfo();
+        auto& pMesh = meshHandler().makeColorMesh<Model::ColorMesh>(&createInfo, pMaterialCreateInfo);
+        model.addOffset(pMesh);
+        pMeshes.push_back(pMesh.get());
+    }
+
+    template <typename TMaterialCreateInfo>
+    void makeTextureMesh(Model::Base& model, std::vector<Mesh::Texture*>& pMeshes,
+                         TMaterialCreateInfo* pMaterialCreateInfo) {
+        auto createInfo = model.getMeshCreateInfo();
+        auto& pMesh = meshHandler().makeTextureMesh<Model::TextureMesh>(&createInfo, pMaterialCreateInfo);
+        model.addOffset(pMesh);
+        pMeshes.push_back(pMesh.get());
+    }
 
     // thread sync
-    template <typename T>
-    void handleMeshes(std::unique_ptr<Scene::Base>& pScene, std::unique_ptr<Model::Base>& pModel,
-                      std::vector<T*>&& pMeshes) {
-        for (auto& pMesh : pMeshes) {
-            // Turn mesh into a unique pointer
-            auto p = std::unique_ptr<T>(pMesh);
-
-            // Add a visual helper mesh
-            if (pModel->visualHelper_) {
-                MeshCreateInfo meshCreateInfo = {};
-                meshCreateInfo.isIndexed = false;
-                meshCreateInfo.model = p->getData().model;
-                meshCreateInfo.pipelineType = pModel->PIPELINE_TYPE;
-                std::unique_ptr<LineMesh> pVH = std::make_unique<VisualHelper>(&meshCreateInfo, p);
-
-                auto& rp = pScene->moveMesh(std::move(pVH));
-                pModel->addOffset(rp);  // Separate visual helper offset???
-            }
-
-            // Add mesh to scene
-            auto& rp = pScene->moveMesh(std::move(p));
-            // Store the offset of the mesh into the scene buffers after moving.
-            pModel->addOffset(rp);
+    template <typename TMesh>
+    void handleMeshes(std::unique_ptr<Model::Base>& pModel, std::vector<TMesh*>&& pMeshes, Model::CBACK& callback) {
+        for (auto pMesh : pMeshes) {
+            assert(pMesh->getStatus() == STATUS::PENDING_BUFFERS);
+            pMesh->prepare();
+        }
+        pModel->postLoad(callback);
+        // Add a visual helper mesh
+        if (pModel->visualHelper_) {
+            for (auto pMesh : pMeshes) meshHandler().makeTangentSpaceVisualHelper(pMesh, pModel->visualHelperLineSize_);
         }
     }
+
+    void makeTexture(const tinyobj::material_t& tinyobj_mat, const std::string& modelDirectory,
+                     Material::CreateInfo* pCreateInfo);
 
     // Mesh futures
     template <typename T>
@@ -76,10 +181,10 @@ class Handler : public Game::Handler {
         if (!futuresMap.empty()) {
             for (auto it = futuresMap.begin(); it != futuresMap.end();) {
                 // Only check futures for models in the scene.
-                if (getModel(it->first)->getSceneOffset() != pScene->getOffset()) {
-                    ++it;
-                    continue;
-                }
+                // if (getModel(it->first)->getSceneOffset() != pScene->getOffset()) {
+                //    ++it;
+                //    continue;
+                //}
 
                 auto& future = it->second.first;  // loading future
 
@@ -91,8 +196,7 @@ class Handler : public Game::Handler {
                     auto& pModel = getModel(it->first);  // model for future & callback
 
                     // Add the model meshes to the scene.
-                    handleMeshes(pScene, pModel, future.get());
-                    pModel->postLoad(callback);
+                    handleMeshes(pModel, future.get(), callback);
 
                     // Remove the future from the list if all goes well.
                     it = futuresMap.erase(it);
@@ -104,8 +208,8 @@ class Handler : public Game::Handler {
     }
 
     std::vector<std::unique_ptr<Model::Base>> pModels_;
-    std::unordered_map<Model::INDEX, std::pair<std::future<std::vector<ColorMesh*>>, Model::CBACK>> ldgColorFutures_;
-    std::unordered_map<Model::INDEX, std::pair<std::future<std::vector<TextureMesh*>>, Model::CBACK>> ldgTexFutures_;
+    std::unordered_map<Model::INDEX, std::pair<std::future<std::vector<Mesh::Color*>>, Model::CBACK>> ldgColorFutures_;
+    std::unordered_map<Model::INDEX, std::pair<std::future<std::vector<Mesh::Texture*>>, Model::CBACK>> ldgTexFutures_;
 };
 
 }  // namespace Model

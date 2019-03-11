@@ -1,30 +1,33 @@
 
+#include <glm/glm.hpp>
 #include <glm/gtc/matrix_access.hpp>
 
 #include "Camera.h"
 #include "Constants.h"
 #include "InputHandler.h"
 
-Camera::Camera(const glm::vec3 &eye, const glm::vec3 &center, float aspect, float fov, float n, float f)
+Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData, Perspective::CreateInfo *pCreateInfo)
     : Object3d(glm::mat4(1.0f)),
-      dirty_(true),
-      data_({glm::mat4(1.0f), glm::mat4(1.0f)}),
-      aspect_(aspect),
-      center_(center),
-      eye_(eye),
-      far_(f),
-      fov_(fov),
-      near_(n) {
-    view_ = glm::lookAt(eye, center, UP_VECTOR);
-    proj_ = glm::perspective(fov, aspect, near_, far_);
+      Uniform::Base(),
+      Buffer::DataItem<DATA>(pData),
+      Buffer::Item(std::forward<const Buffer::Info>(info)),
+      aspect_(pCreateInfo->aspect),
+      center_(pCreateInfo->center),
+      eye_(pCreateInfo->eye),
+      far_(pCreateInfo->f),
+      fov_(pCreateInfo->fov),
+      near_(pCreateInfo->n) {
+    pData_->view = glm::lookAt(pCreateInfo->eye, pCreateInfo->center, UP_VECTOR);
+    proj_ = glm::perspective(pCreateInfo->fov, pCreateInfo->aspect, near_, far_);
     // Vulkan clip space has inverted Y and half Z.
     clip_ = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,   //
                       0.0f, -1.0f, 0.0f, 0.0f,  //
                       0.0f, 0.0f, 0.5f, 0.0f,   //
                       0.0f, 0.0f, 0.5f, 1.0f);  //
+    setData();
 }
 
-Ray Camera::getRay(glm::vec2 &&position, const VkExtent2D &extent, float distance) {
+Ray Camera::Default::Perspective::Base::getRay(glm::vec2 &&position, const VkExtent2D &extent, float distance) {
     /*  Viewport appears to take x, y, w, h where:
             w, y - lower left
             w, h - width and height
@@ -39,7 +42,7 @@ Ray Camera::getRay(glm::vec2 &&position, const VkExtent2D &extent, float distanc
     // It looks like this returns a point in world space.
     auto d = glm::unProject(  //
         win,                  // win
-        view_,                // model (TODO: add model_ to this?)
+        pData_->view,         // model (TODO: add model_ to this?)
         proj_,                // projection
         viewport              // viewport
     );
@@ -56,25 +59,26 @@ Ray Camera::getRay(glm::vec2 &&position, const VkExtent2D &extent, float distanc
     return {e, d, d - e, directionUnit};
 }
 
-void Camera::update(const float aspect, const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
-    // ASPECT
-    if (!helpers::almost_equal(aspect, aspect_, 2)) {
-        proj_ = glm::perspective(fov_, aspect, near_, far_);
-    }
-    // VIEW
-    dirty_ |= updateView(pos_dir, look_dir);
+void Camera::Default::Perspective::Base::setAspect(float aspect) {
+    aspect_ = aspect;
+    proj_ = glm::perspective(fov_, aspect_, near_, far_);
+    setData();
 }
 
-bool Camera::updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
+void Camera::Default::Perspective::Base::update(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
+    if (updateView(pos_dir, look_dir)) setData();
+}
+
+bool Camera::Default::Perspective::Base::updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
     bool update_pos = !glm::all(glm::equal(pos_dir, glm::vec3()));
     bool update_look = !glm::all(glm::equal(look_dir, glm::vec3()));
     // If there is nothing to update then return ...
     if (!update_pos && !update_look) return false;
 
     // Get othonormal basis for camera view ...
-    glm::vec3 w = glm::row(view_, 2);
-    glm::vec3 u = glm::row(view_, 0);  // TODO: handle looking straight up
-    glm::vec3 v = glm::row(view_, 1);
+    glm::vec3 w = glm::row(pData_->view, 2);
+    glm::vec3 u = glm::row(pData_->view, 0);  // TODO: handle looking straight up
+    glm::vec3 v = glm::row(pData_->view, 1);
 
     // MOVEMENT
     if (update_pos) {
@@ -92,7 +96,7 @@ bool Camera::updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
         center_ += look;
     }
 
-    view_ = glm::lookAt(eye_, center_, UP_VECTOR);
+    pData_->view = glm::lookAt(eye_, center_, UP_VECTOR);
 
     return true;
 }

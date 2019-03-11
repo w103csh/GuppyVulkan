@@ -1,37 +1,32 @@
-#pragma once
+#ifndef PLANE_H
+#define PLANE_H
 
-#include <array>
-#include <glm/glm.hpp>
-#include <vulkan/vulkan.h>
+#include <vector>
 
 #include "Constants.h"
+#include "Face.h"
+#include "Mesh.h"
 
-constexpr auto PLANE_VERTEX_SIZE = 4;
-constexpr auto PLANE_INDEX_SIZE = 6;
+namespace Plane {
 
-// **********************
-// Plane
-// **********************
+constexpr auto DEFAULT_DIMENSION = 1.0f;
+constexpr auto VERTEX_SIZE = 4;
+constexpr auto INDEX_SIZE = 6;
 
-class Plane {
-   protected:
-    void createVertices(Mesh* pMesh, bool doubleSided);
-};
+std::vector<Face> make(bool doubleSided = false);
 
-// **********************
-// ColorPlane
-// **********************
-
-class ColorPlane : public Plane, public ColorMesh {
+class Color : public Mesh::Color {
    public:
-    ColorPlane(MeshCreateInfo* pCreateInfo, bool doubleSided = false);
+    Color(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
+          bool doubleSided = false);
 };
 
-// **********************
-// TexturePlane
-// **********************
-
-class TexturePlane : public Plane, public TextureMesh {
+class Texture : public Mesh::Texture {
    public:
-    TexturePlane(MeshCreateInfo* pCreateInfo, bool doubleSided = false);
+    Texture(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
+            bool doubleSided = false);
 };
+
+};  // namespace Plane
+
+#endif  //! PLANE_H

@@ -1,8 +1,12 @@
 
+#include "Helpers.h"
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/matrix_decompose.hpp>
+#include <glm/gtx/quaternion.hpp>
 #include <unordered_map>
 
 #include "Face.h"
-#include "Helpers.h"
 #include "Mesh.h"
 
 namespace helpers {
@@ -315,7 +319,6 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
     vkCmdPipelineBarrier(cmd, srcStages, dstStages, 0, 0, nullptr, 0, nullptr, 1, &barrier);
     //}
 }
-
 void cramers3(glm::vec3 &&c1, glm::vec3 &&c2, glm::vec3 &&c3, glm::vec3 &&c4) {
     /*  Setup example (comes from barycentric intersection):
 
@@ -339,6 +342,11 @@ void cramers3(glm::vec3 &&c1, glm::vec3 &&c2, glm::vec3 &&c3, glm::vec3 &&c4) {
     // auto gamma_ = glm::determinant(GAMMA) / M_;
     // glm::mat3 T(c1, c2, c4);
     // auto t_ = glm::determinant(T) / M_;
+}
+
+void decomposeScale(const glm::mat4 &m, glm::vec3 &scale) {
+    //
+    glm::decompose(m, scale, glm::quat{}, glm::vec3{}, glm::vec3{}, glm::vec4{});
 }
 
 }  // namespace helpers

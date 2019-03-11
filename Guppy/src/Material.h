@@ -4,9 +4,10 @@
 
 #include <functional>
 #include <glm/glm.hpp>
-#include <tiny_obj_loader.h>
 
-#include "BufferManager.h"
+#include "Constants.h"
+#include "BufferItem.h"
+#include "Descriptor.h"
 #include "Texture.h"
 
 namespace Material {
@@ -25,6 +26,7 @@ typedef enum FLAG {
     // THROUGH 0x00000008
     MODE_LAMERTIAN = 0x00000010,
     MODE_BLINN_PHONG = 0x00000020,
+    MODE_TOON_SHADE = 0x00000040,
     // THROUGH 0x00000080
     HIDE = 0x00000100,
     // THROUGH 0x00000800
@@ -33,168 +35,109 @@ typedef enum FLAG {
     BITS_MAX_ENUM = 0x7FFFFFFF
 } FLAG;
 
-struct Info {
-    MATERIAL type = MATERIAL::DEFAULT;
+struct CreateInfo {
+    MATERIAL type;
     std::shared_ptr<Texture::DATA> pTexture = nullptr;
     // COMMON
     FlagBits flags = PER_MATERIAL_COLOR;
     glm::vec3 diffuseCoeff{1.0f};
-    // DEFAULT
+};
+
+// **********************
+//      Base
+// **********************
+
+class Base : public virtual Buffer::Item, public Descriptor::Interface {
+   public:
+    const MATERIAL TYPE;
+
+    const STATUS& getStatus() const { return status_; }
+
+    inline void updateStatus() {
+        assert(status_ != STATUS::READY && "This shouldn't be used to check status");
+        if (hasTexture() && pTexture_->status == STATUS::READY) {
+            setTextureData();
+            DIRTY = true;
+            status_ = STATUS::READY;
+        }
+    }
+
+    inline bool hasTexture() const { return pTexture_ != nullptr; }
+    inline const std::shared_ptr<Texture::DATA> getTexture() const { return pTexture_; }
+
+    virtual FlagBits getFlags() = 0;
+    virtual void setFlags(FlagBits flags) = 0;
+    virtual void setTextureData(){};
+
+    // OBJ
+    virtual void setTinyobjData(const tinyobj::material_t& m){};
+
+    // DESCRIPTOR
+    inline void setWriteInfo(VkWriteDescriptorSet& write) const override { write.pBufferInfo = &BUFFER_INFO.bufferInfo; }
+
+   protected:
+    Base(Material::CreateInfo* pCreateInfo);
+
+    STATUS status_;
+    std::shared_ptr<Texture::DATA> pTexture_;
+};
+
+// **********************
+//      Default
+// **********************
+
+namespace Default {
+
+struct DATA {
+    glm::vec3 Ka{0.1f};
+    FlagBits flags = Material::FLAG::PER_MATERIAL_COLOR;
+    // 16
+    glm::vec3 Kd{1.0f};
+    float opacity = 1.0f;
+    // 16
+    glm::vec3 Ks{0.9f};
+    float shininess = SHININESS::MILDLY_SHINY;
+    // 16
+    FlagBits texFlags = 1;  // Texture::FLAG::NONE;
+    float xRepeat = 1.0f;
+    alignas(8) float yRepeat = 1.0f;
+    // 16 (4 rem)
+};
+
+struct CreateInfo : public Material::CreateInfo {
     glm::vec3 ambientCoeff{0.1f};
     glm::vec3 specularCoeff{0.9f};
     float opacity = 1.0f;
     float repeat = 1.0f;
     float shininess = SHININESS::MILDLY_SHINY;
-    // PBR
-    float roughness = 0.0f;
-    bool metal = false;
 };
 
-static void copyTinyobjData(const tinyobj::material_t& m, Material::Info& materialInfo) {
+class Base : public Buffer::DataItem<DATA>, public Material::Base {
+   public:
+    Base(const Buffer::Info&& info, DATA* pData, CreateInfo* pCreateInfo);
+
+    FlagBits getFlags() override { return pData_->flags; }
+    void setFlags(FlagBits flags) override {
+        pData_->flags = flags;
+        setData();
+    }
+
+    void setTextureData() override;
+    void setTinyobjData(const tinyobj::material_t& m) override;
+    void setData() override { DIRTY = true; };
+
+   private:
+    float repeat_;
+};
+
+static void copyTinyobjData(const tinyobj::material_t& m, Default::CreateInfo& materialInfo) {
     materialInfo.shininess = m.shininess;
     materialInfo.ambientCoeff = {m.ambient[0], m.ambient[1], m.ambient[2]};
     materialInfo.diffuseCoeff = {m.diffuse[0], m.diffuse[1], m.diffuse[2]};
     materialInfo.specularCoeff = {m.specular[0], m.specular[1], m.specular[2]};
 }
 
-class Base : public Buffer::Item {
-   public:
-    Base(Material::Info* pInfo);
-
-    MATERIAL TYPE;
-
-    STATUS getStatus() const {
-        if (hasTexture() && pTexture_->status != STATUS::READY) {
-            return STATUS::PENDING_TEXTURE;
-        }
-        return STATUS::READY;
-    }
-
-    inline bool hasTexture() const { return pTexture_ != nullptr; }
-    inline const std::shared_ptr<Texture::DATA> getTexture() const { return pTexture_; }
-
-   private:
-    std::shared_ptr<Texture::DATA> pTexture_;
-};
-
-namespace Default {
-
-struct DATA {
-    glm::vec3 Ka;
-    FlagBits flags;
-    // 16
-    glm::vec3 Kd;
-    float opacity;
-    // 16
-    glm::vec3 Ks;
-    float shininess;
-    // 16
-    float xRepeat;
-    float yRepeat;
-    // 8 (8 rem)
-};
-
-static DATA getData(const Material::Info* pInfo) {
-    float xRepeat, yRepeat;
-    xRepeat = yRepeat = pInfo->repeat;
-
-    // Deal with non-square images
-    if (pInfo->pTexture != nullptr) {
-        auto aspect = pInfo->pTexture->aspect;
-        if (aspect > 1.0f) {
-            yRepeat *= aspect;
-        } else if (aspect < 1.0f) {
-            xRepeat *= (1 / aspect);
-        }
-    }
-
-    return {pInfo->ambientCoeff,
-            pInfo->flags,
-            pInfo->diffuseCoeff,
-            pInfo->opacity,
-            pInfo->specularCoeff,
-            pInfo->shininess,
-            xRepeat,
-            yRepeat};
-}
-
 }  // namespace Default
-
-// class Base {
-//   public:
-//    struct DATA {
-//        glm::vec3 Ka;
-//        FlagBits flags;
-//        // 16
-//        glm::vec3 Kd;
-//        float opacity;
-//        // 16
-//        glm::vec3 Ks;
-//        float shininess;
-//        // 16
-//        float xRepeat;
-//        float yRepeat;
-//        // 8 (8 rem)
-//    };
-//
-//    static Material::Default::DATA getData(const std::unique_ptr<Material::Base>& pMaterial);
-//
-//    Base(Material::Info* pCreateInfo)
-//        : flags_(pCreateInfo->flags),
-//          ambientCoeff_(pCreateInfo->ambientCoeff),
-//          diffuseCoeff_(pCreateInfo->diffuseCoeff),
-//          specularCoeff_(pCreateInfo->specularCoeff),
-//          opacity_(pCreateInfo->opacity),
-//          repeat_(pCreateInfo->repeat),
-//          // xRepeat_(pCreateInfo->xRepeat),
-//          // yRepeat_(pCreateInfo->yRepeat),
-//          shininess_(pCreateInfo->shininess),
-//          pTexture_(pCreateInfo->pTexture),
-//          // PBR
-//          roughness_(pCreateInfo->roughness)
-//    //
-//    {}
-//
-//    STATUS getStatus() const;
-//
-//    inline FlagBits getFlags() const { return flags_; }
-//    inline glm::vec3 getAmbientCoeff() const { return ambientCoeff_; }
-//    inline glm::vec3 getDiffuseCoeff() const { return diffuseCoeff_; }
-//    inline glm::vec3 getSpecularCoeff() const { return specularCoeff_; }
-//    inline float getOpacity() const { return opacity_; }
-//    inline float getRepeat() const { return repeat_; }
-//    inline float getShininess() const { return shininess_; }
-//    inline const std::shared_ptr<Texture::Data>& getTexture() const { return pTexture_; }
-//    inline float getRoughness() const { return roughness_; }
-//
-//    inline void setFlags(FlagBits flags) { flags_ = flags; }
-//    inline void setColor(glm::vec3 c) { ambientCoeff_ = diffuseCoeff_ = c; }
-//    inline void setAmbientColor(glm::vec3 c) { ambientCoeff_ = c; }
-//    inline void setDiffuseColor(glm::vec3 c) { diffuseCoeff_ = c; }
-//    inline void setSpecularColor(glm::vec3 c) { specularCoeff_ = c; }
-//    inline void setOpacity(float o) { opacity_ = o; }
-//    inline void setRepeat(float r) { repeat_ = r; }
-//    // inline void setXRepeat(float r) { xRepeat_ = r; }
-//    // inline void setYRepeat(float r) { yRepeat_ = r; }
-//    inline void setShininess(float s) { shininess_ = s; }
-//    inline void setRoughness(float r) { roughness_ = r; }
-//
-//    inline void setTexture(std::shared_ptr<Texture::Data> pTexture) {
-//        flags_ = flags_ | (BITS_MAX_ENUM & PER_TEXTURE_COLOR);
-//        pTexture_ = pTexture;
-//    }
-//    inline bool hasTexture() const { return pTexture_.get() != nullptr; }
-//
-//   private:
-//    // DEFAULT
-//    FlagBits flags_;
-//    glm::vec3 ambientCoeff_, diffuseCoeff_, specularCoeff_;
-//    float opacity_, repeat_;  //, xRepeat_, yRepeat_;
-//    float shininess_;         // phong exponent
-//    std::shared_ptr<Texture::Data> pTexture_;
-//    // PBR
-//    float roughness_;
-//};
 
 };  // namespace Material
 

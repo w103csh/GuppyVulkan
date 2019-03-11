@@ -28,6 +28,7 @@ class Handler : public Game::Handler {
     Handler(Game *pGame);
 
     void init() override;
+    inline void destroy() override { cleanup(); };
 
     std::unique_ptr<Loading::Resources> createLoadingResources() const;
     void loadSubmit(std::unique_ptr<Loading::Resources> pLdgRes);

@@ -52,8 +52,7 @@ Please see the [CONTRIBUTING.md](CONTRIBUTING.md) file in this repository for mo
 
 ## How to Build and Run
 
-[BUILD.md](BUILD.md)
-Includes directions for building all components as well as running validation tests and demo applications.
+[BUILD.md](BUILD.md) includes directions for building all components as well as running validation tests and demo applications.
 
 <!-- ## License
 This work is released as open source under a Apache-style license.  See LICENSE.txt for full license.
