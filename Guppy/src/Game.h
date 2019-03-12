@@ -24,17 +24,19 @@
 
 class Shell;
 
-// HANDLERS
 // clang-format off
-namespace Command   { class Handler; }
-namespace Loading   { class Handler; }
-namespace Material  { class Handler; }
-namespace Model     { class Handler; }
-namespace Pipeline  { class Handler; }
-namespace Scene     { class Handler; }
-namespace Shader    { class Handler; }
-namespace Texture   { class Handler; }
-namespace UI        { class Handler; }
+namespace Command       { class Handler; }
+namespace Descriptor    { class Handler; }
+namespace Loading       { class Handler; }
+namespace Material      { class Handler; }
+namespace Mesh          { class Handler; }
+namespace Model         { class Handler; }
+namespace Pipeline      { class Handler; }
+namespace Scene         { class Handler; }
+namespace Shader        { class Handler; }
+namespace Texture       { class Handler; }
+namespace UI            { class Handler; }
+namespace Uniform       { class Handler; }
 // clang-format on
 
 enum class GAME_KEY {
@@ -147,6 +149,21 @@ class Game {
     virtual void onMouse(const MouseInput &input){};  // TODO: bad design & misleading name
 
     // HANDLER
+    struct Handlers {
+        std::unique_ptr<Command::Handler> pCommand = nullptr;
+        std::unique_ptr<Descriptor::Handler> pDescriptor = nullptr;
+        std::unique_ptr<Loading::Handler> pLoading = nullptr;
+        std::unique_ptr<Material::Handler> pMaterial = nullptr;
+        std::unique_ptr<Mesh::Handler> pMesh = nullptr;
+        std::unique_ptr<Model::Handler> pModel = nullptr;
+        std::unique_ptr<Pipeline::Handler> pPipeline = nullptr;
+        std::unique_ptr<Scene::Handler> pScene = nullptr;
+        std::unique_ptr<Shader::Handler> pShader = nullptr;
+        std::unique_ptr<Texture::Handler> pTexture = nullptr;
+        std::unique_ptr<UI::Handler> pUI = nullptr;
+        std::unique_ptr<Uniform::Handler> pUniform = nullptr;
+    };
+
     class Handler {
        public:
         Handler(const Handler &) = delete;             // Prevent construction by copying
@@ -158,15 +175,18 @@ class Game {
         inline const Settings &settings() const { return pGame_->settings(); }
         inline const Shell &shell() const { return pGame_->shell(); }
 
-        inline Command::Handler &commandHandler() const { return std::ref(*pGame_->pCommandHandler_); }
-        inline Loading::Handler &loadingHandler() const { return std::ref(*pGame_->pLoadingHandler_); }
-        inline Material::Handler &materialHandler() const { return std::ref(*pGame_->pMaterialHandler_); }
-        inline Model::Handler &modelHandler() const { return std::ref(*pGame_->pModelHandler_); }
-        inline Pipeline::Handler &pipelineHandler() const { return std::ref(*pGame_->pPipelineHandler_); }
-        inline Scene::Handler &sceneHandler() const { return std::ref(*pGame_->pSceneHandler_); }
-        inline Shader::Handler &shaderHandler() const { return std::ref(*pGame_->pShaderHandler_); }
-        inline Texture::Handler &textureHandler() const { return std::ref(*pGame_->pTextureHandler_); }
-        inline UI::Handler &uiHandler() const { return std::ref(*pGame_->pUIHandler_); }
+        inline Command::Handler &commandHandler() const { return std::ref(*pGame_->handlers_.pCommand); }
+        inline Descriptor::Handler &descriptorHandler() const { return std::ref(*pGame_->handlers_.pDescriptor); }
+        inline Loading::Handler &loadingHandler() const { return std::ref(*pGame_->handlers_.pLoading); }
+        inline Material::Handler &materialHandler() const { return std::ref(*pGame_->handlers_.pMaterial); }
+        inline Mesh::Handler &meshHandler() const { return std::ref(*pGame_->handlers_.pMesh); }
+        inline Model::Handler &modelHandler() const { return std::ref(*pGame_->handlers_.pModel); }
+        inline Pipeline::Handler &pipelineHandler() const { return std::ref(*pGame_->handlers_.pPipeline); }
+        inline Scene::Handler &sceneHandler() const { return std::ref(*pGame_->handlers_.pScene); }
+        inline Shader::Handler &shaderHandler() const { return std::ref(*pGame_->handlers_.pShader); }
+        inline Texture::Handler &textureHandler() const { return std::ref(*pGame_->handlers_.pTexture); }
+        inline UI::Handler &uiHandler() const { return std::ref(*pGame_->handlers_.pUI); }
+        inline Uniform::Handler &uniformHandler() const { return std::ref(*pGame_->handlers_.pUniform); }
 
        protected:
         Handler(Game *pGame) : pGame_(pGame) {}
@@ -177,32 +197,13 @@ class Game {
     };
 
    protected:
-    Game(const std::string &name, const std::vector<std::string> &args,
-         std::unique_ptr<Command::Handler> &&pCommandHandler = nullptr,
-         std::unique_ptr<Loading::Handler> &&pLoadingHandler = nullptr,
-         std::unique_ptr<Material::Handler> &&pMaterialHandler = nullptr,
-         std::unique_ptr<Model::Handler> &&pModelHandler = nullptr,
-         std::unique_ptr<Pipeline::Handler> &&pPipelineHandler = nullptr,
-         std::unique_ptr<Scene::Handler> &&pSceneHandler = nullptr,
-         std::unique_ptr<Shader::Handler> &&pShaderHandler = nullptr,
-         std::unique_ptr<Texture::Handler> &&pTextureHandler = nullptr,  //
-         std::unique_ptr<UI::Handler> &&pUIHandler = nullptr
-         //
-    );
+    Game(const std::string &name, const std::vector<std::string> &args, Handlers &&handlers);
 
     // LISTENERS
     void watchDirectory(const std::string &directory, std::function<void(std::string)> callback);
 
     // HANDLERS
-    std::unique_ptr<Command::Handler> pCommandHandler_;
-    std::unique_ptr<Loading::Handler> pLoadingHandler_;
-    std::unique_ptr<Material::Handler> pMaterialHandler_;
-    std::unique_ptr<Model::Handler> pModelHandler_;
-    std::unique_ptr<Pipeline::Handler> pPipelineHandler_;
-    std::unique_ptr<Scene::Handler> pSceneHandler_;
-    std::unique_ptr<Shader::Handler> pShaderHandler_;
-    std::unique_ptr<Texture::Handler> pTextureHandler_;
-    std::unique_ptr<UI::Handler> pUIHandler_;
+    const Handlers handlers_;
 
    private:
     Settings settings_;

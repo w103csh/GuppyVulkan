@@ -1,41 +1,87 @@
 #ifndef MATERIAL_HANDLER_H
 #define MATERIAL_HANDLER_H
 
-#include "BufferManager.h"
+#include <string>
+
+#include "BufferManagerDescriptor.h"
+#include "Game.h"
 #include "Material.h"
 #include "PBR.h"
 
-#include "Game.h"
-
 namespace Material {
 
+// TODO: inner class of Handler?
+template <class TDerived>
+class Manager : public Buffer::Manager::Descriptor<Material::Base, TDerived, std::shared_ptr> {
+   public:
+    Manager(const std::string &&name, const DESCRIPTOR &&descriptorType, const VkDeviceSize &&maxSize)
+        : Buffer::Manager::Descriptor<Material::Base, TDerived, std::shared_ptr>{
+              std::forward<const std::string>(name),
+              std::forward<const DESCRIPTOR>(descriptorType),
+              std::forward<const VkDeviceSize>(maxSize),
+              false,
+              VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+              static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+          } {}
+};
+
 class Handler : public Game::Handler {
+    friend class Mesh::Handler;
+
    public:
     Handler(Game *pGame);
 
     void init() override;
-
-    // Let the nightmare begin...
-    Buffer::Item::Info insert(const VkDevice &dev, const Material::Info *pMaterialInfo);
-
-    template <typename T>
-    T &get(const Buffer::Item::Info &info);
-    // DEFAULT
-    template <>
-    Material::Default::DATA &get(const Buffer::Item::Info &info) {
-        return defaultBuffer_.get(info);
+    template <class T>
+    inline T &getMaterial(std::shared_ptr<Material::Base> &pMaterial) {
+        const auto &offset = pMaterial->BUFFER_INFO.dataOffset;
+        return std::ref(*(Material::Default::Base *)(getManager<T>().pItems[offset].get()));
     }
-    // PBR
-    template <>
-    PBR::DATA &get(const Buffer::Item::Info &info) {
-        return pbrBuffer_.get(info);
+
+    inline void update(std::shared_ptr<Material::Base> &pMaterial) {
+        if (pMaterial->DIRTY) {
+            switch (pMaterial->TYPE) {
+                case MATERIAL::DEFAULT:
+                    defMgr_.update(shell().context().dev, pMaterial->BUFFER_INFO);
+                    break;
+                case MATERIAL::PBR:
+                    pbrMgr_.update(shell().context().dev, pMaterial->BUFFER_INFO);
+                    break;
+                default:
+                    assert(false && "Unhandled case");
+            }
+        }
     }
 
    private:
     void reset() override;
-    // TODO: some clever way to make this not hardcoded???
-    Buffer::Manager<Material::Default::DATA> defaultBuffer_;
-    Buffer::Manager<Material::PBR::DATA> pbrBuffer_;
+
+    template <typename TMaterialCreateInfo>
+    std::shared_ptr<Material::Base> &makeMaterial(TMaterialCreateInfo *pCreateInfo) {
+        static_assert(false, "Not implemented");
+    }
+    // DEFAULT
+    template <>
+    std::shared_ptr<Material::Base> &makeMaterial(Material::Default::CreateInfo *pCreateInfo) {
+        defMgr_.insert(shell().context().dev, pCreateInfo);
+        return defMgr_.pItems.back();
+    }
+    // PBR
+    template <>
+    std::shared_ptr<Material::Base> &makeMaterial(Material::PBR::CreateInfo *pCreateInfo) {
+        pbrMgr_.insert(shell().context().dev, pCreateInfo);
+        return pbrMgr_.pItems.back();
+    }
+
+    // clang-format off
+    template <class T> inline Material::Manager<T>& getManager() { static_assert(false, "Not implemented"); }
+    template <> inline Material::Manager<Material::Default::Base>& getManager() { return defMgr_; }
+    template <> inline Material::Manager<Material::PBR::Base>& getManager() { return pbrMgr_; }
+    // clang-format on
+
+    Material::Manager<Material::Default::Base> defMgr_;
+    Material::Manager<Material::PBR::Base> pbrMgr_;
 };
 
 }  // namespace Material

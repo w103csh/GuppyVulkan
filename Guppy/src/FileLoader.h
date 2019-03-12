@@ -1,10 +1,10 @@
 #ifndef FILELOADER_H
 #define FILELOADER_H
 
-#include <tiny_obj_loader.h>
 #include <string>
 #include <unordered_map>
 
+#include "Constants.h"
 #include "Face.h"
 #include "Helpers.h"
 #include "Vertex.h"
@@ -129,7 +129,7 @@ void loadObjData(const tinyobj_data &data, std::vector<TVertex *> &pMeshes) {
             face.indexVertices(vertexMap, pMeshes, materialOffset);
         }
     }
-    for (auto &pMesh : pMeshes) pMesh->setStatusPendingBuffers();
+    for (auto &pMesh : pMeshes) pMesh->setStatus(STATUS::PENDING_BUFFERS);
 }
 
 };  // namespace FileLoader

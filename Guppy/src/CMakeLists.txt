@@ -1,10 +1,5 @@
 
 set(SOURCE
-    Axes.h
-    Axes.cpp
-    Box.cpp
-    Box.h
-    BufferManager.h
     Camera.cpp
     Camera.h
 	CommandHandler.cpp
@@ -15,8 +10,6 @@ set(SOURCE
     Extensions.h
     Face.cpp
     Face.h
-    FaceMesh.cpp
-    FaceMesh.h
 	FileLoader.cpp
     FileLoader.h
     Game.cpp
@@ -39,16 +32,10 @@ set(SOURCE
 	Material.h
     MaterialHandler.cpp
     MaterialHandler.h
-    Model.cpp
-    Model.h
-    ModelHandler.cpp
-    ModelHandler.h
     Object3d.cpp
     Object3d.h
     PBR.cpp
     PBR.h
-    Plane.cpp
-    Plane.h
 	Scene.cpp
 	Scene.h
 	SceneHandler.cpp
@@ -58,9 +45,39 @@ set(SOURCE
     Singleton.h
     Vertex.cpp
     Vertex.h
+    # Buffer
+    BufferItem.h
+    BufferManager.h
+    # Descriptor
+    Descriptor.cpp
+    Descriptor.h
+    BufferManagerDescriptor.h
+    DescriptorHandler.cpp
+    DescriptorHandler.h
+    DescriptorSet.cpp
+    DescriptorSet.h
     # Mesh
+    Axes.h
+    Axes.cpp
+    Box.cpp
+    Box.h
+    FaceMesh.cpp
+    FaceMesh.h
 	Mesh.cpp
-	Mesh.h
+    Mesh.h
+	MeshHandler.cpp
+    MeshHandler.h
+    Plane.cpp
+    Plane.h
+    VisualHelper.cpp
+    VisualHelper.h
+    # Model
+    Model.cpp
+    Model.h
+    ModelHandler.cpp
+    ModelHandler.h
+    ModelMesh.cpp
+    ModelMesh.h
     # Shell
     Shell.cpp
     Shell.h
@@ -78,10 +95,6 @@ set(SOURCE
     Shader.h
     ShaderHandler.cpp
     ShaderHandler.h
-    Uniform.cpp
-    Uniform.h
-    UniformHandler.cpp
-    UniformHandler.h
     # Texture
     Sampler.cpp
     Sampler.h
@@ -96,6 +109,11 @@ set(SOURCE
     ImGuiRenderPass.h
     UIHandler.cpp
     UIHandler.h
+    # Uniform
+    Uniform.cpp
+    Uniform.h
+    UniformHandler.cpp
+    UniformHandler.h
     )
 
 # shader folder
@@ -222,4 +240,8 @@ else()
     target_link_libraries(${LINKS})
 
 endif()
+
+set_target_properties(${TARGET_NAME} PROPERTIES
+    CXX_STANDARD 17
+    )
 

@@ -3,9 +3,13 @@
 
 #include "Mesh.h"
 
-class FaceMesh : public LineMesh {
+// clang-format off
+namespace Mesh { class Handler; }
+// clang-format on
+
+class FaceMesh : public Mesh::Line {
    public:
-    FaceMesh(MeshCreateInfo *pCreateInfo);
+    FaceMesh(Mesh::Handler &handler, Mesh::CreateInfo *pCreateInfo, std::shared_ptr<Material::Base> &pMaterial);
 };
 
 #endif  //! FACE_MESH_H

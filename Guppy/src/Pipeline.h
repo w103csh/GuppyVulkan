@@ -31,20 +31,17 @@ class Base : public Handlee<Pipeline::Handler> {
     const VkPipelineBindPoint BIND_POINT;
     const std::string NAME;
 
-    uint32_t SUBPASS_ID;
-
     virtual void init();
 
     inline const VkPipelineLayout &getLayout() const { return layout_; }
     inline const VkPipeline &getPipeline() const { return pipeline_; }
+    inline uint32_t getSubpassId() const { return subpassId_; }
 
-    // DESCRIPTOR
-    const std::set<DESCRIPTOR> getDescriptorTypeSet();
     // TODO: if this ever gets overriden then this should take a struct
     virtual inline uint32_t getDescriptorSetOffset(const std::shared_ptr<Texture::DATA> &pTexture) const { return 0; }
 
    protected:
-    Base(const Pipeline::Handler &handler, const PIPELINE &&type, const std::set<SHADER> &&shaderTypes,
+    Base(Pipeline::Handler &handler, const PIPELINE &&type, const std::set<SHADER> &&shaderTypes,
          const std::vector<PUSH_CONSTANT> &&pushConstantTypes, const VkPipelineBindPoint &&bindPoint,
          const std::string &&name)
         : Handlee(handler),
@@ -52,10 +49,10 @@ class Base : public Handlee<Pipeline::Handler> {
           SHADER_TYPES(shaderTypes),
           PUSH_CONSTANT_TYPES(pushConstantTypes),
           BIND_POINT(bindPoint),
-          SUBPASS_ID(0),
           NAME(name),
           layout_(VK_NULL_HANDLE),
           pipeline_(VK_NULL_HANDLE),
+          subpassId_(0),
           descSetTypeInit_(false) {
         for (const auto &type : PUSH_CONSTANT_TYPES) assert(type != PUSH_CONSTANT::DONT_CARE);
     }
@@ -83,6 +80,7 @@ class Base : public Handlee<Pipeline::Handler> {
     void destroy();
 
    private:
+    uint32_t subpassId_;
     // DESCRIPTOR
     bool descSetTypeInit_;              // TODO: initialize value???
     std::set<DESCRIPTOR> descTypeSet_;  // TODO: initialize value???
@@ -94,8 +92,7 @@ class Base : public Handlee<Pipeline::Handler> {
 namespace Default {
 
 struct PushConstant {
-    Object3d::DATA obj3d;
-    Material::Default::DATA material;
+    glm::mat4 model;
 };
 
 // **********************
@@ -103,7 +100,7 @@ struct PushConstant {
 // **********************
 class TriListColor : public Base {
    public:
-    TriListColor(const Pipeline::Handler &handler)
+    TriListColor(Pipeline::Handler &handler)
         : Base{handler,  //
                PIPELINE::TRI_LIST_COLOR,
                {SHADER::COLOR_VERT, SHADER::COLOR_FRAG},
@@ -121,7 +118,7 @@ class TriListColor : public Base {
 // **********************
 class Line : public Base {
    public:
-    Line(const Pipeline::Handler &handler)
+    Line(Pipeline::Handler &handler)
         : Base{handler,  //
                PIPELINE::LINE,
                {SHADER::COLOR_VERT, SHADER::LINE_FRAG},
@@ -139,7 +136,7 @@ class Line : public Base {
 // **********************
 class TriListTexture : public Base {
    public:
-    TriListTexture(const Pipeline::Handler &handler)
+    TriListTexture(Pipeline::Handler &handler)
         : Base{handler,  //
                PIPELINE::TRI_LIST_TEX,
                {SHADER::TEX_VERT, SHADER::TEX_FRAG},

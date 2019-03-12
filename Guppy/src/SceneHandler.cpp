@@ -2,12 +2,11 @@
 #include "SceneHandler.h"
 
 #include "InputHandler.h"
-#include "SelectionManager.h"
+#include "MeshHandler.h"
 #include "Shell.h"
 #include "TextureHandler.h"
 
-Scene::Handler::Handler(Game* pGame)
-    : Game::Handler(pGame), activeSceneIndex_(), pSelectionManager_(std::make_unique<Selection::Manager>(std::ref(*this))) {}
+Scene::Handler::Handler(Game* pGame) : Game::Handler(pGame), activeSceneIndex_() {}
 
 Scene::Handler::~Handler() = default;  // Required in this file for inner-class forward declaration of "SelectionManager"
 
@@ -22,40 +21,41 @@ SCENE_INDEX_TYPE Scene::Handler::makeScene(bool setActive, bool makeFaceSelectio
     assert(pScenes_.size() < UINT8_MAX);
     SCENE_INDEX_TYPE offset = pScenes_.size();
 
-    pScenes_.push_back(std::make_unique<Scene::Base>(std::ref(*this), offset));
+    pScenes_.push_back(std::make_unique<Scene::Base>(std::ref(*this), offset, makeFaceSelection));
     if (setActive) activeSceneIndex_ = offset;
-
-    // Selection
-    if (makeFaceSelection) pSelectionManager_->addFaceSelection(getActiveScene());
-    // TODO: move selection meshes...
 
     return offset;
 }
 
-void Scene::Handler::updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline) {
-    // Not concerned with speed here at the moment. If recreating pipelines
-    // becomes something that is needed a lot then this is not great.
-    for (auto& pScene : pScenes_) {
-        for (auto& pMesh : pScene->colorMeshes_)
-            if (pMesh->PIPELINE_TYPE == type) pMesh->updatePipelineReferences(type, pipeline);
-        for (auto& pMesh : pScene->lineMeshes_)
-            if (pMesh->PIPELINE_TYPE == type) pMesh->updatePipelineReferences(type, pipeline);
-        for (auto& pMesh : pScene->texMeshes_)
-            if (pMesh->PIPELINE_TYPE == type) pMesh->updatePipelineReferences(type, pipeline);
-    }
+std::unique_ptr<Mesh::Color>& Scene::Handler::getColorMesh(size_t sceneOffset, size_t meshOffset) {
+    // return pScenes_[sceneOffset]->getColorMesh(meshOffset);
+    assert(false);
+    return meshHandler().getColorMesh(meshOffset);
 }
 
-const std::unique_ptr<Face>& Scene::Handler::getFaceSelection() { return pSelectionManager_->getFace(); }
+std::unique_ptr<Mesh::Line>& Scene::Handler::getLineMesh(size_t sceneOffset, size_t meshOffset) {
+    // return pScenes_[sceneOffset]->getLineMesh(meshOffset);
+    assert(false);
+    return meshHandler().getLineMesh(meshOffset);
+}
 
-void Scene::Handler::select(const Ray& ray) {
-    float tMin = T_MAX;  // This is relative to the distance between ray.e & ray.d
-    Face face;
+std::unique_ptr<Mesh::Texture>& Scene::Handler::getTextureMesh(size_t sceneOffset, size_t meshOffset) {
+    // return pScenes_[sceneOffset]->getTextureMesh(meshOffset);
+    assert(false);
+    return meshHandler().getTextureMesh(meshOffset);
+}
 
-    // TODO: pass the scene in, or better, fix it...
-    pSelectionManager_->selectFace(ray, tMin, getActiveScene()->colorMeshes_, face);
-    pSelectionManager_->selectFace(ray, tMin, getActiveScene()->texMeshes_, face);
-
-    pSelectionManager_->updateFaceSelection((tMin < T_MAX) ? std::make_unique<Face>(face) : nullptr);
+void Scene::Handler::updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline) {
+    // Not concerned with speed here at the moment. If recreating pipelines
+    // becomes something that is needed a lot then redo this.
+    for (auto& pScene : pScenes_) {
+        for (auto& pMesh : meshHandler().getColorMeshes())
+            if (pMesh->PIPELINE_TYPE == type) pMesh->updatePipelineReferences(type, pipeline);
+        for (auto& pMesh : meshHandler().getLineMeshes())
+            if (pMesh->PIPELINE_TYPE == type) pMesh->updatePipelineReferences(type, pipeline);
+        for (auto& pMesh : meshHandler().getTextureMeshes())
+            if (pMesh->PIPELINE_TYPE == type) pMesh->updatePipelineReferences(type, pipeline);
+    }
 }
 
 void Scene::Handler::updateDescriptorSets(SCENE_INDEX_TYPE offset, bool isUpdate) {

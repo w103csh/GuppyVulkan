@@ -21,25 +21,30 @@
 
 namespace Light {
 namespace PBR {
-
-class Positional : public Base {
+namespace Positional {
+struct DATA {
+    glm::vec3 position{};           // 12 (camera space)
+    FlagBits flags = FLAG::SHOW;    // 4
+    alignas(16) glm::vec3 L{0.6f};  // 12 light intensity
+    // 4 rem
+};
+class Base : public Light::Base<DATA> {
    public:
-    struct DATA {
-        glm::vec3 position{};           // 12
-        FlagBits flags{FLAG::SHOW};     // 4
-        alignas(16) glm::vec3 L{0.6f};  // 12 light intensity
-        // 4 rem
-    };
+    Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo);
 
-    Positional(DATA data = {}) : Base(), data_(data){};
+    void update(glm::vec3 &&position);
+
+    inline const glm::vec3 &getPosition() { return position; }
+
+    void transform(const glm::mat4 t) override {
+        Object3d::transform(t);
+        position = getWorldSpacePosition();
+    }
 
    private:
-    inline VkDeviceSize getDataSize() const { return sizeof DATA; }
-    inline const void *getData() { return &data_; }
-
-    DATA data_;
+    glm::vec3 position;  // (world space)
 };
-
+}  // namespace Positional
 }  // namespace PBR
 }  // namespace Light
 
@@ -53,39 +58,34 @@ namespace PBR {
 struct DATA {
     glm::vec3 color;  // diffCoeff
     FlagBits flags;
-    float roughness;
-    float __padding1;             // rem 4
-    alignas(8) float __padding2;  // rem 8
+    // 16
+    alignas(8) float roughness;
+    // 8 (4 rem)
 };
 
-static DATA getData(const Material::Info *pInfo) { return {pInfo->diffuseCoeff, pInfo->flags, pInfo->roughness}; }
+struct CreateInfo : public Material::CreateInfo {
+    float roughness;
+};
+
+class Base : public Buffer::DataItem<DATA>, public Material::Base {
+   public:
+    Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo);
+
+    FlagBits getFlags() override { return pData_->flags; }
+    void setFlags(FlagBits flags) override {
+        pData_->flags = flags;
+        setData();
+    }
+
+    void setTextureData() override;
+    void setTinyobjData(const tinyobj::material_t &m) override;
+
+   private:
+    inline void setData() override { DIRTY = true; };
+};
 
 }  // namespace PBR
 }  // namespace Material
-
-// **********************
-//      Uniform
-// **********************
-
-namespace Uniform {
-namespace PBR {
-
-class LightPositional : public Base {
-   public:
-    LightPositional()
-        : Base{UNIFORM::LIGHT_POSITIONAL_DEFAULT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, sizeof(Light::PBR::Positional::DATA),
-               "PBR Positional Light Unifrom Buffer"} {}
-};
-
-class Material : public Base {
-   public:
-    Material()
-        : Base{UNIFORM::MATERIAL_DEFAULT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, sizeof(::Material::PBR::DATA),
-               "PBR Material Dynamic Unifrom Buffer"} {}
-};
-
-}  // namespace PBR
-}  // namespace Uniform
 
 // **********************
 //      Shader
@@ -94,12 +94,9 @@ class Material : public Base {
 namespace Shader {
 namespace PBR {
 
-const std::string FRAG_FILENAME = "color.pbr.frag";
 class ColorFrag : public Base {
    public:
-    ColorFrag(const Shader::Handler &handler)
-        : Base{handler,  //
-               SHADER::PBR_COLOR_FRAG, FRAG_FILENAME, VK_SHADER_STAGE_FRAGMENT_BIT, "PBR Color Fragment Shader"} {}
+    ColorFrag(Shader::Handler &handler);
 };
 
 }  // namespace PBR
@@ -116,20 +113,13 @@ struct CreateInfoResources;
 namespace PBR {
 
 struct PushConstant {
-    Object3d::DATA obj3d;
+    glm::mat4 model;
     Material::PBR::DATA material;
 };
 
 class Color : public Pipeline::Base {
    public:
-    Color(const Pipeline::Handler &handler)
-        : Base{handler,  //
-               PIPELINE::PBR_COLOR,
-               {SHADER::COLOR_VERT, SHADER::PBR_COLOR_FRAG},
-               {PUSH_CONSTANT::PBR},
-               VK_PIPELINE_BIND_POINT_GRAPHICS,
-               "PBR Color"} {};
-
+    Color(Pipeline::Handler &handler);
     // INFOS
     void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
     void getShaderInfoResources(CreateInfoResources &createInfoRes) override;

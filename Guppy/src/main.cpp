@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-#include "Constants.h"  // for USE_DEBUG_GUI macro
+#include "Constants.h"  // for USE_DEBUG_UI macro
 #include "Guppy.h"
 
 namespace {
@@ -83,7 +83,7 @@ void android_main(android_app *app) {
 #elif defined(VK_USE_PLATFORM_WIN32_KHR)
 
 #include "ShellWin32.h"
-#ifdef USE_DEBUG_GUI
+#ifdef USE_DEBUG_UI
 #include "ShellGLFW.h"
 #endif
 
@@ -91,7 +91,7 @@ int main(int argc, char **argv) {
     // Sleep(20000);
     Game *game = create_game(argc, argv);
     {
-#ifndef USE_DEBUG_GUI
+#ifndef USE_DEBUG_UI
         ShellWin32 shell(*game);
         shell.run();
 #else

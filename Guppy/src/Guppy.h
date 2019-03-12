@@ -4,7 +4,6 @@
 
 #include <vector>
 
-#include "Camera.h"
 #include "Game.h"
 #include "Helpers.h"
 #include "RenderPass.h"
@@ -62,8 +61,6 @@ class Guppy : public Game {
 
     // SCENE
     void createScenes();
-
-    Camera camera_;
 };
 
 #endif  // !GUPPY_H

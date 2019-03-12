@@ -18,6 +18,8 @@ class ImGuiHandler : public UI::Handler {
           showSelectionInfoWindow_(true) {}
 
     void init() override;
+    void destroy() override;
+
     void updateRenderPass(RenderPass::FrameInfo* pFrameInfo);
 
     void draw(uint8_t frameIndex) override;

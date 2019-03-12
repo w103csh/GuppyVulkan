@@ -4,8 +4,11 @@
 template <class T>
 class Handlee {
    protected:
-    Handlee(const T &handler) : handler_(handler) {}
-    const T &handler_;
+    Handlee(T &handler) : handler_(handler) {}
+    inline T &handler() { return handler_; }
+
+   private:
+    T &handler_;
 };
 
 #endif  // !HANDLEE_H
