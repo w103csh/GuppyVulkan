@@ -1,26 +1,35 @@
 
-#include <glm/gtc/matrix_access.hpp>
-
 #include "Light.h"
 
-//glm::vec3 Light::Spot::getDirection() const {
-//    glm::vec3 dir1 = glm::row(model_, 2);
-//    auto normie = glm::normalize(dir1);
-//    glm::vec3 dir = glm::row(model_, 2) * -1.0f;
-//    return glm::normalize(dir);
-//}
-//
-//glm::vec3 Light::Spot::getPosition() const {
-//    auto x = -model_ * glm::vec4(0.0f, 0.0f, 0.0f, 1.0f);
-//    auto normie = model_[3];
-//    // I believe this is the "w" homogenous factor from the book.
-//    // Still not 100% sure.
-//    auto w = model_[3];
-//    return -w * model_;
-//}
+// **********************
+//      Positional
+// **********************
 
-// virtual inline glm::vec3 getPosition() const { return model_[3]; }
-// virtual inline glm::vec3 getDirection() const {
-//    glm::vec3 dir = glm::row(model_, 2);
-//    return glm::normalize(dir);
-//}
+Light::Default::Positional::Base::Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo)
+    : Light::Base<DATA>(pData, pCreateInfo),  //,
+      Buffer::Item(std::forward<const Buffer::Info>(info)),
+      position(getWorldSpacePosition()) {}
+
+void Light::Default::Positional::Base::update(glm::vec3 &&position) {
+    pData_->position = position;
+    DIRTY = true;
+}
+
+// **********************
+//      Spot
+// **********************
+
+Light::Default::Spot::Base::Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo)  //
+    : Light::Base<DATA>(pData, pCreateInfo),                                                       //
+      Buffer::Item(std::forward<const Buffer::Info>(info)),
+      direction(getWorldSpaceDirection()),
+      position(getWorldSpacePosition()) {
+    pData_->cutoff = pCreateInfo->cutoff;
+    pData_->exponent = pCreateInfo->exponent;
+}
+
+void Light::Default::Spot::Base::update(glm::vec3 &&direction, glm::vec3 &&position) {
+    pData_->direction = direction;
+    pData_->position = position;
+    DIRTY = true;
+}

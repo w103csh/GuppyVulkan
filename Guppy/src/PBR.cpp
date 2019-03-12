@@ -5,12 +5,89 @@
 #include "ShaderHandler.h"
 
 // **********************
+//      Light
+// **********************
+
+Light::PBR::Positional::Base::Base(const Buffer::Info&& info, DATA* pData, CreateInfo* pCreateInfo)
+    : Light::Base<DATA>(pData, pCreateInfo),  //
+      Buffer::Item(std::forward<const Buffer::Info>(info)),
+      position(getWorldSpacePosition()) {}
+
+void Light::PBR::Positional::Base::update(glm::vec3&& position) {
+    pData_->position = position;
+    DIRTY = true;
+}
+
+// **********************
+//      Material
+// **********************
+
+Material::PBR::Base::Base(const Buffer::Info&& info, DATA* pData, PBR::CreateInfo* pCreateInfo)
+    : Material::Base(pCreateInfo),    //
+      Buffer::DataItem<DATA>(pData),  //
+      Buffer::Item(std::forward<const Buffer::Info>(info)) {
+    pData_->color = pCreateInfo->diffuseCoeff;
+    pData_->flags = pCreateInfo->flags;
+    pData_->roughness = pCreateInfo->roughness;
+    setData();
+}
+
+void Material::PBR::Base::setTextureData() {
+    assert(false);
+    // float xRepeat, yRepeat;
+    // xRepeat = yRepeat = repeat_;
+
+    // if (pTexture_ != nullptr) {
+    //    // REPEAT
+    //    // Deal with non-square images
+    //    auto aspect = pTexture_->aspect;
+    //    if (aspect > 1.0f) {
+    //        yRepeat *= aspect;
+    //    } else if (aspect < 1.0f) {
+    //        xRepeat *= (1 / aspect);
+    //    }
+    //    // FLAGS
+    //    pData_->texFlags = pTexture_->flags;
+    //}
+
+    // pData_->xRepeat = xRepeat;
+    // pData_->yRepeat = yRepeat;
+    setData();
+}
+
+void Material::PBR::Base::setTinyobjData(const tinyobj::material_t& m) {
+    // pData_->shininess = m.shininess;
+    // pData_->Ka = {m.ambient[0], m.ambient[1], m.ambient[2]};
+    pData_->color = {m.diffuse[0], m.diffuse[1], m.diffuse[2]};
+    // pData_->Ks = {m.specular[0], m.specular[1], m.specular[2]};
+    setData();
+}
+
+// **********************
 //      Color Shader
 // **********************
+
+Shader::PBR::ColorFrag::ColorFrag(Shader::Handler& handler)
+    : Base{handler,  //
+           SHADER::PBR_COLOR_FRAG,
+           "color.pbr.frag",
+           VK_SHADER_STAGE_FRAGMENT_BIT,
+           "PBR Color Fragment Shader",
+           {
+               {DESCRIPTOR_SET::UNIFORM_DEFAULT}  //
+           }} {}
 
 // **********************
 //      Color Pipeline
 // **********************
+
+Pipeline::PBR::Color::Color(Pipeline::Handler& handler)
+    : Base{handler,  //
+           PIPELINE::PBR_COLOR,
+           {SHADER::COLOR_VERT, SHADER::PBR_COLOR_FRAG},
+           {PUSH_CONSTANT::PBR},
+           VK_PIPELINE_BIND_POINT_GRAPHICS,
+           "PBR Color"} {};
 
 void Pipeline::PBR::Color::getInputAssemblyInfoResources(Pipeline::CreateInfoResources& createInfoRes) {
     // color vertex
@@ -34,5 +111,5 @@ void Pipeline::PBR::Color::getInputAssemblyInfoResources(Pipeline::CreateInfoRes
 
 void Pipeline::PBR::Color::getShaderInfoResources(Pipeline::CreateInfoResources& createInfoRes) {
     createInfoRes.stagesInfo.clear();  // TODO: faster way?
-    handler_.shaderHandler().getStagesInfo({SHADER::COLOR_VERT, SHADER::PBR_COLOR_FRAG}, createInfoRes.stagesInfo);
+    handler().shaderHandler().getStagesInfo({SHADER::COLOR_VERT, SHADER::PBR_COLOR_FRAG}, createInfoRes.stagesInfo);
 }

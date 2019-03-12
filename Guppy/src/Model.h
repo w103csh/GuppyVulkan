@@ -8,16 +8,15 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "FileLoader.h"
 #include "Handlee.h"
 #include "Helpers.h"
 #include "Material.h"
+#include "Mesh.h"
 #include "Object3d.h"
 
-class ColorMesh;
-class LineMesh;
-class Mesh;
-class TextureMesh;
+// clang-format off
+namespace Mesh { class Handler; }
+// clang-format on
 
 namespace Model {
 
@@ -28,54 +27,56 @@ typedef uint32_t INDEX;
 constexpr auto INDEX_MAX = UINT32_MAX;
 typedef std::function<void(Model::Base *)> CBACK;
 
-typedef struct CreateInfo {
+struct CreateInfo : public Mesh::CreateInfo {
     bool async = false;
-    bool needsTexture = false;
     bool smoothNormals = false;
     bool visualHelper = false;
+    float visualHelperLineSize = 0.1f;
     Model::CBACK callback = nullptr;
     Model::INDEX handlerOffset = Model::INDEX_MAX;  // TODO: this should only be set by the handler...
-    Material::Info materialInfo = {};
-    glm::mat4 model = glm::mat4(1.0f);
     std::string modelPath = "";
-    PIPELINE pipelineType = PIPELINE::DONT_CARE;
-} CreateInfo;
+};
 
 class Base : public Object3d, public Handlee<Model::Handler> {
     friend class Model::Handler;
 
    public:
-    Base(const Model::Handler &handler, Model::CreateInfo *pCreateInfo, Model::INDEX sceneOffset);
+    Base(Model::Handler &handler, Model::CreateInfo *pCreateInfo);
     virtual ~Base();
 
     const PIPELINE PIPELINE_TYPE;
 
-    inline Model::INDEX getHandlerOffset() const { return handlerOffset_; }
-    inline Model::INDEX getSceneOffset() const { return sceneOffset_; }
+    inline Model::INDEX getOffset() const { return offset_; }
 
     void postLoad(Model::CBACK callback);
 
     virtual inline void transform(const glm::mat4 t) override;
-    // void updateAggregateBoundingBox(std::unique_ptr<Scene> &pScene);
 
     // TODO: use a conditional template argument
     Model::INDEX getMeshOffset(MESH type, uint8_t offset);
 
+    inline Model::CreateInfo getMeshCreateInfo() {
+        Model::CreateInfo createInfo = {};
+        createInfo.pipelineType = PIPELINE_TYPE;
+        createInfo.model = getModel();
+        return createInfo;
+    }
+
     STATUS status;
 
    private:
-    void allMeshAction(std::function<void(Mesh *)> action);
-    void updateAggregateBoundingBox(Mesh *pMesh);
+    void allMeshAction(std::function<void(Mesh::Base *)> action);
+    void updateAggregateBoundingBox(Mesh::Base *pMesh);
 
-    Model::INDEX handlerOffset_;
+    Model::INDEX offset_;
     std::string modelPath_;
-    Model::INDEX sceneOffset_;
     bool smoothNormals_;
     bool visualHelper_;
+    float visualHelperLineSize_;
 
-    void addOffset(std::unique_ptr<ColorMesh> &pMesh);
-    void addOffset(std::unique_ptr<LineMesh> &pMesh);
-    void addOffset(std::unique_ptr<TextureMesh> &pMesh);
+    void addOffset(std::unique_ptr<Mesh::Color> &pMesh);
+    void addOffset(std::unique_ptr<Mesh::Line> &pMesh);
+    void addOffset(std::unique_ptr<Mesh::Texture> &pMesh);
 
     std::vector<Model::INDEX> colorOffsets_;
     std::vector<Model::INDEX> lineOffsets_;

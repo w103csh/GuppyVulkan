@@ -88,6 +88,8 @@ class Complete {
     inline Color getColorVertex() const { return {position, normal, color}; }
     inline Texture getTextureVertex() const { return {position, normal, texCoord, tangent, binormal}; }
 
+    inline void transform(const glm::mat4 &t) { position = t * glm::vec4{position, 1.0f}; }
+
     // shared
     glm::vec3 position;
     glm::vec3 normal;

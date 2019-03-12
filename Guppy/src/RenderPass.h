@@ -128,7 +128,7 @@ class Base {
             if (pipelineType == type) break;
             id++;
         }
-        return id;  // TODO: is returning 0 for no types okay???
+        return id;  // TODO: is returning 0 for no types okay? Try using std::optional maybe?
     };
 
     virtual void destroy(const VkDevice &dev);  // calls destroyFrameData
@@ -185,16 +185,7 @@ class Base {
 
 class Default : public Base {
    public:
-    Default()
-        : Base{"Default",
-               {
-                   // Order of the subpasses
-                   PIPELINE::PBR_COLOR,
-                   PIPELINE::TRI_LIST_COLOR,
-                   PIPELINE::LINE,
-                   PIPELINE::TRI_LIST_TEX,
-               }},
-          secCmdFlag_(false) {}
+    Default();
 
     inline void beginSecondary(const uint8_t &frameIndex) override {
         if (secCmdFlag_) return;

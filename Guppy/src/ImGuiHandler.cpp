@@ -7,8 +7,10 @@
 #include "ImGuiHandler.h"
 
 #include "CommandHandler.h"
+#include "DescriptorHandler.h"
 #include "Face.h"
 #include "Helpers.h"
+#include "PipelineHandler.h"
 #include "SceneHandler.h"
 
 void UI::ImGuiHandler::init() {
@@ -31,7 +33,7 @@ void UI::ImGuiHandler::init() {
     init_info.QueueFamily = shell().context().graphics_index;
     init_info.Queue = shell().context().queues[shell().context().graphics_index];
     init_info.PipelineCache = pipelineHandler().getPipelineCache();
-    init_info.DescriptorPool = pipelineHandler().getDescriptorPool();
+    init_info.DescriptorPool = descriptorHandler().getPool();
     init_info.Allocator = nullptr;
     init_info.CheckVkResultFn = (void (*)(VkResult))vk::assert_success;
 
@@ -49,6 +51,11 @@ void UI::ImGuiHandler::init() {
         vkQueueSubmit(shell().context().queues[shell().context().graphics_index], 1, &end_info, VK_NULL_HANDLE));
 
     vk::assert_success(vkDeviceWaitIdle(shell().context().dev));
+
+    // RESET GRAPHICS DEFAULT COMMAND
+    vk::assert_success(vkResetCommandBuffer(commandHandler().graphicsCmd(), 0));
+    commandHandler().beginCmd(commandHandler().graphicsCmd());
+
     ImGui_ImplVulkan_InvalidateFontUploadObjects();
 }
 
@@ -57,6 +64,8 @@ void UI::ImGuiHandler::updateRenderPass(RenderPass::FrameInfo* pFrameInfo) {
 }
 
 void UI::ImGuiHandler::reset() { pPass_->destroyTargetResources(shell().context().dev, commandHandler()); }
+
+void UI::ImGuiHandler::destroy() { pPass_->destroy(shell().context().dev); }
 
 void UI::ImGuiHandler::draw(uint8_t frameIndex) {
     // if (pPass->data.tests[frameIndex] == 0) {
@@ -138,8 +147,7 @@ void UI::ImGuiHandler::menuFile() {
     if (ImGui::MenuItem("Save As..")) {
     }
     if (ImGui::MenuItem("Quit", "Alt+F4")) {
-        assert(false);
-        // glfwSetWindowShouldClose(window_, GLFW_TRUE);
+        shell().quit();
     }
 }
 
@@ -168,7 +176,7 @@ void UI::ImGuiHandler::showSelectionInfoWindow(bool* p_open) {
 
     ImGui::Text("FACES:");
     ImGui::Separator();
-    showFaceSelectionInfoText(sceneHandler().getFaceSelection());
+    showFaceSelectionInfoText(sceneHandler().getActiveScene()->getFaceSelection());
 
     // End of showSelectionInfoWindow()
     ImGui::End();

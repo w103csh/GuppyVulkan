@@ -1,26 +1,27 @@
 
-#include "Face.h"
-#include "Mesh.h"
 #include "Plane.h"
 
-// **********************
-// Plane
-// **********************
-
-void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
-    float width, height;
-    width = height = 1.0f;
-    float l = (width / 2 * -1), r = (width / 2);
-    float b = (height / 2 * -1), t = (height / 2);
-
+namespace {
+void addFaces(Mesh::Base* pMesh, bool& doubleSided) {
     // Mimic approach in loadObj in FileLoader. This way everything is
     // using the same ideas (for testing)...
     unique_vertices_map_smoothing vertexMap = {};
-    Face face;
+    auto faces = Plane::make(doubleSided);
+    for (auto& face : faces) face.indexVertices(vertexMap, pMesh);
+}
+}  // namespace
+
+std::vector<Face> Plane::make(bool doubleSided) {
+    float width, height;
+    width = height = Plane::DEFAULT_DIMENSION;
+    float l = (width / 2 * -1), r = (width / 2);
+    float b = (height / 2 * -1), t = (height / 2);
+
+    std::vector<Face> faces;
 
     // bottom left
-    face = {};
-    face[0] = {
+    faces.push_back({});
+    faces.back()[0] = {
         // geom - bottom left
         {l, b, 0.0f},              // position
         {},                        // normal
@@ -30,7 +31,7 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
         {},                        // tangent
         {}                         // bitangent
     };
-    face[1] = {
+    faces.back()[1] = {
         // geom - bottom right
         {r, b, 0.0f},              // position
         {},                        // normal
@@ -40,7 +41,7 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
         {},                        // tangent
         {}                         // bitangent
     };
-    face[2] = {
+    faces.back()[2] = {
         // geom - top left
         {l, t, 0.0f},              // position
         {},                        // normal
@@ -50,17 +51,15 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
         {},                        // tangent
         {}                         // bitangent
     };
-    face.indexVertices(vertexMap, pMesh);
 
     if (doubleSided) {
-        face.reverse();
-        face.setSmoothingGroup(1);
-        face.indexVertices(vertexMap, pMesh);
+        faces.back().reverse();
+        faces.back().setSmoothingGroup(1);
     }
 
     // top right
-    face = {};
-    face[0] = {
+    faces.push_back({});
+    faces.back()[0] = {
         // geom - top left
         {l, t, 0.0f},              // position
         {},                        // normal
@@ -70,7 +69,7 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
         {},                        // tangent
         {}                         // bitangent
     };
-    face[1] = {
+    faces.back()[1] = {
         // geom - bottom right
         {r, b, 0.0f},              // position
         {},                        // normal
@@ -80,7 +79,7 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
         {},                        // tangent
         {}                         // bitangent
     };
-    face[2] = {
+    faces.back()[2] = {
         // geom - top right
         {r, t, 0.0f},              // position
         {},                        // normal
@@ -90,31 +89,20 @@ void Plane::createVertices(Mesh* pMesh, bool doubleSided) {
         {},                        // tangent
         {}                         // bitangent
     };
-    face.indexVertices(vertexMap, pMesh);
 
     if (doubleSided) {
-        face.reverse();
-        face.setSmoothingGroup(1);
-        face.indexVertices(vertexMap, pMesh);
+        faces.back().reverse();
+        faces.back().setSmoothingGroup(1);
     }
+
+    // TODO: validate face size is DEFAULT_DIMENSION
+    return faces;
 }
 
-// void Plane::createIndices(std::vector<VB_INDEX_TYPE>& indices, bool doubleSided) {
-//    int indexSize = doubleSided ? (PLANE_INDEX_SIZE * 2) : PLANE_INDEX_SIZE;
-//    indices.resize(indexSize);
-//    indices = {0, 1, 2, 2, 1, 3};
-//    if (doubleSided) {
-//        for (int i = 2; i < PLANE_INDEX_SIZE; i += 3)
-//            for (int j = i; j > (i - 3); j--) indices.push_back(indices.at(j));
-//    }
-//}
-
-// **********************
-// ColorPlane
-// **********************
-
-ColorPlane::ColorPlane(MeshCreateInfo* pCreateInfo, bool doubleSided) : ColorMesh("ColorPlane", pCreateInfo) {
-    createVertices(this, doubleSided);
+Plane::Color::Color(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
+                    bool doubleSided)
+    : Mesh::Color(handler, "ColorPlane", pCreateInfo, pMaterial) {
+    addFaces(this, doubleSided);
     updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
 }
@@ -152,12 +140,10 @@ ColorPlane::ColorPlane(MeshCreateInfo* pCreateInfo, bool doubleSided) : ColorMes
 //    };
 //}
 
-// **********************
-// TexturePlane
-// **********************
-
-TexturePlane::TexturePlane(MeshCreateInfo* pCreateInfo, bool doubleSided) : TextureMesh("TexturePlane", pCreateInfo) {
-    createVertices(this, doubleSided);
+Plane::Texture::Texture(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
+                        bool doubleSided)
+    : Mesh::Texture(handler, "TexturePlane", pCreateInfo, pMaterial) {
+    addFaces(this, doubleSided);
     updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
 }

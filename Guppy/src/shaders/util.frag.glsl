@@ -2,10 +2,11 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-#define NUM_POS_LIGHTS 0
-#define HAS_POS_LIGHTS NUM_POS_LIGHTS > 0
-#define NUM_SPOT_LIGHTS 0
-#define HAS_SPOT_LIGHTS NUM_SPOT_LIGHTS > 0
+#define CAM_DEF_PERS 1
+#define MAT_DEF 1
+#define LGT_DEF_POS 0
+#define LGT_DEF_SPT 0
+#define UNI_DEF_FOG 1
 
 // DECLARATIONS
 // Gets the direction from the fragment to the position.
@@ -13,21 +14,51 @@ vec3 getDirToPos(vec3 position);
 // Transform and normalize a direction to local coordinate space.
 vec3 getDir(vec3 direction);
 
-#if HAS_POS_LIGHTS || HAS_SPOT_LIGHTS
-// LIGHT flags
-const uint LIGHT_SHOW    = 0x00000001u;
-#endif
+// FLAGS 
+// LIGHT
+const uint LIGHT_SHOW       = 0x00000001u;
+// MATERIAL
+const uint MODE_TOON_SHADE  = 0x00000040u;
+// FOG
+const uint FOG_LINEAR       = 0x00000001u;
+const uint FOG_EXP          = 0x00000002u;
+const uint FOG_EXP2         = 0x00000004u;
+const uint _FOG_SHOW        = 0x0000000Fu;
 
-#if HAS_POS_LIGHTS
-struct PositionalLight {
+// SHADER variables
+const int ts_levels = 3;
+const float ts_scaleFactor = 1.0 / ts_levels;
+
+struct CameraDefaultPerspective {
+	mat4 viewProjection;
+	mat4 view;
+};
+struct MaterialDefault {
+    vec3 Ka;            // Ambient reflectivity
+    uint flags;         // Flags (general/material)
+    vec3 Kd;            // Diffuse reflectivity
+    float opacity;      // Overall opacity
+    vec3 Ks;            // Specular reflectivity
+    float shininess;    // Specular shininess factor
+    uint texFlags;      // Texture flags
+    float xRepeat;      // Texture xRepeat
+    float yRepeat;      // Texture yRepeat
+    float _padding;
+};
+struct UniformDefaultFog {
+    float minDistance;
+    float maxDistance; 
+    float density;
+    uint flags;
+    vec3 color; // rem 4
+};
+struct LightDefaultPositional {
     vec3 position;  // Light position in eye coords.
     uint flags;
     vec3 La;        // Ambient light intesity
     vec3 L;         // Diffuse and specular light intensity
 };
-#endif
-#if HAS_SPOT_LIGHTS
-struct SpotLight {
+struct LightDefaultSpot {
     vec3 position;
     uint flags;
     vec3 La;
@@ -35,46 +66,32 @@ struct SpotLight {
     vec3 L;
     float cutoff;
     vec3 direction;
+    uint _padding;
 };
+
+// BINDINGS
+layout(set = 0, binding = 0) uniform Binding0 {
+    CameraDefaultPerspective camera;
+} binding0[CAM_DEF_PERS];
+layout(set = 0, binding = 1) uniform Binding1 {
+    MaterialDefault material;
+} binding1[MAT_DEF];
+layout(set = 0, binding = 2) uniform Binding2 {
+    UniformDefaultFog fog;
+} binding2[UNI_DEF_FOG];
+#if LGT_DEF_POS
+layout(set = 0, binding = 3) uniform Binding3 {
+    LightDefaultPositional lgtPos;
+} binding3[LGT_DEF_POS];
 #endif
-
-// SHADER flags
-const uint SHADER_DEFAULT       = 0x00000000u;
-const uint SHADER_TOON_SHADE    = 0x00000001u;
-const uint SHADER_FOG_LINEAR    = 0x00000010u;
-const uint SHADER_FOG_EXP       = 0x00000020u;
-const uint SHADER_FOG_EXP2      = 0x00000040u;
-const uint SHADER_FOG_SHOW      = 0x000000F0u;
-// SHADER variables
-const int ts_levels = 3;
-const float ts_scaleFactor = 1.0 / ts_levels;
-
-struct Camera {
-	mat4 viewProjection;
-	mat4 view;
-};
-
-struct Fog {
-    float minDistance;
-    float maxDistance; 
-    float density; // rem 4
-    vec3 color; // rem 4
-};
-
+#if LGT_DEF_SPT
+layout(set = 0, binding = 4) uniform Binding4 {
+    LightDefaultSpot lgtSpt;
+} binding4[LGT_DEF_SPT];
+#endif
+// IN
 layout(location = 0) in vec3 CS_position;
 layout(location = 1) in vec3 TS_normal;
-// UNIFORM buffer
-layout(binding = 0) uniform DefaultUniformBuffer {
-	Camera camera;
-    uint shaderFlags; // 12 rem
-    Fog fog;
-#if HAS_POS_LIGHTS
-	PositionalLight positionLights[NUM_POS_LIGHTS];
-#endif
-#if HAS_SPOT_LIGHTS
-    SpotLight spotLights[NUM_SPOT_LIGHTS];
-#endif
-} ubo;
 
 vec3 n, Ka, Kd, Ks;
 
@@ -89,20 +106,20 @@ float fogFactor() {
 
     // Each of below has slightly different properties. Read
     // the book again if you want to hear their explanation.
-    if ((ubo.shaderFlags & SHADER_FOG_LINEAR) > 0) {
-        f = (ubo.fog.maxDistance - z) / (ubo.fog.maxDistance - ubo.fog.minDistance);
+    if ((binding2[0].fog.flags & FOG_LINEAR) > 0) {
+        f = (binding2[0].fog.maxDistance - z) / (binding2[0].fog.maxDistance - binding2[0].fog.minDistance);
     }
-    else if ((ubo.shaderFlags & SHADER_FOG_EXP) > 0) {
-        f = exp(-ubo.fog.density * z);
+    else if ((binding2[0].fog.flags & FOG_EXP) > 0) {
+        f = exp(-binding2[0].fog.density * z);
     }
-    else if ((ubo.shaderFlags & SHADER_FOG_EXP2) > 0) {
-        f = exp(-pow((ubo.fog.density * z), 2));
+    else if ((binding2[0].fog.flags & FOG_EXP2) > 0) {
+        f = exp(-pow((binding2[0].fog.density * z), 2));
     }
     return clamp(f, 0.0, 1.0);
 }
 
-#if HAS_POS_LIGHTS
-vec3 phongModel(PositionalLight light, float shininess, uint lightCount) {
+#if LGT_DEF_POS
+vec3 phongModel(LightDefaultPositional light, float shininess, uint lightCount) {
     vec3 ambient = pow(light.La, vec3(lightCount)) * Ka;
     vec3 diff = vec3(0.0), spec = vec3(0.0);
 
@@ -110,8 +127,10 @@ vec3 phongModel(PositionalLight light, float shininess, uint lightCount) {
     vec3 s = getDirToPos(light.position);
     float sDotN = max(dot(s, n), 0.0);
 
+    // return Kd;
+
     // Skip the rest if toon shading
-    if ((ubo.shaderFlags & SHADER_TOON_SHADE) > 0) {
+    if ((binding1[0].material.flags & MODE_TOON_SHADE) > 0) {
         diff = toonShade(sDotN);
         return ambient + light.L * diff;
     }
@@ -135,8 +154,8 @@ vec3 phongModel(PositionalLight light, float shininess, uint lightCount) {
 }
 #endif
 
-#if HAS_SPOT_LIGHTS
-vec3 blinnPhongSpot(SpotLight light, float shininess, uint lightCount) {
+#if LGT_DEF_SPT
+vec3 blinnPhongSpot(LightDefaultSpot light, float shininess, uint lightCount) {
     vec3 ambient = pow(light.La, vec3(lightCount)) * Ka;
     vec3 diff = vec3(0.0), spec = vec3(0.0);
 
@@ -152,7 +171,7 @@ vec3 blinnPhongSpot(SpotLight light, float shininess, uint lightCount) {
         if (sDotN > 0.0) {
             vec3 v = getDirToPos(vec3(0.0));
             vec3 h = normalize(v + s);
-            spec = Ks *
+            spec = Ks * 
                 pow(max(dot(h, n), 0.0), shininess);
         }
     }
@@ -165,27 +184,24 @@ vec3 getColor(float shininess) {
     vec3 color = vec3(0.0);
     uint lightCount = 0;
 
-    // POSITION LIGHTS
-#if HAS_POS_LIGHTS
-    for (int i = 0; i < ubo.positionLights.length(); i++) {
-        if ((ubo.positionLights[i].flags & LIGHT_SHOW) > 0) {
-            color += phongModel(ubo.positionLights[i], shininess, ++lightCount);
+#if LGT_DEF_POS
+    for (int i = 0; i < binding3.length(); i++) {
+        if ((binding3[i].lgtPos.flags & LIGHT_SHOW) > 0) {
+            color += phongModel(binding3[i].lgtPos, shininess, ++lightCount);
         }
     }
 #endif
 
-    // SPOT LIGHTS
-#if HAS_SPOT_LIGHTS
-    for (int i = 0; i < ubo.spotLights.length(); i++) {
-        if ((ubo.spotLights[i].flags & LIGHT_SHOW) > 0) {
-            color += blinnPhongSpot(ubo.spotLights[i], shininess, ++lightCount);
+#if LGT_DEF_SPT
+    for (int i = 0; i < binding4.length(); i++) {
+        if ((binding4[i].lgtSpt.flags & LIGHT_SHOW) > 0) {
+            color += blinnPhongSpot(binding4[i].lgtSpt, shininess, ++lightCount);
         }
     }
 #endif
 
-    // FOG
-    if ((ubo.shaderFlags & SHADER_FOG_SHOW) > 0) {
-        color = mix(ubo.fog.color, color, fogFactor());
+    if ((binding2[0].fog.flags & _FOG_SHOW) > 0) {
+        color = mix(binding2[0].fog.color, color, fogFactor());
     }
 
     return color;

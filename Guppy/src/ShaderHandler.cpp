@@ -15,12 +15,7 @@
 #include "TextureHandler.h"
 #include "util.hpp"
 
-Shader::Handler::Handler(Game* pGame)
-    : Game::Handler(pGame)
-//:  // UNIFORMS
-// pDefaultUniform_(std::make_unique<Uniform::Default>()),
-// pDefaultDynamicUniform_(std::make_unique<Uniform::DefaultDynamic>())
-{
+Shader::Handler::Handler(Game* pGame) : Game::Handler(pGame) {
     // SHADERS (main)
     for (const auto& type : SHADER_ALL) {
         switch (type) {
@@ -68,30 +63,22 @@ Shader::Handler::Handler(Game* pGame)
 void Shader::Handler::init() {
     reset();
 
-    //// UNIFORMS
-    // pDefaultUniform_->init(shell().context().dev, settings, camera);
-    // pDefaultDynamicUniform_->init(shell().context(), settings, TEXTURE_LIMIT);
-
     // LINK SHADERS
-    for (auto& pLinkShader : pLinkShaders_) pLinkShader->init(shell().context().dev, settings(), oldModules_);
+    for (auto& pLinkShader : pLinkShaders_) pLinkShader->init(oldModules_);
 
     init_glslang();
 
     // MAIN SHADERS
-    for (auto& pShader : pShaders_) pShader->init(shell().context().dev, settings(), oldModules_);
+    for (auto& pShader : pShaders_) pShader->init(oldModules_);
 
     finalize_glslang();
 }
 
 void Shader::Handler::reset() {
     // SHADERS
-    for (auto& pShader : pShaders_) pShader->destroy(shell().context().dev);
+    for (auto& pShader : pShaders_) pShader->destroy();
 
     cleanup();
-
-    // UNIFORMS
-    // pDefaultUniform_->destroy(shell().context().dev);
-    // pDefaultDynamicUniform_->destroy(shell().context().dev);
 }
 
 const std::unique_ptr<Shader::Base>& Shader::Handler::getShader(const SHADER& type) const {
@@ -167,7 +154,7 @@ bool Shader::Handler::loadShaders(const std::vector<SHADER>& types, bool doAsser
 
     init_glslang();
 
-    for (const auto& type : types) getShader(type)->init(shell().context().dev, settings(), oldModules_, load, doAssert);
+    for (const auto& type : types) getShader(type)->init(oldModules_, load, doAssert);
 
     finalize_glslang();
 
@@ -182,81 +169,7 @@ void Shader::Handler::getShaderTypes(const SHADER_LINK& linkType, std::vector<SH
     }
 }
 
-void Shader::Handler::updateDescriptorSets(const std::set<DESCRIPTOR> types, std::vector<VkDescriptorSet>& sets,
-                                           uint32_t setCount, const std::shared_ptr<Texture::DATA>& pTexture) const {
-    std::vector<VkWriteDescriptorSet> writes;
-    for (uint32_t i = 0; i < setCount; i++) {
-        for (const auto& type : types) {
-            switch (type) {
-                case DESCRIPTOR::DEFAULT_UNIFORM: {
-                    // writes.push_back(pDefaultUniform_->getWrite());
-                    writes.back().dstSet = sets[i];
-                } break;
-                case DESCRIPTOR::DEFAULT_DYNAMIC_UNIFORM: {
-                    // writes.push_back(pDefaultDynamicUniform_->getWrite());
-                    writes.back().dstSet = sets[i];
-                } break;
-                case DESCRIPTOR::DEFAULT_SAMPLER: {
-                    writes.push_back(textureHandler().getDescriptorWrite(type));
-                    writes.back().dstSet = sets[i];
-                    writes.back().pImageInfo = &pTexture->imgDescInfo;
-                } break;
-            }
-        }
-        vkUpdateDescriptorSets(shell().context().dev, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
-        writes.clear();
-    }
-}
-
-// TODO: This was done hastily and needs to be redone
-std::vector<uint32_t> Shader::Handler::getDynamicOffsets(const std::set<DESCRIPTOR> types) const {
-    for (const auto& type : types) {
-        // switch (type) {
-        //    case DESCRIPTOR::DEFAULT_DYNAMIC_UNIFORM:
-        //        // return {static_cast<uint32_t>(pDefaultDynamicUniform_->getInfo()->range)};
-        //}
-    }
-    return {};
-}
-
 void Shader::Handler::cleanup() {
     for (auto& module : oldModules_) vkDestroyShaderModule(shell().context().dev, module, nullptr);
     oldModules_.clear();
 }
-
-void Shader::Handler::lightMacroReplace(std::string&& macroVariable, uint16_t&& numLights, std::string& text) {
-    // TODO: fix the regex so that you don't have to read from file...
-    std::stringstream ss;
-    ss << "#define " << macroVariable << " ";
-    text = textReplace(text, ss.str(), "", 0, std::forward<uint16_t&&>(numLights));
-}
-
-template <typename T1, typename T2>
-std::string Shader::Handler::textReplace(std::string text, std::string s1, std::string s2, T1 r1, T2 r2) {
-    std::string s = text;
-    std::stringstream rss, nss;
-    rss << s1 << r1 << s2;
-    nss << s1 << r2 << s2;
-    size_t f = s.find(rss.str());
-    if (f != std::string::npos) s.replace(f, rss.str().length(), nss.str());
-    return s;
-}
-
-// **********************
-//      Uniform
-// **********************
-//
-// void Shader::Handler::updateDefaultUniform(Camera& camera) { pDefaultUniform_->update(shell().context().dev, camera); }
-//
-// void Shader::Handler::updateDefaultDynamicUniform() { pDefaultDynamicUniform_->update(shell().context().dev); }
-//
-// VkDescriptorSetLayoutBinding Shader::Handler::getDescriptorLayoutBinding(const DESCRIPTOR& type) {
-//    switch (type) {
-//        case DESCRIPTOR::DEFAULT_UNIFORM:
-//            return pDefaultUniform_->getDecriptorLayoutBinding();
-//        case DESCRIPTOR::DEFAULT_DYNAMIC_UNIFORM:
-//            return pDefaultDynamicUniform_->getDecriptorLayoutBinding();
-//        default:
-//            throw std::runtime_error("descriptor type not handled!");
-//    }
-//}

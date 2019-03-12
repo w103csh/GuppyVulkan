@@ -8,6 +8,7 @@
 #include "Constants.h"
 #include "Helpers.h"
 #include "Object3d.h"
+#include "Uniform.h"
 
 namespace Light {
 
@@ -20,54 +21,97 @@ typedef enum FLAG {
     BITS_MAX_ENUM = 0x7FFFFFFF
 } FLAG;
 
-class Base : public Object3d, public DataObject {};
+struct CreateInfo {
+    glm::mat4 model{1.0f};
+};
+
+// **********************
+//      Base
+// **********************
+
+template <typename T>
+class Base : public Object3d, public Buffer::DataItem<T>, public Uniform::Base {
+   public:
+    Base(T *pData, CreateInfo *pCreateInfo)
+        : Object3d(pCreateInfo->model),  //
+          Uniform::Base(),               //
+          Buffer::DataItem<T>(pData) {}
+};
 
 namespace Default {
 
-class Positional : public Base {
-   public:
-    struct DATA {
-        glm::vec3 position{};            // 12
-        FlagBits flags{FLAG::SHOW};      // 4
-        alignas(16) glm::vec3 La{0.1f};  // 12 (Ambient light intensity)
-        // 4 rem
-        alignas(16) glm::vec3 L{0.6f};  // 12 Diffuse and specular light intensity
-        // 4 rem
-    };
+// **********************
+//      Positional
+// **********************
 
-    Positional(DATA data = {}) : Base(), data_(data){};
+namespace Positional {
+struct DATA {
+    glm::vec3 position{};            // 12 (camera space)
+    FlagBits flags{FLAG::SHOW};      // 4
+    alignas(16) glm::vec3 La{0.1f};  // 12 (Ambient light intensity)
+    // 4 rem
+    alignas(16) glm::vec3 L{0.6f};  // 12 Diffuse and specular light intensity
+    // 4 rem
+};
+class Base : public Light::Base<DATA> {
+   public:
+    Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo);
+
+    void update(glm::vec3 &&position);
+
+    inline const glm::vec3 &getPosition() { return position; }
+
+    void transform(const glm::mat4 t) override {
+        Object3d::transform(t);
+        position = getWorldSpacePosition();
+    }
 
    private:
-    inline VkDeviceSize getDataSize() const { return sizeof DATA; }
-    inline const void* getData() { return &data_; }
-
-    DATA data_;
+    glm::vec3 position;  // (world space)
 };
+}  // namespace Positional
 
-class Spot : public Base {
+// **********************
+//      Spot
+// **********************
+
+namespace Spot {
+struct CreateInfo : public Light::CreateInfo {
+    float cutoff = glm::radians(15.0f);
+    float exponent = 50.0f;
+};
+struct DATA {
+    glm::vec3 position{};                         // 12 (camera space)
+    FlagBits flags = FLAG::SHOW;                  // 4
+    glm::vec3 La{0.0f};                           // 12 (Ambient light intensity)
+    float exponent = 50.0f;                       // 4
+    glm::vec3 L{0.9f};                            // 12 Diffuse and specular light intensity
+    float cutoff = glm::radians(15.0f);           // 4
+    alignas(16) glm::vec3 direction{CARDINAL_Z};  // 12 (camera space)
+    // 4 rem
+};
+class Base : public Light::Base<DATA> {
    public:
-    struct DATA {
-        glm::vec3 position{};                         // 12
-        FlagBits flags{FLAG::SHOW};                   // 4
-        glm::vec3 La{0.0f};                           // 12 (Ambient light intensity)
-        float exponent{50.0f};                        // 4
-        glm::vec3 L{0.9f};                            // 12 Diffuse and specular light intensity
-        float cutoff{glm::radians(15.0f)};            // 4
-        alignas(16) glm::vec3 direction{CARDINAL_Z};  // 12
-        // 4 rem
-    };
+    Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo);
+    void transform(const glm::mat4 t) override {
+        Object3d::transform(t);
+        position = getWorldSpacePosition();
+        direction = getWorldSpaceDirection();
+    }
 
-    Spot(DATA data = {}) : Base(), data_(data){};
+    void update(glm::vec3 &&position, glm::vec3 &&direction);
 
-    inline void setCutoff(float f) { data_.cutoff = f; }
-    inline void setExponent(float f) { data_.exponent = f; }
+    inline const glm::vec3 &getDirection() { return direction; }
+    inline const glm::vec3 &getPosition() { return position; }
+
+    inline void setCutoff(float f) { pData_->cutoff = f; }
+    inline void setExponent(float f) { pData_->exponent = f; }
 
    private:
-    inline VkDeviceSize getDataSize() const { return sizeof DATA; }
-    inline const void* getData() { return &data_; }
-
-    DATA data_;
+    glm::vec3 direction;  // (world space)
+    glm::vec3 position;   // (world space)
 };
+}  // namespace Spot
 
 }  // namespace Default
 

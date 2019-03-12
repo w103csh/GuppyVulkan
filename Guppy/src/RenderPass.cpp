@@ -184,8 +184,20 @@ void RenderPass::Base::createAttachmentDebugMarkers(const Shell::Context& ctx, c
 //      Default
 // **********************
 
+RenderPass::Default::Default()
+    : Base{"Default",
+           {
+               // Order of the subpasses
+               PIPELINE::PBR_COLOR,
+               PIPELINE::TRI_LIST_COLOR,  //
+               PIPELINE::LINE,
+               PIPELINE::TRI_LIST_TEX,
+           }},
+      secCmdFlag_(false) {}
+
 void RenderPass::Default::getSubmitResource(const uint8_t& frameIndex, SubmitResource& resource) const {
-    resource.signalSemaphores.push_back(data.semaphores[frameIndex]);
+    if (initInfo.finalLayout ^ VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+        resource.signalSemaphores.push_back(data.semaphores[frameIndex]);
     resource.commandBuffers.push_back(data.priCmds[frameIndex]);
 }
 

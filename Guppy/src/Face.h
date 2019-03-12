@@ -7,9 +7,8 @@
 #include <unordered_map>
 
 #include "Helpers.h"
+#include "Mesh.h"
 #include "Vertex.h"
-
-class Mesh;
 
 /*  This is used to store unique vertex information when loading a mesh from a file. The key is a
     Vertex::Complete, and the value is a list of mesh offset to mesh vertex index. So, if you are
@@ -51,22 +50,25 @@ class Face {
     void calculateTangentSpaceVectors();
 
     template <typename TMap>
-    void indexVertices(TMap &vertexMap, Mesh *pMesh, bool calcTangentSpace = true) {
-        std::vector<Mesh *> pMeshes = {pMesh};
-        indexVertices(vertexMap, pMeshes, 0, calcTangentSpace);
+    void indexVertices(TMap &vertexMap, Mesh::Base *pMesh) {
+        std::vector<Mesh::Base *> pMeshes = {pMesh};
+        indexVertices(vertexMap, pMeshes, 0);
     }
 
-    template <typename TMap, class TVertex>
-    void indexVertices(TMap &vertexMap, std::vector<TVertex> &pMeshes, uint8_t meshOffset, bool calcNormals = true) {
+    template <typename TMap, class TMesh>
+    void indexVertices(TMap &vertexMap, std::vector<TMesh> &pMeshes, uint8_t meshOffset, bool calcNormal = true) {
         // Calculate per face data.
-        if (calcNormals) calculateNormal();
+        if (calcNormal) calculateNormal();
         // Check if there is a normal map...
+
         bool normalMapped =
             std::any_of(pMeshes.begin(), pMeshes.end(), [](const auto &pMesh) { return pMesh->hasNormalMap(); });
+        bool needsTangentSpace =
+            std::any_of(pMeshes.begin(), pMeshes.end(), [](const auto &pMesh) { return pMesh->TYPE == MESH::TEXTURE; });
 
-        if (normalMapped) calculateTangentSpaceVectors();
+        if (needsTangentSpace || normalMapped) calculateTangentSpaceVectors();
 
-        for (size_t i = 0; i < 3; ++i) {
+        for (size_t i = 0; i < NUM_VERTICES; ++i) {
             long index = -1;
 
             auto range = vertexMap.equal_range(vertices_[i]);
@@ -138,10 +140,14 @@ class Face {
         }
     }
 
+    inline void transform(const glm::mat4 &t) {
+        for (auto &v : vertices_) v.transform(t);
+    }
+
    private:
-    std::array<VB_INDEX_TYPE, 3> indices_;
+    std::array<VB_INDEX_TYPE, NUM_VERTICES> indices_;
     size_t meshOffset_;
-    std::array<Vertex::Complete, 3> vertices_;
+    std::array<Vertex::Complete, NUM_VERTICES> vertices_;
 };
 
 #endif  // !FACE_H
