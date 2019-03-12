@@ -1,10 +1,10 @@
 #ifndef DESCRIPTOR_SET_H
 #define DESCRIPTOR_SET_H
 
-#include <list>
 #include <map>
 #include <set>
 #include <utility>
+#include <vector>
 
 #include "Helpers.h"
 
@@ -22,7 +22,6 @@ typedef std::pair<uint32_t, uint32_t> bindingMapKey;
 typedef std::pair<DESCRIPTOR, std::set<uint32_t>> bindingMapValue;
 typedef std::pair<const bindingMapKey, bindingMapValue> bindingMapKeyValue;
 typedef std::map<bindingMapKey, bindingMapValue> bindingMap;
-// typedef std::pair<bindingMapKey, bindingMapValue> bindingMapIterator;
 
 // **********************
 //      Set

@@ -1,6 +1,4 @@
 
-#include "Face.h"
-#include "MaterialHandler.h"
 #include "Plane.h"
 
 namespace {

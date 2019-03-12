@@ -27,8 +27,6 @@ typedef uint32_t INDEX;
 constexpr auto INDEX_MAX = UINT32_MAX;
 typedef std::function<void(Model::Base *)> CBACK;
 
-struct MaterialInfo {};  // TODO : get rid of this
-
 struct CreateInfo : public Mesh::CreateInfo {
     bool async = false;
     bool smoothNormals = false;
@@ -83,20 +81,6 @@ class Base : public Object3d, public Handlee<Model::Handler> {
     std::vector<Model::INDEX> colorOffsets_;
     std::vector<Model::INDEX> lineOffsets_;
     std::vector<Model::INDEX> texOffsets_;
-};
-
-// TODO: Move these
-class ColorMesh : public Mesh::Color {
-    friend class Mesh::Handler;
-
-   protected:
-    ColorMesh(Mesh::Handler &handler, Model::CreateInfo *pCreateInfo, std::shared_ptr<Material::Base> &pMaterial);
-};
-class TextureMesh : public Mesh::Texture {
-    friend class Mesh::Handler;
-
-   protected:
-    TextureMesh(Mesh::Handler &handler, Model::CreateInfo *pCreateInfo, std::shared_ptr<Material::Base> &pMaterial);
 };
 
 }  // namespace Model

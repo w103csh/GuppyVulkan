@@ -48,17 +48,10 @@ class Base : public Handlee<Shader::Handler> {
 
     virtual const char *loadText(bool load);
 
-    // DESCRIPTOR
-    void getDescriptorBindings(std::set<DESCRIPTOR> &set) {
-        // for (const auto &descType : DESCRIPTOR_TYPES) set.insert(descType);
-    }
+    virtual void destroy();
 
     VkPipelineShaderStageCreateInfo info;
     VkShaderModule module;
-
-    virtual void getDescriptorBindings(std::vector<VkDescriptorSetLayoutBinding> &bindings){};
-
-    virtual void destroy();
 
    protected:
     std::string text_;

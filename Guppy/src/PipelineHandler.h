@@ -27,13 +27,13 @@ struct Reference {
 
 struct CreateInfoResources {
     // BLENDING
-    VkPipelineColorBlendAttachmentState blendAttach;
+    VkPipelineColorBlendAttachmentState blendAttach = {};
     VkPipelineColorBlendStateCreateInfo colorBlendStateInfo = {};
     // DYNAMIC
     VkDynamicState dynamicStates[VK_DYNAMIC_STATE_RANGE_SIZE];
     VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
     // INPUT ASSEMBLY
-    VkVertexInputBindingDescription bindingDesc;
+    VkVertexInputBindingDescription bindingDesc = {};
     std::vector<VkVertexInputAttributeDescription> attrDesc;
     VkPipelineVertexInputStateCreateInfo vertexInputStateInfo = {};
     // FIXED FUNCTION

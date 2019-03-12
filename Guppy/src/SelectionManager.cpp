@@ -7,10 +7,6 @@
 #include "Scene.h"
 #include "SceneHandler.h"
 
-// **********************
-//      Manager
-// **********************
-
 Selection::Manager::Manager(Scene::Handler& handler, bool makeFaceSelection)
     : Handlee(handler), pFaceInfo_(std::make_unique<FaceInfo>()) {
     if (makeFaceSelection) makeFace();
@@ -61,34 +57,4 @@ void Selection::Manager::updateFace(std::unique_ptr<Face> pFace) {
             handler().materialHandler().update(pMesh->getMaterial());
         }
     }
-    // auto& material = handler().materialHandler().getMaterial<Material::Default::Base>(pMesh->getMaterial());
-
-    // pFaceInfo_->pFace = std::move(pFace);
-    // if (pFaceInfo_->pFace != nullptr) {
-    //    if (material.getFlags() & Material::FLAG::HIDE) {
-    //        material.setFlags(material.getFlags() ^ Material::FLAG::HIDE);
-    //        handler().materialHandler().update(material);
-    //    }
-
-    //    auto v0 = (*pFaceInfo_->pFace)[0].getColorVertex();
-    //    v0.color = {1.0f, 0.0f, 0.0f, 1.0f};  // red
-    //    auto v1 = (*pFaceInfo_->pFace)[1].getColorVertex();
-    //    v1.color = {0.0f, 1.0f, 0.0f, 1.0f};  // green
-    //    auto v2 = (*pFaceInfo_->pFace)[2].getColorVertex();
-    //    v2.color = {0.0f, 0.0f, 1.0f, 1.0f};  // blue
-
-    //    pMesh->addVertex(v0, 0);
-    //    pMesh->addVertex(v1, 1);
-    //    pMesh->addVertex(v1, 2);
-    //    pMesh->addVertex(v2, 3);
-    //    pMesh->addVertex(v2, 4);
-    //    pMesh->addVertex(v0, 5);
-
-    //    pMesh->updateBuffers();
-    //} else {
-    //    if (material.getFlags() ^ Material::FLAG::HIDE) {
-    //        material.setFlags(material.getFlags() & Material::FLAG::HIDE);
-    //        handler().materialHandler().update(material);
-    //    }
-    //}
 }

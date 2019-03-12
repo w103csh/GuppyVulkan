@@ -1,6 +1,4 @@
 
-#include <algorithm>
-
 #include "DescriptorSet.h"
 
 Descriptor::Set::Base::Base(const DESCRIPTOR_SET&& type, const Descriptor::bindingMap&& bindingMap)

@@ -5,11 +5,8 @@
 #include "UniformHandler.h"
 
 #include "InputHandler.h"
-#include "CommandHandler.h"
-#include "DescriptorHandler.h"
 #include "MeshHandler.h"
 #include "Shell.h"
-#include "Uniform.h"
 
 namespace {
 
@@ -230,12 +227,6 @@ std::vector<VkDescriptorBufferInfo> Uniform::Handler::getWriteInfos(const Descri
     auto offsets = getBindingOffsets(value);
     for (const auto& offset : offsets) infos.push_back(uniforms[offset]->BUFFER_INFO.bufferInfo);
     return infos;
-    //// DYNAMIC OFFSET
-    // const auto& descriptorType = descriptorHandler().DESCRIPTOR_TYPE_MAP.at(value.first);
-    // if (descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
-    //    descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC) {
-    //    dynamicOffsets.push_back(offset * uniforms[offset]->BUFFER_INFO.bufferInfo.range);
-    //}
 }
 
 std::string Uniform::Handler::macroReplace(const Descriptor::bindingMap& bindingMap, std::string text) {

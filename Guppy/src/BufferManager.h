@@ -6,8 +6,8 @@
 #include <vulkan/vulkan.h>
 
 #include "BufferItem.h"
-#include "Shell.h"
 #include "Helpers.h"
+#include "Shell.h"
 
 namespace Buffer {
 namespace Manager {

@@ -45,6 +45,7 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
 Mesh::Base::~Base() = default;
 
 void Mesh::Base::prepare() {
+    assert(status_ != STATUS::READY);
     assert(getOffset() != BAD_OFFSET);
 
     if (getStatus() == STATUS::PENDING_BUFFERS) {

@@ -66,7 +66,7 @@ class TangentSpace : public Mesh::Line {
         glm::vec3 scale = {};
         helpers::decomposeScale(getModel(), scale);
         glm::vec3 lineSize{1.0f};
-        lineSize /= scale; // inverse scale of model matrix
+        lineSize /= scale;  // inverse scale of model matrix
         lineSize *= pCreateInfo->lineSize;
 
         for (size_t vIndex = 0; vIndex < pMesh->getVertexCount(); vIndex++) {

@@ -61,8 +61,6 @@ Shader::Handler::Handler(Game* pGame) : Game::Handler(pGame) {
 }
 
 void Shader::Handler::init() {
-    // Validate the list.
-
     reset();
 
     // LINK SHADERS

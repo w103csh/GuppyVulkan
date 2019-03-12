@@ -1,6 +1,5 @@
 
 #include "Axes.h"
-#include "MeshHandler.h"
 
 namespace {
 const glm::vec4 red(1.0f, 0.0f, 0.0f, 1.0f);

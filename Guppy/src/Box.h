@@ -2,6 +2,7 @@
 #define BOX_H
 
 #include <vector>
+#include <memory>
 
 #include "Face.h"
 #include "Mesh.h"

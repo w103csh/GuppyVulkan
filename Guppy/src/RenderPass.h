@@ -128,7 +128,7 @@ class Base {
             if (pipelineType == type) break;
             id++;
         }
-        return id;  // TODO: is returning 0 for no types okay???
+        return id;  // TODO: is returning 0 for no types okay? Try using std::optional maybe?
     };
 
     virtual void destroy(const VkDevice &dev);  // calls destroyFrameData

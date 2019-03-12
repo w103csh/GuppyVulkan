@@ -76,6 +76,8 @@ set(SOURCE
     Model.h
     ModelHandler.cpp
     ModelHandler.h
+    ModelMesh.cpp
+    ModelMesh.h
     # Shell
     Shell.cpp
     Shell.h

@@ -14,13 +14,12 @@
 #include "Object3d.h"
 #include "Texture.h"
 
-#include "DescriptorHandler.h"  // TODO: why is this necessary?
-#include "PipelineHandler.h"    // TODO: why is this necessary?
-
 // clang-format off
 class Face;
+#include "DescriptorHandler.h"  // TODO: why is this necessary?
 //namespace Descriptor    { struct Reference; }
 namespace Loading       { struct Resource; }
+#include "PipelineHandler.h"    // TODO: why is this necessary?
 //namespace Pipeline      { struct Reference; }
 namespace Scene         { class Handler; }
 // clang-format on
@@ -44,7 +43,7 @@ typedef struct CreateInfo {
 //      Base
 // **********************
 
-class Base : public Object3d, public Handlee<Mesh::Handler> {
+class Base : public NonCopyable, public Object3d, public Handlee<Mesh::Handler> {
     friend class Mesh::Handler;
     friend class Descriptor::Handler;  // Reference (TODO: get rid of this)
     friend class Pipeline::Handler;    // Reference (TODO: get rid of this)
@@ -55,12 +54,6 @@ class Base : public Object3d, public Handlee<Mesh::Handler> {
         LINE = 0x00000002,
         // THROUGH 0x00000008
     } FLAG;
-
-    Base() = delete;
-    Base(const Base&) = delete;
-    Base& operator=(const Base&) = delete;
-    Base(Base&&) = delete;
-    Base& operator=(Base&&) = delete;
 
     const FlagBits FLAGS;
     const bool MAPPABLE;
@@ -139,6 +132,7 @@ class Base : public Object3d, public Handlee<Mesh::Handler> {
    protected:
     Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags, const std::string&& name,
          CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial);
+    Base() = delete;
     /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTRs OF THIS CLASS.
         IF THIS IS REMOVED THE DESTRUCTOR HERE WILL BE CALLED INSTEAD OF THE DERIVED DESTRUCTOR.
         IT MIGHT JUST BE EASIER/SMARTER TO GET RID OF POLYMORPHISM AND DROP THE POINTERS. */

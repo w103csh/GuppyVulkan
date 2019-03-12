@@ -5,20 +5,14 @@
 #include <unordered_map>
 #include <vector>
 
-#include "Axes.h"
 #include "FileLoader.h"
 #include "Game.h"
 #include "Material.h"
 #include "Mesh.h"
 #include "MeshHandler.h"  // TODO: including this is sketchy
 #include "Model.h"
+#include "ModelMesh.h"
 #include "Scene.h"
-#include "Vertex.h"
-
-// clang-format off
-//namespace Mesh { class Color; }
-//namespace Material { struct CreateInfo; }
-// clang-format on
 
 namespace Model {
 
