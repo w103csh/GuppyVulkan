@@ -58,10 +58,7 @@ void Shader::Base::init(std::vector<VkShaderModule>& oldModules, bool load, bool
 
 const char* Shader::Base::loadText(bool load) {
     if (load) text_ = FileLoader::readFile(BASE_DIRNAME + FILE_NAME);
-    for (const auto& setType : DESCRIPTOR_SETS) {
-        const auto& set = handler().descriptorHandler().getDescriptorSet(setType);
-        text_ = handler().uniformHandler().macroReplace(set.BINDING_MAP, text_);
-    }
+    handler().uniformHandler().shaderTextReplace(text_);
     return text_.c_str();
 }
 
@@ -75,13 +72,12 @@ void Shader::Base::destroy() {
 // **********************
 
 Shader::UtilityFragment::UtilityFragment(Shader::Handler& handler)
-    : Link{handler,
-           SHADER_LINK::UTIL_FRAG,
-           "util.frag.glsl",
-           "Utility Fragement Shader",
-           {
-               {DESCRIPTOR_SET::UNIFORM_DEFAULT}  //
-           }} {}
+    : Link{
+          handler,                    //
+          SHADER_LINK::UTIL_FRAG,     //
+          "util.frag.glsl",           //
+          "Utility Fragement Shader"  //
+      } {}
 
 void Shader::UtilityFragment::init(std::vector<VkShaderModule>& oldModules, bool load, bool doAssert) { loadText(load); };
 
@@ -90,54 +86,48 @@ void Shader::UtilityFragment::init(std::vector<VkShaderModule>& oldModules, bool
 // **********************
 
 Shader::Default::ColorVertex::ColorVertex(Shader::Handler& handler)
-    : Base{handler,  //
-           SHADER::COLOR_VERT,
-           "color.vert",
-           VK_SHADER_STAGE_VERTEX_BIT,
-           "Default Color Vertex Shader",
-           {
-               {DESCRIPTOR_SET::UNIFORM_DEFAULT}  //
-           }} {};
+    : Base{
+          handler,                       //
+          SHADER::COLOR_VERT,            //
+          "color.vert",                  //
+          VK_SHADER_STAGE_VERTEX_BIT,    //
+          "Default Color Vertex Shader"  //
+      } {};
 
 Shader::Default::ColorFragment::ColorFragment(Shader::Handler& handler)
-    : Base{handler,             //
-           SHADER::COLOR_FRAG,  //
-           "color.frag",
-           VK_SHADER_STAGE_FRAGMENT_BIT,
-           "Default Color Fragment Shader",
-           {
-               {DESCRIPTOR_SET::UNIFORM_DEFAULT}  //
-           },
-           {SHADER_LINK::UTIL_FRAG}} {}
+    : Base{
+          handler,                          //
+          SHADER::COLOR_FRAG,               //
+          "color.frag",                     //
+          VK_SHADER_STAGE_FRAGMENT_BIT,     //
+          "Default Color Fragment Shader",  //
+          {SHADER_LINK::UTIL_FRAG}          //
+      } {}
 
 Shader::Default::LineFragment::LineFragment(Shader::Handler& handler)
-    : Base{handler,            //
-           SHADER::LINE_FRAG,  //
-           "line.frag",
-           VK_SHADER_STAGE_FRAGMENT_BIT,
-           "Default Line Fragment Shader",
-           {
-               {DESCRIPTOR_SET::UNIFORM_DEFAULT}  //
-           }} {}
+    : Base{
+          handler,                        //
+          SHADER::LINE_FRAG,              //
+          "line.frag",                    //
+          VK_SHADER_STAGE_FRAGMENT_BIT,   //
+          "Default Line Fragment Shader"  //
+      } {}
 
 Shader::Default::TextureVertex::TextureVertex(Shader::Handler& handler)
-    : Base{handler,  //
-           SHADER::TEX_VERT,
-           "texture.vert",
-           VK_SHADER_STAGE_VERTEX_BIT,
-           "Default Texture Vertex Shader",
-           {
-               {DESCRIPTOR_SET::UNIFORM_DEFAULT}  //
-           }} {}
+    : Base{
+          handler,                         //
+          SHADER::TEX_VERT,                //
+          "texture.vert",                  //
+          VK_SHADER_STAGE_VERTEX_BIT,      //
+          "Default Texture Vertex Shader"  //
+      } {}
 
 Shader::Default::TextureFragment::TextureFragment(Shader::Handler& handler)
-    : Base{handler,  //
-           SHADER::TEX_FRAG,
-           "texture.frag",
-           VK_SHADER_STAGE_FRAGMENT_BIT,
-           "Default Texture Fragment Shader",
-           {
-               {DESCRIPTOR_SET::UNIFORM_DEFAULT},  //
-               {DESCRIPTOR_SET::SAMPLER_DEFAULT}   //
-           },
-           {SHADER_LINK::UTIL_FRAG}} {}
+    : Base{
+          handler,                            //
+          SHADER::TEX_FRAG,                   //
+          "texture.frag",                     //
+          VK_SHADER_STAGE_FRAGMENT_BIT,       //
+          "Default Texture Fragment Shader",  //
+          {SHADER_LINK::UTIL_FRAG}            //
+      } {}

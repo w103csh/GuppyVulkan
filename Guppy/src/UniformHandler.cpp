@@ -1,7 +1,4 @@
 
-#include <regex>
-#include <sstream>
-
 #include "UniformHandler.h"
 
 #include "InputHandler.h"
@@ -10,9 +7,7 @@
 
 namespace {
 
-const std::string MACRO_KEY = "MACRO_NAME";
-const std::string MACRO_REGEX_TEMPLATE = "(#define)\\s+(" + MACRO_KEY + ")\\s+(\\d+)";
-const uint8_t MACRO_REGEX_GROUP = 3;
+const std::string UNIFORM_MACRO_ID_PREFIX = "UMI_";
 
 //// TODO: what should this be???
 // struct _UniformTag {
@@ -23,25 +18,32 @@ const uint8_t MACRO_REGEX_GROUP = 3;
 
 Uniform::Handler::Handler(Game* pGame)
     : Game::Handler(pGame),
-      // CAMERA
-      camDefPersMgr_{"Default Perspective Camera", DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, 5, "CAM_DEF_PERS"},
-      // LIGHT
-      lgtDefPosMgr_{"Default Positional Light", DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, 20, "LGT_DEF_POS"},
-      lgtPbrPosMgr_{"PBR Positional Light", DESCRIPTOR::LIGHT_POSITIONAL_PBR, 20, "LGT_PBR_POS"},
-      lgtDefSptMgr_{"Default Spot Light", DESCRIPTOR::LIGHT_SPOT_DEFAULT, 20, "LGT_DEF_SPT"},
-      // MISCELLANEOUS
-      uniDefFogMgr_{"Default Fog", DESCRIPTOR::FOG_DEFAULT, 5, "UNI_DEF_FOG"},
-      // GENERAL
+      managers_{
+          // CAMERA
+          Uniform::Manager<Camera::Default::Perspective::Base>  //
+          {"Default Perspective Camera", DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, 5, "UMI_CAM_DEF_PERS"},
+          // LIGHT
+          Uniform::Manager<Light::Default::Positional::Base>  //
+          {"Default Positional Light", DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, 20, "UMI_LGT_DEF_POS"},
+          Uniform::Manager<Light::PBR::Positional::Base>  //
+          {"PBR Positional Light", DESCRIPTOR::LIGHT_POSITIONAL_PBR, 20, "UMI_LGT_PBR_POS"},
+          Uniform::Manager<Light::Default::Spot::Base>  //
+          {"Default Spot Light", DESCRIPTOR::LIGHT_SPOT_DEFAULT, 20, "UMI_LGT_DEF_SPT"},
+          // MISCELLANEOUS
+          Uniform::Manager<Uniform::Default::Fog::Base>  //
+          {"Default Fog", DESCRIPTOR::FOG_DEFAULT, 5, "UMI_UNI_DEF_FOG"}
+          //
+      },
       hasVisualHelpers(false) {}
 
 void Uniform::Handler::init() {
     reset();
 
-    camDefPersMgr_.init(shell().context(), settings());
-    lgtDefPosMgr_.init(shell().context(), settings());
-    lgtPbrPosMgr_.init(shell().context(), settings());
-    lgtDefSptMgr_.init(shell().context(), settings());
-    uniDefFogMgr_.init(shell().context(), settings());
+    camDefPersMgr().init(shell().context(), settings());
+    lgtDefPosMgr().init(shell().context(), settings());
+    lgtPbrPosMgr().init(shell().context(), settings());
+    lgtDefSptMgr().init(shell().context(), settings());
+    uniDefFogMgr().init(shell().context(), settings());
 
     createCameras();
     createLights();
@@ -51,13 +53,13 @@ void Uniform::Handler::init() {
 void Uniform::Handler::reset() {
     const auto& dev = shell().context().dev;
     // CAMERAS
-    camDefPersMgr_.destroy(dev);
+    camDefPersMgr().destroy(dev);
     // LIGHTS
-    lgtDefPosMgr_.destroy(dev);
-    lgtPbrPosMgr_.destroy(dev);
-    lgtDefSptMgr_.destroy(dev);
+    lgtDefPosMgr().destroy(dev);
+    lgtPbrPosMgr().destroy(dev);
+    lgtDefSptMgr().destroy(dev);
     // MISCELLANEOUS
-    uniDefFogMgr_.destroy(dev);
+    uniDefFogMgr().destroy(dev);
 }
 
 void Uniform::Handler::createCameras() {
@@ -65,10 +67,10 @@ void Uniform::Handler::createCameras() {
     Camera::Default::Perspective::CreateInfo createInfo = {};
 
     createInfo.aspect = static_cast<float>(settings().initial_width) / static_cast<float>(settings().initial_height);
-    camDefPersMgr_.insert(dev, &createInfo);
-    camDefPersMgr_.insert(dev, &createInfo);
+    camDefPersMgr().insert(dev, &createInfo);
+    camDefPersMgr().insert(dev, &createInfo);
 
-    assert(MAIN_CAMERA_OFFSET < camDefPersMgr_.pItems.size());
+    assert(MAIN_CAMERA_OFFSET < camDefPersMgr().pItems.size());
 }
 
 void Uniform::Handler::createLights() {
@@ -77,50 +79,50 @@ void Uniform::Handler::createLights() {
 
     // POSITIONAL DEFAULT
     createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(20.5f, 10.5f, -23.5f));
-    lgtDefPosMgr_.insert(dev, &createInfo);
+    lgtDefPosMgr().insert(dev, &createInfo);
     createInfo.model = helpers::affine(glm::vec3(1.0f), {-2.5f, 4.5f, -1.5f});
-    lgtDefPosMgr_.insert(dev, &createInfo);
+    lgtDefPosMgr().insert(dev, &createInfo);
     createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-20.0f, 5.0f, -6.0f));
-    lgtDefPosMgr_.insert(dev, &createInfo);
+    lgtDefPosMgr().insert(dev, &createInfo);
 
     // POSITIONAL PBR (TODO: these being seperately created is really dumb!!! If this is
     // necessary there should be one set of positional lights, and multiple data buffers
     // for the one set...)
     createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(10.5f, 17.5f, -23.5f));
-    // lgtPbrPosMgr_.insert(dev, &createInfo);
+    // lgtPbrPosMgr().insert(dev, &createInfo);
     createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(22.5f, 5.5f, -7.5f));
-    // lgtPbrPosMgr_.insert(dev, &createInfo);
+    // lgtPbrPosMgr().insert(dev, &createInfo);
 
     // SPOT DEFAULT
     Light::Default::Spot::CreateInfo spotCreateInfo = {};
     spotCreateInfo.exponent = glm::radians(25.0f);
     spotCreateInfo.exponent = 25.0f;
     spotCreateInfo.model = helpers::viewToWorld({0.0f, 4.5f, 1.0f}, {0.0f, 0.0f, -1.5f}, UP_VECTOR);
-    lgtDefSptMgr_.insert(dev, &spotCreateInfo);
+    lgtDefSptMgr().insert(dev, &spotCreateInfo);
 }
 
 void Uniform::Handler::createMiscellaneous() {
     const auto& dev = shell().context().dev;
     // FOG
-    uniDefFogMgr_.insert(dev);
+    uniDefFogMgr().insert(dev);
 }
 
 void Uniform::Handler::createVisualHelpers() {
     // DEFAULT POSITIONAL
-    for (auto& pItem : lgtDefPosMgr_.pItems) {
-        auto& lgt = lgtDefPosMgr_.getTypedItem<Light::Default::Positional::Base>(pItem);
+    for (auto& pItem : lgtDefPosMgr().pItems) {
+        auto& lgt = lgtDefPosMgr().getTypedItem<Light::Default::Positional::Base>(pItem);
         meshHandler().makeModelSpaceVisualHelper(lgt);
         hasVisualHelpers = true;
     }
     // PBR POSITIONAL
-    for (auto& pItem : lgtPbrPosMgr_.pItems) {
-        auto& lgt = lgtPbrPosMgr_.getTypedItem<Light::PBR::Positional::Base>(pItem);
+    for (auto& pItem : lgtPbrPosMgr().pItems) {
+        auto& lgt = lgtPbrPosMgr().getTypedItem<Light::PBR::Positional::Base>(pItem);
         meshHandler().makeModelSpaceVisualHelper(lgt);
         hasVisualHelpers = true;
     }
     // DEFAULT SPOT
-    for (auto& pItem : lgtDefSptMgr_.pItems) {
-        auto& lgt = lgtDefSptMgr_.getTypedItem<Light::Default::Spot::Base>(pItem);
+    for (auto& pItem : lgtDefSptMgr().pItems) {
+        auto& lgt = lgtDefSptMgr().getTypedItem<Light::Default::Spot::Base>(pItem);
         meshHandler().makeModelSpaceVisualHelper(lgt);
         hasVisualHelpers = true;
     }
@@ -147,26 +149,26 @@ void Uniform::Handler::update() {
     update(camera);
 
     // DEFAULT POSITIONAL
-    for (auto& pItem : lgtDefPosMgr_.pItems) {
-        auto& lgt = lgtDefPosMgr_.getTypedItem<Light::Default::Positional::Base>(pItem);
+    for (auto& pItem : lgtDefPosMgr().pItems) {
+        auto& lgt = lgtDefPosMgr().getTypedItem<Light::Default::Positional::Base>(pItem);
         lgt.update(camera.getCameraSpacePosition(lgt.getPosition()));
         update(lgt);
     }
-    // lgtDefPosMgr_.update(shell().context().dev);
+    // lgtDefPosMgr().update(shell().context().dev);
     // PBR POSITIONAL
-    for (auto& pItem : lgtPbrPosMgr_.pItems) {
-        auto& lgt = lgtPbrPosMgr_.getTypedItem<Light::PBR::Positional::Base>(pItem);
+    for (auto& pItem : lgtPbrPosMgr().pItems) {
+        auto& lgt = lgtPbrPosMgr().getTypedItem<Light::PBR::Positional::Base>(pItem);
         lgt.update(camera.getCameraSpacePosition(lgt.getPosition()));
         update(lgt);
     }
-    // lgtDefPosMgr_.update(shell().context().dev);
+    // lgtDefPosMgr().update(shell().context().dev);
     // DEFAULT SPOT
-    for (auto& pItem : lgtDefSptMgr_.pItems) {
-        auto& lgt = lgtDefSptMgr_.getTypedItem<Light::Default::Spot::Base>(pItem);
+    for (auto& pItem : lgtDefSptMgr().pItems) {
+        auto& lgt = lgtDefSptMgr().getTypedItem<Light::Default::Spot::Base>(pItem);
         lgt.update(camera.getCameraSpaceDirection(lgt.getDirection()), camera.getCameraSpacePosition(lgt.getPosition()));
         update(lgt);
     }
-    // lgtDefPosMgr_.update(shell().context().dev);
+    // lgtDefPosMgr().update(shell().context().dev);
 }
 
 uint32_t Uniform::Handler::getDescriptorCount(const Descriptor::bindingMapValue& value) {
@@ -229,41 +231,30 @@ std::vector<VkDescriptorBufferInfo> Uniform::Handler::getWriteInfos(const Descri
     return infos;
 }
 
-std::string Uniform::Handler::macroReplace(const Descriptor::bindingMap& bindingMap, std::string text) {
-    for (const auto& keyValue : bindingMap) {
-        if (DESCRIPTOR_UNIFORM_ALL.count(keyValue.second.first)) {
-            // TODO: Ugh.
-            const auto& macroName = getMacroName(keyValue.second.first);
-            const auto& uniformCount = getUniforms(keyValue.second.first).size();
-
-            auto regexStr = MACRO_REGEX_TEMPLATE;
-            regexStr = helpers::replaceFirstOccurrence(MACRO_KEY, macroName, regexStr);
-            std::regex macroRegex(regexStr);
-
-            std::smatch matches;
-            std::regex_search(text, matches, macroRegex);
-
-            if (matches.empty()) continue;
-
-            assert(matches.size() == MACRO_REGEX_GROUP + 1);
-            UNIFORM_INDEX macroValue = std::stoi(matches[MACRO_REGEX_GROUP]);
-
-            // If macro value is non-zero then just make sure there are enough uniforms
-            if (macroValue != 0) {
-                assert(macroValue <= uniformCount);
-            } else {
-                std::stringstream ss;
-                for (uint8_t i = 0; i < matches.size(); i++) {
-                    if (i == 0)
-                        continue;
-                    else if (i == 3)
-                        ss << uniformCount;
-                    else
-                        ss << matches[i] << " ";
+void Uniform::Handler::shaderTextReplace(std::string& text) {
+    auto replaceInfo = helpers::getMacroReplaceInfo(UNIFORM_MACRO_ID_PREFIX, text);
+    for (auto& info : replaceInfo) {
+        bool isValid = false;
+        for (auto& manager : managers_) {
+            if (std::get<0>(info).compare(std::visit(MacroName{}, manager)) == 0) {
+                auto itemCount = std::visit(ItemCount{}, manager);
+                auto reqCount = std::get<3>(info);
+                if (reqCount > 0) {
+                    // If the value for the macro in the shader text is greater than zero
+                    // then just make sure there are enought uniforms to meet the requirement.
+                    assert(reqCount <= itemCount && "Not enough uniforms");
+                    isValid = true;
+                } else if (reqCount == 0) {
+                    // If the value for the macro in the shader text is zero
+                    // then use all uniforms available.
+                    if (itemCount > 0) {
+                        helpers::macroReplace(info, static_cast<int>(itemCount), text);
+                    }
+                    isValid = true;
                 }
-                text = helpers::replaceFirstOccurrence(matches[0], ss.str(), text);
+                assert(isValid && "Macro value is expected to be positive for now");
             }
         }
+        assert(isValid && "Could not find a uniform manager for the identifier");
     }
-    return text;
 }

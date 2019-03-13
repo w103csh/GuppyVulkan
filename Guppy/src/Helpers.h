@@ -18,6 +18,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 #include <unordered_map>
+#include <utility>
 
 #include "Constants.h"
 #include "Extensions.h"  // This is here for convenience
@@ -202,6 +203,7 @@ enum class DESCRIPTOR_SET {
     //
     UNIFORM_DEFAULT,
     SAMPLER_DEFAULT,
+    UNIFORM_PBR,
 };
 
 enum class HANDLER {
@@ -274,15 +276,20 @@ static std::string replaceFirstOccurrence(const std::string &toReplace, const st
 }
 
 template <typename T1, typename T2>
-std::string textReplace(std::string text, std::string s1, std::string s2, T1 r1, T2 r2) {
-    std::string s = text;
+static std::string textReplace(std::string &text, std::string s1, std::string s2, T1 r1, T2 r2) {
     std::stringstream rss, nss;
     rss << s1 << r1 << s2;
     nss << s1 << r2 << s2;
-    size_t f = s.find(rss.str());
-    if (f != std::string::npos) s.replace(f, rss.str().length(), nss.str());
-    return s;
+    size_t f = text.find(rss.str());
+    if (f != std::string::npos) text.replace(f, rss.str().length(), nss.str());
 }
+
+// { macro identifier, line to replace, line to append to, value }
+typedef std::tuple<std::string, std::string, std::string, int> macroInfo;
+
+std::vector<macroInfo> getMacroReplaceInfo(const std::string &macroIdentifierPrefix, const std::string &text);
+
+void macroReplace(const macroInfo &info, int itemCount, std::string &text);
 
 template <typename T>
 std::vector<T> &&slice(const std::vector<T> &v, int m, int n) {

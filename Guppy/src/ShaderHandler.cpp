@@ -67,10 +67,8 @@ void Shader::Handler::init() {
     for (auto& pLinkShader : pLinkShaders_) pLinkShader->init(oldModules_);
 
     init_glslang();
-
     // MAIN SHADERS
     for (auto& pShader : pShaders_) pShader->init(oldModules_);
-
     finalize_glslang();
 }
 

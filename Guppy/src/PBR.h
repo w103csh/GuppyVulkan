@@ -9,6 +9,7 @@
 #ifndef PBR_H
 #define PBR_H
 
+#include "DescriptorSet.h"
 #include "Light.h"
 #include "Object3d.h"
 #include "Shader.h"
@@ -88,6 +89,21 @@ class Base : public Buffer::DataItem<DATA>, public Material::Base {
 }  // namespace Material
 
 // **********************
+//      Descriptor Set
+// **********************
+
+namespace Descriptor {
+namespace Set {
+namespace PBR {
+class Uniform : public Set::Base {
+   public:
+    Uniform();
+};
+}  // namespace PBR
+}  // namespace Set
+}  // namespace Descriptor
+
+// **********************
 //      Shader
 // **********************
 
@@ -111,11 +127,6 @@ namespace Pipeline {
 struct CreateInfoResources;
 
 namespace PBR {
-
-struct PushConstant {
-    glm::mat4 model;
-    Material::PBR::DATA material;
-};
 
 class Color : public Pipeline::Base {
    public:

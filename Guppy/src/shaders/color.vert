@@ -2,13 +2,13 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-#define CAM_DEF_PERS 1
+#define UMI_CAM_DEF_PERS 1
 
 // BINDINGS
 layout(binding = 0) uniform CameraDefaultPerspective {
 	mat4 viewProjection;
 	mat4 view;
-} camera[CAM_DEF_PERS];
+} camera[UMI_CAM_DEF_PERS];
 // PUSH CONSTANTS
 layout(push_constant) uniform PushBlock {
     mat4 model;

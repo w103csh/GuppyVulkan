@@ -156,19 +156,11 @@ void Mesh::Base::bindPushConstants(VkCommandBuffer cmd) const {
 
     // TODO: MATERIAL INFO SHOULD PROBABLY BE A DYNAMIC UNIFORM (since it doesn't change constantly)
 
-    switch (pipelineReference_.pushConstantTypes[0]) {
+    switch (pipelineReference_.pushConstantTypes.front()) {
         case PUSH_CONSTANT::DEFAULT: {
             Pipeline::Default::PushConstant pushConstant = {model_};
             vkCmdPushConstants(cmd, pipelineReference_.layout, pipelineReference_.pushConstantStages, 0,
                                static_cast<uint32_t>(sizeof Pipeline::Default::PushConstant), &pushConstant);
-        } break;
-        case PUSH_CONSTANT::PBR: {
-            // TODO: obviously this is not right...
-            assert(false);
-            // Pipeline::PBR::PushConstant pushConstant = {
-            //    model_, handler().materialHandler().get<Material::PBR::DATA>(pMaterial_->BUFFER_INFO)};
-            // vkCmdPushConstants(cmd, pipelineReference_.layout, pipelineReference_.pushConstantStages, 0,
-            //                   static_cast<uint32_t>(sizeof Pipeline::PBR::PushConstant), &pushConstant);
         } break;
         default: { assert(false && "Add new push constant"); } break;
     }

@@ -64,30 +64,44 @@ void Material::PBR::Base::setTinyobjData(const tinyobj::material_t& m) {
 }
 
 // **********************
-//      Color Shader
+//      Descriptor Set
+// **********************
+
+Descriptor::Set::PBR::Uniform::Uniform()
+    : Set::Base{DESCRIPTOR_SET::UNIFORM_PBR,  //
+                {
+                    {{0, 0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {OFFSET_SINGLE}}},
+                    {{0, 1, 0}, {DESCRIPTOR::MATERIAL_PBR, {OFFSET_SINGLE}}},
+                    {{0, 2, 0}, {DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, {OFFSET_ALL}}}  //
+                }} {}
+
+// **********************
+//      Shader
 // **********************
 
 Shader::PBR::ColorFrag::ColorFrag(Shader::Handler& handler)
-    : Base{handler,  //
-           SHADER::PBR_COLOR_FRAG,
-           "color.pbr.frag",
-           VK_SHADER_STAGE_FRAGMENT_BIT,
-           "PBR Color Fragment Shader",
-           {
-               {DESCRIPTOR_SET::UNIFORM_DEFAULT}  //
-           }} {}
+    : Base{
+          handler,                       //
+          SHADER::PBR_COLOR_FRAG,        //
+          "color.pbr.frag",              //
+          VK_SHADER_STAGE_FRAGMENT_BIT,  //
+          "PBR Color Fragment Shader"    //
+      } {}
 
 // **********************
-//      Color Pipeline
+//      Pipeline
 // **********************
 
 Pipeline::PBR::Color::Color(Pipeline::Handler& handler)
-    : Base{handler,  //
-           PIPELINE::PBR_COLOR,
-           {SHADER::COLOR_VERT, SHADER::PBR_COLOR_FRAG},
-           {PUSH_CONSTANT::PBR},
-           VK_PIPELINE_BIND_POINT_GRAPHICS,
-           "PBR Color"} {};
+    : Base{
+          handler,
+          PIPELINE::PBR_COLOR,
+          VK_PIPELINE_BIND_POINT_GRAPHICS,
+          "Default Triangle List Texture",
+          {SHADER::COLOR_VERT, SHADER::PBR_COLOR_FRAG},
+          {PUSH_CONSTANT::DEFAULT},
+          {DESCRIPTOR_SET::UNIFORM_PBR}  //
+      } {};
 
 void Pipeline::PBR::Color::getInputAssemblyInfoResources(Pipeline::CreateInfoResources& createInfoRes) {
     // color vertex

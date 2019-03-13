@@ -4,12 +4,43 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/quaternion.hpp>
+#include <regex>
 #include <unordered_map>
 
 #include "Face.h"
 #include "Mesh.h"
 
+namespace {
+const std::string MACRO_REPLACE_PREFIX = "MACRO_REPLACE_PREFIX";
+const std::string MACRO_REGEX_TEMPLATE = "(#define)\\s+(" + MACRO_REPLACE_PREFIX + "(.+))\\s+(\\d+)";
+}  // namespace
+
 namespace helpers {
+
+std::vector<macroInfo> getMacroReplaceInfo(const std::string &macroIdentifierPrefix, const std::string &text) {
+    // { macro identifier, line, value }
+    std::vector<macroInfo> replaceStrs;
+
+    auto regexStr = MACRO_REGEX_TEMPLATE;
+    regexStr = helpers::replaceFirstOccurrence(MACRO_REPLACE_PREFIX, macroIdentifierPrefix, regexStr);
+    std::regex macroRegex(regexStr);
+
+    std::smatch results;
+    auto it = text.cbegin();
+    while (std::regex_search(it, text.end(), results, macroRegex)) {
+        std::stringstream ss;
+        ss << results[1] << " " << results[2] << " ";
+        replaceStrs.push_back({results[2], results[0], ss.str(), std::stoi(results[4])});
+        it = results[0].second;
+    }
+
+    return replaceStrs;
+}
+
+void macroReplace(const macroInfo &info, int itemCount, std::string &text) {
+    std::string replaceStr = std::get<2>(info) + std::to_string(itemCount);
+    helpers::replaceFirstOccurrence(std::get<1>(info), replaceStr, text);
+}
 
 bool hasStencilComponent(VkFormat format) {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT ||

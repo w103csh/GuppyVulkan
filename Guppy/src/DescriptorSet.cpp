@@ -13,17 +13,17 @@ Descriptor::Set::Resource& Descriptor::Set::Base::getResource(const uint32_t& of
 }
 
 Descriptor::Set::Default::Uniform::Uniform()
-    : Set::Base(DESCRIPTOR_SET::UNIFORM_DEFAULT,  //
+    : Set::Base{DESCRIPTOR_SET::UNIFORM_DEFAULT,  //
                 {
-                    {{0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {OFFSET_ALL}}},
-                    {{1, 0}, {DESCRIPTOR::MATERIAL_DEFAULT, {OFFSET_SINGLE}}},
-                    {{2, 0}, {DESCRIPTOR::FOG_DEFAULT, {OFFSET_SINGLE}}},
-                    {{3, 0}, {DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, {OFFSET_ALL}}},
-                    {{4, 0}, {DESCRIPTOR::LIGHT_SPOT_DEFAULT, {OFFSET_ALL}}}  //
-                }) {}
+                    {{0, 0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {OFFSET_ALL}}},
+                    {{0, 1, 0}, {DESCRIPTOR::MATERIAL_DEFAULT, {OFFSET_SINGLE}}},
+                    {{0, 2, 0}, {DESCRIPTOR::FOG_DEFAULT, {OFFSET_SINGLE}}},
+                    {{0, 3, 0}, {DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, {OFFSET_ALL}}},
+                    {{0, 4, 0}, {DESCRIPTOR::LIGHT_SPOT_DEFAULT, {OFFSET_ALL}}}  //
+                }} {}
 
 Descriptor::Set::Default::Sampler::Sampler()
-    : Set::Base(DESCRIPTOR_SET::SAMPLER_DEFAULT,  //
+    : Set::Base{DESCRIPTOR_SET::SAMPLER_DEFAULT,  //
                 {
-                    {{0, 0}, {DESCRIPTOR::SAMPLER_DEFAULT, {OFFSET_SINGLE}}}  //
-                }) {}
+                    {{1, 0, 0}, {DESCRIPTOR::SAMPLER_DEFAULT, {OFFSET_SINGLE}}}  //
+                }} {}

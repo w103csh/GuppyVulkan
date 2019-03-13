@@ -2,11 +2,11 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-#define CAM_DEF_PERS 1
+#define UMI_CAM_DEF_PERS 1
 #define MAT_DEF 1
-#define LGT_DEF_POS 0
-#define LGT_DEF_SPT 0
-#define UNI_DEF_FOG 1
+#define UMI_LGT_DEF_POS 0
+#define UMI_LGT_DEF_SPT 0
+#define UMI_UNI_DEF_FOG 1
 
 // DECLARATIONS
 // Gets the direction from the fragment to the position.
@@ -72,22 +72,22 @@ struct LightDefaultSpot {
 // BINDINGS
 layout(set = 0, binding = 0) uniform Binding0 {
     CameraDefaultPerspective camera;
-} binding0[CAM_DEF_PERS];
+} binding0[UMI_CAM_DEF_PERS];
 layout(set = 0, binding = 1) uniform Binding1 {
     MaterialDefault material;
 } binding1[MAT_DEF];
 layout(set = 0, binding = 2) uniform Binding2 {
     UniformDefaultFog fog;
-} binding2[UNI_DEF_FOG];
-#if LGT_DEF_POS
+} binding2[UMI_UNI_DEF_FOG];
+#if UMI_LGT_DEF_POS
 layout(set = 0, binding = 3) uniform Binding3 {
     LightDefaultPositional lgtPos;
-} binding3[LGT_DEF_POS];
+} binding3[UMI_LGT_DEF_POS];
 #endif
-#if LGT_DEF_SPT
+#if UMI_LGT_DEF_SPT
 layout(set = 0, binding = 4) uniform Binding4 {
     LightDefaultSpot lgtSpt;
-} binding4[LGT_DEF_SPT];
+} binding4[UMI_LGT_DEF_SPT];
 #endif
 // IN
 layout(location = 0) in vec3 CS_position;
@@ -118,7 +118,7 @@ float fogFactor() {
     return clamp(f, 0.0, 1.0);
 }
 
-#if LGT_DEF_POS
+#if UMI_LGT_DEF_POS
 vec3 phongModel(LightDefaultPositional light, float shininess, uint lightCount) {
     vec3 ambient = pow(light.La, vec3(lightCount)) * Ka;
     vec3 diff = vec3(0.0), spec = vec3(0.0);
@@ -154,7 +154,7 @@ vec3 phongModel(LightDefaultPositional light, float shininess, uint lightCount) 
 }
 #endif
 
-#if LGT_DEF_SPT
+#if UMI_LGT_DEF_SPT
 vec3 blinnPhongSpot(LightDefaultSpot light, float shininess, uint lightCount) {
     vec3 ambient = pow(light.La, vec3(lightCount)) * Ka;
     vec3 diff = vec3(0.0), spec = vec3(0.0);
@@ -184,7 +184,7 @@ vec3 getColor(float shininess) {
     vec3 color = vec3(0.0);
     uint lightCount = 0;
 
-#if LGT_DEF_POS
+#if UMI_LGT_DEF_POS
     for (int i = 0; i < binding3.length(); i++) {
         if ((binding3[i].lgtPos.flags & LIGHT_SHOW) > 0) {
             color += phongModel(binding3[i].lgtPos, shininess, ++lightCount);
@@ -192,7 +192,7 @@ vec3 getColor(float shininess) {
     }
 #endif
 
-#if LGT_DEF_SPT
+#if UMI_LGT_DEF_SPT
     for (int i = 0; i < binding4.length(); i++) {
         if ((binding4[i].lgtSpt.flags & LIGHT_SHOW) > 0) {
             color += blinnPhongSpot(binding4[i].lgtSpt, shininess, ++lightCount);

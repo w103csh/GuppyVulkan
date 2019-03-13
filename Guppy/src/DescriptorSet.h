@@ -16,8 +16,8 @@ class Handler;
 //      Binding map
 // **********************
 
-// key:     { binding, arrayElement }
-typedef std::pair<uint32_t, uint32_t> bindingMapKey;
+// key:     { set, binding, arrayElement }
+typedef std::tuple<uint32_t, uint32_t, uint32_t> bindingMapKey;
 // value:   { descriptorType, offsets }
 typedef std::pair<DESCRIPTOR, std::set<uint32_t>> bindingMapValue;
 typedef std::pair<const bindingMapKey, bindingMapValue> bindingMapKeyValue;
@@ -48,7 +48,6 @@ class Base {
     const Descriptor::bindingMap BINDING_MAP;
 
     VkDescriptorSetLayout layout;
-    std::set<PIPELINE> pipelineTypes;
     VkShaderStageFlags stages;
 
     Descriptor::Set::Resource& getResource(const uint32_t& offset);

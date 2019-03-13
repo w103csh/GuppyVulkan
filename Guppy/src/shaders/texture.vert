@@ -2,14 +2,14 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-#define CAM_DEF_PERS 1
+#define UMI_CAM_DEF_PERS 1
 #define MAT_DEF 1
 
 // BINDINGS
 layout(set = 0, binding = 0) uniform CameraDefaultPerspective {
 	mat4 viewProjection;
 	mat4 view;
-} camera[CAM_DEF_PERS];
+} camera[UMI_CAM_DEF_PERS];
 layout(set = 0, binding = 1) uniform MaterialDefault {
     vec3 Ka;            // Ambient reflectivity
     uint flags;         // Flags (general/material)

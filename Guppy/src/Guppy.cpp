@@ -229,14 +229,15 @@ void Guppy::createScenes() {
 
     // BOX (COLOR)
     meshInfo = {};
-    meshInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
-    meshInfo.model =
-        helpers::affine(glm::vec3{1.0f}, glm::vec3{-6.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{-1.0f, 0.0f, 1.0f});
-    defMatInfo = {};
-    defMatInfo.shininess = Material::SHININESS::EGGSHELL;
-    defMatInfo.diffuseCoeff = {1.0f, 1.0f, 0.0f};
-    auto& boxColor = handlers_.pMesh->makeColorMesh<Box::Color>(&meshInfo, &defMatInfo);
+    meshInfo.pipelineType = PIPELINE::PBR_COLOR;
+    meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{6.0f, 0.0f, 3.5f}, M_PI_2_FLT, glm::vec3{-1.0f, 0.0f, 1.0f});
+    pbrMatInfo = {};
+    pbrMatInfo.flags = Material::FLAG::METAL;
+    pbrMatInfo.diffuseCoeff = {1.0f, 1.0f, 0.0f};
+    auto& boxColor = handlers_.pMesh->makeColorMesh<Box::Color>(&meshInfo, &pbrMatInfo);
     boxColor->putOnTop(groundPlane_bbmm);
+
+    return;
 
     // BURNT ORANGE TORUS
     // MODEL

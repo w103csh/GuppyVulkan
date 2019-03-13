@@ -77,7 +77,7 @@ void Pipeline::Handler::getReference(Mesh::Base& mesh) {
 }
 
 std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
-    const PIPELINE& pipelineType, const std::vector<PUSH_CONSTANT>& pushConstantTypes) const {
+    const PIPELINE& pipelineType, const std::list<PUSH_CONSTANT>& pushConstantTypes) const {
     // Make the ranges...
     std::vector<VkPushConstantRange> ranges;
 
@@ -88,9 +88,6 @@ std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
         switch (type) {
             case PUSH_CONSTANT::DEFAULT:
                 range.size = sizeof(Pipeline::Default::PushConstant);
-                break;
-            case PUSH_CONSTANT::PBR:
-                range.size = sizeof(Pipeline::PBR::PushConstant);
                 break;
             default:
                 assert(false && "Unknown push constant");
