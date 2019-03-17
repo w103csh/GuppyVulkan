@@ -1,6 +1,7 @@
 #ifndef PIPELINE_HANDLER_H
 #define PIPELINE_HANDLER_H
 
+#include <list>
 #include <set>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -22,7 +23,7 @@ struct Reference {
     VkPipelineLayout layout;
     VkPipeline pipeline;
     VkShaderStageFlags pushConstantStages;
-    std::vector<PUSH_CONSTANT> pushConstantTypes;
+    std::list<PUSH_CONSTANT> pushConstantTypes;
 };
 
 struct CreateInfoResources {
@@ -67,12 +68,15 @@ class Handler : public Game::Handler {
 
     // PUSH CONSTANT
     std::vector<VkPushConstantRange> getPushConstantRanges(const PIPELINE &pipelineType,
-                                                           const std::vector<PUSH_CONSTANT> &pushConstantTypes) const;
+                                                           const std::list<PUSH_CONSTANT> &pushConstantTypes) const;
 
     // PIPELINES
     void createPipelines(const std::unique_ptr<RenderPass::Base> &pPass, bool remake = false);
     const VkPipeline &createPipeline(const PIPELINE &type, const std::unique_ptr<RenderPass::Base> &pPass = nullptr,
                                      bool setBase = false);
+
+    // DESCRIPTOR SET
+    VkShaderStageFlags getDescriptorSetStages(const DESCRIPTOR_SET &setType);
 
     inline const std::unique_ptr<Pipeline::Base> &getPipeline(const PIPELINE &type) const {
         assert(type != PIPELINE::DONT_CARE);

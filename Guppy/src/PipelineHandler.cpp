@@ -32,9 +32,13 @@ Pipeline::Handler::Handler(Game* pGame)
             case PIPELINE::PBR_COLOR:
                 pPipelines_.emplace_back(std::make_unique<PBR::Color>(std::ref(*this)));
                 break;
+            case PIPELINE::PBR_TEX:
+                pPipelines_.emplace_back(std::make_unique<PBR::Texture>(std::ref(*this)));
+                break;
             default:
                 assert(false);  // add new pipelines here
         }
+        assert(pPipelines_.back()->TYPE == type);
     }
     // Validate the list of instantiated pipelines.
     assert(pPipelines_.size() == PIPELINE_ALL.size());
@@ -77,7 +81,7 @@ void Pipeline::Handler::getReference(Mesh::Base& mesh) {
 }
 
 std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
-    const PIPELINE& pipelineType, const std::vector<PUSH_CONSTANT>& pushConstantTypes) const {
+    const PIPELINE& pipelineType, const std::list<PUSH_CONSTANT>& pushConstantTypes) const {
     // Make the ranges...
     std::vector<VkPushConstantRange> ranges;
 
@@ -88,9 +92,6 @@ std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
         switch (type) {
             case PUSH_CONSTANT::DEFAULT:
                 range.size = sizeof(Pipeline::Default::PushConstant);
-                break;
-            case PUSH_CONSTANT::PBR:
-                range.size = sizeof(Pipeline::PBR::PushConstant);
                 break;
             default:
                 assert(false && "Unknown push constant");
@@ -173,6 +174,19 @@ const VkPipeline& Pipeline::Handler::createPipeline(const PIPELINE& type, const 
     }
 
     return pipeline;
+}
+
+VkShaderStageFlags Pipeline::Handler::getDescriptorSetStages(const DESCRIPTOR_SET& setType) {
+    VkShaderStageFlags stages = 0;
+    for (const auto& pPipeline : pPipelines_) {
+        for (const auto& type : pPipeline->DESCRIPTOR_SET_TYPES) {
+            if (setType == type) {
+                for (const auto& shaderType : pPipeline->SHADER_TYPES)
+                    stages |= shaderHandler().getShader(shaderType)->STAGE;
+            }
+        }
+    }
+    return stages;
 }
 
 void Pipeline::Handler::needsUpdate(const std::vector<SHADER> types) {

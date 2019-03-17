@@ -18,6 +18,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 #include <unordered_map>
+#include <utility>
 
 #include "Constants.h"
 #include "Extensions.h"  // This is here for convenience
@@ -70,6 +71,8 @@ enum class SHADER {
     TEX_FRAG,
     // PBR
     PBR_COLOR_FRAG,
+    PBR_TEX_FRAG,
+    // Add new to SHADER_ALL and SHADER_LINK_MAP.
 };
 
 const std::array<SHADER, 7> SHADER_ALL = {
@@ -81,22 +84,32 @@ const std::array<SHADER, 7> SHADER_ALL = {
     SHADER::TEX_FRAG,    //
     // PBR
     SHADER::PBR_COLOR_FRAG,  //
+    SHADER::PBR_TEX_FRAG,    //
 };
 
 enum class SHADER_LINK {
     //
-    UTIL_FRAG,
+    COLOR_FRAG = 0,
+    TEX_FRAG,
+    BLINN_PHONG_FRAG,
+    PBR_FRAG,
+    // Add new to SHADER_LINK_ALL and SHADER_LINK_MAP.
 };
 
-const std::array<SHADER_LINK, 1> SHADER_LINK_ALL = {
-    //
-    SHADER_LINK::UTIL_FRAG,  //
+const std::array<SHADER_LINK, 4> SHADER_LINK_ALL = {
+    // These need to be in same order as the enum
+    SHADER_LINK::COLOR_FRAG,  //
+    SHADER_LINK::TEX_FRAG,
+    SHADER_LINK::BLINN_PHONG_FRAG,
+    SHADER_LINK::PBR_FRAG,
 };
 
 const std::map<SHADER, std::set<SHADER_LINK>> SHADER_LINK_MAP = {
-    //
-    {SHADER::COLOR_FRAG, {SHADER_LINK::UTIL_FRAG}},
-    {SHADER::TEX_FRAG, {SHADER_LINK::UTIL_FRAG}},
+    // TODO: why is this necessary? it seems like it shouldn't be.
+    {SHADER::COLOR_FRAG, {SHADER_LINK::COLOR_FRAG, SHADER_LINK::BLINN_PHONG_FRAG}},
+    {SHADER::TEX_FRAG, {SHADER_LINK::TEX_FRAG, SHADER_LINK::BLINN_PHONG_FRAG}},
+    {SHADER::PBR_COLOR_FRAG, {SHADER_LINK::COLOR_FRAG, SHADER_LINK::PBR_FRAG}},
+    {SHADER::PBR_TEX_FRAG, {SHADER_LINK::TEX_FRAG, SHADER_LINK::PBR_FRAG}},
 };
 
 // **********************
@@ -110,14 +123,16 @@ enum class PIPELINE {
     LINE = 1,
     TRI_LIST_TEX = 2,
     PBR_COLOR = 3,
-    // Add new ones to PIPELINE_ALL below.
+    PBR_TEX = 4,
+    // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP below.
 };
 
-const std::array<PIPELINE, 4> PIPELINE_ALL = {
+const std::array<PIPELINE, 5> PIPELINE_ALL = {
     PIPELINE::TRI_LIST_COLOR,  //
     PIPELINE::LINE,            //
     PIPELINE::TRI_LIST_TEX,    //
     PIPELINE::PBR_COLOR,       //
+    PIPELINE::PBR_TEX,         //
 };
 
 const std::map<VERTEX, std::set<PIPELINE>> VERTEX_PIPELINE_MAP = {
@@ -136,6 +151,7 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_PIPELINE_MAP = {
         {
             //
             PIPELINE::TRI_LIST_TEX,  //
+            PIPELINE::PBR_TEX,       //
         },
     }  //
 };
@@ -202,6 +218,7 @@ enum class DESCRIPTOR_SET {
     //
     UNIFORM_DEFAULT,
     SAMPLER_DEFAULT,
+    UNIFORM_PBR,
 };
 
 enum class HANDLER {
@@ -274,15 +291,20 @@ static std::string replaceFirstOccurrence(const std::string &toReplace, const st
 }
 
 template <typename T1, typename T2>
-std::string textReplace(std::string text, std::string s1, std::string s2, T1 r1, T2 r2) {
-    std::string s = text;
+static std::string textReplace(std::string &text, std::string s1, std::string s2, T1 r1, T2 r2) {
     std::stringstream rss, nss;
     rss << s1 << r1 << s2;
     nss << s1 << r2 << s2;
-    size_t f = s.find(rss.str());
-    if (f != std::string::npos) s.replace(f, rss.str().length(), nss.str());
-    return s;
+    size_t f = text.find(rss.str());
+    if (f != std::string::npos) text.replace(f, rss.str().length(), nss.str());
 }
+
+// { macro identifier, line to replace, line to append to, value }
+typedef std::tuple<std::string, std::string, std::string, int> macroInfo;
+
+std::vector<macroInfo> getMacroReplaceInfo(const std::string &macroIdentifierPrefix, const std::string &text);
+
+void macroReplace(const macroInfo &info, int itemCount, std::string &text);
 
 template <typename T>
 std::vector<T> &&slice(const std::vector<T> &v, int m, int n) {

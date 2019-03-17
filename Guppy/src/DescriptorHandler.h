@@ -37,11 +37,12 @@ class Handler : public Game::Handler {
     // POOL
     inline const VkDescriptorPool& getPool() { return pool_; }
     // LAYOUT
-    std::vector<VkDescriptorSetLayout> getDescriptorSetLayouts(const PIPELINE& pipelineType);
+    std::vector<VkDescriptorSetLayout> getDescriptorSetLayouts(const std::list<DESCRIPTOR_SET>& setTypes);
     // DESCRIPTOR
     uint32_t getDescriptorCount(const Descriptor::bindingMapValue& value) const;
     const Descriptor::Set::Base& getDescriptorSet(const DESCRIPTOR_SET& type) { return std::ref(*getSet(type).get()); }
     void getReference(Mesh::Base& pMesh);
+    std::vector<std::unique_ptr<Descriptor::Set::Base>&> getDescriptorSets(const std::list<DESCRIPTOR_SET>& setTypes);
 
    private:
     void reset() override;
@@ -60,7 +61,6 @@ class Handler : public Game::Handler {
         }
         throw std::runtime_error("Unrecognized set type");
     }
-    void updateSet(const PIPELINE& pipelineType, const std::unique_ptr<Shader::Base>& pShader);
     void allocateDescriptorSets(const std::unique_ptr<Descriptor::Set::Base>& pSet, Descriptor::Set::Resource& resource);
     void updateDescriptorSets(const std::unique_ptr<Descriptor::Set::Base>& pSet, Descriptor::Set::Resource& resource,
                               Mesh::Base& mesh) const;

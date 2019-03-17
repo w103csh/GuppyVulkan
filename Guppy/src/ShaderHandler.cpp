@@ -35,11 +35,15 @@ Shader::Handler::Handler(Game* pGame) : Game::Handler(pGame) {
                 pShaders_.emplace_back(std::make_unique<Default::TextureFragment>(std::ref(*this)));
                 break;
             case SHADER::PBR_COLOR_FRAG:
-                pShaders_.emplace_back(std::make_unique<PBR::ColorFrag>(std::ref(*this)));
+                pShaders_.emplace_back(std::make_unique<PBR::ColorFragment>(std::ref(*this)));
+                break;
+            case SHADER::PBR_TEX_FRAG:
+                pShaders_.emplace_back(std::make_unique<PBR::TextureFragment>(std::ref(*this)));
                 break;
             default:
                 assert(false);  // add new ones here...
         }
+        assert(pShaders_.back()->TYPE == type);
     }
     // Validate the list.
     assert(pShaders_.size() == SHADER_ALL.size());
@@ -48,12 +52,22 @@ Shader::Handler::Handler(Game* pGame) : Game::Handler(pGame) {
     // SHADERS (link)
     for (const auto& type : SHADER_LINK_ALL) {
         switch (type) {
-            case SHADER_LINK::UTIL_FRAG:
-                pLinkShaders_.emplace_back(std::make_unique<UtilityFragment>(std::ref(*this)));
+            case SHADER_LINK::COLOR_FRAG:
+                pLinkShaders_.emplace_back(std::make_unique<Link::ColorFragment>(std::ref(*this)));
+                break;
+            case SHADER_LINK::TEX_FRAG:
+                pLinkShaders_.emplace_back(std::make_unique<Link::TextureFragment>(std::ref(*this)));
+                break;
+            case SHADER_LINK::BLINN_PHONG_FRAG:
+                pLinkShaders_.emplace_back(std::make_unique<Link::BlinnPhongFragment>(std::ref(*this)));
+                break;
+            case SHADER_LINK::PBR_FRAG:
+                pLinkShaders_.emplace_back(std::make_unique<Link::PBR::Fragment>(std::ref(*this)));
                 break;
             default:
                 assert(false);  // add new ones here...
         }
+        assert(pLinkShaders_.back()->LINK_TYPE == type);
     }
     // Validate the list.
     assert(pLinkShaders_.size() == SHADER_LINK_ALL.size());
@@ -66,11 +80,9 @@ void Shader::Handler::init() {
     // LINK SHADERS
     for (auto& pLinkShader : pLinkShaders_) pLinkShader->init(oldModules_);
 
-    init_glslang();
-
     // MAIN SHADERS
+    init_glslang();
     for (auto& pShader : pShaders_) pShader->init(oldModules_);
-
     finalize_glslang();
 }
 
@@ -86,7 +98,7 @@ const std::unique_ptr<Shader::Base>& Shader::Handler::getShader(const SHADER& ty
     return pShaders_[static_cast<uint32_t>(type)];
 }
 
-const std::unique_ptr<Shader::Link>& Shader::Handler::getLinkShader(const SHADER_LINK& type) const {
+const std::unique_ptr<Shader::Link::Base>& Shader::Handler::getLinkShader(const SHADER_LINK& type) const {
     return pLinkShaders_[static_cast<uint32_t>(type)];
 }
 

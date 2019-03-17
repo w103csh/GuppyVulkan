@@ -41,12 +41,13 @@ void Scene::Base::record(const uint8_t& frameIndex, std::unique_ptr<RenderPass::
         const auto& pipelineType = (*it);
 
         switch (pipelineType) {
-            case PIPELINE::TRI_LIST_COLOR:
-            case PIPELINE::PBR_COLOR: {
+            case PIPELINE::PBR_COLOR:
+            case PIPELINE::TRI_LIST_COLOR: {
                 for (auto& pMesh : handler().meshHandler().getColorMeshes())
                     if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
                         pMesh->draw(priCmd, frameIndex);
             } break;
+            case PIPELINE::PBR_TEX:
             case PIPELINE::TRI_LIST_TEX: {
                 for (auto& pMesh : handler().meshHandler().getTextureMeshes())
                     if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)

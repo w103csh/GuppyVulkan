@@ -36,11 +36,23 @@ typedef enum FLAG {
 } FLAG;
 
 struct CreateInfo {
-    MATERIAL type;
     std::shared_ptr<Texture::DATA> pTexture = nullptr;
     // COMMON
-    FlagBits flags = PER_MATERIAL_COLOR;
-    glm::vec3 diffuseCoeff{1.0f};
+    glm::vec3 color = {1.0f, 0.0f, 0.0f};
+    FlagBits flags = Material::FLAG::PER_MATERIAL_COLOR;
+    float opacity = 1.0f;
+    float repeat = 1.0f;
+};
+
+struct DATA {
+    glm::vec3 color;  // diffuse coefficient
+    float opacity;
+    // 16
+    FlagBits flags;
+    FlagBits texFlags;
+    float xRepeat;
+    float yRepeat;
+    // 16
 };
 
 // **********************
@@ -76,10 +88,13 @@ class Base : public virtual Buffer::Item, public Descriptor::Interface {
     inline void setWriteInfo(VkWriteDescriptorSet& write) const override { write.pBufferInfo = &BUFFER_INFO.bufferInfo; }
 
    protected:
-    Base(Material::CreateInfo* pCreateInfo);
+    Base(const MATERIAL&& type, Material::CreateInfo* pCreateInfo);
 
     STATUS status_;
+
+    // TEXTURE
     std::shared_ptr<Texture::DATA> pTexture_;
+    float repeat_;
 };
 
 // **********************
@@ -88,33 +103,23 @@ class Base : public virtual Buffer::Item, public Descriptor::Interface {
 
 namespace Default {
 
-struct DATA {
+struct DATA : public Material::DATA {
     glm::vec3 Ka{0.1f};
-    FlagBits flags = Material::FLAG::PER_MATERIAL_COLOR;
-    // 16
-    glm::vec3 Kd{1.0f};
-    float opacity = 1.0f;
-    // 16
-    glm::vec3 Ks{0.9f};
     float shininess = SHININESS::MILDLY_SHINY;
     // 16
-    FlagBits texFlags = 1;  // Texture::FLAG::NONE;
-    float xRepeat = 1.0f;
-    alignas(8) float yRepeat = 1.0f;
+    alignas(16) glm::vec3 Ks{0.9f};
     // 16 (4 rem)
 };
 
 struct CreateInfo : public Material::CreateInfo {
     glm::vec3 ambientCoeff{0.1f};
     glm::vec3 specularCoeff{0.9f};
-    float opacity = 1.0f;
-    float repeat = 1.0f;
     float shininess = SHININESS::MILDLY_SHINY;
 };
 
 class Base : public Buffer::DataItem<DATA>, public Material::Base {
    public:
-    Base(const Buffer::Info&& info, DATA* pData, CreateInfo* pCreateInfo);
+    Base(const Buffer::Info&& info, Default::DATA* pData, Default::CreateInfo* pCreateInfo);
 
     FlagBits getFlags() override { return pData_->flags; }
     void setFlags(FlagBits flags) override {
@@ -124,16 +129,15 @@ class Base : public Buffer::DataItem<DATA>, public Material::Base {
 
     void setTextureData() override;
     void setTinyobjData(const tinyobj::material_t& m) override;
-    void setData() override { DIRTY = true; };
 
    private:
-    float repeat_;
+    void setData() override { DIRTY = true; };
 };
 
 static void copyTinyobjData(const tinyobj::material_t& m, Default::CreateInfo& materialInfo) {
     materialInfo.shininess = m.shininess;
     materialInfo.ambientCoeff = {m.ambient[0], m.ambient[1], m.ambient[2]};
-    materialInfo.diffuseCoeff = {m.diffuse[0], m.diffuse[1], m.diffuse[2]};
+    materialInfo.color = {m.diffuse[0], m.diffuse[1], m.diffuse[2]};
     materialInfo.specularCoeff = {m.specular[0], m.specular[1], m.specular[2]};
 }
 

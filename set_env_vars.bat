@@ -13,7 +13,7 @@ SETX GLM_LIB_DIR "C:/libs/glm-0.9.9.2/glm" /M
 ::      cmake --build . --config Release --target install
 :: This will allow you to build both Debug, and Release easily in Visual Studio.
 SETX GLSLANG_INSTALL_DIR "C:/Users/cloin/source/repos/glslang/build/install" /M
-SETX VULKAN_HEADERS_INSTALL_DIR "C:/Users/cloin/source/repos/Vulkan-Headers/build/RelWithDebInfo/install" /M
+SETX VULKAN_HEADERS_INSTALL_DIR "C:/Users/cloin/source/repos/Vulkan-Headers/build/install" /M
 :: I would imagine that I would have to do something similar to GLSLANG if I ever want to compile
 :: the loader into my projects. I don't think these are being used atm.
 SETX VULKAN_LOADER_INSTALL_DIR "C:/Users/cloin/source/repos/Vulkan-Loader/build/RelWithDebInfo/install" /M

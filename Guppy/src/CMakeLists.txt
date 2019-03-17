@@ -2,22 +2,22 @@
 set(SOURCE
     Camera.cpp
     Camera.h
-	CommandHandler.cpp
-	CommandHandler.h
+    CommandHandler.cpp
+    CommandHandler.h
     CMakeLists.txt
     Constants.h
     EventHandlers.h
     Extensions.h
     Face.cpp
     Face.h
-	FileLoader.cpp
+    FileLoader.cpp
     FileLoader.h
     Game.cpp
     Game.h
     Guppy.cpp
     Guppy.h
     Handlee.h
-	Helpers.cpp
+    Helpers.cpp
     Helpers.h
     InputHandler.cpp
     InputHandler.h
@@ -28,17 +28,17 @@ set(SOURCE
     LoadingHandler.cpp
     LoadingHandler.h
     Main.cpp
-	Material.cpp
-	Material.h
+    Material.cpp
+    Material.h
     MaterialHandler.cpp
     MaterialHandler.h
     Object3d.cpp
     Object3d.h
     PBR.cpp
     PBR.h
-	Scene.cpp
-	Scene.h
-	SceneHandler.cpp
+    Scene.cpp
+    Scene.h
+    SceneHandler.cpp
     SceneHandler.h
     SelectionManager.cpp
     SelectionManager.h
@@ -63,9 +63,9 @@ set(SOURCE
     Box.h
     FaceMesh.cpp
     FaceMesh.h
-	Mesh.cpp
+    Mesh.cpp
     Mesh.h
-	MeshHandler.cpp
+    MeshHandler.cpp
     MeshHandler.h
     Plane.cpp
     Plane.h
@@ -84,14 +84,14 @@ set(SOURCE
     ShellGLFW.cpp
     ShellGLFW.h
     # Pipeline
-	Pipeline.cpp
-	Pipeline.h
-	PipelineHandler.cpp
+    Pipeline.cpp
+    Pipeline.h
+    PipelineHandler.cpp
     PipelineHandler.h
     RenderPass.cpp
     RenderPass.h
     # Shader
-	Shader.cpp
+    Shader.cpp
     Shader.h
     ShaderHandler.cpp
     ShaderHandler.h

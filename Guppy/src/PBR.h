@@ -9,6 +9,7 @@
 #ifndef PBR_H
 #define PBR_H
 
+#include "DescriptorSet.h"
 #include "Light.h"
 #include "Object3d.h"
 #include "Shader.h"
@@ -23,9 +24,9 @@ namespace Light {
 namespace PBR {
 namespace Positional {
 struct DATA {
-    glm::vec3 position{};           // 12 (camera space)
-    FlagBits flags = FLAG::SHOW;    // 4
-    alignas(16) glm::vec3 L{0.6f};  // 12 light intensity
+    glm::vec3 position{};            // 12 (camera space)
+    FlagBits flags = FLAG::SHOW;     // 4
+    alignas(16) glm::vec3 L{30.0f};  // 12 light intensity
     // 4 rem
 };
 class Base : public Light::Base<DATA> {
@@ -41,6 +42,8 @@ class Base : public Light::Base<DATA> {
         position = getWorldSpacePosition();
     }
 
+    void setIntensity(glm::vec3 L) { pData_->L = L; }
+
    private:
     glm::vec3 position;  // (world space)
 };
@@ -55,21 +58,18 @@ class Base : public Light::Base<DATA> {
 namespace Material {
 namespace PBR {
 
-struct DATA {
-    glm::vec3 color;  // diffCoeff
-    FlagBits flags;
-    // 16
-    alignas(8) float roughness;
-    // 8 (4 rem)
+struct DATA : public Material::DATA {
+    alignas(16) float roughness;
+    // rem (12)
 };
 
 struct CreateInfo : public Material::CreateInfo {
-    float roughness;
+    float roughness = 0.43f;
 };
 
 class Base : public Buffer::DataItem<DATA>, public Material::Base {
    public:
-    Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo);
+    Base(const Buffer::Info &&info, PBR::DATA *pData, PBR::CreateInfo *pCreateInfo);
 
     FlagBits getFlags() override { return pData_->flags; }
     void setFlags(FlagBits flags) override {
@@ -80,6 +80,8 @@ class Base : public Buffer::DataItem<DATA>, public Material::Base {
     void setTextureData() override;
     void setTinyobjData(const tinyobj::material_t &m) override;
 
+    void setRoughness(float r);
+
    private:
     inline void setData() override { DIRTY = true; };
 };
@@ -88,18 +90,46 @@ class Base : public Buffer::DataItem<DATA>, public Material::Base {
 }  // namespace Material
 
 // **********************
+//      Descriptor Set
+// **********************
+
+namespace Descriptor {
+namespace Set {
+namespace PBR {
+class Uniform : public Set::Base {
+   public:
+    Uniform();
+};
+}  // namespace PBR
+}  // namespace Set
+}  // namespace Descriptor
+
+// **********************
 //      Shader
 // **********************
 
 namespace Shader {
+
 namespace PBR {
-
-class ColorFrag : public Base {
+class ColorFragment : public Base {
    public:
-    ColorFrag(Shader::Handler &handler);
+    ColorFragment(Shader::Handler &handler);
 };
-
+class TextureFragment : public Base {
+   public:
+    TextureFragment(Shader::Handler &handler);
+};
 }  // namespace PBR
+
+namespace Link {
+namespace PBR {
+class Fragment : public Shader::Link::Base {
+   public:
+    Fragment(Shader::Handler &handler);
+};
+}  // namespace PBR
+}  // namespace Link
+
 }  // namespace Shader
 
 // **********************
@@ -112,17 +142,18 @@ struct CreateInfoResources;
 
 namespace PBR {
 
-struct PushConstant {
-    glm::mat4 model;
-    Material::PBR::DATA material;
-};
-
 class Color : public Pipeline::Base {
    public:
     Color(Pipeline::Handler &handler);
     // INFOS
     void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
-    void getShaderInfoResources(CreateInfoResources &createInfoRes) override;
+};
+
+class Texture : public Pipeline::Base {
+   public:
+    Texture(Pipeline::Handler &handler);
+    // INFOS
+    void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
 };
 
 }  // namespace PBR

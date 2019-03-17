@@ -3,8 +3,11 @@
 #define UNIFORM_HANDLER_H
 
 #include <functional>
+#include <optional>
 #include <set>
 #include <string>
+#include <utility>
+#include <variant>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -74,11 +77,11 @@ class Handler : public Game::Handler {
 
     // MAIN CAMERA
     Camera::Default::Perspective::Base& getMainCamera() {
-        return std::ref(*(Camera::Default::Perspective::Base*)(camDefPersMgr_.pItems[MAIN_CAMERA_OFFSET].get()));
+        return std::ref(*(Camera::Default::Perspective::Base*)(camDefPersMgr().pItems[MAIN_CAMERA_OFFSET].get()));
     }
 
     // SHADER
-    std::string macroReplace(const Descriptor::bindingMap& bindingMap, std::string text);
+    void shaderTextReplace(std::string& text);
 
     template <typename T>
     inline T& getUniform(const DESCRIPTOR& type, const UNIFORM_INDEX& index) {
@@ -95,66 +98,70 @@ class Handler : public Game::Handler {
    private:
     void reset() override;
 
-    // clang-format off
-    template <class T> inline Uniform::Manager<T>& getManager() { static_assert(false, "Not implemented"); }
-    template <> inline Uniform::Manager<Camera::Default::Perspective::Base>& getManager() { return camDefPersMgr_; }
-    template <> inline Uniform::Manager<Light::Default::Positional::Base>& getManager() { return lgtDefPosMgr_; }
-    template <> inline Uniform::Manager<Light::PBR::Positional::Base>& getManager() { return lgtPbrPosMgr_; }
-    template <> inline Uniform::Manager<Light::Default::Spot::Base>& getManager() { return lgtDefSptMgr_; }
-    template <> inline Uniform::Manager<Uniform::Default::Fog::Base>& getManager() { return uniDefFogMgr_; }
-    // clang-format on
-
     std::set<uint32_t> getBindingOffsets(const Descriptor::bindingMapValue& value);
-
-    inline const std::string& getMacroName(const DESCRIPTOR& type) const {
-        switch (type) {
-            case DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT:
-                return camDefPersMgr_.MACRO_NAME;
-            case DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT:
-                return lgtDefPosMgr_.MACRO_NAME;
-            case DESCRIPTOR::LIGHT_POSITIONAL_PBR:
-                return lgtPbrPosMgr_.MACRO_NAME;
-            case DESCRIPTOR::LIGHT_SPOT_DEFAULT:
-                return lgtDefSptMgr_.MACRO_NAME;
-            case DESCRIPTOR::FOG_DEFAULT:
-                return uniDefFogMgr_.MACRO_NAME;
-            default:
-                assert(false);
-                throw std::runtime_error("Unhandled uniform type");
-        }
-    }
 
     inline auto& getUniforms(const DESCRIPTOR& type) {
         switch (type) {
             case DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT:
-                return camDefPersMgr_.pItems;
+                return camDefPersMgr().pItems;
             case DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT:
-                return lgtDefPosMgr_.pItems;
+                return lgtDefPosMgr().pItems;
             case DESCRIPTOR::LIGHT_POSITIONAL_PBR:
-                return lgtPbrPosMgr_.pItems;
+                return lgtPbrPosMgr().pItems;
             case DESCRIPTOR::LIGHT_SPOT_DEFAULT:
-                return lgtDefSptMgr_.pItems;
+                return lgtDefSptMgr().pItems;
             case DESCRIPTOR::FOG_DEFAULT:
-                return uniDefFogMgr_.pItems;
+                return uniDefFogMgr().pItems;
             default:
                 assert(false);
                 throw std::runtime_error("Unhandled uniform type");
         }
     }
 
-    // CAMERA
-    const UNIFORM_INDEX MAIN_CAMERA_OFFSET = 0;
-    void createCameras();
-    Uniform::Manager<Camera::Default::Perspective::Base> camDefPersMgr_;
-    // LIGHTS
-    void createLights();
-    Uniform::Manager<Light::Default::Positional::Base> lgtDefPosMgr_;
-    Uniform::Manager<Light::PBR::Positional::Base> lgtPbrPosMgr_;
-    Uniform::Manager<Light::Default::Spot::Base> lgtDefSptMgr_;
-    // MISCELLANEOUS
-    void createMiscellaneous();
-    Uniform::Manager<Uniform::Default::Fog::Base> uniDefFogMgr_;
+    // clang-format off
+    inline Uniform::Manager<Camera::Default::Perspective::Base>& camDefPersMgr() { return std::get<Uniform::Manager<Camera::Default::Perspective::Base>>(managers_[0]);};
+    inline Uniform::Manager<Light::Default::Positional::Base>& lgtDefPosMgr() { return std::get<Uniform::Manager<Light::Default::Positional::Base>>(managers_[1]);};
+    inline Uniform::Manager<Light::PBR::Positional::Base>& lgtPbrPosMgr() { return std::get<Uniform::Manager<Light::PBR::Positional::Base>>(managers_[2]);};
+    inline Uniform::Manager<Light::Default::Spot::Base>& lgtDefSptMgr() { return std::get<Uniform::Manager<Light::Default::Spot::Base>>(managers_[3]);};
+    inline Uniform::Manager<Uniform::Default::Fog::Base>& uniDefFogMgr() { return std::get<Uniform::Manager<Uniform::Default::Fog::Base>>(managers_[4]);};
 
+    template <class T> inline Uniform::Manager<T>& getManager() { static_assert(false, "Not implemented"); }
+    template <> inline Uniform::Manager<Camera::Default::Perspective::Base>& getManager() { return camDefPersMgr(); }
+    template <> inline Uniform::Manager<Light::Default::Positional::Base>& getManager() { return lgtDefPosMgr(); }
+    template <> inline Uniform::Manager<Light::PBR::Positional::Base>& getManager() { return lgtPbrPosMgr(); }
+    template <> inline Uniform::Manager<Light::Default::Spot::Base>& getManager() { return lgtDefSptMgr(); }
+    template <> inline Uniform::Manager<Uniform::Default::Fog::Base>& getManager() { return uniDefFogMgr(); }
+    // clang-format on
+
+    void createCameras();
+    void createLights();
+    void createMiscellaneous();
+
+    using Manager = std::variant<                              //
+        Uniform::Manager<Camera::Default::Perspective::Base>,  //
+        Uniform::Manager<Light::Default::Positional::Base>,    //
+        Uniform::Manager<Light::PBR::Positional::Base>,        //
+        Uniform::Manager<Light::Default::Spot::Base>,          //
+        Uniform::Manager<Uniform::Default::Fog::Base>          //
+        >;
+
+    std::array<Manager, 5> managers_;
+
+    struct MacroName {
+        template <typename TManager>
+        std::string operator()(const TManager& manager) const {
+            return manager.MACRO_NAME;
+        }
+    };
+
+    struct ItemCount {
+        template <typename TManager>
+        auto operator()(const TManager& manager) const {
+            return manager.pItems.size();
+        }
+    };
+
+    const UNIFORM_INDEX MAIN_CAMERA_OFFSET = 0;
     bool hasVisualHelpers;
 };
 

@@ -224,6 +224,8 @@ if(WIN32)
     if (MSVC)
         set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} /wd4267")
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /wd4267")
+        # This removes warning if building the GLFW DEBUG_UI version
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:MSVCRT")
     endif()
 
 else()

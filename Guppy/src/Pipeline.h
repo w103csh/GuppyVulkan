@@ -1,6 +1,7 @@
 #ifndef PIPELINE_H
 #define PIPELINE_H
 
+#include <list>
 #include <set>
 #include <string>
 #include <vector>
@@ -25,11 +26,12 @@ class Base : public Handlee<Pipeline::Handler> {
     friend class Handler;
 
    public:
-    const PIPELINE TYPE;
-    const std::set<SHADER> SHADER_TYPES;
-    const std::vector<PUSH_CONSTANT> PUSH_CONSTANT_TYPES;
     const VkPipelineBindPoint BIND_POINT;
+    const std::list<DESCRIPTOR_SET> DESCRIPTOR_SET_TYPES;
     const std::string NAME;
+    const std::list<PUSH_CONSTANT> PUSH_CONSTANT_TYPES;
+    const std::set<SHADER> SHADER_TYPES;
+    const PIPELINE TYPE;
 
     virtual void init();
 
@@ -37,19 +39,17 @@ class Base : public Handlee<Pipeline::Handler> {
     inline const VkPipeline &getPipeline() const { return pipeline_; }
     inline uint32_t getSubpassId() const { return subpassId_; }
 
-    // TODO: if this ever gets overriden then this should take a struct
-    virtual inline uint32_t getDescriptorSetOffset(const std::shared_ptr<Texture::DATA> &pTexture) const { return 0; }
-
    protected:
-    Base(Pipeline::Handler &handler, const PIPELINE &&type, const std::set<SHADER> &&shaderTypes,
-         const std::vector<PUSH_CONSTANT> &&pushConstantTypes, const VkPipelineBindPoint &&bindPoint,
-         const std::string &&name)
+    Base(Pipeline::Handler &handler, const PIPELINE &&type, const VkPipelineBindPoint &&bindPoint, const std::string &&name,
+         const std::set<SHADER> &&shaderTypes, const std::list<PUSH_CONSTANT> &&pushConstantTypes = {},
+         std::list<DESCRIPTOR_SET> &&descriptorSets = {})
         : Handlee(handler),
-          TYPE(type),
-          SHADER_TYPES(shaderTypes),
-          PUSH_CONSTANT_TYPES(pushConstantTypes),
           BIND_POINT(bindPoint),
+          DESCRIPTOR_SET_TYPES(descriptorSets),
           NAME(name),
+          PUSH_CONSTANT_TYPES(pushConstantTypes),
+          SHADER_TYPES(shaderTypes),
+          TYPE(type),
           layout_(VK_NULL_HANDLE),
           pipeline_(VK_NULL_HANDLE),
           subpassId_(0),
@@ -64,7 +64,7 @@ class Base : public Handlee<Pipeline::Handler> {
     virtual void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) = 0;  // no default
     virtual void getMultisampleStateInfoResources(CreateInfoResources &createInfoRes);
     virtual void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes);
-    virtual void getShaderInfoResources(CreateInfoResources &createInfoRes) = 0;  // no default
+    virtual void getShaderInfoResources(CreateInfoResources &createInfoRes);
     virtual void getTesselationInfoResources(CreateInfoResources &createInfoRes);
     virtual void getViewportStateInfoResources(CreateInfoResources &createInfoRes);
 
@@ -100,17 +100,9 @@ struct PushConstant {
 // **********************
 class TriListColor : public Base {
    public:
-    TriListColor(Pipeline::Handler &handler)
-        : Base{handler,  //
-               PIPELINE::TRI_LIST_COLOR,
-               {SHADER::COLOR_VERT, SHADER::COLOR_FRAG},
-               {PUSH_CONSTANT::DEFAULT},
-               VK_PIPELINE_BIND_POINT_GRAPHICS,
-               "Default Triangle List Color"} {};
-
+    TriListColor(Pipeline::Handler &handler);
     // INFOS
     void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
-    void getShaderInfoResources(CreateInfoResources &createInfoRes) override;
 };
 
 // **********************
@@ -118,17 +110,9 @@ class TriListColor : public Base {
 // **********************
 class Line : public Base {
    public:
-    Line(Pipeline::Handler &handler)
-        : Base{handler,  //
-               PIPELINE::LINE,
-               {SHADER::COLOR_VERT, SHADER::LINE_FRAG},
-               {PUSH_CONSTANT::DEFAULT},
-               VK_PIPELINE_BIND_POINT_GRAPHICS,
-               "Default Line"} {};
-
+    Line(Pipeline::Handler &handler);
     // INFOS
     void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
-    void getShaderInfoResources(CreateInfoResources &createInfoRes) override;
 };
 
 // **********************
@@ -136,22 +120,9 @@ class Line : public Base {
 // **********************
 class TriListTexture : public Base {
    public:
-    TriListTexture(Pipeline::Handler &handler)
-        : Base{handler,  //
-               PIPELINE::TRI_LIST_TEX,
-               {SHADER::TEX_VERT, SHADER::TEX_FRAG},
-               {PUSH_CONSTANT::DEFAULT},
-               VK_PIPELINE_BIND_POINT_GRAPHICS,
-               "Default Triangle List Texture"} {};
-
+    TriListTexture(Pipeline::Handler &handler);
     // INFOS
     void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
-    void getShaderInfoResources(CreateInfoResources &createInfoRes) override;
-
-    // DESCRIPTOR
-    inline uint32_t getDescriptorSetOffset(const std::shared_ptr<Texture::DATA> &pTexture) const override {
-        return pTexture->offset;
-    }
 };
 }  // namespace Default
 

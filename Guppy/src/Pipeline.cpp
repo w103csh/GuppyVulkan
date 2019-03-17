@@ -18,7 +18,7 @@ void Pipeline::Base::createPipelineLayout() {
     // push constants
     pushConstantRanges_ = handler().getPushConstantRanges(TYPE, PUSH_CONSTANT_TYPES);
     // descriptor layouts
-    const auto& descSetLayouts = handler().descriptorHandler().getDescriptorSetLayouts(TYPE);
+    const auto& descSetLayouts = handler().descriptorHandler().getDescriptorSetLayouts(DESCRIPTOR_SET_TYPES);
 
     VkPipelineLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -133,6 +133,11 @@ void Pipeline::Base::getRasterizationStateInfoResources(CreateInfoResources& cre
         any line thicker than 1.0f requires you to enable the wideLines GPU feature.
     */
     createInfoRes.rasterizationStateInfo.lineWidth = 1.0f;
+}
+
+void Pipeline::Base::getShaderInfoResources(CreateInfoResources& createInfoRes) {
+    createInfoRes.stagesInfo.clear();  // TODO: faster way?
+    handler().shaderHandler().getStagesInfo(SHADER_TYPES, createInfoRes.stagesInfo);
 }
 
 void Pipeline::Base::getMultisampleStateInfoResources(CreateInfoResources& createInfoRes) {
@@ -253,6 +258,17 @@ void Pipeline::Base::getTesselationInfoResources(CreateInfoResources& createInfo
 //      Default Triangle List Color
 // **********************
 
+Pipeline::Default::TriListColor::TriListColor(Pipeline::Handler& handler)
+    : Base{
+          handler,
+          PIPELINE::TRI_LIST_COLOR,
+          VK_PIPELINE_BIND_POINT_GRAPHICS,
+          "Default Triangle List Color",
+          {SHADER::COLOR_VERT, SHADER::COLOR_FRAG},
+          {PUSH_CONSTANT::DEFAULT},
+          {DESCRIPTOR_SET::UNIFORM_DEFAULT}  //
+      } {};
+
 void Pipeline::Default::TriListColor::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     // color vertex
     createInfoRes.bindingDesc = Vertex::getColorBindDesc();
@@ -273,14 +289,20 @@ void Pipeline::Default::TriListColor::getInputAssemblyInfoResources(CreateInfoRe
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 }
 
-void Pipeline::Default::TriListColor::getShaderInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.stagesInfo.clear();  // TODO: faster way?
-    handler().shaderHandler().getStagesInfo(SHADER_TYPES, createInfoRes.stagesInfo);
-}
-
 // **********************
 //      Default Line
 // **********************
+
+Pipeline::Default::Line::Line(Pipeline::Handler& handler)
+    : Base{
+          handler,
+          PIPELINE::LINE,
+          VK_PIPELINE_BIND_POINT_GRAPHICS,
+          "Default Line",
+          {SHADER::COLOR_VERT, SHADER::LINE_FRAG},
+          {PUSH_CONSTANT::DEFAULT},
+          {DESCRIPTOR_SET::UNIFORM_DEFAULT}  //
+      } {};
 
 void Pipeline::Default::Line::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     // color vertex
@@ -302,14 +324,20 @@ void Pipeline::Default::Line::getInputAssemblyInfoResources(CreateInfoResources&
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 }
 
-void Pipeline::Default::Line::getShaderInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.stagesInfo.clear();  // TODO: faster way?
-    handler().shaderHandler().getStagesInfo(SHADER_TYPES, createInfoRes.stagesInfo);
-}
-
 // **********************
 //      Default Triangle List Texture
 // **********************
+
+Pipeline::Default::TriListTexture::TriListTexture(Pipeline::Handler& handler)
+    : Base{
+          handler,
+          PIPELINE::TRI_LIST_TEX,
+          VK_PIPELINE_BIND_POINT_GRAPHICS,
+          "Default Triangle List Texture",
+          {SHADER::TEX_VERT, SHADER::TEX_FRAG},
+          {PUSH_CONSTANT::DEFAULT},
+          {DESCRIPTOR_SET::UNIFORM_DEFAULT, DESCRIPTOR_SET::SAMPLER_DEFAULT}  //
+      } {};
 
 void Pipeline::Default::TriListTexture::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     // texture vertex
@@ -329,9 +357,4 @@ void Pipeline::Default::TriListTexture::getInputAssemblyInfoResources(CreateInfo
     createInfoRes.inputAssemblyStateInfo.flags = 0;
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
-}
-
-void Pipeline::Default::TriListTexture::getShaderInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.stagesInfo.clear();  // TODO: faster way?
-    handler().shaderHandler().getStagesInfo(SHADER_TYPES, createInfoRes.stagesInfo);
 }
