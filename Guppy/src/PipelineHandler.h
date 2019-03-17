@@ -75,6 +75,9 @@ class Handler : public Game::Handler {
     const VkPipeline &createPipeline(const PIPELINE &type, const std::unique_ptr<RenderPass::Base> &pPass = nullptr,
                                      bool setBase = false);
 
+    // DESCRIPTOR SET
+    VkShaderStageFlags getDescriptorSetStages(const DESCRIPTOR_SET &setType);
+
     inline const std::unique_ptr<Pipeline::Base> &getPipeline(const PIPELINE &type) const {
         assert(type != PIPELINE::DONT_CARE);
         return pPipelines_[static_cast<uint64_t>(type)];

@@ -26,21 +26,18 @@ class Base : public Handlee<Pipeline::Handler> {
     friend class Handler;
 
    public:
-    const PIPELINE TYPE;
-    const std::list<DESCRIPTOR_SET> DESCRIPTOR_SET_TYPES;
-    const std::set<SHADER> SHADER_TYPES;
-    const std::list<PUSH_CONSTANT> PUSH_CONSTANT_TYPES;
     const VkPipelineBindPoint BIND_POINT;
+    const std::list<DESCRIPTOR_SET> DESCRIPTOR_SET_TYPES;
     const std::string NAME;
+    const std::list<PUSH_CONSTANT> PUSH_CONSTANT_TYPES;
+    const std::set<SHADER> SHADER_TYPES;
+    const PIPELINE TYPE;
 
     virtual void init();
 
     inline const VkPipelineLayout &getLayout() const { return layout_; }
     inline const VkPipeline &getPipeline() const { return pipeline_; }
     inline uint32_t getSubpassId() const { return subpassId_; }
-
-    // TODO: if this ever gets overriden then this should take a struct
-    virtual inline uint32_t getDescriptorSetOffset(const std::shared_ptr<Texture::DATA> &pTexture) const { return 0; }
 
    protected:
     Base(Pipeline::Handler &handler, const PIPELINE &&type, const VkPipelineBindPoint &&bindPoint, const std::string &&name,
@@ -67,7 +64,7 @@ class Base : public Handlee<Pipeline::Handler> {
     virtual void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) = 0;  // no default
     virtual void getMultisampleStateInfoResources(CreateInfoResources &createInfoRes);
     virtual void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes);
-    virtual void getShaderInfoResources(CreateInfoResources &createInfoRes) = 0;  // no default
+    virtual void getShaderInfoResources(CreateInfoResources &createInfoRes);
     virtual void getTesselationInfoResources(CreateInfoResources &createInfoRes);
     virtual void getViewportStateInfoResources(CreateInfoResources &createInfoRes);
 
@@ -104,10 +101,8 @@ struct PushConstant {
 class TriListColor : public Base {
    public:
     TriListColor(Pipeline::Handler &handler);
-
     // INFOS
     void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
-    void getShaderInfoResources(CreateInfoResources &createInfoRes) override;
 };
 
 // **********************
@@ -116,10 +111,8 @@ class TriListColor : public Base {
 class Line : public Base {
    public:
     Line(Pipeline::Handler &handler);
-
     // INFOS
     void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
-    void getShaderInfoResources(CreateInfoResources &createInfoRes) override;
 };
 
 // **********************
@@ -128,15 +121,8 @@ class Line : public Base {
 class TriListTexture : public Base {
    public:
     TriListTexture(Pipeline::Handler &handler);
-
     // INFOS
     void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
-    void getShaderInfoResources(CreateInfoResources &createInfoRes) override;
-
-    // DESCRIPTOR
-    inline uint32_t getDescriptorSetOffset(const std::shared_ptr<Texture::DATA> &pTexture) const override {
-        return pTexture->offset;
-    }
 };
 }  // namespace Default
 

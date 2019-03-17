@@ -25,10 +25,12 @@ void Shader::Base::init(std::vector<VkShaderModule>& oldModules, bool load, bool
 
     // Return or assert on fail
     if (!success) {
-        if (doAssert)
+        if (doAssert) {
+            if (!success) handler().shell().log(Shell::LOG_ERR, ("Error compiling: " + FILE_NAME).c_str());
             assert(success);
-        else
+        } else {
             return;
+        }
     }
 
     VkShaderModuleCreateInfo moduleInfo = {};
@@ -71,15 +73,31 @@ void Shader::Base::destroy() {
 //      LINK SHADERS
 // **********************
 
-Shader::UtilityFragment::UtilityFragment(Shader::Handler& handler)
-    : Link{
-          handler,                    //
-          SHADER_LINK::UTIL_FRAG,     //
-          "util.frag.glsl",           //
-          "Utility Fragement Shader"  //
+void Shader::Link::Base::init(std::vector<VkShaderModule>& oldModules, bool load, bool doAssert) { loadText(load); };
+
+Shader::Link::ColorFragment::ColorFragment(Shader::Handler& handler)
+    : Shader::Link::Base{
+          handler,                  //
+          SHADER_LINK::COLOR_FRAG,  //
+          "link.color.frag",        //
+          "Link Color Fragment"     //
       } {}
 
-void Shader::UtilityFragment::init(std::vector<VkShaderModule>& oldModules, bool load, bool doAssert) { loadText(load); };
+Shader::Link::TextureFragment::TextureFragment(Shader::Handler& handler)
+    : Shader::Link::Base{
+          handler,                 //
+          SHADER_LINK::TEX_FRAG,   //
+          "link.texture.frag",     //
+          "Link Texture Fragment"  //
+      } {}
+
+Shader::Link::BlinnPhongFragment::BlinnPhongFragment(Shader::Handler& handler)
+    : Shader::Link::Base{
+          handler,                        //
+          SHADER_LINK::BLINN_PHONG_FRAG,  //
+          "link.blinnPhong.glsl",         //
+          "Link Utility Fragment Shader"  //
+      } {}
 
 // **********************
 //      DEFAULT SHADERS
@@ -96,12 +114,12 @@ Shader::Default::ColorVertex::ColorVertex(Shader::Handler& handler)
 
 Shader::Default::ColorFragment::ColorFragment(Shader::Handler& handler)
     : Base{
-          handler,                          //
-          SHADER::COLOR_FRAG,               //
-          "color.frag",                     //
-          VK_SHADER_STAGE_FRAGMENT_BIT,     //
-          "Default Color Fragment Shader",  //
-          {SHADER_LINK::UTIL_FRAG}          //
+          handler,                                                  //
+          SHADER::COLOR_FRAG,                                       //
+          "color.frag",                                             //
+          VK_SHADER_STAGE_FRAGMENT_BIT,                             //
+          "Default Color Fragment Shader",                          //
+          {SHADER_LINK::COLOR_FRAG, SHADER_LINK::BLINN_PHONG_FRAG}  //
       } {}
 
 Shader::Default::LineFragment::LineFragment(Shader::Handler& handler)
@@ -124,10 +142,10 @@ Shader::Default::TextureVertex::TextureVertex(Shader::Handler& handler)
 
 Shader::Default::TextureFragment::TextureFragment(Shader::Handler& handler)
     : Base{
-          handler,                            //
-          SHADER::TEX_FRAG,                   //
-          "texture.frag",                     //
-          VK_SHADER_STAGE_FRAGMENT_BIT,       //
-          "Default Texture Fragment Shader",  //
-          {SHADER_LINK::UTIL_FRAG}            //
+          handler,                                                //
+          SHADER::TEX_FRAG,                                       //
+          "texture.frag",                                         //
+          VK_SHADER_STAGE_FRAGMENT_BIT,                           //
+          "Default Texture Fragment Shader",                      //
+          {SHADER_LINK::TEX_FRAG, SHADER_LINK::BLINN_PHONG_FRAG}  //
       } {}

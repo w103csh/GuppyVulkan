@@ -183,6 +183,7 @@ void Guppy::createScenes() {
     AxesCreateInfo axesInfo;
     Material::Default::CreateInfo defMatInfo;
     Material::PBR::CreateInfo pbrMatInfo;
+    BoundingBoxMinMax groundPlane_bbmm;
 
     // ORIGIN AXES
     axesInfo = {};
@@ -203,7 +204,7 @@ void Guppy::createScenes() {
     defMatInfo.repeat = 800.0f;
     defMatInfo.shininess = Material::SHININESS::EGGSHELL;
     auto& pGroundPlane = handlers_.pMesh->makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo);
-    auto groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
+    groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
 
     //// GROUND PLANE (COLOR)
     // meshInfo = {};
@@ -223,21 +224,43 @@ void Guppy::createScenes() {
     defMatInfo = {};
     defMatInfo.pTexture = handlers_.pTexture->getTextureByPath(VULKAN_TEX_PATH);
     defMatInfo.shininess = Material::SHININESS::EGGSHELL;
-    auto& boxTexture = handlers_.pMesh->makeTextureMesh<Box::Texture>(&meshInfo, &defMatInfo);
-    boxTexture->putOnTop(groundPlane_bbmm);
-    handlers_.pMesh->makeTangentSpaceVisualHelper(boxTexture.get());
+    auto& boxTexture1 = handlers_.pMesh->makeTextureMesh<Box::Texture>(&meshInfo, &defMatInfo);
+    boxTexture1->putOnTop(groundPlane_bbmm);
+    handlers_.pMesh->makeTangentSpaceVisualHelper(boxTexture1.get());
+    // BOX (PBR_TEX)
+    meshInfo = {};
+    meshInfo.pipelineType = PIPELINE::PBR_TEX;
+    meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{1.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f});
+    pbrMatInfo = {};
+    pbrMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::METAL;
+    pbrMatInfo.color = {1.0f, 1.0f, 0.0f};
+    pbrMatInfo.roughness = 0.43f;
+    pbrMatInfo.pTexture = handlers_.pTexture->getTextureByPath(VULKAN_TEX_PATH);
+    auto& boxTexture2 = handlers_.pMesh->makeTextureMesh<Box::Texture>(&meshInfo, &pbrMatInfo);
+    boxTexture2->putOnTop(groundPlane_bbmm);
+    handlers_.pMesh->makeTangentSpaceVisualHelper(boxTexture2.get());
 
-    // BOX (COLOR)
+    // BOX (PBR_COLOR)
     meshInfo = {};
     meshInfo.pipelineType = PIPELINE::PBR_COLOR;
-    meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{6.0f, 0.0f, 3.5f}, M_PI_2_FLT, glm::vec3{-1.0f, 0.0f, 1.0f});
+    meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{2.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f});
     pbrMatInfo = {};
-    pbrMatInfo.flags = Material::FLAG::METAL;
-    pbrMatInfo.diffuseCoeff = {1.0f, 1.0f, 0.0f};
-    auto& boxColor = handlers_.pMesh->makeColorMesh<Box::Color>(&meshInfo, &pbrMatInfo);
-    boxColor->putOnTop(groundPlane_bbmm);
-
-    return;
+    pbrMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::METAL;
+    pbrMatInfo.color = {1.0f, 1.0f, 0.0f};
+    pbrMatInfo.roughness = 0.43f;
+    auto& boxPbrColor = handlers_.pMesh->makeColorMesh<Box::Color>(&meshInfo, &pbrMatInfo);
+    boxPbrColor->putOnTop(groundPlane_bbmm);
+    // BOX (TRI_LIST_COLOR)
+    meshInfo = {};
+    meshInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+    // meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{5.0f, 0.0f, 3.5f}, M_PI_2_FLT, glm::vec3{-1.0f,
+    // 0.0f, 1.0f});
+    meshInfo.model =
+        helpers::affine(glm::vec3{1.0f}, glm::vec3{-1.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f});
+    defMatInfo = {};
+    defMatInfo.color = {1.0f, 1.0f, 0.0f};
+    auto& boxDefColor1 = handlers_.pMesh->makeColorMesh<Box::Color>(&meshInfo, &defMatInfo);
+    boxDefColor1->putOnTop(groundPlane_bbmm);
 
     // BURNT ORANGE TORUS
     // MODEL
@@ -260,7 +283,7 @@ void Guppy::createScenes() {
     defMatInfo = {};
     defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::METAL;
     defMatInfo.ambientCoeff = {0.8f, 0.3f, 0.0f};
-    defMatInfo.diffuseCoeff = {0.8f, 0.3f, 0.0f};
+    defMatInfo.color = {0.8f, 0.3f, 0.0f};
     // matCreateInfo.roughness = 0.5f;
     handlers_.pModel->makeColorModel(&modelInfo, &defMatInfo);
 
@@ -286,11 +309,12 @@ void Guppy::createScenes() {
     // modelCreateInfo.model = helpers::affine();
     // ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene(), nullptr);
 
-    // MEDIEVAL HOUSE
+    // MEDIEVAL HOUSE (TRI_COLOR_TEX)
     modelInfo = {};
     modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
     modelInfo.async = true;
-    modelInfo.model = helpers::affine(glm::vec3{0.0175f}, {-6.5f, 0.0f, -3.5f}, M_PI_4_FLT, CARDINAL_Y);
+    //modelInfo.model = helpers::affine(glm::vec3{0.0175f}, {-6.5f, 0.0f, -6.5f}, M_PI_4_FLT, CARDINAL_Y);
+    modelInfo.model = helpers::affine(glm::vec3{0.0175f}, {-6.5f, 0.0f, 0.0f}, M_PI_4_FLT, CARDINAL_Y);
     modelInfo.modelPath = MED_H_MODEL_PATH;
     modelInfo.smoothNormals = false;
     modelInfo.visualHelper = true;
@@ -298,6 +322,19 @@ void Guppy::createScenes() {
     defMatInfo = {};
     defMatInfo.pTexture = handlers_.pTexture->getTextureByPath(MED_H_DIFF_TEX_PATH);
     handlers_.pModel->makeTextureModel(&modelInfo, &defMatInfo);
+    // MEDIEVAL HOUSE (PBR_TEX)
+    modelInfo = {};
+    modelInfo.pipelineType = PIPELINE::PBR_TEX;
+    modelInfo.async = true;
+    //modelInfo.model = helpers::affine(glm::vec3{0.0175f}, {-6.5f, 0.0f, 0.0f}, M_PI_4_FLT, CARDINAL_Y);
+    modelInfo.model = helpers::affine(glm::vec3{0.0175f}, {-6.5f, 0.0f, -6.5f}, M_PI_4_FLT, CARDINAL_Y);
+    modelInfo.modelPath = MED_H_MODEL_PATH;
+    modelInfo.smoothNormals = false;
+    modelInfo.visualHelper = false;
+    // MATERIAL
+    pbrMatInfo = {};
+    pbrMatInfo.pTexture = handlers_.pTexture->getTextureByPath(MED_H_DIFF_TEX_PATH);
+    handlers_.pModel->makeTextureModel(&modelInfo, &pbrMatInfo);
 
     // PIG
     // MODEL
@@ -312,7 +349,7 @@ void Guppy::createScenes() {
     defMatInfo = {};
     defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::MODE_BLINN_PHONG;
     defMatInfo.ambientCoeff = {0.8f, 0.8f, 0.8f};
-    defMatInfo.diffuseCoeff = {0.8f, 0.8f, 0.8f};
+    defMatInfo.color = {0.8f, 0.8f, 0.8f};
     handlers_.pModel->makeColorModel(&modelInfo, &defMatInfo);
 }
 

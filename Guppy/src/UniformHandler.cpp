@@ -77,23 +77,21 @@ void Uniform::Handler::createLights() {
     const auto& dev = shell().context().dev;
     Light::CreateInfo createInfo = {};
 
-    // POSITIONAL DEFAULT
-    createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(20.5f, 10.5f, -23.5f));
-    lgtDefPosMgr().insert(dev, &createInfo);
-    createInfo.model = helpers::affine(glm::vec3(1.0f), {-2.5f, 4.5f, -1.5f});
-    lgtDefPosMgr().insert(dev, &createInfo);
-    createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-20.0f, 5.0f, -6.0f));
-    lgtDefPosMgr().insert(dev, &createInfo);
-
-    // POSITIONAL PBR (TODO: these being seperately created is really dumb!!! If this is
+    // POSITIONAL
+    // (TODO: these being seperately created is really dumb!!! If this is
     // necessary there should be one set of positional lights, and multiple data buffers
     // for the one set...)
-    createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(10.5f, 17.5f, -23.5f));
-    // lgtPbrPosMgr().insert(dev, &createInfo);
-    createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(22.5f, 5.5f, -7.5f));
-    // lgtPbrPosMgr().insert(dev, &createInfo);
+    createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(20.5f, 10.5f, -23.5f));
+    lgtDefPosMgr().insert(dev, &createInfo);
+    lgtPbrPosMgr().insert(dev, &createInfo);
+    createInfo.model = helpers::affine(glm::vec3(1.0f), {-2.5f, 4.5f, -1.5f});
+    lgtDefPosMgr().insert(dev, &createInfo);
+    lgtPbrPosMgr().insert(dev, &createInfo);
+    createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-20.0f, 5.0f, -6.0f));
+    lgtDefPosMgr().insert(dev, &createInfo);
+    lgtPbrPosMgr().insert(dev, &createInfo);
 
-    // SPOT DEFAULT
+    // SPOT
     Light::Default::Spot::CreateInfo spotCreateInfo = {};
     spotCreateInfo.exponent = glm::radians(25.0f);
     spotCreateInfo.exponent = 25.0f;
@@ -183,7 +181,7 @@ uint32_t Uniform::Handler::getDescriptorCount(const Descriptor::bindingMapValue&
 
 std::set<uint32_t> Uniform::Handler::getBindingOffsets(const Descriptor::bindingMapValue& value) {
     if (value.second.size()) {
-        if (*value.second.begin() == Descriptor::Set::OFFSET_SINGLE) return {0};
+        // TODO: better validation for this
         if (*value.second.begin() == Descriptor::Set::OFFSET_ALL) {
             std::set<uint32_t> offsets;
             for (int i = 0; i < getUniforms(value.first).size(); i++) offsets.insert(i);

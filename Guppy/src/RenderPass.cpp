@@ -188,10 +188,11 @@ RenderPass::Default::Default()
     : Base{"Default",
            {
                // Order of the subpasses
-               PIPELINE::PBR_COLOR,
                PIPELINE::TRI_LIST_COLOR,  //
+               PIPELINE::PBR_COLOR,
                PIPELINE::LINE,
                PIPELINE::TRI_LIST_TEX,
+               PIPELINE::PBR_TEX,
            }},
       secCmdFlag_(false) {}
 

@@ -3,7 +3,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 // DECLARATIONS
-vec3 blinnPhongShade();
+vec3 pbrShade();
 vec3 setTextureDefaults();
 vec3 texCoordShade();
 
@@ -16,9 +16,7 @@ layout(location = 3) in mat3 TBN;
 layout(location = 0) out vec4 outColor;
 
 // GLOBAL
-vec3    Ka, // ambient coefficient
-        Kd, // diffuse coefficient
-        Ks, // speculat coefficient
+vec3    Kd, // color
         n;  // normal
 float opacity;
 bool TEX_COORD_SHADE;
@@ -27,9 +25,11 @@ vec3 transform(vec3 v) { return TBN * v; }
 
 void main() {
     setTextureDefaults();
+
     if (TEX_COORD_SHADE) {
         outColor = vec4(texCoordShade(), 1.0);
     } else {
-        outColor = vec4(blinnPhongShade(), opacity);
+        // outColor = vec4(Kd, opacity);
+        outColor = vec4(pbrShade(), opacity);
     }
 }

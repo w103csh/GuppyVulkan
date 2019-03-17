@@ -20,7 +20,7 @@ class Handler : public Game::Handler {
     inline void destroy() { reset(); }
 
     const std::unique_ptr<Shader::Base> &getShader(const SHADER &type) const;
-    const std::unique_ptr<Shader::Link> &getLinkShader(const SHADER_LINK &type) const;
+    const std::unique_ptr<Shader::Link::Base> &getLinkShader(const SHADER_LINK &type) const;
 
     void getStagesInfo(const std::set<SHADER> &types, std::vector<VkPipelineShaderStageCreateInfo> &stagesInfo) const;
     VkShaderStageFlags getStageFlags(const std::set<SHADER> &shaderTypes) const;
@@ -38,7 +38,7 @@ class Handler : public Game::Handler {
     // SHADERS
     void getShaderTypes(const SHADER_LINK &linkType, std::vector<SHADER> &types);
     std::vector<std::unique_ptr<Shader::Base>> pShaders_;
-    std::vector<std::unique_ptr<Shader::Link>> pLinkShaders_;
+    std::vector<std::unique_ptr<Shader::Link::Base>> pLinkShaders_;
 
     std::queue<PIPELINE> updateQueue_;
     std::vector<VkShaderModule> oldModules_;

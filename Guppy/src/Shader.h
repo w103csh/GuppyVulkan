@@ -57,29 +57,43 @@ class Base : public Handlee<Shader::Handler> {
 //      Link Shaders
 // **********************
 
-class Link : public Base {
+namespace Link {
+
+class Base : public Shader::Base {
    public:
+    // TODO: get rid of LINK_TYPE
     const SHADER_LINK LINK_TYPE;
 
+    void init(std::vector<VkShaderModule> &oldModules, bool load = true, bool doAssert = true) override;
+
    protected:
-    Link(Shader::Handler &handler, const SHADER_LINK &&type, const std::string &fileName, const std::string &&name,
+    Base(Shader::Handler &handler, const SHADER_LINK &&type, const std::string &fileName, const std::string &&name,
          const std::set<SHADER_LINK> &&linkTypes = {})
-        : Base{handler,
-               SHADER::LINK,
-               fileName,
-               static_cast<VkShaderStageFlagBits>(0),
-               std::forward<const std::string>(name),
-               std::forward<const std::set<SHADER_LINK>>(linkTypes)},
+        : Shader::Base{handler,
+                       SHADER::LINK,
+                       fileName,
+                       static_cast<VkShaderStageFlagBits>(0),
+                       std::forward<const std::string>(name),
+                       std::forward<const std::set<SHADER_LINK>>(linkTypes)},
           LINK_TYPE(type) {}
 };
 
-// Utility Fragement Shader
-class UtilityFragment : public Link {
+class ColorFragment : public Shader::Link::Base {
    public:
-    UtilityFragment(Shader::Handler &handler);
-
-    void init(std::vector<VkShaderModule> &oldModules, bool load = true, bool doAssert = true) override;
+    ColorFragment(Shader::Handler &handler);
 };
+
+class TextureFragment : public Shader::Link::Base {
+   public:
+    TextureFragment(Shader::Handler &handler);
+};
+
+class BlinnPhongFragment : public Shader::Link::Base {
+   public:
+    BlinnPhongFragment(Shader::Handler &handler);
+};
+
+}  // namespace Link
 
 // **********************
 //      Default Shaders

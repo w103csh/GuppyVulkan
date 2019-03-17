@@ -30,7 +30,6 @@ typedef std::map<bindingMapKey, bindingMapValue> bindingMap;
 namespace Set {
 
 const uint32_t OFFSET_ALL = UINT32_MAX;
-const uint32_t OFFSET_SINGLE = UINT32_MAX - 1;
 
 struct Resource {
     uint32_t offset;

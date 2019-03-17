@@ -16,8 +16,8 @@ Descriptor::Set::Default::Uniform::Uniform()
     : Set::Base{DESCRIPTOR_SET::UNIFORM_DEFAULT,  //
                 {
                     {{0, 0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {OFFSET_ALL}}},
-                    {{0, 1, 0}, {DESCRIPTOR::MATERIAL_DEFAULT, {OFFSET_SINGLE}}},
-                    {{0, 2, 0}, {DESCRIPTOR::FOG_DEFAULT, {OFFSET_SINGLE}}},
+                    {{0, 1, 0}, {DESCRIPTOR::MATERIAL_DEFAULT, {0}}},
+                    {{0, 2, 0}, {DESCRIPTOR::FOG_DEFAULT, {0}}},
                     {{0, 3, 0}, {DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, {OFFSET_ALL}}},
                     {{0, 4, 0}, {DESCRIPTOR::LIGHT_SPOT_DEFAULT, {OFFSET_ALL}}}  //
                 }} {}
@@ -25,5 +25,5 @@ Descriptor::Set::Default::Uniform::Uniform()
 Descriptor::Set::Default::Sampler::Sampler()
     : Set::Base{DESCRIPTOR_SET::SAMPLER_DEFAULT,  //
                 {
-                    {{1, 0, 0}, {DESCRIPTOR::SAMPLER_DEFAULT, {OFFSET_SINGLE}}}  //
+                    {{1, 0, 0}, {DESCRIPTOR::SAMPLER_DEFAULT, {0}}}  //
                 }} {}

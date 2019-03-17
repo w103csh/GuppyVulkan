@@ -18,7 +18,7 @@ layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
 layout(location = 2) in vec4 inColor;
 // OUT
-layout(location = 0) out vec3 fragPos;
+layout(location = 0) out vec3 fragPosition;
 layout(location = 1) out vec3 fragNormal;
 layout(location = 2) out vec4 fragColor;
 // layout(location = 3) out int fragVertexIndex;
@@ -32,7 +32,7 @@ void main() {
 	gl_Position = camera[0].viewProjection * pushConstantsBlock.model * vec4(inPosition, 1.0);
 	// fragVertexIndex = gl_VertexIndex;
 
-	fragPos = cameraSpacePosition;
+	fragPosition = cameraSpacePosition;
     fragNormal = cameraSpaceNormal;
     fragColor = inColor;
 }

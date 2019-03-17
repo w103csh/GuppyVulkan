@@ -79,6 +79,9 @@ void Descriptor::Handler::createPool() {
 
 void Descriptor::Handler::createLayouts() {
     for (auto& pSet : pDescriptorSets_) {
+        // Determine the shader stage flags...
+        pSet->stages = pipelineHandler().getDescriptorSetStages(pSet->TYPE);
+
         // Gather bindings...
         std::vector<VkDescriptorSetLayoutBinding> bindings;
         for (auto& bindingKeyValue : pSet->BINDING_MAP) {
@@ -116,7 +119,6 @@ VkDescriptorSetLayoutBinding Descriptor::Handler::getDecriptorSetLayoutBinding(
 uint32_t Descriptor::Handler::getDescriptorCount(const Descriptor::bindingMapValue& value) const {
     const auto& min = *value.second.begin();
     if (value.second.size() == 1) {
-        if (min == Descriptor::Set::OFFSET_SINGLE) return 1;
         if (min == Descriptor::Set::OFFSET_ALL) {
             if (DESCRIPTOR_UNIFORM_ALL.count(value.first))
                 return static_cast<uint32_t>(uniformHandler().getDescriptorCount(value));
