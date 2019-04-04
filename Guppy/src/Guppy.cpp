@@ -33,7 +33,7 @@
 Guppy::Guppy(const std::vector<std::string>& args)
     : Game("Guppy", args,
            // HANDLERS
-           {std::make_unique<Command::Handler>(this), std::make_unique<Descriptor::Handler>(this),
+           Game::Handlers{std::make_unique<Command::Handler>(this), std::make_unique<Descriptor::Handler>(this),
             std::make_unique<Loading::Handler>(this), std::make_unique<Material::Handler>(this),
             std::make_unique<Mesh::Handler>(this), std::make_unique<Model::Handler>(this),
             std::make_unique<Pipeline::Handler>(this), std::make_unique<Scene::Handler>(this),
@@ -67,7 +67,7 @@ Guppy::~Guppy() {}
 
 void Guppy::attachShell(Shell& sh) {
     Game::attachShell(sh);
-    const auto& ctx = shell().context();
+    // const auto& ctx = shell().context();
 
     // if (use_push_constants_ && sizeof(ShaderParamBlock) > physical_dev_props_.limits.maxPushConstantsSize) {
     //    shell().log(Shell::LOG_WARN, "cannot enable push constants");
@@ -173,7 +173,7 @@ void Guppy::updateRenderPasses() {
 }
 
 void Guppy::createScenes() {
-    const auto& ctx = shell().context();
+    // const auto& ctx = shell().context();
 
     handlers_.pScene->makeScene(true, true);
 
@@ -192,7 +192,7 @@ void Guppy::createScenes() {
     defMatInfo = {};
     defMatInfo.shininess = 23.123f;
     // pbrMatInfo = {};
-    auto& pOriginAxes = handlers_.pMesh->makeLineMesh<Axes>(&axesInfo, &defMatInfo);
+    handlers_.pMesh->makeLineMesh<Axes>(&axesInfo, &defMatInfo);
 
     // GROUND PLANE (TEXTURE)
     meshInfo = {};
@@ -216,7 +216,7 @@ void Guppy::createScenes() {
     // defMatInfo.diffuseCoeff = {0.5f, 0.5f, 0.5f};
     // auto& pGroundPlane = handlers_.pMesh->makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo);
     // auto groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
-
+    
     // BOX (TEXTURE)
     meshInfo = {};
     meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;

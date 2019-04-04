@@ -150,18 +150,18 @@ class Game {
 
     // HANDLER
     struct Handlers {
-        std::unique_ptr<Command::Handler> pCommand = nullptr;
-        std::unique_ptr<Descriptor::Handler> pDescriptor = nullptr;
-        std::unique_ptr<Loading::Handler> pLoading = nullptr;
-        std::unique_ptr<Material::Handler> pMaterial = nullptr;
-        std::unique_ptr<Mesh::Handler> pMesh = nullptr;
-        std::unique_ptr<Model::Handler> pModel = nullptr;
-        std::unique_ptr<Pipeline::Handler> pPipeline = nullptr;
-        std::unique_ptr<Scene::Handler> pScene = nullptr;
-        std::unique_ptr<Shader::Handler> pShader = nullptr;
-        std::unique_ptr<Texture::Handler> pTexture = nullptr;
-        std::unique_ptr<UI::Handler> pUI = nullptr;
-        std::unique_ptr<Uniform::Handler> pUniform = nullptr;
+        std::unique_ptr<Command::Handler> pCommand;
+        std::unique_ptr<Descriptor::Handler> pDescriptor;
+        std::unique_ptr<Loading::Handler> pLoading;
+        std::unique_ptr<Material::Handler> pMaterial;
+        std::unique_ptr<Mesh::Handler> pMesh;
+        std::unique_ptr<Model::Handler> pModel;
+        std::unique_ptr<Pipeline::Handler> pPipeline;
+        std::unique_ptr<Scene::Handler> pScene;
+        std::unique_ptr<Shader::Handler> pShader;
+        std::unique_ptr<Texture::Handler> pTexture;
+        std::unique_ptr<UI::Handler> pUI;
+        std::unique_ptr<Uniform::Handler> pUniform;
     };
 
     class Handler {
@@ -190,6 +190,7 @@ class Game {
 
        protected:
         Handler(Game *pGame) : pGame_(pGame) {}
+        virtual ~Handler() = default;
 
         virtual void reset() = 0;
 

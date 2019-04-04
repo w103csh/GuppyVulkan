@@ -80,6 +80,7 @@ void InputHandler::updateKeyInput() {
                 if (MY_DEBUG) ss << " DOWN ";
                 posDir_.y += K_Y_MOVE_FACT * -1;
             } break;
+            default:;
         }
     }
 

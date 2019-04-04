@@ -308,11 +308,12 @@ void macroReplace(const macroInfo &info, int itemCount, std::string &text);
 
 template <typename T>
 std::vector<T> &&slice(const std::vector<T> &v, int m, int n) {
-    auto first = v.cbegin(), auto last = v.cbegin() + n + 1;
-    return std::vector<T> vec(first, last);
+    auto first = v.cbegin();
+    auto last = v.cbegin() + n + 1;
+    return std::vector<T>(first, last);
 }
 
-static std::string getFilePath(std::string s) {
+static inline std::string getFilePath(std::string s) {
     char sep = '/';
 #ifdef _WIN32
     sep = '\\';
@@ -508,10 +509,10 @@ struct SubmitResource {
     std::vector<VkSemaphore> signalSemaphores;
 };
 
-template <typename T>
-struct SharedStruct : std::enable_shared_from_this<T> {
-    const std::shared_ptr<const T> getPtr() const { return shared_from_this(); }
-};
+//template <typename T>
+//struct SharedStruct : std::enable_shared_from_this<T> {
+//    const std::shared_ptr<const T> getPtr() const { return shared_from_this(); }
+//};
 
 struct Ray {
     glm::vec3 e;              // start
@@ -544,7 +545,7 @@ struct hash_pair_enum_size_t {
 
 namespace helpers {
 
-static bool isDescriptorTypeDynamic(const DESCRIPTOR &type) {
+static inline bool isDescriptorTypeDynamic(const DESCRIPTOR &type) {
     const auto &descriptorType = DESCRIPTOR_TYPE_MAP.at(type);
     return descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
            descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;

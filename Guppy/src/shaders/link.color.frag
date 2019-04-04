@@ -21,7 +21,7 @@ layout(location = 2) in vec4 fragColor;
 // GLOBAL
 vec3    Ka, // ambient coefficient
         Kd, // diffuse coefficient
-        Ks, // speculat coefficient
+        Ks, // specular coefficient
         n;  // normal
 float opacity;
 

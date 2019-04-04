@@ -157,6 +157,7 @@ void Descriptor::Handler::getReference(Mesh::Base& mesh) {
             case DESCRIPTOR_SET::SAMPLER_DEFAULT: {
                 offset = mesh.getMaterial()->getTexture()->offset;
             } break;
+            default:;
         }
 
         auto& resource = pSet->getResource(offset);

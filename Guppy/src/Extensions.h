@@ -84,7 +84,7 @@ static void CreateDebugMarkerEXTs(VkDevice device, VkPhysicalDevice physicalDevi
 //    }
 //}
 
-static void DebugMarkerSetObjectName(const VkDevice& dev, const uint64_t& object, VkDebugReportObjectTypeEXT objectType,
+static inline void DebugMarkerSetObjectName(const VkDevice& dev, const uint64_t& object, VkDebugReportObjectTypeEXT objectType,
                                      const char* name) {
     VkResult res = VK_INCOMPLETE;
     if (active) {

@@ -17,7 +17,7 @@ class Handler : public Game::Handler {
     Handler(Game *pGame);
 
     void init() override;
-    inline void destroy() { reset(); }
+    inline void destroy() override { reset(); }
 
     const std::unique_ptr<Shader::Base> &getShader(const SHADER &type) const;
     const std::unique_ptr<Shader::Link::Base> &getLinkShader(const SHADER_LINK &type) const;

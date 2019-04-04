@@ -3,11 +3,15 @@
 
 #include <fstream>
 #include <sstream>
+//#include <unistd.h>
 
 #include "FileLoader.h"
 #include "Shell.h"
 
 std::string FileLoader::readFile(std::string filepath) {
+    // char * dir = getcwd(NULL, 0); // Platform-dependent, see reference link below
+    // printf("Current dir: %s\nFile path: %s", dir, (ROOT_PATH + filepath).c_str());
+
     std::ifstream file(ROOT_PATH + filepath, std::ios::binary);
 
     if (!file.is_open()) {

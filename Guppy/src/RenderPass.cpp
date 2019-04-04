@@ -224,7 +224,7 @@ void RenderPass::Default::createClearValues(const Shell::Context& ctx, const Gam
         clearValues_.push_back(value);
     }
     if (depth_.view != VK_NULL_HANDLE) {
-        VkClearValue value = {1.0f, 0};
+        VkClearValue value = {.depthStencil = {1.0f, 0}};
         clearValues_.push_back(value);
     }
 }

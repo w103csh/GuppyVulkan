@@ -1,4 +1,6 @@
 
+#include <iterator>
+
 #include "Scene.h"
 
 #include "Face.h"
@@ -36,8 +38,8 @@ void Scene::Base::record(const uint8_t& frameIndex, std::unique_ptr<RenderPass::
     auto& priCmd = pPass->data.priCmds[frameIndex];
     auto& secCmd = pPass->data.secCmds[frameIndex];
 
-    auto penultimate = std::prev(pPass->PIPELINE_TYPES.end());
-    for (auto it = pPass->PIPELINE_TYPES.begin(); it != pPass->PIPELINE_TYPES.end(); std::advance(it, 1)) {
+    auto it = pPass->PIPELINE_TYPES.begin();
+    while(it != pPass->PIPELINE_TYPES.end()) {
         const auto& pipelineType = (*it);
 
         switch (pipelineType) {
@@ -58,9 +60,11 @@ void Scene::Base::record(const uint8_t& frameIndex, std::unique_ptr<RenderPass::
                     if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
                         pMesh->draw(priCmd, frameIndex);
             } break;
+            default:;
         }
 
-        if (it != penultimate) {
+        std::advance(it, 1);
+        if (it != pPass->PIPELINE_TYPES.end()) {
             vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
             // vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
         }

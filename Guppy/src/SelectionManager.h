@@ -16,7 +16,7 @@ namespace Selection {
 
 class FaceInfo {
    public:
-    std::unique_ptr<Face> pFace = nullptr;
+    std::unique_ptr<Face> pFace;
     Mesh::INDEX offset = Mesh::BAD_OFFSET;
 };
 

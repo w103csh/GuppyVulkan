@@ -1,7 +1,7 @@
 #ifndef CMD_BUF_HANDLER_H
 #define CMD_BUF_HANDLER_H
 
-#include <vector>
+#include <map>
 #include <vulkan/vulkan.h>
 
 #include "Game.h"
@@ -46,8 +46,8 @@ class Handler : public Game::Handler {
    private:
     void reset() override;
 
-    std::vector<VkCommandPool> cmd_pools_;
-    std::vector<VkCommandBuffer> cmds_;
+    std::map<uint32_t, VkCommandPool> pools_;
+    std::map<uint32_t, VkCommandBuffer> cmds_;
 };
 
 }  // namespace Command

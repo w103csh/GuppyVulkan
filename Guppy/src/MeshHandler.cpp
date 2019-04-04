@@ -8,7 +8,6 @@ Mesh::Handler::Handler(Game* pGame) : Game::Handler(pGame) {}
 void Mesh::Handler::init() { reset(); }
 
 void Mesh::Handler::reset() {
-    const auto& dev = shell().context().dev;
     for (auto& pMesh : colorMeshes_) pMesh->destroy();
     colorMeshes_.clear();
     for (auto& pMesh : lineMeshes_) pMesh->destroy();

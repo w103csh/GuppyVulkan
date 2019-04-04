@@ -17,7 +17,7 @@ layout(location = 0) out vec4 outColor;
 // GLOBAL
 vec3    Ka, // ambient coefficient
         Kd, // diffuse coefficient
-        Ks, // speculat coefficient
+        Ks, // specular coefficient
         n;  // normal
 float opacity;
 

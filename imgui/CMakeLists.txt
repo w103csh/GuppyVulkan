@@ -25,4 +25,3 @@ target_link_libraries(${TARGET_NAME}
     ${GLFW_LIBRARIES}
     # ${VULKAN_LOADER}
     )
-

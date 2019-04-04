@@ -18,6 +18,35 @@ namespace Mesh {
 class Handler : public Game::Handler {
     friend Mesh::Base;
 
+   private:
+    // TODO: All materials & meshes should be made here. End of story.
+    template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo, typename TMeshBaseType,
+    typename... TArgs>
+    auto &make(std::vector<TMeshBaseType> &meshes, TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
+               TArgs... args) {
+        // MATERIAL
+        auto &pMaterial = materialHandler().makeMaterial(pMaterialCreateInfo);
+        // MESH
+        meshes.emplace_back(new TMeshType(std::ref(*this), pCreateInfo, pMaterial, args...));
+        // SET VALUES
+        meshes.back()->offset_ = meshes.size() - 1;
+        
+        switch (meshes.back()->getStatus()) {
+                case STATUS::PENDING_VERTICES:
+                // Do nothing. So far this should only be a model mesh.
+                // TODO: add more validation?
+                break;
+                case STATUS::PENDING_BUFFERS:
+                meshes.back()->prepare();
+                break;
+            default:
+                throw std::runtime_error("Invalid mesh status after instantiation");
+        }
+        
+        return meshes.back();
+    }
+
+
    public:
     Handler(Game *pGame);
 
@@ -92,33 +121,6 @@ class Handler : public Game::Handler {
 
    private:
     void reset() override;
-
-    // TODO: All materials & meshes should be made here. End of story.
-    template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo, typename TMeshBaseType,
-              typename... TArgs>
-    auto &make(std::vector<TMeshBaseType> &meshes, TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
-               TArgs... args) {
-        // MATERIAL
-        auto &pMaterial = materialHandler().makeMaterial(pMaterialCreateInfo);
-        // MESH
-        meshes.emplace_back(new TMeshType(std::ref(*this), pCreateInfo, pMaterial, args...));
-        // SET VALUES
-        meshes.back()->offset_ = meshes.size() - 1;
-
-        switch (meshes.back()->getStatus()) {
-            case STATUS::PENDING_VERTICES:
-                // Do nothing. So far this should only be a model mesh.
-                // TODO: add more validation?
-                break;
-            case STATUS::PENDING_BUFFERS:
-                meshes.back()->prepare();
-                break;
-            default:
-                throw std::runtime_error("Invalid mesh status after instantiation");
-        }
-
-        return meshes.back();
-    }
 
     // MESH
     // COLOR

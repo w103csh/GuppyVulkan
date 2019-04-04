@@ -34,7 +34,7 @@ std::unique_ptr<Loading::Resources> Loading::Handler::createLoadingResources() c
         commandHandler().beginCmd(pLdgRes->transferCmd);
     }
 
-    return std::move(pLdgRes);
+    return pLdgRes;
 }
 
 void Loading::Handler::loadSubmit(std::unique_ptr<Loading::Resources> pLdgRes) {

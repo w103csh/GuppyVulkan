@@ -19,31 +19,31 @@ void glfw_cursor_pos_callback(GLFWwindow* window, double xpos, double ypos);
 void glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int mods);
 void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, int mods);
 
-template <class T>
-class ShellGLFW : public T {
-    static_assert(std::is_base_of<Shell, T>::value, "T must be derived from of Shell");
+template <class TShell>
+class ShellGLFW : public TShell {
+    static_assert(std::is_base_of<Shell, TShell>::value, "T must be derived from of Shell");
 
    public:
-    ShellGLFW(Game& game) : T(game){};
+    ShellGLFW(Game& game) : TShell(game){};
     ~ShellGLFW(){};
 
     void run() override {
         // Setup window
         glfwSetErrorCallback(glfw_error_callback);
         if (!glfwInit()) {
-            log(LOG_ERR, "GLFW: Failed to initialize\n");
+            TShell::log(TShell::LOG_ERR, "GLFW: Failed to initialize\n");
             assert(false);
         }
         createWindow();
 
         // Setup Vulkan
         if (!glfwVulkanSupported()) {
-            log(LOG_ERR, "GLFW: Vulkan Not Supported\n");
+            TShell::log(TShell::LOG_ERR, "GLFW: Vulkan Not Supported\n");
             assert(false);
         }
 
         setPlatformSpecificExtensions();
-        init_vk();
+        TShell::init_vk();
 
         // input listeners (set before imgui init because it installs it own callbacks)
         glfwSetCursorPosCallback(window_, glfw_cursor_pos_callback);
@@ -64,34 +64,34 @@ class ShellGLFW : public T {
             // two flags.
             glfwPollEvents();
 
-            if (settings_.enable_directory_listener) checkDirectories();
+            if (TShell::settings_.enable_directory_listener) TShell::checkDirectories();
 
-            acquireBackBuffer();
+            TShell::acquireBackBuffer();
 
             double now = glfwGetTime();
             double elapsed = now - currentTime;
 
             InputHandler::updateInput(static_cast<float>(elapsed));
-            onMouse(InputHandler::getMouseInput());  // TODO: this stuff is all out of whack
+            TShell::onMouse(InputHandler::getMouseInput());  // TODO: this stuff is all out of whack
 
-            addGameTime(static_cast<float>(elapsed));
+            TShell::addGameTime(static_cast<float>(elapsed));
 
-            presentBackBuffer();
+            TShell::presentBackBuffer();
 
             currentTime = now;
 
 #ifdef LIMIT_FRAMERATE
             // TODO: this is crude and inaccurate.
-            DWORD Hz = static_cast<DWORD>(1000 / 10);  // Hz
-            if (settings_.enable_directory_listener) asyncAlert(Hz);
-#else
-            if (settings_.enable_directory_listener) asyncAlert(0);
+            auto Hz = static_cast<uint64_t>(1000 / 10);  // Hz
+            if (TShell::settings_.enable_directory_listener) TShell::asyncAlert(Hz);
+#elif defined(VK_USE_PLATFORM_WIN32_KHR)
+            if (TShell::settings_.enable_directory_listener) TShell::asyncAlert(0);
 #endif
 
             InputHandler::clear();
         }
 
-        vkDeviceWaitIdle(context().dev);
+        vkDeviceWaitIdle(TShell::context().dev);
 
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
@@ -99,7 +99,7 @@ class ShellGLFW : public T {
 
         glfwDestroyWindow(window_);
 
-        destroy_context();
+        TShell::destroy_context();
 
         glfwTerminate();
     }
@@ -110,26 +110,25 @@ class ShellGLFW : public T {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
 
-        create_context();
+        TShell::create_context();
 
         int w, h;
-        glfwGetFramebufferSize(window_, &w, &h);
+        // glfwGetFramebufferSize(window_, &w, &h); // Why is this so different on mac???
+        glfwGetWindowSize(window_, &w, &h);
         glfwSetFramebufferSizeCallback(window_, glfw_resize_callback);
 
-        resizeSwapchain(w, h, false);
+        TShell::resizeSwapchain(w, h, false);
 
-        ImGui_ImplVulkan_SetFrameCount(context().imageCount);  // Remove this?
-
-        const auto& ctx = context();
+        ImGui_ImplVulkan_SetFrameCount(TShell::context().imageCount);  // Remove this?
         // getUI()->getRenderPass()->init(ctx, settings_);
 
         // ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(ctx.physical_dev, ctx.dev, &getUI()->getRenderPass(),
         //                                                          nullptr, w, h);
 
-        windowData_.Surface = context().surface;
-        windowData_.SurfaceFormat = context().surfaceFormat;
-        windowData_.PresentMode = context().mode;
-        windowData_.PresentMode = context().mode;
+        windowData_.Surface = TShell::context().surface;
+        windowData_.SurfaceFormat = TShell::context().surfaceFormat;
+        windowData_.PresentMode = TShell::context().mode;
+        windowData_.PresentMode = TShell::context().mode;
 
         // Setup Platform/Renderer bindings
         ImGui_ImplGlfw_InitForVulkan(window_, true);
@@ -153,7 +152,8 @@ class ShellGLFW : public T {
         //}
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        window_ = glfwCreateWindow(settings_.initial_width, settings_.initial_height, settings_.name.c_str(), NULL, NULL);
+        window_ = glfwCreateWindow(TShell::settings_.initial_width, TShell::settings_.initial_height,
+                                   TShell::settings_.name.c_str(), NULL, NULL);
         glfwSetWindowUserPointer(window_, this);
     }
 
@@ -163,13 +163,13 @@ class ShellGLFW : public T {
         return surface;
     };
 
-    void ShellGLFW::setPlatformSpecificExtensions() {
+    void setPlatformSpecificExtensions() override {
         uint32_t extensions_count = 0;
         const char** extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
 
-        for (uint32_t i = 0; i < extensions_count; i++) instance_extensions_.push_back(extensions[i]);
+        for (uint32_t i = 0; i < extensions_count; i++) TShell::instance_extensions_.push_back(extensions[i]);
 
-        T::setPlatformSpecificExtensions();
+        TShell::setPlatformSpecificExtensions();
     }
 
     void quit() const override { glfwSetWindowShouldClose(window_, GLFW_TRUE); }

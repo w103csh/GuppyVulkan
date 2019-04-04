@@ -37,12 +37,13 @@ struct DATA {
     FlagBits flags = FLAG::FOG_LINEAR;
     alignas(16) glm::vec3 color = CLEAR_COLOR;  // rem 4
 };
-class Base : public Buffer::DataItem<DATA>, public Uniform::Base {
+class Base : public Uniform::Base, public Buffer::DataItem<DATA>  {
    public:
     Base(const Buffer::Info&& info, DATA* pData)
-        : Uniform::Base(),                //
-          Buffer::DataItem<DATA>(pData),  //
-          Buffer::Item(std::forward<const Buffer::Info>(info)) {}
+        : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
+          Uniform::Base(),                                       //
+          Buffer::DataItem<DATA>(pData)                          //
+    {}
 };
 }  // namespace Fog
 }  // namespace Default

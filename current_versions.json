@@ -34,13 +34,16 @@
     },
     {
       "name" : "GLFW",
-      "version" : "glfw-3.2.1.bin.WIN64"
+      "data" : [
+        { "platform": "Win32", "version": "glfw-3.2.1.bin.WIN64", "file" : "glfw3.lib" },
+        { "platform": "macOS", "version": "5292914ce19ed2dc6c6abfd591c4df18820a466a", "file" : "libglfw.3.3.dylib" }
+      ]
     }
   ],
   "install_names" : {
       "glslang" : "GLSLANG_INSTALL_DIR",
       "Vulkan-Headers" : "VULKAN_HEADERS_INSTALL_DIR",
       "GLM" : "GLM_INSTALL_DIR",
-      "GLFW" : ["GLFW_INCLUDE_DIR", "GLFW_LIB_DIR"]
+      "GLFW" : ["GLFW_INCLUDE_DIR", "GLFW_LIB"]
     }
 }

@@ -77,9 +77,7 @@ void Texture::Handler::update() {
 
             if (status == std::future_status::ready) {
                 // Finish creating the texture
-                auto& tex = fut.get();
-
-                createTexture(true, tex);
+                createTexture(true, fut.get());
 
                 // Remove the future from the list if all goes well.
                 itFut = texFutures_.erase(itFut);
@@ -129,7 +127,7 @@ VkCopyDescriptorSet Texture::Handler::getDescriptorCopy(const DESCRIPTOR& type) 
 
 std::future<std::shared_ptr<Texture::DATA>> Texture::Handler::loadTexture(const VkDevice& dev, const bool makeMipmaps,
                                                                           std::shared_ptr<Texture::DATA>& pTexture) {
-    return std::async(std::launch::async, [&dev, &makeMipmaps, pTexture]() {
+    return std::async(std::launch::async, [pTexture]() {
         int width, height, channels;
 
         // Diffuse map (default)

@@ -30,7 +30,7 @@ struct CreateInfo {
 // **********************
 
 template <typename T>
-class Base : public Object3d, public Buffer::DataItem<T>, public Uniform::Base {
+class Base : public Object3d, public Uniform::Base, public Buffer::DataItem<T> {
    public:
     Base(T *pData, CreateInfo *pCreateInfo)
         : Object3d(pCreateInfo->model),  //

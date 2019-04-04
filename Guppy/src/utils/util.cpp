@@ -48,9 +48,10 @@ void init_glslang() {}
 
 void finalize_glslang() {}
 
-bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std::vector<unsigned int> &spirv) {
+bool GLSLtoSPV(const VkShaderStageFlagBits shaderType, std::vector<const char *> pShaders,
+               std::vector<unsigned int> &spirv) {
     MVKShaderStage shaderStage;
-    switch (shader_type) {
+    switch (shaderType) {
         case VK_SHADER_STAGE_VERTEX_BIT:
             shaderStage = kMVKShaderStageVertex;
             break;
@@ -73,12 +74,17 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shader_type, const char *pshader, std
             shaderStage = kMVKShaderStageAuto;
             break;
     }
+    
+    std::vector<std::string> glsls;
+    for (const auto &pShader : pShaders) glsls.push_back(std::string(pShader));
 
     mvk::GLSLToSPIRVConverter glslConverter;
-    glslConverter.setGLSL(pshader);
+    glslConverter.setGLSL(glsls);
     bool wasConverted = glslConverter.convert(shaderStage, false, false);
     if (wasConverted) {
         spirv = glslConverter.getSPIRV();
+    } else {
+        // std::cout << std::endl << glslConverter.getResultLog() << std::endl;
     }
     return wasConverted;
 }

@@ -11,18 +11,51 @@
 
 namespace Buffer {
 namespace Manager {
+    
+template <typename T>
+class Data {
+   public:
+    Data(VkDeviceSize maxSize, uint32_t elementSize)  //
+        : TOTAL_SIZE(maxSize *elementSize),
+          ALIGNMENT(elementSize) {
+        pData_ = (uint8_t*)malloc(TOTAL_SIZE);
+    }
+
+    const VkDeviceSize TOTAL_SIZE;
+    const uint32_t ALIGNMENT;
+
+    inline const void *getData() const { return pData_; }
+    
+    inline void setElement(uint32_t index, T& element) {
+        auto offset = index * ALIGNMENT;
+        assert(offset + ALIGNMENT < TOTAL_SIZE);
+        std::memcpy((pData_+offset), &element, sizeof(T));
+    }
+    
+    inline T &getElement(uint32_t index) {
+        auto offset = index * ALIGNMENT;
+        assert(offset + ALIGNMENT < TOTAL_SIZE);
+        return (T &)(*(pData_ + offset));
+    }
+
+   private:
+    uint8_t *pData_;
+};
 
 template <typename T>
 struct Resource {
+   public:
+    Resource(uint64_t totalSize, uint64_t elementSize)  //
+        : data(std::forward<uint64_t>(totalSize), std::forward<uint64_t>(elementSize)) {}
     VkBuffer buffer = VK_NULL_HANDLE;
     VkDeviceSize currentOffset = 0;
     VkDeviceMemory memory = VK_NULL_HANDLE;
-    VkMemoryRequirements memoryRequirements;
-    void *pMappedData;
-    std::vector<T> data;
+    VkMemoryRequirements memoryRequirements{};
+    void *pMappedData = nullptr;
+    Buffer::Manager::Data<T> data;
 };
 
-template <class TBase, class TDerived, template <typename> class TSmartPointer = std::unique_ptr>
+template <class TBase, class TDerived, template <typename> class TSmartPointer>
 class Base {
    public:
     /*  Last I checked, forcing a "const maxSize" here is very important unless a proper
@@ -41,7 +74,8 @@ class Base {
           USAGE(usage),
           PROPERTIES(properties),
           MODE(sharingMode),
-          FLAGS(flags) {}
+          FLAGS(flags),
+          alignment_(sizeof(typename TDerived::DATA)) {}
 
     const std::string NAME;
     const VkDeviceSize MAX_SIZE;
@@ -82,15 +116,15 @@ class Base {
     // TODO: change the caller so that all the memory can be updated at once.
     void updateData(const VkDevice &dev, const Buffer::Info &info) {
         auto &resource = resources_[info.resourcesOffset];
-        auto pData = static_cast<uint8_t *>(resource.pMappedData) + (info.dataOffset * info.bufferInfo.range);
+        auto pData = static_cast<uint8_t *>(resource.pMappedData) + (info.dataOffset * resource.data.ALIGNMENT);
         if (KEEP_MAPPED) {
-            memcpy(pData, &resource.data[info.dataOffset], static_cast<size_t>(info.bufferInfo.range));
+            memcpy(pData, &resource.data.getElement(info.dataOffset), alignment_);
             return;
         } else {
             // TODO: only map the region being copied???
             vk::assert_success(
                 vkMapMemory(dev, resource.memory, 0, resource.memoryRequirements.size, 0, &resource.pMappedData));
-            memcpy(pData, &resource.data[info.dataOffset], static_cast<size_t>(info.bufferInfo.range));
+            memcpy(pData, &resource.data.getElement(info.dataOffset), resource.data.ALIGNMENT);
             vkUnmapMemory(dev, resource.memory);
         }
     }
@@ -114,8 +148,7 @@ class Base {
         auto &resource = resources_.back();
 
         bool isValid = true;
-
-        isValid &= resource.currentOffset < resource.data.size();
+        isValid &= resource.currentOffset < resource.data.TOTAL_SIZE;
         if (!isValid) assert(isValid && "Either up the max size or figure out how to grow the \"resources_\".");
         // TODO: other validation?
 
@@ -125,10 +158,12 @@ class Base {
         // SET INFO
         setInfo(resource, info);
 
-        resource.data[info.dataOffset] = dataItem;
+        resource.data.setElement(info.dataOffset, dataItem);
 
         return info;
     }
+
+    uint32_t alignment_;
 
    private:
     void reset(const VkDevice &dev) {
@@ -140,16 +175,15 @@ class Base {
     }
 
     void createBuffer(const Shell::Context &ctx, const Game::Settings &settings) {
-        resources_.push_back({});
+        resources_.push_back({MAX_SIZE, alignment_});
         auto &resource = resources_.back();
-        resource.data.resize(MAX_SIZE);
 
         // CREATE BUFFER
 
         VkBufferCreateInfo createInfo = {};
         createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         createInfo.flags = FLAGS;
-        createInfo.size = MAX_SIZE * sizeof TDerived::DATA;
+        createInfo.size = MAX_SIZE * alignment_;
         createInfo.usage = USAGE;
         createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         createInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices_.size());
@@ -185,7 +219,7 @@ class Base {
             each item will do a memcpy if DIRTY after creation. Maybe just make that a necessary step,
             and leave the rest of the buffer garbage.
         */
-        memcpy(resource.pMappedData, resource.data.data(), static_cast<size_t>(resource.memoryRequirements.size));
+        memcpy(resource.pMappedData, resource.data.getData(), static_cast<size_t>(resource.memoryRequirements.size));
         if (!KEEP_MAPPED) vkUnmapMemory(ctx.dev, resource.memory);
 
         // BIND MEMORY
@@ -204,7 +238,7 @@ class Base {
     }
 
     typename TDerived::DATA *get(const Buffer::Info &info) {
-        return &resources_[info.resourcesOffset].data[info.dataOffset];
+        return &resources_[info.resourcesOffset].data.getElement(info.dataOffset);
     }
 
     std::vector<uint32_t> queueFamilyIndices_;

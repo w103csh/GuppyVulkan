@@ -78,39 +78,43 @@ const auto ENABLE_SAMPLE_SHADING = VK_TRUE;
 const float MIN_SAMPLE_SHADING = 0.2f;
 
 // ROOT
-const std::string ROOT_PATH = "..\\..\\..\\";  // TODO: this should come from something meaningful ...
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+const std::string ROOT_PATH = "../../../";  // TODO: this should come from something meaningful ...
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+const std::string ROOT_PATH = "../../../../";  // TODO: this should come from something meaningful ...
+#endif
 
 // DATA
-const std::string DATA_PATH = ROOT_PATH + "data\\";
+const std::string DATA_PATH = ROOT_PATH + "data/";
 
 // MODELS
-const std::string MODEL_PATH = DATA_PATH + "models\\";
+const std::string MODEL_PATH = DATA_PATH + "models/";
 // chalet
-const std::string CHALET_MODEL_PATH = MODEL_PATH + "chalet_obj\\chalet.obj";
-const std::string CHALET_TEX_PATH = MODEL_PATH + "chalet_obj\\chalet.jpg";
+const std::string CHALET_MODEL_PATH = MODEL_PATH + "chalet_obj/chalet.obj";
+const std::string CHALET_TEX_PATH = MODEL_PATH + "chalet_obj/chalet.jpg";
 // medieval house
-const std::string MED_H_MODEL_PATH = MODEL_PATH + "Medieval_House_obj\\Medieval_House.obj";
-const std::string MED_H_DIFF_TEX_PATH = MODEL_PATH + "Medieval_House_obj\\Medieval_House_Diff.png";
-const std::string MED_H_NORM_TEX_PATH = MODEL_PATH + "Medieval_House_obj\\Medieval_House_Nor.png";
-const std::string MED_H_SPEC_TEX_PATH = MODEL_PATH + "Medieval_House_obj\\Medieval_House_Spec.png";
+const std::string MED_H_MODEL_PATH = MODEL_PATH + "Medieval_House_obj/Medieval_House.obj";
+const std::string MED_H_DIFF_TEX_PATH = MODEL_PATH + "Medieval_House_obj/Medieval_House_Diff.png";
+const std::string MED_H_NORM_TEX_PATH = MODEL_PATH + "Medieval_House_obj/Medieval_House_Nor.png";
+const std::string MED_H_SPEC_TEX_PATH = MODEL_PATH + "Medieval_House_obj/Medieval_House_Spec.png";
 // orange
-const std::string ORANGE_MODEL_PATH = MODEL_PATH + "Orange_obj\\Orange.obj";
-const std::string ORANGE_DIFF_TEX_PATH = MODEL_PATH + "Orange_obj\\Color.jpg";
-const std::string ORANGE_NORM_TEX_PATH = MODEL_PATH + "Orange_obj\\Normal.jpg";
+const std::string ORANGE_MODEL_PATH = MODEL_PATH + "Orange_obj/Orange.obj";
+const std::string ORANGE_DIFF_TEX_PATH = MODEL_PATH + "Orange_obj/Color.jpg";
+const std::string ORANGE_NORM_TEX_PATH = MODEL_PATH + "Orange_obj/Normal.jpg";
 // pear
-const std::string PEAR_MODEL_PATH = MODEL_PATH + "pear_export_obj\\pear_export.obj";
+const std::string PEAR_MODEL_PATH = MODEL_PATH + "pear_export_obj/pear_export.obj";
 // general
 const std::string SPHERE_MODEL_PATH = MODEL_PATH + "sphere.obj";
 const std::string TORUS_MODEL_PATH = MODEL_PATH + "torus.obj";
 const std::string PIG_MODEL_PATH = MODEL_PATH + "pig_triangulated.obj";
 
 // IMAGES
-const std::string IMG_PATH = DATA_PATH + "images\\";
+const std::string IMG_PATH = DATA_PATH + "images/";
 const std::string STATUE_TEX_PATH = IMG_PATH + "texture.jpg";
 const std::string VULKAN_TEX_PATH = IMG_PATH + "vulkan.png";
 const std::string HARDWOOD_FLOOR_TEX_PATH = IMG_PATH + "hardwood_floor.jpg";
 // wood
-const std::string WOOD_PATH = IMG_PATH + "Wood_007\\";
+const std::string WOOD_PATH = IMG_PATH + "Wood_007/";
 const std::string WOOD_007_DIFF_TEX_PATH = WOOD_PATH + "Wood_007_COLOR.jpg";
 const std::string WOOD_007_NORM_TEX_PATH = WOOD_PATH + "Wood_007_NORM.jpg";
 

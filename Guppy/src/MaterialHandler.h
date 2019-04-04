@@ -1,6 +1,7 @@
 #ifndef MATERIAL_HANDLER_H
 #define MATERIAL_HANDLER_H
 
+#include <memory>
 #include <string>
 
 #include "BufferManagerDescriptor.h"
@@ -9,13 +10,16 @@
 #include "PBR.h"
 
 namespace Material {
+    
+template <class TBase>
+using ItemPointer = std::shared_ptr<TBase>;
 
 // TODO: inner class of Handler?
 template <class TDerived>
-class Manager : public Buffer::Manager::Descriptor<Material::Base, TDerived, std::shared_ptr> {
+class Manager : public Buffer::Manager::Descriptor<Material::Base, TDerived, ItemPointer> {
    public:
     Manager(const std::string &&name, const DESCRIPTOR &&descriptorType, const VkDeviceSize &&maxSize)
-        : Buffer::Manager::Descriptor<Material::Base, TDerived, std::shared_ptr>{
+        : Buffer::Manager::Descriptor<Material::Base, TDerived, ItemPointer>{
               std::forward<const std::string>(name),
               std::forward<const DESCRIPTOR>(descriptorType),
               std::forward<const VkDeviceSize>(maxSize),
@@ -59,7 +63,7 @@ class Handler : public Game::Handler {
 
     template <typename TMaterialCreateInfo>
     std::shared_ptr<Material::Base> &makeMaterial(TMaterialCreateInfo *pCreateInfo) {
-        static_assert(false, "Not implemented");
+        /*static_assert(false, "Not implemented");*/
     }
     // DEFAULT
     template <>
@@ -75,7 +79,7 @@ class Handler : public Game::Handler {
     }
 
     // clang-format off
-    template <class T> inline Material::Manager<T>& getManager() { static_assert(false, "Not implemented"); }
+    template <class T> inline Material::Manager<T>& getManager() { /*static_assert(false, "Not implemented");*/ }
     template <> inline Material::Manager<Material::Default::Base>& getManager() { return defMgr_; }
     template <> inline Material::Manager<Material::PBR::Base>& getManager() { return pbrMgr_; }
     // clang-format on

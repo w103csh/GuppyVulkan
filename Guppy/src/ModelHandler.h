@@ -21,7 +21,7 @@ class Handler : public Game::Handler {
     Handler(Game* pGame);
 
     void init() override{};
-    inline void destroy() { reset(); }
+    inline void destroy() override { reset(); }
 
     template <typename TMaterialCreateInfo>
     void makeColorModel(Model::CreateInfo* pCreateInfo, TMaterialCreateInfo* pMaterialCreateInfo) {

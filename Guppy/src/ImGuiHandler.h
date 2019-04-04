@@ -20,7 +20,7 @@ class ImGuiHandler : public UI::Handler {
     void init() override;
     void destroy() override;
 
-    void updateRenderPass(RenderPass::FrameInfo* pFrameInfo);
+    void updateRenderPass(RenderPass::FrameInfo* pFrameInfo) override;
 
     void draw(uint8_t frameIndex) override;
 
