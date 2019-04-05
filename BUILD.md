@@ -189,7 +189,8 @@ generate the native platform files. -->
   - Versions
     <!-- - [2013 (update 4)](https://www.visualstudio.com/vs/older-downloads/)
     - [2015](https://www.visualstudio.com/vs/older-downloads/) -->
-    - [2017](https://www.visualstudio.com/vs/downloads/) (Haven't tested anything else)
+    - [2017](https://www.visualstudio.com/vs/downloads/)
+    - [2019](https://www.visualstudio.com/vs/downloads/)
   - The Community Edition of each of the above versions is sufficient, as
     well as any more capable edition.
 - [CMake](http://www.cmake.org/download/) (Version 2.8.11 or better)
@@ -217,8 +218,11 @@ create a build directory and generate the Visual Studio project files:
     mkdir build
     cd build
     cmake -A x64 -DVULKAN_HEADERS_INSTALL_DIR=absolute_path_to_install_dir \
-                 -DGLM_INSTALL_DIR=absolute_path_to_install_dir \
-                 -DGLSLANG_INSTALL_DIR=absolute_path_to_install_dir ..
+                 -DGLM_LIB_DIR=absolute_path_to_install_dir \
+                 -DGLSLANG_INSTALL_DIR=absolute_path_to_install_dir
+                 -DGLFW_INCLUDE_DIR=absolute_path_to_include_dir \
+                 -DGLFW_LIB=absolute_path_to_lib_file \
+                 ..
 
 > **Note: The path delimeters must be forward slashes even on Windows.**
 > The `..` parameter tells `cmake` the location of the root of the
@@ -228,10 +232,10 @@ create a build directory and generate the Visual Studio project files:
 The `-A` option is used to select either the "Win32" or "x64" architecture.
 
 If a generator for a specific version of Visual Studio is required, you can
-specify it for Visual Studio 2015, for example, with:
+specify it for Visual Studio 2017, for example, with:
 
-    64-bit: -G "Visual Studio 14 2015 Win64"
-    32-bit: -G "Visual Studio 14 2015"
+    64-bit: -G "Visual Studio 15 2017 Win64"
+    32-bit: -G "Visual Studio 15 2017"
 
 When generating the project files, the absolute path to a Vulkan-Headers
 install directory must be provided. This can be done by setting the
@@ -242,8 +246,8 @@ Vulkan-Headers repository built with the install target.
 
 When generating the project files, the absolute path to a GLM
 install directory must be provided. This can be done by setting the
-`GLM_INSTALL_DIR` environment variable or by setting the
-`GLM_INSTALL_DIR` CMake variable with the `-D` CMake option. In
+`GLM_LIB_DIR` environment variable or by setting the
+`GLM_LIB_DIR` CMake variable with the `-D` CMake option. In
 either case, the variable should point to the installation directory of a
 Vulkan-Headers repository built with the install target.
 
@@ -253,6 +257,8 @@ directory must be provided. This can be done by setting the
 `GLSLANG_INSTALL_DIR` CMake variable with the `-D` CMake option. In either
 case, the variable should point to the installation directory of a glslang
 repository built with the install target.
+
+When generating the project file, the absolute path to a glfw include directory, and a glfw library file must be provided. This can be done by setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` environment variable or by setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` CMake variable with the -D CMake option. In either case, the variable should point to the installation directory of a glslang repository built with the install target.
 
 The above steps create a Windows solution file named
 `GuppyVulkan.sln` in the build directory.
@@ -457,9 +463,11 @@ Vulkan-Headers repository built with the install target.
 
 When generating the project file, the absolute path to a glfw include
 directory, and a glfw library file must be provided. This can be done by
-setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` environment variable or by setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` CMake variable with the `-D` CMake option.
-In either case, the variable should point to the installation directory of
-a glslang repository built with the install target.
+setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` environment variable or by
+setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` CMake variable with the
+`-D` CMake option. In either case, the variable should point to the
+installation directory of a glslang repository built with the install
+target.
 
 > **<b>Note: I only had success with <code>.dylib</code> library files</b>**
 > **<b>in gerenal. Build the libraries with the dynamic option if your not</b>**

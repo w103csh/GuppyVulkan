@@ -240,9 +240,9 @@ endif()
 message(STATUS "Using GLFW include directory located at ${GLFW_INCLUDE_DIR}")
 
 ############# GLFW LIB
-set(GLFW_LIB "GLFW-LIB-NOTFOUND" CACHE PATH "Absolute path to a GLFW library directory")
+set(GLFW_LIB "GLFW-LIB-NOTFOUND" CACHE PATH "Absolute path to a GLFW library file")
 if(NOT GLFW_LIB AND NOT DEFINED ENV{GLFW_LIB})
-    message(FATAL_ERROR "Must define location of glfw library directory -- see BUILD.md")
+    message(FATAL_ERROR "Must define location of glfw library file -- see BUILD.md")
 endif()
 
 # Cmake command line option overrides environment variable

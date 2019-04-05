@@ -224,7 +224,11 @@ void RenderPass::Default::createClearValues(const Shell::Context& ctx, const Gam
         clearValues_.push_back(value);
     }
     if (depth_.view != VK_NULL_HANDLE) {
+#if defined(VK_USE_PLATFORM_WIN32_KHR) // TODO: figure out why clang, and visual c++ can't get along here.
+        VkClearValue value = {1.0f, 0};
+#else defined(VK_USE_PLATFORM_WIN32_KHR)
         VkClearValue value = {.depthStencil = {1.0f, 0}};
+#endif
         clearValues_.push_back(value);
     }
 }

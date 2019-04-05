@@ -268,14 +268,7 @@ void Guppy::createScenes() {
     // modelCreateInfo.pipelineType = PIPELINE::PBR_COLOR;
     modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
     modelInfo.async = true;
-    modelInfo.callback = [groundPlane_bbmm](auto pModel) {
-        pModel->putOnTop(groundPlane_bbmm);
-        //// This is shitty, and was unforseen when I made the Model/ModelHandler
-        // auto& pMesh = SceneHandler::getColorMesh(pModel->getSceneOffset(),
-        // pModel->getMeshOffset(MESH_TYPE::COLOR,
-        // 0)); auto model = helpers::affine(glm::vec3{1.0f}, {0.0f, 6.0f, 0.0f}) * pMesh->getModel();
-        // pMesh->addInstance(model, std::make_unique<Material>(pMesh->getMaterial()));
-    };
+    modelInfo.callback = [groundPlane_bbmm](auto pModel) {  pModel->putOnTop(groundPlane_bbmm); };
     modelInfo.model = helpers::affine(glm::vec3(0.07f));
     modelInfo.modelPath = TORUS_MODEL_PATH;
     modelInfo.smoothNormals = true;

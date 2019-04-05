@@ -164,9 +164,9 @@ set(INCLUDES
     ${IMGUI_DIR}
     )
 
-message(STATUS "LINKS: ${LINKS}")
+# message(STATUS "LINKS: ${LINKS}")
 # message(STATUS "SHADERS: ${SHADERS}"")
-message(STATUS "INCLUDES: ${INCLUDES}")
+# message(STATUS "INCLUDES: ${INCLUDES}")
 
 if(WIN32)
     list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_WIN32_KHR)
@@ -237,14 +237,7 @@ if(UNIX)
         include_directories(${TARGET_NAME} ${INCLUDES})
 
         # We do this so vulkaninfo is linked to an individual library and NOT a framework.
-        target_link_libraries(${TARGET_NAME}
-            ${Vulkan_LIBRARY}
-            # CoreServices: directory listener
-            "-framework CoreServices"
-            ${IMGUI}
-            ${GLFW_LIBRARIES}
-            /Users/colin/Repos/MoltenVK/Package/Latest/MoltenVKShaderConverter/MoltenVKGLSLToSPIRVConverter/macOS/dynamic/libMoltenVKGLSLToSPIRVConverter.dylib # TODO: environmental variable
-            )
+        target_link_libraries(${TARGET_NAME} ${LINKS})
 
     else()
         # unix specific links
@@ -292,7 +285,7 @@ else()
     # external libraries
     include_directories(${TARGET_NAME} ${INCLUDES})
 
-    target_link_libraries(${LINKS})
+    target_link_libraries(${TARGET_NAME} ${LINKS})
 
 endif()
 

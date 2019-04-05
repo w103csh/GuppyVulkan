@@ -11,42 +11,44 @@
 
 namespace Buffer {
 namespace Manager {
-    
+
 template <typename T>
 class Data {
    public:
-    Data(VkDeviceSize maxSize, uint32_t elementSize)  //
-        : TOTAL_SIZE(maxSize *elementSize),
-          ALIGNMENT(elementSize) {
-        pData_ = (uint8_t*)malloc(TOTAL_SIZE);
+    Data(VkDeviceSize maxSize, VkDeviceSize alignment)  //
+        : TOTAL_SIZE(maxSize * alignment), ALIGNMENT(alignment) {
+        pData_ = (uint8_t *)malloc(TOTAL_SIZE);
     }
 
     const VkDeviceSize TOTAL_SIZE;
-    const uint32_t ALIGNMENT;
+    const VkDeviceSize ALIGNMENT;
 
     inline const void *getData() const { return pData_; }
-    
-    inline void setElement(uint32_t index, T& element) {
+
+    inline void setElement(VkDeviceSize index, T &element) {
         auto offset = index * ALIGNMENT;
         assert(offset + ALIGNMENT < TOTAL_SIZE);
-        std::memcpy((pData_+offset), &element, sizeof(T));
+        std::memcpy((pData_ + offset), &element, sizeof(T));
     }
-    
-    inline T &getElement(uint32_t index) {
+
+    inline T &getElement(VkDeviceSize index) {
         auto offset = index * ALIGNMENT;
         assert(offset + ALIGNMENT < TOTAL_SIZE);
         return (T &)(*(pData_ + offset));
     }
 
    private:
+    // TODO: change this to std::array so memory is initialized.
+    // As of now all buffer memory copies junk into the device buffer,
+    // so an initial dirty copy is necessary.
     uint8_t *pData_;
 };
 
 template <typename T>
 struct Resource {
    public:
-    Resource(uint64_t totalSize, uint64_t elementSize)  //
-        : data(std::forward<uint64_t>(totalSize), std::forward<uint64_t>(elementSize)) {}
+    Resource(VkDeviceSize totalSize, VkDeviceSize alignment)  //
+        : data(std::forward<VkDeviceSize>(totalSize), std::forward<VkDeviceSize>(alignment)) {}
     VkBuffer buffer = VK_NULL_HANDLE;
     VkDeviceSize currentOffset = 0;
     VkDeviceMemory memory = VK_NULL_HANDLE;
@@ -104,6 +106,7 @@ class Base {
         assert(pItems.size() < MAX_SIZE);
         auto info = insert(dev, {});
         pItems.emplace_back(new TDerived(std::move(info), get(info)));
+        update(dev, pItems.back()->BUFFER_INFO);
     }
 
     void update(const VkDevice &dev, const Buffer::Info &info) {
@@ -163,7 +166,7 @@ class Base {
         return info;
     }
 
-    uint32_t alignment_;
+    VkDeviceSize alignment_;
 
    private:
     void reset(const VkDevice &dev) {

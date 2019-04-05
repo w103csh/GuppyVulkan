@@ -315,9 +315,6 @@ std::vector<T> &&slice(const std::vector<T> &v, int m, int n) {
 
 static inline std::string getFilePath(std::string s) {
     char sep = '/';
-#ifdef _WIN32
-    sep = '\\';
-#endif
     size_t i = s.rfind(sep, s.length());
     if (i != std::string::npos) {
         return (s.substr(0, i + 1));
@@ -327,9 +324,6 @@ static inline std::string getFilePath(std::string s) {
 
 static std::string getFileName(std::string s) {
     char sep = '/';
-#ifdef _WIN32
-    sep = '\\';
-#endif
     size_t i = s.rfind(sep, s.length());
     if (i != std::string::npos) {
         return (s.substr(i + 1, s.length() - i));
