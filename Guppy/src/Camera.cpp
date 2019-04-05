@@ -7,16 +7,16 @@
 #include "InputHandler.h"
 
 Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData, Perspective::CreateInfo *pCreateInfo)
-    : Object3d(glm::mat4(1.0f)),
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),
+      Object3d(glm::mat4(1.0f)),
       Uniform::Base(),
       Buffer::DataItem<DATA>(pData),
-      Buffer::Item(std::forward<const Buffer::Info>(info)),
       aspect_(pCreateInfo->aspect),
-      center_(pCreateInfo->center),
-      eye_(pCreateInfo->eye),
       far_(pCreateInfo->f),
       fov_(pCreateInfo->fov),
-      near_(pCreateInfo->n) {
+      near_(pCreateInfo->n),
+      eye_(pCreateInfo->eye),
+      center_(pCreateInfo->center) {
     pData_->view = glm::lookAt(pCreateInfo->eye, pCreateInfo->center, UP_VECTOR);
     proj_ = glm::perspective(pCreateInfo->fov, pCreateInfo->aspect, near_, far_);
     // Vulkan clip space has inverted Y and half Z.

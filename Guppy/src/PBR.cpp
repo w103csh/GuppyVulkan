@@ -9,8 +9,8 @@
 // **********************
 
 Light::PBR::Positional::Base::Base(const Buffer::Info&& info, DATA* pData, CreateInfo* pCreateInfo)
-    : Light::Base<DATA>(pData, pCreateInfo),  //
-      Buffer::Item(std::forward<const Buffer::Info>(info)),
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
+      Light::Base<DATA>(pData, pCreateInfo),                 //
       position(getWorldSpacePosition()) {}
 
 void Light::PBR::Positional::Base::update(glm::vec3&& position) {
@@ -23,9 +23,10 @@ void Light::PBR::Positional::Base::update(glm::vec3&& position) {
 // **********************
 
 Material::PBR::Base::Base(const Buffer::Info&& info, PBR::DATA* pData, PBR::CreateInfo* pCreateInfo)
-    : Material::Base(MATERIAL::PBR, pCreateInfo),  //
-      Buffer::DataItem<PBR::DATA>(pData),          //
-      Buffer::Item(std::forward<const Buffer::Info>(info)) {
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
+      Buffer::DataItem<PBR::DATA>(pData),                    //
+      Material::Base(MATERIAL::PBR, pCreateInfo)             //
+{
     pData_->color = pCreateInfo->color;
     pData_->flags = pCreateInfo->flags;
     pData_->opacity = pCreateInfo->opacity;

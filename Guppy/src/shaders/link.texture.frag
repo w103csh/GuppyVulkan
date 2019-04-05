@@ -4,6 +4,7 @@
 
 // DECLARATIONS
 vec3 getMaterialColor();
+vec3 getMaterialSpecular();
 uint getMaterialTexFlags();
 float getMaterialOpacity();
 float getMaterialShininess();
@@ -25,7 +26,7 @@ layout(location = 0) out vec4 outColor;
 // GLOBAL
 vec3    Ka, // ambient coefficient
         Kd, // diffuse coefficient
-        Ks, // speculat coefficient
+        Ks, // specular coefficient
         n;  // normal
 float opacity;
 bool TEX_COORD_SHADE = false;
@@ -43,6 +44,7 @@ vec3 texCoordShade() {
 
 void setTextureDefaults() {
     Kd = getMaterialColor();
+    Ks = getMaterialSpecular();
     opacity = getMaterialOpacity();
     uint flags = getMaterialTexFlags();
     float xRepeat = getMaterialXRepeat();

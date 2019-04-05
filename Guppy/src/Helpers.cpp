@@ -376,8 +376,11 @@ void cramers3(glm::vec3 &&c1, glm::vec3 &&c2, glm::vec3 &&c3, glm::vec3 &&c4) {
 }
 
 void decomposeScale(const glm::mat4 &m, glm::vec3 &scale) {
-    //
-    glm::decompose(m, scale, glm::quat{}, glm::vec3{}, glm::vec3{}, glm::vec4{});
+    glm::quat orientation{};
+    glm::vec3 translation{};
+    glm::vec3 skew{};
+    glm::vec4 perspective{};
+    glm::decompose(m, scale, orientation, translation, skew, perspective);
 }
 
 }  // namespace helpers

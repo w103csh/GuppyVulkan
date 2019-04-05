@@ -11,6 +11,7 @@ Linux, Android, and Mac at somepoint).
 1. [Windows Build](#building-on-windows)
 1. ~~[Linux Build](#building-on-linux)~~
 1. ~~[Android Build](#building-on-android)~~
+1. [Mac Build](#building-on-mac)
 
 <!-- ## Contributing to the Repository
 
@@ -43,7 +44,9 @@ some other suitable source if you intend to run Vulkan applications.
 
 To create your local git repository:
 
-    git clone https://github.com/w103csh/VulkanTest.git
+    git clone https://github.com/w103csh/GuppyVulkan.git
+
+If building for macOS [jump ahead.](#build-on-mac)
 
 ### Repository Dependencies
 
@@ -51,7 +54,7 @@ This repository attempts to resolve some of its dependencies by using
 components found from the following places, in this order:
 
 1. CMake or Environment variable overrides (e.g., -DVULKAN_HEADERS_INSTALL_DIR)
-1. LunarG Vulkan SDK, located by the `VULKAN_SDK` environment variable
+1. [LunarG Vulkan SDK](https://vulkan.lunarg.com/), located by the `VULKAN_SDK` environment variable
 1. System-installed packages, mostly applicable on Linux
 
 Dependencies that cannot be resolved by the SDK or installed packages must be
@@ -60,6 +63,10 @@ resolved with the "install directory" override and are listed below. The
 version of that dependency.
 
 #### Vulkan-Headers
+
+> **Note: This is not necessary if when you install the [LunarG Vulkan SDK](https://vulkan.lunarg.com/)**
+> **, you also add `VULKAN_SDK` as an environmental**
+> **variable specifiying the path. This is now assumed if buidling for macOS.**
 
 This repository has a required dependency on the
 [Vulkan Headers repository](https://github.com/KhronosGroup/Vulkan-Headers).
@@ -70,7 +77,7 @@ the samples. You must also take note of the headers' install
 directory and pass it on the CMake command line for building this repository,
 as described below.
 
-#### glslang
+#### glslang (not applicable for macOS)
 
 This repository has a required dependency on the
 [glslang repository](https://github.com/KhronosGroup/glslang).
@@ -87,13 +94,30 @@ described below.
 
 You can download GLM from [here](https://github.com/g-truc/glm/tags).
 
+#### GLFW
+
+You can download GLFW from [here](https://www.glfw.org/). This library is required to use
+the [Dear ImGui](https://github.com/ocornut/imgui) debug UI. Eventually [Dear ImGui](https://github.com/ocornut/imgui) might become a dependecy.
+> **Note: For macOS I had to clone the git repository and build a dynamic library that was**
+> **version 3.3 which supports MoltenVK.**
+
+#### MoltenVK (macOS only)
+
+This repository has a required dependency on the
+[MoltenVK repository](https://github.com/w103csh/MoltenVK/commits/master) that I forked.
+You must clone the repository and build its `Packaging (macOS)` product before
+building this repository. The MotenVK repository is required because it
+contains a glsl to spir-v converter that the engine uses for hot swapping shaders during
+runtime. This dependency will be removed soon (hopefully) because the necessary
+dependency is actually [glslang](https://github.com/KhronosGroup/glslang), which comes with the macOS download of the [LunarG Vulkan SDK](https://vulkan.lunarg.com/) for macOS.
 
 ### Building Dependent Repositories with Known-Good Revisions
 
 In the [Vulkan Samples repository](https://github.com/LunarG/VulkanSamples) they maintain a
 [`known_good.json`](https://github.com/LunarG/VulkanSamples/blob/master/scripts/known_good.json)
 file which has a list of commits that are known to work correctly. If the project is
-throwing errors from the dependent projects I would try to rebuild them using those commits.
+throwing errors from the dependent projects I would try to rebuild them using those commits. I
+have also added my own <code>current_versions.json</code> file where I try to keep a list of what version of things I am currently building the project with.
 
 <!--
 There is a Python utility script, `scripts/update_deps.py`, that you can use
@@ -165,7 +189,8 @@ generate the native platform files. -->
   - Versions
     <!-- - [2013 (update 4)](https://www.visualstudio.com/vs/older-downloads/)
     - [2015](https://www.visualstudio.com/vs/older-downloads/) -->
-    - [2017](https://www.visualstudio.com/vs/downloads/) (Haven't tested anything else)
+    - [2017](https://www.visualstudio.com/vs/downloads/)
+    - [2019](https://www.visualstudio.com/vs/downloads/)
   - The Community Edition of each of the above versions is sufficient, as
     well as any more capable edition.
 - [CMake](http://www.cmake.org/download/) (Version 2.8.11 or better)
@@ -174,7 +199,7 @@ generate the native platform files. -->
   - [Git for Windows](http://git-scm.com/download/win) is a popular solution
     for Windows
   - Some IDEs (e.g., [Visual Studio](https://www.visualstudio.com/),
-    [GitHub Desktop](https://desktop.github.com/)) have integrated
+    [GitHub Desktop](https://desktop.github.com/))) have integrated
     Git client support
 
 ### Windows Build - Microsoft Visual Studio
@@ -186,28 +211,31 @@ work with the solution interactively.
 
 #### Use `CMake` to Create the Visual Studio Project Files
 
-Change your current directory to the top of the cloned repository directory,
+Change your current directory to the root of the cloned repository directory,
 create a build directory and generate the Visual Studio project files:
 
-    cd VulkanTest
+    cd GuppyVulkan
     mkdir build
     cd build
     cmake -A x64 -DVULKAN_HEADERS_INSTALL_DIR=absolute_path_to_install_dir \
-                 -DGLM_INSTALL_DIR=absolute_path_to_install_dir \
-                 -DGLSLANG_INSTALL_DIR=absolute_path_to_install_dir ..
+                 -DGLM_LIB_DIR=absolute_path_to_install_dir \
+                 -DGLSLANG_INSTALL_DIR=absolute_path_to_install_dir
+                 -DGLFW_INCLUDE_DIR=absolute_path_to_include_dir \
+                 -DGLFW_LIB=absolute_path_to_lib_file \
+                 ..
 
 > **Note: The path delimeters must be forward slashes even on Windows.**
-> The `..` parameter tells `cmake` the location of the top of the
+> The `..` parameter tells `cmake` the location of the root of the
 > repository. If you place your build directory someplace else, you'll need to
-> specify the location of the repository top differently.
+> specify the location of the repository root differently.
 
 The `-A` option is used to select either the "Win32" or "x64" architecture.
 
 If a generator for a specific version of Visual Studio is required, you can
-specify it for Visual Studio 2015, for example, with:
+specify it for Visual Studio 2017, for example, with:
 
-    64-bit: -G "Visual Studio 14 2015 Win64"
-    32-bit: -G "Visual Studio 14 2015"
+    64-bit: -G "Visual Studio 15 2017 Win64"
+    32-bit: -G "Visual Studio 15 2017"
 
 When generating the project files, the absolute path to a Vulkan-Headers
 install directory must be provided. This can be done by setting the
@@ -218,8 +246,8 @@ Vulkan-Headers repository built with the install target.
 
 When generating the project files, the absolute path to a GLM
 install directory must be provided. This can be done by setting the
-`GLM_INSTALL_DIR` environment variable or by setting the
-`GLM_INSTALL_DIR` CMake variable with the `-D` CMake option. In
+`GLM_LIB_DIR` environment variable or by setting the
+`GLM_LIB_DIR` CMake variable with the `-D` CMake option. In
 either case, the variable should point to the installation directory of a
 Vulkan-Headers repository built with the install target.
 
@@ -229,6 +257,8 @@ directory must be provided. This can be done by setting the
 `GLSLANG_INSTALL_DIR` CMake variable with the `-D` CMake option. In either
 case, the variable should point to the installation directory of a glslang
 repository built with the install target.
+
+When generating the project file, the absolute path to a glfw include directory, and a glfw library file must be provided. This can be done by setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` environment variable or by setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` CMake variable with the -D CMake option. In either case, the variable should point to the installation directory of a glslang repository built with the install target.
 
 The above steps create a Windows solution file named
 `GuppyVulkan.sln` in the build directory.
@@ -250,7 +280,7 @@ to make a Release build.
 
 #### Build the Solution With Visual Studio
 
-Launch Visual Studio and open the "GuppyVulkan.sln" solution file
+Launch Visual Studio and open the `GuppyVulkan.sln` solution file
 in the build folder. You may select "Debug" or "Release" from the Solution
 Configurations drop-down list. Start a build by selecting the Build->Build
 Solution menu item.
@@ -278,7 +308,7 @@ CMake with the `--build` option or `make` to build from the command line.
 
 #### Use CMake to Create the Make Files
 
-Change your current directory to the top of the cloned repository directory,
+Change your current directory to the root of the cloned repository directory,
 create a build directory and generate the make files.
 
     cd Vulkan-Samples
@@ -290,9 +320,9 @@ create a build directory and generate the make files.
           -DGLSLANG_INSTALL_DIR=absolute_path_to_install_dir \
           -DCMAKE_INSTALL_PREFIX=install ..
 
-> Note: The `..` parameter tells `cmake` the location of the top of the
+> Note: The `..` parameter tells `cmake` the location of the root of the
 > repository. If you place your `build` directory someplace else, you'll need
-> to specify the location of the repository top differently.
+> to specify the location of the repository root differently.
 
 Use `-DCMAKE_BUILD_TYPE` to specify a Debug or Release build.
 
@@ -369,3 +399,93 @@ $ cd android
 $ ./gradlew build
 ```
 -->
+
+## Building On Mac
+
+### macOS Environment Requirements
+
+These are what I know worked for me. Other things could work for you, but I do not
+know for sure.
+
+- macOS Mojave
+- Xcode Version 10.2
+- [CMake](http://www.cmake.org/download/) (Version 3.13.4 or better)
+  - Use the installer option to add CMake to the system PATH
+- Python
+  - The version built into macOS should work fine
+- Git Client Support
+  - Some IDEs (e.g., [Xcode](https://developer.apple.com/xcode/), [Visual Studio Code](https://code.visualstudio.com/download))
+    have integrated support
+
+### macOS Build - Xcode
+
+The general approach is to run the CMake using the <code>buildMac.py</code> python
+script to generate the Xcode project file. Then use the Xcode IDE to open the generated
+project and work with the project interactively.
+
+#### Use `Python` and `CMake` to Create the Xcode Project Files
+
+Change your current directory to the root of the cloned repository directory,
+create a build directory and generate the Xcode project files:
+
+    cd GuppyVulkan
+    mkdir build
+    cd build
+    python ../buildMac.py \
+            -DMVK_PACKAGE_DIR=absolute_path_to_package_dir \
+            -DGLM_LIB_DIR=absolute_path_to_install_dir \
+            -DGLFW_INCLUDE_DIR=absolute_path_to_include_dir \
+            -DGLFW_LIB=absolute_path_to_lib_file \
+            ..
+
+> The `..` parameter tells `cmake` the location of the root of the
+> repository. If you place your build directory someplace else, you'll need to
+> specify the location of the repository root differently.
+
+When generating the project file, the absolute path to the [LunarG Vulkan SDK](https://vulkan.lunarg.com/)
+install directory must be provided. This can be done by setting the
+`VULKAN_SDK` environment variable. The variable should point to the installation
+directory of the SDK.
+
+When generating the project file, the absolute path to a MoltenVK
+Package directory must be provided. This can be done by setting the
+`MVK_PACKAGE_DIR` environment variable or by setting the
+`MVK_PACKAGE_DIR` CMake variable with the `-D` CMake option. In
+either case, the variable should point to the package directory of a
+MoltenVK repository built with the `Packaging (macOS)` product.
+
+When generating the project file, the absolute path to a GLM
+install directory must be provided. This can be done by setting the
+`GLM_LIB_DIR` environment variable or by setting the
+`GLM_LIB_DIR` CMake variable with the `-D` CMake option. In
+either case, the variable should point to the installation directory of a
+Vulkan-Headers repository built with the install target.
+
+When generating the project file, the absolute path to a glfw include
+directory, and a glfw library file must be provided. This can be done by
+setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` environment variable or by
+setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` CMake variable with the
+`-D` CMake option. In either case, the variable should point to the
+installation directory of a glslang repository built with the install
+target.
+
+> **<b>Note: I only had success with <code>.dylib</code> library files</b>**
+> **<b>in gerenal. Build the libraries with the dynamic option if your not</b>**
+> **<b>having success.</b>**
+
+The above steps create a Xcode project file named
+`GuppyVulkan.xcodeproj` in the build directory.
+
+At this point, you can build the solution from the command line or open the
+generated solution with Visual Studio.
+
+#### Build the Project From the Command Line
+
+Doesn't work yet...
+
+#### Build the Project With Xcode
+
+Launch Xcode and open the `GuppyVulkan.xcodeproj` project file
+in the build folder. You may select "Debug" or "Release" from the <code>Guppy</code> product scheme editor in the info tab. Configurations drop-down list.
+Start a build by selecting the <code>Guppy</code>
+from the product drop down and hitting &#8984;B or &#8984;R.

@@ -104,4 +104,28 @@ int main(int argc, char **argv) {
     return 0;
 }
 
+#elif defined(VK_USE_PLATFORM_MACOS_MVK)
+
+#include "ShellMac.h"
+#ifdef USE_DEBUG_UI
+#include "ShellGLFW.h"
+#endif
+
+int main(int argc, char **argv) {
+    // Sleep(20000);
+    Game *game = create_game(argc, argv);
+    {
+#ifndef USE_DEBUG_UI
+        ShellMac shell(*game);
+        shell.run();
+#else
+        ShellGLFW<ShellMac> shell(*game);
+        shell.run();
+#endif
+    }
+    delete game;
+    
+    return 0;
+}
+
 #endif  // VK_USE_PLATFORM

@@ -493,7 +493,8 @@ void ShellWin32::watchDirectory(const std::string& directory, std::function<void
 std::string ShellWin32::GetWorkingDirectory() {
     char result[_MAX_PATH];
     auto fileName = std::string(result, GetModuleFileName(NULL, result, MAX_PATH));
-    return helpers::getFilePath(fileName) + "..\\";
+    std::replace(fileName.begin(), fileName.end(), '\\', '/');
+    return helpers::getFilePath(fileName) + "../";
 }
 
 void ShellWin32::checkDirectories() {
@@ -513,7 +514,9 @@ VOID WINAPI FileIOCompletionRoutine(DWORD dwErrorCode, DWORD dwNumberOfBytesTran
     if (lpDirInst->firstComp) {
         // Divide file name length by 2 because chars are wide.
         auto ws = std::wstring(lpDirInst->lpBuffer->FileName, lpDirInst->lpBuffer->FileNameLength / 2);
-        std::string fileName = std::string(ws.begin(), ws.end());
+		// TODO: Handle this cast properly.
+        std::string fileName;
+        for (auto wc : ws) fileName.push_back(static_cast<char>(wc));
         // Invoke callback with the name of the file that was modified.
         lpDirInst->callback(fileName);
     }

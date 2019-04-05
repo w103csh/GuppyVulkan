@@ -2,6 +2,7 @@
 #define BUFFER_ITEM_H
 
 #include <assert.h>
+#include <functional>
 
 #include <vulkan/vulkan.h>
 

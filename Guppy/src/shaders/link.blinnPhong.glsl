@@ -80,7 +80,7 @@ layout(location = 0) in vec3 fragPosition;
 // GLOBAL
 vec3    Ka, // ambient coefficient
         Kd, // diffuse coefficient
-        Ks, // speculat coefficient
+        Ks, // specular coefficient
         n;  // normal
 float opacity;
 
@@ -193,7 +193,7 @@ vec3 blinnPhongShade() {
 #if UMI_LGT_DEF_SPT
     for (int i = 0; i < lgtSpot.length(); i++) {
         if ((lgtSpot[i].flags & LIGHT_SHOW) > 0) {
-            // color += blinnPhongSpot(i, ++lightCount);
+            color += blinnPhongSpot(i, ++lightCount);
         }
     }
 #endif

@@ -1,3 +1,4 @@
+cmake_minimum_required(VERSION 2.8.11)
 
 set(SOURCE
     Camera.cpp
@@ -54,6 +55,7 @@ set(SOURCE
     BufferManagerDescriptor.h
     DescriptorHandler.cpp
     DescriptorHandler.h
+    DescriptorReference.h
     DescriptorSet.cpp
     DescriptorSet.h
     # Mesh
@@ -88,6 +90,7 @@ set(SOURCE
     Pipeline.h
     PipelineHandler.cpp
     PipelineHandler.h
+    PipelineReference.h
     RenderPass.cpp
     RenderPass.h
     # Shader
@@ -148,22 +151,50 @@ file(GLOB UTILS
 
 # target links
 set(LINKS
-    ${TARGET_NAME}
-    ${GLSLANG_LIBRARIES}
-    ${VULKAN_LOADER}
-    ${SPIRV_TOOLS_LIBRARIES}
     ${GLFW_LIBRARIES}
     ${IMGUI}
     )
+    
+# target includes
+set(INCLUDES
+    utils
+    ${GLM_LIB_DIR}
+    ${EXT_LIB_DIR}
+    ${GLFW_INCLUDE_DIR}
+    ${IMGUI_DIR}
+    )
 
-# message(STATUS ${LINKS})
-# message(STATUS ${SHADERS})
+# message(STATUS "LINKS: ${LINKS}")
+# message(STATUS "SHADERS: ${SHADERS}"")
+# message(STATUS "INCLUDES: ${INCLUDES}")
 
 if(WIN32)
     list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_WIN32_KHR)
     list(APPEND definitions PRIVATE -DWIN32_LEAN_AND_MEAN)
 
     list(APPEND SOURCE ShellWin32.cpp ShellWin32.h)
+
+    list(APPEND LINKS
+        ${GLSLANG_LIBRARIES}
+        ${VULKAN_LOADER}
+        ${SPIRV_TOOLS_LIBRARIES}
+        )
+
+elseif(APPLE)
+    list(APPEND SOURCE ShellMac.cpp ShellMac.h)
+
+    list(APPEND LINKS
+        ${Vulkan_LIBRARY}
+        # CoreServices: directory listener
+        "-framework CoreServices"
+        ${MVK_PACKAGE_DIR}/Latest/MoltenVKShaderConverter/MoltenVKGLSLToSPIRVConverter/macOS/dynamic/libMoltenVKGLSLToSPIRVConverter.dylib
+        )
+
+    list(APPEND INCLUDES
+        ${MVK_PACKAGE_DIR}/Latest/MoltenVKShaderConverter/include
+        ${MVK_PACKAGE_DIR}/Latest/MoltenVKShaderConverter/MoltenVKGLSLToSPIRVConverter/macOS/dynamic
+        )
+
 else()
     list(APPEND libraries PRIVATE -ldl)
 
@@ -182,26 +213,49 @@ else()
         list(APPEND includes PRIVATE ${WAYLAND_CLIENT_INCLUDE_DIR})
         list(APPEND libraries PRIVATE ${WAYLAND_CLIENT_LIBRARIES})
     endif()
+
 endif()
 
 if(UNIX)
+    if(APPLE)
 
-    # unix specific links
-    list(APPEND ${LINKS}
-        ${XCB_LIBRARIES}
-        ${WAYLAND_CLIENT_LIBRARIES}
-        ${PTHREAD}
-        )
+        # apple specific links
+        list(APPEND ${LINKS}
+            #something
+            )
 
-    add_executable(${TARGET_NAME}
-        Main.cpp
-        ${SOURCE}
-        ${UTILS}
-        ${SHADERS}
-        )
+        add_executable(${TARGET_NAME}
+            ${SOURCE}
+            ${UTILS}
+            )
 
-    target_link_libraries(${TARGET_NAME} ${LINKS})
+        source_group("Shaders" FILES ${SHADERS})
+        source_group("Utils" FILES ${UTILS})
+        # source_group("Utils/Source Files" FILES ${UTILS})
+        # source_group("Utils/Headers" FILES ${UTILS})
 
+        include_directories(${TARGET_NAME} ${INCLUDES})
+
+        # We do this so vulkaninfo is linked to an individual library and NOT a framework.
+        target_link_libraries(${TARGET_NAME} ${LINKS})
+
+    else()
+        # unix specific links
+        list(APPEND ${LINKS}
+            ${XCB_LIBRARIES}
+            ${WAYLAND_CLIENT_LIBRARIES}
+            ${PTHREAD}
+            )
+
+        add_executable(${TARGET_NAME}
+            Main.cpp
+            ${SOURCE}
+            ${UTILS}
+            ${SHADERS}
+            )
+
+        target_link_libraries(${TARGET_NAME} ${LINKS})
+    endif()
 else()
 
     # windows specific links
@@ -229,15 +283,9 @@ else()
     # source_group("Utils/Headers" FILES ${UTILS})
 
     # external libraries
-    include_directories(${TARGET_NAME}
-        utils
-        ${GLM_LIB_DIR}
-        ${EXT_LIB_DIR}
-        ${GLFW_INCLUDE_DIR}
-        ${IMGUI_DIR}
-        )
+    include_directories(${TARGET_NAME} ${INCLUDES})
 
-    target_link_libraries(${LINKS})
+    target_link_libraries(${TARGET_NAME} ${LINKS})
 
 endif()
 
@@ -245,3 +293,4 @@ set_target_properties(${TARGET_NAME} PROPERTIES
     CXX_STANDARD 17
     )
 
+    

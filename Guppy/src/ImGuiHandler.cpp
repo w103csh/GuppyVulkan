@@ -31,7 +31,7 @@ void UI::ImGuiHandler::init() {
     init_info.PhysicalDevice = shell().context().physical_dev;
     init_info.Device = shell().context().dev;
     init_info.QueueFamily = shell().context().graphics_index;
-    init_info.Queue = shell().context().queues[shell().context().graphics_index];
+    init_info.Queue = shell().context().queues.at(shell().context().graphics_index);
     init_info.PipelineCache = pipelineHandler().getPipelineCache();
     init_info.DescriptorPool = descriptorHandler().getPool();
     init_info.Allocator = nullptr;
@@ -48,7 +48,7 @@ void UI::ImGuiHandler::init() {
     end_info.commandBufferCount = 1;
     end_info.pCommandBuffers = &commandHandler().graphicsCmd();
     vk::assert_success(
-        vkQueueSubmit(shell().context().queues[shell().context().graphics_index], 1, &end_info, VK_NULL_HANDLE));
+        vkQueueSubmit(shell().context().queues.at(shell().context().graphics_index), 1, &end_info, VK_NULL_HANDLE));
 
     vk::assert_success(vkDeviceWaitIdle(shell().context().dev));
 

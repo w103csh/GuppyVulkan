@@ -1,5 +1,5 @@
 
-#ifndef INPUT_HANLDER_H
+#ifndef INPUT_HANDLER_H
 #define INPUT_HANDLER_H
 
 #include <glm/glm.hpp>
@@ -25,6 +25,7 @@ class InputHandler : public Singleton {
             case INPUT_ACTION::DOWN:
                 inst_.currKeyInput_.insert(key);
                 break;
+            default:;
         }
     }
 

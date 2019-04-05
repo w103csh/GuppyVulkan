@@ -3,11 +3,6 @@
 
 #include "Shell.h"
 
-namespace {
-const VkDeviceSize DEFAULT_MAX_SIZE = 20;
-const VkDeviceSize PBR_MAX_SIZE = 20;
-}  // namespace
-
 Material::Handler::Handler(Game* pGame)
     : Game::Handler(pGame),
       defMgr_{"Default Material", DESCRIPTOR::MATERIAL_DEFAULT, 50},  //

@@ -21,6 +21,12 @@ vec3    Kd, // color
 float opacity;
 bool TEX_COORD_SHADE;
 
+/*  TODO: these material getters show that this pattern isn't
+    great. Using link shaders like this should just make adding
+    new shaders easier. Anything final should be hardcoded
+    into one shader file or string in the C++ shader object. */ 
+vec3 getMaterialSpecular() { return vec3(1.0); }
+
 vec3 transform(vec3 v) { return TBN * v; }
 
 void main() {

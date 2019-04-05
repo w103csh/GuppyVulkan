@@ -7,20 +7,18 @@
 #include <vector>
 
 #include "Constants.h"
+#include "DescriptorReference.h"
 #include "Handlee.h"
 #include "Helpers.h"
 #include "Material.h"
+#include "PipelineReference.h"
 #include "Shell.h"
 #include "Object3d.h"
 #include "Texture.h"
 
 // clang-format off
 class Face;
-#include "DescriptorHandler.h"  // TODO: why is this necessary?
-//namespace Descriptor    { struct Reference; }
 namespace Loading       { struct Resource; }
-#include "PipelineHandler.h"    // TODO: why is this necessary?
-//namespace Pipeline      { struct Reference; }
 namespace Scene         { class Handler; }
 // clang-format on
 
@@ -89,7 +87,7 @@ class Base : public NonCopyable, public Object3d, public Handlee<Mesh::Handler> 
     // VERTEX
     virtual Vertex::Complete getVertexComplete(size_t index) const = 0;
     virtual void addVertex(const Vertex::Complete& v, int32_t index = -1) = 0;
-    virtual inline void addVertex(const Face& face);
+    virtual void addVertex(const Face& face);
     virtual inline uint32_t getVertexCount() const = 0;  // TODO: this shouldn't be public
     virtual const glm::vec3& getVertexPositionAtOffset(size_t offset) const = 0;
     void updateBuffers();
@@ -158,9 +156,8 @@ class Base : public NonCopyable, public Object3d, public Handlee<Mesh::Handler> 
     bool selectable_;
     // INSTANCE
     std::vector<std::pair<glm::mat4, std::unique_ptr<Material::Base>>> instances_;
-    // PIPELINE
+    // REFERENCE
     Pipeline::Reference pipelineReference_;
-    // DESCRIPTOR
     Descriptor::Reference descriptorReference_;
 
     BufferResource vertexRes_;
@@ -203,8 +200,8 @@ class Color : public Base {
         updateBoundingBox(vertices_.back());
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
-    inline uint32_t getVertexCount() const { return vertices_.size(); }
-    inline VkDeviceSize getVertexBufferSize(bool assert = false) const {
+    inline uint32_t getVertexCount() const override { return vertices_.size(); }
+    inline VkDeviceSize getVertexBufferSize(bool assert = false) const override {
         VkDeviceSize bufferSize = sizeof(Vertex::Color) * vertices_.size();
         if (assert) assert(bufferSize == vertexRes_.memoryRequirements.size);
         return bufferSize;
@@ -260,8 +257,8 @@ class Texture : public Base {
         updateBoundingBox(vertices_.back());
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
-    inline uint32_t getVertexCount() const { return vertices_.size(); }
-    inline VkDeviceSize getVertexBufferSize(bool assert = false) const {
+    inline uint32_t getVertexCount() const override { return vertices_.size(); }
+    inline VkDeviceSize getVertexBufferSize(bool assert = false) const override {
         VkDeviceSize bufferSize = sizeof(Vertex::Texture) * vertices_.size();
         if (assert) assert(bufferSize == vertexRes_.memoryRequirements.size);
         return bufferSize;

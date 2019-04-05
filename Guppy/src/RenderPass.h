@@ -65,8 +65,10 @@ class Base {
     friend class Pipeline::Base;
 
    public:
-    const std::unordered_set<PIPELINE> PIPELINE_TYPES;
+    virtual ~Base() = default;
+    
     const std::string NAME;
+    const std::unordered_set<PIPELINE> PIPELINE_TYPES;
 
     void init(const Shell::Context &ctx, const Game::Settings &settings, RenderPass::InitInfo *pInfo,
               SubpassResources *pSubpassResources = nullptr);
@@ -140,7 +142,7 @@ class Base {
 
    protected:
     Base(std::string &&name, std::unordered_set<PIPELINE> &&types)
-        : PIPELINE_TYPES(types), initInfo(), frameInfo(), pass(VK_NULL_HANDLE), NAME(name) {}
+    : NAME(name), PIPELINE_TYPES(types), initInfo(), frameInfo(), pass(VK_NULL_HANDLE), data{} {}
 
     // RENDER PASS
     virtual void createPass(const VkDevice &dev);
@@ -176,7 +178,7 @@ class Base {
 
    private:
     void createSemaphores(const Shell::Context &ctx);
-    void RenderPass::Base::createAttachmentDebugMarkers(const Shell::Context &ctx, const Game::Settings &settings);
+    void createAttachmentDebugMarkers(const Shell::Context &ctx, const Game::Settings &settings);
 };
 
 // **********************

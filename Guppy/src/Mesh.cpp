@@ -3,12 +3,14 @@
 
 #include "Mesh.h"
 
+#include "DescriptorHandler.h"
 #include "Face.h"
 #include "FileLoader.h"
 #include "LoadingHandler.h"
 #include "MaterialHandler.h"
 #include "MeshHandler.h"
 #include "PBR.h"  // TODO: this is bad
+#include "PipelineHandler.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
 
@@ -26,17 +28,20 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
       PIPELINE_TYPE(pCreateInfo->pipelineType),
       TYPE(type),
       VERTEX_TYPE(vertexType),
-      isIndexed_(pCreateInfo->isIndexed),
-      offset_(BAD_OFFSET),
-      pMaterial_(pMaterial),
-      selectable_(pCreateInfo->selectable),
       status_(STATUS::PENDING),
+      // INFO
+      isIndexed_(pCreateInfo->isIndexed),
+      selectable_(pCreateInfo->selectable),
+      // REFERENCE
+      pipelineReference_{},
+      descriptorReference_{},
+      //
       vertexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
       indexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
       pLdgRes_(nullptr),
-      // REFERENCE
-      pipelineReference_{},
-      descriptorReference_{}  //
+      pMaterial_(pMaterial),
+      offset_(BAD_OFFSET)
+//
 {
     assert(helpers::checkVertexPipelineMap(VERTEX_TYPE, PIPELINE_TYPE));
     assert(pMaterial_ != nullptr);
@@ -160,13 +165,13 @@ void Mesh::Base::bindPushConstants(VkCommandBuffer cmd) const {
         case PUSH_CONSTANT::DEFAULT: {
             Pipeline::Default::PushConstant pushConstant = {model_};
             vkCmdPushConstants(cmd, pipelineReference_.layout, pipelineReference_.pushConstantStages, 0,
-                               static_cast<uint32_t>(sizeof Pipeline::Default::PushConstant), &pushConstant);
+                               static_cast<uint32_t>(sizeof(Pipeline::Default::PushConstant)), &pushConstant);
         } break;
         default: { assert(false && "Add new push constant"); } break;
     }
 }
 
-inline void Mesh::Base::addVertex(const Face& face) {
+void Mesh::Base::addVertex(const Face& face) {
     // currently not used
     for (uint8_t i = 0; i < Face::NUM_VERTICES; i++) {
         auto face = getFace(i);
@@ -231,7 +236,6 @@ void Mesh::Base::selectFace(const Ray& ray, float& tMin, Face& face, size_t offs
 
     float t0 = 0.0f;  //, t1 = glm::distance(localRay[0], localRay[1]);  // TODO: like this???
 
-    bool faceFound = false;
     for (size_t n = 0; n < indices_.size(); n += 3) {
         // face indices
         const auto& idx0 = indices_[n];

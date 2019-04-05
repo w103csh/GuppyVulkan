@@ -9,7 +9,7 @@ VkVertexInputBindingDescription Vertex::getColorBindDesc() {
     bindingDescription.stride = sizeof(Vertex::Color);
     bindingDescription.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    return std::move(bindingDescription);
+    return bindingDescription;
 }
 
 std::vector<VkVertexInputAttributeDescription> Vertex::getColorAttrDesc() {

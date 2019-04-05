@@ -16,8 +16,8 @@ namespace Perspective {
 
 struct CreateInfo {
     float aspect = (16.0f / 9.0f);
-    const glm::vec3 &eye{2.0f, 2.0f, 4.0f};
-    const glm::vec3 &center{0.0f, 0.0f, 0.0f};
+    const glm::vec3 eye{2.0f, 2.0f, 4.0f};
+    const glm::vec3 center{0.0f, 0.0f, 0.0f};
     float fov = glm::radians(45.0f);
     float n = 0.1f;
     float f = 1000.0f;
@@ -29,7 +29,7 @@ struct DATA {
     glm::mat4 view = glm::mat4(1.0f);  // view matrix created from glm::lookAt
 };
 
-class Base : public Object3d, public Buffer::DataItem<DATA>, public Uniform::Base {
+class Base : public Object3d, public Uniform::Base, public Buffer::DataItem<DATA> {
    public:
     Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo);
 

@@ -15,7 +15,7 @@
 namespace Shader {
 
 // directory of shader files relative to the root of the repo
-const std::string BASE_DIRNAME = "Guppy\\src\\shaders\\";
+const std::string BASE_DIRNAME = "Guppy/src/shaders/";
 
 // **********************
 //      Base
@@ -23,16 +23,7 @@ const std::string BASE_DIRNAME = "Guppy\\src\\shaders\\";
 
 class Base : public Handlee<Shader::Handler> {
    public:
-    Base(Shader::Handler &handler, const SHADER &&type, const std::string &fileName, const VkShaderStageFlagBits &&stage,
-         const std::string &&name, const std::set<SHADER_LINK> &&linkTypes = {})
-        : Handlee(handler),
-          TYPE(type),
-          FILE_NAME(fileName),
-          STAGE(stage),
-          NAME(name),
-          LINK_TYPES(linkTypes),
-          info(),
-          module(VK_NULL_HANDLE){};
+    virtual ~Base() = default;
 
     const SHADER TYPE;
     const std::string FILE_NAME;
@@ -50,6 +41,17 @@ class Base : public Handlee<Shader::Handler> {
     VkShaderModule module;
 
    protected:
+    Base(Shader::Handler &handler, const SHADER &&type, const std::string &fileName, const VkShaderStageFlagBits &&stage,
+         const std::string &&name, const std::set<SHADER_LINK> &&linkTypes = {})
+        : Handlee(handler),
+          TYPE(type),
+          FILE_NAME(fileName),
+          STAGE(stage),
+          NAME(name),
+          LINK_TYPES(linkTypes),
+          info(),
+          module(VK_NULL_HANDLE){};
+
     std::string text_;
 };
 

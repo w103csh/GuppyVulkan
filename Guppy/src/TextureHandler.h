@@ -17,7 +17,7 @@ class Handler : public Game::Handler {
     Handler(Game* pGame);
 
     void init() override;
-    inline void destroy() { reset(); }
+    inline void destroy() override { reset(); }
 
     void addTexture(std::string path, std::string normPath = "", std::string specPath = "");
     const std::shared_ptr<Texture::DATA> getTextureByPath(std::string path) const;

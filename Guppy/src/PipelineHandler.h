@@ -8,24 +8,14 @@
 
 #include "Game.h"
 #include "Material.h"
+#include "Mesh.h"
 #include "Pipeline.h"
+#include "PipelineReference.h"
 #include "Shader.h"
 #include "Vertex.h"
 
-// clang-format off
-namespace Mesh { class Base; }
-// clang-format on
-
 namespace Pipeline {
-
-struct Reference {
-    VkPipelineBindPoint bindPoint;
-    VkPipelineLayout layout;
-    VkPipeline pipeline;
-    VkShaderStageFlags pushConstantStages;
-    std::list<PUSH_CONSTANT> pushConstantTypes;
-};
-
+    
 struct CreateInfoResources {
     // BLENDING
     VkPipelineColorBlendAttachmentState blendAttach = {};
@@ -55,7 +45,7 @@ class Handler : public Game::Handler {
     Handler(Game *pGame);
 
     void init() override;
-    inline void destroy() {
+    inline void destroy() override {
         reset();
         cleanup();
     }

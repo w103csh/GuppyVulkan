@@ -34,6 +34,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         add_definitions(-DVK_USE_PLATFORM_MIR_KHR)
         include_directories(${MIR_INCLUDE_DIR})
     endif()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    add_definitions(-DVK_USE_PLATFORM_MACOS_MVK)
 else()
     message(FATAL_ERROR "Unsupported Platform!")
 endif()
@@ -202,7 +204,7 @@ endif()
 
 set (LIBGLM_INCLUDE_DIR ${V_LVL_RELATIVE_LOCATION}/libs)
 
-if(NOT WIN32 AND NOT ANDROID)
+if(NOT WIN32 AND NOT ANDROID AND NOT APPLE)
     if(SDK_INCLUDE_PATH)
         include_directories(${SDK_INCLUDE_PATH})
     endif()
@@ -227,7 +229,7 @@ if(WIN32)
         # This removes warning if building the GLFW DEBUG_UI version
         set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /NODEFAULTLIB:MSVCRT")
     endif()
-
+    
 else()
     set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-sign-compare")

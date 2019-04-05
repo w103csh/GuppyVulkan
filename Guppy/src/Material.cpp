@@ -12,9 +12,9 @@ Material::Base::Base(const MATERIAL &&type, Material::CreateInfo *pCreateInfo)  
 }
 
 Material::Default::Base::Base(const Buffer::Info &&info, Default::DATA *pData, Default::CreateInfo *pCreateInfo)
-    : Material::Base(MATERIAL::DEFAULT, pCreateInfo),       //
-      Buffer::DataItem<Default::DATA>(pData),               //
-      Buffer::Item(std::forward<const Buffer::Info>(info))  //
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
+      Buffer::DataItem<Default::DATA>(pData),                //
+      Material::Base(MATERIAL::DEFAULT, pCreateInfo)         //
 {
     pData_->color = pCreateInfo->color;
     pData_->flags = pCreateInfo->flags;

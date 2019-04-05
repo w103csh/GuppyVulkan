@@ -1,6 +1,7 @@
 #ifndef DESCRIPTOR_HANDLER_H
 #define DESCRIPTOR_HANDLER_H
 
+#include <list>
 #include <map>
 #include <set>
 #include <vulkan/vulkan.h>
@@ -8,6 +9,7 @@
 #include "Game.h"
 #include "Helpers.h"
 #include "DescriptorSet.h"
+#include "DescriptorReference.h"
 #include "ShaderHandler.h"
 
 // clang-format off
@@ -18,12 +20,6 @@ namespace Shader    { class Base; }
 
 namespace Descriptor {
 
-struct Reference {
-    uint32_t firstSet;
-    std::vector<std::vector<VkDescriptorSet>> descriptorSets;
-    std::vector<uint32_t> dynamicOffsets;
-};
-
 // **********************
 //      Handler
 // **********************
@@ -31,7 +27,7 @@ struct Reference {
 class Handler : public Game::Handler {
    public:
     Handler(Game* pGame);
-
+    
     void init() override;
 
     // POOL

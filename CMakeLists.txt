@@ -1,7 +1,13 @@
 # The name of our project is "GuppyVulkan". CMakeLists files in this project can
 # refer to the root source directory of the project as ${GUPPY_SOURCE_DIR} and
 # to the root binary directory of the project as ${GUPPY_BINARY_DIR}.
-cmake_minimum_required(VERSION 2.8.11)
+if (APPLE)
+    cmake_minimum_required(VERSION 3.13.4)
+    set(CMAKE_XCODE_GENERATE_SCHEME TRUE)
+else()
+    cmake_minimum_required(VERSION 2.8.11)
+endif()
+
 project (GuppyVulkan)
 # set (CMAKE_VERBOSE_MAKEFILE 1)
 
@@ -11,17 +17,20 @@ project (GuppyVulkan)
 set(API_NAME "Vulkan" CACHE STRING "API name to use when building")
 set(MAJOR "1")
 string(TOLOWER ${API_NAME} API_LOWERCASE)
+
 set(VULKAN_HEADERS_INSTALL_DIR "HEADERS-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Headers install directory")
-set(VULKAN_LOADER_INSTALL_DIR "LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
 set(GLM_LIB_DIR "GLM-NOTFOUND" CACHE PATH "Absolute path to a GLM library directory")
 set(GLFW_INCLUDE_DIR "GLFW-INCLUDE-NOTFOUND" CACHE PATH "Absolute path to a GLFW include directory")
-set(GLFW_LIB_DIR "GLFW-LIB-NOTFOUND" CACHE PATH "Absolute path to a GLFW library directory")
+set(GLFW_LIB "GLFW-LIB-NOTFOUND" CACHE PATH "Absolute path to a GLFW library directory")
+if(NOT APPLE)
+    set(VULKAN_LOADER_INSTALL_DIR "LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
+endif()
+
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};${VULKAN_HEADERS_INSTALL_DIR};${VULKAN_LOADER_INSTALL_DIR};${GLM_INSTALL_DIR};
                        $ENV{VULKAN_HEADERS_INSTALL_DIR};$ENV{VULKAN_LOADER_INSTALL_DIR};$ENV{GLM_INSTALL_DIR})
-
                        
 set(EXT_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs")
-  
+
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 find_package(PythonInterp 3 REQUIRED)
 message(STATUS "Using find_package to locate Vulkan")
@@ -96,7 +105,7 @@ if(WIN32)
     add_compile_options("$<$<CXX_COMPILER_ID:MSVC>:/w34245>")
 endif()
 
-if(NOT WIN32)
+if(NOT WIN32 AND NOT APPLE)
     set (BUILDTGT_DIR build)
     set (BINDATA_DIR Bin)
     set (LIBSOURCE_DIR Lib)
@@ -164,7 +173,7 @@ if (WIN32)
         set (SPIRV_TOOLS_OPT_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/opt/${RELEASE_DECORATION}")
         set (SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${EXTERNAL_SOURCE_ROOT}/glslang/${BUILDTGT_DIR}/External/spirv-tools/source/opt/${DEBUG_DECORATION}")
     endif()
-else()
+else(NOT APPLE)
     # not WIN32
     if(CUSTOM_GLSLANG_BIN_ROOT)
         set (GLSLANG_SEARCH_PATH "${GLSLANG_BINARY_ROOT}/install/lib"
@@ -206,39 +215,6 @@ if (CMAKE_COMPILER_IS_GNUCC OR CMAKE_C_COMPILER_ID MATCHES "Clang")
     endif()
 endif()
 
-############# GLSLANG
-set(GLSLANG_INSTALL_DIR "GLSLANG-NOTFOUND" CACHE PATH "Absolute path to a glslang install directory")
-if(NOT GLSLANG_INSTALL_DIR AND NOT DEFINED ENV{GLSLANG_INSTALL_DIR})
-    message(FATAL_ERROR "Must define location of glslang binaries -- see BUILD.md")
-endif()
-
-# Cmake command line option overrides environment variable
-if(NOT GLSLANG_INSTALL_DIR)
-    set(GLSLANG_INSTALL_DIR $ENV{GLSLANG_INSTALL_DIR})
-endif()
-
-############# VULKAN HEADER
-set(VULKAN_HEADERS_INSTALL_DIR "VULKAN-HEADERS-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Headers install directory")
-if(NOT VULKAN_HEADERS_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_HEADERS_INSTALL_DIR})
-    message(FATAL_ERROR "Must define location of vulkan headers -- see BUILD.md")
-endif()
-
-# Cmake command line option overrides environment variable
-if(NOT VULKAN_HEADERS_INSTALL_DIR)
-    set(VULKAN_HEADERS_INSTALL_DIR $ENV{VULKAN_HEADERS_INSTALL_DIR})
-endif()
-
-############# VULKAN LOADER
-set(VULKAN_LOADER_INSTALL_DIR "VULKAN-LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
-if(NOT VULKAN_LOADER_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_LOADER_INSTALL_DIR})
-    message(FATAL_ERROR "Must define location of vulkan loader -- see BUILD.md")
-endif()
-
-# Cmake command line option overrides environment variable
-if(NOT VULKAN_LOADER_INSTALL_DIR)
-    set(VULKAN_LOADER_INSTALL_DIR $ENV{VULKAN_LOADER_INSTALL_DIR})
-endif()
-
 ############# GLM
 set(GLM_LIB_DIR "GLM-NOTFOUND" CACHE PATH "Absolute path to a GLM install directory")
 if(NOT GLM_LIB_DIR AND NOT DEFINED ENV{GLM_LIB_DIR})
@@ -264,130 +240,188 @@ endif()
 message(STATUS "Using GLFW include directory located at ${GLFW_INCLUDE_DIR}")
 
 ############# GLFW LIB
-set(GLFW_LIB_DIR "GLFW-LIB-NOTFOUND" CACHE PATH "Absolute path to a GLFW library directory")
-if(NOT GLFW_LIB_DIR AND NOT DEFINED ENV{GLFW_LIB_DIR})
-    message(FATAL_ERROR "Must define location of glfw library directory -- see BUILD.md")
+set(GLFW_LIB "GLFW-LIB-NOTFOUND" CACHE PATH "Absolute path to a GLFW library file")
+if(NOT GLFW_LIB AND NOT DEFINED ENV{GLFW_LIB})
+    message(FATAL_ERROR "Must define location of glfw library file -- see BUILD.md")
 endif()
 
 # Cmake command line option overrides environment variable
-if(NOT GLFW_LIB_DIR)
-    set(GLFW_LIB_DIR $ENV{GLFW_LIB_DIR})
+if(NOT GLFW_LIB)
+    set(GLFW_LIB $ENV{GLFW_LIB})
 endif()
-message(STATUS "Using GLFW library located at ${GLFW_LIB_DIR}")
-set(GLFW_LIBRARIES "${GLFW_LIB_DIR}/glfw3.lib")
+message(STATUS "Using GLFW library located at ${GLFW_LIB}")
+set(GLFW_LIBRARIES ${GLFW_LIB})
 
-message(STATUS "Using glslang install located at ${GLSLANG_INSTALL_DIR}")
-set(SPIRV_TOOLS_BINARY_ROOT "${GLSLANG_INSTALL_DIR}/lib"
-    CACHE PATH "User defined path to the SPIRV-Tools binaries for this project")
-set(SPIRV_TOOLS_OPT_BINARY_ROOT "${GLSLANG_INSTALL_DIR}/lib"
-    CACHE PATH "User defined path to the SPIRV-Tools-opt binaries for this project")
-# set(GLSLANG_SPIRV_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/include" CACHE PATH "Path to glslang spirv headers")
-# set(SPIRV_TOOLS_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/include" CACHE PATH "Path to spirv tools headers")
-set(GLSLANG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
-set(GLSLANG_DEBUG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
-set(SPIRV_TOOLS_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
-set(SPIRV_TOOLS_DEBUG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
-set(SPIRV_TOOLS_OPT_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
-set(SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
 
-# message(STATUS "GLSLANG_SEARCH_PATH: ${GLSLANG_SEARCH_PATH}")
-# message(STATUS "GLSLANG_DEBUG_SEARCH_PATH: ${GLSLANG_DEBUG_SEARCH_PATH}")
-# message(STATUS "DEBUG_DECORATION: ${DEBUG_DECORATION}")
-# message(STATUS "RELEASE_DECORATION: ${RELEASE_DECORATION}")
+if(NOT APPLE)
+    ############# VULKAN HEADER
+    set(VULKAN_HEADERS_INSTALL_DIR "VULKAN-HEADERS-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Headers install directory")
+    if(NOT VULKAN_HEADERS_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_HEADERS_INSTALL_DIR})
+        message(FATAL_ERROR "Must define location of vulkan headers -- see BUILD.md")
+    endif()
 
-# set(GLSLANG_SPIRV_DINCLUDE_DIR "${GLSLANG_INSTALL_DIR}/${DEBUG_DECORATION}/include" CACHE PATH "Path to glslang spirv debug headers")
-set(GLSLANG_SPIRV_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/${RELEASE_DECORATION}/include" CACHE PATH "Path to glslang spirv headers")
+    # Cmake command line option overrides environment variable
+    if(NOT VULKAN_HEADERS_INSTALL_DIR)
+        set(VULKAN_HEADERS_INSTALL_DIR $ENV{VULKAN_HEADERS_INSTALL_DIR})
+    endif()
 
-# set(SPIRV_TOOLS_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/${DEBUG_DECORATION}/include" CACHE PATH "Path to spirv tools debug headers")
-set(SPIRV_TOOLS_DINCLUDE_DIR "${GLSLANG_INSTALL_DIR}/${RELEASE_DECORATION}/include" CACHE PATH "Path to spirv tools headers")
+    ############# GLSLANG
+    set(GLSLANG_INSTALL_DIR "GLSLANG-NOTFOUND" CACHE PATH "Absolute path to a glslang install directory")
+    if(NOT GLSLANG_INSTALL_DIR AND NOT DEFINED ENV{GLSLANG_INSTALL_DIR})
+        message(FATAL_ERROR "Must define location of glslang binaries -- see BUILD.md")
+    endif()
 
-set(GLSLANG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/${DEBUG_DECORATION}/lib")
-# message(STATUS "GLSLANG_SEARCH_PATH DEBUG: ${GLSLANG_SEARCH_PATH}")
+    # Cmake command line option overrides environment variable
+    if(NOT GLSLANG_INSTALL_DIR)
+        set(GLSLANG_INSTALL_DIR $ENV{GLSLANG_INSTALL_DIR})
+    endif()
 
-find_library(        GLSLANG_DLIB NAMES glslangd HINTS         ${GLSLANG_SEARCH_PATH})
-find_library(    OGLCompiler_DLIB NAMES OGLCompilerd HINTS     ${GLSLANG_SEARCH_PATH})
-find_library(    OSDependent_DLIB NAMES OSDependentd HINTS     ${GLSLANG_SEARCH_PATH})
-find_library(           HLSL_DLIB NAMES HLSLd HINTS            ${GLSLANG_SEARCH_PATH})
-find_library(          SPIRV_DLIB NAMES SPIRVd HINTS           ${GLSLANG_SEARCH_PATH})
-find_library( SPIRV_REMAPPER_DLIB NAMES SPVRemapperd HINTS     ${GLSLANG_SEARCH_PATH})
-find_library(    SPIRV_TOOLS_DLIB NAMES SPIRV-Toolsd HINTS     ${GLSLANG_SEARCH_PATH})
-find_library(SPIRV_TOOLS_OPT_DLIB NAMES SPIRV-Tools-optd HINTS ${GLSLANG_SEARCH_PATH})
+    ############# VULKAN LOADER
+    set(VULKAN_LOADER_INSTALL_DIR "VULKAN-LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
+    if(NOT VULKAN_LOADER_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_LOADER_INSTALL_DIR})
+        message(FATAL_ERROR "Must define location of vulkan loader -- see BUILD.md")
+    endif()
 
-set(GLSLANG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/${RELEASE_DECORATION}/lib")
-# message(STATUS "GLSLANG_SEARCH_PATH RELEASE: ${GLSLANG_SEARCH_PATH}")
+    # Cmake command line option overrides environment variable
+    if(NOT VULKAN_LOADER_INSTALL_DIR)
+        set(VULKAN_LOADER_INSTALL_DIR $ENV{VULKAN_LOADER_INSTALL_DIR})
+    endif()
 
-find_library(        GLSLANG_LIB NAMES glslang HINTS         ${GLSLANG_SEARCH_PATH})
-find_library(    OGLCompiler_LIB NAMES OGLCompiler HINTS     ${GLSLANG_SEARCH_PATH})
-find_library(    OSDependent_LIB NAMES OSDependent HINTS     ${GLSLANG_SEARCH_PATH})
-find_library(           HLSL_LIB NAMES HLSL HINTS            ${GLSLANG_SEARCH_PATH})
-find_library(          SPIRV_LIB NAMES SPIRV HINTS           ${GLSLANG_SEARCH_PATH})
-find_library( SPIRV_REMAPPER_LIB NAMES SPVRemapper HINTS     ${GLSLANG_SEARCH_PATH})
-find_library(    SPIRV_TOOLS_LIB NAMES SPIRV-Tools HINTS     ${GLSLANG_SEARCH_PATH})
-find_library(SPIRV_TOOLS_OPT_LIB NAMES SPIRV-Tools-opt HINTS ${GLSLANG_SEARCH_PATH})
+    message(STATUS "Using glslang install located at ${GLSLANG_INSTALL_DIR}")
+    set(SPIRV_TOOLS_BINARY_ROOT "${GLSLANG_INSTALL_DIR}/lib"
+        CACHE PATH "User defined path to the SPIRV-Tools binaries for this project")
+    set(SPIRV_TOOLS_OPT_BINARY_ROOT "${GLSLANG_INSTALL_DIR}/lib"
+        CACHE PATH "User defined path to the SPIRV-Tools-opt binaries for this project")
+    # set(GLSLANG_SPIRV_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/include" CACHE PATH "Path to glslang spirv headers")
+    # set(SPIRV_TOOLS_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/include" CACHE PATH "Path to spirv tools headers")
+    set(GLSLANG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
+    set(GLSLANG_DEBUG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
+    set(SPIRV_TOOLS_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
+    set(SPIRV_TOOLS_DEBUG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
+    set(SPIRV_TOOLS_OPT_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
+    set(SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/lib")
 
-# message(STATUS "GLSLANG_DLIB: ${GLSLANG_DLIB}")
-# message(STATUS "GLSLANG_LIB: ${GLSLANG_LIB}")
+    # message(STATUS "GLSLANG_SEARCH_PATH: ${GLSLANG_SEARCH_PATH}")
+    # message(STATUS "GLSLANG_DEBUG_SEARCH_PATH: ${GLSLANG_DEBUG_SEARCH_PATH}")
+    # message(STATUS "DEBUG_DECORATION: ${DEBUG_DECORATION}")
+    # message(STATUS "RELEASE_DECORATION: ${RELEASE_DECORATION}")
 
-if(WIN32)
-    add_library(glslang STATIC IMPORTED)
-    add_library(OGLCompiler STATIC IMPORTED)
-    add_library(OSDependent STATIC IMPORTED)
-    add_library(HLSL STATIC IMPORTED)
-    add_library(SPIRV STATIC IMPORTED)
-    add_library(SPVRemapper STATIC IMPORTED)
-    add_library(Loader STATIC IMPORTED)
-    add_library(SPIRV-Tools-opt STATIC IMPORTED)
-    add_library(SPIRV-Tools STATIC IMPORTED)
+    # set(GLSLANG_SPIRV_DINCLUDE_DIR "${GLSLANG_INSTALL_DIR}/${DEBUG_DECORATION}/include" CACHE PATH "Path to glslang spirv debug headers")
+    set(GLSLANG_SPIRV_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/${RELEASE_DECORATION}/include" CACHE PATH "Path to glslang spirv headers")
 
-    find_library(GLSLANG_DLIB NAMES glslangd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
-    find_library(OGLCompiler_DLIB NAMES OGLCompilerd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
-    find_library(OSDependent_DLIB NAMES OSDependentd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
-    find_library(HLSL_DLIB NAMES HLSLd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
-    find_library(SPIRV_DLIB NAMES SPIRVd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
-    find_library(SPIRV_REMAPPER_DLIB NAMES SPVRemapperd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
-    find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Toolsd HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH})
-    find_library(SPIRV_TOOLS_OPT_DLIB NAMES SPIRV-Tools-optd HINTS ${SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH})
-    set_target_properties(glslang PROPERTIES IMPORTED_LOCATION "${GLSLANG_LIB}" IMPORTED_LOCATION_DEBUG "${GLSLANG_DLIB}")
-    # set_target_properties(glslang PROPERTIES MAP_IMPORTED_CONFIG_RELWITHDEBINFO DEBUG) # NEED TO MAP ALL TO RELWITHDEBINFO BECAUSE DEBUG BUILD WAS FAILING TO GENERATE SPIR-V IN HELPER "GLSLtoSPV()"
-    # AND OF COURSE IT DOESN'T WORK
-    set_target_properties(
-        OGLCompiler PROPERTIES IMPORTED_LOCATION "${OGLCompiler_LIB}" IMPORTED_LOCATION_DEBUG "${OGLCompiler_DLIB}")
-    set_target_properties(
-        OSDependent PROPERTIES IMPORTED_LOCATION "${OSDependent_LIB}" IMPORTED_LOCATION_DEBUG "${OSDependent_DLIB}")
-    set_target_properties(HLSL PROPERTIES IMPORTED_LOCATION "${HLSL_LIB}" IMPORTED_LOCATION_DEBUG "${HLSL_DLIB}")
-    set_target_properties(SPIRV PROPERTIES IMPORTED_LOCATION "${SPIRV_LIB}" IMPORTED_LOCATION_DEBUG "${SPIRV_DLIB}")
-    set_target_properties(
-        SPVRemapper PROPERTIES IMPORTED_LOCATION "${SPIRV_REMAPPER_LIB}" IMPORTED_LOCATION_DEBUG "${SPIRV_REMAPPER_DLIB}")
-    set_target_properties(
-        SPIRV-Tools PROPERTIES IMPORTED_LOCATION "${SPIRV_TOOLS_LIB}" IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_DLIB}")
-    set_target_properties(
-        SPIRV-Tools-opt PROPERTIES IMPORTED_LOCATION "${SPIRV_TOOLS_OPT_LIB}" IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_OPT_DLIB}")
-endif()
+    # set(SPIRV_TOOLS_INCLUDE_DIR "${GLSLANG_INSTALL_DIR}/${DEBUG_DECORATION}/include" CACHE PATH "Path to spirv tools debug headers")
+    set(SPIRV_TOOLS_DINCLUDE_DIR "${GLSLANG_INSTALL_DIR}/${RELEASE_DECORATION}/include" CACHE PATH "Path to spirv tools headers")
 
-if(WIN32)
-    set(SPIRV_TOOLS_LIBRARIES
-        SPIRV-Tools-opt
-        SPIRV-Tools
-        )
-    set(GLSLANG_LIBRARIES
-        glslang
-        OGLCompiler
-        OSDependent
-        HLSL SPIRV
-        SPVRemapper
-        ${SPIRV_TOOLS_LIBRARIES}
-        )
+    set(GLSLANG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/${DEBUG_DECORATION}/lib")
+    # message(STATUS "GLSLANG_SEARCH_PATH DEBUG: ${GLSLANG_SEARCH_PATH}")
+
+    find_library(        GLSLANG_DLIB NAMES glslangd HINTS         ${GLSLANG_SEARCH_PATH})
+    find_library(    OGLCompiler_DLIB NAMES OGLCompilerd HINTS     ${GLSLANG_SEARCH_PATH})
+    find_library(    OSDependent_DLIB NAMES OSDependentd HINTS     ${GLSLANG_SEARCH_PATH})
+    find_library(           HLSL_DLIB NAMES HLSLd HINTS            ${GLSLANG_SEARCH_PATH})
+    find_library(          SPIRV_DLIB NAMES SPIRVd HINTS           ${GLSLANG_SEARCH_PATH})
+    find_library( SPIRV_REMAPPER_DLIB NAMES SPVRemapperd HINTS     ${GLSLANG_SEARCH_PATH})
+    find_library(    SPIRV_TOOLS_DLIB NAMES SPIRV-Toolsd HINTS     ${GLSLANG_SEARCH_PATH})
+    find_library(SPIRV_TOOLS_OPT_DLIB NAMES SPIRV-Tools-optd HINTS ${GLSLANG_SEARCH_PATH})
+
+    set(GLSLANG_SEARCH_PATH "${GLSLANG_INSTALL_DIR}/${RELEASE_DECORATION}/lib")
+    # message(STATUS "GLSLANG_SEARCH_PATH RELEASE: ${GLSLANG_SEARCH_PATH}")
+
+    find_library(        GLSLANG_LIB NAMES glslang HINTS         ${GLSLANG_SEARCH_PATH})
+    find_library(    OGLCompiler_LIB NAMES OGLCompiler HINTS     ${GLSLANG_SEARCH_PATH})
+    find_library(    OSDependent_LIB NAMES OSDependent HINTS     ${GLSLANG_SEARCH_PATH})
+    find_library(           HLSL_LIB NAMES HLSL HINTS            ${GLSLANG_SEARCH_PATH})
+    find_library(          SPIRV_LIB NAMES SPIRV HINTS           ${GLSLANG_SEARCH_PATH})
+    find_library( SPIRV_REMAPPER_LIB NAMES SPVRemapper HINTS     ${GLSLANG_SEARCH_PATH})
+    find_library(    SPIRV_TOOLS_LIB NAMES SPIRV-Tools HINTS     ${GLSLANG_SEARCH_PATH})
+    find_library(SPIRV_TOOLS_OPT_LIB NAMES SPIRV-Tools-opt HINTS ${GLSLANG_SEARCH_PATH})
+
+    # message(STATUS "GLSLANG_DLIB: ${GLSLANG_DLIB}")
+    # message(STATUS "GLSLANG_LIB: ${GLSLANG_LIB}")
+
+    if(WIN32)
+        add_library(glslang STATIC IMPORTED)
+        add_library(OGLCompiler STATIC IMPORTED)
+        add_library(OSDependent STATIC IMPORTED)
+        add_library(HLSL STATIC IMPORTED)
+        add_library(SPIRV STATIC IMPORTED)
+        add_library(SPVRemapper STATIC IMPORTED)
+        add_library(Loader STATIC IMPORTED)
+        add_library(SPIRV-Tools-opt STATIC IMPORTED)
+        add_library(SPIRV-Tools STATIC IMPORTED)
+
+        find_library(GLSLANG_DLIB NAMES glslangd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
+        find_library(OGLCompiler_DLIB NAMES OGLCompilerd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
+        find_library(OSDependent_DLIB NAMES OSDependentd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
+        find_library(HLSL_DLIB NAMES HLSLd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
+        find_library(SPIRV_DLIB NAMES SPIRVd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
+        find_library(SPIRV_REMAPPER_DLIB NAMES SPVRemapperd HINTS ${GLSLANG_DEBUG_SEARCH_PATH})
+        find_library(SPIRV_TOOLS_DLIB NAMES SPIRV-Toolsd HINTS ${SPIRV_TOOLS_DEBUG_SEARCH_PATH})
+        find_library(SPIRV_TOOLS_OPT_DLIB NAMES SPIRV-Tools-optd HINTS ${SPIRV_TOOLS_OPT_DEBUG_SEARCH_PATH})
+        set_target_properties(glslang PROPERTIES IMPORTED_LOCATION "${GLSLANG_LIB}" IMPORTED_LOCATION_DEBUG "${GLSLANG_DLIB}")
+        # set_target_properties(glslang PROPERTIES MAP_IMPORTED_CONFIG_RELWITHDEBINFO DEBUG) # NEED TO MAP ALL TO RELWITHDEBINFO BECAUSE DEBUG BUILD WAS FAILING TO GENERATE SPIR-V IN HELPER "GLSLtoSPV()"
+        # AND OF COURSE IT DOESN'T WORK
+        set_target_properties(
+            OGLCompiler PROPERTIES IMPORTED_LOCATION "${OGLCompiler_LIB}" IMPORTED_LOCATION_DEBUG "${OGLCompiler_DLIB}")
+        set_target_properties(
+            OSDependent PROPERTIES IMPORTED_LOCATION "${OSDependent_LIB}" IMPORTED_LOCATION_DEBUG "${OSDependent_DLIB}")
+        set_target_properties(HLSL PROPERTIES IMPORTED_LOCATION "${HLSL_LIB}" IMPORTED_LOCATION_DEBUG "${HLSL_DLIB}")
+        set_target_properties(SPIRV PROPERTIES IMPORTED_LOCATION "${SPIRV_LIB}" IMPORTED_LOCATION_DEBUG "${SPIRV_DLIB}")
+        set_target_properties(
+            SPVRemapper PROPERTIES IMPORTED_LOCATION "${SPIRV_REMAPPER_LIB}" IMPORTED_LOCATION_DEBUG "${SPIRV_REMAPPER_DLIB}")
+        set_target_properties(
+            SPIRV-Tools PROPERTIES IMPORTED_LOCATION "${SPIRV_TOOLS_LIB}" IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_DLIB}")
+        set_target_properties(
+            SPIRV-Tools-opt PROPERTIES IMPORTED_LOCATION "${SPIRV_TOOLS_OPT_LIB}" IMPORTED_LOCATION_DEBUG "${SPIRV_TOOLS_OPT_DLIB}")
+    endif()
+
+    if(WIN32)
+        set(SPIRV_TOOLS_LIBRARIES
+            SPIRV-Tools-opt
+            SPIRV-Tools
+            )
+        set(GLSLANG_LIBRARIES
+            glslang
+            OGLCompiler
+            OSDependent
+            HLSL SPIRV
+            SPVRemapper
+            ${SPIRV_TOOLS_LIBRARIES}
+            )
+    else()
+        set(SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_OPT_LIB} ${SPIRV_TOOLS_LIB})
+        set(GLSLANG_LIBRARIES
+            ${GLSLANG_LIB}
+            ${OGLCompiler_LIB}
+            ${OSDependent_LIB}
+            ${HLSL_LIB}
+            ${SPIRV_LIB}
+            ${SPIRV_REMAPPER_LIB}
+            ${SPIRV_TOOLS_LIBRARIES}
+            )
+    endif()
 else()
-    set(SPIRV_TOOLS_LIBRARIES ${SPIRV_TOOLS_OPT_LIB} ${SPIRV_TOOLS_LIB})
-    set(GLSLANG_LIBRARIES
-        ${GLSLANG_LIB}
-        ${OGLCompiler_LIB}
-        ${OSDependent_LIB}
-        ${HLSL_LIB}
-        ${SPIRV_LIB}
-        ${SPIRV_REMAPPER_LIB}
-        ${SPIRV_TOOLS_LIBRARIES}
-        )
+    ############# MOLTEN VK
+    set(MVK_PACKAGE_DIR "MVK-PACKAGE-NOTFOUND" CACHE PATH "Absolute path to a MoltenVK Package directory")
+    if(NOT MVK_PACKAGE_DIR AND NOT DEFINED ENV{MVK_PACKAGE_DIR})
+        message(FATAL_ERROR "Must define location of MoltenVK Package directory -- see BUILD.md")
+    endif()
+
+    # Cmake command line option overrides environment variable
+    if(NOT MVK_PACKAGE_DIR)
+        set(MVK_PACKAGE_DIR $ENV{MVK_PACKAGE_DIR})
+    endif()
+
+    # These are validated in the buildMac.py script.
+    # ############# VULKAN LAYER PATH
+    # if(NOT $ENV{VK_LAYER_PATH})
+    #     message(FATAL_ERROR "Must set enivronmental variable \"VK_LAYER_PATH\" -- see BUILD.md")
+    # endif()
+
+    # ############# VULKAN LOADER ICD
+    # if(NOT $ENV{VK_ICD_FILENAMES})
+    #     message(FATAL_ERROR "Must set enivronmental variable \"VK_ICD_FILENAMES\" -- see BUILD.md")
+    # endif()
 endif()
 
 set (PYTHON_CMD ${PYTHON_EXECUTABLE})

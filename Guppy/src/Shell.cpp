@@ -31,9 +31,9 @@
 Shell::Shell(Game &game)
     : game_(game),
       settings_(game.settings()),
+      ctx_(),
       game_tick_(1.0f / settings_.ticks_per_second),
-      game_time_(game_tick_),
-      ctx_() {
+      game_time_(game_tick_) {
     // require generic WSI extensions
     instance_extensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     device_extensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -557,9 +557,11 @@ void Shell::init_dev_queues() {
         ctx_.present_index,
         ctx_.transfer_index,
     };
-    ctx_.queues.resize(unique_queue_families.size());
-    for (size_t i = 0; i < unique_queue_families.size(); i++) {
-        vkGetDeviceQueue(ctx_.dev, i, 0, &ctx_.queues[i]);
+    for (auto queue_family_index : unique_queue_families) {
+        VkQueue queue = VK_NULL_HANDLE;
+        vkGetDeviceQueue(ctx_.dev, queue_family_index, 0, &queue);
+        assert(queue != VK_NULL_HANDLE);
+        ctx_.queues[queue_family_index] = queue;
     }
 }
 
@@ -675,7 +677,7 @@ void Shell::enumerate_physical_devs(uint32_t physical_dev_count) {
     uint32_t const req_count = physical_dev_count;
 
     VkResult res = vkEnumeratePhysicalDevices(ctx_.instance, &physical_dev_count, NULL);
-    assert(physical_dev_count >= req_count);
+    assert(res == VK_SUCCESS && physical_dev_count >= req_count);
     devs.resize(physical_dev_count);
 
     vk::assert_success(vkEnumeratePhysicalDevices(ctx_.instance, &physical_dev_count, devs.data()));
@@ -805,7 +807,8 @@ bool Shell::determine_queue_families_support(const PhysicalDeviceProperties &pro
 }
 
 bool Shell::determine_device_extension_support(const PhysicalDeviceProperties &props) {
-    // TODO: This won't work right if either list is not unique, but I don't feel like chaing it atm.
+    if (device_extensions_.empty()) return true;
+    // TODO: This won't work right if either list is not unique, but I don't feel like changing it atm.
     size_t count = 0;
     size_t req_ext_count = device_extensions_.size();
     for (const auto &extension : props.extensions) {
@@ -951,13 +954,12 @@ void Shell::determine_api_version(uint32_t &version) {
     std::string using_version_string = "";
 
     // Set the desired version we want
-    uint16_t desired_major_version = 1;
-    uint16_t desired_minor_version = 1;
-    uint32_t desired_version = VK_MAKE_VERSION(desired_major_version, desired_minor_version, 0);
-    std::string desired_version_string = "";
-    desired_version_string += std::to_string(desired_major_version);
-    desired_version_string += ".";
-    desired_version_string += std::to_string(desired_minor_version);
+    uint32_t desired_version = getDesiredVersion();
+    uint16_t desired_major_version = VK_VERSION_MAJOR(desired_version);
+    uint16_t desired_minor_version = VK_VERSION_MINOR(desired_version);
+    std::string desired_version_string =
+        std::to_string(desired_major_version) + "." + std::to_string(desired_minor_version);
+
     VkInstance instance = VK_NULL_HANDLE;
     std::vector<VkPhysicalDevice> physical_devices_desired;
 

@@ -28,32 +28,21 @@ const auto UNIFORM_MAX_COUNT = UINT8_MAX;
 //      Manager
 // **********************
 
+template <class TBase>
+using ItemPointer = std::unique_ptr<TBase>;
+
 // TODO: inner class of Handler?
 template <class TDerived>
-class Manager : public Buffer::Manager::Descriptor<Uniform::Base, TDerived> {
+class Manager : public Buffer::Manager::Descriptor<Uniform::Base, TDerived, ItemPointer> {
    public:
     Manager(const std::string&& name, const DESCRIPTOR&& descriptorType, const UNIFORM_INDEX&& maxSize,
             const std::string&& macroName)
-        : Buffer::Manager::Descriptor<Uniform::Base, TDerived>{
-              std::forward<const std::string>(name),
-              std::forward<const DESCRIPTOR>(descriptorType),
-              std::forward<const UNIFORM_INDEX>(maxSize),
-              true,
-              VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+        : Buffer::Manager::Descriptor<Uniform::Base, TDerived, ItemPointer>{
+              std::forward<const std::string>(name), std::forward<const DESCRIPTOR>(descriptorType),
+              std::forward<const UNIFORM_INDEX>(maxSize), true, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
               static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-              std::forward<const std::string>(macroName),
-              VK_SHARING_MODE_EXCLUSIVE,
-              0} {}
-
-    void init(const Shell::Context& ctx, const Game::Settings& settings,
-              std::vector<uint32_t> queueFamilyIndices = {}) override {
-        const auto& limits = ctx.physical_dev_props[ctx.physical_dev_index].properties.limits;
-        assert(sizeof TDerived::DATA % limits.minUniformBufferOffsetAlignment == 0);
-        // size = (size + limits.minUniformBufferOffsetAlignment - 1) & ~(limits.minUniformBufferOffsetAlignment - 1);
-        Buffer::Manager::Base<Uniform::Base, TDerived>::init(ctx, settings,
-                                                             std::forward<std::vector<uint32_t>>(queueFamilyIndices));
-    }
+              std::forward<const std::string>(macroName), VK_SHARING_MODE_EXCLUSIVE, 0} {}
 };
 
 // **********************
@@ -61,6 +50,25 @@ class Manager : public Buffer::Manager::Descriptor<Uniform::Base, TDerived> {
 // **********************
 
 class Handler : public Game::Handler {
+   private:
+    inline auto& getUniforms(const DESCRIPTOR& type) {
+        switch (type) {
+                case DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT:
+                return camDefPersMgr().pItems;
+                case DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT:
+                return lgtDefPosMgr().pItems;
+                case DESCRIPTOR::LIGHT_POSITIONAL_PBR:
+                return lgtPbrPosMgr().pItems;
+                case DESCRIPTOR::LIGHT_SPOT_DEFAULT:
+                return lgtDefSptMgr().pItems;
+                case DESCRIPTOR::FOG_DEFAULT:
+                return uniDefFogMgr().pItems;
+            default:
+                assert(false);
+                throw std::runtime_error("Unhandled uniform type");
+        }
+    }
+
    public:
     Handler(Game* pGame);
 
@@ -100,24 +108,6 @@ class Handler : public Game::Handler {
 
     std::set<uint32_t> getBindingOffsets(const Descriptor::bindingMapValue& value);
 
-    inline auto& getUniforms(const DESCRIPTOR& type) {
-        switch (type) {
-            case DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT:
-                return camDefPersMgr().pItems;
-            case DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT:
-                return lgtDefPosMgr().pItems;
-            case DESCRIPTOR::LIGHT_POSITIONAL_PBR:
-                return lgtPbrPosMgr().pItems;
-            case DESCRIPTOR::LIGHT_SPOT_DEFAULT:
-                return lgtDefSptMgr().pItems;
-            case DESCRIPTOR::FOG_DEFAULT:
-                return uniDefFogMgr().pItems;
-            default:
-                assert(false);
-                throw std::runtime_error("Unhandled uniform type");
-        }
-    }
-
     // clang-format off
     inline Uniform::Manager<Camera::Default::Perspective::Base>& camDefPersMgr() { return std::get<Uniform::Manager<Camera::Default::Perspective::Base>>(managers_[0]);};
     inline Uniform::Manager<Light::Default::Positional::Base>& lgtDefPosMgr() { return std::get<Uniform::Manager<Light::Default::Positional::Base>>(managers_[1]);};
@@ -125,7 +115,7 @@ class Handler : public Game::Handler {
     inline Uniform::Manager<Light::Default::Spot::Base>& lgtDefSptMgr() { return std::get<Uniform::Manager<Light::Default::Spot::Base>>(managers_[3]);};
     inline Uniform::Manager<Uniform::Default::Fog::Base>& uniDefFogMgr() { return std::get<Uniform::Manager<Uniform::Default::Fog::Base>>(managers_[4]);};
 
-    template <class T> inline Uniform::Manager<T>& getManager() { static_assert(false, "Not implemented"); }
+    template <class T> inline Uniform::Manager<T>& getManager() { /*static_assert(false, "Not implemented");*/ }
     template <> inline Uniform::Manager<Camera::Default::Perspective::Base>& getManager() { return camDefPersMgr(); }
     template <> inline Uniform::Manager<Light::Default::Positional::Base>& getManager() { return lgtDefPosMgr(); }
     template <> inline Uniform::Manager<Light::PBR::Positional::Base>& getManager() { return lgtPbrPosMgr(); }

@@ -80,7 +80,7 @@ class Shell {
         std::vector<PhysicalDeviceProperties> physical_dev_props;  // *
         uint32_t physical_dev_index = 0;                           // *
         VkPhysicalDeviceMemoryProperties mem_props = {};           // *
-        std::vector<VkQueue> queues;                               // *
+        std::map<uint32_t, VkQueue> queues;                               // *
         uint32_t graphics_index = 0;                               // *
         uint32_t present_index = 0;                                // *
         uint32_t transfer_index = 0;                               // *
@@ -139,12 +139,13 @@ class Shell {
    protected:
     Shell(Game &game);
 
+    virtual uint32_t getDesiredVersion() { return VK_MAKE_VERSION(1, 1, 0); }
     virtual void setPlatformSpecificExtensions() = 0;
     void init_vk();
     void cleanup_vk();
 
     void create_context();
-    void destroy_context();
+    virtual void destroy_context();
 
     void addGameTime(float time);
 
@@ -232,7 +233,7 @@ class Shell {
     void determine_swapchain_image_count();     // *
 
     // called by resizeSwapchain
-    bool Shell::determine_swapchain_extent(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities);  // *
+    bool determine_swapchain_extent(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities);  // *
 
     // called by cleanup_vk
     void destroy_instance();  // *

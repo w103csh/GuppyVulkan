@@ -6,8 +6,8 @@
 // **********************
 
 Light::Default::Positional::Base::Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo)
-    : Light::Base<DATA>(pData, pCreateInfo),  //,
-      Buffer::Item(std::forward<const Buffer::Info>(info)),
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
+      Light::Base<DATA>(pData, pCreateInfo),
       position(getWorldSpacePosition()) {}
 
 void Light::Default::Positional::Base::update(glm::vec3 &&position) {
@@ -20,8 +20,8 @@ void Light::Default::Positional::Base::update(glm::vec3 &&position) {
 // **********************
 
 Light::Default::Spot::Base::Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo)  //
-    : Light::Base<DATA>(pData, pCreateInfo),                                                       //
-      Buffer::Item(std::forward<const Buffer::Info>(info)),
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),
+      Light::Base<DATA>(pData, pCreateInfo),
       direction(getWorldSpaceDirection()),
       position(getWorldSpacePosition()) {
     pData_->cutoff = pCreateInfo->cutoff;

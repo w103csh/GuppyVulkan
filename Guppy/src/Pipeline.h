@@ -26,6 +26,8 @@ class Base : public Handlee<Pipeline::Handler> {
     friend class Handler;
 
    public:
+    virtual ~Base() = default;
+    
     const VkPipelineBindPoint BIND_POINT;
     const std::list<DESCRIPTOR_SET> DESCRIPTOR_SET_TYPES;
     const std::string NAME;

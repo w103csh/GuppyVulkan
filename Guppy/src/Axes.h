@@ -1,7 +1,7 @@
 #ifndef AXES_H
 #define AXES_H
 
-#include <glm\glm.hpp>
+#include <glm/glm.hpp>
 #include <memory>
 #include <string>
 
