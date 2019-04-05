@@ -1,7 +1,7 @@
 # Build Instructions
 
-Instructions for building this repository on ~~Linux~~, Windows, and ~~Android~~. (I plan to make this work on
-Linux, Android, and Mac at somepoint).
+Instructions for building this repository on Windows, macOS, ~~Linux~~, and
+~~Android~~. (I plan to make this work on Linux, Android, and iOS).
 
 ## Index
 
@@ -9,9 +9,9 @@ Linux, Android, and Mac at somepoint).
 1. [Repository Content](#repository-content)
 1. [Repository Set-Up](#repository-set-up) -->
 1. [Windows Build](#building-on-windows)
+1. [Mac Build](#building-on-mac)
 1. ~~[Linux Build](#building-on-linux)~~
 1. ~~[Android Build](#building-on-android)~~
-1. [Mac Build](#building-on-mac)
 
 <!-- ## Contributing to the Repository
 
@@ -45,8 +45,6 @@ some other suitable source if you intend to run Vulkan applications.
 To create your local git repository:
 
     git clone https://github.com/w103csh/GuppyVulkan.git
-
-If building for macOS [jump ahead.](#build-on-mac)
 
 ### Repository Dependencies
 
