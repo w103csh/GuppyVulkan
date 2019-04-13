@@ -16,12 +16,16 @@ namespace Vertex {
 const uint32_t BINDING = 0;
 
 struct Color {
+    static void getBindingDescriptions(std::vector<VkVertexInputBindingDescription> &descs);
+    static void getAttributeDescriptions(std::vector<VkVertexInputAttributeDescription> &descs);
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec4 color;
 };
 
 struct Texture {
+    static void getBindingDescriptions(std::vector<VkVertexInputBindingDescription> &descs);
+    static void getAttributeDescriptions(std::vector<VkVertexInputAttributeDescription> &descs);
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec2 texCoord;
@@ -101,15 +105,6 @@ class Complete {
     glm::vec3 tangent;
     glm::vec3 binormal;
 };
-
-// color
-VkVertexInputBindingDescription getColorBindDesc();
-std::vector<VkVertexInputAttributeDescription> getColorAttrDesc();
-// texture
-VkVertexInputBindingDescription getTexBindDesc();
-std::vector<VkVertexInputAttributeDescription> getTexAttrDesc();
-
-std::string getTypeName(VERTEX type);
 
 }  // namespace Vertex
 

@@ -1,11 +1,14 @@
 #ifndef MESH_HANDLER_H
 #define MESH_HANDLER_H
 
+#include <glm/glm.hpp>
 #include <future>
 #include <unordered_set>
 
 #include "Game.h"
 #include "Helpers.h"
+#include "Instance.h"
+#include "InstanceManager.h"
 #include "MaterialHandler.h"  // TODO: including this is sketchy
 #include "Mesh.h"
 #include "VisualHelper.h"
@@ -20,32 +23,38 @@ class Handler : public Game::Handler {
 
    private:
     // TODO: All materials & meshes should be made here. End of story.
-    template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo, typename TMeshBaseType,
-    typename... TArgs>
+    template <class TMeshType, class TMeshBaseType, typename TMeshCreateInfo, typename TMaterialCreateInfo,
+              typename TInstanceCreateInfo, typename... TArgs>
     auto &make(std::vector<TMeshBaseType> &meshes, TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
-               TArgs... args) {
+               TInstanceCreateInfo *pInstanceCreateInfo, TArgs... args) {
         // MATERIAL
         auto &pMaterial = materialHandler().makeMaterial(pMaterialCreateInfo);
-        // MESH
-        meshes.emplace_back(new TMeshType(std::ref(*this), pCreateInfo, pMaterial, args...));
+        // INSTANCE
+        if (pInstanceCreateInfo == nullptr || pInstanceCreateInfo->data.empty())
+            instDefMgr_.insert(shell().context().dev, true);
+        else
+            instDefMgr_.insert(shell().context().dev, pInstanceCreateInfo->update, pInstanceCreateInfo->data);
+
+        // INSTANTIATE
+        meshes.emplace_back(new TMeshType(std::ref(*this), pCreateInfo, instDefMgr_.pItems.back(), pMaterial, args...));
+
         // SET VALUES
         meshes.back()->offset_ = meshes.size() - 1;
-        
+
         switch (meshes.back()->getStatus()) {
-                case STATUS::PENDING_VERTICES:
+            case STATUS::PENDING_VERTICES:
                 // Do nothing. So far this should only be a model mesh.
                 // TODO: add more validation?
                 break;
-                case STATUS::PENDING_BUFFERS:
+            case STATUS::PENDING_BUFFERS:
                 meshes.back()->prepare();
                 break;
             default:
                 throw std::runtime_error("Invalid mesh status after instantiation");
         }
-        
+
         return meshes.back();
     }
-
 
    public:
     Handler(Game *pGame);
@@ -75,17 +84,20 @@ class Handler : public Game::Handler {
     //}
 
     // WARNING !!! THE REFERENCES RETURNED GO BAD !!! (TODO: what should be returned? anything?)
-    template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo>
-    auto &makeColorMesh(TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo) {
-        return make<TMeshType>(colorMeshes_, pCreateInfo, pMaterialCreateInfo);
+    template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo, typename TInstanceCreateInfo>
+    auto &makeColorMesh(TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
+                        TInstanceCreateInfo *pInstanceCreateInfo) {
+        return make<TMeshType>(colorMeshes_, pCreateInfo, pMaterialCreateInfo, pInstanceCreateInfo);
     }
-    template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo>
-    auto &makeLineMesh(TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo) {
-        return make<TMeshType>(lineMeshes_, pCreateInfo, pMaterialCreateInfo);
+    template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo, typename TInstanceCreateInfo>
+    auto &makeLineMesh(TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
+                       TInstanceCreateInfo *pInstanceCreateInfo) {
+        return make<TMeshType>(lineMeshes_, pCreateInfo, pMaterialCreateInfo, pInstanceCreateInfo);
     }
-    template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo>
-    auto &makeTextureMesh(TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo) {
-        return make<TMeshType>(texMeshes_, pCreateInfo, pMaterialCreateInfo);
+    template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo, typename TInstanceCreateInfo>
+    auto &makeTextureMesh(TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
+                          TInstanceCreateInfo *pInstanceCreateInfo) {
+        return make<TMeshType>(texMeshes_, pCreateInfo, pMaterialCreateInfo, pInstanceCreateInfo);
     }
 
     // TODO: Do these pollute this class? Should this be in a derived Handler?
@@ -95,7 +107,7 @@ class Handler : public Game::Handler {
         meshInfo.model = obj.getModel();
         meshInfo.lineSize = lineSize;
         Material::Default::CreateInfo matInfo = {};
-        make<VisualHelper::ModelSpace>(lineMeshes_, &meshInfo, &matInfo);
+        // make<VisualHelper::ModelSpace>(lineMeshes_, &meshInfo, &matInfo, nullptr);
     }
     template <class TMesh>
     void makeTangentSpaceVisualHelper(TMesh pMesh, float lineSize = 0.1f) {
@@ -103,7 +115,7 @@ class Handler : public Game::Handler {
         meshInfo.model = pMesh->getModel();
         meshInfo.lineSize = lineSize;
         Material::Default::CreateInfo matInfo = {};
-        make<VisualHelper::TangentSpace>(lineMeshes_, &meshInfo, &matInfo, pMesh);
+        // make<VisualHelper::TangentSpace>(lineMeshes_, &meshInfo, &matInfo, nullptr, pMesh);
     }
 
     inline std::unique_ptr<Mesh::Color> &getColorMesh(const size_t &index) { return colorMeshes_[index]; }
@@ -118,6 +130,12 @@ class Handler : public Game::Handler {
     void removeMesh(std::unique_ptr<Mesh::Base> &pMesh);
 
     void update();
+    inline void updateInstanceData(const Buffer::Info &info) { instDefMgr_.updateData(shell().context().dev, info); }
+
+    template <typename TMesh>
+    inline void updateMesh(std::unique_ptr<TMesh> &pMesh) {
+        instDefMgr_.updateData(shell().context().dev, pMesh->pInstanceData_->BUFFER_INFO);
+    }
 
    private:
     void reset() override;
@@ -128,6 +146,9 @@ class Handler : public Game::Handler {
     std::vector<std::unique_ptr<Mesh::Line>> lineMeshes_;
     // TEXTURE
     std::vector<std::unique_ptr<Mesh::Texture>> texMeshes_;
+
+    // INSTANCE
+    Instance::Manager<Instance::Default::Base> instDefMgr_;
 
     // LOADING
     std::vector<std::future<Mesh::Base *>> ldgFutures_;

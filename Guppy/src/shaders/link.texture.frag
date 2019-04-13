@@ -66,6 +66,19 @@ void setTextureDefaults() {
         Ka = Kd;
     }
 
+    /*  It looks to me like if the texture is defining the outline of an object
+        with opacity then as many fragments at the edge need to be discarded as possible.
+
+        THERE MIGHT BE A WAY TO CLEAN THIS UP ELSEWHERE IN VkPipelineColorBlendAttachmentState
+        OR SOME OTHER SETTING!!!
+        
+        If there isn't then there should probably be shaders dedicated to dropping
+        the transparent fragments aggressively, and one dedicated to blending
+        them properly, OR A TEXTURE FLAG!
+    */
+    if (opacity < 0.7)
+        discard;
+
     // Normal
     if ((flags & TEX_NORMAL) > 0) {
         vec3 normal = texture(texSampler, vec3(texCoord, samplerOffset++)).xyz;

@@ -41,7 +41,7 @@ class Base : public Object3d, public Handlee<Model::Handler> {
     friend class Model::Handler;
 
    public:
-    Base(Model::Handler &handler, Model::CreateInfo *pCreateInfo);
+    Base(Model::Handler &handler, Model::CreateInfo *pCreateInfo, const std::vector<glm::mat4> &&models);
     virtual ~Base();
 
     const PIPELINE PIPELINE_TYPE;
@@ -50,7 +50,9 @@ class Base : public Object3d, public Handlee<Model::Handler> {
 
     void postLoad(Model::CBACK callback);
 
-    virtual inline void transform(const glm::mat4 t) override;
+    // OBJECT3D
+    virtual uint32_t getModelCount() { return static_cast<uint32_t>(models_.size()); }
+    virtual inline void transform(const glm::mat4 t, uint32_t index = 0) override;
 
     // TODO: use a conditional template argument
     Model::INDEX getMeshOffset(MESH type, uint8_t offset);
@@ -62,10 +64,15 @@ class Base : public Object3d, public Handlee<Model::Handler> {
         return createInfo;
     }
 
-    STATUS status;
+    void allMeshAction(std::function<void(Mesh::Base *)> action);
+
+    // STATUS status;
 
    private:
-    void allMeshAction(std::function<void(Mesh::Base *)> action);
+    // OBJECT3D
+    inline const glm::mat4 &model(uint32_t index = 0) const override { return models_[index]; }
+    std::vector<glm::mat4> models_;
+
     void updateAggregateBoundingBox(Mesh::Base *pMesh);
 
     Model::INDEX offset_;

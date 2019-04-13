@@ -2,11 +2,10 @@
 #include "Pipeline.h"
 
 #include "DescriptorHandler.h"
+#include "Instance.h"
 #include "PipelineHandler.h"
 #include "ShaderHandler.h"
 #include "Vertex.h"
-
-#include <sstream>
 
 // **********************
 //      BASE
@@ -44,6 +43,10 @@ const VkPipeline& Pipeline::Base::create(const VkPipelineCache& cache, CreateInf
         can just use the easier and slower way of calling this function from
         derivers.
     */
+
+    // TODO: where should this go????
+    createInfoRes.bindDescs.clear();
+    createInfoRes.attrDescs.clear();
 
     // Gather info from derived classes...
     getBlendInfoResources(createInfoRes);
@@ -175,6 +178,9 @@ void Pipeline::Base::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.blendAttach.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
     createInfoRes.blendAttach.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     createInfoRes.blendAttach.alphaBlendOp = VK_BLEND_OP_ADD;
+    // createInfoRes.blendAttach.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    // createInfoRes.blendAttach.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    // createInfoRes.blendAttach.alphaBlendOp = VK_BLEND_OP_ADD;
 
     createInfoRes.colorBlendStateInfo = {};
     createInfoRes.colorBlendStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
@@ -265,21 +271,22 @@ Pipeline::Default::TriListColor::TriListColor(Pipeline::Handler& handler)
           VK_PIPELINE_BIND_POINT_GRAPHICS,
           "Default Triangle List Color",
           {SHADER::COLOR_VERT, SHADER::COLOR_FRAG},
-          {PUSH_CONSTANT::DEFAULT},
+          {/*PUSH_CONSTANT::DEFAULT*/},
           {DESCRIPTOR_SET::UNIFORM_DEFAULT}  //
       } {};
 
 void Pipeline::Default::TriListColor::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    // color vertex
-    createInfoRes.bindingDesc = Vertex::getColorBindDesc();
-    createInfoRes.attrDesc = Vertex::getColorAttrDesc();
     // bindings
-    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = 1;
-    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = &createInfoRes.bindingDesc;
+    Vertex::Color::getBindingDescriptions(createInfoRes.bindDescs);
+    Instance::Default::DATA::getBindingDescriptions(createInfoRes.bindDescs);
+    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
     // attributes
+    Vertex::Color::getAttributeDescriptions(createInfoRes.attrDescs);
+    Instance::Default::DATA::getAttributeDescriptions(createInfoRes.attrDescs);
     createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
-        static_cast<uint32_t>(createInfoRes.attrDesc.size());
-    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDesc.data();
+        static_cast<uint32_t>(createInfoRes.attrDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
     createInfoRes.inputAssemblyStateInfo = {};
     createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -300,21 +307,22 @@ Pipeline::Default::Line::Line(Pipeline::Handler& handler)
           VK_PIPELINE_BIND_POINT_GRAPHICS,
           "Default Line",
           {SHADER::COLOR_VERT, SHADER::LINE_FRAG},
-          {PUSH_CONSTANT::DEFAULT},
+          {/*PUSH_CONSTANT::DEFAULT*/},
           {DESCRIPTOR_SET::UNIFORM_DEFAULT}  //
       } {};
 
 void Pipeline::Default::Line::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    // color vertex
-    createInfoRes.bindingDesc = Vertex::getColorBindDesc();
-    createInfoRes.attrDesc = Vertex::getColorAttrDesc();
     // bindings
-    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = 1;
-    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = &createInfoRes.bindingDesc;
+    Vertex::Color::getBindingDescriptions(createInfoRes.bindDescs);
+    Instance::Default::DATA::getBindingDescriptions(createInfoRes.bindDescs);
+    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
     // attributes
+    Vertex::Color::getAttributeDescriptions(createInfoRes.attrDescs);
+    Instance::Default::DATA::getAttributeDescriptions(createInfoRes.attrDescs);
     createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
-        static_cast<uint32_t>(createInfoRes.attrDesc.size());
-    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDesc.data();
+        static_cast<uint32_t>(createInfoRes.attrDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
     createInfoRes.inputAssemblyStateInfo = {};
     createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -335,21 +343,22 @@ Pipeline::Default::TriListTexture::TriListTexture(Pipeline::Handler& handler)
           VK_PIPELINE_BIND_POINT_GRAPHICS,
           "Default Triangle List Texture",
           {SHADER::TEX_VERT, SHADER::TEX_FRAG},
-          {PUSH_CONSTANT::DEFAULT},
+          {/*PUSH_CONSTANT::DEFAULT*/},
           {DESCRIPTOR_SET::UNIFORM_DEFAULT, DESCRIPTOR_SET::SAMPLER_DEFAULT}  //
       } {};
 
 void Pipeline::Default::TriListTexture::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    // texture vertex
-    createInfoRes.bindingDesc = Vertex::getTexBindDesc();
-    createInfoRes.attrDesc = Vertex::getTexAttrDesc();
     // bindings
-    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = 1;
-    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = &createInfoRes.bindingDesc;
+    Vertex::Texture::getBindingDescriptions(createInfoRes.bindDescs);
+    Instance::Default::DATA::getBindingDescriptions(createInfoRes.bindDescs);
+    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
     // attributes
+    Vertex::Texture::getAttributeDescriptions(createInfoRes.attrDescs);
+    Instance::Default::DATA::getAttributeDescriptions(createInfoRes.attrDescs);
     createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
-        static_cast<uint32_t>(createInfoRes.attrDesc.size());
-    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDesc.data();
+        static_cast<uint32_t>(createInfoRes.attrDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
     createInfoRes.inputAssemblyStateInfo = {};
     createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -357,4 +366,45 @@ void Pipeline::Default::TriListTexture::getInputAssemblyInfoResources(CreateInfo
     createInfoRes.inputAssemblyStateInfo.flags = 0;
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+}
+
+// **********************
+//      Blinn Phong Texture Cull None
+// **********************
+
+Pipeline::BP::TextureCullNone::TextureCullNone(Pipeline::Handler& handler)
+    : Base{
+          handler,
+          PIPELINE::BP_TEX_CULL_NONE,
+          VK_PIPELINE_BIND_POINT_GRAPHICS,
+          "Blinn Phong Texture Cull None",
+          {SHADER::TEX_VERT, SHADER::TEX_FRAG},
+          {/*PUSH_CONSTANT::DEFAULT*/},
+          {DESCRIPTOR_SET::UNIFORM_DEFAULT, DESCRIPTOR_SET::SAMPLER_DEFAULT}  //
+      } {};
+
+void Pipeline::BP::TextureCullNone::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    // bindings
+    Vertex::Texture::getBindingDescriptions(createInfoRes.bindDescs);
+    Instance::Default::DATA::getBindingDescriptions(createInfoRes.bindDescs);
+    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
+    // attributes
+    Vertex::Texture::getAttributeDescriptions(createInfoRes.attrDescs);
+    Instance::Default::DATA::getAttributeDescriptions(createInfoRes.attrDescs);
+    createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
+        static_cast<uint32_t>(createInfoRes.attrDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
+    // topology
+    createInfoRes.inputAssemblyStateInfo = {};
+    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
+    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
+    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+}
+
+void Pipeline::BP::TextureCullNone::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+    Pipeline::Base::getRasterizationStateInfoResources(createInfoRes);
+    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_NONE;
 }

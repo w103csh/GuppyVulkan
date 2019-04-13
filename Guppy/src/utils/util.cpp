@@ -74,7 +74,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shaderType, std::vector<const char *>
             shaderStage = kMVKShaderStageAuto;
             break;
     }
-    
+
     std::vector<std::string> glsls;
     for (const auto &pShader : pShaders) glsls.push_back(std::string(pShader));
 
@@ -263,7 +263,8 @@ shaderc_shader_kind MapShadercType(VkShaderStageFlagBits vkShader) {
 // Compile a given string containing GLSL into SPV for use by VK
 // Return value of false means an error was encountered.
 //
-bool GLSLtoSPV(const VkShaderStageFlagBits shaderType, std::vector<const char *> pShaderStrings, std::vector<unsigned int> &spirv) {
+bool GLSLtoSPV(const VkShaderStageFlagBits shaderType, std::vector<const char *> pShaderStrings,
+               std::vector<unsigned int> &spirv) {
 #ifndef __ANDROID__
     EShLanguage stage = FindLanguage(shaderType);
     TBuiltInResource Resources;

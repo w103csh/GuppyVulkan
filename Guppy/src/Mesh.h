@@ -10,10 +10,12 @@
 #include "DescriptorReference.h"
 #include "Handlee.h"
 #include "Helpers.h"
+#include "Instance.h"
 #include "Material.h"
+#include "Object3d.h"
+#include "ObjectInstanced.h"
 #include "PipelineReference.h"
 #include "Shell.h"
-#include "Object3d.h"
 #include "Texture.h"
 
 // clang-format off
@@ -41,7 +43,7 @@ typedef struct CreateInfo {
 //      Base
 // **********************
 
-class Base : public NonCopyable, public Object3d, public Handlee<Mesh::Handler> {
+class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Object3d, public ObjectInstanced {
     friend class Mesh::Handler;
     friend class Descriptor::Handler;  // Reference (TODO: get rid of this)
     friend class Pipeline::Handler;    // Reference (TODO: get rid of this)
@@ -101,19 +103,6 @@ class Base : public NonCopyable, public Object3d, public Handlee<Mesh::Handler> 
     }
     inline void addIndex(VB_INDEX_TYPE index) { indices_.push_back(index); }
 
-    //// INSTANCE
-    // inline void addInstance(glm::mat4 model, std::unique_ptr<Material> pMaterial) {
-    //    instances_.push_back({std::move(model), std::move(pMaterial)});
-    //}
-    inline uint32_t getInstanceCount() const { return instances_.size() + 1; }
-    // inline uint32_t getInstanceSize() const { return static_cast<uint32_t>(sizeof(PushConstants) * getInstanceCount()); }
-    // inline void getInstanceData(std::vector<PushConstants>& pushConstants) const {
-    //    pushConstants.push_back({getModel(), pMaterial_->getData()});
-    //    for (auto& instance : instances_) {
-    //        pushConstants.push_back({instance.first, instance.second->getData()});
-    //    }
-    //}
-
     // FACE
     inline bool isSelectable() { return selectable_; }
     void selectFace(const Ray& ray, float& tMin, Face& face, size_t offset) const;
@@ -125,11 +114,18 @@ class Base : public NonCopyable, public Object3d, public Handlee<Mesh::Handler> 
     // PIPELINE
     void updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline);
 
+    // OBJECT3D
+    virtual uint32_t getModelCount() { return pInstanceData_->BUFFER_INFO.count; }
+    inline void transform(const glm::mat4 t, uint32_t index = 0) override {
+        pInstanceData_->transform(std::forward<const glm::mat4>(t), std::forward<uint32_t>(index));
+    }
+
     virtual void destroy();
 
    protected:
     Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags, const std::string&& name,
-         CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial);
+         CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+         std::shared_ptr<Material::Base>& pMaterial);
     Base() = delete;
     /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTRs OF THIS CLASS.
         IF THIS IS REMOVED THE DESTRUCTOR HERE WILL BE CALLED INSTEAD OF THE DERIVED DESTRUCTOR.
@@ -154,9 +150,7 @@ class Base : public NonCopyable, public Object3d, public Handlee<Mesh::Handler> 
     // INFO
     bool isIndexed_;
     bool selectable_;
-    // INSTANCE
-    std::vector<std::pair<glm::mat4, std::unique_ptr<Material::Base>>> instances_;
-    // REFERENCE
+    // PIPELINE
     Pipeline::Reference pipelineReference_;
     Descriptor::Reference descriptorReference_;
 
@@ -171,6 +165,9 @@ class Base : public NonCopyable, public Object3d, public Handlee<Mesh::Handler> 
                           BufferResource& res, VkBufferUsageFlagBits usage, std::string bufferType);
 
     void bindPushConstants(VkCommandBuffer cmd) const;  // TODO: I hate this...
+
+    // OBJECT3D
+    inline const glm::mat4& model(uint32_t index = 0) const override { return pInstanceData_->model(index); }
 
     Mesh::INDEX offset_;
 };
@@ -210,9 +207,9 @@ class Color : public Base {
 
    protected:
     Color(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
-          std::shared_ptr<Material::Base>& pMaterial);
+          std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
     Color(Mesh::Handler& handler, const FLAG&& flags, const std::string&& name, CreateInfo* pCreateInfo,
-          std::shared_ptr<Material::Base>& pMaterial);
+          std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
 
     std::vector<Vertex::Color> vertices_;
 };
@@ -229,7 +226,7 @@ class Line : public Color {
 
    protected:
     Line(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
-         std::shared_ptr<Material::Base>& pMaterial);
+         std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
 };
 
 // **********************
@@ -267,7 +264,7 @@ class Texture : public Base {
 
    protected:
     Texture(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
-            std::shared_ptr<Material::Base>& pMaterial);
+            std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
 
     std::vector<Vertex::Texture> vertices_;
 };

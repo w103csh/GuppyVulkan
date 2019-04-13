@@ -3,17 +3,27 @@
 
 #include "Shell.h"
 
-Mesh::Handler::Handler(Game* pGame) : Game::Handler(pGame) {}
+Mesh::Handler::Handler(Game* pGame)
+    : Game::Handler(pGame),                                      //
+      instDefMgr_{"Default Instance Data", (2 * 1000000) + 100}  //
+{}
 
-void Mesh::Handler::init() { reset(); }
+void Mesh::Handler::init() {
+    reset();
+    // INSTANCE
+    instDefMgr_.init(shell().context(), settings());
+}
 
 void Mesh::Handler::reset() {
+    // MESHES
     for (auto& pMesh : colorMeshes_) pMesh->destroy();
     colorMeshes_.clear();
     for (auto& pMesh : lineMeshes_) pMesh->destroy();
     lineMeshes_.clear();
     for (auto& pMesh : texMeshes_) pMesh->destroy();
     texMeshes_.clear();
+    // INSTANCE
+    instDefMgr_.destroy(shell().context().dev);
 }
 
 void Mesh::Handler::update() {

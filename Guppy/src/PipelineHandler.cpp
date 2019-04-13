@@ -35,6 +35,9 @@ Pipeline::Handler::Handler(Game* pGame)
             case PIPELINE::PBR_TEX:
                 pPipelines_.emplace_back(std::make_unique<PBR::Texture>(std::ref(*this)));
                 break;
+            case PIPELINE::BP_TEX_CULL_NONE:
+                pPipelines_.emplace_back(std::make_unique<BP::TextureCullNone>(std::ref(*this)));
+                break;
             default:
                 assert(false);  // add new pipelines here
         }

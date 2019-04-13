@@ -66,7 +66,7 @@ class Base {
 
    public:
     virtual ~Base() = default;
-    
+
     const std::string NAME;
     const std::unordered_set<PIPELINE> PIPELINE_TYPES;
 
@@ -142,7 +142,15 @@ class Base {
 
    protected:
     Base(std::string &&name, std::unordered_set<PIPELINE> &&types)
-    : NAME(name), PIPELINE_TYPES(types), initInfo(), frameInfo(), pass(VK_NULL_HANDLE), data{} {}
+        : NAME(name),
+          PIPELINE_TYPES(types),
+          initInfo{},
+          frameInfo{},
+          pass(VK_NULL_HANDLE),
+          data{},
+          scissor_{},
+          viewport_{},
+          beginInfo_{} {}
 
     // RENDER PASS
     virtual void createPass(const VkDevice &dev);

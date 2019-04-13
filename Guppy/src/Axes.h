@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 
+#include "Instance.h"
 #include "Mesh.h"
 
 // clang-format off
@@ -23,9 +24,10 @@ class Axes : public Mesh::Line {
     friend class Mesh::Handler;
 
    protected:
-    Axes(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial);
-    Axes(Mesh::Handler& handler, const std::string&& name, AxesCreateInfo* pCreateInfo,
+    Axes(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
          std::shared_ptr<Material::Base>& pMaterial);
+    Axes(Mesh::Handler& handler, const std::string&& name, AxesCreateInfo* pCreateInfo,
+         std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
 };
 
 #endif  // !AXES_H

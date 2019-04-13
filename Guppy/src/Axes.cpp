@@ -37,16 +37,17 @@ void make(std::vector<Vertex::Color>& vertices, float lineSize, bool showNegativ
 }
 }  // namespace
 
-Axes::Axes(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial)
-    : Mesh::Line(handler, "Axes", pCreateInfo, pMaterial) {
+Axes::Axes(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+           std::shared_ptr<Material::Base>& pMaterial)
+    : Mesh::Line(handler, "Axes", pCreateInfo, pInstanceData, pMaterial) {
     isIndexed_ = false;
     make(vertices_, pCreateInfo->lineSize, pCreateInfo->showNegative);
     status_ = STATUS::PENDING_BUFFERS;
 }
 
 Axes::Axes(Mesh::Handler& handler, const std::string&& name, AxesCreateInfo* pCreateInfo,
-           std::shared_ptr<Material::Base>& pMaterial)
-    : Mesh::Line(handler, std::forward<const std::string>(name), pCreateInfo, pMaterial) {
+           std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
+    : Mesh::Line(handler, std::forward<const std::string>(name), pCreateInfo, pInstanceData, pMaterial) {
     isIndexed_ = false;
     make(vertices_, pCreateInfo->lineSize, pCreateInfo->showNegative);
     status_ = STATUS::PENDING_BUFFERS;

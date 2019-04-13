@@ -99,92 +99,19 @@ std::vector<Face> Plane::make(bool doubleSided) {
     return faces;
 }
 
-Plane::Color::Color(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
-                    bool doubleSided)
-    : Mesh::Color(handler, "ColorPlane", pCreateInfo, pMaterial) {
+Plane::Color::Color(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+                    std::shared_ptr<Material::Base>& pMaterial, bool doubleSided)
+    : Mesh::Color(handler, "ColorPlane", pCreateInfo, pInstanceData, pMaterial) {
     addFaces(this, doubleSided);
     updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
 }
 
-// void ColorPlane::createVertices() {
-//    float width, height;
-//    width = height = 1.0f;
-//    float l = (width / 2 * -1), r = (width / 2);
-//    float b = (height / 2 * -1), t = (height / 2);
-//    vertices_ = {
-//        {
-//            // geom - bottom left
-//            {l, b, 0.0f},              //
-//            {0.0f, 0.0f, 1.0f},        //
-//            {1.0f, 0.0f, 0.0f, 1.0f},  // red
-//        },                             //
-//        {
-//            // geom - bottom right
-//            {r, b, 0.0f},              //
-//            {0.0f, 0.0f, 1.0f},        //
-//            {0.0f, 0.0f, 1.0f, 1.0f},  // blue
-//        },                             //
-//        {
-//            // geom - top left
-//            {l, t, 0.0f},              //
-//            {0.0f, 0.0f, 1.0f},        //
-//            {0.0f, 1.0f, 0.0f, 1.0f},  // green
-//        },                             //
-//        {
-//            // geom - top right
-//            {r, t, 0.0f},              //
-//            {0.0f, 0.0f, 1.0f},        //
-//            {1.0f, 1.0f, 0.0f, 1.0f},  // yellow
-//        },                             //
-//    };
-//}
-
-Plane::Texture::Texture(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
+Plane::Texture::Texture(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo,
+                        std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
                         bool doubleSided)
-    : Mesh::Texture(handler, "TexturePlane", pCreateInfo, pMaterial) {
+    : Mesh::Texture(handler, "TexturePlane", pCreateInfo, pInstanceData, pMaterial) {
     addFaces(this, doubleSided);
     updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
 }
-
-// void TexturePlane::createVertices() {
-//    float width, height;
-//    width = height = 1.0f;
-//    float l = (width / 2 * -1), r = (width / 2);
-//    float b = (height / 2 * -1), t = (height / 2);
-//    vertices_ = {
-//        {
-//            // geom - bottom left
-//            {l, b, 0.0f},        //
-//            {0.0f, 0.0f, 1.0f},  //
-//            {0.0f, 1.0f},        // tex - bottom left
-//            {},                  //
-//            {}                   //
-//        },                       //
-//        {
-//            // geom - bottom right
-//            {r, b, 0.0f},        //
-//            {0.0f, 0.0f, 1.0f},  //
-//            {1.0f, 1.0f},        // tex - bottom right
-//            {},                  //
-//            {}                   //
-//        },                       //
-//        {
-//            // geom - top left
-//            {l, t, 0.0f},        //
-//            {0.0f, 0.0f, 1.0f},  //
-//            {0.0f, 0.0f},        // tex - top left
-//            {},                  //
-//            {}                   //
-//        },                       //
-//        {
-//            // geom - top right
-//            {r, t, 0.0f},        //
-//            {0.0f, 0.0f, 1.0f},  //
-//            {1.0f, 0.0f},        // tex - top right
-//            {},                  //
-//            {}                   //
-//        },                       //
-//    };
-//}

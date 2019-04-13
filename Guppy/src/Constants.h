@@ -101,6 +101,12 @@ const std::string MED_H_SPEC_TEX_PATH = MODEL_PATH + "Medieval_House_obj/Medieva
 const std::string ORANGE_MODEL_PATH = MODEL_PATH + "Orange_obj/Orange.obj";
 const std::string ORANGE_DIFF_TEX_PATH = MODEL_PATH + "Orange_obj/Color.jpg";
 const std::string ORANGE_NORM_TEX_PATH = MODEL_PATH + "Orange_obj/Normal.jpg";
+// grass
+const std::string GRASS_LP_MODEL_PATH = MODEL_PATH + "grass (low-poly)/grass_low_poly.obj";
+const std::string GRASS_LP_DIFF_TEX_PATH = MODEL_PATH + "grass (low-poly)/low_poly_grass_2.jpg";  // not diffuse apparently
+const std::string GRASS_LP_NORM_TEX_PATH = MODEL_PATH + "grass (low-poly)/low_poly_grass_normal.jpg";
+const std::string GRASS_LP_SPEC_TEX_PATH = MODEL_PATH + "grass (low-poly)/low_poly_grass_specular.jpg";
+const std::string GRASS_LP_OPAC_TEX_PATH = MODEL_PATH + "grass (low-poly)/low_poly_grass_opacity.jpg";
 // pear
 const std::string PEAR_MODEL_PATH = MODEL_PATH + "pear_export_obj/pear_export.obj";
 // general

@@ -19,9 +19,11 @@
 // **********************
 
 Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags,
-                 const std::string&& name, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial)
-    : Object3d(pCreateInfo->model),
-      Handlee(handler),
+                 const std::string&& name, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+                 std::shared_ptr<Material::Base>& pMaterial)
+    : Handlee(handler),
+      Object3d(),
+      ObjectInstanced(pInstanceData),
       FLAGS(flags),
       MAPPABLE(pCreateInfo->mappable),
       NAME(name),
@@ -44,6 +46,7 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
 //
 {
     assert(helpers::checkVertexPipelineMap(VERTEX_TYPE, PIPELINE_TYPE));
+    assert(pInstanceData_ != nullptr);
     assert(pMaterial_ != nullptr);
 }
 
@@ -161,14 +164,15 @@ void Mesh::Base::bindPushConstants(VkCommandBuffer cmd) const {
 
     // TODO: MATERIAL INFO SHOULD PROBABLY BE A DYNAMIC UNIFORM (since it doesn't change constantly)
 
-    switch (pipelineReference_.pushConstantTypes.front()) {
-        case PUSH_CONSTANT::DEFAULT: {
-            Pipeline::Default::PushConstant pushConstant = {model_};
-            vkCmdPushConstants(cmd, pipelineReference_.layout, pipelineReference_.pushConstantStages, 0,
-                               static_cast<uint32_t>(sizeof(Pipeline::Default::PushConstant)), &pushConstant);
-        } break;
-        default: { assert(false && "Add new push constant"); } break;
-    }
+    assert(false);
+    // switch (pipelineReference_.pushConstantTypes.front()) {
+    //    case PUSH_CONSTANT::DEFAULT: {
+    //        Pipeline::Default::PushConstant pushConstant = {model_};
+    //        vkCmdPushConstants(cmd, pipelineReference_.layout, pipelineReference_.pushConstantStages, 0,
+    //                           static_cast<uint32_t>(sizeof Pipeline::Default::PushConstant), &pushConstant);
+    //    } break;
+    //    default: { assert(false && "Add new push constant"); } break;
+    //}
 }
 
 void Mesh::Base::addVertex(const Face& face) {
@@ -351,12 +355,9 @@ void Mesh::Base::updateTangentSpaceData() {
 }
 
 void Mesh::Base::draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) const {
-    VkBuffer vertex_buffers[] = {vertexRes_.buffer};
-    VkDeviceSize offsets[] = {0};
-
     vkCmdBindPipeline(cmd, pipelineReference_.bindPoint, pipelineReference_.pipeline);
 
-    bindPushConstants(cmd);
+    // bindPushConstants(cmd);
 
     vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineReference_.layout, descriptorReference_.firstSet,
                             static_cast<uint32_t>(descriptorReference_.descriptorSets[frameIndex].size()),
@@ -364,21 +365,40 @@ void Mesh::Base::draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) con
                             static_cast<uint32_t>(descriptorReference_.dynamicOffsets.size()),
                             descriptorReference_.dynamicOffsets.data());
 
-    vkCmdBindVertexBuffers(cmd, 0, 1, vertex_buffers, offsets);
+    // VERTEX
+    VkBuffer vertexBuffers[] = {vertexRes_.buffer};
+    VkDeviceSize vertexOffsets[] = {0};
+    VkDeviceSize test = 0;
+    vkCmdBindVertexBuffers(cmd, Vertex::BINDING, 1, &vertexRes_.buffer, &test);
+
+    // INSTANCE (as of now there will always be at least one instance binding)
+    vkCmdBindVertexBuffers(         //
+        cmd,                        // VkCommandBuffer commandBuffer
+        getInstanceFirstBinding(),  // uint32_t firstBinding
+        getInstanceBindingCount(),  // uint32_t bindingCount
+        getInstanceBuffers(),       // const VkBuffer* pBuffers
+        getInstanceOffsets()        // const VkDeviceSize* pOffsets
+    );
 
     // TODO: clean these up!!
     if (indices_.size()) {
-        vkCmdBindIndexBuffer(cmd, indexRes_.buffer, 0,
-                             VK_INDEX_TYPE_UINT32  // TODO: Figure out how to make the type dynamic
+        // TODO: Make index type value dynamic.
+        vkCmdBindIndexBuffer(cmd, indexRes_.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(               //
+            cmd,                        // VkCommandBuffer commandBuffer
+            getIndexCount(),            // uint32_t indexCount
+            getInstanceCount(),         // uint32_t instanceCount
+            0,                          // uint32_t firstIndex
+            0,                          // int32_t vertexOffset
+            getInstanceFirstInstance()  // uint32_t firstInstance
         );
-        vkCmdDrawIndexed(cmd, getIndexCount(), getInstanceCount(), 0, 0, 0);
     } else {
-        vkCmdDraw(
-            cmd,
-            getVertexCount(),  // vertexCount
-            1,                 // instanceCount - Used for instanced rendering, use 1 if you're not doing that.
-            0,  // firstVertex - Used as an offset into the vertex buffer, defines the lowest value of gl_VertexIndex.
-            0   // firstInstance - Used as an offset for instanced rendering, defines the lowest value of gl_InstanceIndex.
+        vkCmdDraw(                      //
+            cmd,                        // VkCommandBuffer commandBuffer
+            getVertexCount(),           // uint32_t vertexCount
+            getInstanceCount(),         // uint32_t instanceCount
+            0,                          // uint32_t firstVertex
+            getInstanceFirstInstance()  // uint32_t firstInstance
         );
     }
 }
@@ -408,6 +428,7 @@ void Mesh::Base::destroy() {
 // **********************
 
 Mesh::Color::Color(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
+                   std::shared_ptr<Instance::Base>& pInstanceData,
                    std::shared_ptr<Material::Base>& pMaterial)
     : Base{handler,                                //
            MESH::COLOR,                            //
@@ -415,9 +436,11 @@ Mesh::Color::Color(Mesh::Handler& handler, const std::string&& name, CreateInfo*
            FLAG::POLY,                             //
            std::forward<const std::string>(name),  //
            pCreateInfo,                            //
+           pInstanceData,                          //
            pMaterial} {}
 
 Mesh::Color::Color(Mesh::Handler& handler, const FLAG&& flags, const std::string&& name, CreateInfo* pCreateInfo,
+                   std::shared_ptr<Instance::Base>& pInstanceData,
                    std::shared_ptr<Material::Base>& pMaterial)
     : Base{handler,                                //
            MESH::COLOR,                            //
@@ -425,6 +448,7 @@ Mesh::Color::Color(Mesh::Handler& handler, const FLAG&& flags, const std::string
            std::forward<const FLAG>(flags),        //
            std::forward<const std::string>(name),  //
            pCreateInfo,                            //
+           pInstanceData,                          //
            pMaterial} {}
 
 Mesh::Color::~Color() = default;
@@ -434,11 +458,13 @@ Mesh::Color::~Color() = default;
 // **********************
 
 Mesh::Line::Line(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
+                 std::shared_ptr<Instance::Base>& pInstanceData,
                  std::shared_ptr<Material::Base>& pMaterial)
     : Color{handler,                                //
             FLAG::LINE,                             //
             std::forward<const std::string>(name),  //
             pCreateInfo,                            //
+            pInstanceData,                          //
             pMaterial} {}
 
 Mesh::Line::~Line() = default;
@@ -448,6 +474,7 @@ Mesh::Line::~Line() = default;
 // **********************
 
 Mesh::Texture::Texture(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
+                       std::shared_ptr<Instance::Base>& pInstanceData,
                        std::shared_ptr<Material::Base>& pMaterial)
     : Base{handler,                                //
            MESH::TEXTURE,                          //
@@ -455,6 +482,7 @@ Mesh::Texture::Texture(Mesh::Handler& handler, const std::string&& name, CreateI
            FLAG::POLY,                             //
            std::forward<const std::string>(name),  //
            pCreateInfo,                            //
+           pInstanceData,                          //
            pMaterial} {
     assert(pMaterial_->hasTexture());
 }

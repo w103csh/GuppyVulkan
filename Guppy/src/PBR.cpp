@@ -1,6 +1,7 @@
 
 #include "PBR.h"
 
+#include "Instance.h"
 #include "PipelineHandler.h"
 #include "ShaderHandler.h"
 
@@ -123,21 +124,22 @@ Pipeline::PBR::Color::Color(Pipeline::Handler& handler)
           VK_PIPELINE_BIND_POINT_GRAPHICS,
           "Default Triangle List Texture",
           {SHADER::COLOR_VERT, SHADER::PBR_COLOR_FRAG},
-          {PUSH_CONSTANT::DEFAULT},
+          {/*PUSH_CONSTANT::DEFAULT*/},
           {DESCRIPTOR_SET::UNIFORM_PBR}  //
       } {};
 
 void Pipeline::PBR::Color::getInputAssemblyInfoResources(Pipeline::CreateInfoResources& createInfoRes) {
-    // color vertex
-    createInfoRes.bindingDesc = Vertex::getColorBindDesc();
-    createInfoRes.attrDesc = Vertex::getColorAttrDesc();
     // bindings
-    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = 1;
-    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = &createInfoRes.bindingDesc;
+    Vertex::Color::getBindingDescriptions(createInfoRes.bindDescs);
+    Instance::Default::DATA::getBindingDescriptions(createInfoRes.bindDescs);
+    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
     // attributes
+    Vertex::Color::getAttributeDescriptions(createInfoRes.attrDescs);
+    Instance::Default::DATA::getAttributeDescriptions(createInfoRes.attrDescs);
     createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
-        static_cast<uint32_t>(createInfoRes.attrDesc.size());
-    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDesc.data();
+        static_cast<uint32_t>(createInfoRes.attrDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
     createInfoRes.inputAssemblyStateInfo = {};
     createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -154,21 +156,22 @@ Pipeline::PBR::Texture::Texture(Pipeline::Handler& handler)
           VK_PIPELINE_BIND_POINT_GRAPHICS,
           "Default Triangle List Texture",
           {SHADER::TEX_VERT, SHADER::PBR_TEX_FRAG},
-          {PUSH_CONSTANT::DEFAULT},
+          {/*PUSH_CONSTANT::DEFAULT*/},
           {DESCRIPTOR_SET::UNIFORM_PBR, DESCRIPTOR_SET::SAMPLER_DEFAULT}  //
       } {};
 
 void Pipeline::PBR::Texture::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    // texture vertex
-    createInfoRes.bindingDesc = Vertex::getTexBindDesc();
-    createInfoRes.attrDesc = Vertex::getTexAttrDesc();
     // bindings
-    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = 1;
-    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = &createInfoRes.bindingDesc;
+    Vertex::Texture::getBindingDescriptions(createInfoRes.bindDescs);
+    Instance::Default::DATA::getBindingDescriptions(createInfoRes.bindDescs);
+    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
     // attributes
+    Vertex::Texture::getAttributeDescriptions(createInfoRes.attrDescs);
+    Instance::Default::DATA::getAttributeDescriptions(createInfoRes.attrDescs);
     createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
-        static_cast<uint32_t>(createInfoRes.attrDesc.size());
-    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDesc.data();
+        static_cast<uint32_t>(createInfoRes.attrDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
     createInfoRes.inputAssemblyStateInfo = {};
     createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;

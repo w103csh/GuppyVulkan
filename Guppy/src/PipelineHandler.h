@@ -24,8 +24,8 @@ struct CreateInfoResources {
     VkDynamicState dynamicStates[VK_DYNAMIC_STATE_RANGE_SIZE];
     VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
     // INPUT ASSEMBLY
-    VkVertexInputBindingDescription bindingDesc = {};
-    std::vector<VkVertexInputAttributeDescription> attrDesc;
+    std::vector<VkVertexInputBindingDescription> bindDescs;
+    std::vector<VkVertexInputAttributeDescription> attrDescs;
     VkPipelineVertexInputStateCreateInfo vertexInputStateInfo = {};
     // FIXED FUNCTION
     VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo = {};

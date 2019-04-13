@@ -30,24 +30,22 @@ class Descriptor : public Buffer::Manager::Base<TBase, TDerived, TSmartPointer> 
     const DESCRIPTOR DESCRIPTOR_TYPE;
     const std::string MACRO_NAME;
 
-    void init(const Shell::Context& ctx, const Game::Settings& settings,
+    void init(const Shell::Context &ctx, const Game::Settings &settings,
               std::vector<uint32_t> queueFamilyIndices = {}) override {
-        const auto& limits = ctx.physical_dev_props[ctx.physical_dev_index].properties.limits;
+        // TODO: dump the alignment padding here so you can see how bad it is...
+        const auto &limits = ctx.physical_dev_props[ctx.physical_dev_index].properties.limits;
         if (sizeof(typename TDerived::DATA) % limits.minUniformBufferOffsetAlignment != 0) {
             Buffer::Manager::Base<TBase, TDerived, TSmartPointer>::alignment_ =
-            (sizeof(typename TDerived::DATA) + limits.minUniformBufferOffsetAlignment - 1) &
-            ~(limits.minUniformBufferOffsetAlignment - 1);
+                (sizeof(typename TDerived::DATA) + limits.minUniformBufferOffsetAlignment - 1) &
+                ~(limits.minUniformBufferOffsetAlignment - 1);
         }
         Buffer::Manager::Base<TBase, TDerived, TSmartPointer>::init(ctx, settings,
                                                                     std::forward<std::vector<uint32_t>>(queueFamilyIndices));
     }
 
    private:
-    void setInfo(const Manager::Resource<typename TDerived::DATA> &resource, Buffer::Info &info) override {
-        info.bufferInfo.buffer = resource.buffer;
-        info.bufferInfo.range = resource.data.ALIGNMENT;
-        info.bufferInfo.offset =
-            helpers::isDescriptorTypeDynamic(DESCRIPTOR_TYPE) ? 0 : (info.dataOffset * info.bufferInfo.range);
+    void setInfo(Buffer::Info &info) override {
+        if (helpers::isDescriptorTypeDynamic(DESCRIPTOR_TYPE)) info.bufferInfo.offset = 0;
     }
 };
 

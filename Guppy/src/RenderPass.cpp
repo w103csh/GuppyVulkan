@@ -192,8 +192,15 @@ RenderPass::Default::Default()
                PIPELINE::PBR_COLOR,
                PIPELINE::LINE,
                PIPELINE::TRI_LIST_TEX,
+               // This needs to come second becuase it has transparent textures.
+               // It looks to be like its blending where the transparent edges meet
+               // the fragment behind it. In the case I was seeing when BP_TEX_CULL_NONE
+               // came before the ground plane pass it was blending the black clear color.
+               PIPELINE::BP_TEX_CULL_NONE,
                PIPELINE::PBR_TEX,
            }},
+      inheritInfo_{},
+      secCmdBeginInfo_{},
       secCmdFlag_(false) {}
 
 void RenderPass::Default::getSubmitResource(const uint8_t& frameIndex, SubmitResource& resource) const {
@@ -224,7 +231,7 @@ void RenderPass::Default::createClearValues(const Shell::Context& ctx, const Gam
         clearValues_.push_back(value);
     }
     if (depth_.view != VK_NULL_HANDLE) {
-#if defined(VK_USE_PLATFORM_WIN32_KHR) // TODO: figure out why clang, and visual c++ can't get along here.
+#if defined(VK_USE_PLATFORM_WIN32_KHR)  // TODO: figure out why clang, and visual c++ can't get along here.
         VkClearValue value = {1.0f, 0};
 #else defined(VK_USE_PLATFORM_WIN32_KHR)
         VkClearValue value = {.depthStencil = {1.0f, 0}};

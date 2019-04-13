@@ -39,7 +39,7 @@ class Handler : public Game::Handler {
     void init() override;
     template <class T>
     inline T &getMaterial(std::shared_ptr<Material::Base> &pMaterial) {
-        const auto &offset = pMaterial->BUFFER_INFO.dataOffset;
+        const auto &offset = pMaterial->BUFFER_INFO.itemOffset;
         return std::ref(*(Material::Default::Base *)(getManager<T>().pItems[offset].get()));
     }
 
@@ -47,10 +47,10 @@ class Handler : public Game::Handler {
         if (pMaterial->DIRTY) {
             switch (pMaterial->TYPE) {
                 case MATERIAL::DEFAULT:
-                    defMgr_.update(shell().context().dev, pMaterial->BUFFER_INFO);
+                    defMgr_.updateData(shell().context().dev, pMaterial->BUFFER_INFO);
                     break;
                 case MATERIAL::PBR:
-                    pbrMgr_.update(shell().context().dev, pMaterial->BUFFER_INFO);
+                    pbrMgr_.updateData(shell().context().dev, pMaterial->BUFFER_INFO);
                     break;
                 default:
                     assert(false && "Unhandled case");
