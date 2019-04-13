@@ -242,7 +242,7 @@ void Descriptor::Handler::getDynamicOffsets(const std::unique_ptr<Descriptor::Se
             switch (keyValue.second.first) {
                 case DESCRIPTOR::MATERIAL_DEFAULT:
                 case DESCRIPTOR::MATERIAL_PBR: {
-                    dynamicOffsets.push_back(mesh.getMaterial()->getDynamicOffset());
+                    dynamicOffsets.push_back(static_cast<uint32_t>(mesh.getMaterial()->BUFFER_INFO.memoryOffset));
                 } break;
                 default:
                     throw std::runtime_error("Unhandled case");

@@ -37,7 +37,7 @@ class Base : public Light::Base<DATA> {
 
     inline const glm::vec3 &getPosition() { return position; }
 
-    void transform(const glm::mat4 t) override {
+    void transform(const glm::mat4 t, uint32_t index = 0) override {
         Object3d::transform(t);
         position = getWorldSpacePosition();
     }

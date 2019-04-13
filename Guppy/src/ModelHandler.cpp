@@ -28,14 +28,15 @@ void Model::Handler::makeTexture(const tinyobj::material_t &tinyobj_mat, const s
     // If there is a texture ignore .obj materials for now. (TODO: more dynamic)
     if (!hasTexture) {
         if (!tinyobj_mat.diffuse_texname.empty() /*|| !to_m.specular_texname.empty() || !to_m.bump_texname.empty()*/) {
-            std::string diff, spec, norm;
+            std::string diff, spec, norm, alph;
             if (!tinyobj_mat.diffuse_texname.empty()) diff = modelDirectory + tinyobj_mat.diffuse_texname;
 
             // Check if the texture already exists (TODO: better check)
             if (textureHandler().getTextureByPath(diff) == nullptr) {
                 if (!tinyobj_mat.specular_texname.empty()) spec = modelDirectory + tinyobj_mat.specular_texname;
                 if (!tinyobj_mat.bump_texname.empty()) norm = modelDirectory + tinyobj_mat.bump_texname;
-                textureHandler().addTexture(diff, norm, spec);
+                if (!tinyobj_mat.alpha_texname.empty()) alph = modelDirectory + tinyobj_mat.alpha_texname;
+                textureHandler().addTexture(diff, norm, spec, alph);
             } else {
                 // TODO: deal with textures sharing some bitmap and not others...
             }

@@ -1,39 +1,10 @@
 
 #include "Object3d.h"
 
-void Object3d::putOnTop(const BoundingBoxMinMax &inBoundingBoxMinMax) {
-    auto myBoundingBoxMinMax = getBoundingBoxMinMax();
-
-    // TODO: account for UP_VECTOR
-
-    // in
-    float inXCtr, inYCtr, inZCtr;
-    inXCtr = inBoundingBoxMinMax.xMin + std::abs((inBoundingBoxMinMax.xMax - inBoundingBoxMinMax.xMin) / 2);
-    inYCtr = inBoundingBoxMinMax.yMax;  // top
-    inZCtr = inBoundingBoxMinMax.zMin + std::abs((inBoundingBoxMinMax.zMax - inBoundingBoxMinMax.zMin) / 2);
-
-    // my
-    float myXCtr, myYCtr, myZCtr;
-    myXCtr = myBoundingBoxMinMax.xMin + std::abs((myBoundingBoxMinMax.xMax - myBoundingBoxMinMax.xMin) / 2);
-    myYCtr = myBoundingBoxMinMax.yMin;  // bottom
-    myZCtr = myBoundingBoxMinMax.zMin + std::abs((myBoundingBoxMinMax.zMax - myBoundingBoxMinMax.zMin) / 2);
-
-    auto tm = glm::translate(glm::mat4(1.0f),  //
-                             {
-                                 //(inXCtr - myXCtr),  //
-                                 0.0f,
-                                 (inYCtr - myYCtr),
-                                 //(inZCtr - myZCtr)  //
-                                 0.0f,
-                             });
-
-    transform(tm);
-}
-
-BoundingBoxMinMax Object3d::getBoundingBoxMinMax(bool transform) const {
+BoundingBoxMinMax Object3d::getBoundingBoxMinMax(bool transform, uint32_t index) const {
     BoundingBoxMinMax bbmm = {FLT_MAX, -FLT_MAX, FLT_MAX, -FLT_MAX, FLT_MAX, -FLT_MAX};
     for (auto v : boundingBox_) {
-        if (transform) v = model_ * glm::vec4(v, 1.0f);
+        if (transform) v = model(index) * glm::vec4(v, 1.0f);
         if (v.x < bbmm.xMin) bbmm.xMin = v.x;  // xMin
         if (v.x > bbmm.xMax) bbmm.xMax = v.x;  // xMax
         if (v.y < bbmm.yMin) bbmm.yMin = v.y;  // yMin
@@ -44,17 +15,9 @@ BoundingBoxMinMax Object3d::getBoundingBoxMinMax(bool transform) const {
     return bbmm;
 }
 
-BoundingBox Object3d::getBoundingBox() const {
-    BoundingBox bb = {};
-    for (size_t i = 0; i < boundingBox_.size(); i++) {
-        bb[i] = model_ * glm::vec4(boundingBox_[i], 1.0f);
-    }
-    return bb;
-}
-
-bool Object3d::testBoundingBox(const Ray &ray, const float &tMin, bool useDirection) const {
+bool Object3d::testBoundingBox(const Ray &ray, const float &tMin, bool useDirection, uint32_t index) const {
     // Numbers are ransformed into world space
-    auto bbmm = getBoundingBoxMinMax(true);
+    auto bbmm = getBoundingBoxMinMax(true, index);
 
     /* TODO: this is potential a step that could be done outside of this function to save time.
 
@@ -122,4 +85,18 @@ bool Object3d::testBoundingBox(const Ray &ray, const float &tMin, bool useDirect
     }
 
     return true;
+}
+
+void Object3d::putOnTop(const BoundingBoxMinMax &inBoundingBoxMinMax, uint32_t index) {
+    auto myBoundingBoxMinMax = getBoundingBoxMinMax(true, index);
+    auto t = translateToTop(inBoundingBoxMinMax, myBoundingBoxMinMax);
+    transform(t, index);
+}
+
+BoundingBox Object3d::getBoundingBox(uint32_t index) const {
+    BoundingBox bb = {};
+    for (size_t i = 0; i < boundingBox_.size(); i++) {
+        bb[i] = model(index) * glm::vec4(boundingBox_[i], 1.0f);
+    }
+    return bb;
 }

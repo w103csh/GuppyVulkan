@@ -3,6 +3,7 @@
 
 #include "Face.h"
 #include "FaceMesh.h"
+#include "Instance.h"
 #include "MeshHandler.h"
 #include "Scene.h"
 #include "SceneHandler.h"
@@ -19,9 +20,10 @@ void Selection::Manager::makeFace() {
     meshInfo.pipelineType = PIPELINE::LINE;
     meshInfo.isIndexed = false;
     meshInfo.mappable = true;
+    Instance::Default::CreateInfo instInfo = {};
     Material::Default::CreateInfo matInfo = {};
     matInfo.flags = Material::FLAG::HIDE & Material::FLAG::PER_VERTEX_COLOR;
-    auto& pFaceMesh = handler().meshHandler().makeLineMesh<FaceMesh>(&meshInfo, &matInfo);
+    auto& pFaceMesh = handler().meshHandler().makeLineMesh<FaceMesh>(&meshInfo, &matInfo, &instInfo);
 
     pFaceInfo_->offset = pFaceMesh->getOffset();
 }

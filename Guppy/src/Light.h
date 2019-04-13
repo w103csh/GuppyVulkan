@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
+#include "BufferItem.h"
 #include "Constants.h"
 #include "Helpers.h"
 #include "Object3d.h"
@@ -21,7 +22,7 @@ typedef enum FLAG {
     BITS_MAX_ENUM = 0x7FFFFFFF
 } FLAG;
 
-struct CreateInfo {
+struct CreateInfo : public Buffer::CreateInfo {
     glm::mat4 model{1.0f};
 };
 
@@ -33,9 +34,14 @@ template <typename T>
 class Base : public Object3d, public Uniform::Base, public Buffer::DataItem<T> {
    public:
     Base(T *pData, CreateInfo *pCreateInfo)
-        : Object3d(pCreateInfo->model),  //
-          Uniform::Base(),               //
-          Buffer::DataItem<T>(pData) {}
+        : Object3d(),       //
+          Uniform::Base(),  //
+          Buffer::DataItem<T>(pData),
+          model_(pCreateInfo->model) {}
+
+   private:
+    inline const glm::mat4 &model(uint32_t index = 0) const override { return model_; }
+    glm::mat4 model_;
 };
 
 namespace Default {
@@ -61,7 +67,7 @@ class Base : public Light::Base<DATA> {
 
     inline const glm::vec3 &getPosition() { return position; }
 
-    void transform(const glm::mat4 t) override {
+    void transform(const glm::mat4 t, uint32_t index = 0) override {
         Object3d::transform(t);
         position = getWorldSpacePosition();
     }
@@ -93,7 +99,7 @@ struct DATA {
 class Base : public Light::Base<DATA> {
    public:
     Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo);
-    void transform(const glm::mat4 t) override {
+    void transform(const glm::mat4 t, uint32_t index = 0) override {
         Object3d::transform(t);
         position = getWorldSpacePosition();
         direction = getWorldSpaceDirection();

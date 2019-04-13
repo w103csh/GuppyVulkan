@@ -27,7 +27,7 @@ class Base : public Handlee<Pipeline::Handler> {
 
    public:
     virtual ~Base() = default;
-    
+
     const VkPipelineBindPoint BIND_POINT;
     const std::list<DESCRIPTOR_SET> DESCRIPTOR_SET_TYPES;
     const std::string NAME;
@@ -127,6 +127,21 @@ class TriListTexture : public Base {
     void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
 };
 }  // namespace Default
+
+namespace BP {
+
+// **********************
+//      Blinn Phong Texture Cull None
+// **********************
+
+class TextureCullNone : public Base {
+   public:
+    TextureCullNone(Pipeline::Handler &handler);
+    // INFOS
+    void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
+    void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes) override;
+};
+}  // namespace BP
 
 }  // namespace Pipeline
 

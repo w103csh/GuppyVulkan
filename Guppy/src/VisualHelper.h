@@ -2,10 +2,12 @@
 #define VISUAL_HELPER_H
 
 #include <glm/glm.hpp>
+#include <memory>
 #include <vector>
 
-#include "Helpers.h"
 #include "Axes.h"
+#include "Helpers.h"
+#include "Instance.h"
 
 // clang-format off
 namespace Mesh { class Handler; }
@@ -17,8 +19,9 @@ class ModelSpace : public Axes {
     friend class Mesh::Handler;
 
    protected:
-    ModelSpace(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial)
-        : Axes(handler, "Model Space Visual Helper", pCreateInfo, pMaterial) {}
+    ModelSpace(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+               std::shared_ptr<Material::Base>& pMaterial)
+        : Axes(handler, "Model Space Visual Helper", pCreateInfo, pInstanceData, pMaterial) {}
 };
 
 class TangentSpace : public Mesh::Line {
@@ -34,9 +37,9 @@ class TangentSpace : public Mesh::Line {
     //    make(pMesh.get(), pCreateInfo);
     //    status_ = STATUS::PENDING_BUFFERS;
     //};
-    TangentSpace(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
-                 Mesh::Color* pMesh)
-        : Mesh::Line(handler, "Tangent Space Visual Helper", pCreateInfo, pMaterial) {
+    TangentSpace(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+                 std::shared_ptr<Material::Base>& pMaterial, Mesh::Color* pMesh)
+        : Mesh::Line(handler, "Tangent Space Visual Helper", pCreateInfo, pInstanceData, pMaterial) {
         assert(false && "No way to do tangent space for this yet. Need tex coords currently.");
         isIndexed_ = false;
         make(pMesh, pCreateInfo);
@@ -50,9 +53,9 @@ class TangentSpace : public Mesh::Line {
     //    make(pMesh.get(), pCreateInfo);
     //    status_ = STATUS::PENDING_BUFFERS;
     //};
-    TangentSpace(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
-                 Mesh::Texture* pMesh)
-        : Mesh::Line(handler, "Tangent Space Visual Helper", pCreateInfo, pMaterial) {
+    TangentSpace(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+                 std::shared_ptr<Material::Base>& pMaterial, Mesh::Texture* pMesh)
+        : Mesh::Line(handler, "Tangent Space Visual Helper", pCreateInfo, pInstanceData, pMaterial) {
         isIndexed_ = false;
         make(pMesh, pCreateInfo);
         status_ = STATUS::PENDING_BUFFERS;

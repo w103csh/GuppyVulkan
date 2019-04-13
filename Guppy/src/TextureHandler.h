@@ -19,7 +19,7 @@ class Handler : public Game::Handler {
     void init() override;
     inline void destroy() override { reset(); }
 
-    void addTexture(std::string path, std::string normPath = "", std::string specPath = "");
+    void addTexture(std::string path, std::string normPath = "", std::string specPath = "", std::string alphPath = "");
     const std::shared_ptr<Texture::DATA> getTextureByPath(std::string path) const;
     void update();
 
@@ -29,16 +29,11 @@ class Handler : public Game::Handler {
     }
     uint32_t getCount() { return static_cast<uint32_t>(pTextures_.size()); }
 
-    // DESCRIPTOR
-    VkDescriptorSetLayoutBinding getDescriptorLayoutBinding(const DESCRIPTOR& type) const;
-    VkWriteDescriptorSet getDescriptorWrite(const DESCRIPTOR& type) const;
-    VkCopyDescriptorSet getDescriptorCopy(const DESCRIPTOR& type) const;
-
    private:
     void reset() override;
 
-    std::future<std::shared_ptr<Texture::DATA>> loadTexture(const VkDevice& dev, const bool makeMipmaps,
-                                                            std::shared_ptr<Texture::DATA>& pTexture);
+    std::future<std::shared_ptr<Texture::DATA>> loadTexture(std::shared_ptr<Texture::DATA>& pTexture);
+
 
     void createTexture(const bool makeMipmaps, std::shared_ptr<Texture::DATA> pTexture);
     void createImage(Texture::DATA& tex, uint32_t layerCount);

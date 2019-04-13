@@ -22,8 +22,6 @@ set(SOURCE
     Helpers.h
     InputHandler.cpp
     InputHandler.h
-    InstanceData.cpp
-    InstanceData.h
     Light.cpp
     Light.h
     LoadingHandler.cpp
@@ -58,6 +56,12 @@ set(SOURCE
     DescriptorReference.h
     DescriptorSet.cpp
     DescriptorSet.h
+    # Instance
+    Instance.cpp
+    Instance.h
+    InstanceManager.h
+    ObjectInstanced.cpp
+    ObjectInstanced.h
     # Mesh
     Axes.h
     Axes.cpp
@@ -80,11 +84,6 @@ set(SOURCE
     ModelHandler.h
     ModelMesh.cpp
     ModelMesh.h
-    # Shell
-    Shell.cpp
-    Shell.h
-    ShellGLFW.cpp
-    ShellGLFW.h
     # Pipeline
     Pipeline.cpp
     Pipeline.h
@@ -98,6 +97,11 @@ set(SOURCE
     Shader.h
     ShaderHandler.cpp
     ShaderHandler.h
+    # Shell
+    Shell.cpp
+    Shell.h
+    ShellGLFW.cpp
+    ShellGLFW.h
     # Texture
     Sampler.cpp
     Sampler.h

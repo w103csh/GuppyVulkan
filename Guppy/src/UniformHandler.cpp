@@ -68,7 +68,6 @@ void Uniform::Handler::createCameras() {
 
     createInfo.aspect = static_cast<float>(settings().initial_width) / static_cast<float>(settings().initial_height);
     camDefPersMgr().insert(dev, &createInfo);
-    camDefPersMgr().insert(dev, &createInfo);
 
     assert(MAIN_CAMERA_OFFSET < camDefPersMgr().pItems.size());
 }
@@ -88,6 +87,9 @@ void Uniform::Handler::createLights() {
     lgtDefPosMgr().insert(dev, &createInfo);
     lgtPbrPosMgr().insert(dev, &createInfo);
     createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-20.0f, 5.0f, -6.0f));
+    lgtDefPosMgr().insert(dev, &createInfo);
+    lgtPbrPosMgr().insert(dev, &createInfo);
+    createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-100.0f, 10.0f, 100.0f));
     lgtDefPosMgr().insert(dev, &createInfo);
     lgtPbrPosMgr().insert(dev, &createInfo);
 

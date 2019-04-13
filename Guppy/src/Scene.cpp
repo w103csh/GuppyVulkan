@@ -39,7 +39,7 @@ void Scene::Base::record(const uint8_t& frameIndex, std::unique_ptr<RenderPass::
     auto& secCmd = pPass->data.secCmds[frameIndex];
 
     auto it = pPass->PIPELINE_TYPES.begin();
-    while(it != pPass->PIPELINE_TYPES.end()) {
+    while (it != pPass->PIPELINE_TYPES.end()) {
         const auto& pipelineType = (*it);
 
         switch (pipelineType) {
@@ -50,6 +50,7 @@ void Scene::Base::record(const uint8_t& frameIndex, std::unique_ptr<RenderPass::
                         pMesh->draw(priCmd, frameIndex);
             } break;
             case PIPELINE::PBR_TEX:
+            case PIPELINE::BP_TEX_CULL_NONE:
             case PIPELINE::TRI_LIST_TEX: {
                 for (auto& pMesh : handler().meshHandler().getTextureMeshes())
                     if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)

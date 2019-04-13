@@ -100,7 +100,7 @@ class Handler : public Game::Handler {
 
     template <class T>
     inline void update(T& uniform) {
-        getManager<T>().update(shell().context().dev, uniform.BUFFER_INFO);
+        getManager<T>().updateData(shell().context().dev, uniform.BUFFER_INFO);
     }
 
    private:

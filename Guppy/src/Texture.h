@@ -23,7 +23,7 @@ typedef enum FLAG {
 } FLAG;
 
 struct DATA {
-    DATA(uint32_t offset, std::string path, std::string normPath = "", std::string specPath = "")
+    DATA(uint32_t offset, std::string path, std::string normPath = "", std::string specPath = "", std::string alphPath = "")
         : status(STATUS::PENDING),
           flags(0),
           image(VK_NULL_HANDLE),
@@ -41,9 +41,11 @@ struct DATA {
           path(path),
           normPath(normPath),
           specPath(specPath),
+          alphPath(alphPath),
           pixels(nullptr),
           normPixels(nullptr),
-          specPixels(nullptr) {
+          specPixels(nullptr),
+          alphPixels(nullptr) {
         // Make sure we have valid flags
         if (!path.empty()) flags |= FLAG::DIFFUSE;
         if (!normPath.empty()) flags |= FLAG::NORMAL;
@@ -59,9 +61,9 @@ struct DATA {
     VkImageView view;
     uint32_t offset, width, height, channels, mipLevels;
     float aspect;
-    std::string name, path, normPath, specPath;
+    std::string name, path, normPath, specPath, alphPath;
     std::unique_ptr<Loading::Resources> pLdgRes;
-    stbi_uc *pixels, *normPixels, *specPixels;
+    stbi_uc *pixels, *normPixels, *specPixels, *alphPixels;
 };
 
 }  // namespace Texture

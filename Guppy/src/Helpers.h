@@ -124,15 +124,17 @@ enum class PIPELINE {
     TRI_LIST_TEX = 2,
     PBR_COLOR = 3,
     PBR_TEX = 4,
+    BP_TEX_CULL_NONE = 5,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP below.
 };
 
-const std::array<PIPELINE, 5> PIPELINE_ALL = {
-    PIPELINE::TRI_LIST_COLOR,  //
-    PIPELINE::LINE,            //
-    PIPELINE::TRI_LIST_TEX,    //
-    PIPELINE::PBR_COLOR,       //
-    PIPELINE::PBR_TEX,         //
+const std::array<PIPELINE, 6> PIPELINE_ALL = {
+    PIPELINE::TRI_LIST_COLOR,    //
+    PIPELINE::LINE,              //
+    PIPELINE::TRI_LIST_TEX,      //
+    PIPELINE::PBR_COLOR,         //
+    PIPELINE::PBR_TEX,           //
+    PIPELINE::BP_TEX_CULL_NONE,  //
 };
 
 const std::map<VERTEX, std::set<PIPELINE>> VERTEX_PIPELINE_MAP = {
@@ -150,8 +152,9 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_PIPELINE_MAP = {
         VERTEX::TEXTURE,
         {
             //
-            PIPELINE::TRI_LIST_TEX,  //
-            PIPELINE::PBR_TEX,       //
+            PIPELINE::TRI_LIST_TEX,      //
+            PIPELINE::PBR_TEX,           //
+            PIPELINE::BP_TEX_CULL_NONE,  //
         },
     }  //
 };
@@ -503,8 +506,8 @@ struct SubmitResource {
     std::vector<VkSemaphore> signalSemaphores;
 };
 
-//template <typename T>
-//struct SharedStruct : std::enable_shared_from_this<T> {
+// template <typename T>
+// struct SharedStruct : std::enable_shared_from_this<T> {
 //    const std::shared_ptr<const T> getPtr() const { return shared_from_this(); }
 //};
 

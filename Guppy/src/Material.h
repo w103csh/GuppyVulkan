@@ -35,10 +35,10 @@ typedef enum FLAG {
     BITS_MAX_ENUM = 0x7FFFFFFF
 } FLAG;
 
-struct CreateInfo {
+struct CreateInfo : public Buffer::CreateInfo {
     std::shared_ptr<Texture::DATA> pTexture = nullptr;
     // COMMON
-    glm::vec3 color = {1.0f, 0.0f, 0.0f};
+    glm::vec3 color = {0.3f, 0.3f, 0.3f};
     FlagBits flags = Material::FLAG::PER_MATERIAL_COLOR;
     float opacity = 1.0f;
     float repeat = 1.0f;

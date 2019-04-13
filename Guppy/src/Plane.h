@@ -23,16 +23,16 @@ class Color : public Mesh::Color {
     friend class Mesh::Handler;
 
    protected:
-    Color(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
-          bool doubleSided = false);
+    Color(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+          std::shared_ptr<Material::Base>& pMaterial, bool doubleSided = false);
 };
 
 class Texture : public Mesh::Texture {
     friend class Mesh::Handler;
 
    protected:
-    Texture(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
-            bool doubleSided = false);
+    Texture(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+            std::shared_ptr<Material::Base>& pMaterial, bool doubleSided = false);
 };
 
 };  // namespace Plane

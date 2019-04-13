@@ -1,0 +1,23 @@
+
+ - Investigate the issue you saw in release mode where models loaded
+    asynchronously had the wrong textures!!!!
+
+ - Make buffer manager data an array instead of a void pointer with the alignment
+    padding added (The host memory only needs the alignment padding).
+
+ - Make texture params dynamic. All of the vulkan options are inaccessible.
+
+ - Add visual helpers back (Didn't add it back after instancing).
+
+ - Instance base class should probably inherit Object3d so common model space
+    operations are available (Would it be super slow????). This would make
+    things like selection on instances possible.
+
+ - Add a .ini file that can store some state (like camera position) that can be
+    loaded on start, so that things are easier to debug.
+
+ - Figure out the issue with alpha blending for transparent fragments. There is
+    a comment about this in link.texture.frag, and in the default render pass
+    intializer list.
+
+ - Countless more...

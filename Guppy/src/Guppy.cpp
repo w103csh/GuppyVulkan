@@ -9,6 +9,7 @@
 #include "Guppy.h"
 #include "Mesh.h"
 #include "Model.h"
+#include "Object3d.h"  // translateToTop
 #include "Plane.h"
 #include "Shell.h"
 // HANDLERS
@@ -34,16 +35,16 @@ Guppy::Guppy(const std::vector<std::string>& args)
     : Game("Guppy", args,
            // HANDLERS
            Game::Handlers{std::make_unique<Command::Handler>(this), std::make_unique<Descriptor::Handler>(this),
-            std::make_unique<Loading::Handler>(this), std::make_unique<Material::Handler>(this),
-            std::make_unique<Mesh::Handler>(this), std::make_unique<Model::Handler>(this),
-            std::make_unique<Pipeline::Handler>(this), std::make_unique<Scene::Handler>(this),
-            std::make_unique<Shader::Handler>(this), std::make_unique<Texture::Handler>(this),
+                          std::make_unique<Loading::Handler>(this), std::make_unique<Material::Handler>(this),
+                          std::make_unique<Mesh::Handler>(this), std::make_unique<Model::Handler>(this),
+                          std::make_unique<Pipeline::Handler>(this), std::make_unique<Scene::Handler>(this),
+                          std::make_unique<Shader::Handler>(this), std::make_unique<Texture::Handler>(this),
 #ifdef USE_DEBUG_UI
-            std::make_unique<UI::ImGuiHandler>(this),
+                          std::make_unique<UI::ImGuiHandler>(this),
 #else
-            std::make_unique<UI::Handler>(this),
+                          std::make_unique<UI::Handler>(this),
 #endif
-            std::make_unique<Uniform::Handler>(this)}),
+                          std::make_unique<Uniform::Handler>(this)}),
       // TODO: use these or get rid of them...
       multithread_(true),
       use_push_constants_(false),
@@ -92,6 +93,7 @@ void Guppy::attachShell(Shell& sh) {
     initRenderPasses();
     handlers_.pPipeline->createPipelines(pDefaultRenderPass_);
     handlers_.pUI->init();
+    handlers_.pMesh->init();
     handlers_.pModel->init();
     handlers_.pScene->init();
 
@@ -173,177 +175,311 @@ void Guppy::updateRenderPasses() {
 }
 
 void Guppy::createScenes() {
-    // const auto& ctx = shell().context();
+    bool suppress = false;
 
-    handlers_.pScene->makeScene(true, true);
+    handlers_.pScene->makeScene(true, (!suppress || false));
 
     // Create info structs
     Mesh::CreateInfo meshInfo;
     Model::CreateInfo modelInfo;
     AxesCreateInfo axesInfo;
+    Instance::Default::CreateInfo defInstInfo;
     Material::Default::CreateInfo defMatInfo;
     Material::PBR::CreateInfo pbrMatInfo;
     BoundingBoxMinMax groundPlane_bbmm;
 
-    // ORIGIN AXES
-    axesInfo = {};
-    axesInfo.lineSize = AXES_MAX_SIZE;
-    axesInfo.showNegative = true;
-    defMatInfo = {};
-    defMatInfo.shininess = 23.123f;
-    // pbrMatInfo = {};
-    handlers_.pMesh->makeLineMesh<Axes>(&axesInfo, &defMatInfo);
+    if (!suppress || true) {
+        // ORIGIN AXES
+        axesInfo = {};
+        axesInfo.lineSize = AXES_MAX_SIZE;
+        axesInfo.showNegative = true;
+        defInstInfo = {};
+        defMatInfo = {};
+        defMatInfo.shininess = 23.123f;
+        handlers_.pMesh->makeLineMesh<Axes>(&axesInfo, &defMatInfo, &defInstInfo);
+    }
 
-    // GROUND PLANE (TEXTURE)
-    meshInfo = {};
-    meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
-    meshInfo.model = helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X);
-    meshInfo.selectable = false;
-    defMatInfo = {};
-    defMatInfo.pTexture = handlers_.pTexture->getTextureByPath(HARDWOOD_FLOOR_TEX_PATH);
-    defMatInfo.repeat = 800.0f;
-    defMatInfo.shininess = Material::SHININESS::EGGSHELL;
-    auto& pGroundPlane = handlers_.pMesh->makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo);
-    groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
+    if (!suppress || true) {
+        // GROUND PLANE (TEXTURE)
+        meshInfo = {};
+        meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+        meshInfo.selectable = false;
+        defInstInfo = {};
+        defInstInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
+        defMatInfo = {};
+        defMatInfo.pTexture = handlers_.pTexture->getTextureByPath(HARDWOOD_FLOOR_TEX_PATH);
+        defMatInfo.repeat = 800.0f;
+        defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+        auto& pGroundPlane = handlers_.pMesh->makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
+        groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
+    }
 
-    //// GROUND PLANE (COLOR)
-    // meshInfo = {};
-    // meshInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
-    // meshInfo.model = helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X);
-    // meshInfo.selectable = false;
-    // defMatInfo = {};
-    // defMatInfo.shininess = Material::SHININESS::EGGSHELL;
-    // defMatInfo.diffuseCoeff = {0.5f, 0.5f, 0.5f};
-    // auto& pGroundPlane = handlers_.pMesh->makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo);
-    // auto groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
-    
-    // BOX (TEXTURE)
-    meshInfo = {};
-    meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
-    meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f});
-    defMatInfo = {};
-    defMatInfo.pTexture = handlers_.pTexture->getTextureByPath(VULKAN_TEX_PATH);
-    defMatInfo.shininess = Material::SHININESS::EGGSHELL;
-    auto& boxTexture1 = handlers_.pMesh->makeTextureMesh<Box::Texture>(&meshInfo, &defMatInfo);
-    boxTexture1->putOnTop(groundPlane_bbmm);
-    handlers_.pMesh->makeTangentSpaceVisualHelper(boxTexture1.get());
-    // BOX (PBR_TEX)
-    meshInfo = {};
-    meshInfo.pipelineType = PIPELINE::PBR_TEX;
-    meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{1.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f});
-    pbrMatInfo = {};
-    pbrMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::METAL;
-    pbrMatInfo.color = {1.0f, 1.0f, 0.0f};
-    pbrMatInfo.roughness = 0.43f;
-    pbrMatInfo.pTexture = handlers_.pTexture->getTextureByPath(VULKAN_TEX_PATH);
-    auto& boxTexture2 = handlers_.pMesh->makeTextureMesh<Box::Texture>(&meshInfo, &pbrMatInfo);
-    boxTexture2->putOnTop(groundPlane_bbmm);
-    handlers_.pMesh->makeTangentSpaceVisualHelper(boxTexture2.get());
+    if (!suppress || true) {
+        //// GROUND PLANE (COLOR)
+        // meshInfo = {};
+        // meshInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+        // meshInfo.selectable = false;
+        // defInstInfo = {};
+        // defInstInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
+        // defMatInfo = {};
+        // defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+        // defMatInfo.color = {0.5f, 0.5f, 0.5f};
+        // auto& pGroundPlane = handlers_.pMesh->makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+        // groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
+    }
 
-    // BOX (PBR_COLOR)
-    meshInfo = {};
-    meshInfo.pipelineType = PIPELINE::PBR_COLOR;
-    meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{2.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f});
-    pbrMatInfo = {};
-    pbrMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::METAL;
-    pbrMatInfo.color = {1.0f, 1.0f, 0.0f};
-    pbrMatInfo.roughness = 0.43f;
-    auto& boxPbrColor = handlers_.pMesh->makeColorMesh<Box::Color>(&meshInfo, &pbrMatInfo);
-    boxPbrColor->putOnTop(groundPlane_bbmm);
-    // BOX (TRI_LIST_COLOR)
-    meshInfo = {};
-    meshInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
-    // meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{5.0f, 0.0f, 3.5f}, M_PI_2_FLT, glm::vec3{-1.0f,
-    // 0.0f, 1.0f});
-    meshInfo.model =
-        helpers::affine(glm::vec3{1.0f}, glm::vec3{-1.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f});
-    defMatInfo = {};
-    defMatInfo.color = {1.0f, 1.0f, 0.0f};
-    auto& boxDefColor1 = handlers_.pMesh->makeColorMesh<Box::Color>(&meshInfo, &defMatInfo);
-    boxDefColor1->putOnTop(groundPlane_bbmm);
+    if (!suppress || false) {
+        // BOX (TEXTURE)
+        meshInfo = {};
+        meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+        // meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f,
+        // 0.0f, 1.0f});
+        defInstInfo = {};
+        defInstInfo.data.push_back(
+            {helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
+        defMatInfo = {};
+        defMatInfo.pTexture = handlers_.pTexture->getTextureByPath(VULKAN_TEX_PATH);
+        defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+        auto& boxTexture1 = handlers_.pMesh->makeTextureMesh<Box::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
+        boxTexture1->putOnTop(groundPlane_bbmm);
+        handlers_.pMesh->updateMesh(boxTexture1);
+        handlers_.pMesh->makeTangentSpaceVisualHelper(boxTexture1.get());
+    }
+    if (!suppress || false) {
+        // BOX (PBR_TEX)
+        meshInfo = {};
+        meshInfo.pipelineType = PIPELINE::PBR_TEX;
+        // meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{1.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f,
+        // 0.0f, 1.0f});
+        defInstInfo = {};
+        defInstInfo.data.push_back(
+            {helpers::affine(glm::vec3{1.0f}, glm::vec3{1.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
+        pbrMatInfo = {};
+        pbrMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::METAL;
+        pbrMatInfo.color = {1.0f, 1.0f, 0.0f};
+        pbrMatInfo.roughness = 0.43f;
+        pbrMatInfo.pTexture = handlers_.pTexture->getTextureByPath(VULKAN_TEX_PATH);
+        auto& boxTexture2 = handlers_.pMesh->makeTextureMesh<Box::Texture>(&meshInfo, &pbrMatInfo, &defInstInfo);
+        boxTexture2->putOnTop(groundPlane_bbmm);
+        handlers_.pMesh->updateMesh(boxTexture2);
+        handlers_.pMesh->makeTangentSpaceVisualHelper(boxTexture2.get());
+    }
 
-    // BURNT ORANGE TORUS
-    // MODEL
-    modelInfo = {};
-    // modelCreateInfo.pipelineType = PIPELINE::PBR_COLOR;
-    modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
-    modelInfo.async = true;
-    modelInfo.callback = [groundPlane_bbmm](auto pModel) {  pModel->putOnTop(groundPlane_bbmm); };
-    modelInfo.model = helpers::affine(glm::vec3(0.07f));
-    modelInfo.modelPath = TORUS_MODEL_PATH;
-    modelInfo.smoothNormals = true;
-    // MATERIAL
-    defMatInfo = {};
-    defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::METAL;
-    defMatInfo.ambientCoeff = {0.8f, 0.3f, 0.0f};
-    defMatInfo.color = {0.8f, 0.3f, 0.0f};
-    // matCreateInfo.roughness = 0.5f;
-    handlers_.pModel->makeColorModel(&modelInfo, &defMatInfo);
+    if (!suppress || false) {
+        // BOX (PBR_COLOR)
+        meshInfo = {};
+        meshInfo.pipelineType = PIPELINE::PBR_COLOR;
+        // meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{2.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f,
+        // 0.0f, 1.0f});
+        defInstInfo = {};
+        defInstInfo.data.push_back(
+            {helpers::affine(glm::vec3{1.0f}, glm::vec3{2.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
+        pbrMatInfo = {};
+        pbrMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::METAL;
+        pbrMatInfo.color = {1.0f, 1.0f, 0.0f};
+        pbrMatInfo.roughness = 0.43f;
+        auto& boxPbrColor = handlers_.pMesh->makeColorMesh<Box::Color>(&meshInfo, &pbrMatInfo, &defInstInfo);
+        boxPbrColor->putOnTop(groundPlane_bbmm);
+        handlers_.pMesh->updateMesh(boxPbrColor);
+    }
+    if (!suppress || false) {
+        // BOX (TRI_LIST_COLOR)
+        meshInfo = {};
+        meshInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+        // meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{5.0f, 0.0f, 3.5f}, M_PI_2_FLT, glm::vec3{-1.0f,
+        // 0.0f, 1.0f});
+        // meshInfo.model =
+        //    helpers::affine(glm::vec3{1.0f}, glm::vec3{-1.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f});
+        defInstInfo = {};
+        defInstInfo.data.push_back(
+            {helpers::affine(glm::vec3{1.0f}, glm::vec3{-1.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
+        defMatInfo = {};
+        defMatInfo.color = {1.0f, 1.0f, 0.0f};
+        auto& boxDefColor1 = handlers_.pMesh->makeColorMesh<Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+        boxDefColor1->putOnTop(groundPlane_bbmm);
+        handlers_.pMesh->updateMesh(boxDefColor1);
+    }
 
-    // ORANGE
-    // MODEL
-    modelInfo = {};
-    modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
-    modelInfo.async = false;
-    modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
-    modelInfo.visualHelper = true;
-    modelInfo.modelPath = ORANGE_MODEL_PATH;
-    modelInfo.model = helpers::affine(glm::vec3{1.0f}, {4.0f, 0.0f, -2.0f});
-    modelInfo.smoothNormals = true;
-    // MATERIAL
-    defMatInfo = {};
-    handlers_.pModel->makeTextureModel(&modelInfo, &defMatInfo);
+    if (!suppress || false) {
+        // BURNT ORANGE TORUS
+        // MODEL
+        modelInfo = {};
+        modelInfo.pipelineType = PIPELINE::PBR_COLOR;
+        // modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+        modelInfo.async = false;
+        modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
+        modelInfo.modelPath = TORUS_MODEL_PATH;
+        modelInfo.smoothNormals = true;
+        defInstInfo = {};
+        defInstInfo.data.push_back({helpers::affine(glm::vec3{0.07f})});
+        // MATERIAL
+        // defMatInfo = {};
+        // defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::METAL;
+        // defMatInfo.ambientCoeff = {0.8f, 0.3f, 0.0f};
+        // defMatInfo.color = {0.8f, 0.3f, 0.0f};
+        pbrMatInfo = {};
+        pbrMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;  // | Material::FLAG::METAL;
+        pbrMatInfo.color = {0.8f, 0.3f, 0.0f};
+        pbrMatInfo.roughness = 0.9f;
+        handlers_.pModel->makeColorModel(&modelInfo, &defInstInfo, &pbrMatInfo);
+    }
 
-    //// PEAR
-    // modelCreateInfo.pipelineType = PIPELINE_TYPE::TRI_LIST_TEX;
-    // modelCreateInfo.async = true;
-    // modelCreateInfo.material = {};
-    // modelCreateInfo.modelPath = PEAR_MODEL_PATH;
-    // modelCreateInfo.model = helpers::affine();
-    // ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene(), nullptr);
+    if (!suppress || true) {
+        // GRASS
+        // MODEL
+        modelInfo = {};
+        modelInfo.pipelineType = PIPELINE::BP_TEX_CULL_NONE;
+        modelInfo.async = false;
+        modelInfo.callback = [groundPlane_bbmm](auto pModel) {
+            // auto bbmm = pModel->getBoundingBoxMinMax(false, 0);
+            // auto trans = translateToTop(groundPlane_bbmm, bbmm);
+            // pModel->allMeshAction([&](Mesh::Base* pMesh) {
+            //    for (uint32_t i = 0; i < pModel->getModelCount(); i++) {
+            //        pMesh->transform(trans, i);
+            //    }
+            //});
+        };
+        modelInfo.visualHelper = false;
+        modelInfo.modelPath = GRASS_LP_MODEL_PATH;
+        modelInfo.smoothNormals = false;
+        defInstInfo = {};
+        defInstInfo.update = false;
+        uint32_t count = 100;
+        std::srand(static_cast<unsigned>(time(0)));
+        float f1 = 0.01f, x, z;
+        float f2 = f1 * 5.0f;
+        float low = f2 * 0.05f;
+        float high = f2 * 3.0f;
+        for (uint32_t i = 0; i < count; i++) {
+            x = static_cast<float>(i) * f2;
+            // x += low + static_cast<float>(std::rand()) / (static_cast<float>(RAND_MAX / (high - low)));
+            for (uint32_t j = 0; j < count; j++) {
+                z = static_cast<float>(j) * f2;
+                // z += low + static_cast<float>(std::rand()) / (static_cast<float>(RAND_MAX / (high - low)));
+                auto scale = glm::vec3{f1};
+                auto translate1 = glm::vec3{x, 0.0f, z};
+                auto translate2 = glm::vec3{x, 0.0f, -z};
+                defInstInfo.data.push_back({helpers::affine(scale, translate1)});
+                if (i == 0 && j == 0) continue;
+                defInstInfo.data.push_back({helpers::affine(scale, -translate1)});
+                if (i == 0) continue;
+                defInstInfo.data.push_back({helpers::affine(scale, translate2)});
+                defInstInfo.data.push_back({helpers::affine(scale, -translate2)});
+            }
+        }
+        // MATERIAL
+        defMatInfo = {};
+        handlers_.pModel->makeTextureModel(&modelInfo, &defInstInfo, &defMatInfo);
+    }
 
-    // MEDIEVAL HOUSE (TRI_COLOR_TEX)
-    modelInfo = {};
-    modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
-    modelInfo.async = true;
-    //modelInfo.model = helpers::affine(glm::vec3{0.0175f}, {-6.5f, 0.0f, -6.5f}, M_PI_4_FLT, CARDINAL_Y);
-    modelInfo.model = helpers::affine(glm::vec3{0.0175f}, {-6.5f, 0.0f, 0.0f}, M_PI_4_FLT, CARDINAL_Y);
-    modelInfo.modelPath = MED_H_MODEL_PATH;
-    modelInfo.smoothNormals = false;
-    modelInfo.visualHelper = true;
-    // MATERIAL
-    defMatInfo = {};
-    defMatInfo.pTexture = handlers_.pTexture->getTextureByPath(MED_H_DIFF_TEX_PATH);
-    handlers_.pModel->makeTextureModel(&modelInfo, &defMatInfo);
-    // MEDIEVAL HOUSE (PBR_TEX)
-    modelInfo = {};
-    modelInfo.pipelineType = PIPELINE::PBR_TEX;
-    modelInfo.async = true;
-    //modelInfo.model = helpers::affine(glm::vec3{0.0175f}, {-6.5f, 0.0f, 0.0f}, M_PI_4_FLT, CARDINAL_Y);
-    modelInfo.model = helpers::affine(glm::vec3{0.0175f}, {-6.5f, 0.0f, -6.5f}, M_PI_4_FLT, CARDINAL_Y);
-    modelInfo.modelPath = MED_H_MODEL_PATH;
-    modelInfo.smoothNormals = false;
-    modelInfo.visualHelper = false;
-    // MATERIAL
-    pbrMatInfo = {};
-    pbrMatInfo.pTexture = handlers_.pTexture->getTextureByPath(MED_H_DIFF_TEX_PATH);
-    handlers_.pModel->makeTextureModel(&modelInfo, &pbrMatInfo);
+    if (!suppress || false) {
+        // ORANGE
+        // MODEL
+        modelInfo = {};
+        modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+        modelInfo.async = false;
+        modelInfo.callback = [groundPlane_bbmm](auto pModel) {
+            auto bbmm = pModel->getBoundingBoxMinMax(false, 0);
+            auto trans = translateToTop(groundPlane_bbmm, bbmm);
+            pModel->allMeshAction([&](Mesh::Base* pMesh) {
+                for (uint32_t i = 0; i < pModel->getModelCount(); i++) {
+                    pMesh->transform(trans, i);
+                }
+            });
+        };
+        modelInfo.visualHelper = false;
+        modelInfo.modelPath = ORANGE_MODEL_PATH;
+        modelInfo.smoothNormals = true;
+        defInstInfo = {};
+        defInstInfo.update = false;
+        uint32_t count = 5;
+        for (uint32_t i = 0; i < count; i++) {
+            float x = 4.0f + (static_cast<float>(i) * 2.0f);
+            for (uint32_t j = 0; j < count; j++) {
+                float z = -2.0f - (static_cast<float>(j) * 2.0f);
+                defInstInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, {x, 0.0f, z})});
+            }
+        }
+        // MATERIAL
+        defMatInfo = {};
+        handlers_.pModel->makeTextureModel(&modelInfo, &defInstInfo, &defMatInfo);
+    }
 
-    // PIG
-    // MODEL
-    modelInfo = {};
-    modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
-    modelInfo.async = true;
-    modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
-    modelInfo.model = helpers::affine(glm::vec3{2.0f}, {0.0f, 0.0f, -4.0f});
-    modelInfo.modelPath = PIG_MODEL_PATH;
-    modelInfo.smoothNormals = true;
-    // MATERIAL
-    defMatInfo = {};
-    defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::MODE_BLINN_PHONG;
-    defMatInfo.ambientCoeff = {0.8f, 0.8f, 0.8f};
-    defMatInfo.color = {0.8f, 0.8f, 0.8f};
-    handlers_.pModel->makeColorModel(&modelInfo, &defMatInfo);
+    if (!suppress || false) {
+        ////// PEAR
+        //// modelCreateInfo.pipelineType = PIPELINE_TYPE::TRI_LIST_TEX;
+        //// modelCreateInfo.async = true;
+        //// modelCreateInfo.material = {};
+        //// modelCreateInfo.modelPath = PEAR_MODEL_PATH;
+        //// modelCreateInfo.model = helpers::affine();
+        //// ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene(), nullptr);
+    }
+
+    if (!suppress || false) {
+        // *************************
+        // MEDIEVAL HOUSE (TRI_COLOR_TEX)
+        // *************************
+        modelInfo = {};
+        modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+        modelInfo.async = false;
+        modelInfo.modelPath = MED_H_MODEL_PATH;
+        modelInfo.smoothNormals = false;
+        modelInfo.visualHelper = true;
+        defInstInfo = {};
+        uint32_t count = 4;
+        for (uint32_t i = 0; i < count; i++) {
+            float x = -6.5f - (static_cast<float>(i) * 6.5f);
+            for (uint32_t j = 0; j < count; j++) {
+                float z = -(static_cast<float>(j) * 6.5f);
+                defInstInfo.data.push_back({helpers::affine(glm::vec3{0.0175f}, {x, 0.0f, z}, M_PI_4_FLT, CARDINAL_Y)});
+            }
+        }
+        // MATERIAL
+        defMatInfo = {};
+        defMatInfo.pTexture = handlers_.pTexture->getTextureByPath(MED_H_DIFF_TEX_PATH);
+        handlers_.pModel->makeTextureModel(&modelInfo, &defInstInfo, &defMatInfo);
+        // *************************
+        // MEDIEVAL HOUSE (PBR_TEX)
+        // *************************
+        modelInfo = {};
+        modelInfo.pipelineType = PIPELINE::PBR_TEX;
+        modelInfo.async = true;
+        modelInfo.modelPath = MED_H_MODEL_PATH;
+        modelInfo.smoothNormals = false;
+        modelInfo.visualHelper = false;
+        defInstInfo = {};
+        for (uint32_t i = 0; i < count; i++) {
+            float x = -6.5f - (static_cast<float>(i) * 6.5f);
+            for (uint32_t j = 0; j < count; j++) {
+                float z = (static_cast<float>(j) * 6.5f);
+                defInstInfo.data.push_back({helpers::affine(glm::vec3{0.0175f}, {x, 0.0f, z}, M_PI_4_FLT, CARDINAL_Y)});
+            }
+        }
+        defInstInfo.data.push_back({helpers::affine(glm::vec3{0.0175f}, {-6.5f, 0.0f, -6.5f}, M_PI_4_FLT, CARDINAL_Y)});
+        // MATERIAL
+        pbrMatInfo = {};
+        pbrMatInfo.pTexture = handlers_.pTexture->getTextureByPath(MED_H_DIFF_TEX_PATH);
+        handlers_.pModel->makeTextureModel(&modelInfo, &defInstInfo, &pbrMatInfo);
+    }
+
+    if (!suppress || false) {
+        // PIG
+        // MODEL
+        modelInfo = {};
+        modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+        modelInfo.async = true;
+        modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
+        modelInfo.modelPath = PIG_MODEL_PATH;
+        modelInfo.smoothNormals = true;
+        defInstInfo = {};
+        defInstInfo.data.push_back({helpers::affine(glm::vec3{2.0f}, {0.0f, 0.0f, -4.0f})});
+        // MATERIAL
+        defMatInfo = {};
+        defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::MODE_BLINN_PHONG;
+        defMatInfo.ambientCoeff = {0.8f, 0.8f, 0.8f};
+        defMatInfo.color = {0.8f, 0.8f, 0.8f};
+        handlers_.pModel->makeColorModel(&modelInfo, &defInstInfo, &defMatInfo);
+    }
 }
 
 /*  This function is for updating things regardless of framerate. It is based on settings.ticks_per_second,

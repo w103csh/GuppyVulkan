@@ -8,7 +8,7 @@
 
 Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData, Perspective::CreateInfo *pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Object3d(glm::mat4(1.0f)),
+      Object3d(),
       Uniform::Base(),
       Buffer::DataItem<DATA>(pData),
       aspect_(pCreateInfo->aspect),
@@ -16,7 +16,8 @@ Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData,
       fov_(pCreateInfo->fov),
       near_(pCreateInfo->n),
       eye_(pCreateInfo->eye),
-      center_(pCreateInfo->center) {
+      center_(pCreateInfo->center),
+	  model_(glm::mat4{ 1.0f }) {
     pData_->view = glm::lookAt(pCreateInfo->eye, pCreateInfo->center, UP_VECTOR);
     proj_ = glm::perspective(pCreateInfo->fov, pCreateInfo->aspect, near_, far_);
     // Vulkan clip space has inverted Y and half Z.

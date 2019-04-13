@@ -5,22 +5,31 @@
 #include "MeshHandler.h"
 #include "ModelHandler.h"
 
-Model::Base::Base(Model::Handler &handler, Model::CreateInfo *pCreateInfo)
-    : Object3d(pCreateInfo->model),
+Model::Base::Base(Model::Handler &handler, Model::CreateInfo *pCreateInfo, const std::vector<glm::mat4> &&models)
+    : Object3d(),
       Handlee(handler),
       PIPELINE_TYPE(pCreateInfo->pipelineType),
       offset_(pCreateInfo->handlerOffset),
       modelPath_(pCreateInfo->modelPath),
       smoothNormals_(pCreateInfo->smoothNormals),
       visualHelper_(pCreateInfo->visualHelper),
-      visualHelperLineSize_(pCreateInfo->visualHelperLineSize) {}
+      visualHelperLineSize_(pCreateInfo->visualHelperLineSize) {
+    if (models.empty())
+        models_.push_back(glm::mat4{1.0f});
+    else
+        models_ = models;
+}
 
 Model::Base::~Base() = default;
 
 void Model::Base::postLoad(Model::CBACK callback) {
     allMeshAction([this](Mesh::Base *pMesh) { updateAggregateBoundingBox(pMesh); });
-    // Invoke callback for say... model transformations. This is a pain in the ass.
+    // Invoke callback for say... model transformations. This is a pain in the ass
+    // and slow.
     if (callback) callback(this);
+    allMeshAction([this](Mesh::Base *pMesh) {  //
+        handler().meshHandler().updateInstanceData(pMesh->getInstanceDataInfo());
+    });
 }
 
 void Model::Base::addOffset(std::unique_ptr<Mesh::Color> &pMesh) { colorOffsets_.push_back(pMesh->getOffset()); }
@@ -31,20 +40,23 @@ void Model::Base::allMeshAction(std::function<void(Mesh::Base *)> action) {
     for (auto &offset : colorOffsets_) {
         auto &pMesh = handler().meshHandler().getColorMesh(offset);
         action(pMesh.get());
+        handler().meshHandler().updateMesh(pMesh);
     }
     for (auto &offset : lineOffsets_) {
         auto &pMesh = handler().meshHandler().getLineMesh(offset);
         action(pMesh.get());
+        handler().meshHandler().updateMesh(pMesh);
     }
     for (auto &offset : texOffsets_) {
         auto &pMesh = handler().meshHandler().getTextureMesh(offset);
         action(pMesh.get());
+        handler().meshHandler().updateMesh(pMesh);
     }
 }
 
-void Model::Base::transform(const glm::mat4 t) {
-    Object3d::transform(t);
-    allMeshAction([&t](Mesh::Base *pMesh) { pMesh->transform(t); });
+void Model::Base::transform(const glm::mat4 t, uint32_t index) {
+    Object3d::transform(t, index);
+    allMeshAction([&t, &index](Mesh::Base *pMesh) { pMesh->transform(t, index); });
 }
 
 Model::INDEX Model::Base::getMeshOffset(MESH type, uint8_t offset) {

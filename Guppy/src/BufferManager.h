@@ -1,6 +1,7 @@
 #ifndef BUFFER_MANAGER_H
 #define BUFFER_MANAGER_H
 
+#include <algorithm>
 #include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -17,21 +18,22 @@ class Data {
    public:
     Data(VkDeviceSize maxSize, VkDeviceSize alignment)  //
         : TOTAL_SIZE(maxSize * alignment), ALIGNMENT(alignment) {
-        pData_ = (uint8_t *)malloc(TOTAL_SIZE);
+        pData_ = (uint8_t *)std::calloc(1, TOTAL_SIZE);
     }
 
     const VkDeviceSize TOTAL_SIZE;
     const VkDeviceSize ALIGNMENT;
 
-    inline const void *getData() const { return pData_; }
+    inline const void *data() const { return pData_; }
 
-    inline void setElement(VkDeviceSize index, T &element) {
+    inline void set(VkDeviceSize index, const std::vector<T> &data) {
         auto offset = index * ALIGNMENT;
-        assert(offset + ALIGNMENT < TOTAL_SIZE);
-        std::memcpy((pData_ + offset), &element, sizeof(T));
+        assert(offset + (ALIGNMENT * data.size()) < TOTAL_SIZE);
+        for (uint64_t i = 0; i < data.size(); i++)  //
+            std::memcpy((pData_ + (offset + (i * ALIGNMENT))), &data[i], sizeof(T));
     }
 
-    inline T &getElement(VkDeviceSize index) {
+    inline T &get(VkDeviceSize index) {
         auto offset = index * ALIGNMENT;
         assert(offset + ALIGNMENT < TOTAL_SIZE);
         return (T &)(*(pData_ + offset));
@@ -97,38 +99,23 @@ class Base {
     template <typename TCreateInfo>
     void insert(const VkDevice &dev, TCreateInfo *pCreateInfo) {
         assert(pItems.size() < MAX_SIZE);
-        auto info = insert(dev, {});
+        auto info = fill(dev, std::vector<typename TDerived::DATA>(1));
         pItems.emplace_back(new TDerived(std::move(info), get(info), pCreateInfo));
-        update(dev, pItems.back()->BUFFER_INFO);
+        if (pCreateInfo == nullptr || pCreateInfo->update) updateData(dev, pItems.back()->BUFFER_INFO);
     }
 
-    void insert(const VkDevice &dev) {
+    void insert(const VkDevice &dev, bool update = true,
+                const std::vector<typename TDerived::DATA> &data = std::vector<typename TDerived::DATA>(1)) {
         assert(pItems.size() < MAX_SIZE);
-        auto info = insert(dev, {});
+        auto info = fill(dev, data);
         pItems.emplace_back(new TDerived(std::move(info), get(info)));
-        update(dev, pItems.back()->BUFFER_INFO);
+        if (update) updateData(dev, pItems.back()->BUFFER_INFO);
     }
 
-    void update(const VkDevice &dev, const Buffer::Info &info) {
-        if (pItems[info.dataOffset]->DIRTY) {
-            updateData(dev, info);
-            pItems[info.dataOffset]->DIRTY = false;
-        }
-    }
-
-    // TODO: change the caller so that all the memory can be updated at once.
     void updateData(const VkDevice &dev, const Buffer::Info &info) {
-        auto &resource = resources_[info.resourcesOffset];
-        auto pData = static_cast<uint8_t *>(resource.pMappedData) + (info.dataOffset * resource.data.ALIGNMENT);
-        if (KEEP_MAPPED) {
-            memcpy(pData, &resource.data.getElement(info.dataOffset), alignment_);
-            return;
-        } else {
-            // TODO: only map the region being copied???
-            vk::assert_success(
-                vkMapMemory(dev, resource.memory, 0, resource.memoryRequirements.size, 0, &resource.pMappedData));
-            memcpy(pData, &resource.data.getElement(info.dataOffset), resource.data.ALIGNMENT);
-            vkUnmapMemory(dev, resource.memory);
+        if (pItems[info.itemOffset]->DIRTY) {
+            updateMappedMemory(dev, info);
+            pItems[info.itemOffset]->DIRTY = false;
         }
     }
 
@@ -145,23 +132,37 @@ class Base {
     std::vector<TSmartPointer<TBase>> pItems;  // TODO: public?
 
    protected:
-    virtual void setInfo(const Manager::Resource<typename TDerived::DATA> &resource, Buffer::Info &info) = 0;
+    virtual void setInfo(Buffer::Info &info){};
 
-    Buffer::Info insert(const VkDevice &dev, typename TDerived::DATA &&dataItem) {
+    Buffer::Info fill(const VkDevice &dev, const std::vector<typename TDerived::DATA> data) {
         auto &resource = resources_.back();
 
         bool isValid = true;
-        isValid &= resource.currentOffset < resource.data.TOTAL_SIZE;
-        if (!isValid) assert(isValid && "Either up the max size or figure out how to grow the \"resources_\".");
-        // TODO: other validation?
+        isValid = !data.empty();
+        assert(isValid && "\"data\" cannot be empty.");
+        isValid &= ((resource.currentOffset + data.size()) * alignment_) <= resource.data.TOTAL_SIZE;
+        assert(isValid && "Either up the max size or figure out how to grow the \"resources_\".");
+        // TODO: other validation? also, does above make any sense?
 
         Buffer::Info info = {};
+        info.bufferInfo.buffer = resource.buffer;
+        info.bufferInfo.range = alignment_;
+        // Note: The offset for descriptor buffer info is 0 for a dynamic buffer. This
+        // is overriden in Buffer::Manager::Descriptor::setInfo.
+        info.memoryOffset = info.bufferInfo.offset = info.bufferInfo.range * resource.currentOffset;
         info.resourcesOffset = resources_.size() - 1;
-        info.dataOffset = resource.currentOffset++;
-        // SET INFO
-        setInfo(resource, info);
+        info.dataOffset = resource.currentOffset;
+        // TODO: putting this here could be super confusing. It relies on the update
+        // functions to create a new item.
+        info.itemOffset = static_cast<uint32_t>(pItems.size());
 
-        resource.data.setElement(info.dataOffset, dataItem);
+        resource.data.set(resource.currentOffset, data);
+        resource.currentOffset += data.size();
+        info.count = static_cast<uint32_t>(data.size());
+        assert(info.count > 0);
+
+        // Let derived classes manipulate the info data if necessary.
+        setInfo(info);
 
         return info;
     }
@@ -169,6 +170,22 @@ class Base {
     VkDeviceSize alignment_;
 
    private:
+    // TODO: change the caller so that all the memory can be updated at once.
+    void updateMappedMemory(const VkDevice &dev, const Buffer::Info &info) {
+        auto &resource = resources_[info.resourcesOffset];
+        auto pData = static_cast<uint8_t *>(resource.pMappedData) + info.memoryOffset;
+        if (KEEP_MAPPED) {
+            VkDeviceSize range = info.count * info.bufferInfo.range;
+            memcpy(pData, &resource.data.get(info.dataOffset), range);
+        } else {
+            // TODO: only map the region being copied???
+            vk::assert_success(
+                vkMapMemory(dev, resource.memory, 0, resource.memoryRequirements.size, 0, &resource.pMappedData));
+            memcpy(pData, &resource.data.get(info.dataOffset), resource.data.ALIGNMENT);
+            vkUnmapMemory(dev, resource.memory);
+        }
+    }
+
     void reset(const VkDevice &dev) {
         for (auto &resource : resources_) {
             if (KEEP_MAPPED) vkUnmapMemory(dev, resource.memory);
@@ -180,6 +197,8 @@ class Base {
     void createBuffer(const Shell::Context &ctx, const Game::Settings &settings) {
         resources_.push_back({MAX_SIZE, alignment_});
         auto &resource = resources_.back();
+
+        // TODO: I FORGOT TO USE A STAGING BUFFER HERE TO SPEED THIS UP!!!
 
         // CREATE BUFFER
 
@@ -222,7 +241,7 @@ class Base {
             each item will do a memcpy if DIRTY after creation. Maybe just make that a necessary step,
             and leave the rest of the buffer garbage.
         */
-        memcpy(resource.pMappedData, resource.data.getData(), static_cast<size_t>(resource.memoryRequirements.size));
+        memcpy(resource.pMappedData, resource.data.data(), static_cast<size_t>(resource.memoryRequirements.size));
         if (!KEEP_MAPPED) vkUnmapMemory(ctx.dev, resource.memory);
 
         // BIND MEMORY
@@ -241,7 +260,7 @@ class Base {
     }
 
     typename TDerived::DATA *get(const Buffer::Info &info) {
-        return &resources_[info.resourcesOffset].data.getElement(info.dataOffset);
+        return &resources_[info.resourcesOffset].data.get(info.dataOffset);
     }
 
     std::vector<uint32_t> queueFamilyIndices_;

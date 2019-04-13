@@ -47,17 +47,17 @@ std::vector<Face> Box::make(bool doubleSided) {
     return faces;
 }
 
-Box::Color::Color(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
-                  bool doubleSided)
-    : Mesh::Color(handler, "ColorPlane", pCreateInfo, pMaterial) {
+Box::Color::Color(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+                  std::shared_ptr<Material::Base>& pMaterial, bool doubleSided)
+    : Mesh::Color(handler, "ColorPlane", pCreateInfo, pInstanceData, pMaterial) {
     addFaces(this, doubleSided);
     updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
 }
 
-Box::Texture::Texture(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
-                      bool doubleSided)
-    : Mesh::Texture(handler, "TexturePlane", pCreateInfo, pMaterial) {
+Box::Texture::Texture(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+                      std::shared_ptr<Material::Base>& pMaterial, bool doubleSided)
+    : Mesh::Texture(handler, "TexturePlane", pCreateInfo, pInstanceData, pMaterial) {
     addFaces(this, doubleSided);
     updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;

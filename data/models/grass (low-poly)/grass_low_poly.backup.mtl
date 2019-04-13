@@ -12,9 +12,8 @@ newmtl grass_mat
 	Kd 0.305882 0.403922 0.309804
 	Ks 0.000000 0.000000 0.000000
 	Ke 0.000000 0.000000 0.000000
-	map_Ka low_poly_grass2.png
-	map_Kd low_poly_grass2.png
-	map_Ks low_poly_grass_specular.png
-	map_d low_poly_grass_opacity.png
-	map_bump low_poly_grass_normal.png
-	bump low_poly_grass_normal.png
+	map_Ka maps\low_poly_grass2.png
+	map_Kd maps\low_poly_grass2.png
+	map_d maps\low_poly_grass_opacity.png
+	map_bump maps\low_poly_grass_normal.png
+	bump maps\low_poly_grass_normal.png

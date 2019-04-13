@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
+#include "BufferItem.h"
 #include "Helpers.h"
 #include "Object3d.h"
 #include "Uniform.h"
@@ -14,7 +15,7 @@ namespace Default {
 
 namespace Perspective {
 
-struct CreateInfo {
+struct CreateInfo : public Buffer::CreateInfo {
     float aspect = (16.0f / 9.0f);
     const glm::vec3 eye{2.0f, 2.0f, 4.0f};
     const glm::vec3 center{0.0f, 0.0f, 0.0f};
@@ -44,13 +45,13 @@ class Base : public Object3d, public Uniform::Base, public Buffer::DataItem<DATA
         return pData_->view * glm::vec4(p, 1.0f);
     }
 
-    inline glm::vec3 getWorldSpaceDirection(const glm::vec3 &d = FORWARD_VECTOR) const override {
+    inline glm::vec3 getWorldSpaceDirection(const glm::vec3 &d = FORWARD_VECTOR, uint32_t index = 0) const override {
         // TODO: deal with model_...
         glm::vec3 direction = glm::inverse(pData_->view) * glm::vec4(d, 0.0f);
         return glm::normalize(direction);
     }
 
-    inline glm::vec3 getWorldSpacePosition(const glm::vec3 &p = {}) const override {
+    inline glm::vec3 getWorldSpacePosition(const glm::vec3 &p = {}, uint32_t index = 0) const override {
         // TODO: deal with model_...
         return glm::inverse(pData_->view) * glm::vec4(p, 1.0f);
     }
@@ -73,6 +74,9 @@ class Base : public Object3d, public Uniform::Base, public Buffer::DataItem<DATA
         pData_->viewProjection = getMVP();
         DIRTY = true;
     }
+
+    inline const glm::mat4 &model(uint32_t index = 0) const override { return model_; }
+    glm::mat4 model_;
 
     glm::mat4 clip_;
     // projection

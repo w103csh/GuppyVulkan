@@ -1,6 +1,7 @@
 
 #include <algorithm>
 #include <sstream>
+#include <iostream>
 #define STB_IMAGE_IMPLEMENTATION
 
 #include "TextureHandler.h"
@@ -12,6 +13,72 @@
 #include "ShaderHandler.h"
 
 #define STB_FORMAT VK_FORMAT_R8G8B8A8_UNORM
+
+namespace {
+
+void check_failure(const std::string path) {
+    if (true) return;
+    if (auto failure_reason = stbi_failure_reason()) {
+        std::stringstream ss;
+        ss << "Error: \"" << failure_reason << "\" in file \"" << path << std::endl;
+        std::cout << ss.str();
+    }
+}
+
+void loadDataAndCompare(const std::shared_ptr<Texture::DATA>& pTexture, int& w, int& h, int& c, const std::string& path,
+                        int req_comp, stbi_uc*& pPixels) {
+    pPixels = stbi_load(path.c_str(), &w, &h, &c, req_comp);
+    check_failure(path);
+
+    std::stringstream ss;
+    if (!pPixels) {
+        ss << "failed to load " << path;
+        throw std::runtime_error(ss.str());
+    }
+
+    if (w != pTexture->width) ss << "invalid " << path << " (width)! ";
+    if (h != pTexture->height) ss << "invalid " << path << " (height)! ";
+    if (c != pTexture->channels) ss << "invalid " << path << " (channels)! ";  // TODO: not sure about this
+    if (!ss.str().empty()) {
+        throw std::runtime_error(ss.str());
+    }
+}
+
+std::shared_ptr<Texture::DATA> load(std::shared_ptr<Texture::DATA>& pTexture) {
+    int width, height, channels;
+
+    // Diffuse map (default)
+    // TODO: make this dynamic like the others...
+    pTexture->pixels = stbi_load(pTexture->path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
+    check_failure(pTexture->path);
+
+    pTexture->width = static_cast<uint32_t>(width);
+    pTexture->height = static_cast<uint32_t>(height);
+    pTexture->channels = static_cast<uint32_t>(channels);
+    pTexture->mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(pTexture->width, pTexture->height)))) + 1;
+    pTexture->aspect = static_cast<float>(width) / static_cast<float>(height);
+
+    // Normal map
+    if (!pTexture->normPath.empty()) {
+        loadDataAndCompare(pTexture, width, height, channels, pTexture->normPath.c_str(), STBI_rgb_alpha,
+                           pTexture->normPixels);
+    }
+
+    // Spectral map
+    if (!pTexture->specPath.empty()) {
+        loadDataAndCompare(pTexture, width, height, channels, pTexture->specPath.c_str(), STBI_rgb_alpha,
+                           pTexture->specPixels);
+    }
+
+    // alphity map
+    if (!pTexture->alphPath.empty()) {
+        loadDataAndCompare(pTexture, width, height, channels, pTexture->alphPath.c_str(), STBI_grey, pTexture->alphPixels);
+    }
+
+    return pTexture;
+}
+
+}  // namespace
 
 Texture::Handler::Handler(Game* pGame) : Game::Handler(pGame) {}
 
@@ -38,24 +105,38 @@ void Texture::Handler::reset() {
 }
 
 // This should be the only avenue for texture creation.
-void Texture::Handler::addTexture(std::string path, std::string normPath, std::string specPath) {
+void Texture::Handler::addTexture(std::string path, std::string normPath, std::string specPath, std::string alphPath) {
+    // TODO: do this here?
+    std::replace(path.begin(), path.end(), '\\', '/');
+    std::replace(normPath.begin(), normPath.end(), '\\', '/');
+    std::replace(specPath.begin(), specPath.end(), '\\', '/');
+    std::replace(alphPath.begin(), alphPath.end(), '\\', '/');
+
     for (auto& tex : pTextures_) {
         if (tex->path == path) shell().log(Shell::LOG_WARN, "Texture with same path was already loaded.");
         if (!tex->normPath.empty() && tex->normPath == normPath)
             shell().log(Shell::LOG_WARN, "Texture with same normal path was already loaded.");
         if (!tex->specPath.empty() && tex->specPath == specPath)
             shell().log(Shell::LOG_WARN, "Texture with same spectral path was already loaded.");
+        if (!tex->alphPath.empty() && tex->alphPath == alphPath)
+            shell().log(Shell::LOG_WARN, "Texture with same alpha path was already loaded.");
     }
 
     // If this asserts read the comment where TEXTURE_LIMIT is declared.
     assert(pTextures_.size() < TEXTURE_LIMIT);
 
     // Make the texture.
-    pTextures_.emplace_back(std::make_shared<Texture::DATA>(pTextures_.size(), path, normPath, specPath));
-    // Load the texture data...
-    auto fut = loadTexture(shell().context().dev, true, pTextures_.back());
-    // Store the loading future.
-    texFutures_.emplace_back(std::move(fut));
+    pTextures_.emplace_back(std::make_shared<Texture::DATA>(pTextures_.size(), path, normPath, specPath, alphPath));
+
+    bool nonAsyncTest = false;
+    if (nonAsyncTest) {
+        auto result = load(pTextures_.back());
+    } else {
+        // Load the texture data...
+        auto fut = loadTexture(pTextures_.back());
+        // Store the loading future.
+        texFutures_.emplace_back(std::move(fut));
+    }
 }
 
 const std::shared_ptr<Texture::DATA> Texture::Handler::getTextureByPath(std::string path) const {
@@ -92,94 +173,8 @@ void Texture::Handler::update() {
     }
 }
 
-VkDescriptorSetLayoutBinding Texture::Handler::getDescriptorLayoutBinding(const DESCRIPTOR& type) const {
-    assert(false);
-    // switch (type) {
-    //    case DESCRIPTOR::DEFAULT_SAMPLER:
-    //        return getDefaultSamplerBindings();
-    //    default:
-    //        throw std::runtime_error("descriptor type not handled!");
-    //}
-    return {};
-}
-
-VkWriteDescriptorSet Texture::Handler::getDescriptorWrite(const DESCRIPTOR& type) const {
-    assert(false);
-    // switch (type) {
-    //    case DESCRIPTOR::DEFAULT_SAMPLER:
-    //        return getDefaultWrite();
-    //    default:
-    //        throw std::runtime_error("descriptor type not handled!");
-    //}
-    return {};
-}
-
-VkCopyDescriptorSet Texture::Handler::getDescriptorCopy(const DESCRIPTOR& type) const {
-    assert(false);
-    // switch (type) {
-    //    case DESCRIPTOR::DEFAULT_SAMPLER:
-    //        return getDefaultCopy();
-    //    default:
-    //        throw std::runtime_error("descriptor type not handled!");
-    //}
-    return {};
-}
-
-std::future<std::shared_ptr<Texture::DATA>> Texture::Handler::loadTexture(const VkDevice& dev, const bool makeMipmaps,
-                                                                          std::shared_ptr<Texture::DATA>& pTexture) {
-    return std::async(std::launch::async, [pTexture]() {
-        int width, height, channels;
-
-        // Diffuse map (default)
-        // TODO: make this dynamic like the others...
-        pTexture->pixels = stbi_load(pTexture->path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-
-        if (!pTexture->pixels) {
-            throw std::runtime_error("failed to load texture map!");
-        }
-
-        pTexture->width = static_cast<uint32_t>(width);
-        pTexture->height = static_cast<uint32_t>(height);
-        pTexture->channels = static_cast<uint32_t>(channels);
-        pTexture->mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(pTexture->width, pTexture->height)))) + 1;
-        pTexture->aspect = static_cast<float>(width) / static_cast<float>(height);
-
-        // Normal map
-        if (!pTexture->normPath.empty()) {
-            pTexture->normPixels = stbi_load(pTexture->normPath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-
-            if (!pTexture->normPixels) {
-                throw std::runtime_error("failed to load normal map!");
-            }
-
-            std::stringstream ss;
-            if (width != pTexture->width) ss << "invalid normal map (width)! ";
-            if (height != pTexture->height) ss << "invalid normal map (height)! ";
-            if (channels != pTexture->channels) ss << "invalid normal map (channels)! ";  // TODO: not sure about this
-            if (!ss.str().empty()) {
-                throw std::runtime_error(ss.str());
-            }
-        }
-
-        // Spectral map
-        if (!pTexture->specPath.empty()) {
-            pTexture->specPixels = stbi_load(pTexture->specPath.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-
-            if (!pTexture->specPixels) {
-                throw std::runtime_error("failed to load spectral map!");
-            }
-
-            std::stringstream ss;
-            if (width != pTexture->width) ss << "invalid spectral map (width)! ";
-            if (height != pTexture->height) ss << "invalid spectral map (height)! ";
-            if (channels != pTexture->channels) ss << "invalid spectral map (channels)! ";  // TODO: not sure about this
-            if (!ss.str().empty()) {
-                throw std::runtime_error(ss.str());
-            }
-        }
-
-        return std::move(pTexture);
-    });
+std::future<std::shared_ptr<Texture::DATA>> Texture::Handler::loadTexture(std::shared_ptr<Texture::DATA>& pTexture) {
+    return std::async(std::launch::async, load, pTexture);
 }
 
 // thread sync
@@ -206,7 +201,8 @@ void Texture::Handler::createTexture(const bool makeMipmaps, std::shared_ptr<Tex
 }
 
 void Texture::Handler::createImage(DATA& tex, uint32_t layerCount) {
-    VkDeviceSize imageSize = tex.width * tex.height * 4;  // 4 components from STBI_rgb_alpha
+    VkDeviceSize imageSize = static_cast<VkDeviceSize>(tex.width) * static_cast<VkDeviceSize>(tex.height) *
+                             4;  // 4 components from STBI_rgb_alpha
 
     BufferResource stgRes = {};
     auto memReqsSize =
@@ -218,16 +214,23 @@ void Texture::Handler::createImage(DATA& tex, uint32_t layerCount) {
     size_t offset = 0, size = static_cast<size_t>(imageSize);
     vk::assert_success(vkMapMemory(shell().context().dev, stgRes.memory, 0, memReqsSize, 0, &pData));
 
+    // Add alpha map data to our 4-component diffuse texture before copy.
+    if (tex.alphPixels) {
+        for (size_t i = 0; i < (imageSize / 4); i++) {
+            std::memcpy(tex.pixels + (i * 4) + 3, tex.alphPixels + i, 1);
+        }
+    }
+
     if (tex.flags & FLAG::DIFFUSE) {
-        memcpy(static_cast<char*>(pData) + offset, tex.pixels, size);
+        std::memcpy(static_cast<char*>(pData) + offset, tex.pixels, size);
         offset += size;
     }
     if (tex.flags & FLAG::NORMAL) {
-        memcpy(static_cast<char*>(pData) + offset, tex.normPixels, size);
+        std::memcpy(static_cast<char*>(pData) + offset, tex.normPixels, size);
         offset += size;  // TODO: same size for all?
     }
     if (tex.flags & FLAG::SPECULAR) {
-        memcpy(static_cast<char*>(pData) + offset, tex.specPixels, size);
+        std::memcpy(static_cast<char*>(pData) + offset, tex.specPixels, size);
         offset += size;  // TODO: same size for all?
     }
 
@@ -236,6 +239,7 @@ void Texture::Handler::createImage(DATA& tex, uint32_t layerCount) {
     stbi_image_free(tex.pixels);
     stbi_image_free(tex.normPixels);
     stbi_image_free(tex.specPixels);
+    stbi_image_free(tex.alphPixels);
 
     // Using CmdBufHandler::getUniqueQueueFamilies(true, false, true) here might not be wise... To work
     // right it relies on the the two command buffers being created with the same data.
@@ -350,6 +354,7 @@ void Texture::Handler::createImageView(const VkDevice& dev, Texture::DATA& tex, 
 void Texture::Handler::createSampler(const VkDevice& dev, Texture::DATA& tex) {
     VkSamplerCreateInfo samplerInfo = {};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    // TODO: make some of these or all of these values dynamic
     samplerInfo.magFilter = VK_FILTER_LINEAR;
     samplerInfo.minFilter = VK_FILTER_LINEAR;
     samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
