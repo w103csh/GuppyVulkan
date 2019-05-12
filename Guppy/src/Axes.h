@@ -15,7 +15,7 @@ namespace Mesh { class Handler; }
 const float AXES_MAX_SIZE = 2000.0f;
 
 struct AxesCreateInfo : public Mesh::CreateInfo {
-    AxesCreateInfo() : Mesh::CreateInfo{false, glm::mat4{1.0f}, PIPELINE::LINE, false} {};
+    AxesCreateInfo() : Mesh::CreateInfo{false, PIPELINE::LINE, false} {};
     float lineSize = 1.0f;
     bool showNegative = false;
 };

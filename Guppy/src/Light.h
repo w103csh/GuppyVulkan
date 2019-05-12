@@ -39,8 +39,9 @@ class Base : public Object3d, public Uniform::Base, public Buffer::DataItem<T> {
           Buffer::DataItem<T>(pData),
           model_(pCreateInfo->model) {}
 
-   private:
     inline const glm::mat4 &model(uint32_t index = 0) const override { return model_; }
+
+   private:
     glm::mat4 model_;
 };
 
