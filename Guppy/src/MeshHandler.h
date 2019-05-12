@@ -30,13 +30,17 @@ class Handler : public Game::Handler {
         // MATERIAL
         auto &pMaterial = materialHandler().makeMaterial(pMaterialCreateInfo);
         // INSTANCE
-        if (pInstanceCreateInfo == nullptr || pInstanceCreateInfo->data.empty())
-            instDefMgr_.insert(shell().context().dev, true);
-        else
-            instDefMgr_.insert(shell().context().dev, pInstanceCreateInfo->update, pInstanceCreateInfo->data);
+        std::shared_ptr<Instance::Base> &pInstanceData = pInstanceCreateInfo->pSharedData;
+        if (pInstanceData == nullptr) {
+            if (pInstanceCreateInfo == nullptr || pInstanceCreateInfo->data.empty())
+                instDefMgr_.insert(shell().context().dev, true);
+            else
+                instDefMgr_.insert(shell().context().dev, pInstanceCreateInfo->update, pInstanceCreateInfo->data);
+            pInstanceData = instDefMgr_.pItems.back();
+        }
 
         // INSTANTIATE
-        meshes.emplace_back(new TMeshType(std::ref(*this), pCreateInfo, instDefMgr_.pItems.back(), pMaterial, args...));
+        meshes.emplace_back(new TMeshType(std::ref(*this), pCreateInfo, pInstanceData, pMaterial, args...));
 
         // SET VALUES
         meshes.back()->offset_ = meshes.size() - 1;
@@ -104,18 +108,20 @@ class Handler : public Game::Handler {
     template <class TObject3d>
     void makeModelSpaceVisualHelper(TObject3d &obj, float lineSize = 1.0f) {
         AxesCreateInfo meshInfo = {};
-        meshInfo.model = obj.getModel();
         meshInfo.lineSize = lineSize;
         Material::Default::CreateInfo matInfo = {};
-        // make<VisualHelper::ModelSpace>(lineMeshes_, &meshInfo, &matInfo, nullptr);
+        Instance::Default::CreateInfo instInfo = {};
+        instInfo.data.push_back({obj.model()});
+        make<VisualHelper::ModelSpace>(lineMeshes_, &meshInfo, &matInfo, &instInfo);
     }
     template <class TMesh>
     void makeTangentSpaceVisualHelper(TMesh pMesh, float lineSize = 0.1f) {
         AxesCreateInfo meshInfo = {};
-        meshInfo.model = pMesh->getModel();
         meshInfo.lineSize = lineSize;
         Material::Default::CreateInfo matInfo = {};
-        // make<VisualHelper::TangentSpace>(lineMeshes_, &meshInfo, &matInfo, nullptr, pMesh);
+        Instance::Default::CreateInfo instInfo = {};
+        instInfo.pSharedData = pMesh->pInstanceData_;
+        make<VisualHelper::TangentSpace>(lineMeshes_, &meshInfo, &matInfo, &instInfo, pMesh);
     }
 
     inline std::unique_ptr<Mesh::Color> &getColorMesh(const size_t &index) { return colorMeshes_[index]; }

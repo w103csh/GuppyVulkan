@@ -186,10 +186,12 @@ void Guppy::createScenes() {
     Instance::Default::CreateInfo defInstInfo;
     Material::Default::CreateInfo defMatInfo;
     Material::PBR::CreateInfo pbrMatInfo;
-    BoundingBoxMinMax groundPlane_bbmm;
 
+    BoundingBoxMinMax groundPlane_bbmm;
+    uint32_t count = 4;
+
+    // ORIGIN AXES
     if (!suppress || true) {
-        // ORIGIN AXES
         axesInfo = {};
         axesInfo.lineSize = AXES_MAX_SIZE;
         axesInfo.showNegative = true;
@@ -199,8 +201,8 @@ void Guppy::createScenes() {
         handlers_.pMesh->makeLineMesh<Axes>(&axesInfo, &defMatInfo, &defInstInfo);
     }
 
+    // GROUND PLANE (TEXTURE)
     if (!suppress || true) {
-        // GROUND PLANE (TEXTURE)
         meshInfo = {};
         meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
         meshInfo.selectable = false;
@@ -214,8 +216,8 @@ void Guppy::createScenes() {
         groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
     }
 
+    // GROUND PLANE (COLOR)
     if (!suppress || true) {
-        //// GROUND PLANE (COLOR)
         // meshInfo = {};
         // meshInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
         // meshInfo.selectable = false;
@@ -228,8 +230,8 @@ void Guppy::createScenes() {
         // groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
     }
 
+    // BOX (TEXTURE)
     if (!suppress || false) {
-        // BOX (TEXTURE)
         meshInfo = {};
         meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
         // meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f,
@@ -245,8 +247,8 @@ void Guppy::createScenes() {
         handlers_.pMesh->updateMesh(boxTexture1);
         handlers_.pMesh->makeTangentSpaceVisualHelper(boxTexture1.get());
     }
+    // BOX (PBR_TEX)
     if (!suppress || false) {
-        // BOX (PBR_TEX)
         meshInfo = {};
         meshInfo.pipelineType = PIPELINE::PBR_TEX;
         // meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{1.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f,
@@ -265,8 +267,8 @@ void Guppy::createScenes() {
         handlers_.pMesh->makeTangentSpaceVisualHelper(boxTexture2.get());
     }
 
+    // BOX (PBR_COLOR)
     if (!suppress || false) {
-        // BOX (PBR_COLOR)
         meshInfo = {};
         meshInfo.pipelineType = PIPELINE::PBR_COLOR;
         // meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{2.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f,
@@ -282,8 +284,8 @@ void Guppy::createScenes() {
         boxPbrColor->putOnTop(groundPlane_bbmm);
         handlers_.pMesh->updateMesh(boxPbrColor);
     }
+    // BOX (TRI_LIST_COLOR)
     if (!suppress || false) {
-        // BOX (TRI_LIST_COLOR)
         meshInfo = {};
         meshInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
         // meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{5.0f, 0.0f, 3.5f}, M_PI_2_FLT, glm::vec3{-1.0f,
@@ -300,12 +302,10 @@ void Guppy::createScenes() {
         handlers_.pMesh->updateMesh(boxDefColor1);
     }
 
+    // BURNT ORANGE TORUS
     if (!suppress || false) {
-        // BURNT ORANGE TORUS
         // MODEL
         modelInfo = {};
-        modelInfo.pipelineType = PIPELINE::PBR_COLOR;
-        // modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
         modelInfo.async = false;
         modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
         modelInfo.modelPath = TORUS_MODEL_PATH;
@@ -313,19 +313,26 @@ void Guppy::createScenes() {
         defInstInfo = {};
         defInstInfo.data.push_back({helpers::affine(glm::vec3{0.07f})});
         // MATERIAL
-        // defMatInfo = {};
-        // defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::METAL;
-        // defMatInfo.ambientCoeff = {0.8f, 0.3f, 0.0f};
-        // defMatInfo.color = {0.8f, 0.3f, 0.0f};
-        pbrMatInfo = {};
-        pbrMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;  // | Material::FLAG::METAL;
-        pbrMatInfo.color = {0.8f, 0.3f, 0.0f};
-        pbrMatInfo.roughness = 0.9f;
-        handlers_.pModel->makeColorModel(&modelInfo, &defInstInfo, &pbrMatInfo);
+        if (true) {
+            modelInfo.pipelineType = PIPELINE::PBR_COLOR;
+            pbrMatInfo = {};
+            pbrMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::METAL;
+            pbrMatInfo.color = {0.8f, 0.3f, 0.0f};
+            pbrMatInfo.roughness = 0.9f;
+            handlers_.pModel->makeColorModel(&modelInfo, &defInstInfo, &pbrMatInfo);
+        } else {
+            modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+            defMatInfo = {};
+            defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
+            defMatInfo.ambientCoeff = {0.8f, 0.3f, 0.0f};
+            defMatInfo.color = {0.8f, 0.3f, 0.0f};
+            handlers_.pModel->makeColorModel(&modelInfo, &defInstInfo, &pbrMatInfo);
+        }
     }
 
+    // GRASS
+    count = 100;
     if (!suppress || true) {
-        // GRASS
         // MODEL
         modelInfo = {};
         modelInfo.pipelineType = PIPELINE::BP_TEX_CULL_NONE;
@@ -344,12 +351,12 @@ void Guppy::createScenes() {
         modelInfo.smoothNormals = false;
         defInstInfo = {};
         defInstInfo.update = false;
-        uint32_t count = 100;
         std::srand(static_cast<unsigned>(time(0)));
         float f1 = 0.01f, x, z;
         float f2 = f1 * 5.0f;
         float low = f2 * 0.05f;
         float high = f2 * 3.0f;
+        defInstInfo.data.reserve(count * count * 4);
         for (uint32_t i = 0; i < count; i++) {
             x = static_cast<float>(i) * f2;
             // x += low + static_cast<float>(std::rand()) / (static_cast<float>(RAND_MAX / (high - low)));
@@ -372,8 +379,9 @@ void Guppy::createScenes() {
         handlers_.pModel->makeTextureModel(&modelInfo, &defInstInfo, &defMatInfo);
     }
 
+    // ORANGE
+    count = 5;
     if (!suppress || false) {
-        // ORANGE
         // MODEL
         modelInfo = {};
         modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
@@ -387,12 +395,12 @@ void Guppy::createScenes() {
                 }
             });
         };
-        modelInfo.visualHelper = false;
+        modelInfo.visualHelper = true;
         modelInfo.modelPath = ORANGE_MODEL_PATH;
         modelInfo.smoothNormals = true;
         defInstInfo = {};
         defInstInfo.update = false;
-        uint32_t count = 5;
+        defInstInfo.data.resize(count * count);
         for (uint32_t i = 0; i < count; i++) {
             float x = 4.0f + (static_cast<float>(i) * 2.0f);
             for (uint32_t j = 0; j < count; j++) {
@@ -405,8 +413,8 @@ void Guppy::createScenes() {
         handlers_.pModel->makeTextureModel(&modelInfo, &defInstInfo, &defMatInfo);
     }
 
+    // PEAR
     if (!suppress || false) {
-        ////// PEAR
         //// modelCreateInfo.pipelineType = PIPELINE_TYPE::TRI_LIST_TEX;
         //// modelCreateInfo.async = true;
         //// modelCreateInfo.material = {};
@@ -415,10 +423,9 @@ void Guppy::createScenes() {
         //// ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene(), nullptr);
     }
 
+    // MEDIEVAL HOUSE (TRI_COLOR_TEX)
+    count = 4;
     if (!suppress || false) {
-        // *************************
-        // MEDIEVAL HOUSE (TRI_COLOR_TEX)
-        // *************************
         modelInfo = {};
         modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
         modelInfo.async = false;
@@ -426,7 +433,7 @@ void Guppy::createScenes() {
         modelInfo.smoothNormals = false;
         modelInfo.visualHelper = true;
         defInstInfo = {};
-        uint32_t count = 4;
+        defInstInfo.data.resize(count * count);
         for (uint32_t i = 0; i < count; i++) {
             float x = -6.5f - (static_cast<float>(i) * 6.5f);
             for (uint32_t j = 0; j < count; j++) {
@@ -438,9 +445,9 @@ void Guppy::createScenes() {
         defMatInfo = {};
         defMatInfo.pTexture = handlers_.pTexture->getTextureByPath(MED_H_DIFF_TEX_PATH);
         handlers_.pModel->makeTextureModel(&modelInfo, &defInstInfo, &defMatInfo);
-        // *************************
-        // MEDIEVAL HOUSE (PBR_TEX)
-        // *************************
+    }
+    // MEDIEVAL HOUSE (PBR_TEX)
+    if (!suppress || false) {
         modelInfo = {};
         modelInfo.pipelineType = PIPELINE::PBR_TEX;
         modelInfo.async = true;
@@ -448,6 +455,7 @@ void Guppy::createScenes() {
         modelInfo.smoothNormals = false;
         modelInfo.visualHelper = false;
         defInstInfo = {};
+        defInstInfo.data.resize(count * count);
         for (uint32_t i = 0; i < count; i++) {
             float x = -6.5f - (static_cast<float>(i) * 6.5f);
             for (uint32_t j = 0; j < count; j++) {
@@ -462,8 +470,8 @@ void Guppy::createScenes() {
         handlers_.pModel->makeTextureModel(&modelInfo, &defInstInfo, &pbrMatInfo);
     }
 
+    // PIG
     if (!suppress || false) {
-        // PIG
         // MODEL
         modelInfo = {};
         modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;

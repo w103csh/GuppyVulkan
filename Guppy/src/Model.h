@@ -60,7 +60,6 @@ class Base : public Object3d, public Handlee<Model::Handler> {
     inline Model::CreateInfo getMeshCreateInfo() {
         Model::CreateInfo createInfo = {};
         createInfo.pipelineType = PIPELINE_TYPE;
-        createInfo.model = getModel();
         return createInfo;
     }
 

@@ -33,7 +33,6 @@ class Handler;
 
 typedef struct CreateInfo {
     bool isIndexed = true;  // This is dumb
-    glm::mat4 model = glm::mat4(1.0f);
     PIPELINE pipelineType = PIPELINE::DONT_CARE;
     bool selectable = true;
     bool mappable = false;

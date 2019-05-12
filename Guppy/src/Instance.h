@@ -28,6 +28,7 @@ class Base : public Object3d, public virtual Buffer::Item {
 template <typename TDATA>
 struct CreateInfo : public Buffer::CreateInfo {
     std::vector<TDATA> data;
+    std::shared_ptr<Instance::Base> pSharedData = nullptr;
 };
 
 // **********************
