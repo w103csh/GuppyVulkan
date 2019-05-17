@@ -24,51 +24,46 @@ class Handler : public Game::Handler {
     void init() override{};
     inline void destroy() override { reset(); }
 
-    template <typename TInstanceCreateInfo, typename TMaterialCreateInfo>
-    void makeColorModel(Model::CreateInfo* pCreateInfo, TInstanceCreateInfo* pInstanceCreateInfo,
-                        TMaterialCreateInfo* pMaterialCreateInfo) {
+    template <typename TMaterialCreateInfo, typename TInstanceCreateInfo>
+    void makeColorModel(Model::CreateInfo* pCreateInfo, TMaterialCreateInfo* pMaterialCreateInfo,
+                        TInstanceCreateInfo* pInstanceCreateInfo) {
         pCreateInfo->handlerOffset = pModels_.size();  // TODO: really?
 
-        // Pull the models out of the instance info.
-        // TODO: this is starting to get ugly.
-        std::vector<glm::mat4> models;
-        for (const auto& inst : pInstanceCreateInfo->data) models.push_back(inst.model);
+        // INSTANCE
+        auto& pInstanceData = meshHandler().makeInstanceData(pInstanceCreateInfo);
 
-        pModels_.emplace_back(std::make_unique<Model::Base>(std::ref(*this), pCreateInfo, std::move(models)));
+        pModels_.emplace_back(std::make_unique<Model::Base>(std::ref(*this), pCreateInfo, pInstanceData));
 
         if (pCreateInfo->async) {
             ldgColorFutures_[pModels_.back()->getOffset()] = std::make_pair(  //
-                std::async(std::launch::async, &Handler::loadColor<TInstanceCreateInfo, TMaterialCreateInfo>, this,
-                           std::ref(*pModels_.back()), *pInstanceCreateInfo, *pMaterialCreateInfo),
+                std::async(std::launch::async, &Handler::loadColor<TMaterialCreateInfo>, this, std::ref(*pModels_.back()),
+                           *pMaterialCreateInfo, pInstanceData),
                 std::move(pCreateInfo->callback)  //
             );
         } else {
-            handleMeshes(pModels_.back(), loadColor(std::ref(*pModels_.back()), *pInstanceCreateInfo, *pMaterialCreateInfo),
+            handleMeshes(pModels_.back(), loadColor(std::ref(*pModels_.back()), *pMaterialCreateInfo, pInstanceData),
                          pCreateInfo->callback);
         }
     }
 
-    template <typename TInstanceCreateInfo, typename TMaterialCreateInfo>
-    void makeTextureModel(Model::CreateInfo* pCreateInfo, TInstanceCreateInfo* pInstanceCreateInfo,
-                          TMaterialCreateInfo* pMaterialCreateInfo) {
+    template <typename TMaterialCreateInfo, typename TInstanceCreateInfo>
+    void makeTextureModel(Model::CreateInfo* pCreateInfo, TMaterialCreateInfo* pMaterialCreateInfo,
+                          TInstanceCreateInfo* pInstanceCreateInfo) {
         pCreateInfo->handlerOffset = pModels_.size();  // TODO: really?
 
-        // Pull the models out of the instance info.
-        // TODO: this is starting to get ugly.
-        std::vector<glm::mat4> models;
-        for (const auto& inst : pInstanceCreateInfo->data) models.push_back(inst.model);
+        // INSTANCE
+        auto& pInstanceData = meshHandler().makeInstanceData(pInstanceCreateInfo);
 
-        pModels_.emplace_back(std::make_unique<Model::Base>(std::ref(*this), pCreateInfo, std::move(models)));
+        pModels_.emplace_back(std::make_unique<Model::Base>(std::ref(*this), pCreateInfo, pInstanceData));
 
         if (pCreateInfo->async) {
             ldgTexFutures_[pModels_.back()->getOffset()] = std::make_pair(  //
-                std::async(std::launch::async, &Handler::loadTexture<TInstanceCreateInfo, TMaterialCreateInfo>, this,
-                           std::ref(*pModels_.back()), *pInstanceCreateInfo, *pMaterialCreateInfo),
+                std::async(std::launch::async, &Handler::loadTexture<TMaterialCreateInfo>, this, std::ref(*pModels_.back()),
+                           *pMaterialCreateInfo, pInstanceData),
                 std::move(pCreateInfo->callback)  //
             );
         } else {
-            handleMeshes(pModels_.back(),
-                         loadTexture(std::ref(*pModels_.back()), *pInstanceCreateInfo, *pMaterialCreateInfo),
+            handleMeshes(pModels_.back(), loadTexture(std::ref(*pModels_.back()), *pMaterialCreateInfo, pInstanceData),
                          pCreateInfo->callback);
         }
     }
@@ -85,9 +80,9 @@ class Handler : public Game::Handler {
 
     FileLoader::tinyobj_data loadData(Model::Base& model);
 
-    template <typename TInstanceCreateInfo, typename TMaterialCreateInfo>
-    std::vector<Mesh::Color*> loadColor(Model::Base& model, TInstanceCreateInfo instanceCreateInfo,
-                                        TMaterialCreateInfo materialCreateInfo) {
+    template <typename TMaterialCreateInfo>
+    std::vector<Mesh::Color*> loadColor(Model::Base& model, TMaterialCreateInfo materialCreateInfo,
+                                        std::shared_ptr<Instance::Base>& pInstanceData) {
         auto data = loadData(model);
         auto createInfo = model.getMeshCreateInfo();
 
@@ -95,10 +90,10 @@ class Handler : public Game::Handler {
         std::vector<Mesh::Color*> pMeshes;
 
         if (data.materials.empty()) {
-            makeColorMesh(model, pMeshes, &materialCreateInfo, &instanceCreateInfo);
+            makeColorMesh(model, pMeshes, &materialCreateInfo, pInstanceData);
         } else {
             for (auto& m : data.materials) {
-                makeColorMesh(model, pMeshes, &materialCreateInfo, &instanceCreateInfo);
+                makeColorMesh(model, pMeshes, &materialCreateInfo, pInstanceData);
                 // TODO: Doing this after creation forces a second copy to device memory immediately
                 pMeshes.back()->getMaterial()->setTinyobjData(m);
             }
@@ -117,9 +112,9 @@ class Handler : public Game::Handler {
         return pMeshes;
     }
 
-    template <typename TInstanceCreateInfo, typename TMaterialCreateInfo>
-    std::vector<Mesh::Texture*> loadTexture(Model::Base& model, TInstanceCreateInfo instanceCreateInfo,
-                                            TMaterialCreateInfo materialCreateInfo) {
+    template <typename TMaterialCreateInfo>
+    std::vector<Mesh::Texture*> loadTexture(Model::Base& model, TMaterialCreateInfo materialCreateInfo,
+                                            std::shared_ptr<Instance::Base>& pInstanceData) {
         auto data = loadData(model);
         auto createInfo = model.getMeshCreateInfo();
 
@@ -127,12 +122,12 @@ class Handler : public Game::Handler {
         std::vector<Mesh::Texture*> pMeshes;
 
         if (data.materials.empty()) {
-            makeTextureMesh(model, pMeshes, &materialCreateInfo, &instanceCreateInfo);
+            makeTextureMesh(model, pMeshes, &materialCreateInfo, pInstanceData);
         } else {
             auto modelDirectory = helpers::getFilePath(model.modelPath_);
             for (auto& tinyobj_mat : data.materials) {
                 makeTexture(tinyobj_mat, modelDirectory, &materialCreateInfo);
-                makeTextureMesh(model, pMeshes, &materialCreateInfo, &instanceCreateInfo);
+                makeTextureMesh(model, pMeshes, &materialCreateInfo, pInstanceData);
                 materialCreateInfo.pTexture = nullptr;
                 // TODO: Doing this after creation forces a second copy to device memory immediately
                 pMeshes.back()->getMaterial()->setTinyobjData(tinyobj_mat);
@@ -152,21 +147,22 @@ class Handler : public Game::Handler {
         return pMeshes;
     }
 
-    template <typename TMaterialCreateInfo, typename TInstanceCreateInfo>
+    template <typename TMaterialCreateInfo>
     void makeColorMesh(Model::Base& model, std::vector<Mesh::Color*>& pMeshes, TMaterialCreateInfo* pMaterialCreateInfo,
-                       TInstanceCreateInfo* pInstanceCreateInfo) {
+                       std::shared_ptr<Instance::Base>& pInstanceData) {
         auto createInfo = model.getMeshCreateInfo();
-        auto& pMesh = meshHandler().makeColorMesh<Model::ColorMesh>(&createInfo, pMaterialCreateInfo, pInstanceCreateInfo);
+        auto& pMesh = meshHandler().make<Model::ColorMesh>(meshHandler().colorMeshes_, &createInfo, pMaterialCreateInfo,
+                                                           pInstanceData);
         model.addOffset(pMesh);
         pMeshes.push_back(pMesh.get());
     }
 
-    template <typename TMaterialCreateInfo, typename TInstanceCreateInfo>
+    template <typename TMaterialCreateInfo>
     void makeTextureMesh(Model::Base& model, std::vector<Mesh::Texture*>& pMeshes, TMaterialCreateInfo* pMaterialCreateInfo,
-                         TInstanceCreateInfo* pInstanceCreateInfo) {
+                         std::shared_ptr<Instance::Base>& pInstanceData) {
         auto createInfo = model.getMeshCreateInfo();
-        auto& pMesh =
-            meshHandler().makeTextureMesh<Model::TextureMesh>(&createInfo, pMaterialCreateInfo, pInstanceCreateInfo);
+        auto& pMesh = meshHandler().make<Model::TextureMesh>(meshHandler().texMeshes_, &createInfo, pMaterialCreateInfo,
+                                                             pInstanceData);
         model.addOffset(pMesh);
         pMeshes.push_back(pMesh.get());
     }

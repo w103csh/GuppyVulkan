@@ -6,7 +6,7 @@
 namespace Descriptor {
 class Interface {
    public:
-    virtual void setWriteInfo(VkWriteDescriptorSet &write) const = 0;
+    virtual void setWriteInfo(VkWriteDescriptorSet& write) const = 0;
 };
 }  // namespace Descriptor
 

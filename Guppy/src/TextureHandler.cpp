@@ -1,18 +1,14 @@
 
+#include "TextureHandler.h"
+
 #include <algorithm>
 #include <sstream>
-#include <iostream>
-#define STB_IMAGE_IMPLEMENTATION
-
-#include "TextureHandler.h"
+#include <stb_image.h>
 
 #include "CommandHandler.h"
 #include "LoadingHandler.h"
 #include "Shell.h"
-#include "Sampler.h"
 #include "ShaderHandler.h"
-
-#define STB_FORMAT VK_FORMAT_R8G8B8A8_UNORM
 
 namespace {
 
@@ -25,57 +21,44 @@ void check_failure(const std::string path) {
     }
 }
 
-void loadDataAndCompare(const std::shared_ptr<Texture::DATA>& pTexture, int& w, int& h, int& c, const std::string& path,
-                        int req_comp, stbi_uc*& pPixels) {
-    pPixels = stbi_load(path.c_str(), &w, &h, &c, req_comp);
-    check_failure(path);
-
-    std::stringstream ss;
-    if (!pPixels) {
-        ss << "failed to load " << path;
-        throw std::runtime_error(ss.str());
-    }
-
-    if (w != pTexture->width) ss << "invalid " << path << " (width)! ";
-    if (h != pTexture->height) ss << "invalid " << path << " (height)! ";
-    if (c != pTexture->channels) ss << "invalid " << path << " (channels)! ";  // TODO: not sure about this
-    if (!ss.str().empty()) {
-        throw std::runtime_error(ss.str());
+// TODO: get rid of all this garbage, and make it properly dynamic
+int getReqComp(const Sampler::CHANNELS& type) {
+    switch (type) {
+        case Sampler::CHANNELS::_1:
+            return STBI_grey;
+            break;
+        case Sampler::CHANNELS::_2:
+            return STBI_grey_alpha;
+            break;
+        case Sampler::CHANNELS::_3:
+            return STBI_rgb;
+            break;
+        case Sampler::CHANNELS::_4:
+            return STBI_rgb_alpha;
+            break;
+        default:
+            assert(false);
+            return STBI_default;
     }
 }
-
-std::shared_ptr<Texture::DATA> load(std::shared_ptr<Texture::DATA>& pTexture) {
-    int width, height, channels;
-
-    // Diffuse map (default)
-    // TODO: make this dynamic like the others...
-    pTexture->pixels = stbi_load(pTexture->path.c_str(), &width, &height, &channels, STBI_rgb_alpha);
-    check_failure(pTexture->path);
-
-    pTexture->width = static_cast<uint32_t>(width);
-    pTexture->height = static_cast<uint32_t>(height);
-    pTexture->channels = static_cast<uint32_t>(channels);
-    pTexture->mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(pTexture->width, pTexture->height)))) + 1;
-    pTexture->aspect = static_cast<float>(width) / static_cast<float>(height);
-
-    // Normal map
-    if (!pTexture->normPath.empty()) {
-        loadDataAndCompare(pTexture, width, height, channels, pTexture->normPath.c_str(), STBI_rgb_alpha,
-                           pTexture->normPixels);
+Sampler::Base& getSampler(const std::shared_ptr<Texture::Base> pTexture, const Sampler::CHANNELS& type) {
+    switch (type) {
+        case Sampler::CHANNELS::_1:
+            return pTexture->sampCh1;
+            break;
+        case Sampler::CHANNELS::_2:
+            return pTexture->sampCh2;
+            break;
+        case Sampler::CHANNELS::_3:
+            return pTexture->sampCh3;
+            break;
+        case Sampler::CHANNELS::_4:
+            return pTexture->sampCh4;
+            break;
+        default:
+            assert(false);
+            throw std::runtime_error("Unhandled sampler channels");
     }
-
-    // Spectral map
-    if (!pTexture->specPath.empty()) {
-        loadDataAndCompare(pTexture, width, height, channels, pTexture->specPath.c_str(), STBI_rgb_alpha,
-                           pTexture->specPixels);
-    }
-
-    // alphity map
-    if (!pTexture->alphPath.empty()) {
-        loadDataAndCompare(pTexture, width, height, channels, pTexture->alphPath.c_str(), STBI_grey, pTexture->alphPixels);
-    }
-
-    return pTexture;
 }
 
 }  // namespace
@@ -85,48 +68,64 @@ Texture::Handler::Handler(Game* pGame) : Game::Handler(pGame) {}
 void Texture::Handler::init() {
     reset();
 
-    // Default textures
-    addTexture(STATUE_TEX_PATH);
-    addTexture(CHALET_TEX_PATH);
-    addTexture(VULKAN_TEX_PATH);
-    addTexture(MED_H_DIFF_TEX_PATH, MED_H_NORM_TEX_PATH, MED_H_SPEC_TEX_PATH);
-    addTexture(HARDWOOD_FLOOR_TEX_PATH);
-    addTexture(WOOD_007_DIFF_TEX_PATH, WOOD_007_NORM_TEX_PATH);
+    // DEFAULT TEXTURES
+    Texture::CreateInfo info;
+
+    info = {};
+    info.colorPath = STATUE_TEX_PATH;
+    addTexture(&info);
+
+    info = {};
+    info.colorPath = CHALET_TEX_PATH;
+    addTexture(&info);
+
+    info = {};
+    info.colorPath = VULKAN_TEX_PATH;
+    addTexture(&info);
+
+    info = {};
+    info.colorPath = MED_H_DIFF_TEX_PATH;
+    info.normalPath = MED_H_NORM_TEX_PATH;
+    info.specularPath = MED_H_SPEC_TEX_PATH;
+    addTexture(&info);
+
+    info = {};
+    info.colorPath = HARDWOOD_FLOOR_TEX_PATH;
+    addTexture(&info);
+
+    info = {};
+    info.colorPath = WOOD_007_DIFF_TEX_PATH;
+    info.normalPath = WOOD_007_NORM_TEX_PATH;
+    addTexture(&info);
+
+    info = {};
+    info.colorPath = MYBRICK_DIFF_TEX_PATH;
+    info.normalPath = MYBRICK_NORM_TEX_PATH;
+    info.heightPath = MYBRICK_HGHT_TEX_PATH;
+    addTexture(&info);
 }
 
 void Texture::Handler::reset() {
+    const auto& dev = shell().context().dev;
     for (auto& pTex : pTextures_) {
-        vkDestroySampler(shell().context().dev, pTex->sampler, nullptr);
-        vkDestroyImageView(shell().context().dev, pTex->view, nullptr);
-        vkDestroyImage(shell().context().dev, pTex->image, nullptr);
-        vkFreeMemory(shell().context().dev, pTex->memory, nullptr);
+        pTex->sampCh1.destory(dev);
+        pTex->sampCh2.destory(dev);
+        pTex->sampCh3.destory(dev);
+        pTex->sampCh4.destory(dev);
     }
     pTextures_.clear();
 }
 
 // This should be the only avenue for texture creation.
-void Texture::Handler::addTexture(std::string path, std::string normPath, std::string specPath, std::string alphPath) {
+void Texture::Handler::addTexture(Texture::CreateInfo* pCreateInfo) {
     // TODO: do this here?
-    std::replace(path.begin(), path.end(), '\\', '/');
-    std::replace(normPath.begin(), normPath.end(), '\\', '/');
-    std::replace(specPath.begin(), specPath.end(), '\\', '/');
-    std::replace(alphPath.begin(), alphPath.end(), '\\', '/');
+    std::replace(pCreateInfo->colorPath.begin(), pCreateInfo->colorPath.end(), '\\', '/');
+    std::replace(pCreateInfo->normalPath.begin(), pCreateInfo->normalPath.end(), '\\', '/');
+    std::replace(pCreateInfo->specularPath.begin(), pCreateInfo->specularPath.end(), '\\', '/');
+    std::replace(pCreateInfo->alphaPath.begin(), pCreateInfo->alphaPath.end(), '\\', '/');
+    std::replace(pCreateInfo->heightPath.begin(), pCreateInfo->heightPath.end(), '\\', '/');
 
-    for (auto& tex : pTextures_) {
-        if (tex->path == path) shell().log(Shell::LOG_WARN, "Texture with same path was already loaded.");
-        if (!tex->normPath.empty() && tex->normPath == normPath)
-            shell().log(Shell::LOG_WARN, "Texture with same normal path was already loaded.");
-        if (!tex->specPath.empty() && tex->specPath == specPath)
-            shell().log(Shell::LOG_WARN, "Texture with same spectral path was already loaded.");
-        if (!tex->alphPath.empty() && tex->alphPath == alphPath)
-            shell().log(Shell::LOG_WARN, "Texture with same alpha path was already loaded.");
-    }
-
-    // If this asserts read the comment where TEXTURE_LIMIT is declared.
-    assert(pTextures_.size() < TEXTURE_LIMIT);
-
-    // Make the texture.
-    pTextures_.emplace_back(std::make_shared<Texture::DATA>(pTextures_.size(), path, normPath, specPath, alphPath));
+    pTextures_.emplace_back(std::make_shared<Texture::Base>(static_cast<uint32_t>(pTextures_.size()), pCreateInfo));
 
     bool nonAsyncTest = false;
     if (nonAsyncTest) {
@@ -139,15 +138,14 @@ void Texture::Handler::addTexture(std::string path, std::string normPath, std::s
     }
 }
 
-const std::shared_ptr<Texture::DATA> Texture::Handler::getTextureByPath(std::string path) const {
-    auto it = std::find_if(pTextures_.begin(), pTextures_.end(), [&path](auto& pTex) { return pTex->path == path; });
+const std::shared_ptr<Texture::Base> Texture::Handler::getTextureByPath(std::string path) const {
+    auto it = std::find_if(pTextures_.begin(), pTextures_.end(), [&path](auto& pTex) { return pTex->colorPath == path; });
     return it == pTextures_.end() ? nullptr : (*it);
 }
 
 void Texture::Handler::update() {
     // Check texture futures
     if (!texFutures_.empty()) {
-        bool wasUpdated = false;
         auto itFut = texFutures_.begin();
 
         while (itFut != texFutures_.end()) {
@@ -158,108 +156,169 @@ void Texture::Handler::update() {
 
             if (status == std::future_status::ready) {
                 // Finish creating the texture
-                createTexture(true, fut.get());
+                createTexture(fut.get());
 
                 // Remove the future from the list if all goes well.
                 itFut = texFutures_.erase(itFut);
-                wasUpdated = true;
 
             } else {
                 ++itFut;
             }
         }
-
-        // if (wasUpdated) Shader::Handler::updateDefaultDynamicUniform();
     }
 }
 
-std::future<std::shared_ptr<Texture::DATA>> Texture::Handler::loadTexture(std::shared_ptr<Texture::DATA>& pTexture) {
-    return std::async(std::launch::async, load, pTexture);
+std::shared_ptr<Texture::Base> Texture::Handler::load(std::shared_ptr<Texture::Base>& pTexture) {
+    // TODO: get rid of all this garbage, and make it properly dynamic
+
+    // HEIGHT
+    /*	This needs to be first in any potential sampler array because it affects the texture
+            coordinate of subsequent samples.
+            Note: If the bitmap is one channel and there is a normal map I should combine the normal
+            map, and height map using the 4th channel for the height.
+    */
+    loadDataAndValidate(pTexture->heightPath, getReqComp(pTexture->heightChannels), pTexture,
+                        getSampler(pTexture, pTexture->heightChannels));
+    // COLOR (diffuse)
+    loadDataAndValidate(pTexture->colorPath, getReqComp(pTexture->colorChannels), pTexture,
+                        getSampler(pTexture, pTexture->colorChannels));
+    // NORMAL
+    loadDataAndValidate(pTexture->normalPath, getReqComp(pTexture->normalChannels), pTexture,
+                        getSampler(pTexture, pTexture->normalChannels));
+    // SPECULAR
+    loadDataAndValidate(pTexture->specularPath, getReqComp(pTexture->specularChannels), pTexture,
+                        getSampler(pTexture, pTexture->specularChannels));
+    // ALPHA
+    /*	Note: If the bitmap is one channel and there is a color map I should combine the color
+                map, and alpha map using the 4th channel for the alpha.
+    */
+    loadDataAndValidate(pTexture->alphaPath, getReqComp(pTexture->alphaChannels), pTexture,
+                        getSampler(pTexture, pTexture->alphaChannels));
+
+    return pTexture;
+}
+
+void Texture::Handler::loadDataAndValidate(const std::string& path, int req_comp, std::shared_ptr<Texture::Base>& pTexture,
+                                           Sampler::Base& texSampler) {
+    if (path.empty()) return;
+
+    int w, h, c;
+    texSampler.pPixels.push_back(stbi_load(path.c_str(), &w, &h, &c, req_comp));
+    check_failure(path);
+
+    std::stringstream ss;
+    if (!texSampler.pPixels.back()) {
+        ss << "failed to load " << path << std::endl;
+        assert(false);
+        throw std::runtime_error(ss.str());
+    }
+
+    // Validate channels
+    if (c < static_cast<int>(texSampler.NUM_CHANNELS)) {
+        ss << std::endl
+           << "Image at path \"" << path << "\" loaded for " << texSampler.NUM_CHANNELS << " channels but only has " << c
+           << " channels." << std::endl;
+        shell().log(Shell::LOG_WARN, ss.str().c_str());
+        ss.str(std::string());
+    }
+
+    // Validate width
+    if (texSampler.width == 0)
+        texSampler.width = w;
+    else if (w != texSampler.width)
+        ss << "invalid " << path << " (width)! " << std::endl;
+
+    // Validate height
+    if (texSampler.height == 0)
+        texSampler.height = h;
+    else if (w != texSampler.height)
+        ss << "invalid " << path << " (height)! " << std::endl;
+
+    // Validate aspect
+    float aspect = static_cast<float>(w) / static_cast<float>(h);
+    if (pTexture->aspect == Texture::EMPTY_ASPECT)
+        pTexture->aspect = aspect;
+    else if (!helpers::almost_equal(aspect, pTexture->aspect, 1))
+        ss << "invalid " << path << " (aspect)! " << std::endl;
+
+    auto errMsg = ss.str();
+    if (!errMsg.empty()) {
+        assert(false);
+        throw std::runtime_error(errMsg);
+    }
+
+    texSampler.mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(texSampler.width, texSampler.height)))) + 1;
+}
+
+std::future<std::shared_ptr<Texture::Base>> Texture::Handler::loadTexture(std::shared_ptr<Texture::Base>& pTexture) {
+    return std::async(std::launch::async, &Texture::Handler::load, this, pTexture);
 }
 
 // thread sync
-void Texture::Handler::createTexture(const bool makeMipmaps, std::shared_ptr<Texture::DATA> pTexture) {
+void Texture::Handler::createTexture(std::shared_ptr<Texture::Base> pTexture) {
     pTexture->pLdgRes = loadingHandler().createLoadingResources();
 
-    auto& tex = (*pTexture);
-    uint32_t layerCount = getArrayLayerCount(tex);
-
-    createImage(tex, layerCount);
-
-    if (makeMipmaps) {
-        generateMipmaps(tex, layerCount);
-    } else {
-        // TODO: DO SOMETHING .. this was not tested
-    }
-    createImageView(shell().context().dev, tex, layerCount);
-    createSampler(shell().context().dev, tex);
-    createDescInfo(tex);
+    createTextureSampler(pTexture, pTexture->sampCh1);
+    createTextureSampler(pTexture, pTexture->sampCh2);
+    createTextureSampler(pTexture, pTexture->sampCh3);
+    createTextureSampler(pTexture, pTexture->sampCh4);
 
     loadingHandler().loadSubmit(std::move(pTexture->pLdgRes));
 
     pTexture->status = STATUS::READY;
 }
 
-void Texture::Handler::createImage(DATA& tex, uint32_t layerCount) {
-    VkDeviceSize imageSize = static_cast<VkDeviceSize>(tex.width) * static_cast<VkDeviceSize>(tex.height) *
-                             4;  // 4 components from STBI_rgb_alpha
+void Texture::Handler::createTextureSampler(const std::shared_ptr<Texture::Base> pTexture, Sampler::Base& texSampler) {
+    if (texSampler.layerCount() == 0) return;
 
+    createImage(pTexture, texSampler);
+    if (pTexture->makeMipmaps) {
+        generateMipmaps(pTexture, texSampler);
+    } else {
+        // TODO: DO SOMETHING.. this was not tested
+    }
+    createImageView(shell().context().dev, texSampler);
+    createSampler(shell().context().dev, texSampler);
+    createDescInfo(texSampler);
+}
+
+void Texture::Handler::createImage(const std::shared_ptr<Texture::Base> pTexture, Sampler::Base& texSampler) {
     BufferResource stgRes = {};
-    auto memReqsSize =
-        helpers::createBuffer(shell().context().dev, (imageSize * layerCount), VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                              shell().context().mem_props, stgRes.buffer, stgRes.memory);
+    VkDeviceSize memorySize = texSampler.size();
+    auto memReqsSize = helpers::createBuffer(shell().context().dev, memorySize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                             shell().context().mem_props, stgRes.buffer, stgRes.memory);
 
     void* pData;
-    size_t offset = 0, size = static_cast<size_t>(imageSize);
+    size_t offset = 0;
     vk::assert_success(vkMapMemory(shell().context().dev, stgRes.memory, 0, memReqsSize, 0, &pData));
-
-    // Add alpha map data to our 4-component diffuse texture before copy.
-    if (tex.alphPixels) {
-        for (size_t i = 0; i < (imageSize / 4); i++) {
-            std::memcpy(tex.pixels + (i * 4) + 3, tex.alphPixels + i, 1);
-        }
-    }
-
-    if (tex.flags & FLAG::DIFFUSE) {
-        std::memcpy(static_cast<char*>(pData) + offset, tex.pixels, size);
-        offset += size;
-    }
-    if (tex.flags & FLAG::NORMAL) {
-        std::memcpy(static_cast<char*>(pData) + offset, tex.normPixels, size);
-        offset += size;  // TODO: same size for all?
-    }
-    if (tex.flags & FLAG::SPECULAR) {
-        std::memcpy(static_cast<char*>(pData) + offset, tex.specPixels, size);
-        offset += size;  // TODO: same size for all?
-    }
+    // Copy data to memory
+    texSampler.copyData(pData, offset);
 
     vkUnmapMemory(shell().context().dev, stgRes.memory);
-
-    stbi_image_free(tex.pixels);
-    stbi_image_free(tex.normPixels);
-    stbi_image_free(tex.specPixels);
-    stbi_image_free(tex.alphPixels);
 
     // Using CmdBufHandler::getUniqueQueueFamilies(true, false, true) here might not be wise... To work
     // right it relies on the the two command buffers being created with the same data.
     helpers::createImage(shell().context().dev, shell().context().mem_props,
-                         commandHandler().getUniqueQueueFamilies(true, false, true), VK_SAMPLE_COUNT_1_BIT, STB_FORMAT,
-                         VK_IMAGE_TILING_OPTIMAL,
+                         commandHandler().getUniqueQueueFamilies(true, false, true), VK_SAMPLE_COUNT_1_BIT,
+                         texSampler.FORMAT, VK_IMAGE_TILING_OPTIMAL,
                          VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
-                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, static_cast<uint32_t>(tex.width),
-                         static_cast<uint32_t>(tex.height), tex.mipLevels, layerCount, tex.image, tex.memory);
+                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, static_cast<uint32_t>(texSampler.width),
+                         static_cast<uint32_t>(texSampler.height), texSampler.mipLevels, texSampler.layerCount(),
+                         texSampler.image, texSampler.memory);
 
-    helpers::transitionImageLayout(tex.pLdgRes->transferCmd, tex.image, STB_FORMAT, VK_IMAGE_LAYOUT_UNDEFINED,
-                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                   VK_PIPELINE_STAGE_TRANSFER_BIT, tex.mipLevels, layerCount);
+    helpers::transitionImageLayout(pTexture->pLdgRes->transferCmd, texSampler.image, texSampler.FORMAT,
+                                   VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                   VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, texSampler.mipLevels,
+                                   texSampler.layerCount());
 
-    helpers::copyBufferToImage(tex.pLdgRes->graphicsCmd, tex.width, tex.height, layerCount, stgRes.buffer, tex.image);
+    helpers::copyBufferToImage(pTexture->pLdgRes->graphicsCmd, texSampler.width, texSampler.height, texSampler.layerCount(),
+                               stgRes.buffer, texSampler.image);
 
-    tex.pLdgRes->stgResources.push_back(stgRes);
+    pTexture->pLdgRes->stgResources.push_back(stgRes);
 }
 
-void Texture::Handler::generateMipmaps(const Texture::DATA& tex, uint32_t layerCount) {
+void Texture::Handler::generateMipmaps(const std::shared_ptr<Texture::Base> pTexture, const Sampler::Base& texSampler) {
     // This was the way before mip maps
     // transitionImageLayout(
     //    srcQueueFamilyIndexFinal,
@@ -276,18 +335,18 @@ void Texture::Handler::generateMipmaps(const Texture::DATA& tex, uint32_t layerC
 
     VkImageMemoryBarrier barrier = {};
     barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.image = tex.image;
+    barrier.image = texSampler.image;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = layerCount;
+    barrier.subresourceRange.layerCount = texSampler.layerCount();
     barrier.subresourceRange.levelCount = 1;
 
-    int32_t mipWidth = tex.width;
-    int32_t mipHeight = tex.height;
+    int32_t mipWidth = texSampler.width;
+    int32_t mipHeight = texSampler.height;
 
-    for (uint32_t i = 1; i < tex.mipLevels; i++) {
+    for (uint32_t i = 1; i < texSampler.mipLevels; i++) {
         // CREATE MIP LEVEL
 
         barrier.subresourceRange.baseMipLevel = i - 1;
@@ -296,8 +355,8 @@ void Texture::Handler::generateMipmaps(const Texture::DATA& tex, uint32_t layerC
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
 
-        vkCmdPipelineBarrier(tex.pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0,
-                             nullptr, 0, nullptr, 1, &barrier);
+        vkCmdPipelineBarrier(pTexture->pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                             0, 0, nullptr, 0, nullptr, 1, &barrier);
 
         VkImageBlit blit = {};
         // source
@@ -306,17 +365,17 @@ void Texture::Handler::generateMipmaps(const Texture::DATA& tex, uint32_t layerC
         blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         blit.srcSubresource.mipLevel = i - 1;
         blit.srcSubresource.baseArrayLayer = 0;
-        blit.srcSubresource.layerCount = layerCount;
+        blit.srcSubresource.layerCount = texSampler.layerCount();
         // destination
         blit.dstOffsets[0] = {0, 0, 0};
         blit.dstOffsets[1] = {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
         blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         blit.dstSubresource.mipLevel = i;
         blit.dstSubresource.baseArrayLayer = 0;
-        blit.dstSubresource.layerCount = layerCount;
+        blit.dstSubresource.layerCount = texSampler.layerCount();
 
-        vkCmdBlitImage(tex.pLdgRes->graphicsCmd, tex.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, tex.image,
-                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+        vkCmdBlitImage(pTexture->pLdgRes->graphicsCmd, texSampler.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+                       texSampler.image, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
 
         // TRANSITION TO SHADER READY
 
@@ -325,8 +384,8 @@ void Texture::Handler::generateMipmaps(const Texture::DATA& tex, uint32_t layerC
         barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-        vkCmdPipelineBarrier(tex.pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                             0, 0, nullptr, 0, nullptr, 1, &barrier);
+        vkCmdPipelineBarrier(pTexture->pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                             VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
         // This is a bit wonky methinks (non-sqaure is the case for this)
         if (mipWidth > 1) mipWidth /= 2;
@@ -336,22 +395,22 @@ void Texture::Handler::generateMipmaps(const Texture::DATA& tex, uint32_t layerC
     // This is not handled in the loop so one more!!!! The last level is never never
     // blitted from.
 
-    barrier.subresourceRange.baseMipLevel = tex.mipLevels - 1;
+    barrier.subresourceRange.baseMipLevel = texSampler.mipLevels - 1;
     barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
     barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 
-    vkCmdPipelineBarrier(tex.pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-                         0, nullptr, 0, nullptr, 1, &barrier);
+    vkCmdPipelineBarrier(pTexture->pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                         VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 }
 
-void Texture::Handler::createImageView(const VkDevice& dev, Texture::DATA& tex, uint32_t layerCount) {
-    helpers::createImageView(dev, tex.image, tex.mipLevels, STB_FORMAT, VK_IMAGE_ASPECT_COLOR_BIT,
-                             VK_IMAGE_VIEW_TYPE_2D_ARRAY, layerCount, tex.view);
+void Texture::Handler::createImageView(const VkDevice& dev, Sampler::Base& texSampler) {
+    helpers::createImageView(dev, texSampler.image, texSampler.mipLevels, texSampler.FORMAT, VK_IMAGE_ASPECT_COLOR_BIT,
+                             VK_IMAGE_VIEW_TYPE_2D_ARRAY, texSampler.layerCount(), texSampler.view);
 }
 
-void Texture::Handler::createSampler(const VkDevice& dev, Texture::DATA& tex) {
+void Texture::Handler::createSampler(const VkDevice& dev, Sampler::Base& texSampler) {
     VkSamplerCreateInfo samplerInfo = {};
     samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
     // TODO: make some of these or all of these values dynamic
@@ -368,26 +427,18 @@ void Texture::Handler::createSampler(const VkDevice& dev, Texture::DATA& tex) {
     samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
     samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
     samplerInfo.minLod = 0;  // static_cast<float>(m_mipLevels / 2); // Optional
-    samplerInfo.maxLod = static_cast<float>(tex.mipLevels);
+    samplerInfo.maxLod = static_cast<float>(texSampler.mipLevels);
     samplerInfo.mipLodBias = 0;  // Optional
 
-    vk::assert_success(vkCreateSampler(dev, &samplerInfo, nullptr, &tex.sampler));
+    vk::assert_success(vkCreateSampler(dev, &samplerInfo, nullptr, &texSampler.sampler));
 
     // Name some objects for debugging
-    ext::DebugMarkerSetObjectName(dev, (uint64_t)tex.sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT,
-                                  (tex.name + " sampler").c_str());
+    ext::DebugMarkerSetObjectName(dev, (uint64_t)texSampler.sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT,
+                                  (texSampler.NAME + " sampler").c_str());
 }
 
-void Texture::Handler::createDescInfo(Texture::DATA& tex) {
-    tex.imgDescInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    tex.imgDescInfo.imageView = tex.view;
-    tex.imgDescInfo.sampler = tex.sampler;
-}
-
-uint32_t Texture::Handler::getArrayLayerCount(const Texture::DATA& tex) {
-    uint32_t count = 0;
-    if (tex.flags & FLAG::DIFFUSE) count++;
-    if (tex.flags & FLAG::NORMAL) count++;
-    if (tex.flags & FLAG::SPECULAR) count++;
-    return count;
+void Texture::Handler::createDescInfo(Sampler::Base& texSampler) {
+    texSampler.imgDescInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    texSampler.imgDescInfo.imageView = texSampler.view;
+    texSampler.imgDescInfo.sampler = texSampler.sampler;
 }

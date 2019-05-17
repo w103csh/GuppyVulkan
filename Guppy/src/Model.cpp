@@ -5,20 +5,15 @@
 #include "MeshHandler.h"
 #include "ModelHandler.h"
 
-Model::Base::Base(Model::Handler &handler, Model::CreateInfo *pCreateInfo, const std::vector<glm::mat4> &&models)
-    : Object3d(),
-      Handlee(handler),
+Model::Base::Base(Model::Handler &handler, Model::CreateInfo *pCreateInfo, std::shared_ptr<Instance::Base> &pInstanceData)
+    : Handlee(handler),
+      ObjInst3d(pInstanceData),
       PIPELINE_TYPE(pCreateInfo->pipelineType),
       offset_(pCreateInfo->handlerOffset),
       modelPath_(pCreateInfo->modelPath),
       smoothNormals_(pCreateInfo->smoothNormals),
       visualHelper_(pCreateInfo->visualHelper),
-      visualHelperLineSize_(pCreateInfo->visualHelperLineSize) {
-    if (models.empty())
-        models_.push_back(glm::mat4{1.0f});
-    else
-        models_ = models;
-}
+      visualHelperLineSize_(pCreateInfo->visualHelperLineSize) {}
 
 Model::Base::~Base() = default;
 
@@ -52,11 +47,6 @@ void Model::Base::allMeshAction(std::function<void(Mesh::Base *)> action) {
         action(pMesh.get());
         handler().meshHandler().updateMesh(pMesh);
     }
-}
-
-void Model::Base::transform(const glm::mat4 t, uint32_t index) {
-    Object3d::transform(t, index);
-    allMeshAction([&t, &index](Mesh::Base *pMesh) { pMesh->transform(t, index); });
 }
 
 Model::INDEX Model::Base::getMeshOffset(MESH type, uint8_t offset) {

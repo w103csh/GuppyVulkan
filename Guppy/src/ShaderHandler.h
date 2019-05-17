@@ -8,7 +8,6 @@
 #include "Game.h"
 #include "Helpers.h"
 #include "Shader.h"
-#include "Texture.h"
 
 namespace Shader {
 

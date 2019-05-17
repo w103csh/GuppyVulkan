@@ -31,8 +31,10 @@ set(SOURCE
     Material.h
     MaterialHandler.cpp
     MaterialHandler.h
-    Object3d.cpp
-    Object3d.h
+    Obj3d.cpp
+    Obj3d.h
+    Parallax.cpp
+    Parallax.h
     PBR.cpp
     PBR.h
     Scene.cpp
@@ -60,8 +62,9 @@ set(SOURCE
     Instance.cpp
     Instance.h
     InstanceManager.h
-    ObjectInstanced.cpp
-    ObjectInstanced.h
+    ObjDrawInst3d.h
+    ObjInst3d.cpp
+    ObjInst3d.h
     # Mesh
     Axes.h
     Axes.cpp
@@ -123,18 +126,6 @@ set(SOURCE
     UniformHandler.h
     )
 
-# shader folder
-file(GLOB SHADERS 
-    shaders/*.vert # - vertex shader
-    shaders/*.tesc # - tessellation control shader
-    shaders/*.tese # - tessellation evaluation shader
-    shaders/*.geom # - geometry shader
-    shaders/*.frag # - fragment shader
-    shaders/*.comp # - compute shader
-    shaders/*.glsl # - general
-    shaders/compile.bat
-    )
-
 # utils folder
 file(GLOB UTILS
     utils/*.cpp
@@ -169,7 +160,6 @@ set(INCLUDES
     )
 
 # message(STATUS "LINKS: ${LINKS}")
-# message(STATUS "SHADERS: ${SHADERS}"")
 # message(STATUS "INCLUDES: ${INCLUDES}")
 
 if(WIN32)
@@ -233,7 +223,6 @@ if(UNIX)
             ${UTILS}
             )
 
-        source_group("Shaders" FILES ${SHADERS})
         source_group("Utils" FILES ${UTILS})
         # source_group("Utils/Source Files" FILES ${UTILS})
         # source_group("Utils/Headers" FILES ${UTILS})
@@ -255,7 +244,6 @@ if(UNIX)
             Main.cpp
             ${SOURCE}
             ${UTILS}
-            ${SHADERS}
             )
 
         target_link_libraries(${TARGET_NAME} ${LINKS})
@@ -275,13 +263,11 @@ else()
         ${UTILS}
         # ${UTILS_SOURCE}
         # ${UTILS_HEADERS}
-        ${SHADERS}
         )
 
     # This is needed for dynamic casting
     # target_compile_options(${TARGET_NAME} PRIVATE "/GR")
 
-    source_group("Shaders" FILES ${SHADERS})
     source_group("Utils" FILES ${UTILS})
     # source_group("Utils/Source Files" FILES ${UTILS})
     # source_group("Utils/Headers" FILES ${UTILS})

@@ -6,20 +6,17 @@
 #include <vulkan/vulkan.h>
 
 #include "BufferItem.h"
-#include "Object3d.h"
+#include "Obj3d.h"
 
-// clang-format off
-namespace Mesh { class Base; }
-// clang-format on
+class ObjInst3d;
 
 namespace Instance {
 
 const uint32_t BINDING = 1;
+const uint32_t MODEL_ALL = UINT32_MAX;
 
-class Base : public Object3d, public virtual Buffer::Item {
-    // TODO: if this stored anywhere but Mesh::Base remove this
-    // except for maybe Model::Base.
-    friend class Mesh::Base;
+class Base : public Obj3d, public virtual Buffer::Item {
+    friend class ObjInst3d;
 
    protected:
     Base() {}
@@ -50,7 +47,7 @@ class Base : public Buffer::DataItem<Default::DATA>, public Instance::Base {
     Base(const Buffer::Info&& info, Default::DATA* pData);
 
     inline void transform(const glm::mat4 t, uint32_t index = 0) override {
-        Object3d::transform(std::forward<const glm::mat4>(t), std::forward<uint32_t>(index));
+        Obj3d::transform(std::forward<const glm::mat4>(t), std::forward<uint32_t>(index));
         DIRTY = true;
     }
 

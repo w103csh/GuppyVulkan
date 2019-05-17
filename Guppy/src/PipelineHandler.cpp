@@ -5,6 +5,7 @@
 #include "DescriptorHandler.h"
 #include "Material.h"
 #include "Mesh.h"
+#include "Parallax.h"
 #include "PBR.h"
 #include "Pipeline.h"
 #include "SceneHandler.h"
@@ -37,6 +38,12 @@ Pipeline::Handler::Handler(Game* pGame)
                 break;
             case PIPELINE::BP_TEX_CULL_NONE:
                 pPipelines_.emplace_back(std::make_unique<BP::TextureCullNone>(std::ref(*this)));
+                break;
+            case PIPELINE::PARALLAX_SIMPLE:
+                pPipelines_.emplace_back(std::make_unique<Parallax::Simple>(std::ref(*this)));
+                break;
+            case PIPELINE::PARALLAX_STEEP:
+                pPipelines_.emplace_back(std::make_unique<Parallax::Steep>(std::ref(*this)));
                 break;
             default:
                 assert(false);  // add new pipelines here

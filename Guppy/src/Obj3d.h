@@ -1,5 +1,5 @@
-#ifndef OBJECT_3D_H
-#define OBJECT_3D_H
+#ifndef OBJ_3D_H
+#define OBJ_3D_H
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_access.hpp>
@@ -11,7 +11,7 @@
 const uint32_t MODEL_ALL = UINT32_MAX;
 typedef std::array<glm::vec3, 6> BoundingBox;
 
-const BoundingBox DefaultBoundingBox = {
+const BoundingBox DEFAULT_BOUNDING_BOX = {
     glm::vec3(FLT_MAX, 0.0f, 0.0f),   // xMin
     glm::vec3(-FLT_MAX, 0.0f, 0.0f),  // xMax
     glm::vec3(0.0f, FLT_MAX, 0.0f),   // yMin
@@ -51,12 +51,10 @@ static inline glm::mat4 translateToTop(const BoundingBoxMinMax& bottomBBMM, cons
                           });
 }
 
-class Object3d {
+class Obj3d {
    public:
-    Object3d()
-        : boundingBox_(DefaultBoundingBox){
-              // TODO: find a way to ensure a model has been set.
-          };
+    // TODO: find a way to ensure a model has been set during construction.
+    Obj3d() : boundingBox_(DEFAULT_BOUNDING_BOX){};
 
     virtual uint32_t getModelCount() { return 1; }
     inline glm::mat4 getModel(uint32_t index = 0) const { return const_cast<glm::mat4&>(model(index)); }
@@ -135,4 +133,4 @@ class Object3d {
     BoundingBox boundingBox_;
 };
 
-#endif  // !OBJECT_3D_H
+#endif  // !OBJ_3D_H

@@ -9,7 +9,7 @@
 
 #include "Handlee.h"
 #include "Helpers.h"
-#include "Object3d.h"
+#include "Obj3d.h"
 #include "Material.h"
 #include "RenderPass.h"
 
@@ -17,6 +17,9 @@ namespace Pipeline {
 
 struct CreateInfoResources;
 class Handler;
+
+void GetDefaultColorInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
+void GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
 
 // **********************
 //      BASE

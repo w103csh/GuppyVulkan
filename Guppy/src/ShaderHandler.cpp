@@ -7,7 +7,9 @@
 #include "FileLoader.h"
 #include "InputHandler.h"
 #include "Material.h"
-#include "Object3d.h"
+#include "Obj3d.h"
+#include "Parallax.h"
+#include "Parallax.h"
 #include "PBR.h"
 #include "PipelineHandler.h"
 #include "Scene.h"
@@ -39,6 +41,15 @@ Shader::Handler::Handler(Game* pGame) : Game::Handler(pGame) {
                 break;
             case SHADER::PBR_TEX_FRAG:
                 pShaders_.emplace_back(std::make_unique<PBR::TextureFragment>(std::ref(*this)));
+                break;
+            case SHADER::PARALLAX_VERT:
+                pShaders_.emplace_back(std::make_unique<Parallax::Vertex>(std::ref(*this)));
+                break;
+            case SHADER::PARALLAX_SIMPLE_FRAG:
+                pShaders_.emplace_back(std::make_unique<Parallax::SimpleFragment>(std::ref(*this)));
+                break;
+            case SHADER::PARALLAX_STEEP_FRAG:
+                pShaders_.emplace_back(std::make_unique<Parallax::SteepFragment>(std::ref(*this)));
                 break;
             default:
                 assert(false);  // add new ones here...

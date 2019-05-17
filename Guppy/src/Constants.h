@@ -123,5 +123,10 @@ const std::string HARDWOOD_FLOOR_TEX_PATH = IMG_PATH + "hardwood_floor.jpg";
 const std::string WOOD_PATH = IMG_PATH + "Wood_007/";
 const std::string WOOD_007_DIFF_TEX_PATH = WOOD_PATH + "Wood_007_COLOR.jpg";
 const std::string WOOD_007_NORM_TEX_PATH = WOOD_PATH + "Wood_007_NORM.jpg";
+// wood
+const std::string MYBRICK_PATH = IMG_PATH + "mybrick/";
+const std::string MYBRICK_DIFF_TEX_PATH = MYBRICK_PATH + "mybrick-color.png";
+const std::string MYBRICK_NORM_TEX_PATH = MYBRICK_PATH + "mybrick-normal-x2.png";
+const std::string MYBRICK_HGHT_TEX_PATH = MYBRICK_PATH + "mybrick-height.png";
 
 #endif  // !CONSTANTS_H

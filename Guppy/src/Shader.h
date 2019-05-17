@@ -15,7 +15,7 @@
 namespace Shader {
 
 // directory of shader files relative to the root of the repo
-const std::string BASE_DIRNAME = "Guppy/src/shaders/";
+const std::string BASE_DIRNAME = "shaders/";
 
 // **********************
 //      Base

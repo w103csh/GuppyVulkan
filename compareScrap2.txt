@@ -1,33 +1,19 @@
-    // TODO: All materials & meshes should be made here. End of story.
-    template <class TMeshType, class TMeshBaseType, typename TMeshCreateInfo, typename TMaterialCreateInfo,
-              typename TInstanceCreateInfo, typename... TArgs>
-    auto &make(std::vector<TMeshBaseType> &meshes, TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
-               TInstanceCreateInfo *pInstanceCreateInfo, TArgs... args) {
-        // MATERIAL
-        auto &pMaterial = materialHandler().makeMaterial(pMaterialCreateInfo);
-        // INSTANCE
-        if (pInstanceCreateInfo == nullptr)
-            instDefMgr_.insert(shell().context().dev);
-        else
-            instDefMgr_.insert(shell().context().dev, pInstanceCreateInfo->data);
 
-        // INSTANTIATE
-        meshes.emplace_back(new TMeshType(std::ref(*this), pCreateInfo, instDefMgr_.pItems.back(), pMaterial, args...));
-
-        // SET VALUES
-        meshes.back()->offset_ = meshes.size() - 1;
-
-        switch (meshes.back()->getStatus()) {
-            case STATUS::PENDING_VERTICES:
-                // Do nothing. So far this should only be a model mesh.
-                // TODO: add more validation?
-                break;
-            case STATUS::PENDING_BUFFERS:
-                meshes.back()->prepare();
-                break;
-            default:
-                throw std::runtime_error("Invalid mesh status after instantiation");
-        }
-
-        return meshes.back();
-    }
+    // bindings
+    Vertex::Color::getBindingDescriptions(createInfoRes.bindDescs);
+    Instance::Default::DATA::getBindingDescriptions(createInfoRes.bindDescs);
+    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
+    // attributes
+    Vertex::Color::getAttributeDescriptions(createInfoRes.attrDescs);
+    Instance::Default::DATA::getAttributeDescriptions(createInfoRes.attrDescs);
+    createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
+        static_cast<uint32_t>(createInfoRes.attrDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
+    // topology
+    createInfoRes.inputAssemblyStateInfo = {};
+    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
+    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
+    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;

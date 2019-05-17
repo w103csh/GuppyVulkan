@@ -18,7 +18,6 @@ void Shader::Base::init(std::vector<VkShaderModule>& oldModules, bool load, bool
     std::vector<const char*> shaderTexts = {loadText(load)};
 
     handler().appendLinkTexts(LINK_TYPES, shaderTexts);
-    // pShaderTexts.insert(pShaderTexts.end(), pLinkTexts.begin(), pLinkTexts.end());
 
     std::vector<unsigned int> spv;
     bool success = GLSLtoSPV(STAGE, shaderTexts, spv);

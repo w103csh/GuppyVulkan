@@ -8,7 +8,7 @@
 
 Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData, Perspective::CreateInfo *pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Object3d(),
+      Obj3d(),
       Uniform::Base(),
       Buffer::DataItem<DATA>(pData),
       aspect_(pCreateInfo->aspect),

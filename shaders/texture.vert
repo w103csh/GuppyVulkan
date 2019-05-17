@@ -4,8 +4,8 @@
 
 // BINDINGS
 layout(set = 0, binding = 0) uniform CameraDefaultPerspective {
-	mat4 viewProjection;
-	mat4 view;
+    mat4 viewProjection;
+    mat4 view;
 } camera;
 // // PUSH CONSTANTS
 // layout(push_constant) uniform PushBlock {
@@ -25,20 +25,20 @@ layout(location = 2) out vec2 fragTexCoord; // (texture space)
 layout(location = 3) out mat3 TBN;
 
 void main() {
-	// Camera space transforms
-	mat4 viewModel = camera.view * inModel;
-	mat3 viewModel3 = mat3(viewModel);
-	vec3 CS_normal = normalize(viewModel3 * inNormal);
-	vec3 CS_tangent = normalize(viewModel3 * inTangent);
-	vec3 CS_binormal = normalize(viewModel3 * inBinormal);
+    // Camera space transforms
+    mat4 viewModel = camera.view * inModel;
+    mat3 viewModel3 = mat3(viewModel);
+    vec3 CS_normal = normalize(viewModel3 * inNormal);
+    vec3 CS_tangent = normalize(viewModel3 * inTangent);
+    vec3 CS_binormal = normalize(viewModel3 * inBinormal);
 
-	gl_Position = camera.viewProjection * inModel * vec4(inPosition, 1.0);
+    gl_Position = camera.viewProjection * inModel * vec4(inPosition, 1.0);
 
-	// Camera space to tangent space
-	// TBN = inverse(mat3(CS_binormal, CS_tangent, CS_normal));
-	TBN = transpose(mat3(CS_binormal, CS_tangent, CS_normal));
+    // Camera space to tangent space
+    // TBN = inverse(mat3(CS_binormal, CS_tangent, CS_normal));
+    TBN = transpose(mat3(CS_binormal, CS_tangent, CS_normal));
 
-	fragPosition = (viewModel * vec4(inPosition, 1.0)).xyz;
+    fragPosition = (viewModel * vec4(inPosition, 1.0)).xyz;
     fragNormal = TBN * CS_normal;
     fragTexCoord = inTexCoord;
 }

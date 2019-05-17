@@ -72,10 +72,14 @@ enum class SHADER {
     // PBR
     PBR_COLOR_FRAG,
     PBR_TEX_FRAG,
+    // PARALLAX
+    PARALLAX_VERT,
+    PARALLAX_SIMPLE_FRAG,
+    PARALLAX_STEEP_FRAG,
     // Add new to SHADER_ALL and SHADER_LINK_MAP.
 };
 
-const std::array<SHADER, 7> SHADER_ALL = {
+const std::array<SHADER, 10> SHADER_ALL = {
     // DEFAULT
     SHADER::COLOR_VERT,  //
     SHADER::COLOR_FRAG,  //
@@ -85,6 +89,10 @@ const std::array<SHADER, 7> SHADER_ALL = {
     // PBR
     SHADER::PBR_COLOR_FRAG,  //
     SHADER::PBR_TEX_FRAG,    //
+    // PARALLAX
+    SHADER::PARALLAX_VERT,
+    SHADER::PARALLAX_SIMPLE_FRAG,
+    SHADER::PARALLAX_STEEP_FRAG,
 };
 
 enum class SHADER_LINK {
@@ -125,16 +133,20 @@ enum class PIPELINE {
     PBR_COLOR = 3,
     PBR_TEX = 4,
     BP_TEX_CULL_NONE = 5,
+    PARALLAX_SIMPLE = 6,
+    PARALLAX_STEEP = 7,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP below.
 };
 
-const std::array<PIPELINE, 6> PIPELINE_ALL = {
+const std::array<PIPELINE, 8> PIPELINE_ALL = {
     PIPELINE::TRI_LIST_COLOR,    //
     PIPELINE::LINE,              //
     PIPELINE::TRI_LIST_TEX,      //
     PIPELINE::PBR_COLOR,         //
     PIPELINE::PBR_TEX,           //
     PIPELINE::BP_TEX_CULL_NONE,  //
+    PIPELINE::PARALLAX_SIMPLE,   //
+    PIPELINE::PARALLAX_STEEP,    //
 };
 
 const std::map<VERTEX, std::set<PIPELINE>> VERTEX_PIPELINE_MAP = {
@@ -155,6 +167,8 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_PIPELINE_MAP = {
             PIPELINE::TRI_LIST_TEX,      //
             PIPELINE::PBR_TEX,           //
             PIPELINE::BP_TEX_CULL_NONE,  //
+            PIPELINE::PARALLAX_SIMPLE,   //
+            PIPELINE::PARALLAX_STEEP,    //
         },
     }  //
 };
@@ -183,7 +197,12 @@ enum class DESCRIPTOR {
     MATERIAL_DEFAULT,
     MATERIAL_PBR,
     // SAMPLER
-    SAMPLER_DEFAULT,
+    SAMPLER_1CH_DEFAULT,
+    SAMPLER_2CH_DEFAULT,
+    SAMPLER_3CH_DEFAULT,
+    SAMPLER_4CH_DEFAULT,
+    // Add new to DESCRIPTOR_TYPE_MAP and either DESCRIPTOR_UNIFORM_ALL
+    // or DESCRIPTOR_SAMPLER_ALL below.
 };
 
 const std::map<DESCRIPTOR, VkDescriptorType> DESCRIPTOR_TYPE_MAP = {
@@ -193,7 +212,10 @@ const std::map<DESCRIPTOR, VkDescriptorType> DESCRIPTOR_TYPE_MAP = {
     {DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER},
     {DESCRIPTOR::LIGHT_SPOT_DEFAULT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER},
     {DESCRIPTOR::MATERIAL_DEFAULT, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC},
-    {DESCRIPTOR::SAMPLER_DEFAULT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER},
+    {DESCRIPTOR::SAMPLER_1CH_DEFAULT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER},
+    {DESCRIPTOR::SAMPLER_2CH_DEFAULT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER},
+    {DESCRIPTOR::SAMPLER_3CH_DEFAULT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER},
+    {DESCRIPTOR::SAMPLER_4CH_DEFAULT, VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER},
     // PBR
     {DESCRIPTOR::LIGHT_POSITIONAL_PBR, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER},
     {DESCRIPTOR::MATERIAL_PBR, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC}
@@ -214,7 +236,10 @@ const std::set<DESCRIPTOR> DESCRIPTOR_MATERIAL_ALL = {
 };
 
 const std::set<DESCRIPTOR> DESCRIPTOR_SAMPLER_ALL = {
-    DESCRIPTOR::SAMPLER_DEFAULT,
+    DESCRIPTOR::SAMPLER_1CH_DEFAULT,
+    DESCRIPTOR::SAMPLER_2CH_DEFAULT,
+    DESCRIPTOR::SAMPLER_3CH_DEFAULT,
+    DESCRIPTOR::SAMPLER_4CH_DEFAULT,
 };
 
 enum class DESCRIPTOR_SET {
@@ -222,6 +247,15 @@ enum class DESCRIPTOR_SET {
     UNIFORM_DEFAULT,
     SAMPLER_DEFAULT,
     UNIFORM_PBR,
+    UNIFORM_PARALLAX,
+    // Add new to DESCRIPTOR_SET_ALL
+};
+
+const std::set<DESCRIPTOR_SET> DESCRIPTOR_SET_ALL = {
+    DESCRIPTOR_SET::UNIFORM_DEFAULT,
+    DESCRIPTOR_SET::SAMPLER_DEFAULT,
+    DESCRIPTOR_SET::UNIFORM_PBR,
+    DESCRIPTOR_SET::UNIFORM_PARALLAX,
 };
 
 enum class HANDLER {
@@ -462,6 +496,16 @@ static void destroyCommandBuffers(const VkDevice &dev, const VkCommandPool &pool
 }
 
 void decomposeScale(const glm::mat4 &m, glm::vec3 &scale);
+
+template <typename T1, typename T2>
+static FlagBits incrementByteFlag(FlagBits flags, T1 firstBit, T2 allBits) {
+    auto byteFlag = flags & allBits;
+    flags = flags & ~allBits;
+    byteFlag = byteFlag == 0 ? firstBit : byteFlag << 1;
+    if (!(byteFlag & allBits)) byteFlag = 0;  // went through whole byte so reset
+    flags |= byteFlag;
+    return flags;
+}
 
 //// This is super simple... add to it if necessary
 // template <typename TKey, typename TValue>

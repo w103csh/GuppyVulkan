@@ -437,6 +437,10 @@ endif()
 add_definitions(-DVULKAN_SAMPLES_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 add_definitions(-DGUPPY_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
+# Custom targets
+add_subdirectory(shaders)
+add_subdirectory(libs)
+
 # TODO: make this optional
 set(IMGUI ${ImGui})
 add_subdirectory(imgui)

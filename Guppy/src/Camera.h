@@ -7,7 +7,7 @@
 
 #include "BufferItem.h"
 #include "Helpers.h"
-#include "Object3d.h"
+#include "Obj3d.h"
 #include "Uniform.h"
 
 namespace Camera {
@@ -30,7 +30,7 @@ struct DATA {
     glm::mat4 view = glm::mat4(1.0f);  // view matrix created from glm::lookAt
 };
 
-class Base : public Object3d, public Uniform::Base, public Buffer::DataItem<DATA> {
+class Base : public Obj3d, public Uniform::Base, public Buffer::DataItem<DATA> {
    public:
     Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo);
 

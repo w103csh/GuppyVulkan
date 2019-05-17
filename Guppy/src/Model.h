@@ -10,9 +10,10 @@
 
 #include "Handlee.h"
 #include "Helpers.h"
+#include "Instance.h"
 #include "Material.h"
 #include "Mesh.h"
-#include "Object3d.h"
+#include "Obj3d.h"
 
 // clang-format off
 namespace Mesh { class Handler; }
@@ -37,11 +38,11 @@ struct CreateInfo : public Mesh::CreateInfo {
     std::string modelPath = "";
 };
 
-class Base : public Object3d, public Handlee<Model::Handler> {
+class Base : public NonCopyable, public Handlee<Model::Handler>, public ObjInst3d {
     friend class Model::Handler;
 
    public:
-    Base(Model::Handler &handler, Model::CreateInfo *pCreateInfo, const std::vector<glm::mat4> &&models);
+    Base(Model::Handler &handler, Model::CreateInfo *pCreateInfo, std::shared_ptr<Instance::Base> &pInstanceData);
     virtual ~Base();
 
     const PIPELINE PIPELINE_TYPE;
@@ -49,10 +50,6 @@ class Base : public Object3d, public Handlee<Model::Handler> {
     inline Model::INDEX getOffset() const { return offset_; }
 
     void postLoad(Model::CBACK callback);
-
-    // OBJECT3D
-    virtual uint32_t getModelCount() { return static_cast<uint32_t>(models_.size()); }
-    virtual inline void transform(const glm::mat4 t, uint32_t index = 0) override;
 
     // TODO: use a conditional template argument
     Model::INDEX getMeshOffset(MESH type, uint8_t offset);
@@ -68,10 +65,6 @@ class Base : public Object3d, public Handlee<Model::Handler> {
     // STATUS status;
 
    private:
-    // OBJECT3D
-    inline const glm::mat4 &model(uint32_t index = 0) const override { return models_[index]; }
-    std::vector<glm::mat4> models_;
-
     void updateAggregateBoundingBox(Mesh::Base *pMesh);
 
     Model::INDEX offset_;

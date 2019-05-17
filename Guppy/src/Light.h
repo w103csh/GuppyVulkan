@@ -8,7 +8,7 @@
 #include "BufferItem.h"
 #include "Constants.h"
 #include "Helpers.h"
-#include "Object3d.h"
+#include "Obj3d.h"
 #include "Uniform.h"
 
 namespace Light {
@@ -18,7 +18,16 @@ typedef enum FLAG {
     // THROUGH 0x00000008
     MODE_LAMERTIAN = 0x00000010,
     MODE_BLINN_PHONG = 0x00000020,
-    // THROUGH 0x00000080
+    // THROUGH 0x0000080
+    DIRECTIONAL = 0x00000100,  // TODO: hook this up (and make positional/diretional the same)
+    POSITIONAL = 0x00000200,   // TODO: hook this up
+    // THROUGH 0x00000800
+    TEST_1 = 0x01000000,
+    TEST_2 = 0x02000000,
+    TEST_3 = 0x04000000,
+    TEST_4 = 0x08000000,
+    TEST_ALL = 0x0F000000,
+    //
     BITS_MAX_ENUM = 0x7FFFFFFF
 } FLAG;
 
@@ -31,10 +40,10 @@ struct CreateInfo : public Buffer::CreateInfo {
 // **********************
 
 template <typename T>
-class Base : public Object3d, public Uniform::Base, public Buffer::DataItem<T> {
+class Base : public Obj3d, public Uniform::Base, public Buffer::DataItem<T> {
    public:
     Base(T *pData, CreateInfo *pCreateInfo)
-        : Object3d(),       //
+        : Obj3d(),          //
           Uniform::Base(),  //
           Buffer::DataItem<T>(pData),
           model_(pCreateInfo->model) {}
@@ -69,8 +78,15 @@ class Base : public Light::Base<DATA> {
     inline const glm::vec3 &getPosition() { return position; }
 
     void transform(const glm::mat4 t, uint32_t index = 0) override {
-        Object3d::transform(t);
+        Obj3d::transform(t);
         position = getWorldSpacePosition();
+    }
+
+    // FLAG
+    inline FlagBits getFlags() const { return pData_->flags; }
+    inline void setFlags(const FlagBits &flags) {
+        pData_->flags = flags;
+        DIRTY = true;
     }
 
    private:
@@ -101,7 +117,7 @@ class Base : public Light::Base<DATA> {
    public:
     Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo);
     void transform(const glm::mat4 t, uint32_t index = 0) override {
-        Object3d::transform(t);
+        Obj3d::transform(t);
         position = getWorldSpacePosition();
         direction = getWorldSpaceDirection();
     }

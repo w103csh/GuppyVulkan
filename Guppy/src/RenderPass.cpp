@@ -192,6 +192,8 @@ RenderPass::Default::Default()
                PIPELINE::PBR_COLOR,
                PIPELINE::LINE,
                PIPELINE::TRI_LIST_TEX,
+               PIPELINE::PARALLAX_SIMPLE,
+               PIPELINE::PARALLAX_STEEP,
                // This needs to come second becuase it has transparent textures.
                // It looks to be like its blending where the transparent edges meet
                // the fragment behind it. In the case I was seeing when BP_TEX_CULL_NONE

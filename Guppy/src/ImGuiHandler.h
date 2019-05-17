@@ -15,7 +15,7 @@ class ImGuiHandler : public UI::Handler {
     ImGuiHandler(Game* pGame)
         : UI::Handler(pGame, std::make_unique<ImGuiRenderPass>()),  //
           showDemoWindow_(false),
-          showSelectionInfoWindow_(true) {}
+          showSelectionInfoWindow_(false) {}
 
     void init() override;
     void destroy() override;

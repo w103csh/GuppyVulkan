@@ -18,11 +18,14 @@ const uint FOG_LINEAR       = 0x00000001u;
 const uint FOG_EXP          = 0x00000002u;
 const uint FOG_EXP2         = 0x00000004u;
 const uint _FOG_SHOW        = 0x0000000Fu;
+// TEXTURE
+//  TYPE MASK
+const uint TEX_HEIGHT           = 0x000F0000u;
 
 // BINDINGS
 layout(set = 0, binding = 0, std140) uniform CameraDefaultPerspective {
-	mat4 viewProjection;
-	mat4 view;
+    mat4 viewProjection;
+    mat4 view;
 } camera;
 layout(set = 0, binding = 1, std140) uniform MaterialDefault {
     vec3 color;         // Diffuse color for dielectrics, f0 for metallic
@@ -78,11 +81,12 @@ layout(set = 0, binding = 4, std140) uniform LightDefaultSpot {
 layout(location = 0) in vec3 fragPosition;
 
 // GLOBAL
-vec3    Ka, // ambient coefficient
-        Kd, // diffuse coefficient
-        Ks, // specular coefficient
-        n;  // normal
-float opacity;
+vec3    Ka,     // ambient coefficient
+        Kd,     // diffuse coefficient
+        Ks,     // specular coefficient
+        n,      // normal
+        v;      // direction to the camera
+float opacity, height;
 
 vec3 getMaterialAmbient() { return material.Ka; }
 vec3 getMaterialColor() { return material.color; }
@@ -139,8 +143,10 @@ vec3 phongModel(int index, uint lightCount) {
     spec = vec3(0.0);
     // Only calculate specular if the cosine is positive
     if(sDotN > 0.0) {
-        // "v" is the direction to the camera
-        vec3 v = normalize(transform(vec3(0.0) - fragPosition));
+        if ((material.texFlags & TEX_HEIGHT) == 0) {
+            // direction to the camera
+            v = normalize(transform(vec3(0.0) - fragPosition));
+        }
         // "h" is the halfway vector between "v" & "s" (Blinn)
         vec3 h = normalize(v + s);
 
@@ -167,7 +173,8 @@ vec3 blinnPhongSpot(int index, uint lightCount) {
         float sDotN = max(dot(s,n), 0.0);
         diff = Kd * sDotN;
         if (sDotN > 0.0) {
-            vec3 v = normalize(transform(vec3(0.0) - fragPosition));
+            if ((material.texFlags & TEX_HEIGHT) == 0)
+                v = normalize(transform(vec3(0.0) - fragPosition));
             vec3 h = normalize(v + s);
             spec = Ks * 
                 pow(max(dot(h, n), 0.0), material.shininess);
@@ -193,7 +200,7 @@ vec3 blinnPhongShade() {
 #if UMI_LGT_DEF_SPT
     for (int i = 0; i < lgtSpot.length(); i++) {
         if ((lgtSpot[i].flags & LIGHT_SHOW) > 0) {
-            color += blinnPhongSpot(i, ++lightCount);
+            // color += blinnPhongSpot(i, ++lightCount);
         }
     }
 #endif

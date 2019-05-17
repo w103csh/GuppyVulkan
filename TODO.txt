@@ -22,4 +22,13 @@
 
  - Add a normal matrix.
 
+ - Use immutable samplers.
+
+ - Parallax mapping never worked right. To me, it looked like it could have been
+    because of a couple things:
+        - The delta varialble in the fragment shaders where offsetting the tex
+            coord in the same direction regardless of view direction.
+        -! Multisampling was distorting the tex coord offsetting.
+        - ...
+
  - Countless more...

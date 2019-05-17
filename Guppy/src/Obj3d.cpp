@@ -1,7 +1,7 @@
 
-#include "Object3d.h"
+#include "Obj3d.h"
 
-BoundingBoxMinMax Object3d::getBoundingBoxMinMax(bool transform, uint32_t index) const {
+BoundingBoxMinMax Obj3d::getBoundingBoxMinMax(bool transform, uint32_t index) const {
     BoundingBoxMinMax bbmm = {FLT_MAX, -FLT_MAX, FLT_MAX, -FLT_MAX, FLT_MAX, -FLT_MAX};
     for (auto v : boundingBox_) {
         if (transform) v = model(index) * glm::vec4(v, 1.0f);
@@ -15,7 +15,7 @@ BoundingBoxMinMax Object3d::getBoundingBoxMinMax(bool transform, uint32_t index)
     return bbmm;
 }
 
-bool Object3d::testBoundingBox(const Ray &ray, const float &tMin, bool useDirection, uint32_t index) const {
+bool Obj3d::testBoundingBox(const Ray &ray, const float &tMin, bool useDirection, uint32_t index) const {
     // Numbers are ransformed into world space
     auto bbmm = getBoundingBoxMinMax(true, index);
 
@@ -87,13 +87,13 @@ bool Object3d::testBoundingBox(const Ray &ray, const float &tMin, bool useDirect
     return true;
 }
 
-void Object3d::putOnTop(const BoundingBoxMinMax &inBoundingBoxMinMax, uint32_t index) {
+void Obj3d::putOnTop(const BoundingBoxMinMax &inBoundingBoxMinMax, uint32_t index) {
     auto myBoundingBoxMinMax = getBoundingBoxMinMax(true, index);
     auto t = translateToTop(inBoundingBoxMinMax, myBoundingBoxMinMax);
     transform(t, index);
 }
 
-BoundingBox Object3d::getBoundingBox(uint32_t index) const {
+BoundingBox Obj3d::getBoundingBox(uint32_t index) const {
     BoundingBox bb = {};
     for (size_t i = 0; i < boundingBox_.size(); i++) {
         bb[i] = model(index) * glm::vec4(boundingBox_[i], 1.0f);

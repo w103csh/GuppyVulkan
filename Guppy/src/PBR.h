@@ -11,7 +11,7 @@
 
 #include "DescriptorSet.h"
 #include "Light.h"
-#include "Object3d.h"
+#include "Obj3d.h"
 #include "Shader.h"
 #include "Pipeline.h"
 #include "Uniform.h"
@@ -38,7 +38,7 @@ class Base : public Light::Base<DATA> {
     inline const glm::vec3 &getPosition() { return position; }
 
     void transform(const glm::mat4 t, uint32_t index = 0) override {
-        Object3d::transform(t);
+        Obj3d::transform(t);
         position = getWorldSpacePosition();
     }
 

@@ -35,7 +35,6 @@ void main() {
     if (TEX_COORD_SHADE) {
         outColor = vec4(texCoordShade(), 1.0);
     } else {
-        // outColor = vec4(Kd, opacity);
         outColor = vec4(pbrShade(), opacity);
     }
 }

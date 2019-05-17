@@ -13,6 +13,10 @@
 #include "Mesh.h"
 #include "VisualHelper.h"
 
+// clang-format off
+namespace Model { class Handler; }
+// clang-format on
+
 namespace Mesh {
 
 // TODO: FIND A WAY TO FORCE ALL MESH CREATION FROM THIS HANDLER !!!!!!!!!!!!!!!!!
@@ -20,13 +24,43 @@ namespace Mesh {
 // The protected Mesh constructors were a crappy start...
 class Handler : public Game::Handler {
     friend Mesh::Base;
+    friend Model::Handler;  // TODO: calls "make" function directly. Another way?
 
    private:
     // TODO: All materials & meshes should be made here. End of story.
     template <class TMeshType, class TMeshBaseType, typename TMeshCreateInfo, typename TMaterialCreateInfo,
-              typename TInstanceCreateInfo, typename... TArgs>
+              typename... TArgs>
     auto &make(std::vector<TMeshBaseType> &meshes, TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
-               TInstanceCreateInfo *pInstanceCreateInfo, TArgs... args) {
+               std::shared_ptr<Instance::Base> &pInstanceData, TArgs... args) {
+        // MATERIAL
+        auto &pMaterial = materialHandler().makeMaterial(pMaterialCreateInfo);
+
+        // INSTANTIATE
+        meshes.emplace_back(new TMeshType(std::ref(*this), pCreateInfo, pInstanceData, pMaterial, args...));
+
+        // SET VALUES
+        meshes.back()->offset_ = meshes.size() - 1;
+
+        switch (meshes.back()->getStatus()) {
+            case STATUS::PENDING_VERTICES:
+                // Do nothing. So far this should only be a model mesh.
+                // TODO: add more validation?
+                break;
+            case STATUS::PENDING_BUFFERS:
+                meshes.back()->prepare();
+                break;
+            default:
+                throw std::runtime_error("Invalid mesh status after instantiation");
+        }
+
+        return meshes.back();
+    }
+
+    // TODO: All materials & meshes should be made here. End of story.
+    template <class TMeshType, class TMeshBaseType, typename TMeshCreateInfo, typename TMaterialCreateInfo,
+              typename TInstanceCreateInfo, typename... TArgs>
+    auto &make2(std::vector<TMeshBaseType> &meshes, TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
+                TInstanceCreateInfo *pInstanceCreateInfo, TArgs... args) {
         // MATERIAL
         auto &pMaterial = materialHandler().makeMaterial(pMaterialCreateInfo);
         // INSTANCE
@@ -87,41 +121,63 @@ class Handler : public Game::Handler {
     //    }
     //}
 
+    template <typename TInstanceCreateInfo>
+    std::shared_ptr<Instance::Base> &makeInstanceData(TInstanceCreateInfo *pInfo) {
+        std::shared_ptr<Instance::Base> &pInstanceData = pInfo->pSharedData;
+        if (pInstanceData == nullptr) {
+            if (pInfo == nullptr || pInfo->data.empty())
+                instDefMgr_.insert(shell().context().dev, true);
+            else
+                instDefMgr_.insert(shell().context().dev, pInfo->update, pInfo->data);
+            pInstanceData = instDefMgr_.pItems.back();
+        }
+        return pInstanceData;
+    }
+
     // WARNING !!! THE REFERENCES RETURNED GO BAD !!! (TODO: what should be returned? anything?)
     template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo, typename TInstanceCreateInfo>
     auto &makeColorMesh(TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
                         TInstanceCreateInfo *pInstanceCreateInfo) {
-        return make<TMeshType>(colorMeshes_, pCreateInfo, pMaterialCreateInfo, pInstanceCreateInfo);
+        auto &pInstanceData = makeInstanceData(pInstanceCreateInfo);
+        return make<TMeshType>(colorMeshes_, pCreateInfo, pMaterialCreateInfo, pInstanceData);
     }
     template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo, typename TInstanceCreateInfo>
     auto &makeLineMesh(TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
                        TInstanceCreateInfo *pInstanceCreateInfo) {
-        return make<TMeshType>(lineMeshes_, pCreateInfo, pMaterialCreateInfo, pInstanceCreateInfo);
+        auto &pInstanceData = makeInstanceData(pInstanceCreateInfo);
+        return make<TMeshType>(lineMeshes_, pCreateInfo, pMaterialCreateInfo, pInstanceData);
     }
     template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo, typename TInstanceCreateInfo>
     auto &makeTextureMesh(TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
                           TInstanceCreateInfo *pInstanceCreateInfo) {
-        return make<TMeshType>(texMeshes_, pCreateInfo, pMaterialCreateInfo, pInstanceCreateInfo);
+        auto &pInstanceData = makeInstanceData(pInstanceCreateInfo);
+        return make<TMeshType>(texMeshes_, pCreateInfo, pMaterialCreateInfo, pInstanceData);
     }
 
     // TODO: Do these pollute this class? Should this be in a derived Handler?
     template <class TObject3d>
     void makeModelSpaceVisualHelper(TObject3d &obj, float lineSize = 1.0f) {
+        // MESH
         AxesCreateInfo meshInfo = {};
         meshInfo.lineSize = lineSize;
+        // MATERIAL
         Material::Default::CreateInfo matInfo = {};
+        // INSTANCE
         Instance::Default::CreateInfo instInfo = {};
         instInfo.data.push_back({obj.model()});
-        make<VisualHelper::ModelSpace>(lineMeshes_, &meshInfo, &matInfo, &instInfo);
+        auto &pInstanceData = makeInstanceData(&instInfo);
+
+        make<VisualHelper::ModelSpace>(lineMeshes_, &meshInfo, &matInfo, pInstanceData);
     }
     template <class TMesh>
     void makeTangentSpaceVisualHelper(TMesh pMesh, float lineSize = 0.1f) {
+        // MESH
         AxesCreateInfo meshInfo = {};
         meshInfo.lineSize = lineSize;
+        // MATERIAL
         Material::Default::CreateInfo matInfo = {};
-        Instance::Default::CreateInfo instInfo = {};
-        instInfo.pSharedData = pMesh->pInstanceData_;
-        make<VisualHelper::TangentSpace>(lineMeshes_, &meshInfo, &matInfo, &instInfo, pMesh);
+
+        make<VisualHelper::TangentSpace>(lineMeshes_, &meshInfo, &matInfo, pMesh->pInstanceData_, pMesh);
     }
 
     inline std::unique_ptr<Mesh::Color> &getColorMesh(const size_t &index) { return colorMeshes_[index]; }

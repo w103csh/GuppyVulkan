@@ -43,7 +43,7 @@ void Material::Default::Base::setTextureData() {
         pData_->flags &= Material::FLAG::PER_TEXTURE_COLOR;
         pData_->texFlags = pTexture_->flags;
     } else {
-        pData_->texFlags = Texture::FLAG::NONE;
+        pData_->texFlags = 0;
     }
 
     pData_->xRepeat = xRepeat;

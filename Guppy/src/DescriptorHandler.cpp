@@ -4,6 +4,7 @@
 #include "DescriptorHandler.h"
 
 #include "Mesh.h"
+#include "Parallax.h"
 #include "PBR.h"
 #include "Pipeline.h"
 #include "PipelineHandler.h"
@@ -11,9 +12,25 @@
 #include "UniformHandler.h"
 
 Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_HANDLE) {
-    pDescriptorSets_.push_back(std::make_unique<Descriptor::Set::Default::Uniform>());
-    pDescriptorSets_.push_back(std::make_unique<Descriptor::Set::Default::Sampler>());
-    pDescriptorSets_.push_back(std::make_unique<Descriptor::Set::PBR::Uniform>());
+    for (const auto& type : DESCRIPTOR_SET_ALL) {
+        switch (type) {
+            case DESCRIPTOR_SET::UNIFORM_DEFAULT:
+                pDescriptorSets_.push_back(std::make_unique<Set::Default::Uniform>());
+                break;
+            case DESCRIPTOR_SET::SAMPLER_DEFAULT:
+                pDescriptorSets_.push_back(std::make_unique<Set::Default::Sampler>());
+                break;
+            case DESCRIPTOR_SET::UNIFORM_PBR:
+                pDescriptorSets_.push_back(std::make_unique<Set::PBR::Uniform>());
+                break;
+            case DESCRIPTOR_SET::UNIFORM_PARALLAX:
+                pDescriptorSets_.push_back(std::make_unique<Set::Parallax::Uniform>());
+                break;
+            default:
+                assert(false);  // add new pipelines here
+        }
+        assert(pDescriptorSets_.back()->TYPE == type);
+    }
 }
 
 void Descriptor::Handler::init() {
@@ -155,7 +172,7 @@ void Descriptor::Handler::getReference(Mesh::Base& mesh) {
         uint32_t offset = 0;
         switch (pSet->TYPE) {
             case DESCRIPTOR_SET::SAMPLER_DEFAULT: {
-                offset = mesh.getMaterial()->getTexture()->offset;
+                offset = mesh.getMaterial()->getTexture()->OFFSET;
             } break;
             default:;
         }
@@ -202,31 +219,31 @@ void Descriptor::Handler::updateDescriptorSets(const std::unique_ptr<Descriptor:
     // std::vector<VkDescriptorImageInfo> imageInfos;
     std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos;
     // std::vector<VkBufferView> texelBufferViews;
-    std::vector<VkWriteDescriptorSet> writes(pSet->BINDING_MAP.size());
-
-    uint32_t count = 0;
+    std::vector<VkWriteDescriptorSet> writes;
+    
     for (const auto& keyValue : pSet->BINDING_MAP) {
-        // WRITE
-        writes[count] = getWrite(keyValue);
         // INFO
         if (DESCRIPTOR_MATERIAL_ALL.count(keyValue.second.first)) {
             // MATERIAL
-            mesh.pMaterial_->setWriteInfo(writes[count]);
+            writes.push_back(getWrite(keyValue));
+            mesh.pMaterial_->setWriteInfo(writes.back());
         } else if (DESCRIPTOR_UNIFORM_ALL.count(keyValue.second.first)) {
             // UNIFORM
+            writes.push_back(getWrite(keyValue));
             bufferInfos.push_back(uniformHandler().getWriteInfos(keyValue.second));
-            writes[count].descriptorCount = static_cast<uint32_t>(bufferInfos.back().size());
-            writes[count].pBufferInfo = bufferInfos.back().data();
+            writes.back().descriptorCount = static_cast<uint32_t>(bufferInfos.back().size());
+            writes.back().pBufferInfo = bufferInfos.back().data();
         } else if (DESCRIPTOR_SAMPLER_ALL.count(keyValue.second.first)) {
-            // SAMPLER
-            // TODO: add "Descriptor::Interface" to texture if it changes to a class...
+            // Validate
             assert(mesh.getMaterial()->getTexture() != nullptr);
-            writes[count].pImageInfo = &mesh.getMaterial()->getTexture()->imgDescInfo;
+            if (!mesh.getMaterial()->getTexture()->hasSampler(std::get<1>(keyValue.first))) continue;
+            // SAMPLER
+            writes.push_back(getWrite(keyValue));
+            mesh.getMaterial()->getTexture()->setWriteInfo(writes.back());
         } else {
             assert(false);
             throw std::runtime_error("Unhandled descriptor type");
         }
-        ++count;
     }
 
     for (uint32_t i = 0; i < resource.descriptorSets.size(); i++) {

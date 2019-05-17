@@ -16,17 +16,19 @@ layout(location = 3) in mat3 TBN;
 layout(location = 0) out vec4 outColor;
 
 // GLOBAL
-vec3    Ka, // ambient coefficient
-        Kd, // diffuse coefficient
-        Ks, // specular coefficient
-        n;  // normal
-float opacity;
+vec3    Ka,     // ambient coefficient
+        Kd,     // diffuse coefficient
+        Ks,     // specular coefficient
+        n,      // normal
+        v;      // direction to the camera
+float opacity, height;
 bool TEX_COORD_SHADE;
 
 vec3 transform(vec3 v) { return TBN * v; }
 
 void main() {
     setTextureDefaults();
+
     if (TEX_COORD_SHADE) {
         outColor = vec4(texCoordShade(), 1.0);
     } else {

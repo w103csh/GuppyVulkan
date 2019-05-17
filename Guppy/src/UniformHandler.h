@@ -38,11 +38,16 @@ class Manager : public Buffer::Manager::Descriptor<Uniform::Base, TDerived, Item
     Manager(const std::string&& name, const DESCRIPTOR&& descriptorType, const UNIFORM_INDEX&& maxSize,
             const std::string&& macroName)
         : Buffer::Manager::Descriptor<Uniform::Base, TDerived, ItemPointer>{
-              std::forward<const std::string>(name), std::forward<const DESCRIPTOR>(descriptorType),
-              std::forward<const UNIFORM_INDEX>(maxSize), true, VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+              std::forward<const std::string>(name),
+              std::forward<const DESCRIPTOR>(descriptorType),
+              std::forward<const UNIFORM_INDEX>(maxSize),
+              true,
+              VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
               static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-              std::forward<const std::string>(macroName), VK_SHARING_MODE_EXCLUSIVE, 0} {}
+              std::forward<const std::string>(macroName),
+              VK_SHARING_MODE_EXCLUSIVE,
+              0} {}
 };
 
 // **********************
@@ -53,15 +58,15 @@ class Handler : public Game::Handler {
    private:
     inline auto& getUniforms(const DESCRIPTOR& type) {
         switch (type) {
-                case DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT:
+            case DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT:
                 return camDefPersMgr().pItems;
-                case DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT:
+            case DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT:
                 return lgtDefPosMgr().pItems;
-                case DESCRIPTOR::LIGHT_POSITIONAL_PBR:
+            case DESCRIPTOR::LIGHT_POSITIONAL_PBR:
                 return lgtPbrPosMgr().pItems;
-                case DESCRIPTOR::LIGHT_SPOT_DEFAULT:
+            case DESCRIPTOR::LIGHT_SPOT_DEFAULT:
                 return lgtDefSptMgr().pItems;
-                case DESCRIPTOR::FOG_DEFAULT:
+            case DESCRIPTOR::FOG_DEFAULT:
                 return uniDefFogMgr().pItems;
             default:
                 assert(false);
@@ -84,8 +89,14 @@ class Handler : public Game::Handler {
     void update();
 
     // MAIN CAMERA
-    Camera::Default::Perspective::Base& getMainCamera() {
+    inline Camera::Default::Perspective::Base& getMainCamera() {
         return std::ref(*(Camera::Default::Perspective::Base*)(camDefPersMgr().pItems[MAIN_CAMERA_OFFSET].get()));
+    }
+
+    // FIRST LIGHT
+    inline Light::Default::Positional::Base& getDefPosLight(uint32_t index = 0) {
+        assert(index < lgtDefPosMgr().pItems.size());
+        return std::ref(*(Light::Default::Positional::Base*)(lgtDefPosMgr().pItems[index].get()));
     }
 
     // SHADER

@@ -12,8 +12,7 @@
 #include "Helpers.h"
 #include "Instance.h"
 #include "Material.h"
-#include "Object3d.h"
-#include "ObjectInstanced.h"
+#include "ObjDrawInst3d.h"
 #include "PipelineReference.h"
 #include "Shell.h"
 #include "Texture.h"
@@ -42,7 +41,7 @@ typedef struct CreateInfo {
 //      Base
 // **********************
 
-class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Object3d, public ObjectInstanced {
+class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawInst3d {
     friend class Mesh::Handler;
     friend class Descriptor::Handler;  // Reference (TODO: get rid of this)
     friend class Pipeline::Handler;    // Reference (TODO: get rid of this)
@@ -67,7 +66,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Object3d,
     // MATERIAL
     inline auto& getMaterial() { return pMaterial_; }
     inline bool hasNormalMap() const {
-        return pMaterial_->hasTexture() && pMaterial_->getTexture()->flags & ::Texture::FLAG::NORMAL;
+        return pMaterial_->hasTexture() && pMaterial_->getTexture()->flags & ::Texture::TYPE::NORMAL;
     }
 
     inline void setStatus(const STATUS&& status) {
@@ -112,12 +111,6 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Object3d,
 
     // PIPELINE
     void updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline);
-
-    // OBJECT3D
-    virtual uint32_t getModelCount() { return pInstanceData_->BUFFER_INFO.count; }
-    inline void transform(const glm::mat4 t, uint32_t index = 0) override {
-        pInstanceData_->transform(std::forward<const glm::mat4>(t), std::forward<uint32_t>(index));
-    }
 
     virtual void destroy();
 
@@ -164,9 +157,6 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Object3d,
                           BufferResource& res, VkBufferUsageFlagBits usage, std::string bufferType);
 
     void bindPushConstants(VkCommandBuffer cmd) const;  // TODO: I hate this...
-
-    // OBJECT3D
-    inline const glm::mat4& model(uint32_t index = 0) const override { return pInstanceData_->model(index); }
 
     Mesh::INDEX offset_;
 };

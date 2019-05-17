@@ -8,8 +8,6 @@
 #include "Game.h"
 #include "Texture.h"
 
-// class Game;
-
 namespace Texture {
 
 class Handler : public Game::Handler {
@@ -19,32 +17,35 @@ class Handler : public Game::Handler {
     void init() override;
     inline void destroy() override { reset(); }
 
-    void addTexture(std::string path, std::string normPath = "", std::string specPath = "", std::string alphPath = "");
-    const std::shared_ptr<Texture::DATA> getTextureByPath(std::string path) const;
+    void addTexture(Texture::CreateInfo* pCreateInfo);
+    const std::shared_ptr<Texture::Base> getTextureByPath(std::string path) const;
     void update();
 
-    const std::shared_ptr<Texture::DATA> getTexture(uint32_t index) {
+    const std::shared_ptr<Texture::Base> getTexture(uint32_t index) {
         if (index < pTextures_.size()) return pTextures_[index];
         return nullptr;
     }
-    uint32_t getCount() { return static_cast<uint32_t>(pTextures_.size()); }
+    inline uint32_t getCount() { return static_cast<uint32_t>(pTextures_.size()); }
 
    private:
     void reset() override;
 
-    std::future<std::shared_ptr<Texture::DATA>> loadTexture(std::shared_ptr<Texture::DATA>& pTexture);
+    std::shared_ptr<Texture::Base> load(std::shared_ptr<Texture::Base>& pTexture);
+    void loadDataAndValidate(const std::string& path, int req_comp, std::shared_ptr<Texture::Base>& pTexture,
+                             Sampler::Base& texSampler);
+    std::future<std::shared_ptr<Texture::Base>> loadTexture(std::shared_ptr<Texture::Base>& pTexture);
 
+    void createTexture(std::shared_ptr<Texture::Base> pTexture);
+    void createTextureSampler(const std::shared_ptr<Texture::Base> pTexture, Sampler::Base& texSampler);
+    void createImage(const std::shared_ptr<Texture::Base> pTexture, Sampler::Base& texSampler);
+    void generateMipmaps(const std::shared_ptr<Texture::Base> pTexture, const Sampler::Base& texSampler);
+    void createImageView(const VkDevice& dev, Sampler::Base& texSampler);
+    void createSampler(const VkDevice& dev, Sampler::Base& texSampler);
 
-    void createTexture(const bool makeMipmaps, std::shared_ptr<Texture::DATA> pTexture);
-    void createImage(Texture::DATA& tex, uint32_t layerCount);
-    void createImageView(const VkDevice& dev, Texture::DATA& tex, uint32_t layerCount);
-    void createSampler(const VkDevice& dev, Texture::DATA& tex);
-    void createDescInfo(Texture::DATA& tex);
-    void generateMipmaps(const Texture::DATA& tex, uint32_t layerCount);
-    uint32_t getArrayLayerCount(const Texture::DATA& tex);
+    void createDescInfo(Sampler::Base& texSampler);
 
-    std::vector<std::shared_ptr<Texture::DATA>> pTextures_;
-    std::vector<std::future<std::shared_ptr<Texture::DATA>>> texFutures_;
+    std::vector<std::shared_ptr<Texture::Base>> pTextures_;
+    std::vector<std::future<std::shared_ptr<Texture::Base>>> texFutures_;
 };
 
 }  // namespace Texture

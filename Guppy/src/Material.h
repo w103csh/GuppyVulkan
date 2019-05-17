@@ -36,7 +36,7 @@ typedef enum FLAG {
 } FLAG;
 
 struct CreateInfo : public Buffer::CreateInfo {
-    std::shared_ptr<Texture::DATA> pTexture = nullptr;
+    std::shared_ptr<Texture::Base> pTexture = nullptr;
     // COMMON
     glm::vec3 color = {0.3f, 0.3f, 0.3f};
     FlagBits flags = Material::FLAG::PER_MATERIAL_COLOR;
@@ -75,7 +75,7 @@ class Base : public virtual Buffer::Item, public Descriptor::Interface {
     }
 
     inline bool hasTexture() const { return pTexture_ != nullptr; }
-    inline const std::shared_ptr<Texture::DATA> getTexture() const { return pTexture_; }
+    inline const std::shared_ptr<Texture::Base> getTexture() const { return pTexture_; }
 
     virtual FlagBits getFlags() = 0;
     virtual void setFlags(FlagBits flags) = 0;
@@ -93,7 +93,7 @@ class Base : public virtual Buffer::Item, public Descriptor::Interface {
     STATUS status_;
 
     // TEXTURE
-    std::shared_ptr<Texture::DATA> pTexture_;
+    std::shared_ptr<Texture::Base> pTexture_;
     float repeat_;
 };
 

@@ -49,6 +49,8 @@ void Scene::Base::record(const uint8_t& frameIndex, std::unique_ptr<RenderPass::
                     if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
                         pMesh->draw(priCmd, frameIndex);
             } break;
+            case PIPELINE::PARALLAX_SIMPLE:
+            case PIPELINE::PARALLAX_STEEP:
             case PIPELINE::PBR_TEX:
             case PIPELINE::BP_TEX_CULL_NONE:
             case PIPELINE::TRI_LIST_TEX: {

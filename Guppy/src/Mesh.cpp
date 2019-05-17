@@ -22,8 +22,7 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
                  const std::string&& name, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
                  std::shared_ptr<Material::Base>& pMaterial)
     : Handlee(handler),
-      Object3d(),
-      ObjectInstanced(pInstanceData),
+      ObjDrawInst3d(pInstanceData),
       FLAGS(flags),
       MAPPABLE(pCreateInfo->mappable),
       NAME(name),
