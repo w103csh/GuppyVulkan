@@ -1,0 +1,48 @@
+
+#ifndef DESCRIPTOR_CONSTANTS_H
+#define DESCRIPTOR_CONSTANTS_H
+
+#include <map>
+#include <set>
+#include <vulkan/vulkan.h>
+
+enum class DESCRIPTOR {
+    // CAMERA
+    CAMERA_PERSPECTIVE_DEFAULT,
+    // LIGHT
+    LIGHT_POSITIONAL_DEFAULT,
+    LIGHT_POSITIONAL_PBR,
+    LIGHT_SPOT_DEFAULT,
+    // FOG,
+    FOG_DEFAULT,
+    // MATERIAL
+    MATERIAL_DEFAULT,
+    MATERIAL_PBR,
+    // SAMPLER
+    SAMPLER_1CH_DEFAULT,
+    SAMPLER_2CH_DEFAULT,
+    SAMPLER_3CH_DEFAULT,
+    SAMPLER_4CH_DEFAULT,
+    // Add new to DESCRIPTOR_TYPE_MAP and either DESCRIPTOR_UNIFORM_ALL
+    // or DESCRIPTOR_SAMPLER_ALL in code file.
+};
+
+enum class DESCRIPTOR_SET {
+    // DEFAULT
+    UNIFORM_DEFAULT,
+    SAMPLER_DEFAULT,
+    // PBR
+    UNIFORM_PBR,
+    // PARALLAX
+    UNIFORM_PARALLAX,
+    SAMPLER_PARALLAX,
+    // Add new to DESCRIPTOR_SET_ALL in code file.
+};
+
+extern const std::map<DESCRIPTOR, VkDescriptorType> DESCRIPTOR_TYPE_MAP;
+extern const std::set<DESCRIPTOR> DESCRIPTOR_UNIFORM_ALL;
+extern const std::set<DESCRIPTOR> DESCRIPTOR_MATERIAL_ALL;
+extern const std::set<DESCRIPTOR> DESCRIPTOR_SAMPLER_ALL;
+extern const std::set<DESCRIPTOR_SET> DESCRIPTOR_SET_ALL;
+
+#endif  // !DESCRIPTOR_CONSTANTS_H

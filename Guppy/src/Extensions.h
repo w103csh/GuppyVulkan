@@ -60,7 +60,7 @@ static void CreateDebugMarkerEXTs(VkDevice device, VkPhysicalDevice physicalDevi
     }
 }
 
-// static void DestoryDebugMarkerEXTs(VkDevice device, VkPhysicalDevice physicalDevice) {
+// static void DestroyDebugMarkerEXTs(VkDevice device, VkPhysicalDevice physicalDevice) {
 //    if (active) {
 //        if (vkDebugMarkerSetObjectTag != VK_NULL_HANDLE) {
 //            auto func = (PFN_vkDebugMarkerSetObjectTagEXT)vkGetDeviceProcAddr(device, "vkDebugMarkerSetObjectTagEXT");
@@ -164,7 +164,7 @@ static VkResult CreateDebugReportCallbackEXT(const VkInstance instance,
     }
 }
 
-static void DestoryDebugReportCallbackEXT(const VkInstance instance, VkDebugReportCallbackEXT& callback,
+static void DestroyDebugReportCallbackEXT(const VkInstance instance, VkDebugReportCallbackEXT& callback,
                                           const VkAllocationCallbacks* pAllocator) {
     auto func = (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
     if (func != nullptr) {

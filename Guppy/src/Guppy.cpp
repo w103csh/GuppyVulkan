@@ -174,9 +174,9 @@ void Guppy::updateRenderPasses() {
 }
 
 void Guppy::createScenes() {
-    bool suppress = true;
+    bool suppress = false;
 
-    handlers_.pScene->makeScene(true, (!suppress || true));
+    handlers_.pScene->makeScene(true, (!suppress || false));
 
     // Create info structs
     Mesh::CreateInfo meshInfo;
@@ -190,7 +190,7 @@ void Guppy::createScenes() {
     uint32_t count = 4;
 
     // ORIGIN AXES
-    if (!suppress || true) {
+    if (!suppress || false) {
         axesInfo = {};
         axesInfo.lineSize = AXES_MAX_SIZE;
         axesInfo.showNegative = true;
@@ -208,7 +208,7 @@ void Guppy::createScenes() {
         defInstInfo = {};
         defInstInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
         defMatInfo = {};
-        defMatInfo.pTexture = handlers_.pTexture->getTextureByPath(HARDWOOD_FLOOR_TEX_PATH);
+        defMatInfo.pTexture = handlers_.pTexture->getTextureByName(Texture::HARDWOOD_CREATE_INFO.name);
         defMatInfo.repeat = 800.0f;
         defMatInfo.shininess = Material::SHININESS::EGGSHELL;
         auto& pGroundPlane = handlers_.pMesh->makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
@@ -216,29 +216,30 @@ void Guppy::createScenes() {
     }
 
     // GROUND PLANE (COLOR)
-    if (!suppress || false) {
-        // meshInfo = {};
-        // meshInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
-        // meshInfo.selectable = false;
-        // defInstInfo = {};
-        // defInstInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
-        // defMatInfo = {};
-        // defMatInfo.shininess = Material::SHININESS::EGGSHELL;
-        // defMatInfo.color = {0.5f, 0.5f, 0.5f};
-        // auto& pGroundPlane = handlers_.pMesh->makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
-        // groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
+    if (!suppress && false) {
+        meshInfo = {};
+        meshInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+        meshInfo.selectable = false;
+        defInstInfo = {};
+        defInstInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
+        defMatInfo = {};
+        defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+        defMatInfo.color = {0.5f, 0.5f, 0.5f};
+        auto& pGroundPlane = handlers_.pMesh->makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+        groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
     }
 
     // BOX (TEXTURE)
-    if (!suppress || true) {
+    if (!suppress || false) {
         meshInfo = {};
-        meshInfo.pipelineType = PIPELINE::PARALLAX_SIMPLE;
-        // meshInfo.pipelineType = PIPELINE::PARALLAX_STEEP;
+        // meshInfo.pipelineType = PIPELINE::PARALLAX_SIMPLE;
+        meshInfo.pipelineType = PIPELINE::PARALLAX_STEEP;
+        // meshInfo.pipelineType = PIPELINE::PBR_TEX;
         defInstInfo = {};
         defInstInfo.data.push_back(
             {helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
         defMatInfo = {};
-        defMatInfo.pTexture = handlers_.pTexture->getTextureByPath(MYBRICK_DIFF_TEX_PATH);
+        defMatInfo.pTexture = handlers_.pTexture->getTextureByName(Texture::MYBRICK_CREATE_INFO.name);
         defMatInfo.shininess = Material::SHININESS::EGGSHELL;
         auto& boxTexture1 = handlers_.pMesh->makeTextureMesh<Box::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
         boxTexture1->putOnTop(groundPlane_bbmm);
@@ -258,7 +259,7 @@ void Guppy::createScenes() {
         pbrMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::METAL;
         pbrMatInfo.color = {1.0f, 1.0f, 0.0f};
         pbrMatInfo.roughness = 0.43f;
-        pbrMatInfo.pTexture = handlers_.pTexture->getTextureByPath(VULKAN_TEX_PATH);
+        pbrMatInfo.pTexture = handlers_.pTexture->getTextureByName(Texture::VULKAN_CREATE_INFO.name);
         auto& boxTexture2 = handlers_.pMesh->makeTextureMesh<Box::Texture>(&meshInfo, &pbrMatInfo, &defInstInfo);
         boxTexture2->putOnTop(groundPlane_bbmm);
         handlers_.pMesh->updateMesh(boxTexture2);
@@ -330,7 +331,7 @@ void Guppy::createScenes() {
 
     count = 100;
     // GRASS
-    if (!suppress || false) {
+    if (!suppress || true) {
         // MODEL
         modelInfo = {};
         modelInfo.pipelineType = PIPELINE::BP_TEX_CULL_NONE;
@@ -342,7 +343,9 @@ void Guppy::createScenes() {
         defInstInfo = {};
         defInstInfo.update = false;
         std::srand(static_cast<unsigned>(time(0)));
-        float f1 = 0.03f, x, z;
+        float x, z;
+        float f1 = 0.03f;
+        // float f1 = 0.2f;
         float f2 = f1 * 5.0f;
         float low = f2 * 0.05f;
         float high = f2 * 3.0f;
@@ -371,7 +374,7 @@ void Guppy::createScenes() {
 
     count = 5;
     // ORANGE
-    if (!suppress || true) {
+    if (!suppress || false) {
         // MODEL
         modelInfo = {};
         modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
@@ -425,7 +428,7 @@ void Guppy::createScenes() {
         }
         // MATERIAL
         defMatInfo = {};
-        defMatInfo.pTexture = handlers_.pTexture->getTextureByPath(MED_H_DIFF_TEX_PATH);
+        defMatInfo.pTexture = handlers_.pTexture->getTextureByName(Texture::MEDIEVAL_HOUSE_CREATE_INFO.name);
         handlers_.pModel->makeTextureModel(&modelInfo, &defMatInfo, &defInstInfo);
     }
     // MEDIEVAL HOUSE (PBR_TEX)
@@ -448,7 +451,7 @@ void Guppy::createScenes() {
         defInstInfo.data.push_back({helpers::affine(glm::vec3{0.0175f}, {-6.5f, 0.0f, -6.5f}, M_PI_4_FLT, CARDINAL_Y)});
         // MATERIAL
         pbrMatInfo = {};
-        pbrMatInfo.pTexture = handlers_.pTexture->getTextureByPath(MED_H_DIFF_TEX_PATH);
+        pbrMatInfo.pTexture = handlers_.pTexture->getTextureByName(Texture::MEDIEVAL_HOUSE_CREATE_INFO.name);
         handlers_.pModel->makeTextureModel(&modelInfo, &pbrMatInfo, &defInstInfo);
     }
 
@@ -699,7 +702,7 @@ void Guppy::destroySwapchainResources() {
 
     for (auto& view : swapchainResources_.views) vkDestroyImageView(ctx.dev, view, nullptr);
     swapchainResources_.views.clear();
-    // Images are destoryed by vkDestroySwapchainKHR
+    // Images are destroyed by vkDestroySwapchainKHR
     swapchainResources_.images.clear();
 }
 

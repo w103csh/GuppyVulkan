@@ -66,7 +66,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     // MATERIAL
     inline auto& getMaterial() { return pMaterial_; }
     inline bool hasNormalMap() const {
-        return pMaterial_->hasTexture() && pMaterial_->getTexture()->flags & ::Texture::TYPE::NORMAL;
+        return pMaterial_->hasTexture() && pMaterial_->getTexture()->flags & ::Sampler::TYPE::NORMAL;
     }
 
     inline void setStatus(const STATUS&& status) {

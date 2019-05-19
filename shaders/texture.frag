@@ -32,6 +32,7 @@ void main() {
     if (TEX_COORD_SHADE) {
         outColor = vec4(texCoordShade(), 1.0);
     } else {
+        // return;
         outColor = vec4(blinnPhongShade(), opacity);
     }
 }

@@ -28,22 +28,50 @@ void Model::Handler::makeTexture(const tinyobj::material_t &tinyobj_mat, const s
     // If there is a texture ignore .obj materials for now. (TODO: more dynamic)
     if (!hasTexture) {
         if (!tinyobj_mat.diffuse_texname.empty() /*|| !to_m.specular_texname.empty() || !to_m.bump_texname.empty()*/) {
-            Texture::CreateInfo texInfo = {};
-            if (!tinyobj_mat.diffuse_texname.empty()) texInfo.colorPath = modelDirectory + tinyobj_mat.diffuse_texname;
+            // See if the texture already exists...
+            pCreateInfo->pTexture = textureHandler().getTextureByName(tinyobj_mat.name);
 
-            // Check if the texture already exists (TODO: better check)
-            if (textureHandler().getTextureByPath(texInfo.colorPath) == nullptr) {
-                if (!tinyobj_mat.specular_texname.empty())  //
-                    texInfo.specularPath = modelDirectory + tinyobj_mat.specular_texname;
-                if (!tinyobj_mat.bump_texname.empty())  //
-                    texInfo.normalPath = modelDirectory + tinyobj_mat.bump_texname;
-                if (!tinyobj_mat.alpha_texname.empty())  //
-                    texInfo.alphaPath = modelDirectory + tinyobj_mat.alpha_texname;
-                textureHandler().addTexture(&texInfo);
-            } else {
-                // TODO: deal with textures sharing some bitmap and not others...
+            if (pCreateInfo->pTexture != nullptr) return;
+
+            // For now its just easier to make separate samplers instead, of layering
+            // everything.
+            Texture::CreateInfo texCreateInfo = {
+                tinyobj_mat.name + " Texture",
+                {{tinyobj_mat.name + " Sampler", {}, VK_IMAGE_VIEW_TYPE_2D_ARRAY}},
+            };
+
+            // DIFFUSE
+            if (!tinyobj_mat.diffuse_texname.empty()) {
+                texCreateInfo.samplerCreateInfos.back().layerInfos.push_back(Sampler::GetDef4Comb3And1LayerInfo(
+                    Sampler::TYPE::COLOR,         //
+                    modelDirectory,               //
+                    tinyobj_mat.diffuse_texname,  //
+                    tinyobj_mat.alpha_texname     //
+                    ));
             }
-            pCreateInfo->pTexture = textureHandler().getTextureByPath(texInfo.colorPath);
+            // NORMAL
+            if (!tinyobj_mat.bump_texname.empty()) {
+                texCreateInfo.samplerCreateInfos.back().layerInfos.push_back(Sampler::GetDef4Comb3And1LayerInfo(
+                    Sampler::TYPE::NORMAL,    //
+                    modelDirectory,           //
+                    tinyobj_mat.bump_texname  //
+                                              // TODO: what should this be?
+                    ));
+            }
+            // SPECULAR
+            if (!tinyobj_mat.specular_texname.empty()) {
+                texCreateInfo.samplerCreateInfos.back().layerInfos.push_back(Sampler::GetDef4Comb3And1LayerInfo(
+                    Sampler::TYPE::SPECULAR,      //
+                    modelDirectory,               //
+                    tinyobj_mat.specular_texname  //
+                                                  // TODO: what should this be?
+                    ));
+            }
+
+            // TODO: there are a bunch of combinations not accounted for.
+
+            pCreateInfo->pTexture = textureHandler().make(&texCreateInfo);
+
         } else {
             // TODO: deal with material that don't have a diffuse bitmap...
         }

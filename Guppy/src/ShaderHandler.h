@@ -5,8 +5,8 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "Constants.h"
 #include "Game.h"
-#include "Helpers.h"
 #include "Shader.h"
 
 namespace Shader {

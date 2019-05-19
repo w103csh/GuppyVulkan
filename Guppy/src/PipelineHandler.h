@@ -15,7 +15,7 @@
 #include "Vertex.h"
 
 namespace Pipeline {
-    
+
 struct CreateInfoResources {
     // BLENDING
     VkPipelineColorBlendAttachmentState blendAttach = {};
@@ -69,7 +69,9 @@ class Handler : public Game::Handler {
     VkShaderStageFlags getDescriptorSetStages(const DESCRIPTOR_SET &setType);
 
     inline const std::unique_ptr<Pipeline::Base> &getPipeline(const PIPELINE &type) const {
-        assert(type != PIPELINE::DONT_CARE);
+        // Make sure the pipeline that is being accessed is available.
+        assert(static_cast<int>(type) > static_cast<int>(PIPELINE::DONT_CARE) &&
+               static_cast<int>(type) < pPipelines_.size());
         return pPipelines_[static_cast<uint64_t>(type)];
     }
     inline const std::vector<std::unique_ptr<Pipeline::Base>> &getPipelines() const { return pPipelines_; }

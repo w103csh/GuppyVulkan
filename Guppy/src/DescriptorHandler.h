@@ -6,8 +6,8 @@
 #include <set>
 #include <vulkan/vulkan.h>
 
+#include "Constants.h"
 #include "Game.h"
-#include "Helpers.h"
 #include "DescriptorSet.h"
 #include "DescriptorReference.h"
 #include "ShaderHandler.h"
@@ -27,7 +27,7 @@ namespace Descriptor {
 class Handler : public Game::Handler {
    public:
     Handler(Game* pGame);
-    
+
     void init() override;
 
     // POOL

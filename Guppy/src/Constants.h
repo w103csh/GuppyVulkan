@@ -4,9 +4,17 @@
 
 #include <glm/glm.hpp>
 #include <map>
-#include <tiny_obj_loader.h>  // TODO: pre-compiled header file
+#include <tiny_obj_loader.h>
+#include <utility>
 #include <vector>
 #include <vulkan/vulkan.h>
+
+#include "DescriptorConstants.h"
+#include "Enum.h"
+#include "PipelineConstants.h"
+#include "SamplerConstants.h"
+#include "ShaderConstants.h"
+#include "TextureConstants.h"
 
 #define LIMIT_FRAMERATE
 #define USE_DEBUG_UI
@@ -113,20 +121,5 @@ const std::string PEAR_MODEL_PATH = MODEL_PATH + "pear_export_obj/pear_export.ob
 const std::string SPHERE_MODEL_PATH = MODEL_PATH + "sphere.obj";
 const std::string TORUS_MODEL_PATH = MODEL_PATH + "torus.obj";
 const std::string PIG_MODEL_PATH = MODEL_PATH + "pig_triangulated.obj";
-
-// IMAGES
-const std::string IMG_PATH = DATA_PATH + "images/";
-const std::string STATUE_TEX_PATH = IMG_PATH + "texture.jpg";
-const std::string VULKAN_TEX_PATH = IMG_PATH + "vulkan.png";
-const std::string HARDWOOD_FLOOR_TEX_PATH = IMG_PATH + "hardwood_floor.jpg";
-// wood
-const std::string WOOD_PATH = IMG_PATH + "Wood_007/";
-const std::string WOOD_007_DIFF_TEX_PATH = WOOD_PATH + "Wood_007_COLOR.jpg";
-const std::string WOOD_007_NORM_TEX_PATH = WOOD_PATH + "Wood_007_NORM.jpg";
-// wood
-const std::string MYBRICK_PATH = IMG_PATH + "mybrick/";
-const std::string MYBRICK_DIFF_TEX_PATH = MYBRICK_PATH + "mybrick-color.png";
-const std::string MYBRICK_NORM_TEX_PATH = MYBRICK_PATH + "mybrick-normal-x2.png";
-const std::string MYBRICK_HGHT_TEX_PATH = MYBRICK_PATH + "mybrick-height.png";
 
 #endif  // !CONSTANTS_H

@@ -200,7 +200,7 @@ vec3 blinnPhongShade() {
 #if UMI_LGT_DEF_SPT
     for (int i = 0; i < lgtSpot.length(); i++) {
         if ((lgtSpot[i].flags & LIGHT_SHOW) > 0) {
-            // color += blinnPhongSpot(i, ++lightCount);
+            color += blinnPhongSpot(i, ++lightCount);
         }
     }
 #endif

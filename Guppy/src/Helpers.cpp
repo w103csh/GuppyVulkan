@@ -155,6 +155,27 @@ void copyBuffer(const VkCommandBuffer &cmd, const VkBuffer &srcBuff, const VkBuf
     vkCmdCopyBuffer(cmd, srcBuff, dstBuff, 1, &copyRegion);
 }
 
+void createImage(const VkDevice &dev, const VkImageCreateInfo &imageInfo, const VkPhysicalDeviceMemoryProperties &memProps,
+                 const VkFlags &reqMask, VkImage &image, VkDeviceMemory &memory) {
+    /* Create image */
+    vk::assert_success(vkCreateImage(dev, &imageInfo, nullptr, &image));
+
+    VkMemoryRequirements mem_reqs;
+    vkGetImageMemoryRequirements(dev, image, &mem_reqs);
+
+    VkMemoryAllocateInfo allocInfo = {};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = mem_reqs.size;
+    /* Use the memory properties to determine the type of memory required */
+    auto pass = getMemoryType(memProps, mem_reqs.memoryTypeBits, reqMask, &allocInfo.memoryTypeIndex);
+    assert(pass);
+
+    /* Allocate memory */
+    vk::assert_success(vkAllocateMemory(dev, &allocInfo, nullptr, &memory));
+
+    vk::assert_success(vkBindImageMemory(dev, image, memory, 0));
+}
+
 void createImage(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps,
                  const std::vector<uint32_t> &queueFamilyIndices, const VkSampleCountFlagBits &numSamples,
                  const VkFormat &format, const VkImageTiling &tiling, const VkImageUsageFlags &usage, const VkFlags &reqMask,
@@ -177,23 +198,7 @@ void createImage(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &me
     imageInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
     imageInfo.pQueueFamilyIndices = queueFamilyIndices.data();
 
-    /* Create image */
-    vk::assert_success(vkCreateImage(dev, &imageInfo, nullptr, &image));
-
-    VkMemoryRequirements mem_reqs;
-    vkGetImageMemoryRequirements(dev, image, &mem_reqs);
-
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = mem_reqs.size;
-    /* Use the memory properties to determine the type of memory required */
-    auto pass = getMemoryType(memProps, mem_reqs.memoryTypeBits, reqMask, &allocInfo.memoryTypeIndex);
-    assert(pass);
-
-    /* Allocate memory */
-    vk::assert_success(vkAllocateMemory(dev, &allocInfo, nullptr, &memory));
-
-    vk::assert_success(vkBindImageMemory(dev, image, memory, 0));
+    createImage(dev, imageInfo, memProps, reqMask, image, memory);
 }
 
 void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount,

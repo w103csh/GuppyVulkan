@@ -7,6 +7,7 @@ set(SOURCE
     CommandHandler.h
     CMakeLists.txt
     Constants.h
+    Enum.h
     EventHandlers.h
     Extensions.h
     Face.cpp
@@ -50,9 +51,11 @@ set(SOURCE
     BufferItem.h
     BufferManager.h
     # Descriptor
+    BufferManagerDescriptor.h
     Descriptor.cpp
     Descriptor.h
-    BufferManagerDescriptor.h
+    DescriptorConstants.cpp
+    DescriptorConstants.h
     DescriptorHandler.cpp
     DescriptorHandler.h
     DescriptorReference.h
@@ -90,6 +93,8 @@ set(SOURCE
     # Pipeline
     Pipeline.cpp
     Pipeline.h
+    PipelineConstants.cpp
+    PipelineConstants.h
     PipelineHandler.cpp
     PipelineHandler.h
     PipelineReference.h
@@ -98,6 +103,8 @@ set(SOURCE
     # Shader
     Shader.cpp
     Shader.h
+    ShaderConstants.cpp
+    ShaderConstants.h
     ShaderHandler.cpp
     ShaderHandler.h
     # Shell
@@ -108,8 +115,12 @@ set(SOURCE
     # Texture
     Sampler.cpp
     Sampler.h
+    SamplerConstants.cpp
+    SamplerConstants.h
     Texture.cpp
     Texture.h
+    TextureConstants.cpp
+    TextureConstants.h
     TextureHandler.cpp
     TextureHandler.h
     # UI

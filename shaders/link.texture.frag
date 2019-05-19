@@ -99,6 +99,8 @@ void setTextureDefaults() {
         Ka = Kd;
     }
 
+    // outColor = vec4(Kd, 1.0);
+
     // NORMAL
     if (getSample(texCoord, flags, TEX_NORMAL, samp)) {
         n = samp.xyz;
@@ -107,15 +109,25 @@ void setTextureDefaults() {
 	    n = fragNormal;
     }
 
+    // outColor = vec4(fragNormal, 1.0);
+    // outColor = vec4(vec3(opacity), 1.0);
+    // return;
+    // n = vec3(0.0);
+    // n = 2.0 * texture(sampCh4, vec3(texCoord, 73)).xyz - 1.0;
+    // outColor = vec4(n, 1.0);
+
     // SPECULAR
     if (getSample(texCoord, flags, TEX_SPECULAR, samp)) {
         Ks = samp.xyz;
     }
 
+    // outColor = vec4(Ks, 1.0);
+    // return;
+
     //  ALPHA
     if (getSample(texCoord, flags, TEX_ALPHA, samp)) {
         opacity = samp.x;
-        if (opacity < 0.7)
+        if (opacity < 0.7) // TODO: This doesn't get picked up by 4Comb3And1 samplers.
             discard;
     }
 

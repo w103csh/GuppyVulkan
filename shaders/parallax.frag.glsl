@@ -10,11 +10,9 @@ layout(location=1) in vec3 ViewDir;
 layout(location=2) in vec3 LightDir[UMI_LGT_DEF_POS];
 #endif
 
-// layout(set=1, binding=0) uniform sampler2D ColorTex;
-// layout(set=1, binding=1) uniform sampler2D NormalMapTex;
+layout(set=1, binding=0) uniform sampler2D ColorTex;
+layout(set=1, binding=1) uniform sampler2D NormalMapTex;
 // layout(set=1, binding=2) uniform sampler2D HeightMapTex;
-layout(set=1, binding=0) uniform sampler2DArray FourChannelTex;
-layout(set=1, binding=1) uniform sampler2DArray OneChannelTex;
 
 #if UMI_LGT_DEF_POS
 layout(set=0, binding=3) uniform LightInfo {
@@ -76,25 +74,23 @@ vec3 blinnPhong( ) {
     if (CheckerBoardTest) {
         const float bumpFactor = 0.015;
         // float height = 1 - texture(HeightMapTex, TexCoord).r;
-        float height = 1 - texture(OneChannelTex, vec3(tc, 0)).r;
+        float height = 1 - texture(NormalMapTex, TexCoord).w;
         vec2 delta = vec2(v.x, v.y) * height * bumpFactor / v.z;
         tc = TexCoord.xy - delta;
         //tc = TexCoord.xy;
     } else if ((Light[0].flags & TEST_3) > 0) {
-        float height = 1 - texture(OneChannelTex, vec3(tc, 0)).r;
+        float height = 1 - texture(NormalMapTex, tc).w;
         c = vec3(height);
         return c;
     } 
 
     // const float bumpFactor = 0.015;
-    // // float height = 1 - texture(HeightMapTex, TexCoord).r;
-    // float height = 1 - texture(OneChannelTex, vec3(TexCoord, 0)).r;
+    // float height = 1 - texture(HeightMapTex, TexCoord).r;
     // vec2 delta = vec2(v.x, v.y) * height * bumpFactor / v.z;
     // vec2 tc = TexCoord.xy - delta;
     // //tc = TexCoord.xy;
 
-    // vec3 n = texture(NormalMapTex, tc).xyz;
-    vec3 n = texture(FourChannelTex, vec3(tc, 1)).xyz;
+    vec3 n = texture(NormalMapTex, tc).xyz;
     n.xy = 2.0 * n.xy - 1.0;
     n  = normalize(n);
 
@@ -108,10 +104,8 @@ vec3 blinnPhong( ) {
 
         float sDotN = max( dot(s,n), 0.0 );
 
-        // vec3 texColor = texture(ColorTex, tc).rgb;
-        vec3 texColor = texture(FourChannelTex, vec3(tc, 0)).rgb;
-        // vec3 ambient = Light[i].La * texColor;
-        vec3 ambient = vec3(0.0);
+        vec3 texColor = texture(ColorTex, tc).rgb;
+        vec3 ambient = Light[i].La * texColor;
         vec3 diffuse = texColor * sDotN;
         vec3 spec = vec3(0.0);
         if( sDotN > 0.0 ) {  

@@ -10,11 +10,9 @@ layout(location=1) in vec3 ViewDir;
 layout(location=2) in vec3 LightDir[UMI_LGT_DEF_POS];
 #endif
 
-// layout(binding=0) uniform sampler2D ColorTex;
-// layout(binding=1) uniform sampler2D NormalMapTex;
-// layout(binding=2) uniform sampler2D HeightMapTex;
-layout(set=1, binding=0) uniform sampler2DArray FourChannelTex;
-layout(set=1, binding=1) uniform sampler2DArray OneChannelTex;
+layout(set=1, binding=0) uniform sampler2D ColorTex;
+layout(set=1, binding=1) uniform sampler2D NormalMapTex;
+// layout(set=1, binding=2) uniform sampler2D HeightMapTex;
 
 layout(set=0, binding=3) uniform LightInfo {
     vec3 Position;  // Light position in cam. coords.
@@ -50,12 +48,12 @@ vec2 findOffset(vec3 v, out float height) {
     float ht = 1.0;
     vec2 tc = TexCoord.xy;
     // height = texture(HeightMapTex, tc).r;
-    height = texture(OneChannelTex, vec3(tc, 0)).r;
+    height = texture(NormalMapTex, tc).w;
     while( height < ht ) {
         ht -= htStep;
         tc -= deltaT;
         // height = texture(HeightMapTex, tc).r;
-        height = texture(OneChannelTex, vec3(tc, 0)).r;
+        height = texture(NormalMapTex, tc).w;
     }
     return tc;
 }
@@ -70,7 +68,7 @@ bool isOccluded(float height, vec2 tc, vec3 s) {
         ht += htStep;
         tc += deltaT;
         // height = texture(HeightMapTex, tc).r;
-        height = texture(OneChannelTex, vec3(tc, 0)).r;
+        height = texture(NormalMapTex, tc).w;
     }
 
     return ht < 1.0;
@@ -87,10 +85,8 @@ vec3 blinnPhong( ) {
     float height = 1.0;
     vec2 tc = findOffset(v, height);
 
-    // vec3 texColor = texture(ColorTex, tc).rgb;
-    vec3 texColor = texture(FourChannelTex, vec3(tc, 0)).rgb;
-    // vec3 n = texture(NormalMapTex, tc).xyz;
-    vec3 n = texture(FourChannelTex, vec3(tc, 1)).xyz;
+    vec3 texColor = texture(ColorTex, tc).rgb;
+    vec3 n = texture(NormalMapTex, tc).xyz;
     n.xy = 2.0 * n.xy - 1.0;
     n  = normalize(n);
 

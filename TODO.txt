@@ -1,4 +1,20 @@
 
+ - In "glaring exampler of problem with smoothing.png" I used the fragNormal variable
+    as Kd.
+
+ - Make material creation public similar to instance data creation, because
+    it is shared data/pointer.
+
+ - Make all the const variables in Constant.h/elsewhere extern, so that
+    you can change the values without having to recompile everything.
+
+ - Add a .ini file that can store some state (like camera position) that can be
+    loaded on start, so that things are easier to debug.
+
+ - Split the sampler creation info and validation into image|view data (i.e.
+    arrayLayers v. layerCount). You can see this very clearly in the table here:
+    https://www.khronos.org/registry/vulkan/specs/1.1-extensions/man/html/VkImageViewCreateInfo.html
+
  - Investigate the issue you saw in release mode where models loaded
     asynchronously had the wrong textures!!!! When you investigate this
 	also make it possible to load instance data asynchronously in a callback
@@ -6,15 +22,6 @@
 
  - Make buffer manager data an array instead of a void pointer with the alignment
     padding added (The host memory only needs the alignment padding).
-
- - Make texture params dynamic. All of the vulkan options are inaccessible.
-
- - Instance base class should probably inherit Object3d so common model space
-    operations are available (Would it be super slow????). This would make
-    things like selection on instances possible.
-
- - Add a .ini file that can store some state (like camera position) that can be
-    loaded on start, so that things are easier to debug.
 
  - Figure out the issue with alpha blending for transparent fragments. There is
     a comment about this in link.texture.frag, and in the default render pass
@@ -26,9 +33,17 @@
 
  - Parallax mapping never worked right. To me, it looked like it could have been
     because of a couple things:
-        - The delta varialble in the fragment shaders where offsetting the tex
-            coord in the same direction regardless of view direction.
         -! Multisampling was distorting the tex coord offsetting.
+        - Should "v" be negated? Is the step moving in the right direction?
         - ...
+
+ - In "glaring exampler of problem with smoothing.png" I used the fragNormal variable
+    as Kd.
+
+ - Fix what seems like a memory barrier problem with mipmap generation. The symptoms
+    for this problem are all the errors/warnings in RenderDOC when you load just load
+    the "Orange" model.
+
+ - The depth buffer doesn't work without a ground plane!!! WTF
 
  - Countless more...

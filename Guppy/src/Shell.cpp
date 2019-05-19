@@ -63,7 +63,7 @@ void Shell::init_vk() {
 }
 
 void Shell::cleanup_vk() {
-    if (settings_.validate) ext::DestoryDebugReportCallbackEXT(ctx_.instance, ctx_.debug_report, nullptr);
+    if (settings_.validate) ext::DestroyDebugReportCallbackEXT(ctx_.instance, ctx_.debug_report, nullptr);
     if (settings_.validate) ext::DestroyDebugUtilsMessengerEXT(ctx_.instance, ctx_.debug_utils_messenger, nullptr);
 
     destroy_instance();

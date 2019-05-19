@@ -18,6 +18,10 @@ class Uniform : public Set::Base {
    public:
     Uniform();
 };
+class Sampler : public Set::Base {
+   public:
+    Sampler();
+};
 }  // namespace Parallax
 }  // namespace Set
 }  // namespace Descriptor

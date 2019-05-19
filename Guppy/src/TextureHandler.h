@@ -17,8 +17,11 @@ class Handler : public Game::Handler {
     void init() override;
     inline void destroy() override { reset(); }
 
-    void addTexture(Texture::CreateInfo* pCreateInfo);
-    const std::shared_ptr<Texture::Base> getTextureByPath(std::string path) const;
+    // Note: pCreateInfo will be copied because of asynchronous loading, so all
+    // the members of Texture::CreateInfo should be trivial.
+    std::shared_ptr<Texture::Base>& make(const Texture::CreateInfo* pCreateInfo);
+
+    const std::shared_ptr<Texture::Base> getTextureByName(std::string name) const;
     void update();
 
     const std::shared_ptr<Texture::Base> getTexture(uint32_t index) {
@@ -30,15 +33,12 @@ class Handler : public Game::Handler {
    private:
     void reset() override;
 
-    std::shared_ptr<Texture::Base> load(std::shared_ptr<Texture::Base>& pTexture);
-    void loadDataAndValidate(const std::string& path, int req_comp, std::shared_ptr<Texture::Base>& pTexture,
-                             Sampler::Base& texSampler);
-    std::future<std::shared_ptr<Texture::Base>> loadTexture(std::shared_ptr<Texture::Base>& pTexture);
+    std::shared_ptr<Texture::Base> load(std::shared_ptr<Texture::Base>& pTexture, CreateInfo createInfo);
 
     void createTexture(std::shared_ptr<Texture::Base> pTexture);
     void createTextureSampler(const std::shared_ptr<Texture::Base> pTexture, Sampler::Base& texSampler);
-    void createImage(const std::shared_ptr<Texture::Base> pTexture, Sampler::Base& texSampler);
-    void generateMipmaps(const std::shared_ptr<Texture::Base> pTexture, const Sampler::Base& texSampler);
+    void createImage(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes);
+    void generateMipmaps(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes);
     void createImageView(const VkDevice& dev, Sampler::Base& texSampler);
     void createSampler(const VkDevice& dev, Sampler::Base& texSampler);
 

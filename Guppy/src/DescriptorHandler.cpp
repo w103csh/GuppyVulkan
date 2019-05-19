@@ -26,6 +26,9 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::UNIFORM_PARALLAX:
                 pDescriptorSets_.push_back(std::make_unique<Set::Parallax::Uniform>());
                 break;
+            case DESCRIPTOR_SET::SAMPLER_PARALLAX:
+                pDescriptorSets_.push_back(std::make_unique<Set::Parallax::Sampler>());
+                break;
             default:
                 assert(false);  // add new pipelines here
         }
@@ -220,25 +223,21 @@ void Descriptor::Handler::updateDescriptorSets(const std::unique_ptr<Descriptor:
     std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos;
     // std::vector<VkBufferView> texelBufferViews;
     std::vector<VkWriteDescriptorSet> writes;
-    
+
     for (const auto& keyValue : pSet->BINDING_MAP) {
-        // INFO
+        writes.push_back(getWrite(keyValue));
+        // WRITE INFO
         if (DESCRIPTOR_MATERIAL_ALL.count(keyValue.second.first)) {
             // MATERIAL
-            writes.push_back(getWrite(keyValue));
             mesh.pMaterial_->setWriteInfo(writes.back());
         } else if (DESCRIPTOR_UNIFORM_ALL.count(keyValue.second.first)) {
             // UNIFORM
-            writes.push_back(getWrite(keyValue));
             bufferInfos.push_back(uniformHandler().getWriteInfos(keyValue.second));
             writes.back().descriptorCount = static_cast<uint32_t>(bufferInfos.back().size());
             writes.back().pBufferInfo = bufferInfos.back().data();
         } else if (DESCRIPTOR_SAMPLER_ALL.count(keyValue.second.first)) {
-            // Validate
             assert(mesh.getMaterial()->getTexture() != nullptr);
-            if (!mesh.getMaterial()->getTexture()->hasSampler(std::get<1>(keyValue.first))) continue;
             // SAMPLER
-            writes.push_back(getWrite(keyValue));
             mesh.getMaterial()->getTexture()->setWriteInfo(writes.back());
         } else {
             assert(false);
