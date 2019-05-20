@@ -180,6 +180,19 @@ class Handler : public Game::Handler {
         make<VisualHelper::TangentSpace>(lineMeshes_, &meshInfo, &matInfo, pMesh->pInstanceData_, pMesh);
     }
 
+    inline Mesh::Base &getMesh(const MESH &type, const size_t &index) {
+        switch (type) {
+            case MESH::COLOR:
+                return std::ref(*colorMeshes_[index].get());
+            case MESH::LINE:
+                return std::ref(*lineMeshes_[index].get());
+            case MESH::TEXTURE:
+                return std::ref(*texMeshes_[index].get());
+            default:
+                assert(false);
+                throw std::runtime_error("Unhandled mesh type");
+        }
+    }
     inline std::unique_ptr<Mesh::Color> &getColorMesh(const size_t &index) { return colorMeshes_[index]; }
     inline std::unique_ptr<Mesh::Line> &getLineMesh(const size_t &index) { return lineMeshes_[index]; }
     inline std::unique_ptr<Mesh::Texture> &getTextureMesh(const size_t &index) { return texMeshes_[index]; }

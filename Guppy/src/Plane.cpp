@@ -2,16 +2,16 @@
 #include "Plane.h"
 
 namespace {
-void addFaces(Mesh::Base* pMesh, bool& doubleSided) {
+void addFaces(Mesh::Base* pMesh, const Geometry::CreateInfo& geoInfo) {
     // Mimic approach in loadObj in FileLoader. This way everything is
     // using the same ideas (for testing)...
     unique_vertices_map_smoothing vertexMap = {};
-    auto faces = Plane::make(doubleSided);
+    auto faces = Plane::make(geoInfo);
     for (auto& face : faces) face.indexVertices(vertexMap, pMesh);
 }
 }  // namespace
 
-std::vector<Face> Plane::make(bool doubleSided) {
+std::vector<Face> Plane::make(const Geometry::CreateInfo& geoInfo) {
     float width, height;
     width = height = Plane::DEFAULT_DIMENSION;
     float l = (width / 2 * -1), r = (width / 2);
@@ -52,9 +52,9 @@ std::vector<Face> Plane::make(bool doubleSided) {
         {}                         // bitangent
     };
 
-    if (doubleSided) {
+    if (geoInfo.invert) {
         faces.back().reverse();
-        faces.back().setSmoothingGroup(1);
+        // faces.back().setSmoothingGroup(1);
     }
 
     // top right
@@ -90,9 +90,9 @@ std::vector<Face> Plane::make(bool doubleSided) {
         {}                         // bitangent
     };
 
-    if (doubleSided) {
+    if (geoInfo.invert) {
         faces.back().reverse();
-        faces.back().setSmoothingGroup(1);
+        // faces.back().setSmoothingGroup(1);
     }
 
     // TODO: validate face size is DEFAULT_DIMENSION
@@ -100,18 +100,17 @@ std::vector<Face> Plane::make(bool doubleSided) {
 }
 
 Plane::Color::Color(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-                    std::shared_ptr<Material::Base>& pMaterial, bool doubleSided)
-    : Mesh::Color(handler, "ColorPlane", pCreateInfo, pInstanceData, pMaterial) {
-    addFaces(this, doubleSided);
+                    std::shared_ptr<Material::Base>& pMaterial)
+    : Mesh::Color(handler, "Color Plane", pCreateInfo, pInstanceData, pMaterial) {
+    addFaces(this, pCreateInfo->geometryCreateInfo);
     updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
 }
 
 Plane::Texture::Texture(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo,
-                        std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
-                        bool doubleSided)
-    : Mesh::Texture(handler, "TexturePlane", pCreateInfo, pInstanceData, pMaterial) {
-    addFaces(this, doubleSided);
+                        std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
+    : Mesh::Texture(handler, "Texture Plane", pCreateInfo, pInstanceData, pMaterial) {
+    addFaces(this, pCreateInfo->geometryCreateInfo);
     updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
 }

@@ -68,6 +68,10 @@ class Sampler : public Set::Base {
    public:
     Sampler();
 };
+class CubeSampler : public Set::Base {
+   public:
+    CubeSampler();
+};
 }  // namespace Default
 
 }  // namespace Set

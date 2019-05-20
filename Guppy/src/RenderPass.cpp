@@ -200,6 +200,9 @@ RenderPass::Default::Default()
                // came before the ground plane pass it was blending the black clear color.
                PIPELINE::BP_TEX_CULL_NONE,
                PIPELINE::PBR_TEX,
+               // This needs to be last to work right for the skybox (or the
+               // shader needs to be changed).
+               PIPELINE::CUBE,
            }},
       inheritInfo_{},
       secCmdBeginInfo_{},

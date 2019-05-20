@@ -5,7 +5,6 @@
 #define UMI_LGT_DEF_POS 0
 
 // FLAGS
-// LIGHT
 const uint LIGHT_SHOW       = 0x00000001u;
 
 layout (location=0) in vec3 VertexPosition;
@@ -15,8 +14,9 @@ layout (location=3) in vec3 VertexTangent;
 layout (location=4) in vec3 VertexBinormal;
 
 layout(set=0, binding=0) uniform CameraDefaultPerspective {
-    mat4 viewProjection;
     mat4 view;
+    mat4 projection;
+    mat4 viewProjection;
 } Camera;
 
 #if UMI_LGT_DEF_POS

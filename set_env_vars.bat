@@ -4,7 +4,7 @@
 :: Set these to right location when setting up environment
 SETX GLFW_INCLUDE_DIR "C:/libs/glfw-3.2.1.bin.WIN64/include" /M
 SETX GLFW_LIB "C:/libs/glfw-3.2.1.bin.WIN64/lib-vc2015/glfw3.lib" /M
-SETX GLM_LIB_DIR "C:/libs/glm-0.9.9.2/glm" /M
+SETX GLM_LIB_DIR "C:/libs/glm-0.9.9.5/glm" /M
 :: To setup the glslang build directory correctly you should run cmake in the build directory as follows:
 ::      cmake -DCMAKE_BUILD_TYPE=Debug -DCMAKE_INSTALL_PREFIX="./install/Debug" .. -A x64
 ::      cmake --build . --config Debug --target install

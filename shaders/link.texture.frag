@@ -40,8 +40,7 @@ layout(location = 0) out vec4 outColor;
 vec3    Ka,     // ambient coefficient
         Kd,     // diffuse coefficient
         Ks,     // specular coefficient
-        n,      // normal
-        v;      // direction to the camera
+        n;      // normal
 float opacity, height;
 bool TEX_COORD_SHADE = false;
 
@@ -98,7 +97,7 @@ void setTextureDefaults() {
         // an ambient texture layer yet...
         Ka = Kd;
     }
-
+    
     // outColor = vec4(Kd, 1.0);
 
     // NORMAL
@@ -110,11 +109,8 @@ void setTextureDefaults() {
     }
 
     // outColor = vec4(fragNormal, 1.0);
-    // outColor = vec4(vec3(opacity), 1.0);
-    // return;
-    // n = vec3(0.0);
-    // n = 2.0 * texture(sampCh4, vec3(texCoord, 73)).xyz - 1.0;
     // outColor = vec4(n, 1.0);
+    // outColor = vec4(vec3(opacity), 1.0);
 
     // SPECULAR
     if (getSample(texCoord, flags, TEX_SPECULAR, samp)) {

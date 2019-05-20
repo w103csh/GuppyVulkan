@@ -36,6 +36,9 @@ Shader::Handler::Handler(Game* pGame) : Game::Handler(pGame) {
             case SHADER::TEX_FRAG:
                 pShaders_.emplace_back(std::make_unique<Default::TextureFragment>(std::ref(*this)));
                 break;
+            case SHADER::CUBE:
+                pShaders_.emplace_back(std::make_unique<Default::Cube>(std::ref(*this)));
+                break;
             case SHADER::PBR_COLOR_FRAG:
                 pShaders_.emplace_back(std::make_unique<PBR::ColorFragment>(std::ref(*this)));
                 break;
@@ -72,8 +75,14 @@ Shader::Handler::Handler(Game* pGame) : Game::Handler(pGame) {
             case SHADER_LINK::BLINN_PHONG_FRAG:
                 pLinkShaders_.emplace_back(std::make_unique<Link::BlinnPhongFragment>(std::ref(*this)));
                 break;
+            case SHADER_LINK::DEFAULT_MATERIAL:
+                pLinkShaders_.emplace_back(std::make_unique<Link::Default::Material>(std::ref(*this)));
+                break;
             case SHADER_LINK::PBR_FRAG:
                 pLinkShaders_.emplace_back(std::make_unique<Link::PBR::Fragment>(std::ref(*this)));
+                break;
+            case SHADER_LINK::PBR_MATERIAL:
+                pLinkShaders_.emplace_back(std::make_unique<Link::PBR::Material>(std::ref(*this)));
                 break;
             default:
                 assert(false);  // add new ones here...

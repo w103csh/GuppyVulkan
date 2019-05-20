@@ -49,14 +49,10 @@ namespace Parallax {
 class Simple : public Pipeline::Base {
    public:
     Simple(Pipeline::Handler &handler);
-    // INFOS
-    void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
 };
 class Steep : public Pipeline::Base {
    public:
     Steep(Pipeline::Handler &handler);
-    // INFOS
-    void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
 };
 }  // namespace Parallax
 }  // namespace Pipeline

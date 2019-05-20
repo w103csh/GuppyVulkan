@@ -46,4 +46,6 @@
 
  - The depth buffer doesn't work without a ground plane!!! WTF
 
+ - "doubleSided" param doesn't work anymore for box/plane.
+
  - Countless more...

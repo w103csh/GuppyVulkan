@@ -157,6 +157,21 @@ void Pipeline::Base::getDynamicStateInfoResources(CreateInfoResources& createInf
     createInfoRes.dynamicStateInfo.dynamicStateCount = 0;
 }
 
+void Pipeline::Base::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    auto range = VERTEX_PIPELINE_MAP.equal_range(VERTEX::COLOR);
+    if (range.first != range.second && range.first->second.count(TYPE)) {
+        GetDefaultColorInputAssemblyInfoResources(createInfoRes);
+        return;
+    }
+    range = VERTEX_PIPELINE_MAP.equal_range(VERTEX::TEXTURE);
+    if (range.first != range.second && range.first->second.count(TYPE)) {
+        GetDefaultTextureInputAssemblyInfoResources(createInfoRes);
+        return;
+    }
+    assert(false);
+    throw std::runtime_error("Unhandled type for input assembly. Override or add to this function?");
+}
+
 void Pipeline::Base::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.rasterizationStateInfo = {};
     createInfoRes.rasterizationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
@@ -302,10 +317,7 @@ void Pipeline::Base::getTesselationInfoResources(CreateInfoResources& createInfo
     createInfoRes.tessellationStateInfo = {};
 }
 
-// **********************
-//      Default Triangle List Color
-// **********************
-
+// DEFAULT TRIANGLE LIST COLOR
 Pipeline::Default::TriListColor::TriListColor(Pipeline::Handler& handler)
     : Base{
           handler,
@@ -317,14 +329,7 @@ Pipeline::Default::TriListColor::TriListColor(Pipeline::Handler& handler)
           {DESCRIPTOR_SET::UNIFORM_DEFAULT}  //
       } {};
 
-void Pipeline::Default::TriListColor::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    GetDefaultColorInputAssemblyInfoResources(createInfoRes);
-}
-
-// **********************
-//      Default Line
-// **********************
-
+// DEFAULT LINE
 Pipeline::Default::Line::Line(Pipeline::Handler& handler)
     : Base{
           handler,
@@ -341,10 +346,7 @@ void Pipeline::Default::Line::getInputAssemblyInfoResources(CreateInfoResources&
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 }
 
-// **********************
-//      Default Triangle List Texture
-// **********************
-
+// DEFAULT TRIANGLE LIST TEXTURE
 Pipeline::Default::TriListTexture::TriListTexture(Pipeline::Handler& handler)
     : Base{
           handler,
@@ -356,14 +358,24 @@ Pipeline::Default::TriListTexture::TriListTexture(Pipeline::Handler& handler)
           {DESCRIPTOR_SET::UNIFORM_DEFAULT, DESCRIPTOR_SET::SAMPLER_DEFAULT}  //
       } {};
 
-void Pipeline::Default::TriListTexture::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    GetDefaultTextureInputAssemblyInfoResources(createInfoRes);
+// CUBE
+Pipeline::Default::Cube::Cube(Pipeline::Handler& handler)
+    : Base{
+          handler,
+          PIPELINE::CUBE,
+          VK_PIPELINE_BIND_POINT_GRAPHICS,
+          "Cube Pipeline",
+          {SHADER::COLOR_VERT, SHADER::CUBE},
+          {/*PUSH_CONSTANT::DEFAULT*/},
+          {DESCRIPTOR_SET::UNIFORM_DEFAULT, DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT},
+      } {}
+
+void Pipeline::Default::Cube::getDepthInfoResources(CreateInfoResources& createInfoRes) {
+    Pipeline::Base::getDepthInfoResources(createInfoRes);
+    createInfoRes.depthStencilStateInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 }
 
-// **********************
-//      Blinn Phong Texture Cull None
-// **********************
-
+// BLINN PHONG TEXTURE CULL NONE
 Pipeline::BP::TextureCullNone::TextureCullNone(Pipeline::Handler& handler)
     : Base{
           handler,
@@ -374,10 +386,6 @@ Pipeline::BP::TextureCullNone::TextureCullNone(Pipeline::Handler& handler)
           {/*PUSH_CONSTANT::DEFAULT*/},
           {DESCRIPTOR_SET::UNIFORM_DEFAULT, DESCRIPTOR_SET::SAMPLER_DEFAULT}  //
       } {};
-
-void Pipeline::BP::TextureCullNone::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    GetDefaultTextureInputAssemblyInfoResources(createInfoRes);
-}
 
 void Pipeline::BP::TextureCullNone::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     Pipeline::Base::getRasterizationStateInfoResources(createInfoRes);

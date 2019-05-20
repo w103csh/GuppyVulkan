@@ -14,7 +14,7 @@ layout(location = 2) in vec4 fragColor;
 layout(location = 0) out vec4 outColor;
 
 // GLOBAL
-vec3    Kd, // color
+vec3    Kd, // diffuse coefficient
         n;  // normal
 float opacity;
 

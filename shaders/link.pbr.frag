@@ -6,27 +6,20 @@
 
 // DECLARATIONS
 vec3 transform(vec3 v);
+vec3 getMaterialColor();
+uint getMaterialFlags();
+uint getMaterialTexFlags();
+float getMaterialOpacity();
+float getMaterialXRepeat();
+float getMaterialYRepeat();
+float getMaterialRough();
+bool isMetal();
 
 // APPLICATION CONSTANTS (TODO: get these from a ubo or something)
 const float screenGamma = 2.2; // Assume the monitor is calibrated to the sRGB color space
 const float PI = 3.14159265358979323846;
 
-// MATERIAL FLAGS
-const uint METAL   = 0x00001000u;
-
 // BINDINGS
-layout(set = 0, binding = 1, std140) uniform MaterialPBR {
-    vec3 color;         // Diffuse color for dielectrics, f0 for metallic
-    float opacity;      // Overall opacity
-    // 16
-    uint flags;         // Flags (general/material)
-    uint texFlags;      // Flags (texture)
-    float xRepeat;      // Texture xRepeat
-    float yRepeat;      // Texture yRepeat
-    // 16
-    float rough;        // Roughness
-    // rem 12
-} material;
 #if UMI_LGT_PBR_POS
 layout(set = 0, binding = 2, std140) uniform LightPBRPositional {
     vec3 position;  // Light position in eye coords.
@@ -43,40 +36,35 @@ layout(location = 1) in vec3 fragNormal;    // (texture space)
 layout(location = 0) out vec4 outColor;
 
 // GLOBAL
-vec3 Kd, n;
-
-vec3 getMaterialColor() { return material.color; }
-uint getMaterialFlags() { return material.flags; }
-uint getMaterialTexFlags() { return material.texFlags; }
-float getMaterialOpacity() { return material.opacity; }
-float getMaterialXRepeat() { return material.xRepeat; }
-float getMaterialYRepeat() { return material.yRepeat; }
+vec3    Kd,     // color
+        n,      // normal
+        v;      // direction to the camera
 
 vec3 schlickFresnel(float lDotH) {
     vec3 f0 = vec3(0.0f); // Dielectrics
-    if ((material.flags & METAL) > 0) {
+    if (isMetal())
         f0 = Kd;
-    }
     return f0 + (1 - f0) * pow(1.0 - lDotH, 5);
 }
 
 float geomSmith(float dotProduct) {
-    float k = (material.rough + 1.0) * (material.rough + 1.0) / 8.0;
+    float rough = getMaterialRough();
+    float k = (rough + 1.0) * (rough + 1.0) / 8.0;
     float denom = dotProduct * (1 - k) + k;
     return 1.0 / denom;
 }
 
 float ggxDistribution(float nDotH) {
-    float alpha2 = material.rough * material.rough * material.rough * material.rough;
+    float rough = getMaterialRough();
+    float alpha2 = rough * rough * rough * rough;
     float d = (nDotH * nDotH) * (alpha2 - 1) + 1;
     return alpha2 / (PI * d * d);
 }
 
 vec3 microfacetModel(int index) {
     vec3 diffuseBrdf = vec3(0.0);  // Metallic
-    if((material.flags & METAL) == 0) {
+    if(!isMetal())
         diffuseBrdf = Kd;
-    }
 
     vec3 l = vec3(0.0), L = lgtPos[index].L;
 
@@ -93,10 +81,9 @@ vec3 microfacetModel(int index) {
 
     // return n;
     // return l;
-    // return vec3(lgtPos[lgtIndex].position.x, lgtPos[lgtIndex].position.y, lgtPos[lgtIndex].position.z);
+    // return vec3(lgtPos[index].position.x, lgtPos[index].position.y, lgtPos[index].position.z);
     // return vec3(1.0) / L;
 
-    vec3 v = normalize(transform(vec3(0.0) - fragPosition)); // direction to camera
     vec3 h = normalize(v + l); // halfway vector
     float nDotH = dot(n, h);
     float lDotH = dot(l, h);
@@ -112,7 +99,10 @@ vec3 microfacetModel(int index) {
 
     // return Kd;
 
-    // return schlickFresnel(lDotH)
+    // return
+    //     schlickFresnel(lDotH)
+    //     *
+    //     vec3(1.0)
     //     * ggxDistribution(nDotH)
     //     * geomSmith(nDotL)
     //     * geomSmith(nDotV)
@@ -138,11 +128,14 @@ bool epsilonEqual(vec3 v1, vec3 v2) {
 
 vec3 pbrShade() {
     vec3 sum = vec3(0.0);
+    v = normalize(transform(vec3(0.0) - fragPosition));
+
 #if UMI_LGT_PBR_POS
     for (int i = 0; i < lgtPos.length(); i++) {
-        // if (i == 0) continue;
+        // if (i != 1) continue;
         sum += microfacetModel(i);
     }
 #endif
-    return pow(sum, vec3(1.0/screenGamma));
+    // return pow(sum, vec3(1.0/screenGamma));
+    return sum;
 }

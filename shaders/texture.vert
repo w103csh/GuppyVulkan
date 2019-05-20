@@ -2,15 +2,21 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
+// DECLARATIONS
+vec3 blinnPhongShade();
+
 // BINDINGS
-layout(set = 0, binding = 0) uniform CameraDefaultPerspective {
-    mat4 viewProjection;
+layout(set=0, binding=0) uniform CameraDefaultPerspective {
     mat4 view;
+    mat4 projection;
+    mat4 viewProjection;
 } camera;
+
 // // PUSH CONSTANTS
 // layout(push_constant) uniform PushBlock {
 //     mat4 model;
 // } pushConstantsBlock;
+
 // IN
 layout(location = 0) in vec3 inPosition;
 layout(location = 1) in vec3 inNormal;
@@ -28,6 +34,7 @@ void main() {
     // Camera space transforms
     mat4 viewModel = camera.view * inModel;
     mat3 viewModel3 = mat3(viewModel);
+
     vec3 CS_normal = normalize(viewModel3 * inNormal);
     vec3 CS_tangent = normalize(viewModel3 * inTangent);
     vec3 CS_binormal = normalize(viewModel3 * inBinormal);

@@ -13,20 +13,32 @@ Descriptor::Set::Resource& Descriptor::Set::Base::getResource(const uint32_t& of
 }
 
 Descriptor::Set::Default::Uniform::Uniform()
-    : Set::Base{DESCRIPTOR_SET::UNIFORM_DEFAULT,  //
-                {
-                    {{0, 0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {OFFSET_ALL}}},
-                    {{0, 1, 0}, {DESCRIPTOR::MATERIAL_DEFAULT, {0}}},
-                    {{0, 2, 0}, {DESCRIPTOR::FOG_DEFAULT, {0}}},
-                    {{0, 3, 0}, {DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, {OFFSET_ALL}}},
-                    {{0, 4, 0}, {DESCRIPTOR::LIGHT_SPOT_DEFAULT, {OFFSET_ALL}}},  //
-                }} {}
+    : Set::Base{
+          DESCRIPTOR_SET::UNIFORM_DEFAULT,
+          {
+              {{0, 0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {OFFSET_ALL}}},
+              {{0, 1, 0}, {DESCRIPTOR::MATERIAL_DEFAULT, {0}}},
+              {{0, 2, 0}, {DESCRIPTOR::FOG_DEFAULT, {0}}},
+              {{0, 3, 0}, {DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, {OFFSET_ALL}}},
+              {{0, 4, 0}, {DESCRIPTOR::LIGHT_SPOT_DEFAULT, {OFFSET_ALL}}},
+          },
+      } {}
 
 Descriptor::Set::Default::Sampler::Sampler()
-    : Set::Base{DESCRIPTOR_SET::SAMPLER_DEFAULT,  //
-                {
-                    {{1, 0, 0}, {DESCRIPTOR::SAMPLER_4CH_DEFAULT, {0}}},
-                    //{{1, 1, 0}, {DESCRIPTOR::SAMPLER_1CH_DEFAULT, {0}}},
-                    //{{1, 2, 0}, {DESCRIPTOR::SAMPLER_2CH_DEFAULT, {0}}},
-                    //{{1, 3, 0}, {DESCRIPTOR::SAMPLER_3CH_DEFAULT, {0}}},  //
-                }} {}
+    : Set::Base{
+          DESCRIPTOR_SET::SAMPLER_DEFAULT,
+          {
+              {{1, 0, 0}, {DESCRIPTOR::SAMPLER_4CH_DEFAULT, {0}}},
+              //{{1, 1, 0}, {DESCRIPTOR::SAMPLER_1CH_DEFAULT, {0}}},
+              //{{1, 2, 0}, {DESCRIPTOR::SAMPLER_2CH_DEFAULT, {0}}},
+              //{{1, 3, 0}, {DESCRIPTOR::SAMPLER_3CH_DEFAULT, {0}}},
+          },
+      } {}
+
+Descriptor::Set::Default::CubeSampler::CubeSampler()
+    : Set::Base{
+          DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT,
+          {
+              {{1, 0, 0}, {DESCRIPTOR::SAMPLER_4CH_CUBE, {0}}},
+          },
+      } {}

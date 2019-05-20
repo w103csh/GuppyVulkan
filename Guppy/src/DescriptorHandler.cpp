@@ -20,6 +20,9 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::SAMPLER_DEFAULT:
                 pDescriptorSets_.push_back(std::make_unique<Set::Default::Sampler>());
                 break;
+            case DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT:
+                pDescriptorSets_.push_back(std::make_unique<Set::Default::CubeSampler>());
+                break;
             case DESCRIPTOR_SET::UNIFORM_PBR:
                 pDescriptorSets_.push_back(std::make_unique<Set::PBR::Uniform>());
                 break;

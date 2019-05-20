@@ -17,14 +17,15 @@ Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData,
       near_(pCreateInfo->n),
       eye_(pCreateInfo->eye),
       center_(pCreateInfo->center),
-	  model_(glm::mat4{ 1.0f }) {
+      model_{1.0f} {
     pData_->view = glm::lookAt(pCreateInfo->eye, pCreateInfo->center, UP_VECTOR);
     proj_ = glm::perspective(pCreateInfo->fov, pCreateInfo->aspect, near_, far_);
     // Vulkan clip space has inverted Y and half Z.
-    clip_ = glm::mat4(1.0f, 0.0f, 0.0f, 0.0f,   //
-                      0.0f, -1.0f, 0.0f, 0.0f,  //
-                      0.0f, 0.0f, 0.5f, 0.0f,   //
-                      0.0f, 0.0f, 0.5f, 1.0f);  //
+    clip_ = glm::mat4{1.0f, 0.0f,  0.0f, 0.0f,   //
+                      0.0f, -1.0f, 0.0f, 0.0f,   //
+                      0.0f, 0.0f,  0.5f, 0.0f,   //
+                      0.0f, 0.0f,  0.5f, 1.0f};  //
+    setProjectionData();
     setData();
 }
 
@@ -63,6 +64,7 @@ Ray Camera::Default::Perspective::Base::getRay(glm::vec2 &&position, const VkExt
 void Camera::Default::Perspective::Base::setAspect(float aspect) {
     aspect_ = aspect;
     proj_ = glm::perspective(fov_, aspect_, near_, far_);
+    setProjectionData();
     setData();
 }
 

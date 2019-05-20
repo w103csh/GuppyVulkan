@@ -49,7 +49,8 @@ void Material::PBR::Base::setTextureData() {
             xRepeat *= (1 / aspect);
         }
         // FLAGS
-        pData_->flags &= Material::FLAG::PER_TEXTURE_COLOR;
+        pData_->flags &= ~Material::FLAG::PER_ALL;
+        pData_->flags |= Material::FLAG::PER_TEXTURE_COLOR;
         pData_->texFlags = pTexture_->flags;
     } else {
         pData_->texFlags = 0;
@@ -86,31 +87,43 @@ Descriptor::Set::PBR::Uniform::Uniform()
 // **********************
 
 Shader::PBR::ColorFragment::ColorFragment(Shader::Handler& handler)
-    : Base{
-          handler,                                          //
-          SHADER::PBR_COLOR_FRAG,                           //
-          "color.pbr.frag",                                 //
-          VK_SHADER_STAGE_FRAGMENT_BIT,                     //
-          "PBR Color Fragment Shader",                      //
-          {SHADER_LINK::COLOR_FRAG, SHADER_LINK::PBR_FRAG}  //
-      } {}
+    : Base{handler,
+           SHADER::PBR_COLOR_FRAG,
+           "color.pbr.frag",
+           VK_SHADER_STAGE_FRAGMENT_BIT,
+           "PBR Color Fragment Shader",
+           {
+               SHADER_LINK::COLOR_FRAG,
+               SHADER_LINK::PBR_FRAG,
+               SHADER_LINK::PBR_MATERIAL,
+           }} {}
 
 Shader::PBR::TextureFragment::TextureFragment(Shader::Handler& handler)
-    : Base{
-          handler,                                        //
-          SHADER::PBR_TEX_FRAG,                           //
-          "texture.pbr.frag",                             //
-          VK_SHADER_STAGE_FRAGMENT_BIT,                   //
-          "PBR Texture Fragment Shader",                  //
-          {SHADER_LINK::TEX_FRAG, SHADER_LINK::PBR_FRAG}  //
-      } {}
+    : Base{handler,
+           SHADER::PBR_TEX_FRAG,
+           "texture.pbr.frag",
+           VK_SHADER_STAGE_FRAGMENT_BIT,
+           "PBR Texture Fragment Shader",
+           {
+               SHADER_LINK::TEX_FRAG,
+               SHADER_LINK::PBR_FRAG,
+               SHADER_LINK::PBR_MATERIAL,
+           }} {}
 
 Shader::Link::PBR::Fragment::Fragment(Shader::Handler& handler)
     : Shader::Link::Base{
-          handler,                //
-          SHADER_LINK::PBR_FRAG,  //
-          "link.pbr.frag",        //
-          "PBR Link Fragment"     //
+          handler,
+          SHADER_LINK::PBR_FRAG,
+          "link.pbr.frag",
+          "PBR Link Fragment",
+      } {}
+
+Shader::Link::PBR::Material::Material(Shader::Handler& handler)
+    : Shader::Link::Base{
+          handler,
+          SHADER_LINK::PBR_MATERIAL,
+          "link.pbr.material.glsl",
+          "PBR Link Material Shader",
       } {}
 
 // **********************
@@ -128,10 +141,6 @@ Pipeline::PBR::Color::Color(Pipeline::Handler& handler)
           {DESCRIPTOR_SET::UNIFORM_PBR}  //
       } {};
 
-void Pipeline::PBR::Color::getInputAssemblyInfoResources(Pipeline::CreateInfoResources& createInfoRes) {
-    GetDefaultColorInputAssemblyInfoResources(createInfoRes);
-}
-
 Pipeline::PBR::Texture::Texture(Pipeline::Handler& handler)
     : Base{
           handler,
@@ -142,7 +151,3 @@ Pipeline::PBR::Texture::Texture(Pipeline::Handler& handler)
           {/*PUSH_CONSTANT::DEFAULT*/},
           {DESCRIPTOR_SET::UNIFORM_PBR, DESCRIPTOR_SET::SAMPLER_DEFAULT}  //
       } {};
-
-void Pipeline::PBR::Texture::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    GetDefaultTextureInputAssemblyInfoResources(createInfoRes);
-}

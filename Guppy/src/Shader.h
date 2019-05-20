@@ -95,6 +95,13 @@ class BlinnPhongFragment : public Shader::Link::Base {
     BlinnPhongFragment(Shader::Handler &handler);
 };
 
+namespace Default {
+class Material : public Shader::Link::Base {
+   public:
+    Material(Shader::Handler &handler);
+};
+}  // namespace Default
+
 }  // namespace Link
 
 // **********************
@@ -126,6 +133,11 @@ class TextureVertex : public Base {
 class TextureFragment : public Base {
    public:
     TextureFragment(Shader::Handler &handler);
+};
+
+class Cube : public Base {
+   public:
+    Cube(Shader::Handler &handler);
 };
 
 }  // namespace Default

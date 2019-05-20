@@ -4,6 +4,10 @@
 
 #define UMI_LGT_DEF_POS 0
 
+// DECLARATIONS
+vec3 getMaterialSpecular();
+float getMaterialShininess();
+
 layout(location=0) in vec2 TexCoord;
 layout(location=1) in vec3 ViewDir;
 #if UMI_LGT_DEF_POS
@@ -22,22 +26,6 @@ layout(set=0, binding=3) uniform LightInfo {
     vec3 L;         // D,S intensity
 } Light[UMI_LGT_DEF_POS];
 #endif
-
-layout(set=0, binding=1) uniform MaterialInfo {
-    vec3 color;         // Diffuse color for dielectrics, f0 for metallic
-    float opacity;      // Overall opacity
-    // 16
-    uint flags;         // Flags (general/material)
-    uint texFlags;      // Flags (texture)
-    float xRepeat;      // Texture xRepeat
-    float yRepeat;      // Texture yRepeat
-    // 16
-    vec3 Ka;            // Ambient reflectivity
-    float Shininess;    // Specular shininess factor
-    // 16
-    vec3 Ks;            // Specular reflectivity
-    // rem 4
-} Material;
 
 layout(location=0) out vec4 FragColor;
 
@@ -110,8 +98,8 @@ vec3 blinnPhong( ) {
         vec3 spec = vec3(0.0);
         if( sDotN > 0.0 ) {  
             vec3 h = normalize( v + s );
-            spec = Material.Ks *
-                pow( max( dot(h,n), 0.0 ), Material.Shininess );
+            spec = getMaterialSpecular() *
+                pow( max( dot(h,n), 0.0 ), getMaterialShininess() );
         }
         c += ambient + Light[i].L * (diffuse + spec);
 
@@ -129,6 +117,6 @@ void main() {
         setCheckerBoardTest();
     }
     vec3 c = blinnPhong();
-    c = pow(c, vec3(1.0/2.2));
+    // c = pow(c, vec3(1.0/2.2));
     FragColor = vec4( c, 1.0 );
 }

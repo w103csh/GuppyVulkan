@@ -44,13 +44,13 @@ int getReqComp(const Sampler::CHANNELS& type) {
 }
 
 void checkFailure(const Shell& shell, const std::string path, const stbi_uc* pPixels) {
-    if (true) return;
+    return;  // TODO: something that works and isn't annoying.
     std::stringstream ss;
     if (auto failure_reason = stbi_failure_reason()) {
         ss << "Error: \"" << failure_reason << "\" in file \"" << path << std::endl;
         shell.log(Shell::LOG_ERR, ss.str().c_str());
     }
-    if (!pPixels) {
+    if (pPixels == NULL) {  // TODO: this doesn't work
         ss << "failed to load " << path << std::endl;
         shell.log(Shell::LOG_ERR, ss.str().c_str());
         throw std::runtime_error(ss.str());
@@ -81,20 +81,13 @@ void validateDimensions(const Shell& shell, Sampler::Base* pSampler, const std::
 
 }  // namespace
 
-Sampler::LayerInfo Sampler::GetDef4Comb3And1LayerInfo(const Sampler::TYPE&& type, const std::string& path,
-                                                      const std::string& fileName, const std::string& combineFileName) {
-    LayerInfo layerInfo = {type, path + fileName};
-    if (!combineFileName.empty()) {
-        layerInfo.combineInfos.push_back({path + combineFileName, CHANNELS::_1, 3});
-    }
-    return layerInfo;
-}
-
 Sampler::Base::Base(const Shell& shell, CreateInfo* pCreateInfo)
     : FORMAT(pCreateInfo->format),
+      IMAGE_FLAGS(pCreateInfo->imageFlags),
       NAME(pCreateInfo->name),
       NUM_CHANNELS(pCreateInfo->channels),
       TILING(pCreateInfo->tiling),
+      TYPE(pCreateInfo->type),
       flags(0),
       width(0),
       height(0),
@@ -118,7 +111,7 @@ Sampler::Base::Base(const Shell& shell, CreateInfo* pCreateInfo)
 
         // Load data...
         pPixels.push_back(stbi_load(layerInfo.path.c_str(), &w, &h, &c, req_comp));
-        checkFailure(shell, layerInfo.path, pPixels.back());
+        // checkFailure(shell, layerInfo.path, p);
 
         validateChannels(shell, this, layerInfo.path, c);
 
@@ -143,7 +136,7 @@ Sampler::Base::Base(const Shell& shell, CreateInfo* pCreateInfo)
 
             // Load combine data...
             auto pCombinePixels = stbi_load(std::get<0>(combineInfo).c_str(), &w, &h, &c, req_comp_combine);
-            checkFailure(shell, layerInfo.path, pCombinePixels);
+            // checkFailure(shell, layerInfo.path, pCombinePixels);
 
             validateChannels(shell, this, layerInfo.path, c);
             validateDimensions(shell, this, layerInfo.path, w, h);
@@ -182,7 +175,7 @@ void Sampler::Base::determineImageTypes() {
             imageViewType = VK_IMAGE_VIEW_TYPE_2D;
             imageType = VK_IMAGE_TYPE_2D;
         } else if (width >= 1 && width == height && arrayLayers == 6) {
-            imageViewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;
+            imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
             imageType = VK_IMAGE_TYPE_2D;
         } else if (width >= 1 && height >= 1 && arrayLayers > 1) {
             imageViewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
@@ -207,7 +200,7 @@ void Sampler::Base::determineImageTypes() {
                 assert(width >= 1 && height >= 1 && arrayLayers >= 1);
                 imageType = VK_IMAGE_TYPE_2D;
                 break;
-            case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
+            case VK_IMAGE_VIEW_TYPE_CUBE:
                 assert(width >= 1 && width == height && arrayLayers >= 6);
                 imageType = VK_IMAGE_TYPE_2D;
                 break;
@@ -227,17 +220,10 @@ void Sampler::Base::copyData(void*& pData, size_t& offset) const {
     }
 }
 
-void Sampler::Base::destroy(const VkDevice& dev) {
-    vkDestroySampler(dev, sampler, nullptr);
-    vkDestroyImageView(dev, view, nullptr);
-    vkDestroyImage(dev, image, nullptr);
-    vkFreeMemory(dev, memory, nullptr);
-}
-
 VkImageCreateInfo Sampler::Base::getImageCreateInfo() {
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.flags = 0;  // TODO: what should this be. There is a 2D array bit.
+    imageInfo.flags = IMAGE_FLAGS;
     imageInfo.imageType = imageType;
     imageInfo.format = FORMAT;
     imageInfo.extent.width = width;
@@ -256,4 +242,69 @@ VkImageCreateInfo Sampler::Base::getImageCreateInfo() {
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     return imageInfo;
+}
+
+void Sampler::Base::destroy(const VkDevice& dev) {
+    vkDestroySampler(dev, sampler, nullptr);
+    vkDestroyImageView(dev, view, nullptr);
+    vkDestroyImage(dev, image, nullptr);
+    vkFreeMemory(dev, memory, nullptr);
+}
+
+// FUNCTIONS
+
+VkSamplerCreateInfo Sampler::GetVkSamplerCreateInfo(const Sampler::Base& sampler) {
+    VkSamplerCreateInfo info = {};
+    switch (sampler.TYPE) {
+        case SAMPLER::DEFAULT:
+            info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+            info.magFilter = VK_FILTER_LINEAR;
+            info.minFilter = VK_FILTER_LINEAR;
+            info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+            info.mipLodBias = 0;              // Optional
+            info.anisotropyEnable = VK_TRUE;  // TODO: OPTION (FEATURE BASED)
+            info.maxAnisotropy = 16;
+            info.compareEnable = VK_FALSE;
+            info.compareOp = VK_COMPARE_OP_ALWAYS;
+            info.minLod = 0;  // static_cast<float>(m_mipLevels / 2); // Optional
+            info.maxLod = static_cast<float>(sampler.mipLevels);
+            info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+            info.unnormalizedCoordinates = VK_FALSE;  // test this out for fun
+            break;
+        case SAMPLER::CUBE:
+            info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+            info.magFilter = VK_FILTER_LINEAR;
+            info.minFilter = VK_FILTER_LINEAR;
+            info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+            info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            info.anisotropyEnable = VK_FALSE;  // VK_TRUE;
+            // info.maxAnisotropy = 16;
+            info.compareEnable = VK_FALSE;
+            info.compareOp = VK_COMPARE_OP_ALWAYS;
+            info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+            if (sampler.mipLevels > 0) {
+                info.mipLodBias = 0;  // Optional
+                info.minLod = 0;      // static_cast<float>(m_mipLevels / 2); // Optional
+                info.maxLod = static_cast<float>(sampler.mipLevels);
+            }
+            break;
+        default:
+            assert(false);
+            throw std::runtime_error("Unhandled sampler type");
+    }
+    return info;
+}
+
+Sampler::LayerInfo Sampler::GetDef4Comb3And1LayerInfo(const Sampler::USE&& type, const std::string& path,
+                                                      const std::string& fileName, const std::string& combineFileName) {
+    LayerInfo layerInfo = {type, path + fileName};
+    if (!combineFileName.empty()) {
+        layerInfo.combineInfos.push_back({path + combineFileName, CHANNELS::_1, 3});
+    }
+    return layerInfo;
 }

@@ -46,4 +46,16 @@ const CreateInfo MYBRICK_CREATE_INFO = {
     },
 };
 
+// PISA HDR
+const CreateInfo PISA_HDR_CREATE_INFO = {
+    "Pisa HDR Texture",
+    {Sampler::PISA_HDR_CREATE_INFO},
+};
+
+// PISA HDR
+const CreateInfo SKYBOX_CREATE_INFO = {
+    "Skybox Texture",
+    {Sampler::SKYBOX_CREATE_INFO},
+};
+
 }  // namespace Texture

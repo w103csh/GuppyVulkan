@@ -43,7 +43,7 @@ void Model::Handler::makeTexture(const tinyobj::material_t &tinyobj_mat, const s
             // DIFFUSE
             if (!tinyobj_mat.diffuse_texname.empty()) {
                 texCreateInfo.samplerCreateInfos.back().layerInfos.push_back(Sampler::GetDef4Comb3And1LayerInfo(
-                    Sampler::TYPE::COLOR,         //
+                    Sampler::USE::COLOR,         //
                     modelDirectory,               //
                     tinyobj_mat.diffuse_texname,  //
                     tinyobj_mat.alpha_texname     //
@@ -52,7 +52,7 @@ void Model::Handler::makeTexture(const tinyobj::material_t &tinyobj_mat, const s
             // NORMAL
             if (!tinyobj_mat.bump_texname.empty()) {
                 texCreateInfo.samplerCreateInfos.back().layerInfos.push_back(Sampler::GetDef4Comb3And1LayerInfo(
-                    Sampler::TYPE::NORMAL,    //
+                    Sampler::USE::NORMAL,    //
                     modelDirectory,           //
                     tinyobj_mat.bump_texname  //
                                               // TODO: what should this be?
@@ -61,7 +61,7 @@ void Model::Handler::makeTexture(const tinyobj::material_t &tinyobj_mat, const s
             // SPECULAR
             if (!tinyobj_mat.specular_texname.empty()) {
                 texCreateInfo.samplerCreateInfos.back().layerInfos.push_back(Sampler::GetDef4Comb3And1LayerInfo(
-                    Sampler::TYPE::SPECULAR,      //
+                    Sampler::USE::SPECULAR,      //
                     modelDirectory,               //
                     tinyobj_mat.specular_texname  //
                                                   // TODO: what should this be?

@@ -8,7 +8,7 @@ export VK_ICD_FILENAMES=$VULKAN_SDK/etc/vulkan/icd.d/MoltenVK_icd.json
 # MoltenVK
 export MVK_PACKAGE_DIR=/Users/colin/Repos/MoltenVK/Package
 # GLM
-export GLM_LIB_DIR=/Users/Shared/libs/glm-0.9.9.2/glm
+export GLM_LIB_DIR=/Users/Shared/libs/glm-0.9.9.5/glm
 # GLFW
 export GLFW_INCLUDE_DIR=/Users/colin/Repos/glfw/include
 export GLFW_LIB=/Users/colin/Repos/glfw/glfw-build/src/libglfw.3.dylib

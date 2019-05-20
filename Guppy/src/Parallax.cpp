@@ -40,6 +40,7 @@ Shader::Parallax::SimpleFragment::SimpleFragment(Shader::Handler& handler)
           "parallax.frag.glsl",
           VK_SHADER_STAGE_FRAGMENT_BIT,
           "Parallax Simple Fragment Shader",
+          {SHADER_LINK::DEFAULT_MATERIAL},
       } {}
 
 Shader::Parallax::SteepFragment::SteepFragment(Shader::Handler& handler)
@@ -49,6 +50,7 @@ Shader::Parallax::SteepFragment::SteepFragment(Shader::Handler& handler)
           "steep-parallax.frag.glsl",
           VK_SHADER_STAGE_FRAGMENT_BIT,
           "Parallax Steep Fragment Shader",
+          {SHADER_LINK::DEFAULT_MATERIAL},
       } {}
 
 Pipeline::Parallax::Simple::Simple(Pipeline::Handler& handler)
@@ -62,10 +64,6 @@ Pipeline::Parallax::Simple::Simple(Pipeline::Handler& handler)
           {DESCRIPTOR_SET::UNIFORM_PARALLAX, DESCRIPTOR_SET::SAMPLER_PARALLAX},
       } {};
 
-void Pipeline::Parallax::Simple::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    GetDefaultTextureInputAssemblyInfoResources(createInfoRes);
-}
-
 Pipeline::Parallax::Steep::Steep(Pipeline::Handler& handler)
     : Base{
           handler,
@@ -76,7 +74,3 @@ Pipeline::Parallax::Steep::Steep(Pipeline::Handler& handler)
           {},
           {DESCRIPTOR_SET::UNIFORM_PARALLAX, DESCRIPTOR_SET::SAMPLER_PARALLAX},
       } {};
-
-void Pipeline::Parallax::Steep::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    GetDefaultTextureInputAssemblyInfoResources(createInfoRes);
-}

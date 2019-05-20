@@ -1,19 +1,8 @@
 
-    // bindings
-    Vertex::Color::getBindingDescriptions(createInfoRes.bindDescs);
-    Instance::Default::DATA::getBindingDescriptions(createInfoRes.bindDescs);
-    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
-    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
-    // attributes
-    Vertex::Color::getAttributeDescriptions(createInfoRes.attrDescs);
-    Instance::Default::DATA::getAttributeDescriptions(createInfoRes.attrDescs);
-    createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
-        static_cast<uint32_t>(createInfoRes.attrDescs.size());
-    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
-    // topology
-    createInfoRes.inputAssemblyStateInfo = {};
-    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
-    createInfoRes.inputAssemblyStateInfo.flags = 0;
-    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+
+validation layer: 
+
+Submitted command buffer expects image 0x86 (subresource: aspectMask 0x1 array layer 2, mip level 0)
+to be in layout
+VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL--instead,
+image 0x86's current layout is VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.

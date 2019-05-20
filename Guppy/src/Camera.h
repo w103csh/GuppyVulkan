@@ -25,9 +25,12 @@ struct CreateInfo : public Buffer::CreateInfo {
 };
 
 struct DATA {
-    glm::mat4 viewProjection = glm::mat4(1.0f);
+    // View matrix created from glm::lookAt
+    glm::mat4 view = glm::mat4(1.0f);
+    // This is actually clip_ * proj_;
+    glm::mat4 projection = glm::mat4(1.0f);
     // World space to view space
-    glm::mat4 view = glm::mat4(1.0f);  // view matrix created from glm::lookAt
+    glm::mat4 viewProjection = glm::mat4(1.0f);
 };
 
 class Base : public Obj3d, public Uniform::Base, public Buffer::DataItem<DATA> {
@@ -65,9 +68,13 @@ class Base : public Obj3d, public Uniform::Base, public Buffer::DataItem<DATA> {
     void update(const glm::vec3 &pos_dir = {}, const glm::vec3 &look_dir = {});
 
    private:
-    inline glm::mat4 getMVP() const { return clip_ * proj_ * getMV(); }
+    inline glm::mat4 getMVP() const { return pData_->projection * getMV(); }
     inline glm::mat4 getMV() const { return pData_->view * model_; }
     bool updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir);
+
+    // This should be the only way to set the projection data. Also,
+    // this is not actually the projection matrix!!!
+    inline void setProjectionData() { pData_->projection = clip_ * proj_; }
 
     inline void setData() override {
         pData_->view = getMV();

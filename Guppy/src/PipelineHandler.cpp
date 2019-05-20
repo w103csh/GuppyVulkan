@@ -30,6 +30,9 @@ Pipeline::Handler::Handler(Game* pGame)
             case PIPELINE::TRI_LIST_TEX:
                 pPipelines_.emplace_back(std::make_unique<Default::TriListTexture>(std::ref(*this)));
                 break;
+            case PIPELINE::CUBE:
+                pPipelines_.emplace_back(std::make_unique<Default::Cube>(std::ref(*this)));
+                break;
             case PIPELINE::PBR_COLOR:
                 pPipelines_.emplace_back(std::make_unique<PBR::Color>(std::ref(*this)));
                 break;

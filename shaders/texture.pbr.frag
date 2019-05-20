@@ -16,8 +16,6 @@ layout(location = 3) in mat3 TBN;
 layout(location = 0) out vec4 outColor;
 
 // GLOBAL
-vec3    Kd, // color
-        n;  // normal
 float opacity;
 bool TEX_COORD_SHADE;
 
@@ -35,6 +33,7 @@ void main() {
     if (TEX_COORD_SHADE) {
         outColor = vec4(texCoordShade(), 1.0);
     } else {
+        // return;
         outColor = vec4(pbrShade(), opacity);
     }
 }

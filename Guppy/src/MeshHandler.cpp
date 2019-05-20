@@ -52,23 +52,19 @@ void Mesh::Handler::update() {
     // Check loading offsets...
     if (!ldgOffsets_.empty()) {
         for (auto it = ldgOffsets_.begin(); it != ldgOffsets_.end();) {
-            bool erase = false;
+            auto& mesh = getMesh(it->first, it->second);
 
-            switch (it->first) {
-                case MESH::COLOR: {
-                } break;
-                case MESH::LINE: {
-                } break;
-                case MESH::TEXTURE: {
-                    auto& pMesh = getTextureMesh(it->second);
-                    if (pMesh->getStatus() == STATUS::PENDING_TEXTURE) {
-                        pMesh->prepare();
-                    }
-                    erase = pMesh->getStatus() == STATUS::READY;
-                } break;
+            // Check the status
+            switch (mesh.getStatus()) {
+                case STATUS::PENDING_TEXTURE:
+                    mesh.prepare();
+                    break;
+                default:
+                    assert(false);
+                    throw std::runtime_error("Unhandled status");
             }
 
-            if (erase)
+            if (mesh.getStatus() == STATUS::READY)
                 it = ldgOffsets_.erase(it);
             else
                 ++it;

@@ -19,8 +19,7 @@ layout(location = 0) out vec4 outColor;
 vec3    Ka,     // ambient coefficient
         Kd,     // diffuse coefficient
         Ks,     // specular coefficient
-        n,      // normal
-        v;      // direction to the camera
+        n;      // normal
 float opacity, height;
 bool TEX_COORD_SHADE;
 

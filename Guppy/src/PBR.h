@@ -127,6 +127,10 @@ class Fragment : public Shader::Link::Base {
    public:
     Fragment(Shader::Handler &handler);
 };
+class Material : public Shader::Link::Base {
+   public:
+    Material(Shader::Handler &handler);
+};
 }  // namespace PBR
 }  // namespace Link
 
@@ -145,15 +149,11 @@ namespace PBR {
 class Color : public Pipeline::Base {
    public:
     Color(Pipeline::Handler &handler);
-    // INFOS
-    void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
 };
 
 class Texture : public Pipeline::Base {
    public:
     Texture(Pipeline::Handler &handler);
-    // INFOS
-    void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
 };
 
 }  // namespace PBR

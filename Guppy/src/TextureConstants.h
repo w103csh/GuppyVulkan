@@ -14,6 +14,8 @@ extern const CreateInfo HARDWOOD_CREATE_INFO;
 extern const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO;
 extern const CreateInfo WOOD_CREATE_INFO;
 extern const CreateInfo MYBRICK_CREATE_INFO;
+extern const CreateInfo PISA_HDR_CREATE_INFO;
+extern const CreateInfo SKYBOX_CREATE_INFO;
 
 }  // namespace Texture
 

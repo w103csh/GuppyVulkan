@@ -32,8 +32,9 @@
 
 // // CAMERA
 // struct CameraDefaultPerspective {
-// 	mat4 viewProjection;
-// 	mat4 view;
+//     mat4 view;
+//     mat4 projection;
+//     mat4 viewProjection;
 // };
 
 // // MATERIAL

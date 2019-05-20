@@ -7,42 +7,33 @@
 
 // DECLARATIONS
 vec3 transform(vec3 v);
+vec3 getMaterialAmbient();
+vec3 getMaterialColor();
+vec3 getMaterialSpecular();
+uint getMaterialFlags();
+uint getMaterialTexFlags();
+float getMaterialOpacity();
+float getMaterialXRepeat();
+float getMaterialYRepeat();
+float getMaterialShininess();
+bool isModeToonShade();
 
 // FLAGS
 // LIGHT
 const uint LIGHT_SHOW       = 0x00000001u;
-// MATERIAL
-const uint MODE_TOON_SHADE  = 0x00000040u;
 // FOG
 const uint FOG_LINEAR       = 0x00000001u;
 const uint FOG_EXP          = 0x00000002u;
 const uint FOG_EXP2         = 0x00000004u;
 const uint _FOG_SHOW        = 0x0000000Fu;
-// TEXTURE
-//  TYPE MASK
-const uint TEX_HEIGHT           = 0x000F0000u;
 
 // BINDINGS
-layout(set = 0, binding = 0, std140) uniform CameraDefaultPerspective {
-    mat4 viewProjection;
+layout(set=0, binding=0, std140) uniform CameraDefaultPerspective {
     mat4 view;
+    mat4 projection;
+    mat4 viewProjection;
 } camera;
-layout(set = 0, binding = 1, std140) uniform MaterialDefault {
-    vec3 color;         // Diffuse color for dielectrics, f0 for metallic
-    float opacity;      // Overall opacity
-    // 16
-    uint flags;         // Flags (general/material)
-    uint texFlags;      // Flags (texture)
-    float xRepeat;      // Texture xRepeat
-    float yRepeat;      // Texture yRepeat
-    // 16
-    vec3 Ka;            // Ambient reflectivity
-    float shininess;    // Specular shininess factor
-    // 16
-    vec3 Ks;            // Specular reflectivity
-    // rem 4
-} material;
-layout(set = 0, binding = 2, std140) uniform UniformDefaultFog {
+layout(set=0, binding=2, std140) uniform UniformDefaultFog {
     float minDistance;
     float maxDistance; 
     float density;
@@ -52,7 +43,7 @@ layout(set = 0, binding = 2, std140) uniform UniformDefaultFog {
     // rem 4
 } fog;
 #if UMI_LGT_DEF_POS
-layout(set = 0, binding = 3, std140) uniform LightDefaultPositional {
+layout(set=0, binding=3, std140) uniform LightDefaultPositional {
     vec3 position;  // Light position in eye coords.
     uint flags;
     // 16
@@ -63,7 +54,7 @@ layout(set = 0, binding = 3, std140) uniform LightDefaultPositional {
 } lgtPos[UMI_LGT_DEF_POS];
 #endif
 #if UMI_LGT_DEF_SPT
-layout(set = 0, binding = 4, std140) uniform LightDefaultSpot {
+layout(set=0, binding=4, std140) uniform LightDefaultSpot {
     vec3 position;
     uint flags;
     // 16
@@ -78,7 +69,9 @@ layout(set = 0, binding = 4, std140) uniform LightDefaultSpot {
 } lgtSpot[UMI_LGT_DEF_SPT];
 #endif
 // IN
-layout(location = 0) in vec3 fragPosition;
+layout(location=0) in vec3 fragPosition;
+// OUT
+layout(location=0) out vec4 outColor;
 
 // GLOBAL
 vec3    Ka,     // ambient coefficient
@@ -88,14 +81,6 @@ vec3    Ka,     // ambient coefficient
         v;      // direction to the camera
 float opacity, height;
 
-vec3 getMaterialAmbient() { return material.Ka; }
-vec3 getMaterialColor() { return material.color; }
-vec3 getMaterialSpecular() { return material.Ks; }
-uint getMaterialFlags() { return material.flags; }
-uint getMaterialTexFlags() { return material.texFlags; }
-float getMaterialOpacity() { return material.opacity; }
-float getMaterialXRepeat() { return material.xRepeat; }
-float getMaterialYRepeat() { return material.yRepeat; }
 
 const int ts_levels = 3;
 const float ts_scaleFactor = 1.0 / ts_levels;
@@ -132,7 +117,7 @@ vec3 phongModel(int index, uint lightCount) {
     float sDotN = max(dot(s, n), 0.0);
 
     // Skip the rest if toon shading
-    if ((material.flags & MODE_TOON_SHADE) > 0) {
+    if (isModeToonShade()) {
         diff = toonShade(sDotN);
         return ambient + lgtPos[index].L * diff;
     }
@@ -143,15 +128,10 @@ vec3 phongModel(int index, uint lightCount) {
     spec = vec3(0.0);
     // Only calculate specular if the cosine is positive
     if(sDotN > 0.0) {
-        if ((material.texFlags & TEX_HEIGHT) == 0) {
-            // direction to the camera
-            v = normalize(transform(vec3(0.0) - fragPosition));
-        }
         // "h" is the halfway vector between "v" & "s" (Blinn)
         vec3 h = normalize(v + s);
-
         spec = Ks *
-                pow(max(dot(h, n), 0.0), material.shininess);
+                pow(max(dot(h, n), 0.0), getMaterialShininess());
     }
 
     return ambient + lgtPos[index].L * (diff + spec);
@@ -173,11 +153,9 @@ vec3 blinnPhongSpot(int index, uint lightCount) {
         float sDotN = max(dot(s,n), 0.0);
         diff = Kd * sDotN;
         if (sDotN > 0.0) {
-            if ((material.texFlags & TEX_HEIGHT) == 0)
-                v = normalize(transform(vec3(0.0) - fragPosition));
             vec3 h = normalize(v + s);
             spec = Ks * 
-                pow(max(dot(h, n), 0.0), material.shininess);
+                pow(max(dot(h, n), 0.0), getMaterialShininess());
         }
     }
 
@@ -188,6 +166,7 @@ vec3 blinnPhongSpot(int index, uint lightCount) {
 vec3 blinnPhongShade() {
     vec3 color = vec3(0.0);
     uint lightCount = 0;
+    v = normalize(transform(vec3(0.0) - fragPosition));
 
 #if UMI_LGT_DEF_POS
     for (int i = 0; i < lgtPos.length(); i++) {

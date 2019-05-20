@@ -8,6 +8,7 @@
 
 #include "Constants.h"
 #include "DescriptorReference.h"
+#include "Geometry.h"
 #include "Handlee.h"
 #include "Helpers.h"
 #include "Instance.h"
@@ -35,6 +36,7 @@ typedef struct CreateInfo {
     PIPELINE pipelineType = PIPELINE::DONT_CARE;
     bool selectable = true;
     bool mappable = false;
+    Geometry::CreateInfo geometryCreateInfo = {};
 } CreateInfo;
 
 // **********************
@@ -66,7 +68,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     // MATERIAL
     inline auto& getMaterial() { return pMaterial_; }
     inline bool hasNormalMap() const {
-        return pMaterial_->hasTexture() && pMaterial_->getTexture()->flags & ::Sampler::TYPE::NORMAL;
+        return pMaterial_->hasTexture() && pMaterial_->getTexture()->flags & ::Sampler::USE::NORMAL;
     }
 
     inline void setStatus(const STATUS&& status) {

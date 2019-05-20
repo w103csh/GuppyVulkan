@@ -10,16 +10,23 @@ enum class VERTEX;
 
 enum class PIPELINE {
     DONT_CARE = -1,
-    // These are index values...
+    // These are index values, so the order here
+    // must match order in ALL...
+    // DEFAULT
     TRI_LIST_COLOR = 0,
-    LINE = 1,
-    TRI_LIST_TEX = 2,
-    PBR_COLOR = 3,
-    PBR_TEX = 4,
-    BP_TEX_CULL_NONE = 5,
-    PARALLAX_SIMPLE = 6,
-    PARALLAX_STEEP = 7,
-    // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in code file.
+    LINE,
+    TRI_LIST_TEX,
+    CUBE,
+    // PBR
+    PBR_COLOR,
+    PBR_TEX,
+    // BLINN PHONG
+    BP_TEX_CULL_NONE,
+    // PARALLAX
+    PARALLAX_SIMPLE,
+    PARALLAX_STEEP,
+    // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP
+    // in code file.
 };
 
 extern const std::vector<PIPELINE> PIPELINE_ALL;

@@ -8,13 +8,15 @@
 
 enum class SHADER {
     LINK = -1,
-    // These are index values...
+    // These are index values, so the order here
+    // must match order in ALL...
     // DEFAULT
     COLOR_VERT = 0,
     COLOR_FRAG,
     LINE_FRAG,
     TEX_VERT,
     TEX_FRAG,
+    CUBE,
     // PBR
     PBR_COLOR_FRAG,
     PBR_TEX_FRAG,
@@ -30,7 +32,9 @@ enum class SHADER_LINK {
     COLOR_FRAG = 0,
     TEX_FRAG,
     BLINN_PHONG_FRAG,
+    DEFAULT_MATERIAL,
     PBR_FRAG,
+    PBR_MATERIAL,
     // Add new to SHADER_LINK_ALL and SHADER_LINK_MAP.
 };
 

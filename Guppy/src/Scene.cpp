@@ -44,6 +44,7 @@ void Scene::Base::record(const uint8_t& frameIndex, std::unique_ptr<RenderPass::
 
         switch (pipelineType) {
             case PIPELINE::PBR_COLOR:
+            case PIPELINE::CUBE:
             case PIPELINE::TRI_LIST_COLOR: {
                 for (auto& pMesh : handler().meshHandler().getColorMeshes())
                     if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)

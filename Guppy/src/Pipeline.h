@@ -66,7 +66,7 @@ class Base : public Handlee<Pipeline::Handler> {
     virtual void getBlendInfoResources(CreateInfoResources &createInfoRes);
     virtual void getDepthInfoResources(CreateInfoResources &createInfoRes);
     virtual void getDynamicStateInfoResources(CreateInfoResources &createInfoRes);
-    virtual void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) = 0;  // no default
+    virtual void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
     virtual void getMultisampleStateInfoResources(CreateInfoResources &createInfoRes);
     virtual void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes);
     virtual void getShaderInfoResources(CreateInfoResources &createInfoRes);
@@ -100,19 +100,13 @@ struct PushConstant {
     glm::mat4 model;
 };
 
-// **********************
-//      Triangle List Color
-// **********************
+// TRIANGLE LIST COLOR
 class TriListColor : public Base {
    public:
     TriListColor(Pipeline::Handler &handler);
-    // INFOS
-    void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
 };
 
-// **********************
-//      Line
-// **********************
+// LINE
 class Line : public Base {
    public:
     Line(Pipeline::Handler &handler);
@@ -120,28 +114,29 @@ class Line : public Base {
     void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
 };
 
-// **********************
-//      Triangle List Texture
-// **********************
+// TRIANGLE LIST TEXTURE
 class TriListTexture : public Base {
    public:
     TriListTexture(Pipeline::Handler &handler);
-    // INFOS
-    void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
 };
+
+// CUBE
+class Cube : public Base {
+   public:
+    Cube(Pipeline::Handler &handler);
+    // INFOS
+    void getDepthInfoResources(CreateInfoResources &createInfoRes) override;
+};
+
 }  // namespace Default
 
 namespace BP {
 
-// **********************
-//      Blinn Phong Texture Cull None
-// **********************
-
+// BLINN PHONG TEXTURE CULL NONE
 class TextureCullNone : public Base {
    public:
     TextureCullNone(Pipeline::Handler &handler);
     // INFOS
-    void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
     void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes) override;
 };
 }  // namespace BP

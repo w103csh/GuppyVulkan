@@ -15,14 +15,14 @@ Texture::Handler::Handler(Game* pGame) : Game::Handler(pGame) {}
 void Texture::Handler::init() {
     reset();
 
-    if (false) return;
-
     make(&Texture::STATUE_CREATE_INFO);
     make(&Texture::VULKAN_CREATE_INFO);
     make(&Texture::HARDWOOD_CREATE_INFO);
     make(&Texture::MEDIEVAL_HOUSE_CREATE_INFO);
     make(&Texture::WOOD_CREATE_INFO);
     make(&Texture::MYBRICK_CREATE_INFO);
+    make(&Texture::PISA_HDR_CREATE_INFO);
+    make(&Texture::SKYBOX_CREATE_INFO);
 }
 
 void Texture::Handler::reset() {
@@ -117,6 +117,16 @@ void Texture::Handler::createTextureSampler(const std::shared_ptr<Texture::Base>
     createImage(sampler, pTexture->pLdgRes);
     if (sampler.mipLevels > 1) {
         generateMipmaps(sampler, pTexture->pLdgRes);
+    } else {
+        /* As of now there are memory barries (transitions) in "createImages", "generateMipmaps",
+         *	and here. Its kind of confusing and should potentionally be combined into one call
+         *	to vkCmdPipelineBarrier. A single call might not be possible because you
+         *	can/should use different queues based on staging and things.
+         */
+        helpers::transitionImageLayout(pTexture->pLdgRes->graphicsCmd, sampler.image, sampler.FORMAT,
+                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                       VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                                       sampler.mipLevels, sampler.arrayLayers);
     }
     createImageView(shell().context().dev, sampler);
     createSampler(shell().context().dev, sampler);
@@ -255,27 +265,8 @@ void Texture::Handler::createImageView(const VkDevice& dev, Sampler::Base& sampl
 }
 
 void Texture::Handler::createSampler(const VkDevice& dev, Sampler::Base& sampler) {
-    VkSamplerCreateInfo samplerInfo = {};
-    samplerInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    // TODO: make some of these or all of these values dynamic
-    samplerInfo.magFilter = VK_FILTER_LINEAR;
-    samplerInfo.minFilter = VK_FILTER_LINEAR;
-    samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    samplerInfo.anisotropyEnable = VK_TRUE;  // TODO: OPTION (FEATURE BASED)
-    samplerInfo.maxAnisotropy = 16;
-    samplerInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-    samplerInfo.unnormalizedCoordinates = VK_FALSE;  // test this out for fun
-    samplerInfo.compareEnable = VK_FALSE;
-    samplerInfo.compareOp = VK_COMPARE_OP_ALWAYS;
-    samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    samplerInfo.minLod = 0;  // static_cast<float>(m_mipLevels / 2); // Optional
-    samplerInfo.maxLod = static_cast<float>(sampler.mipLevels);
-    samplerInfo.mipLodBias = 0;  // Optional
-
+    VkSamplerCreateInfo samplerInfo = Sampler::GetVkSamplerCreateInfo(sampler);
     vk::assert_success(vkCreateSampler(dev, &samplerInfo, nullptr, &sampler.sampler));
-
     // Name some objects for debugging
     ext::DebugMarkerSetObjectName(dev, (uint64_t)sampler.sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT,
                                   (sampler.NAME + " sampler").c_str());

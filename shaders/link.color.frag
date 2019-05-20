@@ -8,11 +8,8 @@ vec3 getMaterialColor();
 vec3 getMaterialSpecular();
 uint getMaterialFlags();
 float getMaterialOpacity();
-
-// MATERIAL FLAGS
-const uint PER_MATERIAL_COLOR   = 0x00000001u;
-const uint PER_VERTEX_COLOR     = 0x00000002u;
-const uint PER_TEXTURE_COLOR    = 0x00000004u;
+bool isPerMaterialColor();
+bool isPerVertexColor();
 
 // IN
 layout(location = 1) in vec3 fragNormal;
@@ -27,14 +24,13 @@ float opacity;
 
 void setColorDefaults() {
     n = fragNormal;
-    uint flags = getMaterialFlags();
     
-    if ((flags & PER_VERTEX_COLOR) > 0) {
+    if (isPerVertexColor()) {
         Ka = fragColor.xyz;
         Kd = fragColor.xyz;
         Ks = vec3(0.8, 0.8, 0.8);
         opacity = fragColor.w;
-    } else if ((flags & PER_MATERIAL_COLOR) > 0) {
+    } else if (isPerMaterialColor()) {
         Ka = getMaterialAmbient();
         Kd = getMaterialColor();
         Ks = getMaterialSpecular();

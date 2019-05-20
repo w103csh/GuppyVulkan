@@ -6,6 +6,7 @@
 #include "Box.h"
 #include "Constants.h"
 #include "Game.h"
+#include "Geometry.h"
 #include "Guppy.h"
 #include "Mesh.h"
 #include "Model.h"
@@ -190,9 +191,9 @@ void Guppy::createScenes() {
     uint32_t count = 4;
 
     // ORIGIN AXES
-    if (!suppress || false) {
+    if (!suppress || true) {
         axesInfo = {};
-        axesInfo.lineSize = AXES_MAX_SIZE;
+        axesInfo.lineSize = 500.f;
         axesInfo.showNegative = true;
         defInstInfo = {};
         defMatInfo = {};
@@ -206,10 +207,11 @@ void Guppy::createScenes() {
         meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
         meshInfo.selectable = false;
         defInstInfo = {};
-        defInstInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
+        defInstInfo.data.push_back({helpers::affine(glm::vec3{500.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
         defMatInfo = {};
         defMatInfo.pTexture = handlers_.pTexture->getTextureByName(Texture::HARDWOOD_CREATE_INFO.name);
         defMatInfo.repeat = 800.0f;
+        defMatInfo.specularCoeff *= 0.5f;
         defMatInfo.shininess = Material::SHININESS::EGGSHELL;
         auto& pGroundPlane = handlers_.pMesh->makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
         groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
@@ -227,6 +229,21 @@ void Guppy::createScenes() {
         defMatInfo.color = {0.5f, 0.5f, 0.5f};
         auto& pGroundPlane = handlers_.pMesh->makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
         groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
+    }
+
+    // SKYBOX
+    if (!suppress || true) {
+        meshInfo = {};
+        meshInfo.pipelineType = PIPELINE::CUBE;
+        meshInfo.selectable = false;
+        meshInfo.geometryCreateInfo = {true, true};
+        // meshInfo.geometryCreateInfo.invert = true;
+        defInstInfo = {};
+        defInstInfo.data.push_back({helpers::affine(glm::vec3{10.0f})});
+        defMatInfo = {};
+        defMatInfo.flags |= Material::FLAG::SKYBOX;
+        defMatInfo.pTexture = handlers_.pTexture->getTextureByName(Texture::SKYBOX_CREATE_INFO.name);
+        auto& skybox = handlers_.pMesh->makeColorMesh<Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
     }
 
     // BOX (TEXTURE)
@@ -331,7 +348,7 @@ void Guppy::createScenes() {
 
     count = 100;
     // GRASS
-    if (!suppress || true) {
+    if (!suppress || false) {
         // MODEL
         modelInfo = {};
         modelInfo.pipelineType = PIPELINE::BP_TEX_CULL_NONE;
@@ -410,13 +427,13 @@ void Guppy::createScenes() {
 
     count = 5;
     // MEDIEVAL HOUSE (TRI_COLOR_TEX)
-    if (!suppress || false) {
+    if (!suppress || true) {
         modelInfo = {};
         modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
         modelInfo.async = false;
         modelInfo.modelPath = MED_H_MODEL_PATH;
         modelInfo.smoothNormals = false;
-        modelInfo.visualHelper = true;
+        modelInfo.visualHelper = false;
         defInstInfo = {};
         defInstInfo.data.reserve(static_cast<size_t>(count) * static_cast<size_t>(count));
         for (uint32_t i = 0; i < count; i++) {
@@ -438,7 +455,7 @@ void Guppy::createScenes() {
         modelInfo.async = true;
         modelInfo.modelPath = MED_H_MODEL_PATH;
         modelInfo.smoothNormals = false;
-        modelInfo.visualHelper = true;
+        modelInfo.visualHelper = false;
         defInstInfo = {};
         defInstInfo.data.reserve(static_cast<size_t>(count) * static_cast<size_t>(count));
         for (uint32_t i = 0; i < count; i++) {
