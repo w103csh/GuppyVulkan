@@ -31,6 +31,13 @@ void main() {
         if (isRefract())
             baseColor = texture(sampCube,  fragRefractDir).rgb;
 
+        /** Note: things to try if I ever come back to this:
+        *       - Fresnel
+        *       - Chromatic abberation
+        *       - Refract through both side
+        *       - ...
+        */
+
         outColor = vec4(
             mix(baseColor, sampCubeColor.rgb, getMaterialReflectionFactor()),
             getMaterialOpacity()
