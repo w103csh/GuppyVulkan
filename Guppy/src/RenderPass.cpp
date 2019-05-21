@@ -200,8 +200,11 @@ RenderPass::Default::Default()
                // came before the ground plane pass it was blending the black clear color.
                PIPELINE::BP_TEX_CULL_NONE,
                PIPELINE::PBR_TEX,
-               // This needs to be last to work right for the skybox (or the
-               // shader needs to be changed).
+               /* TODO: come up with a clever way to render the skybox last.
+                *   Some of the logic in cube.vert requires the skybox to be rendered
+                *   last in order for it to be efficient (This is why gl_Position takes
+                *   .xyww swizzle so that it defaults the z value to 1.0 in depth tests).
+                */
                PIPELINE::CUBE,
            }},
       inheritInfo_{},

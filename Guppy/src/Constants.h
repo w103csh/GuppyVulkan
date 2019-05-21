@@ -66,6 +66,11 @@ const std::vector<const char*> DEVICE_EXTENSIONS = {
 const glm::vec4 CLEAR_COLOR = {};
 const VkClearColorValue CLEAR_VALUE = {};
 
+const glm::vec4 COLOR_RED = {1.0f, 0.0f, 0.0f, 1.0f};
+const glm::vec4 COLOR_GREEN = {0.0f, 1.0f, 0.0f, 1.0f};
+const glm::vec4 COLOR_BLUE = {0.0f, 0.0f, 1.0f, 1.0f};
+const glm::vec4 COLOR_WHITE = {1.0f, 1.0f, 1.0f, 1.0f};
+
 // X
 const glm::vec3 CARDINAL_X = glm::vec3(1.0f, 0.0f, 0.0f);
 const glm::vec3 CARDINAL_X_POS = glm::vec4(CARDINAL_X, 1.0f);

@@ -31,6 +31,8 @@ typedef enum FLAG {
     // THROUGH 0x00000080
     HIDE = 0x00000100,
     SKYBOX = 0x00000200,
+    REFLECT = 0x00000400,
+    REFRACT = 0x00000800,
     // THROUGH 0x00000800
     METAL = 0x00001000,
     // THROUGH 0x00008000
@@ -109,14 +111,18 @@ struct DATA : public Material::DATA {
     glm::vec3 Ka{0.1f};
     float shininess = SHININESS::MILDLY_SHINY;
     // 16
-    alignas(16) glm::vec3 Ks{0.9f};
-    // 16 (4 rem)
+    glm::vec3 Ks{0.9f};
+    float eta;
+    // 16
+    alignas(16) float reflectionFactor;
 };
 
 struct CreateInfo : public Material::CreateInfo {
     glm::vec3 ambientCoeff{0.1f};
     glm::vec3 specularCoeff{0.9f};
     float shininess = SHININESS::MILDLY_SHINY;
+    float eta = 0.94f;
+    float reflectionFactor = 0.85f;
 };
 
 class Base : public Buffer::DataItem<DATA>, public Material::Base {

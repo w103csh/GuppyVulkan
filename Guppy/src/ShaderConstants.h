@@ -16,7 +16,8 @@ enum class SHADER {
     LINE_FRAG,
     TEX_VERT,
     TEX_FRAG,
-    CUBE,
+    CUBE_VERT,
+    CUBE_FRAG,
     // PBR
     PBR_COLOR_FRAG,
     PBR_TEX_FRAG,

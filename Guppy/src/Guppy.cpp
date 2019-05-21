@@ -175,7 +175,7 @@ void Guppy::updateRenderPasses() {
 }
 
 void Guppy::createScenes() {
-    bool suppress = false;
+    bool suppress = true;
 
     handlers_.pScene->makeScene(true, (!suppress || false));
 
@@ -202,7 +202,7 @@ void Guppy::createScenes() {
     }
 
     // GROUND PLANE (TEXTURE)
-    if (!suppress || true) {
+    if (!suppress || false) {
         meshInfo = {};
         meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
         meshInfo.selectable = false;
@@ -236,8 +236,7 @@ void Guppy::createScenes() {
         meshInfo = {};
         meshInfo.pipelineType = PIPELINE::CUBE;
         meshInfo.selectable = false;
-        meshInfo.geometryCreateInfo = {true, true};
-        // meshInfo.geometryCreateInfo.invert = true;
+        meshInfo.geometryCreateInfo.invert = true;
         defInstInfo = {};
         defInstInfo.data.push_back({helpers::affine(glm::vec3{10.0f})});
         defMatInfo = {};
@@ -282,7 +281,6 @@ void Guppy::createScenes() {
         handlers_.pMesh->updateMesh(boxTexture2);
         handlers_.pMesh->makeTangentSpaceVisualHelper(boxTexture2.get());
     }
-
     // BOX (PBR_COLOR)
     if (!suppress || false) {
         meshInfo = {};
@@ -317,6 +315,45 @@ void Guppy::createScenes() {
         boxDefColor1->putOnTop(groundPlane_bbmm);
         handlers_.pMesh->updateMesh(boxDefColor1);
     }
+    // BOX (CUBE)
+    if (!suppress || true) {
+        meshInfo = {};
+        defInstInfo = {};
+        defInstInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, {}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
+        defMatInfo = {};
+        // defMatInfo.color = {0x2E / 255.0f, 0x40 / 255.0f, 0x53 / 255.0f};
+        defMatInfo.color = COLOR_RED;
+        if (false) {  // reflect defaults
+            defMatInfo.flags |= Material::FLAG::REFLECT;
+            defMatInfo.eta = 0.94f;
+            defMatInfo.reflectionFactor = 0.85f;
+        } else {  // reflect defaults
+            defMatInfo.flags |= Material::FLAG::REFLECT | Material::FLAG::REFRACT;
+            defMatInfo.eta = 0.94f;
+            defMatInfo.reflectionFactor = 0.1f;
+        }
+        meshInfo.pipelineType = PIPELINE::CUBE;
+        defMatInfo.pTexture = handlers_.pTexture->getTextureByName(Texture::SKYBOX_CREATE_INFO.name);
+        handlers_.pMesh->makeColorMesh<Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+        ////
+        // defInstInfo = {};
+        // defInstInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 1.0f, 0.0f}, M_PI_2_FLT,
+        // CARDINAL_Z)}); handlers_.pMesh->makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+        ////
+        // meshInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+        // defMatInfo = {};
+        // defMatInfo.color = {0x2E / 255.0f, 0x40 / 255.0f, 0x53 / 255.0f};
+        // defInstInfo = {};
+        // defInstInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{1.0f, 0.0f, 0.0f})});
+        // handlers_.pMesh->makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+        ////
+        // meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+        // defMatInfo = {};
+        // defMatInfo.pTexture = handlers_.pTexture->getTextureByName(Texture::STATUE_CREATE_INFO.name);
+        // defInstInfo = {};
+        // defInstInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{2.0f, 0.0f, 0.0f})});
+        // handlers_.pMesh->makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
+    }
 
     // BURNT ORANGE TORUS
     if (!suppress || false) {
@@ -336,12 +373,20 @@ void Guppy::createScenes() {
             pbrMatInfo.color = {0.8f, 0.3f, 0.0f};
             pbrMatInfo.roughness = 0.9f;
             handlers_.pModel->makeColorModel(&modelInfo, &pbrMatInfo, &defInstInfo);
-        } else {
+        } else if (false) {
             modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
             defMatInfo = {};
             defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
             defMatInfo.ambientCoeff = {0.8f, 0.3f, 0.0f};
             defMatInfo.color = {0.8f, 0.3f, 0.0f};
+            handlers_.pModel->makeColorModel(&modelInfo, &defMatInfo, &defInstInfo);
+        } else {
+            modelInfo.pipelineType = PIPELINE::CUBE;
+            defMatInfo = {};
+            pbrMatInfo.color = {0.8f, 0.3f, 0.0f};
+            defMatInfo.flags |= Material::FLAG::REFLECT;
+            defMatInfo.reflectionFactor = 0.85f;
+            defMatInfo.pTexture = handlers_.pTexture->getTextureByName(Texture::SKYBOX_CREATE_INFO.name);
             handlers_.pModel->makeColorModel(&modelInfo, &defMatInfo, &defInstInfo);
         }
     }
@@ -427,7 +472,7 @@ void Guppy::createScenes() {
 
     count = 5;
     // MEDIEVAL HOUSE (TRI_COLOR_TEX)
-    if (!suppress || true) {
+    if (!suppress || false) {
         modelInfo = {};
         modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
         modelInfo.async = false;

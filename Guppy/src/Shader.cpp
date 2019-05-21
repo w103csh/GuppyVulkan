@@ -112,12 +112,11 @@ Shader::Link::Default::Material::Material(Shader::Handler& handler)
 
 Shader::Default::ColorVertex::ColorVertex(Shader::Handler& handler)
     : Base{
-          handler,                          //
-          SHADER::COLOR_VERT,               //
-          "color.vert",                     //
-          VK_SHADER_STAGE_VERTEX_BIT,       //
-          "Default Color Vertex Shader",    //
-          {SHADER_LINK::DEFAULT_MATERIAL},  //
+          handler,                        //
+          SHADER::COLOR_VERT,             //
+          "color.vert",                   //
+          VK_SHADER_STAGE_VERTEX_BIT,     //
+          "Default Color Vertex Shader",  //
       } {};
 
 Shader::Default::ColorFragment::ColorFragment(Shader::Handler& handler)
@@ -166,11 +165,22 @@ Shader::Default::TextureFragment::TextureFragment(Shader::Handler& handler)
           },
       } {}
 
-Shader::Default::Cube::Cube(Shader::Handler& handler)
+Shader::Default::CubeVertex::CubeVertex(Shader::Handler& handler)
     : Base{
-          handler,                       //
-          SHADER::CUBE,                  //
-          "cube.frag",                   //
-          VK_SHADER_STAGE_FRAGMENT_BIT,  //
-          "Cube Fragment Shader",        //
+          handler,                          //
+          SHADER::CUBE_VERT,                //
+          "cube.vert",                      //
+          VK_SHADER_STAGE_VERTEX_BIT,       //
+          "Cube Vertex Shader",             //
+          {SHADER_LINK::DEFAULT_MATERIAL},  //
+      } {}
+
+Shader::Default::CubeFragment::CubeFragment(Shader::Handler& handler)
+    : Base{
+          handler,                          //
+          SHADER::CUBE_FRAG,                //
+          "cube.frag",                      //
+          VK_SHADER_STAGE_FRAGMENT_BIT,     //
+          "Cube Fragment Shader",           //
+          {SHADER_LINK::DEFAULT_MATERIAL},  //
       } {}

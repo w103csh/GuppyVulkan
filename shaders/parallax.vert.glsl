@@ -17,6 +17,7 @@ layout(set=0, binding=0) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
     mat4 viewProjection;
+    vec3 worldPosition;
 } Camera;
 
 #if UMI_LGT_DEF_POS

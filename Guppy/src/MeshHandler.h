@@ -56,44 +56,6 @@ class Handler : public Game::Handler {
         return meshes.back();
     }
 
-    // TODO: All materials & meshes should be made here. End of story.
-    template <class TMeshType, class TMeshBaseType, typename TMeshCreateInfo, typename TMaterialCreateInfo,
-              typename TInstanceCreateInfo, typename... TArgs>
-    auto &make2(std::vector<TMeshBaseType> &meshes, TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
-                TInstanceCreateInfo *pInstanceCreateInfo, TArgs... args) {
-        // MATERIAL
-        auto &pMaterial = materialHandler().makeMaterial(pMaterialCreateInfo);
-        // INSTANCE
-        std::shared_ptr<Instance::Base> &pInstanceData = pInstanceCreateInfo->pSharedData;
-        if (pInstanceData == nullptr) {
-            if (pInstanceCreateInfo == nullptr || pInstanceCreateInfo->data.empty())
-                instDefMgr_.insert(shell().context().dev, true);
-            else
-                instDefMgr_.insert(shell().context().dev, pInstanceCreateInfo->update, pInstanceCreateInfo->data);
-            pInstanceData = instDefMgr_.pItems.back();
-        }
-
-        // INSTANTIATE
-        meshes.emplace_back(new TMeshType(std::ref(*this), pCreateInfo, pInstanceData, pMaterial, args...));
-
-        // SET VALUES
-        meshes.back()->offset_ = meshes.size() - 1;
-
-        switch (meshes.back()->getStatus()) {
-            case STATUS::PENDING_VERTICES:
-                // Do nothing. So far this should only be a model mesh.
-                // TODO: add more validation?
-                break;
-            case STATUS::PENDING_BUFFERS:
-                meshes.back()->prepare();
-                break;
-            default:
-                throw std::runtime_error("Invalid mesh status after instantiation");
-        }
-
-        return meshes.back();
-    }
-
    public:
     Handler(Game *pGame);
 
@@ -179,6 +141,7 @@ class Handler : public Game::Handler {
 
         make<VisualHelper::TangentSpace>(lineMeshes_, &meshInfo, &matInfo, pMesh->pInstanceData_, pMesh);
     }
+    void makeSkyBox() { assert(false); }
 
     inline Mesh::Base &getMesh(const MESH &type, const size_t &index) {
         switch (type) {

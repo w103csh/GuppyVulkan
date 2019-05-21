@@ -22,6 +22,8 @@ Material::Default::Base::Base(const Buffer::Info &&info, Default::DATA *pData, D
     pData_->Ks = pCreateInfo->specularCoeff;
     pData_->opacity = pCreateInfo->opacity;
     pData_->shininess = pCreateInfo->shininess;
+    pData_->eta = pCreateInfo->eta;
+    pData_->reflectionFactor = pCreateInfo->reflectionFactor;
     setTextureData();
     setData();
 }

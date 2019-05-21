@@ -32,6 +32,7 @@ layout(set=0, binding=0, std140) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
     mat4 viewProjection;
+    vec3 worldPosition;
 } camera;
 layout(set=0, binding=2, std140) uniform UniformDefaultFog {
     float minDistance;

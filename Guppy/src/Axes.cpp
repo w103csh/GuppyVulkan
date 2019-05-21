@@ -1,22 +1,20 @@
 
 #include "Axes.h"
 
+#include "Constants.h"
+
 namespace {
-const glm::vec4 red(1.0f, 0.0f, 0.0f, 1.0f);
-const glm::vec4 green(0.0f, 1.0f, 0.0f, 1.0f);
-const glm::vec4 blue(0.0f, 0.0f, 1.0f, 1.0f);
-const glm::vec4 white(1.0f);
 void make(std::vector<Vertex::Color>& vertices, float lineSize, bool showNegative) {
     float max_ = lineSize;
     float min_ = max_ * -1;
 
     vertices = {
-        {{0.0f, 0.0f, 0.0f}, glm::vec3(), red},    // X (RED)
-        {{max_, 0.0f, 0.0f}, glm::vec3(), red},    // X
-        {{0.0f, 0.0f, 0.0f}, glm::vec3(), green},  // Y (GREEN)
-        {{0.0f, max_, 0.0f}, glm::vec3(), green},  // Y
-        {{0.0f, 0.0f, 0.0f}, glm::vec3(), blue},   // Z (BLUE)
-        {{0.0f, 0.0f, max_}, glm::vec3(), blue},   // Z
+        {{0.0f, 0.0f, 0.0f}, glm::vec3(), COLOR_RED},    // X (RED)
+        {{max_, 0.0f, 0.0f}, glm::vec3(), COLOR_RED},    // X
+        {{0.0f, 0.0f, 0.0f}, glm::vec3(), COLOR_GREEN},  // Y (GREEN)
+        {{0.0f, max_, 0.0f}, glm::vec3(), COLOR_GREEN},  // Y
+        {{0.0f, 0.0f, 0.0f}, glm::vec3(), COLOR_BLUE},   // Z (BLUE)
+        {{0.0f, 0.0f, max_}, glm::vec3(), COLOR_BLUE},   // Z
 
         // TEST LINES
         //{{0.0f, 0.0f, 0.0f}, {1.0f, 1.0f, 0.0f, 1.0f}, {0.0f, 0.0f}},  // yellow through all positive
@@ -25,12 +23,12 @@ void make(std::vector<Vertex::Color>& vertices, float lineSize, bool showNegativ
 
     if (showNegative) {
         std::vector<Vertex::Color> nvs = {
-            {{0.0f, 0.0f, 0.0f}, glm::vec3(), white},  // -X (WHITE)
-            {{min_, 0.0f, 0.0f}, glm::vec3(), white},  // -X
-            {{0.0f, 0.0f, 0.0f}, glm::vec3(), white},  // -Y (WHITE)
-            {{0.0f, min_, 0.0f}, glm::vec3(), white},  // -Y
-            {{0.0f, 0.0f, 0.0f}, glm::vec3(), white},  // -Z (WHITE)
-            {{0.0f, 0.0f, min_}, glm::vec3(), white},  // -Z
+            {{0.0f, 0.0f, 0.0f}, glm::vec3(), COLOR_WHITE},  // -X (WHITE)
+            {{min_, 0.0f, 0.0f}, glm::vec3(), COLOR_WHITE},  // -X
+            {{0.0f, 0.0f, 0.0f}, glm::vec3(), COLOR_WHITE},  // -Y (WHITE)
+            {{0.0f, min_, 0.0f}, glm::vec3(), COLOR_WHITE},  // -Y
+            {{0.0f, 0.0f, 0.0f}, glm::vec3(), COLOR_WHITE},  // -Z (WHITE)
+            {{0.0f, 0.0f, min_}, glm::vec3(), COLOR_WHITE},  // -Z
         };
         vertices.insert(vertices.end(), nvs.begin(), nvs.end());
     }

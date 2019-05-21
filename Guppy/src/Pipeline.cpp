@@ -365,7 +365,7 @@ Pipeline::Default::Cube::Cube(Pipeline::Handler& handler)
           PIPELINE::CUBE,
           VK_PIPELINE_BIND_POINT_GRAPHICS,
           "Cube Pipeline",
-          {SHADER::COLOR_VERT, SHADER::CUBE},
+          {SHADER::CUBE_VERT, SHADER::CUBE_FRAG},
           {/*PUSH_CONSTANT::DEFAULT*/},
           {DESCRIPTOR_SET::UNIFORM_DEFAULT, DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT},
       } {}

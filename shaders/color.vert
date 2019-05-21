@@ -2,14 +2,12 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-// DECLARATIONS
-bool isSkybox();
-
 // BINDINGS
 layout(set=0, binding=0) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
     mat4 viewProjection;
+    vec3 worldPosition;
 } camera;
 
 // // PUSH CONSTANTS
@@ -29,15 +27,6 @@ layout(location=2) out vec4 fragColor;
 // layout(location=3) out int fragVertexIndex;
 
 void main() {
-    // TODO: move this to separate shader??
-    if (isSkybox()) {
-        mat4 view = mat4(mat3(camera.view));
-        vec4 pos = camera.projection * view * inModel * vec4(inPosition, 1.0);
-        gl_Position = pos.xyww;
-        fragPosition = inPosition;
-        return;
-    }
-
     // This obviously can be much more efficient. (Can it??)
     mat4 viewModel = camera.view * inModel;
     vec3 cameraSpacePosition = (viewModel * vec4(inPosition, 1.0)).xyz;

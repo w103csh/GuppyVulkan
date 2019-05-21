@@ -358,7 +358,8 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
     vkCmdPipelineBarrier(cmd, srcStages, dstStages, 0, 0, nullptr, 0, nullptr, 1, &barrier);
     //}
 }
-void cramers3(glm::vec3 &&c1, glm::vec3 &&c2, glm::vec3 &&c3, glm::vec3 &&c4) {
+
+void cramers3(glm::vec3 c1, glm::vec3 c2, glm::vec3 c3, glm::vec3 c4) {
     /*  Setup example (comes from barycentric intersection):
 
         |a   d   g| |beta | = |j|

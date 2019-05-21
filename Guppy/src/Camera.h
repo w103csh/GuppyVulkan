@@ -27,10 +27,12 @@ struct CreateInfo : public Buffer::CreateInfo {
 struct DATA {
     // View matrix created from glm::lookAt
     glm::mat4 view = glm::mat4(1.0f);
-    // This is actually clip_ * proj_;
+    // This is actually clip_ * proj_
     glm::mat4 projection = glm::mat4(1.0f);
     // World space to view space
     glm::mat4 viewProjection = glm::mat4(1.0f);
+    glm::vec3 worldPosition;
+    // rem 4
 };
 
 class Base : public Obj3d, public Uniform::Base, public Buffer::DataItem<DATA> {
@@ -79,6 +81,7 @@ class Base : public Obj3d, public Uniform::Base, public Buffer::DataItem<DATA> {
     inline void setData() override {
         pData_->view = getMV();
         pData_->viewProjection = getMVP();
+        pData_->worldPosition = getWorldSpacePosition();
         DIRTY = true;
     }
 

@@ -8,7 +8,8 @@ const std::vector<SHADER> SHADER_ALL = {
     SHADER::LINE_FRAG,   //
     SHADER::TEX_VERT,    //
     SHADER::TEX_FRAG,    //
-    SHADER::CUBE,        //
+    SHADER::CUBE_VERT,   //
+    SHADER::CUBE_FRAG,   //
     // PBR
     SHADER::PBR_COLOR_FRAG,  //
     SHADER::PBR_TEX_FRAG,    //
@@ -29,11 +30,7 @@ const std::vector<SHADER_LINK> SHADER_LINK_ALL = {
 };
 
 const std::map<SHADER, std::set<SHADER_LINK>> SHADER_LINK_MAP = {
-    // TODO: why is this necessary? it seems like it shouldn't be.
-    {SHADER::COLOR_VERT,
-     {
-         SHADER_LINK::DEFAULT_MATERIAL,
-     }},
+    // This map is used to recompile the shaders on the fly.
     {SHADER::COLOR_FRAG,
      {
          SHADER_LINK::COLOR_FRAG,
@@ -44,6 +41,14 @@ const std::map<SHADER, std::set<SHADER_LINK>> SHADER_LINK_MAP = {
      {
          SHADER_LINK::TEX_FRAG,
          SHADER_LINK::BLINN_PHONG_FRAG,
+         SHADER_LINK::DEFAULT_MATERIAL,
+     }},
+    {SHADER::CUBE_VERT,
+     {
+         SHADER_LINK::DEFAULT_MATERIAL,
+     }},
+    {SHADER::CUBE_FRAG,
+     {
          SHADER_LINK::DEFAULT_MATERIAL,
      }},
     {SHADER::PBR_COLOR_FRAG,

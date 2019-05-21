@@ -135,9 +135,14 @@ class TextureFragment : public Base {
     TextureFragment(Shader::Handler &handler);
 };
 
-class Cube : public Base {
+class CubeVertex : public Base {
    public:
-    Cube(Shader::Handler &handler);
+    CubeVertex(Shader::Handler &handler);
+};
+
+class CubeFragment : public Base {
+   public:
+    CubeFragment(Shader::Handler &handler);
 };
 
 }  // namespace Default

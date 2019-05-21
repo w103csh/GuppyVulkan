@@ -50,9 +50,9 @@ class Face {
     void calculateTangentSpaceVectors();
 
     template <typename TMap>
-    void indexVertices(TMap &vertexMap, Mesh::Base *pMesh) {
+    void indexVertices(TMap &vertexMap, Mesh::Base *pMesh, bool calcNormal = true) {
         std::vector<Mesh::Base *> pMeshes = {pMesh};
-        indexVertices(vertexMap, pMeshes, 0);
+        indexVertices(vertexMap, pMeshes, 0, calcNormal);
     }
 
     template <typename TMap, class TMesh>
@@ -81,46 +81,46 @@ class Face {
                 // Non-unique vertex
                 Vertex::Complete vertex;
 
-                std::for_each(range.first, range.second, [&](auto &keyValue) {
-                    auto &mOffset = keyValue.second.first;  // mesh offset
-                    auto &vIndex = keyValue.second.second;  // vertex index
+                    std::for_each(range.first, range.second, [&](auto &keyValue) {
+                        auto &mOffset = keyValue.second.first;  // mesh offset
+                        auto &vIndex = keyValue.second.second;  // vertex index
 
-                    // Averge the vertex attributes
-                    vertex = pMeshes[mOffset]->getVertexComplete(vIndex);
+                        // Averge the vertex attributes
+                        vertex = pMeshes[mOffset]->getVertexComplete(vIndex);
 
-                    /*  Below was an attempt to fix bad orange smoothing. I decided
-                        that the problem was probably coming from the obj's having
-                        faces with 4 vertices. tiny_obj can spit out 4 vertex faces
-                        so I should try that at some point instead...
-                    */
-                    // if (glm::dot(vertices_[i].binormal, vertex.binormal) < 0.0f ||
-                    //    glm::dot(vertices_[i].tangent, vertex.tangent) < 0.0f) {
-                    //    // This is shitty...
-                    //    auto r = glm::rotate(glm::mat4(1.0f), M_PI_FLT, vertices_[i].normal);
-                    //    vertices_[i].binormal = r * glm::vec4(vertices_[i].binormal, 0.0f);
-                    //    vertices_[i].tangent = r * glm::vec4(vertices_[i].tangent, 0.0f);
-                    //}
+                        /*  Below was an attempt to fix bad orange smoothing. I decided
+                            that the problem was probably coming from the obj's having
+                            faces with 4 vertices. tiny_obj can spit out 4 vertex faces
+                            so I should try that at some point instead...
+                        */
+                        // if (glm::dot(vertices_[i].binormal, vertex.binormal) < 0.0f ||
+                        //    glm::dot(vertices_[i].tangent, vertex.tangent) < 0.0f) {
+                        //    // This is shitty...
+                        //    auto r = glm::rotate(glm::mat4(1.0f), M_PI_FLT, vertices_[i].normal);
+                        //    vertices_[i].binormal = r * glm::vec4(vertices_[i].binormal, 0.0f);
+                        //    vertices_[i].tangent = r * glm::vec4(vertices_[i].tangent, 0.0f);
+                        //}
 
-                    vertex.normal += vertices_[i].normal;
-                    vertex.tangent += vertices_[i].tangent;
-                    vertex.binormal += vertices_[i].binormal;
+                        vertex.normal += vertices_[i].normal;
+                        vertex.tangent += vertices_[i].tangent;
+                        vertex.binormal += vertices_[i].binormal;
 
-                    // If the vertex already exists in the current mesh then use the existing index.
-                    if (mOffset == meshOffset &&
-                        //
-                        (pMeshes[mOffset]->VERTEX_TYPE == VERTEX::COLOR ||
-                         // If the vertex is in going to be in a texture mesh then check tex coords
-                         (pMeshes[mOffset]->VERTEX_TYPE == VERTEX::TEXTURE && vertex.compareTexCoords(vertices_[i])))
-                        //
-                    ) {
-                        index = vIndex;
-                    }
+                        // If the vertex already exists in the current mesh then use the existing index.
+                        if (mOffset == meshOffset &&
+                            //
+                            (pMeshes[mOffset]->VERTEX_TYPE == VERTEX::COLOR ||
+                             // If the vertex is in going to be in a texture mesh then check tex coords
+                             (pMeshes[mOffset]->VERTEX_TYPE == VERTEX::TEXTURE && vertex.compareTexCoords(vertices_[i])))
+                            //
+                        ) {
+                            index = vIndex;
+                        }
 
-                    // Update the vertex for all meshes.
-                    pMeshes[mOffset]->addVertex(vertex, vIndex);
-                });
+                        // Update the vertex for all meshes.
+                        pMeshes[mOffset]->addVertex(vertex, vIndex);
+                    });
 
-                // If the vertex is indexed for other meshes but no the current mesh then add
+                // If the vertex is indexed for other meshes but not the current mesh then add
                 // a new value to the vertex map.
                 if (index < 0) {
                     index = static_cast<VB_INDEX_TYPE>(pMeshes[meshOffset]->getVertexCount());

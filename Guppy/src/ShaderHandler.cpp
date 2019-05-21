@@ -36,8 +36,11 @@ Shader::Handler::Handler(Game* pGame) : Game::Handler(pGame) {
             case SHADER::TEX_FRAG:
                 pShaders_.emplace_back(std::make_unique<Default::TextureFragment>(std::ref(*this)));
                 break;
-            case SHADER::CUBE:
-                pShaders_.emplace_back(std::make_unique<Default::Cube>(std::ref(*this)));
+            case SHADER::CUBE_VERT:
+                pShaders_.emplace_back(std::make_unique<Default::CubeVertex>(std::ref(*this)));
+                break;
+            case SHADER::CUBE_FRAG:
+                pShaders_.emplace_back(std::make_unique<Default::CubeFragment>(std::ref(*this)));
                 break;
             case SHADER::PBR_COLOR_FRAG:
                 pShaders_.emplace_back(std::make_unique<PBR::ColorFragment>(std::ref(*this)));
