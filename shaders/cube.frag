@@ -21,7 +21,7 @@ layout(location=0) out vec4 outColor;
 vec3    Kd;
 
 void main() {
-    vec4 sampCubeColor = texture(sampCube, normalize(fragWorldPositionReflecionDir));
+    vec4 sampCubeColor = texture(sampCube, fragWorldPositionReflecionDir);
     if (isSkybox()) {
         outColor = sampCubeColor;
     } else  {
@@ -29,7 +29,7 @@ void main() {
         if (isReflect())
             baseColor = getMaterialColor();
         if (isRefract())
-            baseColor = texture(sampCube,  normalize(fragRefractDir)).rgb;
+            baseColor = texture(sampCube,  fragRefractDir).rgb;
 
         outColor = vec4(
             mix(baseColor, sampCubeColor.rgb, getMaterialReflectionFactor()),
