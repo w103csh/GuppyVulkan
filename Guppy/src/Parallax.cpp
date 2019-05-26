@@ -8,7 +8,7 @@
 Descriptor::Set::Parallax::Uniform::Uniform()
     : Set::Base{
           DESCRIPTOR_SET::UNIFORM_PARALLAX,
-          "DSMI_UNI_PLX",
+          "_DS_UNI_PLX",
           {
               {{0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {0}, ""}},
               {{1, 0}, {DESCRIPTOR::MATERIAL_DEFAULT, {0}, ""}},
@@ -19,7 +19,7 @@ Descriptor::Set::Parallax::Uniform::Uniform()
 Descriptor::Set::Parallax::Sampler::Sampler()
     : Set::Base{
           DESCRIPTOR_SET::SAMPLER_PARALLAX,
-          "DSMI_SMP_PLX",
+          "_DS_SMP_PLX",
           {
               {{0, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED, {0}, ""}},
               {{1, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED, {0}, ""}},

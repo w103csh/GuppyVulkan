@@ -2,10 +2,10 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-#define DSMI_PRJ_DEF -1
+#define _DS_PRJ_DEF -1
 
-#if DSMI_PRJ_DEF >= 0
-layout(set=DSMI_PRJ_DEF, binding=1) uniform DefaultProjector {
+#if _DS_PRJ_DEF >= 0
+layout(set=_DS_PRJ_DEF, binding=1) uniform DefaultProjector {
     mat4 matrix;
 } projector;
 

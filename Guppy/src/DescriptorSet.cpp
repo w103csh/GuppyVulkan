@@ -19,7 +19,7 @@ Descriptor::Set::Resource& Descriptor::Set::Base::getResource(const uint32_t& of
 Descriptor::Set::Default::Uniform::Uniform()
     : Set::Base{
           DESCRIPTOR_SET::UNIFORM_DEFAULT,
-          "DSMI_UNI_DEF",
+          "_DS_UNI_DEF",
           {
               {{0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {0}, ""}},
               {{1, 0}, {DESCRIPTOR::MATERIAL_DEFAULT, {0}, ""}},
@@ -32,7 +32,7 @@ Descriptor::Set::Default::Uniform::Uniform()
 Descriptor::Set::Default::Sampler::Sampler()
     : Set::Base{
           DESCRIPTOR_SET::SAMPLER_DEFAULT,
-          "DSMI_SMP_DEF",
+          "_DS_SMP_DEF",
           {
               {{0, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED, {0}, ""}},
               //{{1, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED, {0}, ""}},
@@ -44,7 +44,7 @@ Descriptor::Set::Default::Sampler::Sampler()
 Descriptor::Set::Default::CubeSampler::CubeSampler()
     : Set::Base{
           DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT,
-          "DSMI_CBE_DEF",
+          "_DS_CBE_DEF",
           {
               {{0, 0}, {DESCRIPTOR::SAMPLER_PIPELINE_COMBINED, {0}, Texture::SKYBOX_CREATE_INFO.name}},
           },
@@ -53,7 +53,7 @@ Descriptor::Set::Default::CubeSampler::CubeSampler()
 Descriptor::Set::Default::ProjectorSampler::ProjectorSampler()
     : Set::Base{
           DESCRIPTOR_SET::PROJECTOR_DEFAULT,
-          "DSMI_PRJ_DEF",
+          "_DS_PRJ_DEF",
           {
               {{0, 0}, {DESCRIPTOR::SAMPLER_PIPELINE_COMBINED, {0}, Texture::STATUE_CREATE_INFO.name}},
               {{1, 0}, {DESCRIPTOR::PROJECTOR_DEFAULT, {0}, ""}},

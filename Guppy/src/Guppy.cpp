@@ -175,7 +175,7 @@ void Guppy::updateRenderPasses() {
 }
 
 void Guppy::createScenes() {
-    bool suppress = true;
+    bool suppress = false;
 
     handlers_.pScene->makeScene(true, (!suppress || false));
 

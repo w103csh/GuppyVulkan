@@ -43,7 +43,7 @@ enum class DESCRIPTOR_SET {
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 
-const std::string DESC_SET_MACRO_ID_PREFIX = "DSMI_";
+const std::string DESC_SET_MACRO_ID_PREFIX = "_DS_";
 
 extern const std::map<DESCRIPTOR, VkDescriptorType> DESCRIPTOR_TYPE_MAP;
 extern const std::set<DESCRIPTOR> DESCRIPTOR_UNIFORM_ALL;

@@ -2,7 +2,7 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-#define DSMI_UNI_DEF 0
+#define _DS_UNI_DEF 0
 
 // FLAGS
 const uint PER_MATERIAL_COLOR   = 0x00000001u;
@@ -16,7 +16,7 @@ const uint REFRACT              = 0x00000800u;
 //  TYPE MASK
 const uint TEX_HEIGHT       = 0x000F0000u;
 
-layout(set=DSMI_UNI_DEF, binding=1) uniform MaterialDefault {
+layout(set=_DS_UNI_DEF, binding=1) uniform MaterialDefault {
     vec3 color;             // Diffuse color for dielectrics, f0 for metallic
     float opacity;          // Overall opacity
     // 16

@@ -2,8 +2,8 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-#define UMI_LGT_PBR_POS 0
-#define DSMI_UNI_PBR 0
+#define _U_LGT_PBR_POS 0
+#define _DS_UNI_PBR 0
 
 // DECLARATIONS
 vec3 transform(vec3 v);
@@ -21,13 +21,13 @@ const float screenGamma = 2.2; // Assume the monitor is calibrated to the sRGB c
 const float PI = 3.14159265358979323846;
 
 // BINDINGS
-#if UMI_LGT_PBR_POS
-layout(set=DSMI_UNI_PBR, binding=2) uniform LightPBRPositional {
+#if _U_LGT_PBR_POS
+layout(set=_DS_UNI_PBR, binding=2) uniform LightPBRPositional {
     vec3 position;  // Light position in eye coords.
     uint flags;
     vec3 L;         // Diffuse and specular light intensity
     // rem 4
-} lgtPos[UMI_LGT_PBR_POS];
+} lgtPos[_U_LGT_PBR_POS];
 #endif
 
 // IN
@@ -131,7 +131,7 @@ vec3 pbrShade() {
     vec3 sum = vec3(0.0);
     v = normalize(transform(vec3(0.0) - fragPosition));
 
-#if UMI_LGT_PBR_POS
+#if _U_LGT_PBR_POS
     for (int i = 0; i < lgtPos.length(); i++) {
         // if (i != 1) continue;
         sum += microfacetModel(i);

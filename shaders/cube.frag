@@ -2,7 +2,7 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-#define DSMI_CBE_DEF 0
+#define _DS_CBE_DEF 0
 
 // DECLARATIONS
 vec3 getMaterialColor();
@@ -12,7 +12,7 @@ bool isSkybox();
 bool isReflect();
 bool isRefract();
 
-layout(set=DSMI_CBE_DEF, binding=0) uniform samplerCube sampCube;
+layout(set=_DS_CBE_DEF, binding=0) uniform samplerCube sampCube;
 // IN
 layout(location=0) in vec3 fragWorldPositionReflecionDir;   // (world space)
 layout(location=1) in vec3 fragRefractDir;                  // (world space)

@@ -2,8 +2,8 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-#define UMI_LGT_DEF_POS 0
-#define DSMI_UNI_PLX 0
+#define _U_LGT_DEF_POS 0
+#define _DS_UNI_PLX 0
 
 // FLAGS
 const uint LIGHT_SHOW       = 0x00000001u;
@@ -14,26 +14,26 @@ layout (location=2) in vec2 VertexTexCoord;
 layout (location=3) in vec3 VertexTangent;
 layout (location=4) in vec3 VertexBinormal;
 
-layout(set=DSMI_UNI_PLX, binding=0) uniform CameraDefaultPerspective {
+layout(set=_DS_UNI_PLX, binding=0) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
     mat4 viewProjection;
     vec3 worldPosition;
 } Camera;
 
-#if UMI_LGT_DEF_POS
-layout(set=DSMI_UNI_PLX, binding=3) uniform LightInfo {
+#if _U_LGT_DEF_POS
+layout(set=_DS_UNI_PLX, binding=3) uniform LightInfo {
     vec3 Position;  // Light position in cam. coords.
     uint flags;
     vec3 La;        // Amb intensity
     vec3 L;         // D,S intensity
-} Light[UMI_LGT_DEF_POS];
+} Light[_U_LGT_DEF_POS];
 #endif
 
 layout(location=0) out vec2 TexCoord;
 layout(location=1) out vec3 ViewDir;
-#if UMI_LGT_DEF_POS
-layout(location=2) out vec3 LightDir[UMI_LGT_DEF_POS];
+#if _U_LGT_DEF_POS
+layout(location=2) out vec3 LightDir[_U_LGT_DEF_POS];
 #endif
 
 layout(location=5) in mat4 ModelMatrix;
@@ -61,7 +61,7 @@ void main() {
     ViewDir = toObjectLocal * normalize(-pos);
     TexCoord = VertexTexCoord;
 
-#if UMI_LGT_DEF_POS
+#if _U_LGT_DEF_POS
     for (int i = 0; i < Light.length(); i++)
         if ((Light[i].flags & LIGHT_SHOW) > 0)
             LightDir[i] = normalize( toObjectLocal * (Light[i].Position - pos) );

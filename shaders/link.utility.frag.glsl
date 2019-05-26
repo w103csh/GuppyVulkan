@@ -2,11 +2,11 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-#define UMI_LGT_DEF_POS 0
-#define UMI_LGT_DEF_SPT 0
-#define DSMI_UNI_DEF 0
-#define DSMI_SMP_DEF 0
-#define DSMI_PRJ_DEF -1
+#define _U_LGT_DEF_POS 0
+#define _U_LGT_DEF_SPT 0
+#define _DS_UNI_DEF 0
+#define _DS_SMP_DEF 0
+#define _DS_PRJ_DEF -1
 
 // DECLARATIONS
 vec3 transform(vec3 v);
@@ -46,14 +46,14 @@ const uint FOG_EXP2         = 0x00000004u;
 const uint _FOG_SHOW        = 0x0000000Fu;
 
 // BINDINGS
-layout(set=DSMI_UNI_DEF, binding=0, std140) uniform CameraDefaultPerspective {
+layout(set=_DS_UNI_DEF, binding=0, std140) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
     mat4 viewProjection;
     vec3 worldPosition;
 } camera;
 
-layout(set=DSMI_UNI_DEF, binding=2, std140) uniform UniformDefaultFog {
+layout(set=_DS_UNI_DEF, binding=2, std140) uniform UniformDefaultFog {
     float minDistance;
     float maxDistance; 
     float density;
@@ -63,8 +63,8 @@ layout(set=DSMI_UNI_DEF, binding=2, std140) uniform UniformDefaultFog {
     // rem 4
 } fog;
 
-#if UMI_LGT_DEF_POS
-layout(set=DSMI_UNI_DEF, binding=3) uniform LightDefaultPositional {
+#if _U_LGT_DEF_POS
+layout(set=_DS_UNI_DEF, binding=3) uniform LightDefaultPositional {
     vec3 position;  // Light position in eye coords.
     uint flags;
     // 16
@@ -72,11 +72,11 @@ layout(set=DSMI_UNI_DEF, binding=3) uniform LightDefaultPositional {
     // rem 4
     vec3 L;         // Diffuse and specular light intensity
     // rem 4
-} lgtPos[UMI_LGT_DEF_POS];
+} lgtPos[_U_LGT_DEF_POS];
 #endif
 
-#if UMI_LGT_DEF_SPT
-layout(set=DSMI_UNI_DEF, binding=4) uniform LightDefaultSpot {
+#if _U_LGT_DEF_SPT
+layout(set=_DS_UNI_DEF, binding=4) uniform LightDefaultSpot {
     vec3 position;
     uint flags;
     // 16
@@ -88,16 +88,16 @@ layout(set=DSMI_UNI_DEF, binding=4) uniform LightDefaultSpot {
     // 16
     vec3 direction;
     // rem 4
-} lgtSpot[UMI_LGT_DEF_SPT];
+} lgtSpot[_U_LGT_DEF_SPT];
 #endif
 
-#if DSMI_PRJ_DEF > -1
-layout(set=DSMI_PRJ_DEF, binding=0) uniform sampler2D sampProjector;
+#if _DS_PRJ_DEF > -1
+layout(set=_DS_PRJ_DEF, binding=0) uniform sampler2D sampProjector;
 #endif
 
 // IN
 layout(location=0) in vec3 fragPosition;
-#if DSMI_PRJ_DEF > -1
+#if _DS_PRJ_DEF > -1
 layout(location=6) in vec4 fragProjTexCoord;
 layout(location=7) in vec4 fragTest;
 #endif
@@ -146,7 +146,7 @@ float fogFactor() {
 }
 
 void addProjectorTexColor(inout vec3 color) {
-#if DSMI_PRJ_DEF >= -1
+#if _DS_PRJ_DEF >= -1
     if(fragProjTexCoord.z > 0.0) {
         vec3 projColor = textureProj(sampProjector, fragProjTexCoord).rgb;
         color += projColor * 0.8;
@@ -165,7 +165,7 @@ vec3 blinnPhongShade() {
     v = normalize(transform(vec3(0.0) - fragPosition));
     float shininess = getMaterialShininess();
 
-#if UMI_LGT_DEF_POS
+#if _U_LGT_DEF_POS
     for (int i = 0; i < lgtPos.length(); i++) {
         if ((lgtPos[i].flags & LIGHT_SHOW) > 0) {
 
@@ -192,7 +192,7 @@ vec3 blinnPhongShade() {
     }
 #endif
 
-#if UMI_LGT_DEF_SPT
+#if _U_LGT_DEF_SPT
     for (int i = 0; i < lgtSpot.length(); i++) {
         if ((lgtSpot[i].flags & LIGHT_SHOW) > 0) {
 

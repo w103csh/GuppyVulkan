@@ -2,9 +2,9 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
-#define UMI_LGT_DEF_POS 0
-#define DSMI_SMP_PLX 0
-#define DSMI_UNI_PLX 0
+#define _U_LGT_DEF_POS 0
+#define _DS_SMP_PLX 0
+#define _DS_UNI_PLX 0
 
 // DECLARATIONS
 vec3 getMaterialSpecular();
@@ -12,15 +12,15 @@ float getMaterialShininess();
 
 layout(location=0) in vec2 TexCoord;
 layout(location=1) in vec3 ViewDir;
-#if UMI_LGT_DEF_POS
-layout(location=2) in vec3 LightDir[UMI_LGT_DEF_POS];
+#if _U_LGT_DEF_POS
+layout(location=2) in vec3 LightDir[_U_LGT_DEF_POS];
 #endif
 
-layout(set=DSMI_SMP_PLX, binding=0) uniform sampler2D ColorTex;
-layout(set=DSMI_SMP_PLX, binding=1) uniform sampler2D NormalMapTex;
+layout(set=_DS_SMP_PLX, binding=0) uniform sampler2D ColorTex;
+layout(set=_DS_SMP_PLX, binding=1) uniform sampler2D NormalMapTex;
 // layout(set=1, binding=2) uniform sampler2D HeightMapTex;
 
-layout(set=DSMI_UNI_PLX, binding=3) uniform LightInfo {
+layout(set=_DS_UNI_PLX, binding=3) uniform LightInfo {
     vec3 Position;  // Light position in cam. coords.
     uint flags;
     vec3 La;        // Amb intensity
@@ -66,7 +66,7 @@ bool isOccluded(float height, vec2 tc, vec3 s) {
 
 vec3 blinnPhong( ) {  
     vec3 v = normalize(ViewDir);
-#if UMI_LGT_DEF_POS
+#if _U_LGT_DEF_POS
     vec3 s = normalize( LightDir[0] );
 #else
     vec3 s = vec3(0.0);

@@ -9,7 +9,7 @@
 
 namespace {
 
-const std::string UNIFORM_MACRO_ID_PREFIX = "UMI_";
+const std::string UNIFORM_MACRO_ID_PREFIX = "_U_";
 
 //// TODO: what should this be???
 // struct _UniformTag {
@@ -23,19 +23,19 @@ Uniform::Handler::Handler(Game* pGame)
       managers_{
           // CAMERA
           Uniform::Manager<Camera::Default::Perspective::Base>  //
-          {"Default Perspective Camera", DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, 5, "UMI_CAM_DEF_PERS"},
+          {"Default Perspective Camera", DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, 5, "_U_CAM_DEF_PERS"},
           // LIGHT
           Uniform::Manager<Light::Default::Positional::Base>  //
-          {"Default Positional Light", DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, 20, "UMI_LGT_DEF_POS"},
+          {"Default Positional Light", DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, 20, "_U_LGT_DEF_POS"},
           Uniform::Manager<Light::PBR::Positional::Base>  //
-          {"PBR Positional Light", DESCRIPTOR::LIGHT_POSITIONAL_PBR, 20, "UMI_LGT_PBR_POS"},
+          {"PBR Positional Light", DESCRIPTOR::LIGHT_POSITIONAL_PBR, 20, "_U_LGT_PBR_POS"},
           Uniform::Manager<Light::Default::Spot::Base>  //
-          {"Default Spot Light", DESCRIPTOR::LIGHT_SPOT_DEFAULT, 20, "UMI_LGT_DEF_SPT"},
+          {"Default Spot Light", DESCRIPTOR::LIGHT_SPOT_DEFAULT, 20, "_U_LGT_DEF_SPT"},
           // MISCELLANEOUS
           Uniform::Manager<Uniform::Default::Fog::Base>  //
-          {"Default Fog", DESCRIPTOR::FOG_DEFAULT, 5, "UMI_UNI_DEF_FOG"},
+          {"Default Fog", DESCRIPTOR::FOG_DEFAULT, 5, "_U_UNI_DEF_FOG"},
           Uniform::Manager<Uniform::Default::Projector::Base>  //
-          {"Default Projector", DESCRIPTOR::FOG_DEFAULT, 5, "UMI_UNI_DEF_PRJ"},
+          {"Default Projector", DESCRIPTOR::FOG_DEFAULT, 5, "_U_UNI_DEF_PRJ"},
           //
       },
       hasVisualHelpers(false) {}

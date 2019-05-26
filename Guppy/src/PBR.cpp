@@ -82,7 +82,7 @@ void Material::PBR::Base::setRoughness(float r) {
 Descriptor::Set::PBR::Uniform::Uniform()
     : Set::Base{
           DESCRIPTOR_SET::UNIFORM_PBR,
-          "DSMI_UNI_PBR",
+          "_DS_UNI_PBR",
           {
               {{0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {0}, ""}},
               {{1, 0}, {DESCRIPTOR::MATERIAL_PBR, {0}, ""}},
