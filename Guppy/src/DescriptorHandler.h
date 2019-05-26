@@ -1,15 +1,14 @@
 #ifndef DESCRIPTOR_HANDLER_H
 #define DESCRIPTOR_HANDLER_H
 
-#include <list>
 #include <map>
 #include <set>
+#include <string>
 #include <vulkan/vulkan.h>
 
 #include "Constants.h"
 #include "Game.h"
 #include "DescriptorSet.h"
-#include "DescriptorReference.h"
 #include "ShaderHandler.h"
 
 // clang-format off
@@ -32,13 +31,11 @@ class Handler : public Game::Handler {
 
     // POOL
     inline const VkDescriptorPool& getPool() { return pool_; }
-    // LAYOUT
-    std::vector<VkDescriptorSetLayout> getDescriptorSetLayouts(const std::list<DESCRIPTOR_SET>& setTypes);
+    // SET
+    const Descriptor::Set::Base& getDescriptorSet(const DESCRIPTOR_SET& type) { return std::ref(*getSet(type).get()); }
     // DESCRIPTOR
     uint32_t getDescriptorCount(const Descriptor::bindingMapValue& value) const;
-    const Descriptor::Set::Base& getDescriptorSet(const DESCRIPTOR_SET& type) { return std::ref(*getSet(type).get()); }
     void getReference(Mesh::Base& pMesh);
-    std::vector<std::unique_ptr<Descriptor::Set::Base>&> getDescriptorSets(const std::list<DESCRIPTOR_SET>& setTypes);
 
    private:
     void reset() override;

@@ -7,8 +7,8 @@
 #ifndef PARALLAX_H
 #define PARALLAX_H
 
+#include "Constants.h"
 #include "DescriptorSet.h"
-#include "Shader.h"
 #include "Pipeline.h"
 
 namespace Descriptor {
@@ -28,18 +28,9 @@ class Sampler : public Set::Base {
 
 namespace Shader {
 namespace Parallax {
-class Vertex : public Base {
-   public:
-    Vertex(Shader::Handler &handler);
-};
-class SimpleFragment : public Base {
-   public:
-    SimpleFragment(Shader::Handler &handler);
-};
-class SteepFragment : public Base {
-   public:
-    SteepFragment(Shader::Handler &handler);
-};
+extern const CreateInfo VERT_CREATE_INFO;
+extern const CreateInfo SIMPLE_CREATE_INFO;
+extern const CreateInfo STEEP_CREATE_INFO;
 }  // namespace Parallax
 }  // namespace Shader
 

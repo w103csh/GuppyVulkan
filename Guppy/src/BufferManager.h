@@ -135,6 +135,7 @@ class Base {
     virtual void setInfo(Buffer::Info &info){};
 
     Buffer::Info fill(const VkDevice &dev, const std::vector<typename TDerived::DATA> data) {
+        assert(resources_.size() && "Did you initialize the manager?");
         auto &resource = resources_.back();
 
         bool isValid = true;

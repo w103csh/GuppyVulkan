@@ -66,6 +66,8 @@ class Base : public Obj3d, public Uniform::Base, public Buffer::DataItem<DATA> {
     }
     Ray getRay(glm::vec2 &&position, const VkExtent2D &extent, float distance);
 
+    inline const glm::mat4 getClip() { return clip_; }
+
     void setAspect(float aspect);
     void update(const glm::vec3 &pos_dir = {}, const glm::vec3 &look_dir = {});
 

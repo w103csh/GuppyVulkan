@@ -5,6 +5,7 @@
 #include "Instance.h"
 #include "PipelineHandler.h"
 #include "ShaderHandler.h"
+#include "TextureHandler.h"
 #include "Vertex.h"
 
 void Pipeline::GetDefaultColorInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
@@ -53,13 +54,83 @@ void Pipeline::GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources& 
 //      BASE
 // **********************
 
-void Pipeline::Base::init() { createPipelineLayout(); }
+Pipeline::Base::Base(Pipeline::Handler& handler, const PIPELINE&& type, const VkPipelineBindPoint&& bindPoint,
+                     const std::string&& name, const std::set<SHADER>&& shaderTypes,
+                     const std::vector<PUSH_CONSTANT>&& pushConstantTypes, std::vector<DESCRIPTOR_SET>&& descriptorSets)
+    : Handlee(handler),
+      BIND_POINT(bindPoint),
+      DESCRIPTOR_SET_TYPES(descriptorSets),
+      NAME(name),
+      PUSH_CONSTANT_TYPES(pushConstantTypes),
+      SHADER_TYPES(shaderTypes),
+      TYPE(type),
+      status_(STATUS::PENDING),
+      layout_(VK_NULL_HANDLE),
+      pipeline_(VK_NULL_HANDLE),
+      subpassId_(0) {
+    for (const auto& type : PUSH_CONSTANT_TYPES) assert(type != PUSH_CONSTANT::DONT_CARE);
+}
+
+void Pipeline::Base::init() {
+    validatePipelineDescriptorSets();
+    createPipelineLayout();
+}
+
+void Pipeline::Base::updateStatus() {
+    assert(status_ != STATUS::READY);
+    auto it = pendingTexturesOffsets_.begin();
+    while (it != pendingTexturesOffsets_.end()) {
+        // check texture
+        const auto& pTexture = handler().textureHandler().getTexture(*it);
+        assert(pTexture != nullptr && "Couldn't find texture.");
+        if (pTexture->status == STATUS::READY)
+            it = pendingTexturesOffsets_.erase(it);
+        else
+            ++it;
+    }
+    if (pendingTexturesOffsets_.empty()) status_ = STATUS::READY;
+}
+
+void Pipeline::Base::validatePipelineDescriptorSets() {
+    for (const auto& setType : DESCRIPTOR_SET_TYPES) {
+        const auto& descSet = handler().descriptorHandler().getDescriptorSet(setType);
+        for (const auto& keyValue : descSet.BINDING_MAP) {
+            if (std::get<0>(keyValue.second) == DESCRIPTOR::SAMPLER_PIPELINE_COMBINED ||
+                std::get<2>(keyValue.second).size()) {
+                // validate tuple
+                assert(std::get<0>(keyValue.second) == DESCRIPTOR::SAMPLER_PIPELINE_COMBINED &&
+                       std::get<2>(keyValue.second).size());
+                // check texture
+                const auto& pTexture = handler().textureHandler().getTextureByName(std::get<2>(keyValue.second));
+                assert(pTexture != nullptr && "Couldn't find texture.");
+                if (pTexture->status != STATUS::READY) pendingTexturesOffsets_.push_back(pTexture->OFFSET);
+            }
+        }
+    }
+    if (pendingTexturesOffsets_.size()) status_ = STATUS::PENDING_TEXTURE;
+}
+
+std::vector<VkDescriptorSetLayout> Pipeline::Base::prepareDescSetInfo() {
+    std::vector<VkDescriptorSetLayout> layouts;
+
+    uint8_t slot = 0;
+    for (const auto& setType : DESCRIPTOR_SET_TYPES) {
+        const auto& descSet = handler().descriptorHandler().getDescriptorSet(setType);
+        descSetMacroSlotMap_[descSet.MACRO_NAME] = slot++;
+        layouts.push_back(descSet.layout);
+    }
+
+    assert(layouts.size() == DESCRIPTOR_SET_TYPES.size() && "Wrong amount of set layouts");
+    assert(descSetMacroSlotMap_.size() == DESCRIPTOR_SET_TYPES.size() && "Wrong amount of set slot keys");
+
+    return layouts;
+}
 
 void Pipeline::Base::createPipelineLayout() {
-    // push constants
+    // PUSH CONSTANTS
     pushConstantRanges_ = handler().getPushConstantRanges(TYPE, PUSH_CONSTANT_TYPES);
-    // descriptor layouts
-    const auto& descSetLayouts = handler().descriptorHandler().getDescriptorSetLayouts(DESCRIPTOR_SET_TYPES);
+    // DESCRIPTOR LAYOUTS
+    const auto& descSetLayouts = prepareDescSetInfo();
 
     VkPipelineLayoutCreateInfo layoutInfo = {};
     layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
@@ -197,7 +268,10 @@ void Pipeline::Base::getRasterizationStateInfoResources(CreateInfoResources& cre
 
 void Pipeline::Base::getShaderInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.stagesInfo.clear();  // TODO: faster way?
-    handler().shaderHandler().getStagesInfo(SHADER_TYPES, createInfoRes.stagesInfo);
+    for (const auto& shaderType : SHADER_TYPES) {
+        Shader::shaderInfoMapKey key = {shaderType, descSetMacroSlotMap_};
+        handler().shaderHandler().getStagesInfo(key, createInfoRes.stagesInfo);
+    }
 }
 
 void Pipeline::Base::getMultisampleStateInfoResources(CreateInfoResources& createInfoRes) {
@@ -326,7 +400,10 @@ Pipeline::Default::TriListColor::TriListColor(Pipeline::Handler& handler)
           "Default Triangle List Color",
           {SHADER::COLOR_VERT, SHADER::COLOR_FRAG},
           {/*PUSH_CONSTANT::DEFAULT*/},
-          {DESCRIPTOR_SET::UNIFORM_DEFAULT}  //
+          {
+              DESCRIPTOR_SET::UNIFORM_DEFAULT,
+              DESCRIPTOR_SET::PROJECTOR_DEFAULT,
+          },
       } {};
 
 // DEFAULT LINE
@@ -338,7 +415,7 @@ Pipeline::Default::Line::Line(Pipeline::Handler& handler)
           "Default Line",
           {SHADER::COLOR_VERT, SHADER::LINE_FRAG},
           {/*PUSH_CONSTANT::DEFAULT*/},
-          {DESCRIPTOR_SET::UNIFORM_DEFAULT}  //
+          {DESCRIPTOR_SET::UNIFORM_DEFAULT},
       } {};
 
 void Pipeline::Default::Line::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
@@ -355,7 +432,11 @@ Pipeline::Default::TriListTexture::TriListTexture(Pipeline::Handler& handler)
           "Default Triangle List Texture",
           {SHADER::TEX_VERT, SHADER::TEX_FRAG},
           {/*PUSH_CONSTANT::DEFAULT*/},
-          {DESCRIPTOR_SET::UNIFORM_DEFAULT, DESCRIPTOR_SET::SAMPLER_DEFAULT}  //
+          {
+              DESCRIPTOR_SET::UNIFORM_DEFAULT,
+              DESCRIPTOR_SET::SAMPLER_DEFAULT,
+              DESCRIPTOR_SET::PROJECTOR_DEFAULT,
+          },
       } {};
 
 // CUBE
@@ -367,7 +448,10 @@ Pipeline::Default::Cube::Cube(Pipeline::Handler& handler)
           "Cube Pipeline",
           {SHADER::CUBE_VERT, SHADER::CUBE_FRAG},
           {/*PUSH_CONSTANT::DEFAULT*/},
-          {DESCRIPTOR_SET::UNIFORM_DEFAULT, DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT},
+          {
+              DESCRIPTOR_SET::UNIFORM_DEFAULT,
+              DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT,
+          },
       } {}
 
 void Pipeline::Default::Cube::getDepthInfoResources(CreateInfoResources& createInfoRes) {
@@ -384,7 +468,11 @@ Pipeline::BP::TextureCullNone::TextureCullNone(Pipeline::Handler& handler)
           "Blinn Phong Texture Cull None",
           {SHADER::TEX_VERT, SHADER::TEX_FRAG},
           {/*PUSH_CONSTANT::DEFAULT*/},
-          {DESCRIPTOR_SET::UNIFORM_DEFAULT, DESCRIPTOR_SET::SAMPLER_DEFAULT}  //
+          {
+              DESCRIPTOR_SET::UNIFORM_DEFAULT,
+              DESCRIPTOR_SET::SAMPLER_DEFAULT,
+              DESCRIPTOR_SET::PROJECTOR_DEFAULT,
+          },
       } {};
 
 void Pipeline::BP::TextureCullNone::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {

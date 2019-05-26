@@ -2,6 +2,8 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
+#define DSMI_SMP_DEF 0
+
 // DECLARATIONS
 vec3 getMaterialColor();
 vec3 getMaterialSpecular();
@@ -25,10 +27,10 @@ const uint TEX_CH_2             = 0x02u;
 const uint TEX_CH_3             = 0x04u;
 const uint TEX_CH_4             = 0x08u;
 
-layout(set = 1, binding = 0) uniform sampler2DArray sampCh4;
-// layout(set = 1, binding = 1) uniform sampler2DArray sampCh1;
-// layout(set = 1, binding = 2) uniform sampler2DArray sampCh2;
-// layout(set = 1, binding = 3) uniform sampler2DArray sampCh3;
+layout(set=DSMI_SMP_DEF, binding=0) uniform sampler2DArray sampCh4;
+// layout(set=DSMI_SMP_DEF, binding=1) uniform sampler2DArray sampCh1;
+// layout(set=DSMI_SMP_DEF, binding=2) uniform sampler2DArray sampCh2;
+// layout(set=DSMI_SMP_DEF, binding=3) uniform sampler2DArray sampCh3;
 // IN
 layout(location = 0) in vec3 fragPosition;  // (texture space)
 layout(location = 1) in vec3 fragNormal;    // (texture space)

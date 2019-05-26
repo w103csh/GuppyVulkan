@@ -9,6 +9,7 @@
 #include "Pipeline.h"
 #include "PipelineHandler.h"
 #include "ShaderHandler.h"
+#include "TextureHandler.h"
 #include "UniformHandler.h"
 
 Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_HANDLE) {
@@ -22,6 +23,9 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
                 break;
             case DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT:
                 pDescriptorSets_.push_back(std::make_unique<Set::Default::CubeSampler>());
+                break;
+            case DESCRIPTOR_SET::PROJECTOR_DEFAULT:
+                pDescriptorSets_.push_back(std::make_unique<Set::Default::ProjectorSampler>());
                 break;
             case DESCRIPTOR_SET::UNIFORM_PBR:
                 pDescriptorSets_.push_back(std::make_unique<Set::PBR::Uniform>());
@@ -131,8 +135,8 @@ void Descriptor::Handler::createLayouts() {
 VkDescriptorSetLayoutBinding Descriptor::Handler::getDecriptorSetLayoutBinding(
     const Descriptor::bindingMapKeyValue& keyValue, const VkShaderStageFlags& stageFlags) const {
     VkDescriptorSetLayoutBinding layoutBinding = {};
-    layoutBinding.binding = std::get<1>(keyValue.first);
-    layoutBinding.descriptorType = DESCRIPTOR_TYPE_MAP.at(keyValue.second.first);
+    layoutBinding.binding = keyValue.first.first;
+    layoutBinding.descriptorType = DESCRIPTOR_TYPE_MAP.at(std::get<0>(keyValue.second));
     layoutBinding.descriptorCount = getDescriptorCount(keyValue.second);
     layoutBinding.stageFlags = stageFlags;
     layoutBinding.pImmutableSamplers = nullptr;  // TODO: use this
@@ -140,26 +144,16 @@ VkDescriptorSetLayoutBinding Descriptor::Handler::getDecriptorSetLayoutBinding(
 }
 
 uint32_t Descriptor::Handler::getDescriptorCount(const Descriptor::bindingMapValue& value) const {
-    const auto& min = *value.second.begin();
-    if (value.second.size() == 1) {
+    const auto& min = *std::get<1>(value).begin();
+    if (std::get<1>(value).size() == 1) {
         if (min == Descriptor::Set::OFFSET_ALL) {
-            if (DESCRIPTOR_UNIFORM_ALL.count(value.first))
+            if (DESCRIPTOR_UNIFORM_ALL.count(std::get<0>(value)))
                 return static_cast<uint32_t>(uniformHandler().getDescriptorCount(value));
             else
                 assert(false && "Unaccounted for scenario");
         }
     }
-    return static_cast<uint32_t>(value.second.size());
-}
-
-std::vector<VkDescriptorSetLayout> Descriptor::Handler::getDescriptorSetLayouts(const std::list<DESCRIPTOR_SET>& setTypes) {
-    std::vector<VkDescriptorSetLayout> layouts;
-    for (const auto& setType : setTypes) {
-        auto& pSet = getSet(setType);
-        if (pSet->TYPE == setType) layouts.push_back(pSet->layout);
-    }
-    assert(!layouts.empty() && "Didn't find a descriptor layout");
-    return layouts;
+    return static_cast<uint32_t>(std::get<1>(value).size());
 }
 
 // TODO: add params that can indicate to free/reallocate
@@ -230,18 +224,21 @@ void Descriptor::Handler::updateDescriptorSets(const std::unique_ptr<Descriptor:
     for (const auto& keyValue : pSet->BINDING_MAP) {
         writes.push_back(getWrite(keyValue));
         // WRITE INFO
-        if (DESCRIPTOR_MATERIAL_ALL.count(keyValue.second.first)) {
+        if (DESCRIPTOR_MATERIAL_ALL.count(std::get<0>(keyValue.second))) {
             // MATERIAL
             mesh.pMaterial_->setWriteInfo(writes.back());
-        } else if (DESCRIPTOR_UNIFORM_ALL.count(keyValue.second.first)) {
+        } else if (DESCRIPTOR_UNIFORM_ALL.count(std::get<0>(keyValue.second))) {
             // UNIFORM
             bufferInfos.push_back(uniformHandler().getWriteInfos(keyValue.second));
             writes.back().descriptorCount = static_cast<uint32_t>(bufferInfos.back().size());
             writes.back().pBufferInfo = bufferInfos.back().data();
-        } else if (DESCRIPTOR_SAMPLER_ALL.count(keyValue.second.first)) {
+        } else if (std::get<0>(keyValue.second) == DESCRIPTOR::SAMPLER_MATERIAL_COMBINED) {
+            // MATERIAL SAMPLER
             assert(mesh.getMaterial()->getTexture() != nullptr);
-            // SAMPLER
             mesh.getMaterial()->getTexture()->setWriteInfo(writes.back());
+        } else if (std::get<0>(keyValue.second) == DESCRIPTOR::SAMPLER_PIPELINE_COMBINED) {
+            // PIPELINE SAMPLER
+            textureHandler().getTextureByName(std::get<2>(keyValue.second))->setWriteInfo(writes.back());
         } else {
             assert(false);
             throw std::runtime_error("Unhandled descriptor type");
@@ -257,8 +254,8 @@ void Descriptor::Handler::updateDescriptorSets(const std::unique_ptr<Descriptor:
 void Descriptor::Handler::getDynamicOffsets(const std::unique_ptr<Descriptor::Set::Base>& pSet,
                                             std::vector<uint32_t>& dynamicOffsets, Mesh::Base& mesh) {
     for (auto& keyValue : pSet->BINDING_MAP) {
-        if (helpers::isDescriptorTypeDynamic(keyValue.second.first)) {
-            switch (keyValue.second.first) {
+        if (helpers::isDescriptorTypeDynamic(std::get<0>(keyValue.second))) {
+            switch (std::get<0>(keyValue.second)) {
                 case DESCRIPTOR::MATERIAL_DEFAULT:
                 case DESCRIPTOR::MATERIAL_PBR: {
                     dynamicOffsets.push_back(static_cast<uint32_t>(mesh.getMaterial()->BUFFER_INFO.memoryOffset));
@@ -271,12 +268,12 @@ void Descriptor::Handler::getDynamicOffsets(const std::unique_ptr<Descriptor::Se
 }
 
 VkWriteDescriptorSet Descriptor::Handler::getWrite(const Descriptor::bindingMapKeyValue& keyValue) const {
-    assert(!keyValue.second.second.empty());
+    assert(!std::get<1>(keyValue.second).empty());
     VkWriteDescriptorSet write = {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-    write.dstBinding = std::get<1>(keyValue.first);
-    write.dstArrayElement = std::get<2>(keyValue.first);
-    write.descriptorType = DESCRIPTOR_TYPE_MAP.at(keyValue.second.first);
+    write.dstBinding = keyValue.first.first;
+    write.dstArrayElement = keyValue.first.second;
+    write.descriptorType = DESCRIPTOR_TYPE_MAP.at(std::get<0>(keyValue.second));
     write.descriptorCount = getDescriptorCount(keyValue.second);  // TODO: don't do this a second time
     return write;
 }

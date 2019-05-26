@@ -41,9 +41,11 @@ namespace Sampler {
 
 // STATUE
 const CreateInfo STATUE_CREATE_INFO = {
-    "Statue Color Sampler",
-    {{Sampler::USE::COLOR, STATUE_TEX_PATH}},
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    "Statue Color Sampler",                    //
+    {{Sampler::USE::COLOR, STATUE_TEX_PATH}},  //
+    VK_IMAGE_VIEW_TYPE_2D,                     //
+    0,
+    SAMPLER::CLAMP_TO_BORDER,
 };
 
 // VULKAN LOGO

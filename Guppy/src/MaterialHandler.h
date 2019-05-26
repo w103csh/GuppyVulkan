@@ -10,7 +10,7 @@
 #include "PBR.h"
 
 namespace Material {
-    
+
 template <class TBase>
 using ItemPointer = std::shared_ptr<TBase>;
 
@@ -28,6 +28,14 @@ class Manager : public Buffer::Manager::Descriptor<Material::Base, TDerived, Ite
               static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
           } {}
+
+    void updateTexture(const VkDevice &dev, const std::shared_ptr<Texture::Base> &pTexture) {
+        for (auto &pItem : pItems)
+            if (pItem->getTexture() == pTexture) {
+                pItem->setTextureData();
+                updateData(dev, pItem->BUFFER_INFO);
+            }
+    }
 };
 
 class Handler : public Game::Handler {
@@ -57,6 +65,8 @@ class Handler : public Game::Handler {
             }
         }
     }
+
+    void updateTexture(const std::shared_ptr<Texture::Base> &pTexture);
 
    private:
     void reset() override;

@@ -7,14 +7,12 @@
 #include <vector>
 
 #include "Constants.h"
-#include "DescriptorReference.h"
 #include "Geometry.h"
 #include "Handlee.h"
 #include "Helpers.h"
 #include "Instance.h"
 #include "Material.h"
 #include "ObjDrawInst3d.h"
-#include "PipelineReference.h"
 #include "Shell.h"
 #include "Texture.h"
 
@@ -63,7 +61,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     const VERTEX VERTEX_TYPE;
 
     inline Mesh::INDEX getOffset() const { return offset_; }
-    inline STATUS getStatus() const { return status_; }
+    inline FlagBits getStatus() const { return status_; }
 
     // MATERIAL
     inline auto& getMaterial() { return pMaterial_; }
@@ -140,7 +138,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
         return bufferSize;
     }
 
-    STATUS status_;
+    FlagBits status_;
     // INFO
     bool isIndexed_;
     bool selectable_;
@@ -198,9 +196,11 @@ class Color : public Base {
 
    protected:
     Color(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
-          std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
+          std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
+          const MESH&& type = MESH::COLOR);
     Color(Mesh::Handler& handler, const FLAG&& flags, const std::string&& name, CreateInfo* pCreateInfo,
-          std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
+          std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
+          const MESH&& type = MESH::COLOR);
 
     std::vector<Vertex::Color> vertices_;
 };

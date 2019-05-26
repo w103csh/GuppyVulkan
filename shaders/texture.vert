@@ -3,10 +3,10 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 // DECLARATIONS
-vec3 blinnPhongShade();
+void setProjectorTexCoord(const in vec4 pos);
 
 // BINDINGS
-layout(set=0, binding=0) uniform CameraDefaultPerspective {
+layout(binding=0) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
     mat4 viewProjection;
@@ -19,17 +19,17 @@ layout(set=0, binding=0) uniform CameraDefaultPerspective {
 // } pushConstantsBlock;
 
 // IN
-layout(location = 0) in vec3 inPosition;
-layout(location = 1) in vec3 inNormal;
-layout(location = 2) in vec2 inTexCoord;
-layout(location = 3) in vec3 inTangent;
-layout(location = 4) in vec3 inBinormal;
-layout(location = 5) in mat4 inModel;
+layout(location=0) in vec3 inPosition;
+layout(location=1) in vec3 inNormal;
+layout(location=2) in vec2 inTexCoord;
+layout(location=3) in vec3 inTangent;
+layout(location=4) in vec3 inBinormal;
+layout(location=5) in mat4 inModel;
 // OUT
-layout(location = 0) out vec3 fragPosition; // (camera space)
-layout(location = 1) out vec3 fragNormal;   // (texture space)
-layout(location = 2) out vec2 fragTexCoord; // (texture space)
-layout(location = 3) out mat3 TBN;
+layout(location=0) out vec3 fragPosition; // (camera space)
+layout(location=1) out vec3 fragNormal;   // (texture space)
+layout(location=2) out vec2 fragTexCoord; // (texture space)
+layout(location=3) out mat3 TBN;
 
 void main() {
     // Camera space transforms
@@ -40,7 +40,10 @@ void main() {
     vec3 CS_tangent = normalize(viewModel3 * inTangent);
     vec3 CS_binormal = normalize(viewModel3 * inBinormal);
 
-    gl_Position = camera.viewProjection * inModel * vec4(inPosition, 1.0);
+    vec4 pos = inModel * vec4(inPosition, 1.0);
+    setProjectorTexCoord(pos);
+
+    gl_Position = camera.viewProjection * pos;
 
     // Camera space to tangent space
     // TBN = inverse(mat3(CS_binormal, CS_tangent, CS_normal));

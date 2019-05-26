@@ -68,6 +68,8 @@ class Handler : public Game::Handler {
                 return lgtDefSptMgr().pItems;
             case DESCRIPTOR::FOG_DEFAULT:
                 return uniDefFogMgr().pItems;
+            case DESCRIPTOR::PROJECTOR_DEFAULT:
+                return uniDefPrjMgr().pItems;
             default:
                 assert(false);
                 throw std::runtime_error("Unhandled uniform type");
@@ -100,7 +102,7 @@ class Handler : public Game::Handler {
     }
 
     // SHADER
-    void shaderTextReplace(std::string& text);
+    void shaderTextReplace(std::string& text) const;
 
     template <typename T>
     inline T& getUniform(const DESCRIPTOR& type, const UNIFORM_INDEX& index) {
@@ -125,6 +127,7 @@ class Handler : public Game::Handler {
     inline Uniform::Manager<Light::PBR::Positional::Base>& lgtPbrPosMgr() { return std::get<Uniform::Manager<Light::PBR::Positional::Base>>(managers_[2]);};
     inline Uniform::Manager<Light::Default::Spot::Base>& lgtDefSptMgr() { return std::get<Uniform::Manager<Light::Default::Spot::Base>>(managers_[3]);};
     inline Uniform::Manager<Uniform::Default::Fog::Base>& uniDefFogMgr() { return std::get<Uniform::Manager<Uniform::Default::Fog::Base>>(managers_[4]);};
+    inline Uniform::Manager<Uniform::Default::Projector::Base>& uniDefPrjMgr() { return std::get<Uniform::Manager<Uniform::Default::Projector::Base>>(managers_[5]);};
 
     template <class T> inline Uniform::Manager<T>& getManager() { /*static_assert(false, "Not implemented");*/ }
     template <> inline Uniform::Manager<Camera::Default::Perspective::Base>& getManager() { return camDefPersMgr(); }
@@ -132,6 +135,7 @@ class Handler : public Game::Handler {
     template <> inline Uniform::Manager<Light::PBR::Positional::Base>& getManager() { return lgtPbrPosMgr(); }
     template <> inline Uniform::Manager<Light::Default::Spot::Base>& getManager() { return lgtDefSptMgr(); }
     template <> inline Uniform::Manager<Uniform::Default::Fog::Base>& getManager() { return uniDefFogMgr(); }
+    template <> inline Uniform::Manager<Uniform::Default::Projector::Base>& getManager() { return uniDefPrjMgr(); }
     // clang-format on
 
     void createCameras();
@@ -143,10 +147,11 @@ class Handler : public Game::Handler {
         Uniform::Manager<Light::Default::Positional::Base>,    //
         Uniform::Manager<Light::PBR::Positional::Base>,        //
         Uniform::Manager<Light::Default::Spot::Base>,          //
-        Uniform::Manager<Uniform::Default::Fog::Base>          //
+        Uniform::Manager<Uniform::Default::Fog::Base>,         //
+        Uniform::Manager<Uniform::Default::Projector::Base>    //
         >;
 
-    std::array<Manager, 5> managers_;
+    std::array<Manager, 6> managers_;
 
     struct MacroName {
         template <typename TManager>

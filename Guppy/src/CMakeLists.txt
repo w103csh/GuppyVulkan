@@ -59,7 +59,6 @@ set(SOURCE
     DescriptorConstants.h
     DescriptorHandler.cpp
     DescriptorHandler.h
-    DescriptorReference.h
     DescriptorSet.cpp
     DescriptorSet.h
     # Instance
@@ -98,7 +97,6 @@ set(SOURCE
     PipelineConstants.h
     PipelineHandler.cpp
     PipelineHandler.h
-    PipelineReference.h
     RenderPass.cpp
     RenderPass.h
     # Shader

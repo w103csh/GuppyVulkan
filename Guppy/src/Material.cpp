@@ -51,6 +51,11 @@ void Material::Default::Base::setTextureData() {
 
     pData_->xRepeat = xRepeat;
     pData_->yRepeat = yRepeat;
+
+    if (status_ == STATUS::PENDING_TEXTURE && pTexture_->status == STATUS::READY)  //
+        status_ = STATUS::READY;
+
+    DIRTY = true;
 }
 
 void Material::Default::Base::setTinyobjData(const tinyobj::material_t &m) {

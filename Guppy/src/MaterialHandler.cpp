@@ -14,6 +14,12 @@ void Material::Handler::init() {
     pbrMgr_.init(shell().context(), settings());
 }
 
+void Material::Handler::updateTexture(const std::shared_ptr<Texture::Base>& pTexture) {
+    assert(pTexture->status == STATUS::READY);
+    defMgr_.updateTexture(shell().context().dev, pTexture);
+    pbrMgr_.updateTexture(shell().context().dev, pTexture);
+}
+
 void Material::Handler::reset() {
     defMgr_.destroy(shell().context().dev);
     pbrMgr_.destroy(shell().context().dev);

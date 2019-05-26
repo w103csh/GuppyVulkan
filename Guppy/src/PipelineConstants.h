@@ -5,7 +5,9 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <vulkan/vulkan.h>
 
+enum class PUSH_CONSTANT;
 enum class VERTEX;
 
 enum class PIPELINE {
@@ -31,5 +33,17 @@ enum class PIPELINE {
 
 extern const std::vector<PIPELINE> PIPELINE_ALL;
 extern const std::map<VERTEX, std::set<PIPELINE>> VERTEX_PIPELINE_MAP;
+
+namespace Pipeline {
+
+struct Reference {
+    VkPipelineBindPoint bindPoint;
+    VkPipelineLayout layout;
+    VkPipeline pipeline;
+    VkShaderStageFlags pushConstantStages;
+    std::vector<PUSH_CONSTANT> pushConstantTypes;
+};
+
+}  // namespace Pipeline
 
 #endif  // !PIPELINE_CONSTANTS_H

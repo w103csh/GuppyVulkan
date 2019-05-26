@@ -3,6 +3,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 #define UMI_LGT_DEF_POS 0
+#define DSMI_UNI_PLX 0
 
 // FLAGS
 const uint LIGHT_SHOW       = 0x00000001u;
@@ -13,7 +14,7 @@ layout (location=2) in vec2 VertexTexCoord;
 layout (location=3) in vec3 VertexTangent;
 layout (location=4) in vec3 VertexBinormal;
 
-layout(set=0, binding=0) uniform CameraDefaultPerspective {
+layout(set=DSMI_UNI_PLX, binding=0) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
     mat4 viewProjection;
@@ -21,7 +22,7 @@ layout(set=0, binding=0) uniform CameraDefaultPerspective {
 } Camera;
 
 #if UMI_LGT_DEF_POS
-layout(set=0, binding=3) uniform LightInfo {
+layout(set=DSMI_UNI_PLX, binding=3) uniform LightInfo {
     vec3 Position;  // Light position in cam. coords.
     uint flags;
     vec3 La;        // Amb intensity

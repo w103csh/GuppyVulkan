@@ -5,10 +5,13 @@
 enum class SAMPLER {
     //
     DEFAULT = 0,
-    CUBE = 1,
+    CUBE,
+    CLAMP_TO_BORDER,
+    CLAMP_TO_EDGE,
 };
 
 namespace Sampler {
+
 struct CreateInfo;
 
 // CREATE INFOS

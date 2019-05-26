@@ -7,6 +7,7 @@
 #include "CommandHandler.h"
 #include "Constants.h"
 #include "LoadingHandler.h"
+#include "MaterialHandler.h"
 #include "Shell.h"
 #include "ShaderHandler.h"
 
@@ -36,6 +37,9 @@ void Texture::Handler::reset() {
 }
 
 std::shared_ptr<Texture::Base>& Texture::Handler::make(const Texture::CreateInfo* pCreateInfo) {
+    // Using the name as an ID for now, so make sure its unique.
+    for (const auto& pTexture : pTextures_) assert(pTexture->NAME.compare(pCreateInfo->name) != 0);
+
     pTextures_.emplace_back(std::make_shared<Texture::Base>(static_cast<uint32_t>(pTextures_.size()), pCreateInfo));
 
     bool nonAsyncTest = false;
@@ -109,6 +113,8 @@ void Texture::Handler::createTexture(std::shared_ptr<Texture::Base> pTexture) {
     for (auto& sampler : pTexture->samplers) createTextureSampler(pTexture, sampler);
     loadingHandler().loadSubmit(std::move(pTexture->pLdgRes));
     pTexture->status = STATUS::READY;
+    // Notify any materials to update their data
+    materialHandler().updateTexture(pTexture);
 }
 
 void Texture::Handler::createTextureSampler(const std::shared_ptr<Texture::Base> pTexture, Sampler::Base& sampler) {

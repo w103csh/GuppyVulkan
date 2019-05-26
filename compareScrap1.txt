@@ -1,8 +1,0 @@
-
-
-validation layer: 
-
-Submitted command buffer expects image 0x86 (subresource: aspectMask 0x1 array layer 2, mip level 0)
-to be in layout
-VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL--instead,
-image 0x86's current layout is VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL.

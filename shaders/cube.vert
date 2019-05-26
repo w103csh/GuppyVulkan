@@ -2,6 +2,8 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
+#define DSMI_UNI_DEF 0
+
 // DECLARATIONS
 float getMaterialEta();
 bool isSkybox();
@@ -9,7 +11,7 @@ bool isReflect();
 bool isRefract();
 
 // BINDINGS
-layout(set=0, binding=0) uniform CameraDefaultPerspective {
+layout(set=DSMI_UNI_DEF, binding=0) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
     mat4 viewProjection;

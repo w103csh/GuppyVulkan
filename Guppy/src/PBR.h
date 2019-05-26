@@ -9,10 +9,10 @@
 #ifndef PBR_H
 #define PBR_H
 
+#include "Constants.h"
 #include "DescriptorSet.h"
 #include "Light.h"
 #include "Obj3d.h"
-#include "Shader.h"
 #include "Pipeline.h"
 #include "Uniform.h"
 
@@ -109,28 +109,15 @@ class Uniform : public Set::Base {
 // **********************
 
 namespace Shader {
-
 namespace PBR {
-class ColorFragment : public Base {
-   public:
-    ColorFragment(Shader::Handler &handler);
-};
-class TextureFragment : public Base {
-   public:
-    TextureFragment(Shader::Handler &handler);
-};
+extern const CreateInfo COLOR_FRAG_CREATE_INFO;
+extern const CreateInfo TEX_FRAG_CREATE_INFO;
 }  // namespace PBR
 
 namespace Link {
 namespace PBR {
-class Fragment : public Shader::Link::Base {
-   public:
-    Fragment(Shader::Handler &handler);
-};
-class Material : public Shader::Link::Base {
-   public:
-    Material(Shader::Handler &handler);
-};
+extern const CreateInfo FRAG_CREATE_INFO;
+extern const CreateInfo MATERIAL_CREATE_INFO;
 }  // namespace PBR
 }  // namespace Link
 

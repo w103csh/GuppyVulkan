@@ -3,6 +3,7 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 #define UMI_LGT_PBR_POS 0
+#define DSMI_UNI_PBR 0
 
 // DECLARATIONS
 vec3 transform(vec3 v);
@@ -21,7 +22,7 @@ const float PI = 3.14159265358979323846;
 
 // BINDINGS
 #if UMI_LGT_PBR_POS
-layout(set = 0, binding = 2, std140) uniform LightPBRPositional {
+layout(set=DSMI_UNI_PBR, binding=2) uniform LightPBRPositional {
     vec3 position;  // Light position in eye coords.
     uint flags;
     vec3 L;         // Diffuse and specular light intensity

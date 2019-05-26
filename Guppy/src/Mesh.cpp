@@ -52,19 +52,28 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
 Mesh::Base::~Base() = default;
 
 void Mesh::Base::prepare() {
-    assert(status_ != STATUS::READY);
+    assert(status_ ^ STATUS::READY);
     assert(getOffset() != BAD_OFFSET);
 
-    if (getStatus() == STATUS::PENDING_BUFFERS) {
+    if (status_ == STATUS::PENDING_BUFFERS) {
         loadBuffers();
         // Submit vertex loading commands...
         handler().loadingHandler().loadSubmit(std::move(pLdgRes_));
-        status_ = STATUS::PENDING_MATERIAL;
+        status_ = STATUS::PENDING_MATERIAL | STATUS::PENDING_PIPELINE;
     }
 
-    if (pMaterial_->getStatus() != STATUS::READY) {
-        pMaterial_->updateStatus();
-        handler().materialHandler().update(pMaterial_);
+    if (status_ & STATUS::PENDING_MATERIAL) {
+        if (pMaterial_->getStatus() == STATUS::READY) {
+            status_ ^= STATUS::PENDING_MATERIAL;
+        }
+    }
+
+    if (status_ & STATUS::PENDING_PIPELINE) {
+        auto& pPipeline = handler().pipelineHandler().getPipeline(PIPELINE_TYPE);
+        if (pPipeline->getStatus() == STATUS::READY)
+            status_ ^= STATUS::PENDING_PIPELINE;
+        else
+            pPipeline->updateStatus();
     }
 
     /*  TODO: apparently you can allocate the descriptor sets immediately, and then
@@ -72,14 +81,12 @@ void Mesh::Base::prepare() {
         resources... I should implement this. As of now just wait until we
         can allocate and update all at once.
     */
-    if (pMaterial_->getStatus() == STATUS::READY) {
+    if (status_ == STATUS::READY) {
         handler().pipelineHandler().getReference(std::ref(*this));
         handler().descriptorHandler().getReference(std::ref(*this));
+    } else {
+        handler().ldgOffsets_.insert({TYPE, getOffset()});
     }
-
-    status_ = pMaterial_->getStatus();
-
-    if (getStatus() != STATUS::READY) handler().ldgOffsets_.insert({TYPE, getOffset()});
 }
 
 // thread sync
@@ -427,10 +434,10 @@ void Mesh::Base::destroy() {
 // **********************
 
 Mesh::Color::Color(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
-                   std::shared_ptr<Instance::Base>& pInstanceData,
-                   std::shared_ptr<Material::Base>& pMaterial)
+                   std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
+                   const MESH&& type)
     : Base{handler,                                //
-           MESH::COLOR,                            //
+           std::forward<const MESH>(type),         //
            VERTEX::COLOR,                          //
            FLAG::POLY,                             //
            std::forward<const std::string>(name),  //
@@ -439,10 +446,10 @@ Mesh::Color::Color(Mesh::Handler& handler, const std::string&& name, CreateInfo*
            pMaterial} {}
 
 Mesh::Color::Color(Mesh::Handler& handler, const FLAG&& flags, const std::string&& name, CreateInfo* pCreateInfo,
-                   std::shared_ptr<Instance::Base>& pInstanceData,
-                   std::shared_ptr<Material::Base>& pMaterial)
+                   std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
+                   const MESH&& type)
     : Base{handler,                                //
-           MESH::COLOR,                            //
+           std::forward<const MESH>(type),         //
            VERTEX::COLOR,                          //
            std::forward<const FLAG>(flags),        //
            std::forward<const std::string>(name),  //
@@ -464,7 +471,8 @@ Mesh::Line::Line(Mesh::Handler& handler, const std::string&& name, CreateInfo* p
             std::forward<const std::string>(name),  //
             pCreateInfo,                            //
             pInstanceData,                          //
-            pMaterial} {}
+            pMaterial,
+            MESH::LINE} {}
 
 Mesh::Line::~Line() = default;
 

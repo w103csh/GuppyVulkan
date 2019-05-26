@@ -8,50 +8,48 @@
 Descriptor::Set::Parallax::Uniform::Uniform()
     : Set::Base{
           DESCRIPTOR_SET::UNIFORM_PARALLAX,
+          "DSMI_UNI_PLX",
           {
-              {{0, 0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {0}}},
-              {{0, 1, 0}, {DESCRIPTOR::MATERIAL_DEFAULT, {0}}},
-              {{0, 3, 0}, {DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, {OFFSET_ALL}}},
+              {{0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {0}, ""}},
+              {{1, 0}, {DESCRIPTOR::MATERIAL_DEFAULT, {0}, ""}},
+              {{3, 0}, {DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, {OFFSET_ALL}, ""}},
           },
       } {}
 
 Descriptor::Set::Parallax::Sampler::Sampler()
     : Set::Base{
           DESCRIPTOR_SET::SAMPLER_PARALLAX,
+          "DSMI_SMP_PLX",
           {
-              {{1, 0, 0}, {DESCRIPTOR::SAMPLER_4CH_DEFAULT, {0}}},
-              {{1, 1, 0}, {DESCRIPTOR::SAMPLER_4CH_DEFAULT, {0}}},
+              {{0, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED, {0}, ""}},
+              {{1, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED, {0}, ""}},
           },
       } {}
 
-Shader::Parallax::Vertex::Vertex(Shader::Handler& handler)
-    : Base{
-          handler,  //
-          SHADER::PARALLAX_VERT,
-          "parallax.vert.glsl",
-          VK_SHADER_STAGE_VERTEX_BIT,
-          "Parallax Vertex Shader",
-      } {}
-
-Shader::Parallax::SimpleFragment::SimpleFragment(Shader::Handler& handler)
-    : Base{
-          handler,
-          SHADER::PARALLAX_SIMPLE_FRAG,
-          "parallax.frag.glsl",
-          VK_SHADER_STAGE_FRAGMENT_BIT,
-          "Parallax Simple Fragment Shader",
-          {SHADER_LINK::DEFAULT_MATERIAL},
-      } {}
-
-Shader::Parallax::SteepFragment::SteepFragment(Shader::Handler& handler)
-    : Base{
-          handler,
-          SHADER::PARALLAX_STEEP_FRAG,
-          "steep-parallax.frag.glsl",
-          VK_SHADER_STAGE_FRAGMENT_BIT,
-          "Parallax Steep Fragment Shader",
-          {SHADER_LINK::DEFAULT_MATERIAL},
-      } {}
+namespace Shader {
+namespace Parallax {
+const CreateInfo VERT_CREATE_INFO = {
+    SHADER::PARALLAX_VERT,
+    "Parallax Vertex Shader",
+    "parallax.vert.glsl",
+    VK_SHADER_STAGE_VERTEX_BIT,
+};
+const CreateInfo SIMPLE_CREATE_INFO = {
+    SHADER::PARALLAX_SIMPLE_FRAG,       //
+    "Parallax Simple Fragment Shader",  //
+    "parallax.frag.glsl",
+    VK_SHADER_STAGE_FRAGMENT_BIT,
+    {SHADER_LINK::DEFAULT_MATERIAL},
+};
+const CreateInfo STEEP_CREATE_INFO = {
+    SHADER::PARALLAX_STEEP_FRAG,       //
+    "Parallax Steep Fragment Shader",  //
+    "steep-parallax.frag.glsl",        //
+    VK_SHADER_STAGE_FRAGMENT_BIT,      //
+    {SHADER_LINK::DEFAULT_MATERIAL},
+};
+}  // namespace Parallax
+}  // namespace Shader
 
 Pipeline::Parallax::Simple::Simple(Pipeline::Handler& handler)
     : Base{
@@ -61,7 +59,10 @@ Pipeline::Parallax::Simple::Simple(Pipeline::Handler& handler)
           "Parallax Simple Pipeline",
           {SHADER::PARALLAX_VERT, SHADER::PARALLAX_SIMPLE_FRAG},
           {},
-          {DESCRIPTOR_SET::UNIFORM_PARALLAX, DESCRIPTOR_SET::SAMPLER_PARALLAX},
+          {
+              DESCRIPTOR_SET::UNIFORM_PARALLAX,
+              DESCRIPTOR_SET::SAMPLER_PARALLAX,
+          },
       } {};
 
 Pipeline::Parallax::Steep::Steep(Pipeline::Handler& handler)
@@ -72,5 +73,8 @@ Pipeline::Parallax::Steep::Steep(Pipeline::Handler& handler)
           "Parallax Steep Pipeline",
           {SHADER::PARALLAX_VERT, SHADER::PARALLAX_STEEP_FRAG},
           {},
-          {DESCRIPTOR_SET::UNIFORM_PARALLAX, DESCRIPTOR_SET::SAMPLER_PARALLAX},
+          {
+              DESCRIPTOR_SET::UNIFORM_PARALLAX,
+              DESCRIPTOR_SET::SAMPLER_PARALLAX,
+          },
       } {};

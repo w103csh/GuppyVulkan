@@ -3,6 +3,8 @@
 #extension GL_ARB_separate_shader_objects : enable
 
 #define UMI_LGT_DEF_POS 0
+#define DSMI_UNI_PLX 0
+#define DSMI_SMP_PLX 0
 
 // DECLARATIONS
 vec3 getMaterialSpecular();
@@ -14,18 +16,18 @@ layout(location=1) in vec3 ViewDir;
 layout(location=2) in vec3 LightDir[UMI_LGT_DEF_POS];
 #endif
 
-layout(set=1, binding=0) uniform sampler2D ColorTex;
-layout(set=1, binding=1) uniform sampler2D NormalMapTex;
-// layout(set=1, binding=2) uniform sampler2D HeightMapTex;
-
 #if UMI_LGT_DEF_POS
-layout(set=0, binding=3) uniform LightInfo {
+layout(set=DSMI_UNI_PLX, binding=3) uniform LightInfo {
     vec3 Position;  // Light position in cam. coords.
     uint flags;
     vec3 La;        // Amb intensity
     vec3 L;         // D,S intensity
 } Light[UMI_LGT_DEF_POS];
 #endif
+
+layout(set=DSMI_SMP_PLX, binding=0) uniform sampler2D ColorTex;
+layout(set=DSMI_SMP_PLX, binding=1) uniform sampler2D NormalMapTex;
+// layout(set=1, binding=2) uniform sampler2D HeightMapTex;
 
 layout(location=0) out vec4 FragColor;
 

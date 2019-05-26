@@ -25,7 +25,7 @@
 
  - Figure out the issue with alpha blending for transparent fragments. There is
     a comment about this in link.texture.frag, and in the default render pass
-    intializer list.
+    initializer list.
 
  - Add a normal matrix.
 
@@ -38,14 +38,30 @@
         - ...
 
  - In "glaring exampler of problem with smoothing.png" I used the fragNormal variable
-    as Kd.
+    as Kd. Also, figure out the long standing smoothing issue... (comment about
+    this in Face.h - indexVertices)
 
- - Fix what seems like a memory barrier problem with mipmap generation. The symptoms
-    for this problem are all the errors/warnings in RenderDOC when you load just load
-    the "Orange" model.
+ - I looked into below and have come to the conclusion that it is a false positive. I
+    am keeping it here so that don't forget that I looked into it.
+        Fix what seems like a memory barrier problem with mipmap generation. The symptoms
+        for this problem are all the errors/warnings in RenderDOC when you load just load
+        the "Orange" model.
 
- - The depth buffer doesn't work without a ground plane!!! WTF
+ - The depth buffer doesn't work without a ground plane under certain circumstances!!! WTF
 
  - "doubleSided" param doesn't work anymore for box/plane.
+
+ - There is now a way to create multiple shader programs with different define macros
+    for descriptor set slots. This revealed that there needs to be work done to determine
+    compatability between shaders for pipelines that don't use the entire descriptor set
+    for one stage. For example, "color.vert" and "pbr.vert" have different uniforms for
+    slot 0.1, and 0.2 but not 0.0 (default camera). There are at least two pipelines that
+    do not care about this for the vertex stage, so they should be able to use the same
+    module for that stage, but as of now the handler just makes two modules. You can see
+    this pretty clearly by looking throug the "shaderInfoMap" in the shader handler. This
+    will not be easy to fix!
+
+ - The variant code in the uniform handler is a nightmare. Either use the variant properly
+    or remove it.
 
  - Countless more...

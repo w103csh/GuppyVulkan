@@ -15,15 +15,32 @@ namespace Uniform {
 class Base : public virtual Buffer::Item, public Descriptor::Interface {
    public:
     // DESCRIPTOR
-    inline void setWriteInfo(VkWriteDescriptorSet& write) const override {
-        write.pBufferInfo = &BUFFER_INFO.bufferInfo;
-    }
+    inline void setWriteInfo(VkWriteDescriptorSet& write) const override { write.pBufferInfo = &BUFFER_INFO.bufferInfo; }
 
    protected:
     Base() {}
 };
 
 namespace Default {
+
+// PROJECTOR
+namespace Projector {
+struct DATA {
+    glm::mat4 proj;
+};
+class Base : public Uniform::Base, public Buffer::DataItem<DATA> {
+   public:
+    Base(const Buffer::Info&& info, DATA* pData)
+        : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
+          Uniform::Base(),                                       //
+          Buffer::DataItem<DATA>(pData)                          //
+    {
+        DIRTY = true;
+    }
+};
+}  // namespace Projector
+
+// FOG
 namespace Fog {
 typedef enum FLAG {
     FOG_LINEAR = 0x0000000,
@@ -50,6 +67,7 @@ class Base : public Uniform::Base, public Buffer::DataItem<DATA> {
     }
 };
 }  // namespace Fog
+
 }  // namespace Default
 
 }  // namespace Uniform

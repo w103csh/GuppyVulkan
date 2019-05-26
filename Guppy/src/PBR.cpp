@@ -58,6 +58,11 @@ void Material::PBR::Base::setTextureData() {
 
     pData_->xRepeat = xRepeat;
     pData_->yRepeat = yRepeat;
+
+    if (status_ == STATUS::PENDING_TEXTURE && pTexture_->status == STATUS::READY)  //
+        status_ = STATUS::READY;
+
+    DIRTY = true;
 }
 
 void Material::PBR::Base::setTinyobjData(const tinyobj::material_t& m) {
@@ -75,56 +80,58 @@ void Material::PBR::Base::setRoughness(float r) {
 // **********************
 
 Descriptor::Set::PBR::Uniform::Uniform()
-    : Set::Base{DESCRIPTOR_SET::UNIFORM_PBR,  //
-                {
-                    {{0, 0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {0}}},
-                    {{0, 1, 0}, {DESCRIPTOR::MATERIAL_PBR, {0}}},
-                    {{0, 2, 0}, {DESCRIPTOR::LIGHT_POSITIONAL_PBR, {OFFSET_ALL}}}  //
-                }} {}
+    : Set::Base{
+          DESCRIPTOR_SET::UNIFORM_PBR,
+          "DSMI_UNI_PBR",
+          {
+              {{0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {0}, ""}},
+              {{1, 0}, {DESCRIPTOR::MATERIAL_PBR, {0}, ""}},
+              {{2, 0}, {DESCRIPTOR::LIGHT_POSITIONAL_PBR, {OFFSET_ALL}, ""}},
+          },
+      } {}
 
 // **********************
 //      Shader
 // **********************
 
-Shader::PBR::ColorFragment::ColorFragment(Shader::Handler& handler)
-    : Base{handler,
-           SHADER::PBR_COLOR_FRAG,
-           "color.pbr.frag",
-           VK_SHADER_STAGE_FRAGMENT_BIT,
-           "PBR Color Fragment Shader",
-           {
-               SHADER_LINK::COLOR_FRAG,
-               SHADER_LINK::PBR_FRAG,
-               SHADER_LINK::PBR_MATERIAL,
-           }} {}
-
-Shader::PBR::TextureFragment::TextureFragment(Shader::Handler& handler)
-    : Base{handler,
-           SHADER::PBR_TEX_FRAG,
-           "texture.pbr.frag",
-           VK_SHADER_STAGE_FRAGMENT_BIT,
-           "PBR Texture Fragment Shader",
-           {
-               SHADER_LINK::TEX_FRAG,
-               SHADER_LINK::PBR_FRAG,
-               SHADER_LINK::PBR_MATERIAL,
-           }} {}
-
-Shader::Link::PBR::Fragment::Fragment(Shader::Handler& handler)
-    : Shader::Link::Base{
-          handler,
-          SHADER_LINK::PBR_FRAG,
-          "link.pbr.frag",
-          "PBR Link Fragment",
-      } {}
-
-Shader::Link::PBR::Material::Material(Shader::Handler& handler)
-    : Shader::Link::Base{
-          handler,
-          SHADER_LINK::PBR_MATERIAL,
-          "link.pbr.material.glsl",
-          "PBR Link Material Shader",
-      } {}
+namespace Shader {
+namespace PBR {
+const CreateInfo COLOR_FRAG_CREATE_INFO = {
+    SHADER::PBR_COLOR_FRAG,
+    "PBR Color Fragment Shader",
+    "color.pbr.frag",
+    VK_SHADER_STAGE_FRAGMENT_BIT,
+    {
+        SHADER_LINK::COLOR_FRAG,
+        SHADER_LINK::PBR_FRAG,
+        SHADER_LINK::PBR_MATERIAL,
+    },
+};
+const CreateInfo TEX_FRAG_CREATE_INFO = {
+    SHADER::PBR_TEX_FRAG,
+    "PBR Texture Fragment Shader",
+    "texture.pbr.frag",
+    VK_SHADER_STAGE_FRAGMENT_BIT,
+    {
+        SHADER_LINK::TEX_FRAG,
+        SHADER_LINK::PBR_FRAG,
+        SHADER_LINK::PBR_MATERIAL,
+    },
+};
+}  // namespace PBR
+namespace Link {
+namespace PBR {
+const CreateInfo FRAG_CREATE_INFO = {
+    SHADER_LINK::PBR_MATERIAL,  //
+    "link.pbr.frag",
+};
+const CreateInfo MATERIAL_CREATE_INFO = {
+    SHADER_LINK::PBR_MATERIAL,  //
+    "link.pbr.material.glsl",
+};
+}  // namespace PBR
+}  // namespace Link
+}  // namespace Shader
 
 // **********************
 //      Pipeline
@@ -149,5 +156,8 @@ Pipeline::PBR::Texture::Texture(Pipeline::Handler& handler)
           "PBR Texture Pipeline",
           {SHADER::TEX_VERT, SHADER::PBR_TEX_FRAG},
           {/*PUSH_CONSTANT::DEFAULT*/},
-          {DESCRIPTOR_SET::UNIFORM_PBR, DESCRIPTOR_SET::SAMPLER_DEFAULT}  //
+          {
+              DESCRIPTOR_SET::UNIFORM_PBR,
+              DESCRIPTOR_SET::SAMPLER_DEFAULT,
+          }  //
       } {};

@@ -94,7 +94,7 @@ void Pipeline::Handler::getReference(Mesh::Base& mesh) {
 }
 
 std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
-    const PIPELINE& pipelineType, const std::list<PUSH_CONSTANT>& pushConstantTypes) const {
+    const PIPELINE& pipelineType, const std::vector<PUSH_CONSTANT>& pushConstantTypes) const {
     // Make the ranges...
     std::vector<VkPushConstantRange> ranges;
 
@@ -192,14 +192,24 @@ const VkPipeline& Pipeline::Handler::createPipeline(const PIPELINE& type, const 
 VkShaderStageFlags Pipeline::Handler::getDescriptorSetStages(const DESCRIPTOR_SET& setType) {
     VkShaderStageFlags stages = 0;
     for (const auto& pPipeline : pPipelines_) {
-        for (const auto& type : pPipeline->DESCRIPTOR_SET_TYPES) {
-            if (setType == type) {
-                for (const auto& shaderType : pPipeline->SHADER_TYPES)
-                    stages |= shaderHandler().getShader(shaderType)->STAGE;
+        for (const auto& setType : pPipeline->DESCRIPTOR_SET_TYPES) {
+            if (setType == setType) {
+                for (const auto& shaderType : pPipeline->SHADER_TYPES) {
+                    stages |= SHADER_ALL.at(shaderType).stage;
+                }
             }
         }
     }
     return stages;
+}
+
+void Pipeline::Handler::initShaderInfoMap(Shader::shaderInfoMap& map) {
+    for (const auto& pPipeline : pPipelines_) {
+        const auto& slotMap = pPipeline->getDescSetMacroSlotMap();
+        for (const auto& shaderType : pPipeline->SHADER_TYPES) {
+            map.insert({{shaderType, slotMap}, {}});
+        }
+    }
 }
 
 void Pipeline::Handler::needsUpdate(const std::vector<SHADER> types) {

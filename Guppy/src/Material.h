@@ -69,17 +69,8 @@ class Base : public virtual Buffer::Item, public Descriptor::Interface {
 
     const STATUS& getStatus() const { return status_; }
 
-    inline void updateStatus() {
-        assert(status_ != STATUS::READY && "This shouldn't be used to check status");
-        if (hasTexture() && pTexture_->status == STATUS::READY) {
-            setTextureData();
-            DIRTY = true;
-            status_ = STATUS::READY;
-        }
-    }
-
     inline bool hasTexture() const { return pTexture_ != nullptr; }
-    inline const std::shared_ptr<Texture::Base> getTexture() const { return pTexture_; }
+    inline const std::shared_ptr<Texture::Base>& getTexture() const { return pTexture_; }
 
     virtual FlagBits getFlags() = 0;
     virtual void setFlags(FlagBits flags) = 0;

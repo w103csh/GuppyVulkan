@@ -1,199 +1,186 @@
 
-#include <sstream>
-
 #include "ShaderHandler.h"
 
-#include "Camera.h"
 #include "FileLoader.h"
-#include "InputHandler.h"
-#include "Material.h"
-#include "Obj3d.h"
-#include "Parallax.h"
-#include "Parallax.h"
-#include "PBR.h"
 #include "PipelineHandler.h"
-#include "Scene.h"
 #include "Shell.h"
-#include "TextureHandler.h"
+#include "UniformHandler.h"
 #include "util.hpp"
 
-Shader::Handler::Handler(Game* pGame) : Game::Handler(pGame) {
-    // SHADERS (main)
-    for (const auto& type : SHADER_ALL) {
-        switch (type) {
-            case SHADER::COLOR_VERT:
-                pShaders_.emplace_back(std::make_unique<Default::ColorVertex>(std::ref(*this)));
-                break;
-            case SHADER::COLOR_FRAG:
-                pShaders_.emplace_back(std::make_unique<Default::ColorFragment>(std::ref(*this)));
-                break;
-            case SHADER::LINE_FRAG:
-                pShaders_.emplace_back(std::make_unique<Default::LineFragment>(std::ref(*this)));
-                break;
-            case SHADER::TEX_VERT:
-                pShaders_.emplace_back(std::make_unique<Default::TextureVertex>(std::ref(*this)));
-                break;
-            case SHADER::TEX_FRAG:
-                pShaders_.emplace_back(std::make_unique<Default::TextureFragment>(std::ref(*this)));
-                break;
-            case SHADER::CUBE_VERT:
-                pShaders_.emplace_back(std::make_unique<Default::CubeVertex>(std::ref(*this)));
-                break;
-            case SHADER::CUBE_FRAG:
-                pShaders_.emplace_back(std::make_unique<Default::CubeFragment>(std::ref(*this)));
-                break;
-            case SHADER::PBR_COLOR_FRAG:
-                pShaders_.emplace_back(std::make_unique<PBR::ColorFragment>(std::ref(*this)));
-                break;
-            case SHADER::PBR_TEX_FRAG:
-                pShaders_.emplace_back(std::make_unique<PBR::TextureFragment>(std::ref(*this)));
-                break;
-            case SHADER::PARALLAX_VERT:
-                pShaders_.emplace_back(std::make_unique<Parallax::Vertex>(std::ref(*this)));
-                break;
-            case SHADER::PARALLAX_SIMPLE_FRAG:
-                pShaders_.emplace_back(std::make_unique<Parallax::SimpleFragment>(std::ref(*this)));
-                break;
-            case SHADER::PARALLAX_STEEP_FRAG:
-                pShaders_.emplace_back(std::make_unique<Parallax::SteepFragment>(std::ref(*this)));
-                break;
-            default:
-                assert(false);  // add new ones here...
-        }
-        assert(pShaders_.back()->TYPE == type);
-    }
-    // Validate the list.
-    assert(pShaders_.size() == SHADER_ALL.size());
-    for (const auto& pShader : pShaders_) assert(pShader != nullptr);
-
-    // SHADERS (link)
-    for (const auto& type : SHADER_LINK_ALL) {
-        switch (type) {
-            case SHADER_LINK::COLOR_FRAG:
-                pLinkShaders_.emplace_back(std::make_unique<Link::ColorFragment>(std::ref(*this)));
-                break;
-            case SHADER_LINK::TEX_FRAG:
-                pLinkShaders_.emplace_back(std::make_unique<Link::TextureFragment>(std::ref(*this)));
-                break;
-            case SHADER_LINK::BLINN_PHONG_FRAG:
-                pLinkShaders_.emplace_back(std::make_unique<Link::BlinnPhongFragment>(std::ref(*this)));
-                break;
-            case SHADER_LINK::DEFAULT_MATERIAL:
-                pLinkShaders_.emplace_back(std::make_unique<Link::Default::Material>(std::ref(*this)));
-                break;
-            case SHADER_LINK::PBR_FRAG:
-                pLinkShaders_.emplace_back(std::make_unique<Link::PBR::Fragment>(std::ref(*this)));
-                break;
-            case SHADER_LINK::PBR_MATERIAL:
-                pLinkShaders_.emplace_back(std::make_unique<Link::PBR::Material>(std::ref(*this)));
-                break;
-            default:
-                assert(false);  // add new ones here...
-        }
-        assert(pLinkShaders_.back()->LINK_TYPE == type);
-    }
-    // Validate the list.
-    assert(pLinkShaders_.size() == SHADER_LINK_ALL.size());
-    for (const auto& pLinkShader : pLinkShaders_) assert(pLinkShader != nullptr);
-}
+Shader::Handler::Handler(Game* pGame) : Game::Handler(pGame), clearTextsAfterLoad(true) {}
 
 void Shader::Handler::init() {
     reset();
 
-    // LINK SHADERS
-    for (auto& pLinkShader : pLinkShaders_) pLinkShader->init(oldModules_);
+    pipelineHandler().initShaderInfoMap(shaderInfoMap_);
 
-    // MAIN SHADERS
     init_glslang();
-    for (auto& pShader : pShaders_) pShader->init(oldModules_);
+
+    for (auto& keyValue : shaderInfoMap_) {
+        bool needsUpdate = make(keyValue, true, true);
+        assert(!needsUpdate);
+    }
+
     finalize_glslang();
+
+    if (clearTextsAfterLoad) {
+        shaderTexts_.clear();
+        shaderLinkTexts_.clear();
+    }
 }
 
 void Shader::Handler::reset() {
     // SHADERS
-    for (auto& pShader : pShaders_) pShader->destroy();
+    for (auto& keyValue : shaderInfoMap_) {
+        if (keyValue.second.module != VK_NULL_HANDLE)
+            vkDestroyShaderModule(shell().context().dev, keyValue.second.module, nullptr);
+    }
 
     cleanup();
 }
 
-const std::unique_ptr<Shader::Base>& Shader::Handler::getShader(const SHADER& type) const {
-    assert(type != SHADER::LINK);  // TODO: this ain't great...
-    return pShaders_[static_cast<uint32_t>(type)];
+bool Shader::Handler::make(shaderInfoMapKeyValue& keyValue, bool doAssert, bool isInit) {
+    auto& stageInfo = keyValue.second;
+    if (isInit && stageInfo.module != VK_NULL_HANDLE) return false;
+
+    auto stringTexts = loadText(keyValue.first);
+
+    // I can't figure out how else to do this atm.
+    std::vector<const char*> texts;
+    for (auto& s : stringTexts) texts.push_back(s.c_str());
+
+    const auto& createInfo = SHADER_ALL.at(keyValue.first.first);
+    std::vector<unsigned int> spv;
+    bool success = GLSLtoSPV(createInfo.stage, texts, spv);
+
+    // Return or assert on fail
+    if (!success) {
+        if (doAssert) {
+            if (!success) shell().log(Shell::LOG_ERR, ("Error compiling: " + createInfo.fileName).c_str());
+            assert(success);
+        } else {
+            return false;
+        }
+    }
+
+    VkShaderModuleCreateInfo moduleInfo = {};
+    moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    moduleInfo.codeSize = spv.size() * sizeof(unsigned int);
+    moduleInfo.pCode = spv.data();
+
+    // Store old module for clean up if necessary
+    bool needsUpdate = stageInfo.module != VK_NULL_HANDLE;
+    if (needsUpdate) oldModules_.push_back(std::move(stageInfo.module));
+
+    stageInfo = {};
+    vk::assert_success(vkCreateShaderModule(shell().context().dev, &moduleInfo, nullptr, &stageInfo.module));
+
+    stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stageInfo.stage = createInfo.stage;
+    stageInfo.pName = "main";
+
+    if (settings().enable_debug_markers) {
+        std::string markerName = createInfo.name + "shader module";
+        ext::DebugMarkerSetObjectName(shell().context().dev, (uint64_t)stageInfo.module,
+                                      VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, markerName.c_str());
+    }
+
+    return needsUpdate;
 }
 
-const std::unique_ptr<Shader::Link::Base>& Shader::Handler::getLinkShader(const SHADER_LINK& type) const {
-    return pLinkShaders_[static_cast<uint32_t>(type)];
+std::vector<std::string> Shader::Handler::loadText(const shaderInfoMapKey& keyValue) {
+    std::vector<std::string> texts;
+    const auto& createInfo = SHADER_ALL.at(keyValue.first);
+
+    // main shader text
+    if (shaderTexts_.count(keyValue.first) == 0) {
+        shaderTexts_[keyValue.first] = FileLoader::readFile(BASE_DIRNAME + createInfo.fileName);
+    }
+    texts.push_back(shaderTexts_.at(keyValue.first));
+    textReplace(keyValue.second, texts.back());
+    uniformHandler().shaderTextReplace(texts.back());
+
+    // link shader text
+    for (const auto& linkShaderType : createInfo.linkTypes) {
+        const auto& linkCreateInfo = SHADER_LINK_ALL.at(linkShaderType);
+        if (shaderLinkTexts_.count(linkShaderType) == 0) {
+            shaderLinkTexts_[linkShaderType] = FileLoader::readFile(BASE_DIRNAME + linkCreateInfo.fileName);
+        }
+        texts.push_back(shaderLinkTexts_.at(linkShaderType));
+        textReplace(keyValue.second, texts.back());
+        uniformHandler().shaderTextReplace(texts.back());
+    }
+    return texts;
 }
 
-void Shader::Handler::getStagesInfo(const std::set<SHADER>& shaderTypes,
+void Shader::Handler::textReplace(const descSetMacroSlotMap& slotMap, std::string& text) const {
+    auto replaceInfo = helpers::getMacroReplaceInfo(DESC_SET_MACRO_ID_PREFIX, text);
+    for (auto& info : replaceInfo) {
+        if (slotMap.count(std::get<0>(info)) == 0) continue;  // TODO: Warn?
+        auto slot = slotMap.at(std::get<0>(info));
+        if (static_cast<int>(slot) != std::get<3>(info))  //
+            helpers::macroReplace(info, static_cast<int>(slot), text);
+    }
+}
+
+void Shader::Handler::getStagesInfo(const shaderInfoMapKey& key,
                                     std::vector<VkPipelineShaderStageCreateInfo>& stagesInfo) const {
-    for (auto& shaderType : shaderTypes) stagesInfo.push_back(getShader(shaderType)->info);
+    stagesInfo.push_back(shaderInfoMap_.at(key));
 }
 
 VkShaderStageFlags Shader::Handler::getStageFlags(const std::set<SHADER>& shaderTypes) const {
     VkShaderStageFlags stages = 0;
-    for (const auto& shaderType : shaderTypes) stages |= getShader(shaderType)->STAGE;
+    for (const auto& shaderType : shaderTypes) stages |= SHADER_ALL.at(shaderType).stage;
     return stages;
 }
 
 void Shader::Handler::recompileShader(std::string fileName) {
     bool assert = settings().assert_on_recompile_shader;
 
+    init_glslang();
+
+    std::vector<SHADER> needsUpdateTypes;
+
     // Check for main shader
-    for (auto& pShader : pShaders_) {
-        if (pShader->FILE_NAME.compare(fileName) == 0) {
-            if (loadShaders({pShader->TYPE}, assert)) {
-                pipelineHandler().needsUpdate({pShader->TYPE});
-                return;
-            };
-        }
-    }
-
-    // Check for link shader.
-    for (auto& pLinkShader : pLinkShaders_) {
-        if (pLinkShader->FILE_NAME.compare(fileName) == 0) {
-            // Get the mains mapped to this link shader...
-            std::vector<SHADER> types;
-            getShaderTypes(pLinkShader->LINK_TYPE, types);
-
-            if (loadShaders(types, assert)) {
-                pipelineHandler().needsUpdate(types);
-                return;
-            };
-        }
-    }
-}
-
-void Shader::Handler::appendLinkTexts(const std::set<SHADER_LINK>& linkTypes, std::vector<const char*>& texts) const {
-    for (auto& type : linkTypes) texts.push_back(getLinkShader(type)->loadText(false));
-}
-
-bool Shader::Handler::loadShaders(const std::vector<SHADER>& types, bool doAssert, bool load) {
-    // For cleanup
-    auto numOldResources = oldModules_.size();
-
-    // Load link shaders
-    if (load) {
-        std::set<SHADER_LINK> linkTypes;
-        // Gather unique list of link shaders...
-        for (const auto& type : types) {
-            if (SHADER_LINK_MAP.count(type)) {
-                for (const auto& linkType : SHADER_LINK_MAP.at(type)) {
-                    linkTypes.insert(linkType);
+    for (const auto& createInfoKeyValue : SHADER_ALL) {
+        if (createInfoKeyValue.second.fileName == fileName) {
+            for (auto& stageInfoKeyValue : shaderInfoMap_) {
+                if (stageInfoKeyValue.first.first == createInfoKeyValue.first) {
+                    if (make(stageInfoKeyValue, assert, false)) {
+                        needsUpdateTypes.push_back(createInfoKeyValue.first);
+                    }
                 }
             }
         }
-        // Only load from file once.
-        for (const auto& linkType : linkTypes) getLinkShader(linkType)->loadText(load);
     }
 
-    init_glslang();
+    // Check for link shader
+    for (const auto& createInfoKeyValue : SHADER_LINK_ALL) {
+        if (createInfoKeyValue.second.fileName == fileName) {
+            // Get the mains mapped to this link shader...
+            std::vector<SHADER> types;
+            getShaderTypes(createInfoKeyValue.second.type, types);
+            for (auto& stageInfoKeyValue : shaderInfoMap_) {
+                for (const auto& type : types) {
+                    if (stageInfoKeyValue.first.first == type) {
+                        if (make(stageInfoKeyValue, assert, false)) {
+                            needsUpdateTypes.push_back(type);
+                        }
+                    }
+                }
+            }
+        }
+    }
 
-    for (const auto& type : types) getShader(type)->init(oldModules_, load, doAssert);
+    // Notify pipeline handler
+    if (needsUpdateTypes.size()) pipelineHandler().needsUpdate(needsUpdateTypes);
 
     finalize_glslang();
 
-    return numOldResources < oldModules_.size();
+    if (clearTextsAfterLoad) {
+        shaderTexts_.clear();
+        shaderLinkTexts_.clear();
+    }
 }
 
 void Shader::Handler::getShaderTypes(const SHADER_LINK& linkType, std::vector<SHADER>& types) {
@@ -205,6 +192,7 @@ void Shader::Handler::getShaderTypes(const SHADER_LINK& linkType, std::vector<SH
 }
 
 void Shader::Handler::cleanup() {
-    for (auto& module : oldModules_) vkDestroyShaderModule(shell().context().dev, module, nullptr);
+    for (auto& module : oldModules_)  //
+        vkDestroyShaderModule(shell().context().dev, module, nullptr);
     oldModules_.clear();
 }

@@ -3,6 +3,7 @@
 
 #include <map>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
@@ -16,10 +17,10 @@ class Handler;
 //      Binding map
 // **********************
 
-// key:     { set, binding, arrayElement }
-typedef std::tuple<uint32_t, uint32_t, uint32_t> bindingMapKey;
-// value:   { descriptorType, offsets }
-typedef std::pair<DESCRIPTOR, std::set<uint32_t>> bindingMapValue;
+// key:     { binding, arrayElement }
+typedef std::pair<uint32_t, uint32_t> bindingMapKey;
+// value:   { descriptorType, offsets, (optional) descriptor ID } // TODO: proper ID instead of string
+typedef std::tuple<DESCRIPTOR, std::set<uint32_t>, std::string> bindingMapValue;
 typedef std::pair<const bindingMapKey, bindingMapValue> bindingMapKeyValue;
 typedef std::map<bindingMapKey, bindingMapValue> bindingMap;
 
@@ -32,8 +33,9 @@ namespace Set {
 const uint32_t OFFSET_ALL = UINT32_MAX;
 
 struct Resource {
-    uint32_t offset;
-    STATUS status = STATUS::PENDING;
+    Resource(uint32_t offset) : offset(offset), status(STATUS::PENDING) {}
+    const uint32_t offset;
+    STATUS status;
     std::vector<VkDescriptorSet> descriptorSets;
 };
 
@@ -41,9 +43,10 @@ class Base {
     friend class Descriptor::Handler;
 
    public:
-    Base(const DESCRIPTOR_SET&& type, const Descriptor::bindingMap&& bindingMap);
+    Base(const DESCRIPTOR_SET&& type, const std::string&& macroName, const Descriptor::bindingMap&& bindingMap);
 
     const DESCRIPTOR_SET TYPE;
+    const std::string MACRO_NAME;
     const Descriptor::bindingMap BINDING_MAP;
 
     VkDescriptorSetLayout layout;
@@ -71,6 +74,10 @@ class Sampler : public Set::Base {
 class CubeSampler : public Set::Base {
    public:
     CubeSampler();
+};
+class ProjectorSampler : public Set::Base {
+   public:
+    ProjectorSampler();
 };
 }  // namespace Default
 

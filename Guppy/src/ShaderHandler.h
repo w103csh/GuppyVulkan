@@ -1,13 +1,14 @@
 #ifndef SHADER_HANDLER_H
 #define SHADER_HANDLER_H
 
-#include <functional>
+#include <map>
+#include <queue>
+#include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
 
 #include "Constants.h"
 #include "Game.h"
-#include "Shader.h"
 
 namespace Shader {
 
@@ -18,26 +19,28 @@ class Handler : public Game::Handler {
     void init() override;
     inline void destroy() override { reset(); }
 
-    const std::unique_ptr<Shader::Base> &getShader(const SHADER &type) const;
-    const std::unique_ptr<Shader::Link::Base> &getLinkShader(const SHADER_LINK &type) const;
-
-    void getStagesInfo(const std::set<SHADER> &types, std::vector<VkPipelineShaderStageCreateInfo> &stagesInfo) const;
+    void getStagesInfo(const shaderInfoMapKey &key, std::vector<VkPipelineShaderStageCreateInfo> &stagesInfo) const;
     VkShaderStageFlags getStageFlags(const std::set<SHADER> &shaderTypes) const;
 
     void recompileShader(std::string);
-    void appendLinkTexts(const std::set<SHADER_LINK> &linkTypes, std::vector<const char *> &texts) const;
 
     void cleanup();
 
    private:
     void reset() override;
 
-    bool loadShaders(const std::vector<SHADER> &types, bool doAssert, bool load = true);
+    bool make(shaderInfoMapKeyValue &keyValue, bool doAssert, bool isInit);
+    std::vector<std::string> loadText(const shaderInfoMapKey &keyValue);
+    void textReplace(const descSetMacroSlotMap &slotMap, std::string &text) const;
 
     // SHADERS
     void getShaderTypes(const SHADER_LINK &linkType, std::vector<SHADER> &types);
-    std::vector<std::unique_ptr<Shader::Base>> pShaders_;
-    std::vector<std::unique_ptr<Shader::Link::Base>> pLinkShaders_;
+
+    bool clearTextsAfterLoad;
+    std::map<SHADER, std::string> shaderTexts_;
+    std::map<SHADER_LINK, std::string> shaderLinkTexts_;
+
+    shaderInfoMap shaderInfoMap_;
 
     std::queue<PIPELINE> updateQueue_;
     std::vector<VkShaderModule> oldModules_;

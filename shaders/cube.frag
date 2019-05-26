@@ -2,6 +2,8 @@
 #version 450
 #extension GL_ARB_separate_shader_objects : enable
 
+#define DSMI_CBE_DEF 0
+
 // DECLARATIONS
 vec3 getMaterialColor();
 float getMaterialOpacity();
@@ -10,7 +12,7 @@ bool isSkybox();
 bool isReflect();
 bool isRefract();
 
-layout(set=1, binding=0) uniform samplerCube sampCube;
+layout(set=DSMI_CBE_DEF, binding=0) uniform samplerCube sampCube;
 // IN
 layout(location=0) in vec3 fragWorldPositionReflecionDir;   // (world space)
 layout(location=1) in vec3 fragRefractDir;                  // (world space)
@@ -31,10 +33,10 @@ void main() {
         if (isRefract())
             baseColor = texture(sampCube,  fragRefractDir).rgb;
 
-        /** Note: things to try if I ever come back to this:
+        /** Things to try if I ever come back to this:
         *       - Fresnel
         *       - Chromatic abberation
-        *       - Refract through both side
+        *       - Refract through both sides
         *       - ...
         */
 

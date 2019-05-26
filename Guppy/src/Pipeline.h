@@ -1,12 +1,12 @@
 #ifndef PIPELINE_H
 #define PIPELINE_H
 
-#include <list>
 #include <set>
 #include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "Constants.h"
 #include "Handlee.h"
 #include "Helpers.h"
 #include "Obj3d.h"
@@ -32,35 +32,27 @@ class Base : public Handlee<Pipeline::Handler> {
     virtual ~Base() = default;
 
     const VkPipelineBindPoint BIND_POINT;
-    const std::list<DESCRIPTOR_SET> DESCRIPTOR_SET_TYPES;
+    const std::vector<DESCRIPTOR_SET> DESCRIPTOR_SET_TYPES;
     const std::string NAME;
-    const std::list<PUSH_CONSTANT> PUSH_CONSTANT_TYPES;
+    const std::vector<PUSH_CONSTANT> PUSH_CONSTANT_TYPES;
     const std::set<SHADER> SHADER_TYPES;
     const PIPELINE TYPE;
 
     virtual void init();
+    virtual void updateStatus();
 
+    inline const STATUS &getStatus() const { return status_; }
     inline const VkPipelineLayout &getLayout() const { return layout_; }
     inline const VkPipeline &getPipeline() const { return pipeline_; }
     inline uint32_t getSubpassId() const { return subpassId_; }
 
+    // DESCRIPTOR SET
+    Shader::descSetMacroSlotMap getDescSetMacroSlotMap() { return descSetMacroSlotMap_; }
+
    protected:
     Base(Pipeline::Handler &handler, const PIPELINE &&type, const VkPipelineBindPoint &&bindPoint, const std::string &&name,
-         const std::set<SHADER> &&shaderTypes, const std::list<PUSH_CONSTANT> &&pushConstantTypes = {},
-         std::list<DESCRIPTOR_SET> &&descriptorSets = {})
-        : Handlee(handler),
-          BIND_POINT(bindPoint),
-          DESCRIPTOR_SET_TYPES(descriptorSets),
-          NAME(name),
-          PUSH_CONSTANT_TYPES(pushConstantTypes),
-          SHADER_TYPES(shaderTypes),
-          TYPE(type),
-          layout_(VK_NULL_HANDLE),
-          pipeline_(VK_NULL_HANDLE),
-          subpassId_(0),
-          descSetTypeInit_(false) {
-        for (const auto &type : PUSH_CONSTANT_TYPES) assert(type != PUSH_CONSTANT::DONT_CARE);
-    }
+         const std::set<SHADER> &&shaderTypes, const std::vector<PUSH_CONSTANT> &&pushConstantTypes = {},
+         std::vector<DESCRIPTOR_SET> &&descriptorSets = {});
 
     // INFOS
     virtual void getBlendInfoResources(CreateInfoResources &createInfoRes);
@@ -78,20 +70,27 @@ class Base : public Handlee<Pipeline::Handler> {
                                      const VkPipeline &basePipelineHandle = VK_NULL_HANDLE,
                                      const int32_t basePipelineIndex = -1);
 
-    virtual void createPipelineLayout();
-    VkPipelineLayout layout_;
-    VkPipeline pipeline_;
+    // DESCRIPTOR SET
+    void validatePipelineDescriptorSets();
+    // SHADER / DESCRIPTOR SET
+    std::vector<VkDescriptorSetLayout> prepareDescSetInfo();
+
+    void createPipelineLayout();
 
     void destroy();
 
+    STATUS status_;
+    VkPipelineLayout layout_;
+    VkPipeline pipeline_;
+
    private:
     uint32_t subpassId_;
-    // DESCRIPTOR
-    bool descSetTypeInit_;              // TODO: initialize value???
-    std::set<DESCRIPTOR> descTypeSet_;  // TODO: initialize value???
-    std::vector<VkDescriptorSet> descriptorSets_;
+    // DESCRIPTOR SET
+    Shader::descSetMacroSlotMap descSetMacroSlotMap_;
     // PUSH CONSTANT
     std::vector<VkPushConstantRange> pushConstantRanges_;
+    // TEXTURE
+    std::vector<uint32_t> pendingTexturesOffsets_;
 };
 
 namespace Default {

@@ -1,17 +1,15 @@
 #ifndef PIPELINE_HANDLER_H
 #define PIPELINE_HANDLER_H
 
-#include <list>
 #include <set>
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "Constants.h"
 #include "Game.h"
 #include "Material.h"
 #include "Mesh.h"
 #include "Pipeline.h"
-#include "PipelineReference.h"
-#include "Shader.h"
 #include "Vertex.h"
 
 namespace Pipeline {
@@ -58,7 +56,7 @@ class Handler : public Game::Handler {
 
     // PUSH CONSTANT
     std::vector<VkPushConstantRange> getPushConstantRanges(const PIPELINE &pipelineType,
-                                                           const std::list<PUSH_CONSTANT> &pushConstantTypes) const;
+                                                           const std::vector<PUSH_CONSTANT> &pushConstantTypes) const;
 
     // PIPELINES
     void createPipelines(const std::unique_ptr<RenderPass::Base> &pPass, bool remake = false);
@@ -67,6 +65,7 @@ class Handler : public Game::Handler {
 
     // DESCRIPTOR SET
     VkShaderStageFlags getDescriptorSetStages(const DESCRIPTOR_SET &setType);
+    void initShaderInfoMap(Shader::shaderInfoMap &map);
 
     inline const std::unique_ptr<Pipeline::Base> &getPipeline(const PIPELINE &type) const {
         // Make sure the pipeline that is being accessed is available.

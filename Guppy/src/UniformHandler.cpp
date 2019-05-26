@@ -1,6 +1,8 @@
 
 #include "UniformHandler.h"
 
+#include <glm/glm.hpp>
+
 #include "InputHandler.h"
 #include "MeshHandler.h"
 #include "Shell.h"
@@ -31,7 +33,9 @@ Uniform::Handler::Handler(Game* pGame)
           {"Default Spot Light", DESCRIPTOR::LIGHT_SPOT_DEFAULT, 20, "UMI_LGT_DEF_SPT"},
           // MISCELLANEOUS
           Uniform::Manager<Uniform::Default::Fog::Base>  //
-          {"Default Fog", DESCRIPTOR::FOG_DEFAULT, 5, "UMI_UNI_DEF_FOG"}
+          {"Default Fog", DESCRIPTOR::FOG_DEFAULT, 5, "UMI_UNI_DEF_FOG"},
+          Uniform::Manager<Uniform::Default::Projector::Base>  //
+          {"Default Projector", DESCRIPTOR::FOG_DEFAULT, 5, "UMI_UNI_DEF_PRJ"},
           //
       },
       hasVisualHelpers(false) {}
@@ -44,6 +48,7 @@ void Uniform::Handler::init() {
     lgtPbrPosMgr().init(shell().context(), settings());
     lgtDefSptMgr().init(shell().context(), settings());
     uniDefFogMgr().init(shell().context(), settings());
+    uniDefPrjMgr().init(shell().context(), settings());
 
     createCameras();
     createLights();
@@ -60,6 +65,7 @@ void Uniform::Handler::reset() {
     lgtDefSptMgr().destroy(dev);
     // MISCELLANEOUS
     uniDefFogMgr().destroy(dev);
+    uniDefPrjMgr().destroy(dev);
 }
 
 void Uniform::Handler::createCameras() {
@@ -103,8 +109,29 @@ void Uniform::Handler::createLights() {
 
 void Uniform::Handler::createMiscellaneous() {
     const auto& dev = shell().context().dev;
+
     // FOG
     uniDefFogMgr().insert(dev);
+
+    // PROJECTOR
+    {
+        glm::vec3 eye, center;
+
+        eye = {2.0f, 4.0f, 0.0f};
+        center = {-3.0f, 0.0f, 0.0f};
+
+        auto view = glm::lookAt(eye, center, UP_VECTOR);
+        // Don't forget to use the vulkan clip transform.
+        auto proj = getMainCamera().getClip() * glm::perspective(glm::radians(30.0f), 1.0f, 0.2f, 1000.0f);
+
+        // Normalized screen space transform (texture coord space) s,t,r : [0, 1]
+        auto bias = glm::translate(glm::mat4{1.0f}, glm::vec3{0.5f});
+        bias = glm::scale(bias, glm::vec3{0.5f});
+
+        auto projector = bias * proj * view;
+
+        uniDefPrjMgr().insert(dev, true, {{projector}});
+    }
 }
 
 void Uniform::Handler::createVisualHelpers() {
@@ -172,25 +199,25 @@ void Uniform::Handler::update() {
 }
 
 uint32_t Uniform::Handler::getDescriptorCount(const Descriptor::bindingMapValue& value) {
-    const auto& min = *value.second.begin();
-    const auto& max = *value.second.rbegin();
-    if (value.second.size() == 1 && min == Descriptor::Set::OFFSET_ALL) {
-        return static_cast<uint32_t>(getUniforms(value.first).size());
+    const auto& min = *std::get<1>(value).begin();
+    const auto& max = *std::get<1>(value).rbegin();
+    if (std::get<1>(value).size() == 1 && min == Descriptor::Set::OFFSET_ALL) {
+        return static_cast<uint32_t>(getUniforms(std::get<0>(value)).size());
     }
-    assert(min >= 0 && max < getUniforms(value.first).size());
-    return static_cast<uint32_t>(value.second.size());
+    assert(min >= 0 && max < getUniforms(std::get<0>(value)).size());
+    return static_cast<uint32_t>(std::get<1>(value).size());
 }
 
 std::set<uint32_t> Uniform::Handler::getBindingOffsets(const Descriptor::bindingMapValue& value) {
-    if (value.second.size()) {
+    if (std::get<1>(value).size()) {
         // TODO: better validation for this
-        if (*value.second.begin() == Descriptor::Set::OFFSET_ALL) {
+        if (*std::get<1>(value).begin() == Descriptor::Set::OFFSET_ALL) {
             std::set<uint32_t> offsets;
-            for (int i = 0; i < getUniforms(value.first).size(); i++) offsets.insert(i);
+            for (int i = 0; i < getUniforms(std::get<0>(value)).size(); i++) offsets.insert(i);
             return offsets;
         }
     }
-    return value.second;
+    return std::get<1>(value);
 }
 
 bool Uniform::Handler::validatePipelineLayout(const Descriptor::bindingMap& map) {
@@ -200,13 +227,13 @@ bool Uniform::Handler::validatePipelineLayout(const Descriptor::bindingMap& map)
         // This is only validating that there are a sufficient number of uniforms
         // for the layout. The unifrom offset info is in the value of the binding map.
         const Descriptor::bindingMapValue& value = keyValue.second;
-        UNIFORM_INDEX offset = value.second.empty() ? 0 : *value.second.rbegin();
+        UNIFORM_INDEX offset = std::get<1>(value).empty() ? 0 : *std::get<1>(value).rbegin();
 
-        auto it = validationMap.find(value.first);
+        auto it = validationMap.find(std::get<0>(value));
         if (it != validationMap.end()) {
             it->second = (std::max)(it->second, offset);
         } else {
-            validationMap[value.first] = offset;
+            validationMap[std::get<0>(value)] = offset;
         }
     }
     // Ensure the highest offset value is within the data vectors
@@ -225,13 +252,13 @@ bool Uniform::Handler::validateUniformOffsets(const std::pair<DESCRIPTOR, UNIFOR
 
 std::vector<VkDescriptorBufferInfo> Uniform::Handler::getWriteInfos(const Descriptor::bindingMapValue& value) {
     std::vector<VkDescriptorBufferInfo> infos;
-    auto& uniforms = getUniforms(value.first);
+    auto& uniforms = getUniforms(std::get<0>(value));
     auto offsets = getBindingOffsets(value);
     for (const auto& offset : offsets) infos.push_back(uniforms[offset]->BUFFER_INFO.bufferInfo);
     return infos;
 }
 
-void Uniform::Handler::shaderTextReplace(std::string& text) {
+void Uniform::Handler::shaderTextReplace(std::string& text) const {
     auto replaceInfo = helpers::getMacroReplaceInfo(UNIFORM_MACRO_ID_PREFIX, text);
     for (auto& info : replaceInfo) {
         bool isValid = false;
@@ -241,7 +268,7 @@ void Uniform::Handler::shaderTextReplace(std::string& text) {
                 auto reqCount = std::get<3>(info);
                 if (reqCount > 0) {
                     // If the value for the macro in the shader text is greater than zero
-                    // then just make sure there are enought uniforms to meet the requirement.
+                    // then just make sure there are enough uniforms to meet the requirement.
                     assert(reqCount <= itemCount && "Not enough uniforms");
                     isValid = true;
                 } else if (reqCount == 0) {

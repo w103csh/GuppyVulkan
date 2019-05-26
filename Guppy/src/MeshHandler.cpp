@@ -55,13 +55,8 @@ void Mesh::Handler::update() {
             auto& mesh = getMesh(it->first, it->second);
 
             // Check the status
-            switch (mesh.getStatus()) {
-                case STATUS::PENDING_TEXTURE:
-                    mesh.prepare();
-                    break;
-                default:
-                    assert(false);
-                    throw std::runtime_error("Unhandled status");
+            if (mesh.getStatus() ^ STATUS::READY) {
+                mesh.prepare();
             }
 
             if (mesh.getStatus() == STATUS::READY)

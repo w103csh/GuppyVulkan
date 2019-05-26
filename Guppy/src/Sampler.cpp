@@ -255,43 +255,47 @@ void Sampler::Base::destroy(const VkDevice& dev) {
 
 VkSamplerCreateInfo Sampler::GetVkSamplerCreateInfo(const Sampler::Base& sampler) {
     VkSamplerCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+    info.magFilter = VK_FILTER_LINEAR;
+    info.minFilter = VK_FILTER_LINEAR;
+    info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+    info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+    info.mipLodBias = 0;              // Optional
+    info.anisotropyEnable = VK_TRUE;  // TODO: OPTION (FEATURE BASED)
+    info.maxAnisotropy = 16;
+    info.compareEnable = VK_FALSE;
+    info.compareOp = VK_COMPARE_OP_ALWAYS;
+    info.minLod = 0;  // static_cast<float>(m_mipLevels / 2); // Optional
+    info.maxLod = static_cast<float>(sampler.mipLevels);
+    info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    info.unnormalizedCoordinates = VK_FALSE;  // test this out for fun
+
     switch (sampler.TYPE) {
-        case SAMPLER::DEFAULT:
-            info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-            info.magFilter = VK_FILTER_LINEAR;
-            info.minFilter = VK_FILTER_LINEAR;
-            info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-            info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-            info.mipLodBias = 0;              // Optional
-            info.anisotropyEnable = VK_TRUE;  // TODO: OPTION (FEATURE BASED)
-            info.maxAnisotropy = 16;
-            info.compareEnable = VK_FALSE;
-            info.compareOp = VK_COMPARE_OP_ALWAYS;
-            info.minLod = 0;  // static_cast<float>(m_mipLevels / 2); // Optional
-            info.maxLod = static_cast<float>(sampler.mipLevels);
-            info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-            info.unnormalizedCoordinates = VK_FALSE;  // test this out for fun
-            break;
         case SAMPLER::CUBE:
-            info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-            info.magFilter = VK_FILTER_LINEAR;
-            info.minFilter = VK_FILTER_LINEAR;
-            info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
             info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
             info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
             info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
             info.anisotropyEnable = VK_FALSE;  // VK_TRUE;
             // info.maxAnisotropy = 16;
-            info.compareEnable = VK_FALSE;
-            info.compareOp = VK_COMPARE_OP_ALWAYS;
-            info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
             if (sampler.mipLevels > 0) {
                 info.mipLodBias = 0;  // Optional
                 info.minLod = 0;      // static_cast<float>(m_mipLevels / 2); // Optional
                 info.maxLod = static_cast<float>(sampler.mipLevels);
             }
+            break;
+        case SAMPLER::CLAMP_TO_BORDER:
+            info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            info.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+            break;
+        case SAMPLER::CLAMP_TO_EDGE:
+            info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+        case SAMPLER::DEFAULT:
             break;
         default:
             assert(false);
