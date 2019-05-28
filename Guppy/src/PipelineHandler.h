@@ -59,9 +59,8 @@ class Handler : public Game::Handler {
                                                            const std::vector<PUSH_CONSTANT> &pushConstantTypes) const;
 
     // PIPELINES
-    void createPipelines(const std::unique_ptr<RenderPass::Base> &pPass, bool remake = false);
-    const VkPipeline &createPipeline(const PIPELINE &type, const std::unique_ptr<RenderPass::Base> &pPass = nullptr,
-                                     bool setBase = false);
+    void createPipelines(bool remake = false);
+    const VkPipeline &createPipeline(const PIPELINE &type, bool setBase = false);
 
     // DESCRIPTOR SET
     VkShaderStageFlags getDescriptorSetStages(const DESCRIPTOR_SET &setType);

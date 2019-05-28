@@ -2,6 +2,7 @@
 #include "LoadingHandler.h"
 
 #include "Shell.h"
+// HANDLERS
 #include "CommandHandler.h"
 
 Loading::Handler::Handler(Game* pGame) : Game::Handler(pGame){};

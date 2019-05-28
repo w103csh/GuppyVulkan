@@ -4,11 +4,12 @@
 #include <algorithm>
 #include <stb_image.h>
 
-#include "CommandHandler.h"
 #include "Constants.h"
+#include "Shell.h"
+// HANDLERS
+#include "CommandHandler.h"
 #include "LoadingHandler.h"
 #include "MaterialHandler.h"
-#include "Shell.h"
 #include "ShaderHandler.h"
 
 Texture::Handler::Handler(Game* pGame) : Game::Handler(pGame) {}

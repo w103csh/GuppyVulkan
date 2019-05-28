@@ -24,16 +24,17 @@ class Base : public Handlee<Scene::Handler> {
     friend class Handler;
 
    public:
-    Base(Scene::Handler &handler, size_t offset, bool makeFaceSelection);
+    Base(Scene::Handler& handler, size_t offset, bool makeFaceSelection);
     virtual ~Base();
 
     inline size_t getOffset() { return offset_; }
 
-    void record(const uint8_t &frameIndex, std::unique_ptr<RenderPass::Base> &pPass);
+    void record(const PIPELINE& pipelineType, const VkCommandBuffer& priCmd, const VkCommandBuffer& secCmd,
+                const uint8_t& frameIndex);
 
     // SELECTION
-    inline const std::unique_ptr<Face> &getFaceSelection() { return pSelectionManager_->getFace(); }
-    void select(const Ray &ray);
+    inline const std::unique_ptr<Face>& getFaceSelection() { return pSelectionManager_->getFace(); }
+    void select(const Ray& ray);
 
     void destroy();
 

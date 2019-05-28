@@ -8,8 +8,9 @@
 #include <vulkan/vulkan.h>
 
 #include "Descriptor.h"
-#include "LoadingHandler.h"
 #include "Sampler.h"
+// HANDLERS
+#include "LoadingHandler.h"
 
 namespace Texture {
 

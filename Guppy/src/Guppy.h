@@ -40,27 +40,6 @@ class Guppy : public Game {
     bool sim_paused_;
     bool sim_fade_;
     // Simulation sim_;
-
-    // SWAPCHAIN
-    void createSwapchainResources();
-    void destroySwapchainResources();
-    struct SwapchainResources {
-        std::vector<VkImage> images;
-        std::vector<VkImageView> views;
-    } swapchainResources_;
-
-    // FRAME
-    uint8_t frameIndex_;
-    std::vector<VkFramebuffer> framebuffers_;
-
-    // RENDER PASS
-    void initRenderPasses();
-    void updateRenderPasses();
-    void submitRenderPasses(const std::vector<SubmitResource>& resources, VkFence fence = VK_NULL_HANDLE);
-    std::unique_ptr<RenderPass::Base> pDefaultRenderPass_;
-
-    // SCENE
-    void createScenes();
 };
 
 #endif  // !GUPPY_H

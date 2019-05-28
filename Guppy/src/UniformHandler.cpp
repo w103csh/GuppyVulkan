@@ -3,9 +3,10 @@
 
 #include <glm/glm.hpp>
 
+#include "Shell.h"
+// HANDLERS
 #include "InputHandler.h"
 #include "MeshHandler.h"
-#include "Shell.h"
 
 namespace {
 

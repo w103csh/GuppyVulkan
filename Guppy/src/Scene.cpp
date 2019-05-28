@@ -1,15 +1,16 @@
 
-#include <iterator>
-
 #include "Scene.h"
 
+#include <iterator>
+
 #include "Face.h"
+#include "RenderPass.h"
+#include "Shell.h"
+// HANDLERS
 #include "MeshHandler.h"
 #include "PipelineHandler.h"
-#include "RenderPass.h"
 #include "SceneHandler.h"
 #include "SelectionManager.h"
-#include "Shell.h"
 #include "TextureHandler.h"
 
 namespace {
@@ -27,54 +28,32 @@ Scene::Base::Base(Scene::Handler& handler, size_t offset, bool makeFaceSelection
 
 Scene::Base::~Base() = default;
 
-void Scene::Base::record(const uint8_t& frameIndex, std::unique_ptr<RenderPass::Base>& pPass) {
-    // if (pPass->data.tests[frameIndex] == 0) {
-    //    return;
-    //}
-    pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    // pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-    // VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-    auto& priCmd = pPass->data.priCmds[frameIndex];
-    auto& secCmd = pPass->data.secCmds[frameIndex];
-
-    auto it = pPass->PIPELINE_TYPES.begin();
-    while (it != pPass->PIPELINE_TYPES.end()) {
-        const auto& pipelineType = (*it);
-
-        switch (pipelineType) {
-            case PIPELINE::PBR_COLOR:
-            case PIPELINE::CUBE:
-            case PIPELINE::TRI_LIST_COLOR: {
-                for (auto& pMesh : handler().meshHandler().getColorMeshes())
-                    if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
-                        pMesh->draw(priCmd, frameIndex);
-            } break;
-            case PIPELINE::PARALLAX_SIMPLE:
-            case PIPELINE::PARALLAX_STEEP:
-            case PIPELINE::PBR_TEX:
-            case PIPELINE::BP_TEX_CULL_NONE:
-            case PIPELINE::TRI_LIST_TEX: {
-                for (auto& pMesh : handler().meshHandler().getTextureMeshes())
-                    if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
-                        pMesh->draw(priCmd, frameIndex);
-            } break;
-            case PIPELINE::LINE: {
-                for (auto& pMesh : handler().meshHandler().getLineMeshes())
-                    if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
-                        pMesh->draw(priCmd, frameIndex);
-            } break;
-            default:;
-        }
-
-        std::advance(it, 1);
-        if (it != pPass->PIPELINE_TYPES.end()) {
-            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
-            // vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-        }
+void Scene::Base::record(const PIPELINE& pipelineType, const VkCommandBuffer& priCmd, const VkCommandBuffer& secCmd,
+                         const uint8_t& frameIndex) {
+    switch (pipelineType) {
+        case PIPELINE::PBR_COLOR:
+        case PIPELINE::CUBE:
+        case PIPELINE::TRI_LIST_COLOR: {
+            for (auto& pMesh : handler().meshHandler().getColorMeshes())
+                if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
+                    pMesh->draw(priCmd, frameIndex);
+        } break;
+        case PIPELINE::PARALLAX_SIMPLE:
+        case PIPELINE::PARALLAX_STEEP:
+        case PIPELINE::PBR_TEX:
+        case PIPELINE::BP_TEX_CULL_NONE:
+        case PIPELINE::TRI_LIST_TEX: {
+            for (auto& pMesh : handler().meshHandler().getTextureMeshes())
+                if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
+                    pMesh->draw(priCmd, frameIndex);
+        } break;
+        case PIPELINE::LINE: {
+            for (auto& pMesh : handler().meshHandler().getLineMeshes())
+                if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
+                    pMesh->draw(priCmd, frameIndex);
+        } break;
+        default:;
     }
-
-    pPass->endPass(frameIndex);
 }
 
 void Scene::Base::select(const Ray& ray) {

@@ -4,8 +4,9 @@
 #include "Face.h"
 #include "FaceMesh.h"
 #include "Instance.h"
-#include "MeshHandler.h"
 #include "Scene.h"
+// HANDLERS
+#include "MeshHandler.h"
 #include "SceneHandler.h"
 
 Selection::Manager::Manager(Scene::Handler& handler, bool makeFaceSelection)

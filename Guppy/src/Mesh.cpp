@@ -1,22 +1,19 @@
 
-#include <unordered_map>
-
 #include "Mesh.h"
 
-#include "DescriptorHandler.h"
 #include "Face.h"
 #include "FileLoader.h"
+#include "PBR.h"  // TODO: this is bad
+// HANDLERS
+#include "DescriptorHandler.h"
 #include "LoadingHandler.h"
 #include "MaterialHandler.h"
 #include "MeshHandler.h"
-#include "PBR.h"  // TODO: this is bad
 #include "PipelineHandler.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
 
-// **********************
-// Mesh
-// **********************
+// BASE
 
 Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags,
                  const std::string&& name, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
@@ -429,9 +426,7 @@ void Mesh::Base::destroy() {
     }
 }
 
-// **********************
-//      Color
-// **********************
+// COLOR
 
 Mesh::Color::Color(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
                    std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
@@ -459,9 +454,7 @@ Mesh::Color::Color(Mesh::Handler& handler, const FLAG&& flags, const std::string
 
 Mesh::Color::~Color() = default;
 
-// **********************
-//      Line
-// **********************
+// LINE
 
 Mesh::Line::Line(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
                  std::shared_ptr<Instance::Base>& pInstanceData,
@@ -476,9 +469,7 @@ Mesh::Line::Line(Mesh::Handler& handler, const std::string&& name, CreateInfo* p
 
 Mesh::Line::~Line() = default;
 
-// **********************
-//      Texture
-// **********************
+// TEXTURE
 
 Mesh::Texture::Texture(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
                        std::shared_ptr<Instance::Base>& pInstanceData,

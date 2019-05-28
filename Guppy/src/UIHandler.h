@@ -1,6 +1,9 @@
 #ifndef UI_HANDLER_H
 #define UI_HANDLER_H
 
+#include <memory>
+#include <vulkan/vulkan.h>
+
 #include "Game.h"
 #include "RenderPass.h"
 
@@ -8,18 +11,14 @@ namespace UI {
 
 class Handler : public Game::Handler {
    public:
-    Handler(Game* pGame, std::unique_ptr<RenderPass::Base>&& pPass = nullptr);
+    UI::Handler::Handler(Game* pGame) : Game::Handler(pGame) {}
 
     // Default behaviour is to do nothing.
-    void init() override {}
-    virtual void updateRenderPass(RenderPass::FrameInfo* pFrameInfo){};
-    virtual void draw(uint8_t frameIndex){};
-    void reset() override{};
-
-    inline const std::unique_ptr<RenderPass::Base>& getPass() const { return pPass_; }
-
-   protected:
-    std::unique_ptr<RenderPass::Base> pPass_;
+    virtual void init() override {}
+    virtual void reset() override {}
+    virtual void destroy() override {}
+    virtual void update() {}
+    virtual void draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) {}
 };
 
 }  // namespace UI

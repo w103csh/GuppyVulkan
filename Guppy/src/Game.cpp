@@ -8,6 +8,7 @@
 #include "MeshHandler.h"
 #include "ModelHandler.h"
 #include "PipelineHandler.h"
+#include "RenderPassHandler.h"
 #include "SceneHandler.h"
 #include "ShaderHandler.h"
 #include "TextureHandler.h"

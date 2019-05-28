@@ -2,16 +2,18 @@
 #include "PipelineHandler.h"
 
 #include "Constants.h"
-#include "DescriptorHandler.h"
 #include "Material.h"
 #include "Mesh.h"
 #include "Parallax.h"
 #include "PBR.h"
 #include "Pipeline.h"
+#include "Shell.h"
+// HANDLERS
+#include "DescriptorHandler.h"
+#include "TextureHandler.h"
+#include "RenderPassHandler.h"
 #include "SceneHandler.h"
 #include "ShaderHandler.h"
-#include "Shell.h"
-#include "TextureHandler.h"
 
 Pipeline::Handler::Handler(Game* pGame)
     : Game::Handler(pGame),
@@ -150,23 +152,22 @@ void Pipeline::Handler::createPipelineCache(VkPipelineCache& cache) {
     vk::assert_success(vkCreatePipelineCache(shell().context().dev, &pipeline_cache_info, nullptr, &cache));
 }
 
-void Pipeline::Handler::createPipelines(const std::unique_ptr<RenderPass::Base>& pPass, bool remake) {
-    for (const auto& type : pPass->PIPELINE_TYPES) {
+void Pipeline::Handler::createPipelines(bool remake) {
+    for (const auto& type : passHandler().getMainPass()->PIPELINE_TYPES) {
         auto& pPipeline = getPipeline(type);
-        pPipeline->subpassId_ = pPass->getSubpassId(type);
+        pPipeline->subpassId_ = passHandler().getMainPass()->getSubpassId(type);
         if (pPipeline->pipeline_ != VK_NULL_HANDLE && !remake) return;
-        createPipeline(type, pPass, false);
+        createPipeline(type, false);
     }
 }
 
 // TODO: this needs a refactor... only does default pipeline stuff!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-const VkPipeline& Pipeline::Handler::createPipeline(const PIPELINE& type, const std::unique_ptr<RenderPass::Base>& pPass,
-                                                    bool setBase) {
+const VkPipeline& Pipeline::Handler::createPipeline(const PIPELINE& type, bool setBase) {
     auto& createInfo = getPipelineCreateInfo(type);
     auto& pPipeline = getPipeline(type);
 
-    // Store the render pass handle on first creation
-    if (pPass != nullptr) createInfo.renderPass = pPass->pass;
+    // Just hardcode the main pass for now...
+    createInfo.renderPass = passHandler().getMainPass()->pass;
     createInfo.subpass = pPipeline->getSubpassId();
 
     // TODO: WHAT HAPPENS IF YOU DELETE THE BASE PIPELINE?????

@@ -1,77 +1,21 @@
 
+#include "UIImGuiHandler.h"
+
 #include <imgui.h>
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 #include <glm/glm.hpp>
 
-#include "ImGuiHandler.h"
-
-#include "CommandHandler.h"
-#include "DescriptorHandler.h"
 #include "Face.h"
 #include "Helpers.h"
+// HANDLERS
+#include "CommandHandler.h"
+#include "DescriptorHandler.h"
 #include "PipelineHandler.h"
+#include "RenderPassHandler.h"
 #include "SceneHandler.h"
 
-void UI::ImGuiHandler::init() {
-    // if (pRenderPass != nullptr) pRenderPass->destroy(dev);
-    // pRenderPass = std::move(pPass);
-
-    // RENDER PASS
-    RenderPass::InitInfo initInfo = {};
-    initInfo = {};
-    initInfo.format = shell().context().surfaceFormat.format;
-    initInfo.commandCount = shell().context().imageCount;
-    initInfo.waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    pPass_->init(shell().context(), settings(), &initInfo);
-
-    // VULKAN INIT
-    ImGui_ImplVulkan_InitInfo init_info = {};
-    init_info.Instance = shell().context().instance;
-    init_info.PhysicalDevice = shell().context().physical_dev;
-    init_info.Device = shell().context().dev;
-    init_info.QueueFamily = shell().context().graphics_index;
-    init_info.Queue = shell().context().queues.at(shell().context().graphics_index);
-    init_info.PipelineCache = pipelineHandler().getPipelineCache();
-    init_info.DescriptorPool = descriptorHandler().getPool();
-    init_info.Allocator = nullptr;
-    init_info.CheckVkResultFn = (void (*)(VkResult))vk::assert_success;
-
-    ImGui_ImplVulkan_Init(&init_info, pPass_->pass);
-
-    // FONTS
-    ImGui_ImplVulkan_CreateFontsTexture(commandHandler().graphicsCmd());
-    vkEndCommandBuffer(commandHandler().graphicsCmd());
-
-    VkSubmitInfo end_info = {};
-    end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    end_info.commandBufferCount = 1;
-    end_info.pCommandBuffers = &commandHandler().graphicsCmd();
-    vk::assert_success(
-        vkQueueSubmit(shell().context().queues.at(shell().context().graphics_index), 1, &end_info, VK_NULL_HANDLE));
-
-    vk::assert_success(vkDeviceWaitIdle(shell().context().dev));
-
-    // RESET GRAPHICS DEFAULT COMMAND
-    vk::assert_success(vkResetCommandBuffer(commandHandler().graphicsCmd(), 0));
-    commandHandler().beginCmd(commandHandler().graphicsCmd());
-
-    ImGui_ImplVulkan_InvalidateFontUploadObjects();
-}
-
-void UI::ImGuiHandler::updateRenderPass(RenderPass::FrameInfo* pFrameInfo) {
-    pPass_->createTarget(shell().context(), settings(), commandHandler(), pFrameInfo);
-}
-
-void UI::ImGuiHandler::reset() { pPass_->destroyTargetResources(shell().context().dev, commandHandler()); }
-
-void UI::ImGuiHandler::destroy() { pPass_->destroy(shell().context().dev); }
-
-void UI::ImGuiHandler::draw(uint8_t frameIndex) {
-    // if (pPass->data.tests[frameIndex] == 0) {
-    //    return;
-    //}
-
+void UI::ImGuiHandler::update() {
     // Start the Dear ImGui frame
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();
@@ -83,14 +27,11 @@ void UI::ImGuiHandler::draw(uint8_t frameIndex) {
 
     // Rendering
     ImGui::Render();
+}
 
-    auto& cmd = pPass_->data.priCmds[frameIndex];
-    pPass_->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
-
+void UI::ImGuiHandler::draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) {
     // Record Imgui Draw Data and draw funcs into command buffer
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd, frameIndex);
-
-    pPass_->endPass(frameIndex);
 }
 
 void UI::ImGuiHandler::appMainMenuBar() {

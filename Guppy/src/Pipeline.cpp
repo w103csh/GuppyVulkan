@@ -1,12 +1,13 @@
 
 #include "Pipeline.h"
 
-#include "DescriptorHandler.h"
 #include "Instance.h"
+#include "Vertex.h"
+// HANDLERS
+#include "DescriptorHandler.h"
 #include "PipelineHandler.h"
 #include "ShaderHandler.h"
 #include "TextureHandler.h"
-#include "Vertex.h"
 
 void Pipeline::GetDefaultColorInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     // bindings

@@ -46,6 +46,9 @@ set(SOURCE
     SelectionManager.cpp
     SelectionManager.h
     Singleton.h
+    Types.h
+    UIHandler.cpp
+    UIHandler.h
     Vertex.cpp
     Vertex.h
     # Buffer
@@ -61,6 +64,11 @@ set(SOURCE
     DescriptorHandler.h
     DescriptorSet.cpp
     DescriptorSet.h
+    # ImGui
+    UIImGuiHandler.cpp
+    UIImGuiHandler.h
+    RenderPassImGui.cpp
+    RenderPassImGui.h
     # Instance
     Instance.cpp
     Instance.h
@@ -97,8 +105,17 @@ set(SOURCE
     PipelineConstants.h
     PipelineHandler.cpp
     PipelineHandler.h
+    # Render Pass
     RenderPass.cpp
     RenderPass.h
+    RenderPassDefault.cpp
+    RenderPassDefault.h
+    RenderPassSampler.cpp
+    RenderPassSampler.h
+    RenderPassConstants.cpp
+    RenderPassConstants.h
+    RenderPassHandler.cpp
+    RenderPassHandler.h
     # Shader
     Shader.cpp
     Shader.h
@@ -122,13 +139,6 @@ set(SOURCE
     TextureConstants.h
     TextureHandler.cpp
     TextureHandler.h
-    # UI
-    ImGuiHandler.cpp
-    ImGuiHandler.h
-    ImGuiRenderPass.cpp
-    ImGuiRenderPass.h
-    UIHandler.cpp
-    UIHandler.h
     # Uniform
     Uniform.cpp
     Uniform.h

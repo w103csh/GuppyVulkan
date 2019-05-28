@@ -2,10 +2,11 @@
 #include "ShaderHandler.h"
 
 #include "FileLoader.h"
-#include "PipelineHandler.h"
 #include "Shell.h"
-#include "UniformHandler.h"
 #include "util.hpp"
+// HANDLERS
+#include "PipelineHandler.h"
+#include "UniformHandler.h"
 
 Shader::Handler::Handler(Game* pGame) : Game::Handler(pGame), clearTextsAfterLoad(true) {}
 

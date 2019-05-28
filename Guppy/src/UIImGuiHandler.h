@@ -1,9 +1,9 @@
-#ifndef IMGUI_UI_HANDLER_H
-#define IMGUI_UI_HANDLER_H
+#ifndef UI_IMGUI_HANDLER_H
+#define UI_IMGUI_HANDLER_H
 
 #include <vulkan/vulkan.h>
 
-#include "ImGuiRenderPass.h"
+#include "RenderPassImGui.h"
 #include "UIHandler.h"
 
 class Face;
@@ -13,16 +13,12 @@ namespace UI {
 class ImGuiHandler : public UI::Handler {
    public:
     ImGuiHandler(Game* pGame)
-        : UI::Handler(pGame, std::make_unique<ImGuiRenderPass>()),  //
+        : UI::Handler(pGame),  //
           showDemoWindow_(false),
           showSelectionInfoWindow_(false) {}
 
-    void init() override;
-    void destroy() override;
-
-    void updateRenderPass(RenderPass::FrameInfo* pFrameInfo) override;
-
-    void draw(uint8_t frameIndex) override;
+    void update() override;
+    void draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) override;
 
     // Application main menu (TODO: move this to a UI class)
     void appMainMenuBar();
@@ -31,8 +27,6 @@ class ImGuiHandler : public UI::Handler {
     void showSelectionInfoWindow(bool* p_open);
 
    private:
-    void reset() override;
-
     void showFaceSelectionInfoText(const std::unique_ptr<Face>& pFace);
 
     bool showDemoWindow_;
@@ -41,4 +35,4 @@ class ImGuiHandler : public UI::Handler {
 
 }  // namespace UI
 
-#endif  // !IMGUI_UI_HANDLER_H
+#endif  // !UI_IMGUI_HANDLER_H

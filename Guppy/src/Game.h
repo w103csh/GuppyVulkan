@@ -32,6 +32,7 @@ namespace Material      { class Handler; }
 namespace Mesh          { class Handler; }
 namespace Model         { class Handler; }
 namespace Pipeline      { class Handler; }
+namespace RenderPass    { class Handler; }
 namespace Scene         { class Handler; }
 namespace Shader        { class Handler; }
 namespace Texture       { class Handler; }
@@ -157,6 +158,7 @@ class Game {
         std::unique_ptr<Mesh::Handler> pMesh;
         std::unique_ptr<Model::Handler> pModel;
         std::unique_ptr<Pipeline::Handler> pPipeline;
+        std::unique_ptr<RenderPass::Handler> pPass;
         std::unique_ptr<Scene::Handler> pScene;
         std::unique_ptr<Shader::Handler> pShader;
         std::unique_ptr<Texture::Handler> pTexture;
@@ -182,6 +184,7 @@ class Game {
         inline Mesh::Handler &meshHandler() const { return std::ref(*pGame_->handlers_.pMesh); }
         inline Model::Handler &modelHandler() const { return std::ref(*pGame_->handlers_.pModel); }
         inline Pipeline::Handler &pipelineHandler() const { return std::ref(*pGame_->handlers_.pPipeline); }
+        inline RenderPass::Handler &passHandler() const { return std::ref(*pGame_->handlers_.pPass); }
         inline Scene::Handler &sceneHandler() const { return std::ref(*pGame_->handlers_.pScene); }
         inline Shader::Handler &shaderHandler() const { return std::ref(*pGame_->handlers_.pShader); }
         inline Texture::Handler &textureHandler() const { return std::ref(*pGame_->handlers_.pTexture); }

@@ -9,9 +9,12 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "DescriptorConstants.h"
 #include "Enum.h"
+#include "Types.h"
+// CONSTANTS
+#include "DescriptorConstants.h"
 #include "PipelineConstants.h"
+#include "RenderPassConstants.h"
 #include "SamplerConstants.h"
 #include "ShaderConstants.h"
 #include "TextureConstants.h"

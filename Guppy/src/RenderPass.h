@@ -6,62 +6,24 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "Constants.h"
+#include "Constants.h"
+#include "Handlee.h"
 #include "Helpers.h"
-#include "Shell.h"
 
 // clang-format off
-namespace Command   { class Handler; }
-namespace Pipeline  { class Base; }
+namespace Pipeline { class Base; }
 // clang-format on
 
 namespace RenderPass {
 
-struct InitInfo {
-    bool clearColor = false;
-    bool clearDepth = false;
-    VkFormat format = {};
-    VkFormat depthFormat = {};
-    VkImageLayout finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    VkSampleCountFlagBits samples = VK_SAMPLE_COUNT_1_BIT;
-    uint32_t commandCount = 0;
-    uint32_t fenceCount = 0;
-    uint32_t semaphoreCount = 0;
-    VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-};
-
-struct FrameInfo {
-    VkExtent2D extent = {0, 0};
-    uint32_t viewCount;
-    VkImageView *pViews = nullptr;
-};
-
-struct Data {
-    std::vector<VkFence> fences;
-    std::vector<VkFramebuffer> framebuffers;
-    std::vector<VkCommandBuffer> priCmds;
-    std::vector<VkCommandBuffer> secCmds;
-    std::vector<VkSemaphore> semaphores;
-    std::vector<int> tests;
-};
-
-struct SubpassResources {
-    // storage
-    std::vector<VkAttachmentReference> inputAttachments;
-    std::vector<VkAttachmentReference> colorAttachments;
-    std::vector<VkAttachmentReference> resolveAttachments;
-    VkAttachmentReference depthStencilAttachment = {};
-    std::vector<uint32_t> preserveAttachments;
-    // render pass create info
-    std::vector<VkSubpassDescription> subpasses;
-    std::vector<VkAttachmentDescription> attachments;
-    std::vector<VkSubpassDependency> dependencies;
-};
+class Handler;
 
 // **********************
 //      Base
 // **********************
 
-class Base {
+class Base : public Handlee<RenderPass::Handler> {
     friend class Pipeline::Base;
 
    public:
@@ -70,41 +32,20 @@ class Base {
     const std::string NAME;
     const std::unordered_set<PIPELINE> PIPELINE_TYPES;
 
-    void init(const Shell::Context &ctx, const Game::Settings &settings, RenderPass::InitInfo *pInfo,
-              SubpassResources *pSubpassResources = nullptr);
+    const bool CLEAR_COLOR;
+    const bool CLEAR_DEPTH;
 
-    virtual void createTarget(const Shell::Context &ctx, const Game::Settings &settings, Command::Handler &cmdBuffHandler,
-                              RenderPass::FrameInfo *pInfo);
+    // LIFECYCLE
+    virtual void init() = 0;
+    void create();
+    virtual void postCreate() {}
+    virtual void setSwapchainInfo() {}
+    void createTarget();
+    virtual void record() = 0;
 
-    virtual inline void beginPass(
-        const uint8_t &frameIndex,
-        VkCommandBufferUsageFlags &&primaryCommandUsage = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-        VkSubpassContents &&subpassContents = VK_SUBPASS_CONTENTS_INLINE) {
-        if (data.tests[frameIndex]) data.tests[frameIndex] = 0;
-
-        // FRAME UPDATE
-        beginInfo_.framebuffer = data.framebuffers[frameIndex];
-        auto &priCmd = data.priCmds[frameIndex];
-
-        // RESET BUFFERS
-        vkResetCommandBuffer(priCmd, 0);
-
-        // BEGIN BUFFERS
-        VkCommandBufferBeginInfo bufferInfo;
-        // PRIMARY
-        bufferInfo = {};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        bufferInfo.flags = primaryCommandUsage;
-        vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
-
-        // FRAME COMMANDS
-        vkCmdSetScissor(priCmd, 0, 1, &scissor_);
-        vkCmdSetViewport(priCmd, 0, 1, &viewport_);
-
-        //// Start a new debug marker region
-        // ext::DebugMarkerBegin(primaryCmd, "Render x scene", glm::vec4(0.2f, 0.3f, 0.4f, 1.0f));
-        vkCmdBeginRenderPass(priCmd, &beginInfo_, subpassContents);
-    }
+    virtual void beginPass(const uint8_t &frameIndex,
+                           VkCommandBufferUsageFlags &&primaryCommandUsage = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+                           VkSubpassContents &&subpassContents = VK_SUBPASS_CONTENTS_INLINE);
 
     virtual inline void endPass(const uint8_t &frameIndex) {
         auto &primaryCmd = data.priCmds[frameIndex];
@@ -119,10 +60,6 @@ class Base {
 
     virtual void getSubmitResource(const uint8_t &frameIndex, SubmitResource &resource) const = 0;
 
-    // SETTINGS
-    InitInfo initInfo;
-    FrameInfo frameInfo;
-
     // SUBPASS
     inline uint32_t getSubpassId(const PIPELINE &type) const {
         uint32_t id = 0;
@@ -133,33 +70,24 @@ class Base {
         return id;  // TODO: is returning 0 for no types okay? Try using std::optional maybe?
     };
 
-    virtual void destroy(const VkDevice &dev);  // calls destroyFrameData
-    virtual void destroyTargetResources(const VkDevice &dev, Command::Handler &cmdBuffHandler);
+    virtual void destroy();  // calls destroyFrameData
+    virtual void destroyTargetResources();
 
     // TODO: Scene as friend?
     VkRenderPass pass;
     Data data;
 
    protected:
-    Base(std::string &&name, std::unordered_set<PIPELINE> &&types)
-        : NAME(name),
-          PIPELINE_TYPES(types),
-          initInfo{},
-          frameInfo{},
-          pass(VK_NULL_HANDLE),
-          data{},
-          scissor_{},
-          viewport_{},
-          beginInfo_{} {}
+    Base(RenderPass::Handler &handler, const std::string &&name, const RenderPass::CreateInfo createInfo = {});
 
     // RENDER PASS
-    virtual void createPass(const VkDevice &dev);
-    virtual void createClearValues(const Shell::Context &ctx, const Game::Settings &settings) {
+    virtual void createPass();
+    virtual void createClearValues() {
         // TODO: some default behavior when "clearColor" or "clearDefault" is set.
-        assert(!initInfo.clearColor && !initInfo.clearDepth);
+        assert(!CLEAR_COLOR && !CLEAR_DEPTH);
     }
-    virtual void createBeginInfo(const Shell::Context &ctx, const Game::Settings &settings);
-    virtual void updateBeginInfo(const Shell::Context &ctx, const Game::Settings &settings);  // TODO: what should this be?
+    virtual void createBeginInfo();
+    virtual void updateBeginInfo();  // TODO: what should this be?
     virtual void createViewport();
     std::vector<VkClearValue> clearValues_;
     VkRect2D scissor_;
@@ -167,78 +95,37 @@ class Base {
     VkRenderPassBeginInfo beginInfo_;
 
     // SUBPASS
-    virtual void createAttachmentsAndSubpasses(const Shell::Context &ctx, const Game::Settings &settings) = 0;
-    virtual void createDependencies(const Shell::Context &ctx, const Game::Settings &settings) = 0;
+    virtual void createAttachmentsAndSubpasses() = 0;
+    virtual void createDependencies() = 0;
     SubpassResources subpassResources_;
 
     // FRAME DATA
-    virtual void createCommandBuffers(const Shell::Context &ctx, Command::Handler &cmdBuffHandler);
-    virtual void createColorResources(const Shell::Context &ctx, const Game::Settings &settings,
-                                      Command::Handler &cmdBuffHandler) {}
-    virtual void createDepthResource(const Shell::Context &ctx, const Game::Settings &settings,
-                                     Command::Handler &cmdBuffHandler) {}
-    virtual void createFramebuffers(const Shell::Context &ctx, const Game::Settings &settings) {}
-    virtual void createFences(const Shell::Context &ctx, VkFenceCreateFlags flags = VK_FENCE_CREATE_SIGNALED_BIT);
+    virtual void createCommandBuffers();
+    virtual void createColorResources() {}
+    virtual void createDepthResource() {}
+    virtual void createFramebuffers() {}
+    virtual void createFences(VkFenceCreateFlags flags = VK_FENCE_CREATE_SIGNALED_BIT);
+
+    // SETTINGS
+    VkFormat format_;
+    VkFormat depthFormat_;
+    VkImageLayout finalLayout_;
+    VkSampleCountFlagBits samples_;
+    uint32_t commandCount_;
+    uint32_t fenceCount_;
+    uint32_t semaphoreCount_;
+    VkPipelineStageFlags waitDstStageMask_;
+    VkExtent2D extent_;
+    uint32_t viewCount_;
+    const VkImageView *pViews_;
 
     // ATTACHMENT
     std::vector<ImageResource> colors_;
     ImageResource depth_;
 
    private:
-    void createSemaphores(const Shell::Context &ctx);
-    void createAttachmentDebugMarkers(const Shell::Context &ctx, const Game::Settings &settings);
-};
-
-// **********************
-//      Default
-// **********************
-
-class Default : public Base {
-   public:
-    Default();
-
-    inline void beginSecondary(const uint8_t &frameIndex) override {
-        if (secCmdFlag_) return;
-        // FRAME UPDATE
-        auto &secCmd = data.secCmds[frameIndex];
-        inheritInfo_.framebuffer = data.framebuffers[frameIndex];
-        // COMMAND
-        vkResetCommandBuffer(secCmd, 0);
-        vk::assert_success(vkBeginCommandBuffer(secCmd, &secCmdBeginInfo_));
-        // FRAME COMMANDS
-        vkCmdSetScissor(secCmd, 0, 1, &scissor_);
-        vkCmdSetViewport(secCmd, 0, 1, &viewport_);
-
-        secCmdFlag_ = true;
-    }
-
-    inline void endSecondary(const uint8_t &frameIndex, const VkCommandBuffer &priCmd) override {
-        if (!secCmdFlag_) return;
-        // EXECUTE SECONDARY
-        auto &secCmd = data.secCmds[frameIndex];
-        vk::assert_success(vkEndCommandBuffer(secCmd));
-        vkCmdExecuteCommands(priCmd, 1, &secCmd);
-
-        secCmdFlag_ = false;
-    }
-
-    void getSubmitResource(const uint8_t &frameIndex, SubmitResource &resource) const override;
-
-   private:
-    void createClearValues(const Shell::Context &ctx, const Game::Settings &settings) override;
-    void createBeginInfo(const Shell::Context &ctx, const Game::Settings &settings) override;
-    VkCommandBufferInheritanceInfo inheritInfo_;
-    VkCommandBufferBeginInfo secCmdBeginInfo_;
-    bool secCmdFlag_;
-
-    void createCommandBuffers(const Shell::Context &ctx, Command::Handler &cmdBuffHandler) override;
-    void createColorResources(const Shell::Context &ctx, const Game::Settings &settings,
-                              Command::Handler &cmdBuffHandler) override;
-    void createDepthResource(const Shell::Context &ctx, const Game::Settings &settings,
-                             Command::Handler &cmdBuffHandler) override;
-    void createAttachmentsAndSubpasses(const Shell::Context &ctx, const Game::Settings &settings) override;
-    void createDependencies(const Shell::Context &ctx, const Game::Settings &settings) override;
-    void createFramebuffers(const Shell::Context &ctx, const Game::Settings &settings) override;
+    void createSemaphores();
+    void createAttachmentDebugMarkers();
 };
 
 }  // namespace RenderPass

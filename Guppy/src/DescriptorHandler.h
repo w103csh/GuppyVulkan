@@ -9,7 +9,6 @@
 #include "Constants.h"
 #include "Game.h"
 #include "DescriptorSet.h"
-#include "ShaderHandler.h"
 
 // clang-format off
 namespace Mesh      { class Base; }
