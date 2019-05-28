@@ -26,7 +26,7 @@ struct BoundingBoxMinMax {
     float zMin, zMax;
 };
 
-static inline glm::mat4 translateToTop(const BoundingBoxMinMax& bottomBBMM, const BoundingBoxMinMax& topBBMM) {
+static glm::mat4 translateToTop(const BoundingBoxMinMax& bottomBBMM, const BoundingBoxMinMax& topBBMM) {
     // TODO: account for UP_VECTOR
 
     // bottom
