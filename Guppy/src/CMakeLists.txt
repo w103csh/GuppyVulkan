@@ -6,6 +6,7 @@ set(SOURCE
     CommandHandler.cpp
     CommandHandler.h
     CMakeLists.txt
+    Constants.cpp
     Constants.h
     Enum.h
     EventHandlers.h

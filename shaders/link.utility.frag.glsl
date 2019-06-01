@@ -146,7 +146,7 @@ float fogFactor() {
 }
 
 void addProjectorTexColor(inout vec3 color) {
-#if _DS_PRJ_DEF >= -1
+#if _DS_PRJ_DEF > -1
     if(fragProjTexCoord.z > 0.0) {
         vec3 projColor = textureProj(sampProjector, fragProjTexCoord).rgb;
         color += projColor * 0.8;
@@ -157,7 +157,6 @@ void addProjectorTexColor(inout vec3 color) {
     }
 #endif
 }
-
 
 vec3 blinnPhongShade() {
     vec3 color = vec3(0.0);

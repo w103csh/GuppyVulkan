@@ -30,19 +30,21 @@ class Handler : public Game::Handler {
     }
     inline uint32_t getCount() { return static_cast<uint32_t>(pTextures_.size()); }
 
+    // TODO: should these be public? Moved these for render to sampler.
+    void createSampler(const VkDevice& dev, Sampler::Base& texSampler);
+    void createDescInfo(Sampler::Base& texSampler);
+
    private:
     void reset() override;
 
-    std::shared_ptr<Texture::Base> load(std::shared_ptr<Texture::Base>& pTexture, CreateInfo createInfo);
+    std::shared_ptr<Texture::Base> asyncLoad(std::shared_ptr<Texture::Base>& pTexture, CreateInfo createInfo);
+    void load(std::shared_ptr<Texture::Base>& pTexture, const CreateInfo* pCreateInfo);
 
     void createTexture(std::shared_ptr<Texture::Base> pTexture);
     void createTextureSampler(const std::shared_ptr<Texture::Base> pTexture, Sampler::Base& texSampler);
     void createImage(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes);
     void generateMipmaps(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes);
     void createImageView(const VkDevice& dev, Sampler::Base& texSampler);
-    void createSampler(const VkDevice& dev, Sampler::Base& texSampler);
-
-    void createDescInfo(Sampler::Base& texSampler);
 
     std::vector<std::shared_ptr<Texture::Base>> pTextures_;
     std::vector<std::future<std::shared_ptr<Texture::Base>>> texFutures_;

@@ -13,58 +13,15 @@ typedef unsigned char stbi_uc;  // <stbi_image.h>
 
 namespace Sampler {
 
-typedef enum USE {
-    COLOR = 0x00000001,  // DIFFUSE
-    // THROUGH 0x00000008
-    NORMAL = 0x00000010,
-    // THROUGH 0x00000080
-    SPECULAR = 0x00000100,
-    // THROUGH 0x00000800
-    ALPHA = 0x00001000,
-    // THROUGH 0x00000800
-    HEIGHT = 0x00010000,
-    // THROUGH 0x00000800
-} USE;
-
-// Note: the values here are used for byte offsets,
-// and other things that rely on them.
-typedef enum CHANNELS {
-    _1 = 1,
-    _2 = 2,
-    _3 = 3,
-    _4 = 4,
-} CHANNELS;
-
-// { path, number of channels, combine offset }
-typedef std::tuple<std::string, CHANNELS, uint8_t> combineInfo;
-
-struct LayerInfo {
-    USE type;
-    std::string path;
-    std::vector<combineInfo> combineInfos;
-};
-
-struct CreateInfo {
-    std::string name = "";
-    std::vector<LayerInfo> layerInfos;
-    VkImageViewType imageViewType = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
-    VkImageCreateFlags imageFlags = 0;
-    SAMPLER type = SAMPLER::DEFAULT;
-    bool makeMipmaps = true;
-    CHANNELS channels = CHANNELS::_4;
-    VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
-    VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
-};
-
 class Base {
    public:  // TODO: use access modifiers
-    Base(const Shell &shell, CreateInfo *pCreateInfo);
+    Base(const CreateInfo *pCreateInfo);
 
     void determineImageTypes();
 
     inline VkDeviceSize layerSize() const {
-        return static_cast<VkDeviceSize>(width) *   //
-               static_cast<VkDeviceSize>(height) *  //
+        return static_cast<VkDeviceSize>(extent.width) *   //
+               static_cast<VkDeviceSize>(extent.height) *  //
                static_cast<VkDeviceSize>(NUM_CHANNELS);
     }
     inline VkDeviceSize size() const { return layerSize() * static_cast<VkDeviceSize>(arrayLayers); }
@@ -84,7 +41,8 @@ class Base {
     const SAMPLER TYPE;
 
     FlagBits flags;  // TODO: remove this instead of passing a dynamic list to shaders?
-    uint32_t width, height, mipLevels, arrayLayers;
+    VkExtent2D extent;
+    uint32_t mipLevels, arrayLayers;
     VkImageType imageType;
     VkImage image;
     VkDeviceMemory memory;
@@ -96,6 +54,8 @@ class Base {
 };
 
 // FUNCTIONS
+
+Sampler::Base make(const Shell &shell, const CreateInfo *pCreateInfo);
 
 /*	FlagBits mask for CHANNELS:
         _1 -> 0x01

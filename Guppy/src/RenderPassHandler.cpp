@@ -1,6 +1,9 @@
 
 #include "RenderPassHandler.h"
 
+#include <algorithm>
+#include <set>
+
 #include "Constants.h"
 #ifdef USE_DEBUG_UI
 #include "RenderPassImGui.h"
@@ -9,39 +12,79 @@
 #include "Shell.h"
 // HANDLERS
 #include "CommandHandler.h"
+#include "PipelineHandler.h"
 #include "RenderPassSampler.h"
 #include "UIHandler.h"
 
-RenderPass::Handler::Handler(Game* pGame)  //
-    : Game::Handler(pGame), defaultOffset_(BAD_OFFSET), uiOffset_(BAD_OFFSET), frameIndex_(0) {
-    // DEFAULT
-    pPasses_.emplace_back(std::make_unique<RenderPass::Default>(std::ref(*this)));
-    defaultOffset_ = pPasses_.size() - 1;
-
-    // UI
+RenderPass::Handler::Handler(Game* pGame)
+    : Game::Handler(pGame), frameIndex_(0), swpchnRes_{}, submitResources_{}, pPasses_() {
+    for (const auto& type : RENDER_PASS_ALL) {
+        switch (type) {
+            case RENDER_PASS::DEFAULT:
+                pPasses_.emplace_back(
+                    std::make_unique<RenderPass::Default>(std::ref(*this), pPasses_.size(), &DEFAULT_CREATE_INFO));
+                break;
+            case RENDER_PASS::IMGUI:
 #ifdef USE_DEBUG_UI
-    pPasses_.emplace_back(std::make_unique<RenderPass::ImGui>(std::ref(*this)));
-#else
-    pPasses_.emplace_back(nullptr);
+                pPasses_.emplace_back(std::make_unique<RenderPass::ImGui>(std::ref(*this), pPasses_.size()));
 #endif
-    uiOffset_ = pPasses_.size() - 1;
-
-    // GENERAL
-    // pPasses_.emplace_back(std::make_shared<RenderPass::Sampler>(std::ref(*this)));
-
-    assert(defaultOffset_ < pPasses_.size() && uiOffset_ < pPasses_.size());
+                break;
+            case RENDER_PASS::SAMPLER:
+                pPasses_.emplace_back(std::make_unique<RenderPass::Sampler>(std::ref(*this), pPasses_.size()));
+                break;
+            default:
+                assert(false && "Unhandled pass type");
+                throw std::runtime_error("Unhandled pass type");
+        }
+    }
+    assert(pPasses_.size() <= RESOURCE_SIZE);
 }
 
 void RenderPass::Handler::init() {
-    const auto& ctx = shell().context();
-
     for (auto& pPass : pPasses_) {
-        if (pPass != nullptr) {
-            // LIFECYCLE
-            pPass->init();
-            pPass->create();
-            pPass->postCreate();
+        // LIFECYCLE
+        pPass->init();
+        pPass->create();
+        pPass->postCreate();
+    }
+
+    // PIPELINES
+    createPipelines();
+
+    // SYNC
+    createFences();
+    submitInfos_.assign(3, {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr});
+}
+
+void RenderPass::Handler::createPipelines() {
+    /* Create pipeline to pass offset map. This way pipeline cache stuff
+     *  can potentially be used to speed up creation or caching???? I am
+     *  not going to worry about it other than this atm though.
+     */
+    std::multiset<std::pair<PIPELINE, offset>> set;
+    for (const auto& pPass : pPasses_) {
+        for (const auto keyValue : pPass->getPipelineReferenceMap()) {
+            set.insert({keyValue.first, pPass->OFFSET});
         }
+    }
+    const auto refs = pipelineHandler().createPipelines(set);
+    updatePipelineReferences(set, refs);
+}
+
+void RenderPass::Handler::createFences(VkFenceCreateFlags flags) {
+    fences_.resize(shell().context().imageCount);
+    VkFenceCreateInfo fenceInfo = {};
+    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    fenceInfo.flags = flags;
+    for (auto& fence : fences_) vk::assert_success(vkCreateFence(shell().context().dev, &fenceInfo, nullptr, &fence));
+}
+
+void RenderPass::Handler::updatePipelineReferences(const std::multiset<std::pair<PIPELINE, RenderPass::offset>>& set,
+                                                   const std::vector<Pipeline::Reference>& refs) {
+    assert(refs.size() == set.size());
+    auto index = 0;
+    for (const auto& pair : set) {
+        pPasses_[pair.second]->setPipelineReference(pair.first, refs[index++]);
     }
 }
 
@@ -52,11 +95,9 @@ void RenderPass::Handler::attachSwapchain() {
     createSwapchainResources();
 
     for (auto& pPass : pPasses_) {
-        if (pPass != nullptr) {
-            // LIFECYCLE
-            pPass->setSwapchainInfo();
-            pPass->createTarget();
-        }
+        // LIFECYCLE
+        pPass->setSwapchainInfo();
+        pPass->createTarget();
     }
 }
 
@@ -75,72 +116,79 @@ void RenderPass::Handler::createSwapchainResources() {
         helpers::createImageView(ctx.dev, swpchnRes_.images[i], 1, ctx.surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT,
                                  VK_IMAGE_VIEW_TYPE_2D, 1, swpchnRes_.views[i]);
     }
+
+    assert(shell().context().imageCount == swpchnRes_.images.size());
+    assert(swpchnRes_.images.size() == swpchnRes_.views.size());
 }
 
 void RenderPass::Handler::acquireBackBuffer() {
     const auto& ctx = shell().context();
-
-    auto& fence = getMainPass()->data.fences[frameIndex_];
     // wait for the last submission since we reuse frame data
-    vk::assert_success(vkWaitForFences(ctx.dev, 1, &fence, true, UINT64_MAX));
-    vk::assert_success(vkResetFences(ctx.dev, 1, &fence));
-
-    const Shell::BackBuffer& back = ctx.acquiredBackBuffer;
+    vk::assert_success(vkWaitForFences(ctx.dev, 1, &fences_[frameIndex_], true, UINT64_MAX));
+    vk::assert_success(vkResetFences(ctx.dev, 1, &fences_[frameIndex_]));
 }
 
 void RenderPass::Handler::recordPasses() {
     const auto& ctx = shell().context();
-    const Shell::BackBuffer& back = ctx.acquiredBackBuffer;
+    auto frameIndex = getFrameIndex();
 
-    std::vector<SubmitResource> resources;
-    SubmitResource resource;
+    for (uint8_t i = 0; i < pPasses_.size(); i++) {
+        auto& resource = submitResources_[i];
+        resource.waitSemaphoreCount = resource.commandBufferCount = resource.signalSemaphoreCount = 0;
 
-    // MAIN
-    getMainPass()->record();
-    resource = {};
-    resource.waitSemaphores.push_back(back.acquireSemaphore);    // wait for back buffer...
-    resource.waitDstStageMasks.push_back(ctx.waitDstStageMask);  // back buffer flags...
-#ifndef USE_DEBUG_UI
-    resource.signalSemaphores.push_back(back.renderSemaphore);  // signal back buffer...
-#endif
-    getMainPass()->getSubmitResource(frameIndex_, resource);
-    resources.push_back(resource);
+        // Add a pass resources
+        if (i == 0) {
+            // wait for back buffer...
+            resource.waitSemaphores[resource.waitSemaphoreCount] = ctx.acquiredBackBuffer.acquireSemaphore;
+            // back buffer flags...
+            resource.waitDstStageMasks[resource.waitSemaphoreCount] = ctx.waitDstStageMask;
+            resource.waitSemaphoreCount++;
+        } else if (submitResources_[i - 1].signalSemaphoreCount) {
+            // Take the signals from the previous pass
+            std::memcpy(                                                            //
+                &resource.waitSemaphores[resource.waitSemaphoreCount],              //
+                submitResources_[i - 1].signalSemaphores.data(),                    //
+                sizeof(VkSemaphore) * submitResources_[i - 1].signalSemaphoreCount  //
+            );
+            std::memcpy(                                                                     //
+                &resource.waitDstStageMasks[resource.waitSemaphoreCount],                    //
+                submitResources_[i - 1].signalSrcStageMasks.data(),                          //
+                sizeof(VkPipelineStageFlags) * submitResources_[i - 1].signalSemaphoreCount  //
+            );
+            resource.waitSemaphoreCount += submitResources_[i - 1].signalSemaphoreCount;
+        }
 
-    // UI
-#ifdef USE_DEBUG_UI
-    getUIPass()->record();
-    resource = {};
-    resource.waitSemaphores.push_back(
-        getMainPass()->data.semaphores[frameIndex_]);           // wait on scene... (must be earlier in submission scope)
-    resource.signalSemaphores.push_back(back.renderSemaphore);  // signal back buffer...
-    getUIPass()->getSubmitResource(frameIndex_, resource);
-    resources.push_back(resource);
-#endif
+        // Record the pass and update the resources
+        pPasses_[i]->record(frameIndex);
+        pPasses_[i]->updateSubmitResource(submitResources_[i], frameIndex);
 
-    submit(resources);
-}
-
-void RenderPass::Handler::submit(const std::vector<SubmitResource>& resources) {
-    std::vector<VkSubmitInfo> infos;
-    infos.reserve(resources.size());
-
-    for (const auto& resource : resources) {
-        assert(resource.waitSemaphores.size() == resource.waitDstStageMasks.size());
-
-        VkSubmitInfo submitInfo = {};
-        submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-        submitInfo.waitSemaphoreCount = static_cast<uint32_t>(resource.waitSemaphores.size());
-        submitInfo.pWaitSemaphores = resource.waitSemaphores.data();
-        submitInfo.pWaitDstStageMask = resource.waitDstStageMasks.data();
-        submitInfo.commandBufferCount = static_cast<uint32_t>(resource.commandBuffers.size());
-        submitInfo.pCommandBuffers = resource.commandBuffers.data();
-        submitInfo.signalSemaphoreCount = static_cast<uint32_t>(resource.signalSemaphores.size());
-        submitInfo.pSignalSemaphores = resource.signalSemaphores.data();
-        infos.push_back(submitInfo);
+        // Always add the render semaphore to the last pass
+        if ((static_cast<size_t>(i) + 1) == pPasses_.size()) {
+            // signal back buffer...
+            resource.signalSemaphores[resource.signalSemaphoreCount] = ctx.acquiredBackBuffer.renderSemaphore;
+            resource.signalSemaphoreCount++;
+        }
     }
 
-    vk::assert_success(vkQueueSubmit(commandHandler().graphicsQueue(), static_cast<uint32_t>(infos.size()), infos.data(),
-                                     getMainPass()->data.fences[frameIndex_]));
+    submit();
+}
+
+void RenderPass::Handler::submit() {
+    for (uint8_t i = 0; i < pPasses_.size(); i++) {
+        const auto& resource = submitResources_[i];
+        assert(resource.waitSemaphores.size() == resource.waitDstStageMasks.size());
+
+        submitInfos_[i].waitSemaphoreCount = resource.waitSemaphoreCount;
+        submitInfos_[i].pWaitSemaphores = resource.waitSemaphores.data();
+        submitInfos_[i].pWaitDstStageMask = resource.waitDstStageMasks.data();
+        submitInfos_[i].commandBufferCount = resource.commandBufferCount;
+        submitInfos_[i].pCommandBuffers = resource.commandBuffers.data();
+        submitInfos_[i].signalSemaphoreCount = resource.signalSemaphoreCount;
+        submitInfos_[i].pSignalSemaphores = resource.signalSemaphores.data();
+    }
+
+    vk::assert_success(
+        vkQueueSubmit(commandHandler().graphicsQueue(), pPasses_.size(), submitInfos_.data(), fences_[frameIndex_]));
 }
 
 void RenderPass::Handler::update() { frameIndex_ = (frameIndex_ + 1) % static_cast<uint8_t>(shell().context().imageCount); }
@@ -158,17 +206,19 @@ void RenderPass::Handler::destroySwapchainResources() {
 }
 
 void RenderPass::Handler::destroy() {
+    // PASSES
     for (auto& pPass : pPasses_) {
-        if (pPass != nullptr) {
-            pPass->destroy();
-        }
+        if (!pPass->SWAPCHAIN_DEPENDENT) pPass->destroyTargetResources();
+        pPass->destroy();
     }
-    pPasses_.clear();
+    // FENCE
+    for (auto& fence : fences_) vkDestroyFence(shell().context().dev, fence, nullptr);
+    fences_.clear();
 }
 
 void RenderPass::Handler::reset() {
     for (auto& pPass : pPasses_) {
-        if (pPass != nullptr) {
+        if (pPass->SWAPCHAIN_DEPENDENT) {
             pPass->destroyTargetResources();
         }
     }

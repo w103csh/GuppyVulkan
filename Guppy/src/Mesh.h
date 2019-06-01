@@ -44,7 +44,6 @@ typedef struct CreateInfo {
 class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawInst3d {
     friend class Mesh::Handler;
     friend class Descriptor::Handler;  // Reference (TODO: get rid of this)
-    friend class Pipeline::Handler;    // Reference (TODO: get rid of this)
 
    public:
     typedef enum FLAG {
@@ -107,10 +106,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     void updateTangentSpaceData();
 
     // DRAWING
-    void draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) const;
-
-    // PIPELINE
-    void updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline);
+    void draw(const Pipeline::Reference& pipelineReference, const VkCommandBuffer& cmd, const uint8_t& frameIndex) const;
 
     virtual void destroy();
 
@@ -142,8 +138,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     // INFO
     bool isIndexed_;
     bool selectable_;
-    // PIPELINE
-    Pipeline::Reference pipelineReference_;
+    // REFERENCE
     Descriptor::Reference descriptorReference_;
 
     BufferResource vertexRes_;

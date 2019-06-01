@@ -66,9 +66,7 @@ Pipeline::Base::Base(Pipeline::Handler& handler, const PIPELINE&& type, const Vk
       SHADER_TYPES(shaderTypes),
       TYPE(type),
       status_(STATUS::PENDING),
-      layout_(VK_NULL_HANDLE),
-      pipeline_(VK_NULL_HANDLE),
-      subpassId_(0) {
+      layout_(VK_NULL_HANDLE) {
     for (const auto& type : PUSH_CONSTANT_TYPES) assert(type != PUSH_CONSTANT::DONT_CARE);
 }
 
@@ -90,6 +88,16 @@ void Pipeline::Base::updateStatus() {
             ++it;
     }
     if (pendingTexturesOffsets_.empty()) status_ = STATUS::READY;
+}
+
+Pipeline::Reference Pipeline::Base::makeReference() {
+    Reference ref = {};
+    ref.bindPoint = BIND_POINT;
+    ref.layout = layout_;
+    // PUSH CONSTANT
+    ref.pushConstantTypes = PUSH_CONSTANT_TYPES;
+    ref.pushConstantStages = handler().shaderHandler().getStageFlags(SHADER_TYPES);
+    return ref;
 }
 
 void Pipeline::Base::validatePipelineDescriptorSets() {
@@ -149,9 +157,7 @@ void Pipeline::Base::createPipelineLayout() {
     }
 }
 
-const VkPipeline& Pipeline::Base::create(const VkPipelineCache& cache, CreateInfoResources& createInfoRes,
-                                         VkGraphicsPipelineCreateInfo& pipelineCreateInfo,
-                                         const VkPipeline& basePipelineHandle, const int32_t basePipelineIndex) {
+void Pipeline::Base::setInfo(CreateInfoResources& createInfoRes, VkGraphicsPipelineCreateInfo& pipelineCreateInfo) {
     /*
         The idea here is that this can be overridden in a bunch of ways, or you
         can just use the easier and slower way of calling this function from
@@ -194,29 +200,11 @@ const VkPipeline& Pipeline::Base::create(const VkPipelineCache& cache, CreateInf
     pipelineCreateInfo.pViewportState = &createInfoRes.viewportStateInfo;
     // LAYOUT
     pipelineCreateInfo.layout = layout_;
-    pipelineCreateInfo.basePipelineHandle = basePipelineHandle;
-    pipelineCreateInfo.basePipelineIndex = basePipelineIndex;
-    // RENDER PASS
-    // pipelineCreateInfo.renderPass = renderPass;
-    // pipelineCreateInfo.subpass = subpass;
-
-    auto& oldPipeline = pipeline_;  // Save old handler for clean up if rebuilding
-    vk::assert_success(
-        vkCreateGraphicsPipelines(handler().shell().context().dev, cache, 1, &pipelineCreateInfo, nullptr, &pipeline_));
-
-    if (handler().settings().enable_debug_markers) {
-        std::string markerName = NAME + " pipline";
-        ext::DebugMarkerSetObjectName(handler().shell().context().dev, (uint64_t)pipeline_,
-                                      VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT, markerName.c_str());
-    }
-
-    return oldPipeline;
 }
 
 void Pipeline::Base::destroy() {
     const auto& dev = handler().shell().context().dev;
     if (layout_ != VK_NULL_HANDLE) vkDestroyPipelineLayout(dev, layout_, nullptr);
-    if (pipeline_ != VK_NULL_HANDLE) vkDestroyPipeline(dev, pipeline_, nullptr);
 }
 
 void Pipeline::Base::getDynamicStateInfoResources(CreateInfoResources& createInfoRes) {
@@ -369,8 +357,9 @@ void Pipeline::Base::getDepthInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.depthStencilStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     createInfoRes.depthStencilStateInfo.pNext = nullptr;
     createInfoRes.depthStencilStateInfo.flags = 0;
-    createInfoRes.depthStencilStateInfo.depthTestEnable = handler().settings().include_depth;
-    createInfoRes.depthStencilStateInfo.depthWriteEnable = handler().settings().include_depth;
+    // This is set in overridePipelineCreateInfo now.
+    // createInfoRes.depthStencilStateInfo.depthTestEnable = handler().settings().include_depth;
+    // createInfoRes.depthStencilStateInfo.depthWriteEnable = handler().settings().include_depth;
     createInfoRes.depthStencilStateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
     createInfoRes.depthStencilStateInfo.depthBoundsTestEnable = VK_FALSE;
     createInfoRes.depthStencilStateInfo.minDepthBounds = 0;
@@ -403,7 +392,7 @@ Pipeline::Default::TriListColor::TriListColor(Pipeline::Handler& handler)
           {/*PUSH_CONSTANT::DEFAULT*/},
           {
               DESCRIPTOR_SET::UNIFORM_DEFAULT,
-              DESCRIPTOR_SET::PROJECTOR_DEFAULT,
+              //DESCRIPTOR_SET::PROJECTOR_DEFAULT,
           },
       } {};
 
@@ -436,7 +425,7 @@ Pipeline::Default::TriListTexture::TriListTexture(Pipeline::Handler& handler)
           {
               DESCRIPTOR_SET::UNIFORM_DEFAULT,
               DESCRIPTOR_SET::SAMPLER_DEFAULT,
-              DESCRIPTOR_SET::PROJECTOR_DEFAULT,
+              //DESCRIPTOR_SET::PROJECTOR_DEFAULT,
           },
       } {};
 
@@ -472,7 +461,7 @@ Pipeline::BP::TextureCullNone::TextureCullNone(Pipeline::Handler& handler)
           {
               DESCRIPTOR_SET::UNIFORM_DEFAULT,
               DESCRIPTOR_SET::SAMPLER_DEFAULT,
-              DESCRIPTOR_SET::PROJECTOR_DEFAULT,
+              //DESCRIPTOR_SET::PROJECTOR_DEFAULT,
           },
       } {};
 

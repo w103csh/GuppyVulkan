@@ -5,7 +5,7 @@ template <class T>
 class Handlee {
    protected:
     Handlee(T &handler) : handler_(handler) {}
-    inline T &handler() { return handler_; }
+    inline T &handler() const { return handler_; }
 
    private:
     T &handler_;

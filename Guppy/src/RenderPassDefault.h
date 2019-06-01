@@ -13,11 +13,10 @@ class Handler;
 
 class Default : public Base {
    public:
-    Default(Handler &handler);
+    Default(Handler &handler, const uint32_t &&offset, const RenderPass::CreateInfo *pCreateInfo);
 
     void init() override;
     void setSwapchainInfo() override;
-    void record() override;
 
     inline void beginSecondary(const uint8_t &frameIndex) override {
         if (secCmdFlag_) return;
@@ -44,10 +43,10 @@ class Default : public Base {
         secCmdFlag_ = false;
     }
 
-    void getSubmitResource(const uint8_t &frameIndex, SubmitResource &resource) const override;
+   protected:
+    bool includeMultiSampleAttachment_;
 
    private:
-    void createClearValues() override;
     void createBeginInfo() override;
     VkCommandBufferInheritanceInfo inheritInfo_;
     VkCommandBufferBeginInfo secCmdBeginInfo_;
@@ -58,6 +57,7 @@ class Default : public Base {
     void createDepthResource() override;
     void createAttachmentsAndSubpasses() override;
     void createDependencies() override;
+    void updateClearValues() override;
     void createFramebuffers() override;
 };
 

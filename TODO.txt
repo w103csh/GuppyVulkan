@@ -1,6 +1,14 @@
 
- - In "glaring exampler of problem with smoothing.png" I used the fragNormal variable
-    as Kd.
+ - SHOULD THERE BE VIEWS FOR EACH FRAMEBUFFER THAT IS CREATED OR IS IT OKAY TO SHARE THEM?
+    THE SWAPCHAIN HAS A VIEW PER FRAMEBUFFER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    WHICH IS RIGHT ????????
+
+ - Define descriptor offsets somewhere other than the Descriptor::Set! (Maybe on a pass basis? This 
+    will require a refactor of the pipeline layout creation process.)
+
+- Figure out the long standing smoothing issue... (comment about this in Face.h - indexVertices)
+    - In "glaring exampler of problem with smoothing.png" I used the fragNormal variable
+        as Kd.
 
  - Make material creation public similar to instance data creation, because
     it is shared data/pointer.
@@ -36,10 +44,6 @@
         -! Multisampling was distorting the tex coord offsetting.
         - Should "v" be negated? Is the step moving in the right direction?
         - ...
-
- - In "glaring exampler of problem with smoothing.png" I used the fragNormal variable
-    as Kd. Also, figure out the long standing smoothing issue... (comment about
-    this in Face.h - indexVertices)
 
  - I looked into below and have come to the conclusion that it is a false positive. I
     am keeping it here so that don't forget that I looked into it.

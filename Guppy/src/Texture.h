@@ -14,11 +14,6 @@
 
 namespace Texture {
 
-struct CreateInfo {
-    std::string name;
-    std::vector<Sampler::CreateInfo> samplerCreateInfos;
-};
-
 class Base : public Descriptor::Interface {
    public:
     Base(const uint32_t &&offset, const CreateInfo *pCreateInfo);

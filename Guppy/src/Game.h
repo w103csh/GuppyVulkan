@@ -123,8 +123,6 @@ class Game {
         bool try_sampler_anisotropy = true;  // TODO: Not sure what this does
         bool try_sample_rate_shading = true;
         bool enable_sample_shading = true;
-        bool include_color = true;
-        bool include_depth = true;
         bool enable_double_clicks = false;
         bool enable_debug_markers = false;
         bool enable_directory_listener = true;

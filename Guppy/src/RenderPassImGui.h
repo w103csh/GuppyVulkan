@@ -14,19 +14,17 @@ class Handler;
 
 class ImGui : public Base {
    public:
-    ImGui(Handler& handler);
+    ImGui(Handler& handler, const uint32_t&& offset);
 
     void init() override;
     void postCreate() override;
     void setSwapchainInfo() override;
-    void record() override;
-
-    void getSubmitResource(const uint8_t& frameIndex, SubmitResource& resource) const override;
+    void record(const uint32_t& frameIndex) override;
 
    private:
-    void createClearValues() override;
     void createAttachmentsAndSubpasses() override;
     void createDependencies() override;
+    void updateClearValues() override;
     void createFramebuffers() override;
 };
 

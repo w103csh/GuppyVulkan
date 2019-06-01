@@ -31,7 +31,6 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
       isIndexed_(pCreateInfo->isIndexed),
       selectable_(pCreateInfo->selectable),
       // REFERENCE
-      pipelineReference_{},
       descriptorReference_{},
       //
       vertexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
@@ -79,7 +78,6 @@ void Mesh::Base::prepare() {
         can allocate and update all at once.
     */
     if (status_ == STATUS::READY) {
-        handler().pipelineHandler().getReference(std::ref(*this));
         handler().descriptorHandler().getReference(std::ref(*this));
     } else {
         handler().ldgOffsets_.insert({TYPE, getOffset()});
@@ -162,8 +160,9 @@ void Mesh::Base::createBufferData(const VkCommandBuffer& cmd, BufferResource& st
 
 // TODO: I hate this...
 void Mesh::Base::bindPushConstants(VkCommandBuffer cmd) const {
-    if (pipelineReference_.pushConstantTypes.empty()) return;
-    assert(pipelineReference_.pushConstantTypes.size() == 1 && "Cannot handle multiple push constants");
+    assert(false);
+    // if (pipelineReference_.pushConstantTypes.empty()) return;
+    // assert(pipelineReference_.pushConstantTypes.size() == 1 && "Cannot handle multiple push constants");
 
     // TODO: MATERIAL INFO SHOULD PROBABLY BE A DYNAMIC UNIFORM (since it doesn't change constantly)
 
@@ -357,12 +356,13 @@ void Mesh::Base::updateTangentSpaceData() {
     }
 }
 
-void Mesh::Base::draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) const {
-    vkCmdBindPipeline(cmd, pipelineReference_.bindPoint, pipelineReference_.pipeline);
+void Mesh::Base::draw(const Pipeline::Reference& pipelineReference, const VkCommandBuffer& cmd,
+                      const uint8_t& frameIndex) const {
+    vkCmdBindPipeline(cmd, pipelineReference.bindPoint, pipelineReference.pipeline);
 
     // bindPushConstants(cmd);
 
-    vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineReference_.layout, descriptorReference_.firstSet,
+    vkCmdBindDescriptorSets(cmd, pipelineReference.bindPoint, pipelineReference.layout, descriptorReference_.firstSet,
                             static_cast<uint32_t>(descriptorReference_.descriptorSets[frameIndex].size()),
                             descriptorReference_.descriptorSets[frameIndex].data(),
                             static_cast<uint32_t>(descriptorReference_.dynamicOffsets.size()),
@@ -403,12 +403,6 @@ void Mesh::Base::draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) con
             0,                          // uint32_t firstVertex
             getInstanceFirstInstance()  // uint32_t firstInstance
         );
-    }
-}
-
-void Mesh::Base::updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline) {
-    if (type == PIPELINE_TYPE) {
-        pipelineReference_.pipeline = pipeline;
     }
 }
 

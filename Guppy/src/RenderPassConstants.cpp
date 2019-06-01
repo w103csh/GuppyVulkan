@@ -3,11 +3,22 @@
 
 #include <vulkan/vulkan.h>
 
+#include "RenderPass.h"
 #include "Constants.h"
+
+const std::vector<RENDER_PASS> RENDER_PASS_ALL = {
+    RENDER_PASS::SAMPLER,
+    RENDER_PASS::DEFAULT,
+// UI pass needs to always be last since it
+// is optional
+#ifdef USE_DEBUG_UI
+    RENDER_PASS::IMGUI,
+#endif
+};
 
 namespace RenderPass {
 
-void AddDefaultSubpasses(RenderPass::SubpassResources& resources, uint64_t count) {
+void AddDefaultSubpasses(RenderPass::Resources& resources, uint64_t count) {
     VkSubpassDependency dependency = {};
     for (uint32_t i = 0; i < count - 1; i++) {
         dependency = {};
@@ -25,6 +36,8 @@ void AddDefaultSubpasses(RenderPass::SubpassResources& resources, uint64_t count
 }
 
 const CreateInfo DEFAULT_CREATE_INFO = {
+    RENDER_PASS::DEFAULT,
+    "Default",
     {
         // Order of the subpasses
         PIPELINE::TRI_LIST_COLOR,  //
@@ -46,12 +59,47 @@ const CreateInfo DEFAULT_CREATE_INFO = {
          */
         PIPELINE::CUBE,
     },
-    true,
-    true,
 };
 
 const CreateInfo SAMPLER_CREATE_INFO = {
-    //
+    RENDER_PASS::SAMPLER,
+    "Sampler",
+    {
+        PIPELINE::TRI_LIST_COLOR,
+    },
+    false,
+};
+
+// 2D
+const Sampler::CreateInfo SAMPLER_2D_CREATE_INFO = {
+    "Render Pass 2D Color Sampler",  //
+    {{::Sampler::USE::COLOR}},       //
+    VK_IMAGE_VIEW_TYPE_2D,           //
+    0,
+    SAMPLER::CLAMP_TO_BORDER,
+    {640, 480},
+    false,
+};
+const Texture::CreateInfo TEXTURE_2D_CREATE_INFO = {
+    "Render Pass 2D Texture",
+    {SAMPLER_2D_CREATE_INFO},
+    false,
+};
+
+// 2D ARRAY
+const Sampler::CreateInfo SAMPLER_2D_ARRAY_CREATE_INFO = {
+    "Render Pass 2D Array Color Sampler",  //
+    {{::Sampler::USE::COLOR}},             //
+    VK_IMAGE_VIEW_TYPE_2D_ARRAY,           //
+    0,
+    SAMPLER::CLAMP_TO_BORDER,
+    {640, 480},
+    false,
+};
+const Texture::CreateInfo TEXTURE_2D_ARRAY_CREATE_INFO = {
+    "Render Pass 2D Array Texture",
+    {SAMPLER_2D_ARRAY_CREATE_INFO},
+    false,
 };
 
 }  // namespace RenderPass

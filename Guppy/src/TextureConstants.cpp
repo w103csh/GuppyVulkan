@@ -5,8 +5,6 @@
 
 namespace Texture {
 
-// CREATE INFOS
-
 // STATUE
 const CreateInfo STATUE_CREATE_INFO = {
     "Statue Texture",

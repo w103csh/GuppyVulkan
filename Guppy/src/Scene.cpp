@@ -28,15 +28,15 @@ Scene::Base::Base(Scene::Handler& handler, size_t offset, bool makeFaceSelection
 
 Scene::Base::~Base() = default;
 
-void Scene::Base::record(const PIPELINE& pipelineType, const VkCommandBuffer& priCmd, const VkCommandBuffer& secCmd,
-                         const uint8_t& frameIndex) {
+void Scene::Base::record(const PIPELINE& pipelineType, const Pipeline::Reference& pipelineReference,
+                         const VkCommandBuffer& priCmd, const VkCommandBuffer& secCmd, const uint8_t& frameIndex) {
     switch (pipelineType) {
         case PIPELINE::PBR_COLOR:
         case PIPELINE::CUBE:
         case PIPELINE::TRI_LIST_COLOR: {
             for (auto& pMesh : handler().meshHandler().getColorMeshes())
                 if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
-                    pMesh->draw(priCmd, frameIndex);
+                    pMesh->draw(pipelineReference, priCmd, frameIndex);
         } break;
         case PIPELINE::PARALLAX_SIMPLE:
         case PIPELINE::PARALLAX_STEEP:
@@ -45,12 +45,12 @@ void Scene::Base::record(const PIPELINE& pipelineType, const VkCommandBuffer& pr
         case PIPELINE::TRI_LIST_TEX: {
             for (auto& pMesh : handler().meshHandler().getTextureMeshes())
                 if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
-                    pMesh->draw(priCmd, frameIndex);
+                    pMesh->draw(pipelineReference, priCmd, frameIndex);
         } break;
         case PIPELINE::LINE: {
             for (auto& pMesh : handler().meshHandler().getLineMeshes())
                 if (pMesh->PIPELINE_TYPE == pipelineType && pMesh->getStatus() == STATUS::READY)
-                    pMesh->draw(priCmd, frameIndex);
+                    pMesh->draw(pipelineReference, priCmd, frameIndex);
         } break;
         default:;
     }

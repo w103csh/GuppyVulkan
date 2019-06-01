@@ -4,7 +4,7 @@
 
 #define _DS_PRJ_DEF -1
 
-#if _DS_PRJ_DEF >= 0
+#if _DS_PRJ_DEF > -1
 layout(set=_DS_PRJ_DEF, binding=1) uniform DefaultProjector {
     mat4 matrix;
 } projector;

@@ -93,7 +93,6 @@ void Guppy::attachShell(Shell& sh) {
     handlers_.pPipeline->init();
     handlers_.pShader->init();
     handlers_.pPass->init();
-    handlers_.pPipeline->createPipelines();
     handlers_.pUI->init();
     handlers_.pMesh->init();
     handlers_.pModel->init();
@@ -272,7 +271,6 @@ void Guppy::detachShell() {
     }
 
     handlers_.pScene->destroy();
-    handlers_.pCommand->destroy();
     handlers_.pPipeline->destroy();
     handlers_.pShader->destroy();
     handlers_.pDescriptor->destroy();
@@ -283,6 +281,7 @@ void Guppy::detachShell() {
     handlers_.pScene->destroy();
     handlers_.pUI->destroy();
     handlers_.pPass->destroy();
+    handlers_.pCommand->destroy();
     handlers_.pLoading->destroy();
 
     Game::detachShell();

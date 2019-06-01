@@ -1,27 +1,26 @@
 #ifndef SAMPLER_RENDER_PASS_H
 #define SAMPLER_RENDER_PASS_H
 
-#include "RenderPass.h"
+#include "RenderPassDefault.h"
 #include "Shell.h"
+#include "Texture.h"
 
 namespace RenderPass {
 
 class Handler;
 
-class Sampler : public Base {
+class Sampler : public Default {
    public:
-    Sampler(RenderPass::Handler& handler);
+    Sampler(RenderPass::Handler& handler, const uint32_t&& offset);
 
     void init() override;
-    void record() override { assert(false); }
-
-    void getSubmitResource(const uint8_t& frameIndex, SubmitResource& resource) const override;
+    void overridePipelineCreateInfo(const PIPELINE& type, Pipeline::CreateInfoResources& createInfoRes) override;
 
    private:
-    void createClearValues() override;
-    void createAttachmentsAndSubpasses() override;
-    void createDependencies() override;
-    void createFramebuffers() override;
+    void createSampler();
+    void createFramebuffers();
+
+    std::shared_ptr<Texture::Base> pTexture_;
 };
 
 };  // namespace RenderPass

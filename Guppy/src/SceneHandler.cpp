@@ -76,16 +76,22 @@ void Scene::Handler::init() {
     }
 
     // SINGLE PLANE
-    if (!suppress && false) {
+    if (!suppress || false) {
         meshInfo = {};
-        meshInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+        meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
         meshInfo.selectable = false;
         defInstInfo = {};
-        defInstInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{0.5f, 0.0f, 0.5f}, -M_PI_2_FLT, CARDINAL_X)});
+        defInstInfo.data.push_back({helpers::affine(glm::vec3{2.0f}, glm::vec3{0.5f, 3.0f, 0.5f})});
+        // defInstInfo.data.push_back(
+        //    {helpers::affine(glm::vec3{5.0f}, glm::vec3{10.5f, 10.0f, 10.5f}, -M_PI_2_FLT, CARDINAL_Y)});
+        // defInstInfo.data.push_back(
+        //    {helpers::affine(glm::vec3{2.0f}, glm::vec3{4.5f, -5.0f, 13.5f}, -M_PI_2_FLT, CARDINAL_Z)});
         defMatInfo = {};
         defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+        // defMatInfo.pTexture = textureHandler().getTextureByName(RenderPass::TEXTURE_2D_CREATE_INFO.name);
+        defMatInfo.pTexture = textureHandler().getTextureByName(RenderPass::TEXTURE_2D_ARRAY_CREATE_INFO.name);
         defMatInfo.color = {0.5f, 0.5f, 0.5f};
-        meshHandler().makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+        meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
     }
 
     // SKYBOX
@@ -424,19 +430,6 @@ std::unique_ptr<Mesh::Texture>& Scene::Handler::getTextureMesh(size_t sceneOffse
     // return pScenes_[sceneOffset]->getTextureMesh(meshOffset);
     assert(false);
     return meshHandler().getTextureMesh(meshOffset);
-}
-
-void Scene::Handler::updatePipelineReferences(const PIPELINE& type, const VkPipeline& pipeline) {
-    // Not concerned with speed here at the moment. If recreating pipelines
-    // becomes something that is needed a lot then redo this.
-    for (auto& pScene : pScenes_) {
-        for (auto& pMesh : meshHandler().getColorMeshes())
-            if (pMesh->PIPELINE_TYPE == type) pMesh->updatePipelineReferences(type, pipeline);
-        for (auto& pMesh : meshHandler().getLineMeshes())
-            if (pMesh->PIPELINE_TYPE == type) pMesh->updatePipelineReferences(type, pipeline);
-        for (auto& pMesh : meshHandler().getTextureMeshes())
-            if (pMesh->PIPELINE_TYPE == type) pMesh->updatePipelineReferences(type, pipeline);
-    }
 }
 
 void Scene::Handler::updateDescriptorSets(SCENE_INDEX_TYPE offset, bool isUpdate) {

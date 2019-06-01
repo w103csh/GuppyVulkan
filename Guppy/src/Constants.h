@@ -19,8 +19,9 @@
 #include "ShaderConstants.h"
 #include "TextureConstants.h"
 
-#define LIMIT_FRAMERATE
 #define USE_DEBUG_UI
+
+extern const bool LIMIT_FRAMERATE;
 
 constexpr bool PRIMARY_MONITOR = 0;
 // TODO: a proper dynamic buffer allocator.
@@ -63,11 +64,6 @@ const std::vector<const char*> INSTANCE_EXTENSIONS = {
 const std::vector<const char*> DEVICE_EXTENSIONS = {
     // VK_KHR_SWAPCHAIN_EXTENSION_NAME, in init_swapchain_extension now
 };
-
-// const glm::vec4 CLEAR_COLOR = {190.0f / 256.0f, 223.0f / 256.0f, 246.0f / 256.0f, 1.0f};
-// const VkClearColorValue CLEAR_VALUE = {CLEAR_COLOR.x, CLEAR_COLOR.y, CLEAR_COLOR.z, CLEAR_COLOR.w};
-const glm::vec4 CLEAR_COLOR = {};
-const VkClearColorValue CLEAR_VALUE = {};
 
 const glm::vec4 COLOR_RED = {1.0f, 0.0f, 0.0f, 1.0f};
 const glm::vec4 COLOR_GREEN = {0.0f, 1.0f, 0.0f, 1.0f};

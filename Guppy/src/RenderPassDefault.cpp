@@ -1,6 +1,8 @@
 
 #include "RenderPassDefault.h"
 
+#include <utility>
+
 #include "Constants.h"
 #include "Shell.h"
 // HANDLERS
@@ -8,8 +10,9 @@
 #include "RenderPassHandler.h"
 #include "SceneHandler.h"
 
-RenderPass::Default::Default(Handler& handler)
-    : Base{handler, "Default", DEFAULT_CREATE_INFO},  //
+RenderPass::Default::Default(Handler& handler, const uint32_t&& offset, const RenderPass::CreateInfo* pCreateInfo)
+    : Base{handler, std::forward<const uint32_t>(offset), pCreateInfo},  //
+      includeMultiSampleAttachment_(true),
       inheritInfo_{},
       secCmdBeginInfo_{},
       secCmdFlag_(false) {}
@@ -17,89 +20,24 @@ RenderPass::Default::Default(Handler& handler)
 void RenderPass::Default::init() {
     auto& ctx = handler().shell().context();
 
+    // FRAME DATA
     format_ = ctx.surfaceFormat.format;
     depthFormat_ = ctx.depthFormat;
 #ifdef USE_DEBUG_UI
     finalLayout_ = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 #endif
     samples_ = ctx.samples;
+
+    // SYNC
     commandCount_ = ctx.imageCount;
-    fenceCount_ = ctx.imageCount;
-    semaphoreCount_ = ctx.imageCount;
+    if (finalLayout_ ^ VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+        semaphoreCount_ = ctx.imageCount;
+        data.signalSrcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    }
 }
 
 void RenderPass::Default::setSwapchainInfo() {
-    extent_ = handler().shell().context().extent;
-    const auto& swpchnRes = handler().getSwapchainResources();
-    viewCount_ = static_cast<uint32_t>(swpchnRes.views.size());
-    pViews_ = swpchnRes.views.data();
-}
-
-void RenderPass::Default::record() {
-    const auto& frameIndex = handler().getFrameIndex();
-
-    // if (pPass->data.tests[frameIndex] == 0) {
-    //    return;
-    //}
-
-    beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    // pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-    // VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-    auto& priCmd = data.priCmds[frameIndex];
-    auto& secCmd = data.secCmds[frameIndex];
-    auto& pScene = handler().sceneHandler().getActiveScene();
-
-    auto it = PIPELINE_TYPES.begin();
-    while (it != PIPELINE_TYPES.end()) {
-        const auto& pipelineType = (*it);
-
-        std::advance(it, 1);
-        if (it != PIPELINE_TYPES.end()) {
-            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
-            // vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-            pScene->record(*it, priCmd, secCmd, frameIndex);
-        }
-    }
-
-    endPass(frameIndex);
-}
-
-void RenderPass::Default::getSubmitResource(const uint8_t& frameIndex, SubmitResource& resource) const {
-    if (finalLayout_ ^ VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) resource.signalSemaphores.push_back(data.semaphores[frameIndex]);
-    resource.commandBuffers.push_back(data.priCmds[frameIndex]);
-}
-
-void RenderPass::Default::createClearValues() {
-    /*  Need to pad this here because:
-
-        In vkCmdBeginRenderPass() the VkRenderPassBeginInfo struct has a clearValueCount
-        of 2 but there must be at least 3 entries in pClearValues array to account for the
-        highest index attachment in renderPass 0x2f that uses VK_ATTACHMENT_LOAD_OP_CLEAR
-        is 3. Note that the pClearValues array is indexed by attachment number so even if
-        some pClearValues entries between 0 and 2 correspond to attachments that aren't
-        cleared they will be ignored. The spec valid usage text states 'clearValueCount
-        must be greater than the largest attachment index in renderPass that specifies a
-        loadOp (or stencilLoadOp, if the attachment has a depth/stencil format) of
-        VK_ATTACHMENT_LOAD_OP_CLEAR'
-        (https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#VUID-VkRenderPassBeginInfo-clearValueCount-00902)
-    */
-    clearValues_.resize(1);  // pad for framebuffer view
-    // clearValuues[0] = final layout is in this spot; // pad this spot
-
-    for (auto& color : colors_) {
-        VkClearValue value = {CLEAR_VALUE};
-        clearValues_.push_back(value);
-    }
-    if (depth_.view != VK_NULL_HANDLE) {
-#if defined(VK_USE_PLATFORM_WIN32_KHR)  // TODO: figure out why clang, and visual c++ can't get along here.
-        VkClearValue value = {1.0f, 0};
-#else defined(VK_USE_PLATFORM_WIN32_KHR)
-        VkClearValue value = {.depthStencil = {1.0f, 0}};
-#endif
-        clearValues_.push_back(value);
-    }
+    extent_ = handler().shell().context().extent;  //
 }
 
 void RenderPass::Default::createBeginInfo() {
@@ -134,29 +72,32 @@ void RenderPass::Default::createCommandBuffers() {
 
 void RenderPass::Default::createColorResources() {
     auto& ctx = handler().shell().context();
-    if (handler().settings().include_color) {  // TODO: is this still something?
-        colors_.resize(1);
-        auto& res = colors_.back();
+    if (includeMultiSampleAttachment_) {
+        assert(resources_.resolveAttachments.size() == 1 && "Make sure multi-sampling attachment reference was added");
+
+        images_.push_back({});
 
         helpers::createImage(ctx.dev, ctx.mem_props, handler().commandHandler().getUniqueQueueFamilies(true, false, true),
                              samples_, format_, VK_IMAGE_TILING_OPTIMAL,
                              VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, colors_.back().image,
-                             colors_.back().memory);
+                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, images_.back().image,
+                             images_.back().memory);
 
-        helpers::createImageView(ctx.dev, colors_.back().image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D,
-                                 1, colors_.back().view);
+        helpers::createImageView(ctx.dev, images_.back().image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D,
+                                 1, images_.back().view);
 
-        helpers::transitionImageLayout(handler().commandHandler().graphicsCmd(), colors_.back().image, format_,
+        helpers::transitionImageLayout(handler().commandHandler().graphicsCmd(), images_.back().image, format_,
                                        VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                                        VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 1,
                                        1);
+    } else {
+        assert(resources_.resolveAttachments.size() == 0 && "Make sure multi-sampling attachment reference was not added");
     }
 }
 
 void RenderPass::Default::createDepthResource() {
     auto& ctx = handler().shell().context();
-    if (handler().settings().include_depth) {  // TODO: is this still something?
+    if (includeDepth_) {
         VkImageTiling tiling;
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(ctx.physical_dev, depthFormat_, &props);
@@ -189,90 +130,88 @@ void RenderPass::Default::createDepthResource() {
 }
 
 void RenderPass::Default::createAttachmentsAndSubpasses() {
-    auto& resources = subpassResources_;
-    VkAttachmentDescription attachemnt = {};
-
-    // COLOR ATTACHMENT (SWAP-CHAIN)
-    attachemnt = {};
-    attachemnt.format = format_;
-    attachemnt.samples = VK_SAMPLE_COUNT_1_BIT;
-    attachemnt.loadOp = CLEAR_COLOR ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-    attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    attachemnt.finalLayout = finalLayout_;
-    attachemnt.flags = 0;
-
-    resources.attachments.push_back(attachemnt);
-
-    // REFERENCE
-    resources.colorAttachments.resize(1);
-    resources.colorAttachments.back().attachment = static_cast<uint32_t>(resources.attachments.size() - 1);
-    resources.colorAttachments.back().layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-    // COLOR ATTACHMENT RESOLVE (MULTI-SAMPLE)
-    if (handler().settings().include_color) {
-        attachemnt = {};
-        attachemnt.format = format_;
-        attachemnt.samples = samples_;
-        attachemnt.loadOp = CLEAR_COLOR ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-        attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachemnt.finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        attachemnt.flags = 0;
-
-        // REFERENCE (point to swapchain attachment)
-        resources.resolveAttachments.resize(1);
-        resources.resolveAttachments.back().attachment = static_cast<uint32_t>(resources.attachments.size() - 1);
-        resources.resolveAttachments.back().layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        resources.attachments.push_back(attachemnt);
-
-        // point to multi-sample attachment
-        resources.colorAttachments.back().attachment = static_cast<uint32_t>(resources.attachments.size() - 1);
-    }
-
-    // TODO: this depth attachment shouldn't be added if there is no depth
-
     // DEPTH ATTACHMENT
-    if (handler().settings().include_depth) {
-        attachemnt = {};
-        attachemnt.format = depthFormat_;
-        attachemnt.samples = samples_;
-        attachemnt.loadOp = CLEAR_DEPTH ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-        attachemnt.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        attachemnt.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
-        attachemnt.stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
-        attachemnt.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        attachemnt.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        attachemnt.flags = 0;
+    if (includeDepth_) {
+        resources_.attachments.push_back({});
+        resources_.attachments.back().format = getDepthFormat();
+        resources_.attachments.back().samples = getSamples();
+        resources_.attachments.back().loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;  // TODO: clear used to be a param
+        resources_.attachments.back().storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        resources_.attachments.back().stencilLoadOp = VK_ATTACHMENT_LOAD_OP_LOAD;
+        resources_.attachments.back().stencilStoreOp = VK_ATTACHMENT_STORE_OP_STORE;
+        resources_.attachments.back().initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        resources_.attachments.back().finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+        resources_.attachments.back().flags = 0;
+
+        // REFERENCE
+        resources_.depthStencilAttachment = {
+            static_cast<uint32_t>(resources_.attachments.size() - 1),
+            VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
+        };
     }
 
-    resources.attachments.push_back(attachemnt);
+    // COLOR ATTACHMENT (MULTI-SAMPLE)
+    if (includeMultiSampleAttachment_) {
+        resources_.attachments.push_back({});
+        resources_.attachments.back().format = getFormat();
+        resources_.attachments.back().samples = getSamples();
+        resources_.attachments.back().loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        resources_.attachments.back().storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        resources_.attachments.back().stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        resources_.attachments.back().stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+        resources_.attachments.back().initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        resources_.attachments.back().finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+        resources_.attachments.back().flags = 0;
+
+        // REFERENCE
+        resources_.colorAttachments.push_back({
+            static_cast<uint32_t>(resources_.attachments.size() - 1),
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        });
+    }
+
+    bool clearAttachment = true;
+    if (SWAPCHAIN_DEPENDENT) clearAttachment = !handler().getSwapchainCleared();
+
+    // COLOR ATTACHMENT
+    resources_.attachments.push_back({});
+    resources_.attachments.back().format = getFormat();
+    resources_.attachments.back().samples = VK_SAMPLE_COUNT_1_BIT;
+    resources_.attachments.back().loadOp = clearAttachment ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    resources_.attachments.back().storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    resources_.attachments.back().stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    resources_.attachments.back().stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    resources_.attachments.back().initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    resources_.attachments.back().finalLayout = getFinalLayout();
+    resources_.attachments.back().flags = 0;
 
     // REFERENCE
-    resources.depthStencilAttachment = {};
-    resources.depthStencilAttachment.attachment = static_cast<uint32_t>(resources.attachments.size() - 1);
-    resources.depthStencilAttachment.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    if (includeMultiSampleAttachment_) {
+        // Set resolve to swapchain attachment
+        resources_.resolveAttachments.push_back({
+            static_cast<uint32_t>(resources_.attachments.size() - 1),
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        });
+    } else {
+        resources_.colorAttachments.push_back({
+            static_cast<uint32_t>(resources_.attachments.size() - 1),
+            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        });
+    }
 
     // TODO: below comes from pipeline ???
     // SETUP DESCRIPTION
     VkSubpassDescription subpass = {};
-    subpass.colorAttachmentCount = static_cast<uint32_t>(resources.colorAttachments.size());
-    subpass.pColorAttachments = resources.colorAttachments.data();
-    subpass.pResolveAttachments = resources.resolveAttachments.data();
-    subpass.pDepthStencilAttachment = &resources.depthStencilAttachment;
+    subpass.colorAttachmentCount = static_cast<uint32_t>(resources_.colorAttachments.size());
+    subpass.pColorAttachments = resources_.colorAttachments.data();
+    subpass.pResolveAttachments = resources_.resolveAttachments.data();
+    subpass.pDepthStencilAttachment = &resources_.depthStencilAttachment;
 
-    resources.subpasses.assign(PIPELINE_TYPES.size(), subpass);
+    resources_.subpasses.assign(getPipelineCount(), subpass);
 }
 
 void RenderPass::Default::createDependencies() {
-    auto& resources = subpassResources_;
-
-    AddDefaultSubpasses(resources, PIPELINE_TYPES.size());
+    AddDefaultSubpasses(resources_, pipelineTypeReferenceMap_.size());
 
     //// Desparate attempt to understand the pipline ordering issue below...
     // VkSubpassDependency dependency = {};
@@ -283,8 +222,9 @@ void RenderPass::Default::createDependencies() {
     // dependency.dependencyFlags = 0;
     // dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     // dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-    // dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-    // dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    // dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+    // VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT; dependency.srcAccessMask =
+    // VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
     // resources.dependencies.push_back(dependency);
 
     // dependency = {};
@@ -293,28 +233,64 @@ void RenderPass::Default::createDependencies() {
     // dependency.dependencyFlags = 0;
     // dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
     // dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-    // dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-    // dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+    // dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+    // VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT; dependency.srcAccessMask =
+    // VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
     // resources.dependencies.push_back(dependency);
 }
 
+void RenderPass::Default::updateClearValues() {
+    /* NO LONGER RELEVANT! (keeping because this was confusing when first encountered)
+     *  Need to pad this here because:
+     *      In vkCmdBeginRenderPass() the VkRenderPassBeginInfo struct has a clearValueCount
+     *      of 2 but there must be at least 3 entries in pClearValues array to account for the
+     *      highest index attachment in renderPass 0x2f that uses VK_ATTACHMENT_LOAD_OP_CLEAR
+     *      is 3. Note that the pClearValues array is indexed by attachment number so even if
+     *      some pClearValues entries between 0 and 2 correspond to attachments that aren't
+     *      cleared they will be ignored. The spec valid usage text states 'clearValueCount
+     *      must be greater than the largest attachment index in renderPass that specifies a
+     *      loadOp (or stencilLoadOp, if the attachment has a depth/stencil format) of
+     *      VK_ATTACHMENT_LOAD_OP_CLEAR'
+     *      (https://www.khronos.org/registry/vulkan/specs/1.0/html/vkspec.html#VUID-VkRenderPassBeginInfo-clearValueCount-00902)
+     */
+    clearValues_.clear();
+    // DEPTH ATTACHMENT
+    if (includeDepth_) {
+        clearValues_.push_back({});
+        clearValues_.back().depthStencil = DEFAULT_CLEAR_DEPTH_STENCIL_VALUE;
+    }
+    // MULTI-SAMPLE ATTACHMENT
+    if (includeMultiSampleAttachment_) {
+        clearValues_.push_back({});
+        clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
+    }
+    // SWAPCHAIN ATTACHMENT
+    clearValues_.push_back({});
+    clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
+}
+
 void RenderPass::Default::createFramebuffers() {
-    /*  These are the views for framebuffer.
-
-        view[0] is swapchain
-        view[1] is mulit-sample (resolve)
-        view[2] is depth
-
-        The incoming "views" param are the swapchain views.
-    */
-    std::vector<VkImageView> attachmentViews(1);
-
-    // colors
-    for (const auto& color : colors_)
-        if (color.view != VK_NULL_HANDLE) attachmentViews.push_back(color.view);
-
-    // depth
-    if (depth_.view != VK_NULL_HANDLE) attachmentViews.push_back(depth_.view);
+    /* These are the potential views for framebuffer.
+     *  - depth
+     *  - mulit-sample
+     *  - swapchain
+     */
+    std::vector<VkImageView> attachmentViews;
+    // DEPTH
+    if (includeDepth_) {
+        assert(depth_.view != VK_NULL_HANDLE);
+        attachmentViews.push_back(depth_.view);
+    }
+    // MULTI-SAMPLE
+    if (includeMultiSampleAttachment_) {
+        assert(images_.size() == 1);
+        assert(images_[0].view != VK_NULL_HANDLE);
+        attachmentViews.push_back(images_[0].view);
+    }
+    // SWAPCHAIN
+    if (SWAPCHAIN_DEPENDENT) {
+        attachmentViews.push_back({});
+    }
 
     VkFramebufferCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -325,14 +301,15 @@ void RenderPass::Default::createFramebuffers() {
     createInfo.height = extent_.height;
     createInfo.layers = 1;
 
-    data.framebuffers.resize(viewCount_);
-    for (uint8_t i = 0; i < viewCount_; i++) {
-        // Set slot [0] for the framebuffer[i] view attachments
-        // to the appropriate swapchain image view.
-        attachmentViews[0] = pViews_[i];
+    data.framebuffers.resize(handler().getSwapchainImageCount());
+    for (auto i = 0; i < data.framebuffers.size(); i++) {
+        // TODO: HOLY SHIT DOES THIS MEAN THAT THERE SHOULD BE VIEWS
+        // FOR EVERY PASS FRAMEBUFFER???????????
+        if (SWAPCHAIN_DEPENDENT) {
+            attachmentViews.back() = handler().getSwapchainViews()[i];
+        }
         // Create the framebuffer...
         vk::assert_success(
             vkCreateFramebuffer(handler().shell().context().dev, &createInfo, nullptr, &data.framebuffers[i]));
-        data.tests.push_back(1);
     }
 }

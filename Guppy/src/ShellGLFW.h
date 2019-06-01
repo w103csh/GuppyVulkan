@@ -80,13 +80,15 @@ class ShellGLFW : public TShell {
 
             currentTime = now;
 
-#ifdef LIMIT_FRAMERATE
-            // TODO: this is crude and inaccurate.
-            auto Hz = static_cast<uint64_t>(1000 / 10);  // Hz
-            if (TShell::settings_.enable_directory_listener) TShell::asyncAlert(Hz);
-#elif defined(VK_USE_PLATFORM_WIN32_KHR)
-            if (TShell::settings_.enable_directory_listener) TShell::asyncAlert(0);
+            if (LIMIT_FRAMERATE) {
+                // TODO: this is crude and inaccurate.
+                auto Hz = static_cast<uint64_t>(1000 / 10);  // Hz
+                if (TShell::settings_.enable_directory_listener) TShell::asyncAlert(Hz);
+            } else {
+#if defined(VK_USE_PLATFORM_WIN32_KHR)
+                if (TShell::settings_.enable_directory_listener) TShell::asyncAlert(0);
 #endif
+            }
 
             InputHandler::clear();
         }

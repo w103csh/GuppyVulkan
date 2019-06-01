@@ -12,6 +12,12 @@
 #include "MaterialHandler.h"
 #include "ShaderHandler.h"
 
+namespace {
+constexpr bool extentWasSet(const Sampler::CreateInfo& info) {
+    return info.extent.width != Sampler::BAD_EXTENT_2D.width && info.extent.height != Sampler::BAD_EXTENT_2D.height;
+}
+}  // namespace
+
 Texture::Handler::Handler(Game* pGame) : Game::Handler(pGame) {}
 
 void Texture::Handler::init() {
@@ -25,6 +31,8 @@ void Texture::Handler::init() {
     make(&Texture::MYBRICK_CREATE_INFO);
     make(&Texture::PISA_HDR_CREATE_INFO);
     make(&Texture::SKYBOX_CREATE_INFO);
+    make(&RenderPass::TEXTURE_2D_CREATE_INFO);
+    make(&RenderPass::TEXTURE_2D_ARRAY_CREATE_INFO);
 }
 
 void Texture::Handler::reset() {
@@ -43,13 +51,17 @@ std::shared_ptr<Texture::Base>& Texture::Handler::make(const Texture::CreateInfo
 
     pTextures_.emplace_back(std::make_shared<Texture::Base>(static_cast<uint32_t>(pTextures_.size()), pCreateInfo));
 
-    bool nonAsyncTest = false;
-    if (nonAsyncTest) {
-        auto result = load(pTextures_.back(), *pCreateInfo);
+    if (pCreateInfo->hasData) {
+        bool nonAsyncTest = false;
+        if (nonAsyncTest) {
+            load(pTextures_.back(), pCreateInfo);
+        } else {
+            // Load the texture data...
+            texFutures_.emplace_back(
+                std::async(std::launch::async, &Texture::Handler::asyncLoad, this, pTextures_.back(), *pCreateInfo));
+        }
     } else {
-        // Load the texture data...
-        texFutures_.emplace_back(
-            std::async(std::launch::async, &Texture::Handler::load, this, pTextures_.back(), *pCreateInfo));
+        load(pTextures_.back(), pCreateInfo);
     }
 
     return pTextures_.back();
@@ -85,10 +97,19 @@ void Texture::Handler::update() {
     }
 }
 
-std::shared_ptr<Texture::Base> Texture::Handler::load(std::shared_ptr<Texture::Base>& pTexture, CreateInfo createInfo) {
+std::shared_ptr<Texture::Base> Texture::Handler::asyncLoad(std::shared_ptr<Texture::Base>& pTexture, CreateInfo createInfo) {
+    load(pTexture, &createInfo);
+    return pTexture;
+}
+
+void Texture::Handler::load(std::shared_ptr<Texture::Base>& pTexture, const CreateInfo* pCreateInfo) {
     pTexture->aspect = FLT_MAX;
-    for (auto& samplerCreateInfo : createInfo.samplerCreateInfos) {
-        pTexture->samplers.push_back(Sampler::Base(shell(), &samplerCreateInfo));
+    for (auto& samplerCreateInfo : pCreateInfo->samplerCreateInfos) {
+        if (extentWasSet(samplerCreateInfo)) {
+            pTexture->samplers.emplace_back(&samplerCreateInfo);
+        } else {
+            pTexture->samplers.emplace_back(Sampler::make(shell(), &samplerCreateInfo));
+        }
 
         assert(!pTexture->samplers.empty());
         auto& sampler = pTexture->samplers.back();
@@ -96,7 +117,7 @@ std::shared_ptr<Texture::Base> Texture::Handler::load(std::shared_ptr<Texture::B
         // set texture-wide info
         pTexture->flags |= sampler.flags;
 
-        float aspect = static_cast<float>(sampler.width) / static_cast<float>(sampler.height);
+        float aspect = static_cast<float>(sampler.extent.width) / static_cast<float>(sampler.extent.height);
         if (pTexture->aspect == FLT_MAX) {
             pTexture->aspect = aspect;
         } else if (!helpers::almost_equal(aspect, pTexture->aspect, 1)) {
@@ -104,12 +125,12 @@ std::shared_ptr<Texture::Base> Texture::Handler::load(std::shared_ptr<Texture::B
             shell().log(Shell::LOG_WARN, msg.c_str());
         }
     }
-    assert(!pTexture->samplers.empty());
-    return pTexture;
+    assert(pTexture->samplers.size() && pTexture->samplers.size() == pCreateInfo->samplerCreateInfos.size());
 }
 
 // thread sync
 void Texture::Handler::createTexture(std::shared_ptr<Texture::Base> pTexture) {
+    assert(pTexture->samplers.size());
     pTexture->pLdgRes = loadingHandler().createLoadingResources();
     for (auto& sampler : pTexture->samplers) createTextureSampler(pTexture, sampler);
     loadingHandler().loadSubmit(std::move(pTexture->pLdgRes));
@@ -173,8 +194,8 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
                                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                    VK_PIPELINE_STAGE_TRANSFER_BIT, sampler.mipLevels, sampler.arrayLayers);
 
-    helpers::copyBufferToImage(pLdgRes->graphicsCmd, sampler.width, sampler.height, sampler.arrayLayers, stgRes.buffer,
-                               sampler.image);
+    helpers::copyBufferToImage(pLdgRes->graphicsCmd, sampler.extent.width, sampler.extent.height, sampler.arrayLayers,
+                               stgRes.buffer, sampler.image);
 
     pLdgRes->stgResources.push_back(stgRes);
 }
@@ -204,8 +225,8 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
     barrier.subresourceRange.layerCount = sampler.arrayLayers;
     barrier.subresourceRange.levelCount = 1;
 
-    int32_t mipWidth = sampler.width;
-    int32_t mipHeight = sampler.height;
+    int32_t mipWidth = sampler.extent.width;
+    int32_t mipHeight = sampler.extent.height;
 
     for (uint32_t i = 1; i < sampler.mipLevels; i++) {
         // CREATE MIP LEVEL

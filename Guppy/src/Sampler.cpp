@@ -8,7 +8,7 @@
 
 namespace {
 
-void validateInfo(Sampler::CreateInfo* pCreateInfo) {
+void validateInfo(const Sampler::CreateInfo* pCreateInfo) {
     assert(pCreateInfo);
     assert(!pCreateInfo->layerInfos.empty());
     assert(pCreateInfo->channels < UINT8_MAX);
@@ -57,20 +57,20 @@ void checkFailure(const Shell& shell, const std::string path, const stbi_uc* pPi
     }
 }
 
-void validateChannels(const Shell& shell, Sampler::Base* pSampler, const std::string path, int c) {
-    if (c < static_cast<int>(pSampler->NUM_CHANNELS)) {
+void validateChannels(const Shell& shell, Sampler::Base& sampler, const std::string path, int c) {
+    if (c < static_cast<int>(sampler.NUM_CHANNELS)) {
         std::stringstream ss;
         ss << std::endl
-           << "Image at path \"" << path << "\" loaded for " << pSampler->NUM_CHANNELS << " channels but only has " << c
+           << "Image at path \"" << path << "\" loaded for " << sampler.NUM_CHANNELS << " channels but only has " << c
            << " channels." << std::endl;
         shell.log(Shell::LOG_WARN, ss.str().c_str());
     }
 }
 
-void validateDimensions(const Shell& shell, Sampler::Base* pSampler, const std::string path, int w, int h) {
+void validateDimensions(const Shell& shell, Sampler::Base& sampler, const std::string path, int w, int h) {
     std::stringstream ss;
-    if (w != pSampler->width) ss << "invalid " << path << " (width)! " << std::endl;
-    if (w != pSampler->height) ss << "invalid " << path << " (height)! " << std::endl;
+    if (w != sampler.extent.width) ss << "invalid " << path << " (width)! " << std::endl;
+    if (w != sampler.extent.height) ss << "invalid " << path << " (height)! " << std::endl;
     auto errMsg = ss.str();
     if (!errMsg.empty()) {
         shell.log(Shell::LOG_ERR, errMsg.c_str());
@@ -81,7 +81,7 @@ void validateDimensions(const Shell& shell, Sampler::Base* pSampler, const std::
 
 }  // namespace
 
-Sampler::Base::Base(const Shell& shell, CreateInfo* pCreateInfo)
+Sampler::Base::Base(const CreateInfo* pCreateInfo)
     : FORMAT(pCreateInfo->format),
       IMAGE_FLAGS(pCreateInfo->imageFlags),
       NAME(pCreateInfo->name),
@@ -89,8 +89,7 @@ Sampler::Base::Base(const Shell& shell, CreateInfo* pCreateInfo)
       TILING(pCreateInfo->tiling),
       TYPE(pCreateInfo->type),
       flags(0),
-      width(0),
-      height(0),
+      extent(pCreateInfo->extent),
       mipLevels(1),
       arrayLayers(pCreateInfo->layerInfos.size()),
       image(VK_NULL_HANDLE),
@@ -98,61 +97,12 @@ Sampler::Base::Base(const Shell& shell, CreateInfo* pCreateInfo)
       imageViewType(pCreateInfo->imageViewType),
       view(VK_NULL_HANDLE),
       sampler(VK_NULL_HANDLE),
-      imgDescInfo{} {
-    // VALIDATE INFO
-    validateInfo(pCreateInfo);
-
-    bool isFirstLayer = true;
-    int w, h, c, req_comp = getReqComp(pCreateInfo->channels);
-
-    for (auto& layerInfo : pCreateInfo->layerInfos) {
-        // Convert windows path delimiters.
-        std::replace(layerInfo.path.begin(), layerInfo.path.end(), '\\', '/');
-
-        // Load data...
-        pPixels.push_back(stbi_load(layerInfo.path.c_str(), &w, &h, &c, req_comp));
-        // checkFailure(shell, layerInfo.path, p);
-
-        validateChannels(shell, this, layerInfo.path, c);
-
-        if (isFirstLayer) {
-            width = static_cast<uint32_t>(w);
-            height = static_cast<uint32_t>(h);
-            if (pCreateInfo->makeMipmaps)
-                mipLevels = static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1;
-            // validate
-            assert(width > 0);
-            assert(height > 0);
-            assert(mipLevels > 0);
-            isFirstLayer = false;
-        } else {
-            validateDimensions(shell, this, layerInfo.path, w, h);
-        }
-
+      imgDescInfo{}  //
+{
+    // TOOD: move back to "make" when it can handle dataless samplers.
+    for (const auto& layerInfo : pCreateInfo->layerInfos) {
         flags |= layerInfo.type * GetChannelMask(pCreateInfo->channels);
-
-        for (const auto& combineInfo : layerInfo.combineInfos) {
-            int req_comp_combine = getReqComp(std::get<1>(combineInfo));
-
-            // Load combine data...
-            auto pCombinePixels = stbi_load(std::get<0>(combineInfo).c_str(), &w, &h, &c, req_comp_combine);
-            // checkFailure(shell, layerInfo.path, pCombinePixels);
-
-            validateChannels(shell, this, layerInfo.path, c);
-            validateDimensions(shell, this, layerInfo.path, w, h);
-
-            // Mix combined data in.
-            VkDeviceSize size = static_cast<VkDeviceSize>(width) * static_cast<VkDeviceSize>(height);
-            for (VkDeviceSize i = 0; i < size; i++) {
-                // combineInfo { path, number of channels, combine offset }
-                auto offset = (i * NUM_CHANNELS) + std::get<2>(combineInfo);
-                auto combineOffset = i * std::get<1>(combineInfo);
-                std::memcpy(pPixels.back() + offset, pCombinePixels + combineOffset, std::get<1>(combineInfo));
-            }
-        }
     }
-    assert(arrayLayers == pPixels.size());
-    determineImageTypes();
 }
 
 void Sampler::Base::determineImageTypes() {
@@ -165,19 +115,19 @@ void Sampler::Base::determineImageTypes() {
 
     if (imageViewType == VK_IMAGE_VIEW_TYPE_MAX_ENUM) {
         // If imageViewType is not set then determine one.
-        if (width >= 1 && height == 1 && arrayLayers == 1) {
+        if (extent.width >= 1 && extent.height == 1 && arrayLayers == 1) {
             imageViewType = VK_IMAGE_VIEW_TYPE_1D;
             imageType = VK_IMAGE_TYPE_1D;
-        } else if (width >= 1 && height == 1 && arrayLayers > 1) {
+        } else if (extent.width >= 1 && extent.height == 1 && arrayLayers > 1) {
             imageViewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
             imageType = VK_IMAGE_TYPE_1D;
-        } else if (width >= 1 && height >= 1 && arrayLayers == 1) {
+        } else if (extent.width >= 1 && extent.height >= 1 && arrayLayers == 1) {
             imageViewType = VK_IMAGE_VIEW_TYPE_2D;
             imageType = VK_IMAGE_TYPE_2D;
-        } else if (width >= 1 && width == height && arrayLayers == 6) {
+        } else if (extent.width >= 1 && extent.width == extent.height && arrayLayers == 6) {
             imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
             imageType = VK_IMAGE_TYPE_2D;
-        } else if (width >= 1 && height >= 1 && arrayLayers > 1) {
+        } else if (extent.width >= 1 && extent.height >= 1 && arrayLayers > 1) {
             imageViewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
             imageType = VK_IMAGE_TYPE_2D;
         }
@@ -185,23 +135,23 @@ void Sampler::Base::determineImageTypes() {
         // If imageViewType is set then validate it.
         switch (imageViewType) {
             case VK_IMAGE_VIEW_TYPE_1D:
-                assert(width >= 1 && height == 1 && arrayLayers >= 1);
+                assert(extent.width >= 1 && extent.height == 1 && arrayLayers >= 1);
                 imageType = VK_IMAGE_TYPE_1D;
                 break;
             case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
-                assert(width >= 1 && height == 1 && arrayLayers >= 1);
+                assert(extent.width >= 1 && extent.height == 1 && arrayLayers >= 1);
                 imageType = VK_IMAGE_TYPE_1D;
                 break;
             case VK_IMAGE_VIEW_TYPE_2D:
-                assert(width >= 1 && height >= 1 && arrayLayers >= 1);
+                assert(extent.width >= 1 && extent.height >= 1 && arrayLayers >= 1);
                 imageType = VK_IMAGE_TYPE_2D;
                 break;
             case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
-                assert(width >= 1 && height >= 1 && arrayLayers >= 1);
+                assert(extent.width >= 1 && extent.height >= 1 && arrayLayers >= 1);
                 imageType = VK_IMAGE_TYPE_2D;
                 break;
             case VK_IMAGE_VIEW_TYPE_CUBE:
-                assert(width >= 1 && width == height && arrayLayers >= 6);
+                assert(extent.width >= 1 && extent.width == extent.height && arrayLayers >= 6);
                 imageType = VK_IMAGE_TYPE_2D;
                 break;
             default:
@@ -226,8 +176,8 @@ VkImageCreateInfo Sampler::Base::getImageCreateInfo() {
     imageInfo.flags = IMAGE_FLAGS;
     imageInfo.imageType = imageType;
     imageInfo.format = FORMAT;
-    imageInfo.extent.width = width;
-    imageInfo.extent.height = height;
+    imageInfo.extent.width = extent.width;
+    imageInfo.extent.height = extent.height;
     imageInfo.arrayLayers = arrayLayers;
     imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;  // TODO: can this be something else?
     imageInfo.tiling = TILING;
@@ -252,6 +202,72 @@ void Sampler::Base::destroy(const VkDevice& dev) {
 }
 
 // FUNCTIONS
+
+Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo) {
+    Sampler::Base sampler(pCreateInfo);
+    // VALIDATE INFO
+    validateInfo(pCreateInfo);
+
+    bool isFirstLayer = true;
+    int w, h, c, req_comp = getReqComp(pCreateInfo->channels);
+
+    for (auto& layerInfo : pCreateInfo->layerInfos) {
+        // LOAD FROM FILE
+        std::string path = layerInfo.path;
+        std::replace(path.begin(), path.end(), '\\', '/');  // Convert windows path delimiters.
+
+        // Load data...
+        sampler.pPixels.push_back(stbi_load(path.c_str(), &w, &h, &c, req_comp));
+        // checkFailure(shell, layerInfo.path, p);
+        assert(sampler.pPixels.back() != nullptr);  // TODO: get this to work inside checkFailure.
+
+        validateChannels(shell, sampler, layerInfo.path, c);
+
+        if (isFirstLayer) {
+            sampler.extent.width = static_cast<uint32_t>(w);
+            sampler.extent.height = static_cast<uint32_t>(h);
+            if (pCreateInfo->makeMipmaps)
+                sampler.mipLevels =
+                    static_cast<uint32_t>(std::floor(std::log2(std::max(sampler.extent.width, sampler.extent.height)))) + 1;
+            // validate
+            assert(sampler.extent.width > 0);
+            assert(sampler.extent.height > 0);
+            assert(sampler.mipLevels > 0);
+            isFirstLayer = false;
+        } else {
+            validateDimensions(shell, sampler, layerInfo.path, w, h);
+        }
+
+        /* TOOD: uncomment this and remove constructor code when this can
+         *  handle dataless samplers. Or remove both if moving toward macro
+         *  replace for sampler types/count.
+         */
+        // sampler.flags |= layerInfo.type * GetChannelMask(pCreateInfo->channels);
+
+        for (const auto& combineInfo : layerInfo.combineInfos) {
+            int req_comp_combine = getReqComp(std::get<1>(combineInfo));
+
+            // Load combine data...
+            auto pCombinePixels = stbi_load(std::get<0>(combineInfo).c_str(), &w, &h, &c, req_comp_combine);
+            // checkFailure(shell, layerInfo.path, pCombinePixels);
+
+            validateChannels(shell, sampler, layerInfo.path, c);
+            validateDimensions(shell, sampler, layerInfo.path, w, h);
+
+            // Mix combined data in.
+            VkDeviceSize size = static_cast<VkDeviceSize>(sampler.extent.width) * static_cast<VkDeviceSize>(sampler.extent.height);
+            for (VkDeviceSize i = 0; i < size; i++) {
+                // combineInfo { path, number of channels, combine offset }
+                auto offset = (i * sampler.NUM_CHANNELS) + std::get<2>(combineInfo);
+                auto combineOffset = i * std::get<1>(combineInfo);
+                std::memcpy(sampler.pPixels.back() + offset, pCombinePixels + combineOffset, std::get<1>(combineInfo));
+            }
+        }
+    }
+    assert(sampler.arrayLayers == sampler.pPixels.size());
+    sampler.determineImageTypes();
+    return sampler;
+}
 
 VkSamplerCreateInfo Sampler::GetVkSamplerCreateInfo(const Sampler::Base& sampler) {
     VkSamplerCreateInfo info = {};

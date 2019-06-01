@@ -7,10 +7,10 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-typedef uint32_t FlagBits;
+using FlagBits = uint32_t;
 // Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)
-typedef uint32_t VB_INDEX_TYPE;
-typedef uint8_t SCENE_INDEX_TYPE;
+using VB_INDEX_TYPE = uint32_t;
+using SCENE_INDEX_TYPE = uint8_t;
 
 // TODO: make a data structure so this can be const in the handlers.
 template <typename TEnum, typename TType>
@@ -39,15 +39,6 @@ struct ImageResource {
     VkImage image = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
     VkImageView view = VK_NULL_HANDLE;
-};
-
-// TODO: check other places like LoadingResourceHandler to see if this
-// could be used.
-struct SubmitResource {
-    std::vector<VkSemaphore> waitSemaphores;
-    std::vector<VkPipelineStageFlags> waitDstStageMasks;
-    std::vector<VkCommandBuffer> commandBuffers;
-    std::vector<VkSemaphore> signalSemaphores;
 };
 
 // template <typename T>

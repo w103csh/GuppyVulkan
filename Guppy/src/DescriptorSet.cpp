@@ -55,7 +55,8 @@ Descriptor::Set::Default::ProjectorSampler::ProjectorSampler()
           DESCRIPTOR_SET::PROJECTOR_DEFAULT,
           "_DS_PRJ_DEF",
           {
-              {{0, 0}, {DESCRIPTOR::SAMPLER_PIPELINE_COMBINED, {0}, Texture::STATUE_CREATE_INFO.name}},
+              //{{0, 0}, {DESCRIPTOR::SAMPLER_PIPELINE_COMBINED, {0}, Texture::STATUE_CREATE_INFO.name}},
+              {{0, 0}, {DESCRIPTOR::SAMPLER_PIPELINE_COMBINED, {0}, RenderPass::TEXTURE_2D_CREATE_INFO.name}},
               {{1, 0}, {DESCRIPTOR::PROJECTOR_DEFAULT, {0}, ""}},
           },
       } {}

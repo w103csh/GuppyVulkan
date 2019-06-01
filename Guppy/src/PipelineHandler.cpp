@@ -15,12 +15,19 @@
 #include "SceneHandler.h"
 #include "ShaderHandler.h"
 
-Pipeline::Handler::Handler(Game* pGame)
-    : Game::Handler(pGame),
-      cache_(VK_NULL_HANDLE),
-      // DEFAULT (TODO: remove default things...)
-      defaultPipelineInfo_{}  //
-{
+namespace {
+void setBase(const VkPipeline& pipeline, VkGraphicsPipelineCreateInfo& info, bool& hasBase) {
+    if (!hasBase && pipeline != VK_NULL_HANDLE) {
+        // Setup for derivatives...
+        info.flags = VK_PIPELINE_CREATE_DERIVATIVE_BIT;
+        info.basePipelineHandle = pipeline;
+        info.basePipelineIndex = -1;
+        hasBase = true;
+    }
+}
+}  // namespace
+
+Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_HANDLE), maxPushConstantsSize_(UINT32_MAX) {
     for (const auto& type : PIPELINE_ALL) {
         switch (type) {
             case PIPELINE::TRI_LIST_COLOR:
@@ -63,6 +70,7 @@ Pipeline::Handler::Handler(Game* pGame)
 void Pipeline::Handler::reset() {
     // PIPELINE
     for (auto& pPipeline : pPipelines_) pPipeline->destroy();
+    for (auto& keyValue : pipelineMap_) vkDestroyPipeline(shell().context().dev, keyValue.second, nullptr);
     // CACHE
     if (cache_ != VK_NULL_HANDLE) vkDestroyPipelineCache(shell().context().dev, cache_, nullptr);
 
@@ -75,24 +83,13 @@ void Pipeline::Handler::init() {
     // PUSH CONSTANT
     maxPushConstantsSize_ =
         shell().context().physical_dev_props[shell().context().physical_dev_index].properties.limits.maxPushConstantsSize;
+    assert(maxPushConstantsSize_ != UINT32_MAX);
 
     // CACHE
     createPipelineCache(cache_);
 
     // PIPELINES
     for (auto& pPipeline : pPipelines_) pPipeline->init();
-}
-
-void Pipeline::Handler::getReference(Mesh::Base& mesh) {
-    const auto& pPipeline = getPipeline(mesh.PIPELINE_TYPE);
-    auto reference = &mesh.pipelineReference_;
-    // PIPELINE
-    reference->pipeline = pPipeline->pipeline_;
-    reference->bindPoint = pPipeline->BIND_POINT;
-    reference->layout = pPipeline->layout_;
-    // PUSH CONSTANT
-    reference->pushConstantTypes = pPipeline->PUSH_CONSTANT_TYPES;
-    reference->pushConstantStages = shaderHandler().getStageFlags(pPipeline->SHADER_TYPES);
 }
 
 std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
@@ -152,42 +149,73 @@ void Pipeline::Handler::createPipelineCache(VkPipelineCache& cache) {
     vk::assert_success(vkCreatePipelineCache(shell().context().dev, &pipeline_cache_info, nullptr, &cache));
 }
 
-void Pipeline::Handler::createPipelines(bool remake) {
-    for (const auto& type : passHandler().getMainPass()->PIPELINE_TYPES) {
-        auto& pPipeline = getPipeline(type);
-        pPipeline->subpassId_ = passHandler().getMainPass()->getSubpassId(type);
-        if (pPipeline->pipeline_ != VK_NULL_HANDLE && !remake) return;
-        createPipeline(type, false);
+void Pipeline::Handler::createPipeline(const std::string&& name, VkGraphicsPipelineCreateInfo& createInfo,
+                                       VkPipeline& pipeline) {
+    vk::assert_success(vkCreateGraphicsPipelines(shell().context().dev, cache_, 1, &createInfo, nullptr, &pipeline));
+
+    if (settings().enable_debug_markers) {
+        std::string markerName = name + " pipline";
+        ext::DebugMarkerSetObjectName(shell().context().dev, (uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                                      markerName.c_str());
     }
 }
 
-// TODO: this needs a refactor... only does default pipeline stuff!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-const VkPipeline& Pipeline::Handler::createPipeline(const PIPELINE& type, bool setBase) {
-    auto& createInfo = getPipelineCreateInfo(type);
-    auto& pPipeline = getPipeline(type);
+const std::vector<Pipeline::Reference> Pipeline::Handler::createPipelines(
+    const std::multiset<std::pair<PIPELINE, RenderPass::offset>>& set) {
+    //
+    std::vector<Pipeline::Reference> refs;
+    VkGraphicsPipelineCreateInfo createInfo;
+    CreateInfoResources createInfoRes;
 
-    // Just hardcode the main pass for now...
-    createInfo.renderPass = passHandler().getMainPass()->pass;
-    createInfo.subpass = pPipeline->getSubpassId();
-
-    // TODO: WHAT HAPPENS IF YOU DELETE THE BASE PIPELINE?????
-    if (setBase) {
+    auto it = set.begin();
+    while (it != set.end()) {
+        createInfo = {};
         createInfo.basePipelineHandle = VK_NULL_HANDLE;
         createInfo.basePipelineIndex = 0;
+        createInfoRes = {};
+
+        auto pipelineType = it->first;
+        auto& pPipeline = getPipeline(it->first);
+
+        while (it != set.end() && it->first == pipelineType) {
+            bool hasBase = false;
+            // Get pipeline from map or create a map element
+            pipelineMapKey key = {pipelineType, it->second};
+            if (pipelineMap_.count(key) == 0) {
+                pipelineMap_.insert({key, VK_NULL_HANDLE});
+            }
+
+            VkPipeline& pipeline = pipelineMap_.at(key);
+            // Setup for derivatives...
+            setBase(pipeline, createInfo, hasBase);
+
+            // Save the old pipeline for clean up if necessary
+            if (pipeline != VK_NULL_HANDLE) oldPipelines_.push_back({-1, pipeline});
+
+            const auto& pPass = passHandler().getPass(it->second);
+            createInfo.renderPass = pPass->pass;
+            createInfo.subpass = pPass->getSubpassId(pipelineType);
+
+            pPipeline->setInfo(createInfoRes, createInfo);
+
+            // Give the render pass a chance to override default settings
+            pPass->overridePipelineCreateInfo(pipelineType, createInfoRes);
+
+            // Create the pipeline
+            createPipeline(pPipeline->NAME + " " + std::to_string(it->second), createInfo, pipeline);
+
+            // REFERENCE
+            refs.emplace_back(pPipeline->makeReference());
+            refs.back().pipeline = pipeline;
+
+            // Setup for derivatives...
+            setBase(pipeline, createInfo, hasBase);
+
+            std::advance(it, 1);
+        }
     }
-    // Save old pipeline for clean up if necessary...
-    if (pPipeline->pipeline_ != VK_NULL_HANDLE) oldPipelines_.push_back({-1, pPipeline->pipeline_});
 
-    auto& pipeline = pPipeline->create(cache_, defaultCreateInfoResources_, createInfo);
-
-    // Setup for derivatives...
-    if (setBase) {
-        createInfo.flags = VK_PIPELINE_CREATE_DERIVATIVE_BIT;
-        createInfo.basePipelineHandle = pipeline;
-        createInfo.basePipelineIndex = -1;
-    }
-
-    return pipeline;
+    return refs;
 }
 
 VkShaderStageFlags Pipeline::Handler::getDescriptorSetStages(const DESCRIPTOR_SET& setType) {
@@ -239,9 +267,26 @@ void Pipeline::Handler::cleanup(int frameIndex) {
 }
 
 void Pipeline::Handler::update() {
-    for (const auto& type : needsUpdateSet_) {
-        createPipeline(type);
-        sceneHandler().updatePipelineReferences(type, getPipeline(type)->pipeline_);
+    if (needsUpdateSet_.empty()) return;
+
+    std::multiset<std::pair<PIPELINE, RenderPass::offset>> updateSet;
+
+    auto itUpdate = needsUpdateSet_.begin();
+    auto itMap = pipelineMap_.begin();
+
+    while (itUpdate != needsUpdateSet_.end() && itMap != pipelineMap_.end()) {
+        while (*itUpdate != itMap->first.first && itMap != pipelineMap_.end()) ++itMap;
+        while (*itUpdate == itMap->first.first && itMap != pipelineMap_.end()) {
+            updateSet.insert({itMap->first.first, itMap->first.second});
+            ++itMap;
+        }
+        ++itUpdate;
     }
+
+    if (updateSet.empty()) return;
+
+    auto refs = createPipelines(updateSet);
+    passHandler().updatePipelineReferences(updateSet, refs);
+
     needsUpdateSet_.clear();
 }

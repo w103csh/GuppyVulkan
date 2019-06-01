@@ -41,10 +41,10 @@ class Base : public Handlee<Pipeline::Handler> {
     virtual void init();
     virtual void updateStatus();
 
+    Pipeline::Reference makeReference();
+
     inline const STATUS &getStatus() const { return status_; }
     inline const VkPipelineLayout &getLayout() const { return layout_; }
-    inline const VkPipeline &getPipeline() const { return pipeline_; }
-    inline uint32_t getSubpassId() const { return subpassId_; }
 
     // DESCRIPTOR SET
     Shader::descSetMacroSlotMap getDescSetMacroSlotMap() { return descSetMacroSlotMap_; }
@@ -65,10 +65,7 @@ class Base : public Handlee<Pipeline::Handler> {
     virtual void getTesselationInfoResources(CreateInfoResources &createInfoRes);
     virtual void getViewportStateInfoResources(CreateInfoResources &createInfoRes);
 
-    virtual const VkPipeline &create(const VkPipelineCache &cache, CreateInfoResources &createInfoRes,
-                                     VkGraphicsPipelineCreateInfo &pipelineCreateInfo,
-                                     const VkPipeline &basePipelineHandle = VK_NULL_HANDLE,
-                                     const int32_t basePipelineIndex = -1);
+    virtual void setInfo(CreateInfoResources &createInfoRes, VkGraphicsPipelineCreateInfo &pipelineCreateInfo);
 
     // DESCRIPTOR SET
     void validatePipelineDescriptorSets();
@@ -81,10 +78,8 @@ class Base : public Handlee<Pipeline::Handler> {
 
     STATUS status_;
     VkPipelineLayout layout_;
-    VkPipeline pipeline_;
 
    private:
-    uint32_t subpassId_;
     // DESCRIPTOR SET
     Shader::descSetMacroSlotMap descSetMacroSlotMap_;
     // PUSH CONSTANT

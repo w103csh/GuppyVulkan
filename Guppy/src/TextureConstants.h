@@ -2,9 +2,18 @@
 #ifndef TEXTURE_CONSTANTS_H
 #define TEXTURE_CONSTANTS_H
 
+#include <string>
+#include <vector>
+
+#include "SamplerConstants.h"
+
 namespace Texture {
 
-struct CreateInfo;
+struct CreateInfo {
+    std::string name;
+    std::vector<Sampler::CreateInfo> samplerCreateInfos;
+    bool hasData = true;
+};
 
 // CREATE INFOS
 

@@ -5,30 +5,36 @@
 // HANDLERS
 #include "CommandHandler.h"
 #include "RenderPassHandler.h"
+#include "SceneHandler.h"
 
-RenderPass::Base::Base(RenderPass::Handler& handler, const std::string&& name, const RenderPass::CreateInfo createInfo)
+RenderPass::Base::Base(RenderPass::Handler& handler, const uint32_t&& offset, const RenderPass::CreateInfo* pCreateInfo)
     : Handlee(handler),
-      NAME(name),
-      PIPELINE_TYPES(createInfo.types),
-      CLEAR_COLOR(createInfo.clearColor),
-      CLEAR_DEPTH(createInfo.clearDepth),
+      NAME(pCreateInfo->name),
+      OFFSET(offset),
+      TYPE(pCreateInfo->type),
+      SWAPCHAIN_DEPENDENT(pCreateInfo->swapchainDependent),
       pass(VK_NULL_HANDLE),
       data{},
       scissor_{},
       viewport_{},
       beginInfo_{},
-      depthFormat_{},
+      includeDepth_(pCreateInfo->includeDepth),
+      format_(VK_FORMAT_UNDEFINED),
+      depthFormat_(VK_FORMAT_UNDEFINED),
       finalLayout_(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR),
-      samples_(VK_SAMPLE_COUNT_1_BIT),
+      samples_(VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM),
       commandCount_(0),
-      fenceCount_(0),
       semaphoreCount_(0),
-      waitDstStageMask_(VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT),
       extent_{0, 0},
-      viewCount_(0),
-      pViews_(nullptr),
       depth_{}  //
-{}
+{
+    for (const auto& pipelineType : pCreateInfo->pipelineTypes) {
+        // If changed from set then a lot of work needs to be done, so I am
+        // adding some validation here.
+        assert(pipelineTypeReferenceMap_.count(pipelineType) == 0);
+        pipelineTypeReferenceMap_.insert({pipelineType, {}});
+    }
+}
 
 void RenderPass::Base::create() {
     createAttachmentsAndSubpasses();
@@ -44,6 +50,12 @@ void RenderPass::Base::create() {
         ext::DebugMarkerSetObjectName(handler().shell().context().dev, (uint64_t)pass,
                                       VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, markerName.c_str());
     }
+
+    // Not sure if this is the right place for validation since the
+    // base doesn't use these.
+    assert(format_ != VK_FORMAT_UNDEFINED);
+    if (includeDepth_)  //
+        assert(depthFormat_ != VK_FORMAT_UNDEFINED);
 }
 
 void RenderPass::Base::createTarget() {
@@ -51,7 +63,7 @@ void RenderPass::Base::createTarget() {
     createColorResources();
     createDepthResource();
     createAttachmentDebugMarkers();
-    createClearValues();
+    updateClearValues();
     createFramebuffers();
 
     // RENDER PASS
@@ -60,14 +72,52 @@ void RenderPass::Base::createTarget() {
     updateBeginInfo();
 
     // SYNC
-    createFences();
     createSemaphores();
+
+    // Validate signal semaphore creation. If semaphores are created
+    // the mask should be set.
+    if (data.semaphores.empty())
+        assert(data.signalSrcStageMask == VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM);
+    else
+        assert(data.signalSrcStageMask != VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM);
+
+    assert(data.priCmds.size() + data.secCmds.size() <= RESOURCE_SIZE);
+    assert(data.semaphores.size() <= RESOURCE_SIZE);
+}
+
+void RenderPass::Base::overridePipelineCreateInfo(const PIPELINE& type, Pipeline::CreateInfoResources& createInfoRes) {
+    createInfoRes.depthStencilStateInfo.depthTestEnable = includeDepth_;
+    createInfoRes.depthStencilStateInfo.depthWriteEnable = includeDepth_;
+    assert(samples_ != VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM);
+    createInfoRes.multisampleStateInfo.rasterizationSamples = samples_;
+}
+
+void RenderPass::Base::record(const uint32_t& frameIndex) {
+    beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    // pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    // VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+    auto& priCmd = data.priCmds[frameIndex];
+    auto& secCmd = data.secCmds[frameIndex];
+    auto& pScene = handler().sceneHandler().getActiveScene();
+
+    auto it = pipelineTypeReferenceMap_.begin();
+    while (it != pipelineTypeReferenceMap_.end()) {
+        // Record the scene
+        pScene->record((*it).first, pipelineTypeReferenceMap_.at((*it).first), priCmd, secCmd, frameIndex);
+
+        std::advance(it, 1);
+        if (it != pipelineTypeReferenceMap_.end()) {
+            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+            // vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+        }
+    }
+
+    endPass(frameIndex);
 }
 
 void RenderPass::Base::beginPass(const uint8_t& frameIndex, VkCommandBufferUsageFlags&& primaryCommandUsage,
                                  VkSubpassContents&& subpassContents) {
-    if (data.tests[frameIndex]) data.tests[frameIndex] = 0;
-
     // FRAME UPDATE
     beginInfo_.framebuffer = data.framebuffers[frameIndex];
     auto& priCmd = data.priCmds[frameIndex];
@@ -97,14 +147,14 @@ void RenderPass::Base::createPass() {
     createInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
     createInfo.pNext = nullptr;
     // ATTACHMENTS
-    createInfo.attachmentCount = static_cast<uint32_t>(subpassResources_.attachments.size());
-    createInfo.pAttachments = subpassResources_.attachments.data();
+    createInfo.attachmentCount = static_cast<uint32_t>(resources_.attachments.size());
+    createInfo.pAttachments = resources_.attachments.data();
     // SUBPASSES
-    createInfo.subpassCount = static_cast<uint32_t>(subpassResources_.subpasses.size());
-    createInfo.pSubpasses = subpassResources_.subpasses.data();
+    createInfo.subpassCount = static_cast<uint32_t>(resources_.subpasses.size());
+    createInfo.pSubpasses = resources_.subpasses.data();
     // DEPENDENCIES
-    createInfo.dependencyCount = static_cast<uint32_t>(subpassResources_.dependencies.size());
-    createInfo.pDependencies = subpassResources_.dependencies.data();
+    createInfo.dependencyCount = static_cast<uint32_t>(resources_.dependencies.size());
+    createInfo.pDependencies = resources_.dependencies.data();
 
     vk::assert_success(vkCreateRenderPass(handler().shell().context().dev, &createInfo, nullptr, &pass));
 }
@@ -119,15 +169,6 @@ void RenderPass::Base::createCommandBuffers() {
     data.priCmds.resize(commandCount_);
     handler().commandHandler().createCmdBuffers(handler().commandHandler().graphicsCmdPool(), data.priCmds.data(),
                                                 VK_COMMAND_BUFFER_LEVEL_PRIMARY, handler().shell().context().imageCount);
-}
-
-void RenderPass::Base::createFences(VkFenceCreateFlags flags) {
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = flags;
-    data.fences.resize(fenceCount_);
-    for (auto& fence : data.fences)
-        vk::assert_success(vkCreateFence(handler().shell().context().dev, &fenceInfo, nullptr, &fence));
 }
 
 void RenderPass::Base::createViewport() {
@@ -153,8 +194,8 @@ void RenderPass::Base::updateBeginInfo() {
 void RenderPass::Base::destroyTargetResources() {
     auto& dev = handler().shell().context().dev;
     // COLOR
-    for (auto& color : colors_) helpers::destroyImageResource(dev, color);
-    colors_.clear();
+    for (auto& color : images_) helpers::destroyImageResource(dev, color);
+    images_.clear();
     // DEPTH
     helpers::destroyImageResource(dev, depth_);
     // FRAMEBUFFER
@@ -163,12 +204,41 @@ void RenderPass::Base::destroyTargetResources() {
     // COMMAND
     helpers::destroyCommandBuffers(dev, handler().commandHandler().graphicsCmdPool(), data.priCmds);
     helpers::destroyCommandBuffers(dev, handler().commandHandler().graphicsCmdPool(), data.secCmds);
-    // FENCE
-    for (auto& fence : data.fences) vkDestroyFence(dev, fence, nullptr);
-    data.fences.clear();
     // SEMAPHORE
     for (auto& semaphore : data.semaphores) vkDestroySemaphore(dev, semaphore, nullptr);
     data.semaphores.clear();
+}
+
+void RenderPass::Base::updateSubmitResource(SubmitResource& resource, const uint32_t& frameIndex) const {
+    if (data.signalSrcStageMask != VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM) {
+        std::memcpy(                                                    //
+            &resource.signalSemaphores[resource.signalSemaphoreCount],  //
+            &data.semaphores[frameIndex], sizeof(VkSemaphore)           //
+        );
+        std::memcpy(                                                       //
+            &resource.signalSrcStageMasks[resource.signalSemaphoreCount],  //
+            &data.signalSrcStageMask, sizeof(VkPipelineStageFlags)         //
+        );
+        resource.signalSemaphoreCount++;
+    }
+    std::memcpy(                                                //
+        &resource.commandBuffers[resource.commandBufferCount],  //
+        &data.priCmds[frameIndex], sizeof(VkCommandBuffer)      //
+    );
+    resource.commandBufferCount++;
+}
+
+uint32_t RenderPass::Base::getSubpassId(const PIPELINE& type) const {
+    uint32_t id = 0;
+    for (const auto keyValue : pipelineTypeReferenceMap_) {
+        if (keyValue.first == type) break;
+        id++;
+    }
+    return id;  // TODO: is returning 0 for no types okay? Try using std::optional maybe?
+};
+
+void RenderPass::Base::setPipelineReference(const PIPELINE& pipelineType, const Pipeline::Reference& reference) {
+    pipelineTypeReferenceMap_.at(pipelineType) = reference;
 }
 
 void RenderPass::Base::destroy() {
@@ -190,7 +260,7 @@ void RenderPass::Base::createAttachmentDebugMarkers() {
     if (handler().settings().enable_debug_markers) {
         std::string markerName;
         uint32_t count = 0;
-        for (auto& color : colors_) {
+        for (auto& color : images_) {
             if (color.image != VK_NULL_HANDLE) {
                 markerName = NAME + " color framebuffer image (" + std::to_string(count++) + ")";
                 ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)color.image, VK_DEBUG_REPORT_OBJECT_TYPE_IMAGE_EXT,

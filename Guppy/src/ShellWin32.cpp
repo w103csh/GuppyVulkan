@@ -446,13 +446,13 @@ void ShellWin32::run() {
             presentBackBuffer();
         }
 
-#ifdef LIMIT_FRAMERATE
-        // TODO: this is crude and inaccurate.
-        DWORD Hz = static_cast<DWORD>(1000 / 10);  // 30Hz
-        if (settings_.enable_directory_listener) asyncAlert(Hz);
-#else
-        if (settings_.enable_directory_listener) asyncAlert(0);
-#endif
+        if (LIMIT_FRAMERATE) {
+            // TODO: this is crude and inaccurate.
+            DWORD Hz = static_cast<DWORD>(1000 / 10);  // 30Hz
+            if (settings_.enable_directory_listener) asyncAlert(Hz);
+        } else {
+            if (settings_.enable_directory_listener) asyncAlert(0);
+        }
 
         InputHandler::clear();
     }
@@ -514,7 +514,7 @@ VOID WINAPI FileIOCompletionRoutine(DWORD dwErrorCode, DWORD dwNumberOfBytesTran
     if (lpDirInst->firstComp) {
         // Divide file name length by 2 because chars are wide.
         auto ws = std::wstring(lpDirInst->lpBuffer->FileName, lpDirInst->lpBuffer->FileNameLength / 2);
-		// TODO: Handle this cast properly.
+        // TODO: Handle this cast properly.
         std::string fileName;
         for (auto wc : ws) fileName.push_back(static_cast<char>(wc));
         // Invoke callback with the name of the file that was modified.

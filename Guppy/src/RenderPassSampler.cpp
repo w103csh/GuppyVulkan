@@ -1,96 +1,105 @@
 
 #include "RenderPassSampler.h"
 
+#include <utility>
 #include <vulkan/vulkan.h>
 
+#include "Constants.h"
+#include "Texture.h"
 #include "Helpers.h"
+#include "RenderPassDefault.h"
+// HANDLERS
+#include "CommandHandler.h"
+#include "MaterialHandler.h"
 #include "RenderPassHandler.h"
+#include "TextureHandler.h"
 
-RenderPass::Sampler::Sampler(RenderPass::Handler& handler) : RenderPass::Base{handler, "Sampler", SAMPLER_CREATE_INFO} {}
+RenderPass::Sampler::Sampler(RenderPass::Handler& handler, const uint32_t&& offset)
+    : RenderPass::Default{handler, std::forward<const uint32_t>(offset), &SAMPLER_CREATE_INFO}, pTexture_(nullptr) {}
 
 void RenderPass::Sampler::init() {
-    // TODO
+    auto& ctx = handler().shell().context();
+
+    // FRAME DATA
+    format_ = ctx.surfaceFormat.format;
+    depthFormat_ = ctx.depthFormat;
+    finalLayout_ = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    samples_ = VK_SAMPLE_COUNT_1_BIT;
+    extent_ = {1024, 768};
+    includeMultiSampleAttachment_ = false;
+    // SYNC
+    commandCount_ = ctx.imageCount;
+    semaphoreCount_ = ctx.imageCount;
+    data.signalSrcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+
+    createSampler();
 }
 
-void RenderPass::Sampler::getSubmitResource(const uint8_t& frameIndex, SubmitResource& resource) const {
-    // resource.waitDstStageMasks.push_back({VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT});
-    // resource.commandBuffers.push_back(data.priCmds[frameIndex]);
+void RenderPass::Sampler::overridePipelineCreateInfo(const PIPELINE& type, Pipeline::CreateInfoResources& createInfoRes) {
+    createInfoRes.multisampleStateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 }
 
-void RenderPass::Sampler::createClearValues() {
-    // if (CLEAR_COLOR) clearValues_.push_back({CLEAR_VALUE});
-}
+void RenderPass::Sampler::createSampler() {
+    auto& ctx = handler().shell().context();
 
-void RenderPass::Sampler::createAttachmentsAndSubpasses() {
-    // auto& resources = subpassResources_;
-    ///*
-    //    THESE SETTINGS ARE COPIED DIRECTLY FROM THE IMGUI VULKAN SAMPLE.
-    //    IF IMGUI IS UPDATED THIS SHOULD BE REPLACED WITH THE NEW SETTINGS, OR
-    //    HOPEFULLY TURNED INTO A MORE MODULAR SETUP CALLING THEIR FUNCTIONS!
+    // pTexture_ = handler().textureHandler().getTextureByName(TEXTURE_2D_CREATE_INFO.name);
+    pTexture_ = handler().textureHandler().getTextureByName(TEXTURE_2D_ARRAY_CREATE_INFO.name);
+    assert(pTexture_ != nullptr && pTexture_->samplers.size());
 
-    //    The ImGui implementation currently creates a swapchain along with a
-    //    render pass inside their setup. We only want the render pass & attachments,
-    //    so unfortunately their code cannot be used as is.
-    //*/
-    // VkAttachmentDescription attachment = {};
-    // attachment.format = initInfo.format;
-    // attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    // attachment.loadOp = initInfo.clearColor ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    // attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    // attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    // attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    // attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    // attachment.finalLayout = initInfo.finalLayout;
+    auto& sampler = pTexture_->samplers.back();
 
-    // subpassResources_.attachments.push_back(attachment);
+    helpers::createImage(ctx.dev, ctx.mem_props, handler().commandHandler().getUniqueQueueFamilies(true, false, true),
+                         samples_, format_, sampler.TILING, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, sampler.image,
+                         sampler.memory);
 
-    // subpassResources_.colorAttachments.resize(1);
-    // subpassResources_.colorAttachments.back().attachment = 0;
-    // subpassResources_.colorAttachments.back().layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    helpers::createImageView(ctx.dev, sampler.image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, sampler.imageViewType, 1,
+                             pTexture_->samplers.back().view);
 
-    // VkSubpassDescription subpass = {};
-    // subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    // subpass.colorAttachmentCount = static_cast<uint32_t>(subpassResources_.colorAttachments.size());
-    // subpass.pColorAttachments = &subpassResources_.colorAttachments.back();
+    helpers::transitionImageLayout(handler().commandHandler().graphicsCmd(), sampler.image, format_,
+                                   VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                                   VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 1, 1);
 
-    // resources.subpasses.push_back(subpass);
-}
+    handler().textureHandler().createSampler(ctx.dev, sampler);
 
-void RenderPass::Sampler::createDependencies() {
-    // auto& resources = subpassResources_;
-    ///*
-    //    SEE COMMENT IN createSubpassesAndAttachments !!!!!
-    //*/
-    // VkSubpassDependency dependency = {};
-    // dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-    // dependency.dstSubpass = 0;
-    // dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    // dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    // dependency.srcAccessMask = 0;
-    // dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    sampler.imgDescInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    sampler.imgDescInfo.imageView = sampler.view;
+    sampler.imgDescInfo.sampler = sampler.sampler;
 
-    // resources.dependencies.push_back(dependency);
+    // TODO: This is getting a little too similar here. Maybe find a way to
+    // move this stuff to the texture handler.
+    pTexture_->status = STATUS::READY;
+    handler().materialHandler().updateTexture(pTexture_);
 }
 
 void RenderPass::Sampler::createFramebuffers() {
-    ///*  These are the views for framebuffer.
+    /* These are the potential views for framebuffer.
+     *  - depth
+     *  - sampler
+     */
+    std::vector<VkImageView> attachmentViews;
+    // DEPTH
+    if (includeDepth_) {
+        assert(depth_.view != VK_NULL_HANDLE);
+        attachmentViews.push_back(depth_.view);
+    }
+    // SAMPLER
+    assert(pTexture_->samplers.size() == 1 && pTexture_->samplers[0].view != VK_NULL_HANDLE);
+    attachmentViews.push_back(pTexture_->samplers[0].view);
 
-    //    view[0] is swapchain
+    VkFramebufferCreateInfo createInfo = {};
+    createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    createInfo.renderPass = pass;
+    createInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
+    createInfo.pAttachments = attachmentViews.data();
+    createInfo.width = extent_.width;
+    createInfo.height = extent_.height;
+    createInfo.layers = 1;
 
-    //    The incoming "views" param are the swapchain views.
-    //*/
-    // VkFramebufferCreateInfo createInfo = {};
-    // createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    // createInfo.renderPass = pass;
-    // createInfo.attachmentCount = 1;
-    // createInfo.width = frameInfo.extent.width;
-    // createInfo.height = frameInfo.extent.height;
-    // createInfo.layers = 1;
-
-    // data.framebuffers.resize(frameInfo.viewCount);
-    // for (uint8_t i = 0; i < frameInfo.viewCount; i++) {
-    //    createInfo.pAttachments = &frameInfo.pViews[i];
-    //    vk::assert_success(vkCreateFramebuffer(ctx.dev, &createInfo, nullptr, &data.framebuffers[i]));
-    //    data.tests.push_back(1);
-    //}
+    data.framebuffers.resize(handler().getSwapchainImageCount());
+    for (auto i = 0; i < data.framebuffers.size(); i++) {
+        // Create the framebuffer...
+        vk::assert_success(
+            vkCreateFramebuffer(handler().shell().context().dev, &createInfo, nullptr, &data.framebuffers[i]));
+    }
 }
