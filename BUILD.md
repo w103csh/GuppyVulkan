@@ -428,8 +428,7 @@ create a build directory and generate the Xcode project files:
 
     cd GuppyVulkan
     mkdir build
-    cd build
-    python ../buildMac.py \
+    python ../buildMac.py .. \
             -DMVK_PACKAGE_DIR=absolute_path_to_package_dir \
             -DGLM_LIB_DIR=absolute_path_to_install_dir \
             -DGLFW_INCLUDE_DIR=absolute_path_to_include_dir \
@@ -437,8 +436,8 @@ create a build directory and generate the Xcode project files:
             ..
 
 > The `..` parameter tells `cmake` the location of the root of the
-> repository. If you place your build directory someplace else, you'll need to
-> specify the location of the repository root differently.
+> repository. If you place your build directory somewhere other than `build`,
+> you'll need to specify the location of the repository root differently.
 
 When generating the project file, the absolute path to the [LunarG Vulkan SDK](https://vulkan.lunarg.com/)
 install directory must be provided. This can be done by setting the

@@ -2,6 +2,7 @@
 #include "TextureHandler.h"
 
 #include <algorithm>
+#include <future>
 #include <stb_image.h>
 
 #include "Constants.h"
@@ -97,7 +98,7 @@ void Texture::Handler::update() {
     }
 }
 
-std::shared_ptr<Texture::Base> Texture::Handler::asyncLoad(std::shared_ptr<Texture::Base>& pTexture, CreateInfo createInfo) {
+std::shared_ptr<Texture::Base> Texture::Handler::asyncLoad(std::shared_ptr<Texture::Base> pTexture, CreateInfo createInfo) {
     load(pTexture, &createInfo);
     return pTexture;
 }

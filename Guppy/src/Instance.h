@@ -16,7 +16,7 @@ const uint32_t BINDING = 1;
 const uint32_t MODEL_ALL = UINT32_MAX;
 
 class Base : public Obj3d, public virtual Buffer::Item {
-    friend class ObjInst3d;
+    friend class ::ObjInst3d;
 
    protected:
     Base() {}

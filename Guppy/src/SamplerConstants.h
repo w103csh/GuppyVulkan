@@ -45,7 +45,7 @@ struct LayerInfo {
     std::vector<combineInfo> combineInfos;
 };
 
-const VkExtent2D BAD_EXTENT_2D = {UINT32_MAX, UINT32_MAX};
+constexpr VkExtent2D BAD_EXTENT_2D = {UINT32_MAX, UINT32_MAX};
 
 struct CreateInfo {
     std::string name = "";
