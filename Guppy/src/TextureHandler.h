@@ -37,7 +37,7 @@ class Handler : public Game::Handler {
    private:
     void reset() override;
 
-    std::shared_ptr<Texture::Base> asyncLoad(std::shared_ptr<Texture::Base>& pTexture, CreateInfo createInfo);
+    std::shared_ptr<Texture::Base> asyncLoad(std::shared_ptr<Texture::Base> pTexture, CreateInfo createInfo);
     void load(std::shared_ptr<Texture::Base>& pTexture, const CreateInfo* pCreateInfo);
 
     void createTexture(std::shared_ptr<Texture::Base> pTexture);

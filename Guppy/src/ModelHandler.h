@@ -82,7 +82,7 @@ class Handler : public Game::Handler {
 
     template <typename TMaterialCreateInfo>
     std::vector<Mesh::Color*> loadColor(Model::Base& model, TMaterialCreateInfo materialCreateInfo,
-                                        std::shared_ptr<Instance::Base>& pInstanceData) {
+                                        std::shared_ptr<Instance::Base> pInstanceData) {
         auto data = loadData(model);
         auto createInfo = model.getMeshCreateInfo();
 
@@ -114,7 +114,7 @@ class Handler : public Game::Handler {
 
     template <typename TMaterialCreateInfo>
     std::vector<Mesh::Texture*> loadTexture(Model::Base& model, TMaterialCreateInfo materialCreateInfo,
-                                            std::shared_ptr<Instance::Base>& pInstanceData) {
+                                            std::shared_ptr<Instance::Base> pInstanceData) {
         auto data = loadData(model);
         auto createInfo = model.getMeshCreateInfo();
 

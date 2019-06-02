@@ -17,6 +17,7 @@ namespace Texture {
 class Base : public Descriptor::Interface {
    public:
     Base(const uint32_t &&offset, const CreateInfo *pCreateInfo);
+    virtual ~Base() = default;
 
     // DESCRIPTOR
     void setWriteInfo(VkWriteDescriptorSet &write) const override;

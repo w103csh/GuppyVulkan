@@ -11,7 +11,7 @@ namespace UI {
 
 class Handler : public Game::Handler {
    public:
-    UI::Handler::Handler(Game* pGame) : Game::Handler(pGame) {}
+    Handler(Game* pGame) : Game::Handler(pGame) {}
 
     // Default behaviour is to do nothing.
     virtual void init() override {}

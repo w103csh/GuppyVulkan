@@ -6,6 +6,8 @@
  - Define descriptor offsets somewhere other than the Descriptor::Set! (Maybe on a pass basis? This 
     will require a refactor of the pipeline layout creation process.)
 
+ - Mac now renders a black scene, but still runs the UI fine. Ugh.......
+
 - Figure out the long standing smoothing issue... (comment about this in Face.h - indexVertices)
     - In "glaring exampler of problem with smoothing.png" I used the fragNormal variable
         as Kd.

@@ -221,8 +221,8 @@ const std::vector<Pipeline::Reference> Pipeline::Handler::createPipelines(
 VkShaderStageFlags Pipeline::Handler::getDescriptorSetStages(const DESCRIPTOR_SET& setType) {
     VkShaderStageFlags stages = 0;
     for (const auto& pPipeline : pPipelines_) {
-        for (const auto& setType : pPipeline->DESCRIPTOR_SET_TYPES) {
-            if (setType == setType) {
+        for (const auto& type : pPipeline->DESCRIPTOR_SET_TYPES) {
+            if (type == setType) {
                 for (const auto& shaderType : pPipeline->SHADER_TYPES) {
                     stages |= SHADER_ALL.at(shaderType).stage;
                 }
@@ -275,8 +275,8 @@ void Pipeline::Handler::update() {
     auto itMap = pipelineMap_.begin();
 
     while (itUpdate != needsUpdateSet_.end() && itMap != pipelineMap_.end()) {
-        while (*itUpdate != itMap->first.first && itMap != pipelineMap_.end()) ++itMap;
-        while (*itUpdate == itMap->first.first && itMap != pipelineMap_.end()) {
+        while (itMap != pipelineMap_.end() && *itUpdate != itMap->first.first) ++itMap;
+        while (itMap != pipelineMap_.end() && *itUpdate == itMap->first.first) {
             updateSet.insert({itMap->first.first, itMap->first.second});
             ++itMap;
         }

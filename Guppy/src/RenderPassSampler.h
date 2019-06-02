@@ -18,7 +18,7 @@ class Sampler : public Default {
 
    private:
     void createSampler();
-    void createFramebuffers();
+    void createFramebuffers() override;
 
     std::shared_ptr<Texture::Base> pTexture_;
 };

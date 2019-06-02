@@ -40,7 +40,7 @@ class Handler : public Game::Handler {
         if (!cleared) swpchnRes_.cleared = true;
         return cleared;
     }
-    inline const auto getSwapchainImageCount() const { return swpchnRes_.images.size(); }
+    inline auto getSwapchainImageCount() const { return swpchnRes_.images.size(); }
     inline const VkImage* getSwapchainImages() const { return swpchnRes_.images.data(); }
     inline const VkImageView* getSwapchainViews() const { return swpchnRes_.views.data(); }
 

@@ -13,13 +13,16 @@ namespace Material {
 
 template <class TBase>
 using ItemPointer = std::shared_ptr<TBase>;
+    
+template <class TDerived>
+using ManagerType = Buffer::Manager::Descriptor<Material::Base, TDerived, ItemPointer>;
 
 // TODO: inner class of Handler?
 template <class TDerived>
-class Manager : public Buffer::Manager::Descriptor<Material::Base, TDerived, ItemPointer> {
+class Manager : public ManagerType<TDerived> {
    public:
     Manager(const std::string &&name, const DESCRIPTOR &&descriptorType, const VkDeviceSize &&maxSize)
-        : Buffer::Manager::Descriptor<Material::Base, TDerived, ItemPointer>{
+        : ManagerType<TDerived>{
               std::forward<const std::string>(name),
               std::forward<const DESCRIPTOR>(descriptorType),
               std::forward<const VkDeviceSize>(maxSize),
@@ -30,10 +33,10 @@ class Manager : public Buffer::Manager::Descriptor<Material::Base, TDerived, Ite
           } {}
 
     void updateTexture(const VkDevice &dev, const std::shared_ptr<Texture::Base> &pTexture) {
-        for (auto &pItem : pItems)
+        for (auto &pItem : ManagerType<TDerived>::pItems)
             if (pItem->getTexture() == pTexture) {
                 pItem->setTextureData();
-                updateData(dev, pItem->BUFFER_INFO);
+                ManagerType<TDerived>::updateData(dev, pItem->BUFFER_INFO);
             }
     }
 };
