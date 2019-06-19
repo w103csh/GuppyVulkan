@@ -44,7 +44,6 @@ class Handler : public Game::Handler {
     std::unique_ptr<Mesh::Line>& getLineMesh(size_t sceneOffset, size_t meshOffset);
     std::unique_ptr<Mesh::Texture>& getTextureMesh(size_t sceneOffset, size_t meshOffset);
 
-    void updateDescriptorSets(SCENE_INDEX_TYPE offset, bool isUpdate = true);
     void cleanup();
 
    private:

@@ -3,6 +3,7 @@
 
 #include <array>
 #include <memory>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -19,6 +20,10 @@ class Handler : public Game::Handler {
    public:
     Handler(Game* pGame);
 
+    Uniform::offsetsMap makeUniformOffsetsMap();
+    // NOTE: this is not in order!!!
+    std::set<RENDER_PASS> getActivePassTypes(const PIPELINE& pipelineType = PIPELINE::ALL_ENUM);
+
     void init() override;
     void destroy() override;
 
@@ -26,9 +31,15 @@ class Handler : public Game::Handler {
     void recordPasses();
     void update();
 
-    inline const std::unique_ptr<RenderPass::Base>& getPass(const offset& offset) {
+    inline const auto& getPass(const offset& offset) {
         assert(offset >= 0 && offset < pPasses_.size());
         return pPasses_[offset];
+    }
+    inline const auto& getPass(const RENDER_PASS& type) {
+        for (const auto& pPass : pPasses_)
+            if (pPass->TYPE == type) return pPass;
+        assert(false);
+        throw std::runtime_error("Couldn't find pass");
     }
     inline uint8_t getFrameIndex() const { return frameIndex_; }
 
@@ -45,8 +56,7 @@ class Handler : public Game::Handler {
     inline const VkImageView* getSwapchainViews() const { return swpchnRes_.views.data(); }
 
     // PIPELINE
-    void updatePipelineReferences(const std::multiset<std::pair<PIPELINE, RenderPass::offset>>& set,
-                                  const std::vector<Pipeline::Reference>& refs);
+    void updateBindData(const pipelinePassSet& set);
 
    private:
     void reset() override;

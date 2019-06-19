@@ -957,8 +957,7 @@ void Shell::determine_api_version(uint32_t &version) {
     uint32_t desired_version = getDesiredVersion();
     uint16_t desired_major_version = VK_VERSION_MAJOR(desired_version);
     uint16_t desired_minor_version = VK_VERSION_MINOR(desired_version);
-    std::string desired_version_string =
-        std::to_string(desired_major_version) + "." + std::to_string(desired_minor_version);
+    std::string desired_version_string = std::to_string(desired_major_version) + "." + std::to_string(desired_minor_version);
 
     VkInstance instance = VK_NULL_HANDLE;
     std::vector<VkPhysicalDevice> physical_devices_desired;

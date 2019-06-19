@@ -10,9 +10,9 @@ Descriptor::Set::Parallax::Uniform::Uniform()
           DESCRIPTOR_SET::UNIFORM_PARALLAX,
           "_DS_UNI_PLX",
           {
-              {{0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {0}, ""}},
-              {{1, 0}, {DESCRIPTOR::MATERIAL_DEFAULT, {0}, ""}},
-              {{3, 0}, {DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, {OFFSET_ALL}, ""}},
+              {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, ""}},
+              {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_DEFAULT, ""}},
+              {{3, 0}, {UNIFORM::LIGHT_POSITIONAL_DEFAULT, ""}},
           },
       } {}
 
@@ -21,8 +21,8 @@ Descriptor::Set::Parallax::Sampler::Sampler()
           DESCRIPTOR_SET::SAMPLER_PARALLAX,
           "_DS_SMP_PLX",
           {
-              {{0, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED, {0}, ""}},
-              {{1, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED, {0}, ""}},
+              {{0, 0}, {COMBINED_SAMPLER::MATERIAL, ""}},
+              {{1, 0}, {COMBINED_SAMPLER::MATERIAL, ""}},
           },
       } {}
 
@@ -51,30 +51,28 @@ const CreateInfo STEEP_CREATE_INFO = {
 }  // namespace Parallax
 }  // namespace Shader
 
-Pipeline::Parallax::Simple::Simple(Pipeline::Handler& handler)
-    : Base{
-          handler,
-          PIPELINE::PARALLAX_SIMPLE,
-          VK_PIPELINE_BIND_POINT_GRAPHICS,
-          "Parallax Simple Pipeline",
-          {SHADER::PARALLAX_VERT, SHADER::PARALLAX_SIMPLE_FRAG},
-          {},
-          {
-              DESCRIPTOR_SET::UNIFORM_PARALLAX,
-              DESCRIPTOR_SET::SAMPLER_PARALLAX,
-          },
-      } {};
+namespace Pipeline {
+namespace Parallax {
 
-Pipeline::Parallax::Steep::Steep(Pipeline::Handler& handler)
-    : Base{
-          handler,
-          PIPELINE::PARALLAX_STEEP,
-          VK_PIPELINE_BIND_POINT_GRAPHICS,
-          "Parallax Steep Pipeline",
-          {SHADER::PARALLAX_VERT, SHADER::PARALLAX_STEEP_FRAG},
-          {},
-          {
-              DESCRIPTOR_SET::UNIFORM_PARALLAX,
-              DESCRIPTOR_SET::SAMPLER_PARALLAX,
-          },
-      } {};
+const Pipeline::CreateInfo SIMPLE_CREATE_INFO = {
+    PIPELINE::PARALLAX_SIMPLE,
+    "Parallax Simple Pipeline",
+    {SHADER::PARALLAX_VERT, SHADER::PARALLAX_SIMPLE_FRAG},
+    {
+        DESCRIPTOR_SET::UNIFORM_PARALLAX,
+        DESCRIPTOR_SET::SAMPLER_PARALLAX,
+    },
+};
+
+const Pipeline::CreateInfo STEEP_CREATE_INFO = {
+    PIPELINE::PARALLAX_STEEP,
+    "Parallax Steep Pipeline",
+    {SHADER::PARALLAX_VERT, SHADER::PARALLAX_STEEP_FRAG},
+    {
+        DESCRIPTOR_SET::UNIFORM_PARALLAX,
+        DESCRIPTOR_SET::SAMPLER_PARALLAX,
+    },
+};
+
+}  // namespace Parallax
+}  // namespace Pipeline

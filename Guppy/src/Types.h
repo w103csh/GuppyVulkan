@@ -3,9 +3,16 @@
 
 #include <glm/glm.hpp>
 #include <functional>
+#include <map>
 #include <memory>
-#include <vector>
+#include <set>
+#include <variant>
 #include <vulkan/vulkan.h>
+
+#include "Enum.h"
+
+enum class PIPELINE : uint32_t;
+enum class RENDER_PASS : uint32_t;
 
 using FlagBits = uint32_t;
 // Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)
@@ -74,5 +81,10 @@ struct hash_pair_enum_size_t {
         return int_hasher(static_cast<int>(p.first)) ^ size_t_hasher(p.second);
     }
 };
+
+using DESCRIPTOR = std::variant<UNIFORM, UNIFORM_DYNAMIC, COMBINED_SAMPLER>;
+
+// Why is this a multiset?
+using pipelinePassSet = std::multiset<std::pair<PIPELINE, RENDER_PASS>>;
 
 #endif  //! TYPE_H

@@ -37,7 +37,7 @@ class Base : public Handlee<RenderPass::Handler> {
     virtual void postCreate() {}
     virtual void setSwapchainInfo() {}
     void createTarget();
-    virtual void overridePipelineCreateInfo(const PIPELINE &type, Pipeline::CreateInfoResources &createInfoRes);
+    void overridePipelineCreateInfo(const PIPELINE &type, Pipeline::CreateInfoVkResources &createInfoRes);
     virtual void record(const uint32_t &frameIndex);
 
     virtual void beginPass(const uint8_t &frameIndex,
@@ -61,15 +61,30 @@ class Base : public Handlee<RenderPass::Handler> {
     const VkFormat &getFormat() const { return format_; }
     const VkFormat &getDepthFormat() const { return depthFormat_; }
     const VkImageLayout &getFinalLayout() const { return finalLayout_; }
-    const VkSampleCountFlagBits &getSamples() const { return samples_; }
+    const VkSampleCountFlagBits &getSamples() const { return pipelineData_.samples; }
 
     // SUBPASS
     uint32_t getSubpassId(const PIPELINE &type) const;
 
     // PIPELINE
-    const auto &getPipelineReferenceMap() const { return pipelineTypeReferenceMap_; }
-    void setPipelineReference(const PIPELINE &pipelineType, const Pipeline::Reference &reference);
-    auto getPipelineCount() const { return pipelineTypeReferenceMap_.size(); }
+    const auto &getPipelineBindDataMap() const { return pipelineTypeBindDataMap_; }
+    void setBindData(const PIPELINE &pipelineType, const std::shared_ptr<Pipeline::BindData> &pBindData);
+    inline auto getPipelineCount() const { return pipelineTypeBindDataMap_.size(); }
+    inline std::set<PIPELINE> getPipelineTypes() {
+        std::set<PIPELINE> types;
+        for (const auto &keyValue : pipelineTypeBindDataMap_) types.insert(keyValue.first);
+        return types;
+    }
+    inline void addPipelineTypes(std::set<PIPELINE> &pipelineTypes) {
+        for (const auto &keyValue : pipelineTypeBindDataMap_) pipelineTypes.insert(keyValue.first);
+    }
+    inline const auto &getPipelineData() { return pipelineData_; }
+    inline bool comparePipelineData(const std::unique_ptr<Base> &pOther) {
+        return pipelineData_ == pOther->getPipelineData();
+    }
+
+    // UNIFORM
+    const auto &getDescriptorPipelineOffsets() { return descPipelineOffsets_; }
 
     virtual void destroy();  // calls destroyFrameData
     virtual void destroyTargetResources();
@@ -82,7 +97,8 @@ class Base : public Handlee<RenderPass::Handler> {
     Base(RenderPass::Handler &handler, const uint32_t &&offset, const RenderPass::CreateInfo *pCreateInfo);
 
     // PIPELINE
-    std::unordered_map<PIPELINE, Pipeline::Reference> pipelineTypeReferenceMap_;
+    PipelineData pipelineData_;
+    std::unordered_map<PIPELINE, std::shared_ptr<Pipeline::BindData>> pipelineTypeBindDataMap_;  // Is this still necessary?
 
     // RENDER PASS
     virtual void createPass();
@@ -107,11 +123,9 @@ class Base : public Handlee<RenderPass::Handler> {
     std::vector<VkClearValue> clearValues_;
 
     // SETTINGS
-    bool includeDepth_;
     VkFormat format_;
     VkFormat depthFormat_;
     VkImageLayout finalLayout_;
-    VkSampleCountFlagBits samples_;
     uint32_t commandCount_;
     uint32_t semaphoreCount_;
     VkExtent2D extent_;
@@ -119,6 +133,9 @@ class Base : public Handlee<RenderPass::Handler> {
     // ATTACHMENT
     std::vector<ImageResource> images_;
     ImageResource depth_;
+
+    // UNIFORM
+    descriptorPipelineOffsetsMap descPipelineOffsets_;
 
    private:
     void createSemaphores();

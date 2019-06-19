@@ -23,8 +23,8 @@ void RenderPass::Sampler::init() {
     // FRAME DATA
     format_ = ctx.surfaceFormat.format;
     depthFormat_ = ctx.depthFormat;
-    finalLayout_ = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    samples_ = VK_SAMPLE_COUNT_1_BIT;
+    finalLayout_ = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    pipelineData_.samples = VK_SAMPLE_COUNT_1_BIT;
     extent_ = {1024, 768};
     includeMultiSampleAttachment_ = false;
     // SYNC
@@ -33,10 +33,6 @@ void RenderPass::Sampler::init() {
     data.signalSrcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
     createSampler();
-}
-
-void RenderPass::Sampler::overridePipelineCreateInfo(const PIPELINE& type, Pipeline::CreateInfoResources& createInfoRes) {
-    createInfoRes.multisampleStateInfo.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 }
 
 void RenderPass::Sampler::createSampler() {
@@ -48,21 +44,17 @@ void RenderPass::Sampler::createSampler() {
 
     auto& sampler = pTexture_->samplers.back();
 
-    helpers::createImage(ctx.dev, ctx.mem_props, handler().commandHandler().getUniqueQueueFamilies(true, false, true),
-                         samples_, format_, sampler.TILING, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                         VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, sampler.image,
-                         sampler.memory);
+    helpers::createImage(
+        ctx.dev, ctx.mem_props, handler().commandHandler().getUniqueQueueFamilies(true, false, true), pipelineData_.samples,
+        format_, sampler.TILING, VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
+        VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, sampler.image, sampler.memory);
 
     helpers::createImageView(ctx.dev, sampler.image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, sampler.imageViewType, 1,
                              pTexture_->samplers.back().view);
 
-    helpers::transitionImageLayout(handler().commandHandler().graphicsCmd(), sampler.image, format_,
-                                   VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                                   VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, 1, 1);
-
     handler().textureHandler().createSampler(ctx.dev, sampler);
 
-    sampler.imgDescInfo.imageLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    sampler.imgDescInfo.imageLayout = finalLayout_;
     sampler.imgDescInfo.imageView = sampler.view;
     sampler.imgDescInfo.sampler = sampler.sampler;
 
@@ -79,7 +71,7 @@ void RenderPass::Sampler::createFramebuffers() {
      */
     std::vector<VkImageView> attachmentViews;
     // DEPTH
-    if (includeDepth_) {
+    if (pipelineData_.includeDepth) {
         assert(depth_.view != VK_NULL_HANDLE);
         attachmentViews.push_back(depth_.view);
     }

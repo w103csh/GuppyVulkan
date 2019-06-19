@@ -13,11 +13,11 @@ Shader::Handler::Handler(Game* pGame) : Game::Handler(pGame), clearTextsAfterLoa
 void Shader::Handler::init() {
     reset();
 
-    pipelineHandler().initShaderInfoMap(shaderInfoMap_);
+    pipelineHandler().makeShaderInfoMap(infoMap_);
 
     init_glslang();
 
-    for (auto& keyValue : shaderInfoMap_) {
+    for (auto& keyValue : infoMap_) {
         bool needsUpdate = make(keyValue, true, true);
         assert(!needsUpdate);
     }
@@ -32,25 +32,25 @@ void Shader::Handler::init() {
 
 void Shader::Handler::reset() {
     // SHADERS
-    for (auto& keyValue : shaderInfoMap_) {
-        if (keyValue.second.module != VK_NULL_HANDLE)
-            vkDestroyShaderModule(shell().context().dev, keyValue.second.module, nullptr);
+    for (auto& keyValue : infoMap_) {
+        if (keyValue.second.second.module != VK_NULL_HANDLE)
+            vkDestroyShaderModule(shell().context().dev, keyValue.second.second.module, nullptr);
     }
 
     cleanup();
 }
 
-bool Shader::Handler::make(shaderInfoMapKeyValue& keyValue, bool doAssert, bool isInit) {
-    auto& stageInfo = keyValue.second;
+bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit) {
+    auto& stageInfo = keyValue.second.second;
     if (isInit && stageInfo.module != VK_NULL_HANDLE) return false;
 
-    auto stringTexts = loadText(keyValue.first);
+    auto stringTexts = loadText(keyValue);
 
     // I can't figure out how else to do this atm.
     std::vector<const char*> texts;
     for (auto& s : stringTexts) texts.push_back(s.c_str());
 
-    const auto& createInfo = SHADER_ALL.at(keyValue.first.first);
+    const auto& createInfo = SHADER_ALL.at(std::get<0>(keyValue.first));
     std::vector<unsigned int> spv;
     bool success = GLSLtoSPV(createInfo.stage, texts, spv);
 
@@ -89,17 +89,17 @@ bool Shader::Handler::make(shaderInfoMapKeyValue& keyValue, bool doAssert, bool 
     return needsUpdate;
 }
 
-std::vector<std::string> Shader::Handler::loadText(const shaderInfoMapKey& keyValue) {
+std::vector<std::string> Shader::Handler::loadText(const infoMapKeyValue& keyValue) {
     std::vector<std::string> texts;
-    const auto& createInfo = SHADER_ALL.at(keyValue.first);
+    const auto& createInfo = SHADER_ALL.at(std::get<0>(keyValue.first));
 
     // main shader text
-    if (shaderTexts_.count(keyValue.first) == 0) {
-        shaderTexts_[keyValue.first] = FileLoader::readFile(BASE_DIRNAME + createInfo.fileName);
+    if (shaderTexts_.count(std::get<0>(keyValue.first)) == 0) {
+        shaderTexts_[std::get<0>(keyValue.first)] = FileLoader::readFile(BASE_DIRNAME + createInfo.fileName);
     }
-    texts.push_back(shaderTexts_.at(keyValue.first));
-    textReplace(keyValue.second, texts.back());
-    uniformHandler().shaderTextReplace(texts.back());
+    texts.push_back(shaderTexts_.at(std::get<0>(keyValue.first)));
+    textReplace(keyValue.second.first, texts.back());
+    uniformHandler().shaderTextReplace(keyValue.second.first, texts.back());
 
     // link shader text
     for (const auto& linkShaderType : createInfo.linkTypes) {
@@ -108,25 +108,50 @@ std::vector<std::string> Shader::Handler::loadText(const shaderInfoMapKey& keyVa
             shaderLinkTexts_[linkShaderType] = FileLoader::readFile(BASE_DIRNAME + linkCreateInfo.fileName);
         }
         texts.push_back(shaderLinkTexts_.at(linkShaderType));
-        textReplace(keyValue.second, texts.back());
-        uniformHandler().shaderTextReplace(texts.back());
+        textReplace(keyValue.second.first, texts.back());
+        uniformHandler().shaderTextReplace(keyValue.second.first, texts.back());
     }
     return texts;
 }
 
-void Shader::Handler::textReplace(const descSetMacroSlotMap& slotMap, std::string& text) const {
-    auto replaceInfo = helpers::getMacroReplaceInfo(DESC_SET_MACRO_ID_PREFIX, text);
+void Shader::Handler::textReplace(const Descriptor::Set::textReplaceTuples& replaceTuples, std::string& text) const {
+    auto replaceInfo = helpers::getMacroReplaceInfo(Descriptor::Set::MACRO_ID_PREFIX, text);
     for (auto& info : replaceInfo) {
-        if (slotMap.count(std::get<0>(info)) == 0) continue;  // TODO: Warn?
-        auto slot = slotMap.at(std::get<0>(info));
-        if (static_cast<int>(slot) != std::get<3>(info))  //
-            helpers::macroReplace(info, static_cast<int>(slot), text);
+        for (const auto& tuple : replaceTuples) {
+            if (std::get<0>(tuple) != std::get<0>(info)) continue;  // TODO: Warn?
+            auto slot = static_cast<int>(std::get<1>(tuple));
+            if (slot != std::get<3>(info))  //
+                helpers::macroReplace(info, slot, text);
+        }
     }
 }
 
-void Shader::Handler::getStagesInfo(const shaderInfoMapKey& key,
+void Shader::Handler::getStagesInfo(const SHADER& shaderType, const PIPELINE& pipelineType, const RENDER_PASS& passType,
                                     std::vector<VkPipelineShaderStageCreateInfo>& stagesInfo) const {
-    stagesInfo.push_back(shaderInfoMap_.at(key));
+    auto it1 = infoMap_.begin();
+    auto it2 = infoMap_.end();
+    // Look for a specific stage info
+    for (; it1 != infoMap_.end(); std::advance(it1, 1)) {
+        if (std::get<0>(it1->first) != shaderType) continue;
+        if (std::get<1>(it1->first) != pipelineType) continue;
+        if (it2 == infoMap_.end()) it2 = it1;  // Save the spot where the relevant info begins
+        if (std::get<2>(it1->first).find(passType) != std::get<2>(it1->first).end()) {
+            stagesInfo.push_back(it1->second.second);
+            return;
+        };
+    }
+    assert(it2 != infoMap_.end());
+    it1 = it2;
+    // Look for a default stage info
+    for (; it1 != infoMap_.end(); std::advance(it1, 1)) {
+        if (std::get<0>(it1->first) != shaderType) continue;
+        if (std::get<1>(it1->first) != pipelineType) continue;
+        if (std::get<2>(it1->first) == Uniform::RENDER_PASS_ALL_SET) {
+            stagesInfo.push_back(it1->second.second);
+            return;
+        };
+    }
+    assert(false);  // A shader stage info was not found.
 }
 
 VkShaderStageFlags Shader::Handler::getStageFlags(const std::set<SHADER>& shaderTypes) const {
@@ -143,12 +168,12 @@ void Shader::Handler::recompileShader(std::string fileName) {
     std::vector<SHADER> needsUpdateTypes;
 
     // Check for main shader
-    for (const auto& createInfoKeyValue : SHADER_ALL) {
-        if (createInfoKeyValue.second.fileName == fileName) {
-            for (auto& stageInfoKeyValue : shaderInfoMap_) {
-                if (stageInfoKeyValue.first.first == createInfoKeyValue.first) {
+    for (const auto& [shaderType, createInfo] : SHADER_ALL) {
+        if (createInfo.fileName == fileName) {
+            for (auto& stageInfoKeyValue : infoMap_) {
+                if (std::get<0>(stageInfoKeyValue.first) == shaderType) {
                     if (make(stageInfoKeyValue, assert, false)) {
-                        needsUpdateTypes.push_back(createInfoKeyValue.first);
+                        needsUpdateTypes.push_back(shaderType);
                     }
                 }
             }
@@ -156,16 +181,16 @@ void Shader::Handler::recompileShader(std::string fileName) {
     }
 
     // Check for link shader
-    for (const auto& createInfoKeyValue : SHADER_LINK_ALL) {
-        if (createInfoKeyValue.second.fileName == fileName) {
+    for (const auto& [linkShaderType, createInfo] : SHADER_LINK_ALL) {
+        if (createInfo.fileName == fileName) {
             // Get the mains mapped to this link shader...
-            std::vector<SHADER> types;
-            getShaderTypes(createInfoKeyValue.second.type, types);
-            for (auto& stageInfoKeyValue : shaderInfoMap_) {
-                for (const auto& type : types) {
-                    if (stageInfoKeyValue.first.first == type) {
+            std::vector<SHADER> shaderTypes;
+            getShaderTypes(linkShaderType, shaderTypes);
+            for (auto& stageInfoKeyValue : infoMap_) {
+                for (const auto& shaderType : shaderTypes) {
+                    if (std::get<0>(stageInfoKeyValue.first) == shaderType) {
                         if (make(stageInfoKeyValue, assert, false)) {
-                            needsUpdateTypes.push_back(type);
+                            needsUpdateTypes.push_back(shaderType);
                         }
                     }
                 }

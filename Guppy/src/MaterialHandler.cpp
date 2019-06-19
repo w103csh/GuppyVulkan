@@ -5,8 +5,8 @@
 
 Material::Handler::Handler(Game* pGame)
     : Game::Handler(pGame),
-      defMgr_{"Default Material", DESCRIPTOR::MATERIAL_DEFAULT, 50},  //
-      pbrMgr_{"PBR Material", DESCRIPTOR::MATERIAL_PBR, 50} {}
+      defMgr_{"Default Material", UNIFORM_DYNAMIC::MATERIAL_DEFAULT, 50},  //
+      pbrMgr_{"PBR Material", UNIFORM_DYNAMIC::MATERIAL_PBR, 50} {}
 
 void Material::Handler::init() {
     reset();

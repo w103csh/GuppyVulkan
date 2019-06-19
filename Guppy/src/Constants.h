@@ -18,6 +18,7 @@
 #include "SamplerConstants.h"
 #include "ShaderConstants.h"
 #include "TextureConstants.h"
+#include "UniformConstants.h"
 
 #define USE_DEBUG_UI
 

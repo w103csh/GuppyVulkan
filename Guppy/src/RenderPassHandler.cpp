@@ -18,7 +18,7 @@
 
 RenderPass::Handler::Handler(Game* pGame)
     : Game::Handler(pGame), frameIndex_(0), swpchnRes_{}, submitResources_{}, pPasses_() {
-    for (const auto& type : RENDER_PASS_ALL) {
+    for (const auto& type : RenderPass::ALL) {
         switch (type) {
             case RENDER_PASS::DEFAULT:
                 pPasses_.emplace_back(
@@ -38,6 +38,42 @@ RenderPass::Handler::Handler(Game* pGame)
         }
     }
     assert(pPasses_.size() <= RESOURCE_SIZE);
+}
+
+Uniform::offsetsMap RenderPass::Handler::makeUniformOffsetsMap() {
+    // TODO: validation? This is actually merging things.
+    Uniform::offsetsMap map;
+    for (const auto& pPass : pPasses_) {
+        for (const auto& keyValue : pPass->getDescriptorPipelineOffsets()) {
+            auto searchKey = map.find(keyValue.first);
+            if (searchKey != map.end()) {
+                auto searchValue = searchKey->second.find(keyValue.second);
+                if (searchValue != searchKey->second.end()) {
+                    searchValue->second.insert(pPass->TYPE);
+                } else {
+                    searchKey->second[keyValue.second] = {pPass->TYPE};
+                }
+            } else {
+                map[keyValue.first] = {{keyValue.second, {pPass->TYPE}}};
+            }
+        }
+    }
+    return map;
+}
+
+std::set<RENDER_PASS> RenderPass::Handler::getActivePassTypes(const PIPELINE& pipelineType) {
+    // This is obviously to slow if ever used for anything meaningful.
+    std::set<RENDER_PASS> passTypes;
+    for (const auto& pPass : pPasses_) {
+        if (pPass->TYPE == RENDER_PASS::IMGUI) continue;
+        if (pipelineType == PIPELINE::ALL_ENUM) {
+            for (const auto& pplnType : pPass->getPipelineTypes())
+                if (pplnType == pipelineType) passTypes.insert(pPass->TYPE);
+        } else {
+            passTypes.insert(pPass->TYPE);
+        }
+    }
+    return passTypes;
 }
 
 void RenderPass::Handler::init() {
@@ -61,14 +97,14 @@ void RenderPass::Handler::createPipelines() {
      *  can potentially be used to speed up creation or caching???? I am
      *  not going to worry about it other than this atm though.
      */
-    std::multiset<std::pair<PIPELINE, offset>> set;
+    pipelinePassSet set;
     for (const auto& pPass : pPasses_) {
-        for (const auto keyValue : pPass->getPipelineReferenceMap()) {
-            set.insert({keyValue.first, pPass->OFFSET});
+        for (const auto keyValue : pPass->getPipelineBindDataMap()) {
+            set.insert({keyValue.first, pPass->TYPE});
         }
     }
-    const auto refs = pipelineHandler().createPipelines(set);
-    updatePipelineReferences(set, refs);
+    pipelineHandler().createPipelines(set);
+    updateBindData(set);
 }
 
 void RenderPass::Handler::createFences(VkFenceCreateFlags flags) {
@@ -79,13 +115,9 @@ void RenderPass::Handler::createFences(VkFenceCreateFlags flags) {
     for (auto& fence : fences_) vk::assert_success(vkCreateFence(shell().context().dev, &fenceInfo, nullptr, &fence));
 }
 
-void RenderPass::Handler::updatePipelineReferences(const std::multiset<std::pair<PIPELINE, RenderPass::offset>>& set,
-                                                   const std::vector<Pipeline::Reference>& refs) {
-    assert(refs.size() == set.size());
-    auto index = 0;
-    for (const auto& pair : set) {
-        pPasses_[pair.second]->setPipelineReference(pair.first, refs[index++]);
-    }
+void RenderPass::Handler::updateBindData(const pipelinePassSet& set) {
+    const auto& bindDataMap = pipelineHandler().getPipelineBindDataMap();
+    for (const auto& pair : set) getPass(pair.second)->setBindData(pair.first, bindDataMap.at(pair));
 }
 
 void RenderPass::Handler::attachSwapchain() {

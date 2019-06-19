@@ -69,12 +69,24 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
 
 void Pipeline::Handler::reset() {
     // PIPELINE
+    pipelineBindDataMap_.clear();
     for (auto& pPipeline : pPipelines_) pPipeline->destroy();
-    for (auto& keyValue : pipelineMap_) vkDestroyPipeline(shell().context().dev, keyValue.second, nullptr);
     // CACHE
     if (cache_ != VK_NULL_HANDLE) vkDestroyPipelineCache(shell().context().dev, cache_, nullptr);
 
     maxPushConstantsSize_ = 0;
+}
+
+Uniform::offsetsMap Pipeline::Handler::makeUniformOffsetsMap() {
+    Uniform::offsetsMap map;
+    for (const auto& pPipeline : pPipelines_) {
+        for (const auto& [descType, offsets] : pPipeline->getDescriptorOffsets().map()) {
+            Uniform::offsetsMapKey key = {descType, pPipeline->TYPE};
+            assert(map.count(key) == 0);
+            map[key] = {{offsets, Uniform::RENDER_PASS_ALL_SET}};
+        }
+    }
+    return map;
 }
 
 void Pipeline::Handler::init() {
@@ -160,12 +172,9 @@ void Pipeline::Handler::createPipeline(const std::string&& name, VkGraphicsPipel
     }
 }
 
-const std::vector<Pipeline::Reference> Pipeline::Handler::createPipelines(
-    const std::multiset<std::pair<PIPELINE, RenderPass::offset>>& set) {
-    //
-    std::vector<Pipeline::Reference> refs;
+void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
     VkGraphicsPipelineCreateInfo createInfo;
-    CreateInfoResources createInfoRes;
+    CreateInfoVkResources createInfoRes;
 
     auto it = set.begin();
     while (it != set.end()) {
@@ -179,22 +188,30 @@ const std::vector<Pipeline::Reference> Pipeline::Handler::createPipelines(
 
         while (it != set.end() && it->first == pipelineType) {
             bool hasBase = false;
+
             // Get pipeline from map or create a map element
-            pipelineMapKey key = {pipelineType, it->second};
-            if (pipelineMap_.count(key) == 0) {
-                pipelineMap_.insert({key, VK_NULL_HANDLE});
+            pipelineBindDataMapKey key = {pipelineType, it->second};
+            if (pipelineBindDataMap_.count(key) == 0) {
+                pipelineBindDataMap_.insert({key, pPipeline->getBindData(it->second)});
             }
 
-            VkPipeline& pipeline = pipelineMap_.at(key);
+            const auto& pPipelineBindData = pipelineBindDataMap_.at(key);
             // Setup for derivatives...
-            setBase(pipeline, createInfo, hasBase);
+            setBase(pPipelineBindData->pipeline, createInfo, hasBase);
 
             // Save the old pipeline for clean up if necessary
-            if (pipeline != VK_NULL_HANDLE) oldPipelines_.push_back({-1, pipeline});
+            if (pPipelineBindData->pipeline != VK_NULL_HANDLE) oldPipelines_.push_back({-1, pPipelineBindData->pipeline});
 
             const auto& pPass = passHandler().getPass(it->second);
             createInfo.renderPass = pPass->pass;
             createInfo.subpass = pPass->getSubpassId(pipelineType);
+            createInfo.layout = pPipelineBindData->layout;
+
+            // shader info
+            createInfoRes.stagesInfo.clear();
+            for (const auto& shaderType : pPipeline->SHADER_TYPES) {
+                shaderHandler().getStagesInfo(shaderType, pPipeline->TYPE, pPass->TYPE, createInfoRes.stagesInfo);
+            }
 
             pPipeline->setInfo(createInfoRes, createInfo);
 
@@ -202,41 +219,40 @@ const std::vector<Pipeline::Reference> Pipeline::Handler::createPipelines(
             pPass->overridePipelineCreateInfo(pipelineType, createInfoRes);
 
             // Create the pipeline
-            createPipeline(pPipeline->NAME + " " + std::to_string(it->second), createInfo, pipeline);
-
-            // REFERENCE
-            refs.emplace_back(pPipeline->makeReference());
-            refs.back().pipeline = pipeline;
+            createPipeline(pPipeline->NAME + " " + std::to_string(static_cast<uint32_t>(it->second)), createInfo,
+                           pPipelineBindData->pipeline);
 
             // Setup for derivatives...
-            setBase(pipeline, createInfo, hasBase);
+            setBase(pPipelineBindData->pipeline, createInfo, hasBase);
 
             std::advance(it, 1);
         }
     }
-
-    return refs;
 }
 
-VkShaderStageFlags Pipeline::Handler::getDescriptorSetStages(const DESCRIPTOR_SET& setType) {
-    VkShaderStageFlags stages = 0;
+void Pipeline::Handler::makeShaderInfoMap(Shader::infoMap& map) {
     for (const auto& pPipeline : pPipelines_) {
-        for (const auto& type : pPipeline->DESCRIPTOR_SET_TYPES) {
-            if (type == setType) {
-                for (const auto& shaderType : pPipeline->SHADER_TYPES) {
-                    stages |= SHADER_ALL.at(shaderType).stage;
-                }
+        const auto& shaderReplaceMap = pPipeline->getShaderTextReplaceInfoMap();
+        for (const auto& shaderReplaceKeyValue : shaderReplaceMap) {
+            for (const auto& shaderType : pPipeline->SHADER_TYPES) {
+                map.insert({
+                    {
+                        shaderType,
+                        pPipeline->TYPE,
+                        shaderReplaceKeyValue.first,
+                    },
+                    {shaderReplaceKeyValue.second, {}},
+                });
             }
         }
     }
-    return stages;
 }
 
-void Pipeline::Handler::initShaderInfoMap(Shader::shaderInfoMap& map) {
+void Pipeline::Handler::getShaderStages(const std::set<PIPELINE>& pipelineTypes, VkShaderStageFlags& stages) {
     for (const auto& pPipeline : pPipelines_) {
-        const auto& slotMap = pPipeline->getDescSetMacroSlotMap();
+        if (pipelineTypes.find(pPipeline->TYPE) == pipelineTypes.end()) continue;
         for (const auto& shaderType : pPipeline->SHADER_TYPES) {
-            map.insert({{shaderType, slotMap}, {}});
+            stages |= SHADER_ALL.at(shaderType).stage;
         }
     }
 }
@@ -269,14 +285,14 @@ void Pipeline::Handler::cleanup(int frameIndex) {
 void Pipeline::Handler::update() {
     if (needsUpdateSet_.empty()) return;
 
-    std::multiset<std::pair<PIPELINE, RenderPass::offset>> updateSet;
+    pipelinePassSet updateSet;
 
     auto itUpdate = needsUpdateSet_.begin();
-    auto itMap = pipelineMap_.begin();
+    auto itMap = pipelineBindDataMap_.begin();
 
-    while (itUpdate != needsUpdateSet_.end() && itMap != pipelineMap_.end()) {
-        while (itMap != pipelineMap_.end() && *itUpdate != itMap->first.first) ++itMap;
-        while (itMap != pipelineMap_.end() && *itUpdate == itMap->first.first) {
+    while (itUpdate != needsUpdateSet_.end() && itMap != pipelineBindDataMap_.end()) {
+        while (itMap != pipelineBindDataMap_.end() && *itUpdate != itMap->first.first) ++itMap;
+        while (itMap != pipelineBindDataMap_.end() && *itUpdate == itMap->first.first) {
             updateSet.insert({itMap->first.first, itMap->first.second});
             ++itMap;
         }
@@ -285,8 +301,8 @@ void Pipeline::Handler::update() {
 
     if (updateSet.empty()) return;
 
-    auto refs = createPipelines(updateSet);
-    passHandler().updatePipelineReferences(updateSet, refs);
+    createPipelines(updateSet);
+    passHandler().updateBindData(updateSet);
 
     needsUpdateSet_.clear();
 }

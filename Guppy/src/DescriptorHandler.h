@@ -23,6 +23,7 @@ namespace Descriptor {
 // **********************
 
 class Handler : public Game::Handler {
+    friend class Pipeline::Base;  // TODO: remove this!!!!!!!!!!!!!!!!!!!!!!!!!!!
    public:
     Handler(Game* pGame);
 
@@ -33,8 +34,7 @@ class Handler : public Game::Handler {
     // SET
     const Descriptor::Set::Base& getDescriptorSet(const DESCRIPTOR_SET& type) { return std::ref(*getSet(type).get()); }
     // DESCRIPTOR
-    uint32_t getDescriptorCount(const Descriptor::bindingMapValue& value) const;
-    void getReference(Mesh::Base& pMesh);
+    void getBindData(Mesh::Base& pMesh);
 
    private:
     void reset() override;
@@ -46,26 +46,35 @@ class Handler : public Game::Handler {
     // LAYOUT
     void createLayouts();
 
-    // SET
+    // DESCRIPTOR
+    uint32_t getDescriptorCount(const DESCRIPTOR& descType, const Uniform::offsets& offsets) const;
+
     inline std::unique_ptr<Descriptor::Set::Base>& getSet(const DESCRIPTOR_SET& type) {
         for (auto& pSet : pDescriptorSets_) {
             if (pSet->TYPE == type) return pSet;
         }
         throw std::runtime_error("Unrecognized set type");
     }
-    void allocateDescriptorSets(const std::unique_ptr<Descriptor::Set::Base>& pSet, Descriptor::Set::Resource& resource);
-    void updateDescriptorSets(const std::unique_ptr<Descriptor::Set::Base>& pSet, Descriptor::Set::Resource& resource,
-                              Mesh::Base& mesh) const;
+
+    void prepareDescriptorSet(std::unique_ptr<Descriptor::Set::Base>& pSet);
+
+    Descriptor::Set::resourceHelpers getResourceHelpers(const std::set<RENDER_PASS> passTypes, const PIPELINE& pipelineType,
+                                                        const std::vector<DESCRIPTOR_SET>& descSetTypes);
+
+    void allocateDescriptorSets(const Descriptor::Set::Resource& resource, std::vector<VkDescriptorSet>& descriptorSets);
+    void updateDescriptorSets(const std::unique_ptr<Descriptor::Set::Base>& pSet, const Mesh::Base& mesh,
+                              const Descriptor::OffsetsMap& offsets, std::vector<VkDescriptorSet>& descriptorSets) const;
+
+    VkWriteDescriptorSet getWrite(const Descriptor::bindingMapKeyValue& keyValue) const;
     void getDynamicOffsets(const std::unique_ptr<Descriptor::Set::Base>& pSet, std::vector<uint32_t>& dynamicOffsets,
                            Mesh::Base& mesh);
+
     std::vector<std::unique_ptr<Descriptor::Set::Base>> pDescriptorSets_;
 
     // BINDING
     VkDescriptorSetLayoutBinding getDecriptorSetLayoutBinding(const Descriptor::bindingMapKeyValue& keyValue,
-                                                              const VkShaderStageFlags& stageFlags) const;
-    // WRITE
-    VkWriteDescriptorSet getWrite(const Descriptor::bindingMapKeyValue& keyValue) const;
-    // virtual VkCopyDescriptorSet getCopy() = 0;
+                                                              const VkShaderStageFlags& stageFlags,
+                                                              const Uniform::offsets& offsets) const;
 };
 
 }  // namespace Descriptor

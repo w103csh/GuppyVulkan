@@ -1,15 +1,19 @@
 
 #include "Pipeline.h"
 
+#include <algorithm>
+
+#include "Constants.h"
 #include "Instance.h"
 #include "Vertex.h"
 // HANDLERS
 #include "DescriptorHandler.h"
 #include "PipelineHandler.h"
+#include "RenderPassHandler.h"
 #include "ShaderHandler.h"
 #include "TextureHandler.h"
 
-void Pipeline::GetDefaultColorInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::GetDefaultColorInputAssemblyInfoResources(CreateInfoVkResources& createInfoRes) {
     // bindings
     Vertex::Color::getBindingDescriptions(createInfoRes.bindDescs);
     Instance::Default::DATA::getBindingDescriptions(createInfoRes.bindDescs);
@@ -30,7 +34,7 @@ void Pipeline::GetDefaultColorInputAssemblyInfoResources(CreateInfoResources& cr
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 }
 
-void Pipeline::GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::GetDefaultTextureInputAssemblyInfoResources(CreateInfoVkResources& createInfoRes) {
     // bindings
     Vertex::Texture::getBindingDescriptions(createInfoRes.bindDescs);
     Instance::Default::DATA::getBindingDescriptions(createInfoRes.bindDescs);
@@ -51,28 +55,25 @@ void Pipeline::GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources& 
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 }
 
-// **********************
-//      BASE
-// **********************
+//  BASE
 
-Pipeline::Base::Base(Pipeline::Handler& handler, const PIPELINE&& type, const VkPipelineBindPoint&& bindPoint,
-                     const std::string&& name, const std::set<SHADER>&& shaderTypes,
-                     const std::vector<PUSH_CONSTANT>&& pushConstantTypes, std::vector<DESCRIPTOR_SET>&& descriptorSets)
+Pipeline::Base::Base(Pipeline::Handler& handler, const Pipeline::CreateInfo* pCreateInfo)
     : Handlee(handler),
-      BIND_POINT(bindPoint),
-      DESCRIPTOR_SET_TYPES(descriptorSets),
-      NAME(name),
-      PUSH_CONSTANT_TYPES(pushConstantTypes),
-      SHADER_TYPES(shaderTypes),
-      TYPE(type),
+      BIND_POINT(pCreateInfo->bindPoint),
+      DESCRIPTOR_SET_TYPES(pCreateInfo->descriptorSets),
+      NAME(pCreateInfo->name),
+      PUSH_CONSTANT_TYPES(pCreateInfo->pushConstantTypes),
+      SHADER_TYPES(pCreateInfo->shaderTypes),
+      TYPE(pCreateInfo->type),
       status_(STATUS::PENDING),
-      layout_(VK_NULL_HANDLE) {
+      descriptorOffsets_(pCreateInfo->uniformOffsets) {
+    assert(TYPE != PIPELINE::ALL_ENUM);
     for (const auto& type : PUSH_CONSTANT_TYPES) assert(type != PUSH_CONSTANT::DONT_CARE);
 }
 
 void Pipeline::Base::init() {
     validatePipelineDescriptorSets();
-    createPipelineLayout();
+    makePipelineLayouts();
 }
 
 void Pipeline::Base::updateStatus() {
@@ -90,27 +91,16 @@ void Pipeline::Base::updateStatus() {
     if (pendingTexturesOffsets_.empty()) status_ = STATUS::READY;
 }
 
-Pipeline::Reference Pipeline::Base::makeReference() {
-    Reference ref = {};
-    ref.bindPoint = BIND_POINT;
-    ref.layout = layout_;
-    // PUSH CONSTANT
-    ref.pushConstantTypes = PUSH_CONSTANT_TYPES;
-    ref.pushConstantStages = handler().shaderHandler().getStageFlags(SHADER_TYPES);
-    return ref;
-}
-
 void Pipeline::Base::validatePipelineDescriptorSets() {
     for (const auto& setType : DESCRIPTOR_SET_TYPES) {
         const auto& descSet = handler().descriptorHandler().getDescriptorSet(setType);
         for (const auto& keyValue : descSet.BINDING_MAP) {
-            if (std::get<0>(keyValue.second) == DESCRIPTOR::SAMPLER_PIPELINE_COMBINED ||
-                std::get<2>(keyValue.second).size()) {
+            bool hasPipelineSampler = std::visit(Descriptor::IsCombinedSamplerPipeline{}, std::get<0>(keyValue.second));
+            if (hasPipelineSampler || std::get<1>(keyValue.second).size()) {
                 // validate tuple
-                assert(std::get<0>(keyValue.second) == DESCRIPTOR::SAMPLER_PIPELINE_COMBINED &&
-                       std::get<2>(keyValue.second).size());
+                assert(hasPipelineSampler && std::get<1>(keyValue.second).size());
                 // check texture
-                const auto& pTexture = handler().textureHandler().getTextureByName(std::get<2>(keyValue.second));
+                const auto& pTexture = handler().textureHandler().getTextureByName(std::get<1>(keyValue.second));
                 assert(pTexture != nullptr && "Couldn't find texture.");
                 if (pTexture->status != STATUS::READY) pendingTexturesOffsets_.push_back(pTexture->OFFSET);
             }
@@ -119,45 +109,86 @@ void Pipeline::Base::validatePipelineDescriptorSets() {
     if (pendingTexturesOffsets_.size()) status_ = STATUS::PENDING_TEXTURE;
 }
 
-std::vector<VkDescriptorSetLayout> Pipeline::Base::prepareDescSetInfo() {
-    std::vector<VkDescriptorSetLayout> layouts;
+void Pipeline::Base::prepareDescriptorSetInfo() {
+    // Get a list of active passes for this pipeline type.
+    const auto passTypes = handler().passHandler().getActivePassTypes(TYPE);
 
-    uint8_t slot = 0;
-    for (const auto& setType : DESCRIPTOR_SET_TYPES) {
-        const auto& descSet = handler().descriptorHandler().getDescriptorSet(setType);
-        descSetMacroSlotMap_[descSet.MACRO_NAME] = slot++;
-        layouts.push_back(descSet.layout);
+    // Gather a culled list of resources.
+    auto helpers = handler().descriptorHandler().getResourceHelpers(passTypes, TYPE, DESCRIPTOR_SET_TYPES);
+
+    for (auto resourceIndex = 0; resourceIndex < helpers.front().size(); resourceIndex++) {
+        // Loop through each layer of descriptor set resources at resourceIndex
+        for (auto setIndex = 0; setIndex < helpers.size(); setIndex++) {
+            auto& resourceTuple = helpers[setIndex][resourceIndex];
+            const auto& descSet = handler().descriptorHandler().getDescriptorSet(std::get<3>(resourceTuple));
+
+            // Add the culled sets to a shader replace map, for later shader text replacement.
+            if (shaderTextReplaceInfoMap_.count(std::get<0>(resourceTuple)) == 0) {
+                shaderTextReplaceInfoMap_.insert({std::get<0>(resourceTuple), {}});
+            }
+            shaderTextReplaceInfoMap_.at(std::get<0>(resourceTuple))
+                .push_back({
+                    descSet.MACRO_NAME,
+                    setIndex,
+                    descSet.getDescriptorOffsets(resourceTuple),
+                    std::get<4>(resourceTuple),
+                });
+
+            // Add the culled sets to a layouts data structure that can be used to create
+            // the pipeline layouts.
+            if (layoutsMap_.count(std::get<0>(resourceTuple)) == 0) {
+                layoutsMap_.insert(std::pair<std::set<RENDER_PASS>, Layouts>{
+                    std::get<0>(resourceTuple),
+                    {VK_NULL_HANDLE, {}},
+                });
+            }
+            layoutsMap_.at(std::get<0>(resourceTuple)).descSetLayouts.push_back(std::get<1>(resourceTuple)->layout);
+        }
     }
 
-    assert(layouts.size() == DESCRIPTOR_SET_TYPES.size() && "Wrong amount of set layouts");
-    assert(descSetMacroSlotMap_.size() == DESCRIPTOR_SET_TYPES.size() && "Wrong amount of set slot keys");
-
-    return layouts;
+    for (const auto& keyValue : shaderTextReplaceInfoMap_) assert(keyValue.second.size() == DESCRIPTOR_SET_TYPES.size());
+    assert(layoutsMap_.size() == helpers.front().size());
+    for (const auto& keyValue : layoutsMap_) assert(keyValue.second.descSetLayouts.size() == DESCRIPTOR_SET_TYPES.size());
 }
 
-void Pipeline::Base::createPipelineLayout() {
-    // PUSH CONSTANTS
-    pushConstantRanges_ = handler().getPushConstantRanges(TYPE, PUSH_CONSTANT_TYPES);
-    // DESCRIPTOR LAYOUTS
-    const auto& descSetLayouts = prepareDescSetInfo();
+std::shared_ptr<Pipeline::BindData> Pipeline::Base::makeBindData(const VkPipelineLayout& layout) {
+    return std::shared_ptr<Pipeline::BindData>(new Pipeline::BindData{
+        BIND_POINT,
+        layout,
+        VK_NULL_HANDLE,
+        0,
+        PUSH_CONSTANT_TYPES,
+    });
+}
 
-    VkPipelineLayoutCreateInfo layoutInfo = {};
-    layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    layoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges_.size());
-    layoutInfo.pPushConstantRanges = pushConstantRanges_.data();
-    layoutInfo.setLayoutCount = static_cast<uint32_t>(descSetLayouts.size());
-    layoutInfo.pSetLayouts = descSetLayouts.data();
+void Pipeline::Base::makePipelineLayouts() {
+    // TODO: destroy layouts if they already exist
 
-    vk::assert_success(vkCreatePipelineLayout(handler().shell().context().dev, &layoutInfo, nullptr, &layout_));
+    prepareDescriptorSetInfo();
 
-    if (handler().settings().enable_debug_markers) {
-        std::string markerName = NAME + " pipeline layout";
-        ext::DebugMarkerSetObjectName(handler().shell().context().dev, (uint64_t)layout_,
-                                      VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, markerName.c_str());
+    for (auto& keyValue : layoutsMap_) {
+        // PUSH CONSTANTS
+        pushConstantRanges_ = handler().getPushConstantRanges(TYPE, PUSH_CONSTANT_TYPES);
+
+        VkPipelineLayoutCreateInfo layoutInfo = {};
+        layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        layoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges_.size());
+        layoutInfo.pPushConstantRanges = pushConstantRanges_.data();
+        layoutInfo.setLayoutCount = static_cast<uint32_t>(keyValue.second.descSetLayouts.size());
+        layoutInfo.pSetLayouts = keyValue.second.descSetLayouts.data();
+
+        vk::assert_success(
+            vkCreatePipelineLayout(handler().shell().context().dev, &layoutInfo, nullptr, &keyValue.second.pipelineLayout));
+
+        if (handler().settings().enable_debug_markers) {
+            std::string markerName = NAME + " pipeline layout";
+            ext::DebugMarkerSetObjectName(handler().shell().context().dev, (uint64_t)&keyValue.second.pipelineLayout,
+                                          VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, markerName.c_str());
+        }
     }
 }
 
-void Pipeline::Base::setInfo(CreateInfoResources& createInfoRes, VkGraphicsPipelineCreateInfo& pipelineCreateInfo) {
+void Pipeline::Base::setInfo(CreateInfoVkResources& createInfoRes, VkGraphicsPipelineCreateInfo& pipelineCreateInfo) {
     /*
         The idea here is that this can be overridden in a bunch of ways, or you
         can just use the easier and slower way of calling this function from
@@ -175,7 +206,6 @@ void Pipeline::Base::setInfo(CreateInfoResources& createInfoRes, VkGraphicsPipel
     getInputAssemblyInfoResources(createInfoRes);
     getMultisampleStateInfoResources(createInfoRes);
     getRasterizationStateInfoResources(createInfoRes);
-    getShaderInfoResources(createInfoRes);
     getTesselationInfoResources(createInfoRes);
     getViewportStateInfoResources(createInfoRes);
 
@@ -198,16 +228,80 @@ void Pipeline::Base::setInfo(CreateInfoResources& createInfoRes, VkGraphicsPipel
     pipelineCreateInfo.pTessellationState = &createInfoRes.tessellationStateInfo;
     pipelineCreateInfo.pVertexInputState = &createInfoRes.vertexInputStateInfo;
     pipelineCreateInfo.pViewportState = &createInfoRes.viewportStateInfo;
-    // LAYOUT
-    pipelineCreateInfo.layout = layout_;
+}
+
+const std::shared_ptr<Pipeline::BindData>& Pipeline::Base::getBindData(const RENDER_PASS& passType) {
+    std::set<RENDER_PASS> tempSet;
+    const auto& pPass = handler().passHandler().getPass(passType);
+
+    // Find the layout map element for the pass type.
+    auto itLayoutMap = layoutsMap_.begin();
+    // Look for non-default.
+    for (; itLayoutMap != layoutsMap_.end(); std::advance(itLayoutMap, 1))
+        if (itLayoutMap->first.find(passType) != itLayoutMap->first.end()) break;
+    // Look for default if a non-default wasn't found.
+    if (itLayoutMap == layoutsMap_.end()) {
+        itLayoutMap = layoutsMap_.begin();
+        for (; itLayoutMap != layoutsMap_.end(); std::advance(itLayoutMap, 1))
+            if (itLayoutMap->first == Uniform::RENDER_PASS_ALL_SET) break;
+    }
+    assert(itLayoutMap != layoutsMap_.end());
+
+    // Get or create the bind data for the pass type.
+    auto itBindData = bindDataMap_.begin();
+    for (; itBindData != bindDataMap_.end(); std::advance(itBindData, 1)) {
+        // Get the set difference of the iterator pass type keys.
+        std::set_difference(itBindData->first.begin(), itBindData->first.end(), itLayoutMap->first.begin(),
+                            itLayoutMap->first.end(), std::inserter(tempSet, tempSet.begin()));
+
+        // If there size of the difference is not the same as the bind data key then the
+        // pass type needed is already in the bind data map.
+        if (tempSet.size() != itBindData->first.size()) {
+            // Compare the pipeline data to see if the pipeline bind data is compatible.
+            bool isCompatible = true;
+            for (const auto& bindDataPassType : tempSet) {
+                // The set difference should filter out the ALL_ENUM. If it doesn't
+                // I am not sure if the algorithm will work right.
+                assert(bindDataPassType != RENDER_PASS::ALL_ENUM);
+                if (!handler().passHandler().getPass(bindDataPassType)->comparePipelineData(pPass)) {
+                    isCompatible = false;
+                    break;
+                }
+            }
+
+            if (isCompatible) {
+                // Bind data is compatible so extract the bind data, update the key with the new pass type, and
+                // add the extracted element back into the map.
+                auto nh = bindDataMap_.extract(itBindData->first);
+                nh.key().insert(passType);
+                auto& key = nh.key();
+                return bindDataMap_.insert(std::move(nh)).node.mapped();
+            }
+        }
+    }
+
+    // No compatible bind data was found so make a new one
+    auto key = itLayoutMap->first;
+    key.insert(passType);
+    bindDataMap_.insert({key, makeBindData(itLayoutMap->second.pipelineLayout)});
+    return bindDataMap_.at(key);
 }
 
 void Pipeline::Base::destroy() {
     const auto& dev = handler().shell().context().dev;
-    if (layout_ != VK_NULL_HANDLE) vkDestroyPipelineLayout(dev, layout_, nullptr);
+    for (const auto& [passTypes, bindData] : bindDataMap_) {
+        if (bindData->pipeline != VK_NULL_HANDLE)  //
+            vkDestroyPipeline(dev, bindData->pipeline, nullptr);
+    }
+    bindDataMap_.clear();
+    for (auto& [passTypes, layouts] : layoutsMap_) {
+        if (layouts.pipelineLayout != VK_NULL_HANDLE)  //
+            vkDestroyPipelineLayout(dev, layouts.pipelineLayout, nullptr);
+    }
+    layoutsMap_.clear();
 }
 
-void Pipeline::Base::getDynamicStateInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Base::getDynamicStateInfoResources(CreateInfoVkResources& createInfoRes) {
     // TODO: this is weird
     createInfoRes.dynamicStateInfo = {};
     memset(createInfoRes.dynamicStates, 0, sizeof(createInfoRes.dynamicStates));
@@ -217,7 +311,7 @@ void Pipeline::Base::getDynamicStateInfoResources(CreateInfoResources& createInf
     createInfoRes.dynamicStateInfo.dynamicStateCount = 0;
 }
 
-void Pipeline::Base::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Base::getInputAssemblyInfoResources(CreateInfoVkResources& createInfoRes) {
     auto range = VERTEX_PIPELINE_MAP.equal_range(VERTEX::COLOR);
     if (range.first != range.second && range.first->second.count(TYPE)) {
         GetDefaultColorInputAssemblyInfoResources(createInfoRes);
@@ -232,7 +326,7 @@ void Pipeline::Base::getInputAssemblyInfoResources(CreateInfoResources& createIn
     throw std::runtime_error("Unhandled type for input assembly. Override or add to this function?");
 }
 
-void Pipeline::Base::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Base::getRasterizationStateInfoResources(CreateInfoVkResources& createInfoRes) {
     createInfoRes.rasterizationStateInfo = {};
     createInfoRes.rasterizationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_FILL;
@@ -255,15 +349,7 @@ void Pipeline::Base::getRasterizationStateInfoResources(CreateInfoResources& cre
     createInfoRes.rasterizationStateInfo.lineWidth = 1.0f;
 }
 
-void Pipeline::Base::getShaderInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.stagesInfo.clear();  // TODO: faster way?
-    for (const auto& shaderType : SHADER_TYPES) {
-        Shader::shaderInfoMapKey key = {shaderType, descSetMacroSlotMap_};
-        handler().shaderHandler().getStagesInfo(key, createInfoRes.stagesInfo);
-    }
-}
-
-void Pipeline::Base::getMultisampleStateInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Base::getMultisampleStateInfoResources(CreateInfoVkResources& createInfoRes) {
     createInfoRes.multisampleStateInfo = {};
     createInfoRes.multisampleStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     createInfoRes.multisampleStateInfo.rasterizationSamples = handler().shell().context().samples;
@@ -279,7 +365,7 @@ void Pipeline::Base::getMultisampleStateInfoResources(CreateInfoResources& creat
     createInfoRes.multisampleStateInfo.alphaToOneEnable = VK_FALSE;       // Optional
 }
 
-void Pipeline::Base::getBlendInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Base::getBlendInfoResources(CreateInfoVkResources& createInfoRes) {
     createInfoRes.blendAttach = {};
     createInfoRes.blendAttach.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -318,7 +404,7 @@ void Pipeline::Base::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     // createInfoRes.colorBlendStateInfo.blendConstants[3] = 0.2f;
 }
 
-void Pipeline::Base::getViewportStateInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Base::getViewportStateInfoResources(CreateInfoVkResources& createInfoRes) {
     createInfoRes.viewportStateInfo = {};
     createInfoRes.viewportStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
 #ifndef __ANDROID__
@@ -352,7 +438,7 @@ void Pipeline::Base::getViewportStateInfoResources(CreateInfoResources& createIn
 #endif
 }
 
-void Pipeline::Base::getDepthInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Base::getDepthInfoResources(CreateInfoVkResources& createInfoRes) {
     createInfoRes.depthStencilStateInfo = {};
     createInfoRes.depthStencilStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
     createInfoRes.depthStencilStateInfo.pNext = nullptr;
@@ -377,95 +463,24 @@ void Pipeline::Base::getDepthInfoResources(CreateInfoResources& createInfoRes) {
     // dss.front = ds.back;
 }
 
-void Pipeline::Base::getTesselationInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Base::getTesselationInfoResources(CreateInfoVkResources& createInfoRes) {
     createInfoRes.tessellationStateInfo = {};
 }
 
-// DEFAULT TRIANGLE LIST COLOR
-Pipeline::Default::TriListColor::TriListColor(Pipeline::Handler& handler)
-    : Base{
-          handler,
-          PIPELINE::TRI_LIST_COLOR,
-          VK_PIPELINE_BIND_POINT_GRAPHICS,
-          "Default Triangle List Color",
-          {SHADER::COLOR_VERT, SHADER::COLOR_FRAG},
-          {/*PUSH_CONSTANT::DEFAULT*/},
-          {
-              DESCRIPTOR_SET::UNIFORM_DEFAULT,
-              //DESCRIPTOR_SET::PROJECTOR_DEFAULT,
-          },
-      } {};
-
-// DEFAULT LINE
-Pipeline::Default::Line::Line(Pipeline::Handler& handler)
-    : Base{
-          handler,
-          PIPELINE::LINE,
-          VK_PIPELINE_BIND_POINT_GRAPHICS,
-          "Default Line",
-          {SHADER::COLOR_VERT, SHADER::LINE_FRAG},
-          {/*PUSH_CONSTANT::DEFAULT*/},
-          {DESCRIPTOR_SET::UNIFORM_DEFAULT},
-      } {};
-
-void Pipeline::Default::Line::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+//  LINE
+void Pipeline::Default::Line::getInputAssemblyInfoResources(CreateInfoVkResources& createInfoRes) {
     GetDefaultColorInputAssemblyInfoResources(createInfoRes);
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 }
 
-// DEFAULT TRIANGLE LIST TEXTURE
-Pipeline::Default::TriListTexture::TriListTexture(Pipeline::Handler& handler)
-    : Base{
-          handler,
-          PIPELINE::TRI_LIST_TEX,
-          VK_PIPELINE_BIND_POINT_GRAPHICS,
-          "Default Triangle List Texture",
-          {SHADER::TEX_VERT, SHADER::TEX_FRAG},
-          {/*PUSH_CONSTANT::DEFAULT*/},
-          {
-              DESCRIPTOR_SET::UNIFORM_DEFAULT,
-              DESCRIPTOR_SET::SAMPLER_DEFAULT,
-              //DESCRIPTOR_SET::PROJECTOR_DEFAULT,
-          },
-      } {};
-
 // CUBE
-Pipeline::Default::Cube::Cube(Pipeline::Handler& handler)
-    : Base{
-          handler,
-          PIPELINE::CUBE,
-          VK_PIPELINE_BIND_POINT_GRAPHICS,
-          "Cube Pipeline",
-          {SHADER::CUBE_VERT, SHADER::CUBE_FRAG},
-          {/*PUSH_CONSTANT::DEFAULT*/},
-          {
-              DESCRIPTOR_SET::UNIFORM_DEFAULT,
-              DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT,
-          },
-      } {}
-
-void Pipeline::Default::Cube::getDepthInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Default::Cube::getDepthInfoResources(CreateInfoVkResources& createInfoRes) {
     Pipeline::Base::getDepthInfoResources(createInfoRes);
     createInfoRes.depthStencilStateInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 }
 
 // BLINN PHONG TEXTURE CULL NONE
-Pipeline::BP::TextureCullNone::TextureCullNone(Pipeline::Handler& handler)
-    : Base{
-          handler,
-          PIPELINE::BP_TEX_CULL_NONE,
-          VK_PIPELINE_BIND_POINT_GRAPHICS,
-          "Blinn Phong Texture Cull None",
-          {SHADER::TEX_VERT, SHADER::TEX_FRAG},
-          {/*PUSH_CONSTANT::DEFAULT*/},
-          {
-              DESCRIPTOR_SET::UNIFORM_DEFAULT,
-              DESCRIPTOR_SET::SAMPLER_DEFAULT,
-              //DESCRIPTOR_SET::PROJECTOR_DEFAULT,
-          },
-      } {};
-
-void Pipeline::BP::TextureCullNone::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::BP::TextureCullNone::getRasterizationStateInfoResources(CreateInfoVkResources& createInfoRes) {
     Pipeline::Base::getRasterizationStateInfoResources(createInfoRes);
     createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_NONE;
 }

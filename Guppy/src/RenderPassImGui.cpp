@@ -98,7 +98,11 @@ void RenderPass::ImGui::createAttachmentsAndSubpasses() {
     attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    if (OFFSET == 0) {
+        attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    } else {
+        attachment.initialLayout = handler().getPass(OFFSET - 1)->getFinalLayout();
+    }
     attachment.finalLayout = finalLayout_;
 
     resources_.attachments.push_back(attachment);

@@ -85,9 +85,9 @@ Descriptor::Set::PBR::Uniform::Uniform()
           DESCRIPTOR_SET::UNIFORM_PBR,
           "_DS_UNI_PBR",
           {
-              {{0, 0}, {DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, {0}, ""}},
-              {{1, 0}, {DESCRIPTOR::MATERIAL_PBR, {0}, ""}},
-              {{2, 0}, {DESCRIPTOR::LIGHT_POSITIONAL_PBR, {OFFSET_ALL}, ""}},
+              {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, ""}},
+              {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_PBR, ""}},
+              {{2, 0}, {UNIFORM::LIGHT_POSITIONAL_PBR, ""}},
           },
       } {}
 
@@ -134,31 +134,25 @@ const CreateInfo MATERIAL_CREATE_INFO = {
 }  // namespace Link
 }  // namespace Shader
 
-// **********************
-//      Pipeline
-// **********************
+//  PIPELINE
 
-Pipeline::PBR::Color::Color(Pipeline::Handler& handler)
-    : Base{
-          handler,
-          PIPELINE::PBR_COLOR,
-          VK_PIPELINE_BIND_POINT_GRAPHICS,
-          "PBR Color Pipeline",
-          {SHADER::COLOR_VERT, SHADER::PBR_COLOR_FRAG},
-          {/*PUSH_CONSTANT::DEFAULT*/},
-          {DESCRIPTOR_SET::UNIFORM_PBR}  //
-      } {};
+const Pipeline::CreateInfo COLOR_CREATE_INFO = {
+    PIPELINE::PBR_COLOR,
+    "PBR Color Pipeline",
+    {SHADER::COLOR_VERT, SHADER::PBR_COLOR_FRAG},
+    {DESCRIPTOR_SET::UNIFORM_PBR},
+};
 
-Pipeline::PBR::Texture::Texture(Pipeline::Handler& handler)
-    : Base{
-          handler,
-          PIPELINE::PBR_TEX,
-          VK_PIPELINE_BIND_POINT_GRAPHICS,
-          "PBR Texture Pipeline",
-          {SHADER::TEX_VERT, SHADER::PBR_TEX_FRAG},
-          {/*PUSH_CONSTANT::DEFAULT*/},
-          {
-              DESCRIPTOR_SET::UNIFORM_PBR,
-              DESCRIPTOR_SET::SAMPLER_DEFAULT,
-          }  //
-      } {};
+Pipeline::PBR::Color::Color(Pipeline::Handler& handler) : Base(handler, &COLOR_CREATE_INFO) {}
+
+const Pipeline::CreateInfo TEX_CREATE_INFO = {
+    PIPELINE::PBR_TEX,
+    "PBR Texture Pipeline",
+    {SHADER::TEX_VERT, SHADER::PBR_TEX_FRAG},
+    {
+        DESCRIPTOR_SET::UNIFORM_PBR,
+        DESCRIPTOR_SET::SAMPLER_DEFAULT,
+    },
+};
+
+Pipeline::PBR::Texture::Texture(Pipeline::Handler& handler) : Base(handler, &TEX_CREATE_INFO) {}

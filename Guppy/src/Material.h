@@ -80,7 +80,9 @@ class Base : public virtual Buffer::Item, public Descriptor::Interface {
     virtual void setTinyobjData(const tinyobj::material_t& m){};
 
     // DESCRIPTOR
-    inline void setWriteInfo(VkWriteDescriptorSet& write) const override { write.pBufferInfo = &BUFFER_INFO.bufferInfo; }
+    inline void setWriteInfo(VkWriteDescriptorSet& write, uint32_t index = 0) const override {
+        write.pBufferInfo = &BUFFER_INFO.bufferInfo;
+    }
 
    protected:
     Base(const MATERIAL&& type, Material::CreateInfo* pCreateInfo);
@@ -103,9 +105,9 @@ struct DATA : public Material::DATA {
     float shininess = SHININESS::MILDLY_SHINY;
     // 16
     glm::vec3 Ks{0.9f};
-    float eta;
+    float eta = 0.94f;
     // 16
-    alignas(16) float reflectionFactor;
+    alignas(16) float reflectionFactor = 0.85f;
 };
 
 struct CreateInfo : public Material::CreateInfo {

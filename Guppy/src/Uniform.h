@@ -15,7 +15,9 @@ namespace Uniform {
 class Base : public virtual Buffer::Item, public Descriptor::Interface {
    public:
     // DESCRIPTOR
-    inline void setWriteInfo(VkWriteDescriptorSet& write) const override { write.pBufferInfo = &BUFFER_INFO.bufferInfo; }
+    inline void setWriteInfo(VkWriteDescriptorSet& write, uint32_t index = 0) const override {
+        write.pBufferInfo = &BUFFER_INFO.bufferInfo;
+    }
 
    protected:
     Base() {}

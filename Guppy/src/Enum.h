@@ -63,4 +63,33 @@ enum class MESH {
     TEXTURE
 };
 
+enum class COMBINED_SAMPLER {
+    MATERIAL,
+    PIPELINE,
+    //
+    DONT_CARE
+};
+
+enum class UNIFORM {
+    // CAMERA
+    CAMERA_PERSPECTIVE_DEFAULT,
+    // LIGHT
+    LIGHT_POSITIONAL_DEFAULT,
+    LIGHT_SPOT_DEFAULT,
+    LIGHT_POSITIONAL_PBR,
+    // GENERAL
+    FOG_DEFAULT,
+    PROJECTOR_DEFAULT,
+    //
+    DONT_CARE,
+};
+
+enum class UNIFORM_DYNAMIC {
+    // MATERIAL
+    MATERIAL_DEFAULT,
+    MATERIAL_PBR,
+    //
+    DONT_CARE,
+};
+
 #endif  // !ENUM_H

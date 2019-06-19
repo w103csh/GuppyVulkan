@@ -3,11 +3,24 @@
 
 #include <array>
 #include <glm/glm.hpp>
+#include <map>
+#include <set>
 #include <string>
 #include <unordered_set>
 #include <utility>
 #include <vector>
 #include <vulkan/vulkan.h>
+
+#include "DescriptorConstants.h"
+#include "Types.h"
+
+enum class DESCRIPTOR_SET;
+enum class PIPELINE : uint32_t;
+enum class SHADER;
+// clang-format off
+namespace Sampler { struct CreateInfo; }
+namespace Texture { struct CreateInfo; }
+// clang-format on
 
 // const glm::vec4 CLEAR_COLOR = {190.0f / 256.0f, 223.0f / 256.0f, 246.0f / 256.0f, 1.0f};
 const glm::vec4 CLEAR_COLOR = {};
@@ -15,27 +28,31 @@ const VkClearColorValue DEFAULT_CLEAR_COLOR_VALUE = {{CLEAR_COLOR.x, CLEAR_COLOR
 
 const VkClearDepthStencilValue DEFAULT_CLEAR_DEPTH_STENCIL_VALUE = {1.0f, 0};
 
-enum class PIPELINE;
-// clang-format off
-namespace Sampler { struct CreateInfo; }
-namespace Texture { struct CreateInfo; }
-// clang-format on
-
-enum class RENDER_PASS : uint64_t {
+enum class RENDER_PASS : uint32_t {
     DEFAULT = 0,
     IMGUI,
     SAMPLER,
+    // Used to indicate bad data, and "all" in uniform offsets
+    ALL_ENUM = UINT32_MAX,
 };
-
-extern const std::vector<RENDER_PASS> RENDER_PASS_ALL;
 
 namespace RenderPass {
 
-class Base;
-
 using offset = uint32_t;
-
 constexpr uint8_t RESOURCE_SIZE = 20;
+extern const std::vector<RENDER_PASS> ALL;
+
+using descriptorPipelineOffsetsMap = std::map<Uniform::offsetsMapKey, Uniform::offsets>;
+
+struct PipelineData {
+    constexpr bool operator==(const PipelineData &other) {
+        return includeDepth == other.includeDepth &&  //
+               samples == other.samples;
+    }
+    constexpr bool operator!=(const PipelineData &other) { return !(*this == other); }
+    VkBool32 includeDepth;
+    VkSampleCountFlagBits samples;
+};
 
 struct SwapchainResources {
     /* The "cleared" value should be set by the pass that clears the
@@ -81,7 +98,7 @@ struct Resources {
     std::vector<VkSubpassDependency> dependencies;
 };
 
-void AddDefaultSubpasses(RenderPass::Resources& resources, uint64_t count);
+void AddDefaultSubpasses(RenderPass::Resources &resources, uint64_t count);
 
 struct CreateInfo {
     RENDER_PASS type;
@@ -89,6 +106,7 @@ struct CreateInfo {
     std::unordered_set<PIPELINE> pipelineTypes;
     bool swapchainDependent = true;
     bool includeDepth = true;
+    descriptorPipelineOffsetsMap descPipelineOffsets;
 };
 
 extern const CreateInfo DEFAULT_CREATE_INFO;

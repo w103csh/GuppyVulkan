@@ -23,6 +23,8 @@ void Scene::Handler::init() {
 
     makeScene(true, (!suppress || false));
 
+    // TODO: move this into a scene already!!!
+
     // Create info structs
     Mesh::CreateInfo meshInfo;
     Model::CreateInfo modelInfo;
@@ -95,7 +97,7 @@ void Scene::Handler::init() {
     }
 
     // SKYBOX
-    if (!suppress || true) {
+    if (!suppress || false) {
         meshInfo = {};
         meshInfo.pipelineType = PIPELINE::CUBE;
         meshInfo.selectable = false;
@@ -334,7 +336,7 @@ void Scene::Handler::init() {
 
     count = 5;
     // MEDIEVAL HOUSE (TRI_COLOR_TEX)
-    if (!suppress || true) {
+    if (!suppress || false) {
         modelInfo = {};
         modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
         modelInfo.async = false;
@@ -430,30 +432,6 @@ std::unique_ptr<Mesh::Texture>& Scene::Handler::getTextureMesh(size_t sceneOffse
     // return pScenes_[sceneOffset]->getTextureMesh(meshOffset);
     assert(false);
     return meshHandler().getTextureMesh(meshOffset);
-}
-
-void Scene::Handler::updateDescriptorSets(SCENE_INDEX_TYPE offset, bool isUpdate) {
-    // auto& pScene = pScenes_[offset];
-
-    //// destroy old uniforms first
-    // if (isUpdate) {
-    //    invalidRes_.push_back(
-    //        {pScene->pDescResources_->pool, pScene->pDescResources_->texSets, pScene->pDynUBOResource_});
-    //    pScene->pDynUBOResource_ = nullptr;
-    //    pScene->pDescResources_->texSets.clear();
-
-    //    pScene->createDynamicTexUniformBuffer(shell().context(), settings());
-    //    pScene->pDescResources_->dynUboInfos = {pScene->pDynUBOResource_->info};
-    //    pScene->pDescResources_->texCount = pScene->pDynUBOResource_->count;
-    //    pScene->pDescResources_->texSets.resize(pScene->pDynUBOResource_->count);
-    //}
-
-    //// Allocate descriptor sets for meshes that are ready ...
-    // for (auto& pMesh : pScene->texMeshes_) {
-    //    if (pMesh->getStatus() == STATUS::READY) {
-    //        pMesh->tryCreateDescriptorSets(pScene->pDescResources_);
-    //    }
-    //}
 }
 
 void Scene::Handler::cleanup() {

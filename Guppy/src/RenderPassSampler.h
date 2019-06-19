@@ -14,11 +14,12 @@ class Sampler : public Default {
     Sampler(RenderPass::Handler& handler, const uint32_t&& offset);
 
     void init() override;
-    void overridePipelineCreateInfo(const PIPELINE& type, Pipeline::CreateInfoResources& createInfoRes) override;
 
    private:
     void createSampler();
     void createFramebuffers() override;
+
+    void setSwapchainInfo() override {}
 
     std::shared_ptr<Texture::Base> pTexture_;
 };

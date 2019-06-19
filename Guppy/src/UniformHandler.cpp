@@ -7,6 +7,8 @@
 // HANDLERS
 #include "InputHandler.h"
 #include "MeshHandler.h"
+#include "PipelineHandler.h"
+#include "RenderPassHandler.h"
 
 namespace {
 
@@ -24,25 +26,35 @@ Uniform::Handler::Handler(Game* pGame)
       managers_{
           // CAMERA
           Uniform::Manager<Camera::Default::Perspective::Base>  //
-          {"Default Perspective Camera", DESCRIPTOR::CAMERA_PERSPECTIVE_DEFAULT, 5, "_U_CAM_DEF_PERS"},
+          {"Default Perspective Camera", UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, 5, "_U_CAM_DEF_PERS"},
           // LIGHT
           Uniform::Manager<Light::Default::Positional::Base>  //
-          {"Default Positional Light", DESCRIPTOR::LIGHT_POSITIONAL_DEFAULT, 20, "_U_LGT_DEF_POS"},
+          {"Default Positional Light", UNIFORM::LIGHT_POSITIONAL_DEFAULT, 20, "_U_LGT_DEF_POS"},
           Uniform::Manager<Light::PBR::Positional::Base>  //
-          {"PBR Positional Light", DESCRIPTOR::LIGHT_POSITIONAL_PBR, 20, "_U_LGT_PBR_POS"},
+          {"PBR Positional Light", UNIFORM::LIGHT_POSITIONAL_PBR, 20, "_U_LGT_PBR_POS"},
           Uniform::Manager<Light::Default::Spot::Base>  //
-          {"Default Spot Light", DESCRIPTOR::LIGHT_SPOT_DEFAULT, 20, "_U_LGT_DEF_SPT"},
+          {"Default Spot Light", UNIFORM::LIGHT_SPOT_DEFAULT, 20, "_U_LGT_DEF_SPT"},
           // MISCELLANEOUS
           Uniform::Manager<Uniform::Default::Fog::Base>  //
-          {"Default Fog", DESCRIPTOR::FOG_DEFAULT, 5, "_U_UNI_DEF_FOG"},
+          {"Default Fog", UNIFORM::FOG_DEFAULT, 5, "_U_UNI_DEF_FOG"},
           Uniform::Manager<Uniform::Default::Projector::Base>  //
-          {"Default Projector", DESCRIPTOR::FOG_DEFAULT, 5, "_U_UNI_DEF_PRJ"},
+          {"Default Projector", UNIFORM::PROJECTOR_DEFAULT, 5, "_U_UNI_DEF_PRJ"},
           //
       },
-      hasVisualHelpers(false) {}
+      hasVisualHelpers(false),
+      mainCameraOffset_(0) {}
 
 void Uniform::Handler::init() {
     reset();
+
+    /* Get any overriden descriptor offsets from the render pass/pipeline
+     *  handlers, so that when the descriptor set layouts are created
+     *  the offsets manager is ready.
+     */
+    auto passOffsets = passHandler().makeUniformOffsetsMap();
+    offsetsManager_.addOffsets(passOffsets, OffsetsManager::ADD_TYPE::RenderPass);
+    passOffsets = pipelineHandler().makeUniformOffsetsMap();
+    offsetsManager_.addOffsets(passOffsets, OffsetsManager::ADD_TYPE::Pipeline);
 
     camDefPersMgr().init(shell().context(), settings());
     lgtDefPosMgr().init(shell().context(), settings());
@@ -73,10 +85,17 @@ void Uniform::Handler::createCameras() {
     const auto& dev = shell().context().dev;
     Camera::Default::Perspective::CreateInfo createInfo = {};
 
+    // MAIN
     createInfo.aspect = static_cast<float>(settings().initial_width) / static_cast<float>(settings().initial_height);
     camDefPersMgr().insert(dev, &createInfo);
+    mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
 
-    assert(MAIN_CAMERA_OFFSET < camDefPersMgr().pItems.size());
+    // 1
+    createInfo.eye = {2.0f, -2.0f, 4.0f};
+    camDefPersMgr().insert(dev, &createInfo);
+    // mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
+
+    assert(mainCameraOffset_ < camDefPersMgr().pItems.size());
 }
 
 void Uniform::Handler::createLights() {
@@ -112,6 +131,7 @@ void Uniform::Handler::createMiscellaneous() {
     const auto& dev = shell().context().dev;
 
     // FOG
+    uniDefFogMgr().insert(dev);
     uniDefFogMgr().insert(dev);
 
     // PROJECTOR
@@ -199,36 +219,38 @@ void Uniform::Handler::update() {
     // lgtDefPosMgr().update(shell().context().dev);
 }
 
-uint32_t Uniform::Handler::getDescriptorCount(const Descriptor::bindingMapValue& value) {
-    const auto& min = *std::get<1>(value).begin();
-    const auto& max = *std::get<1>(value).rbegin();
-    if (std::get<1>(value).size() == 1 && min == Descriptor::Set::OFFSET_ALL) {
-        return static_cast<uint32_t>(getUniforms(std::get<0>(value)).size());
-    }
-    assert(min >= 0 && max < getUniforms(std::get<0>(value)).size());
-    return static_cast<uint32_t>(std::get<1>(value).size());
+uint32_t Uniform::Handler::getDescriptorCount(const DESCRIPTOR& descType, const Uniform::offsets& offsets) {
+    return getDescriptorCount(getItems(descType), offsets);
 }
 
-std::set<uint32_t> Uniform::Handler::getBindingOffsets(const Descriptor::bindingMapValue& value) {
-    if (std::get<1>(value).size()) {
-        // TODO: better validation for this
-        if (*std::get<1>(value).begin() == Descriptor::Set::OFFSET_ALL) {
-            std::set<uint32_t> offsets;
-            for (int i = 0; i < getUniforms(std::get<0>(value)).size(); i++) offsets.insert(i);
-            return offsets;
-        }
+uint32_t Uniform::Handler::getDescriptorCount(const std::vector<ItemPointer<Uniform::Base>>& pItems,
+                                              const Uniform::offsets& offsets) const {
+    auto resolvedOffsets = getBindingOffsets(pItems, offsets);
+    return static_cast<uint32_t>(resolvedOffsets.size());
+}
+
+std::set<uint32_t> Uniform::Handler::getBindingOffsets(const std::vector<ItemPointer<Uniform::Base>>& pItems,
+                                                       const Uniform::offsets& offsets) const {
+    assert(offsets.size());
+    const auto& lowest = *offsets.begin();
+    if (lowest == Descriptor::Set::OFFSET_ALL) {
+        std::set<uint32_t> resolvedOffsets;
+        for (int i = 0; i < pItems.size(); i++) resolvedOffsets.insert(i);
+        assert(resolvedOffsets.size());
+        return resolvedOffsets;
     }
-    return std::get<1>(value);
+    assert(lowest >= 0 && *offsets.rbegin() < pItems.size());
+    return offsets;
 }
 
 bool Uniform::Handler::validatePipelineLayout(const Descriptor::bindingMap& map) {
-    std::map<DESCRIPTOR, UNIFORM_INDEX> validationMap;
+    std::map<DESCRIPTOR, index> validationMap;
     // Find the highest offset value for each descriptor type.
     for (const auto& keyValue : map) {
         // This is only validating that there are a sufficient number of uniforms
         // for the layout. The unifrom offset info is in the value of the binding map.
         const Descriptor::bindingMapValue& value = keyValue.second;
-        UNIFORM_INDEX offset = std::get<1>(value).empty() ? 0 : *std::get<1>(value).rbegin();
+        index offset = std::get<1>(value).empty() ? 0 : *std::get<1>(value).rbegin();
 
         auto it = validationMap.find(std::get<0>(value));
         if (it != validationMap.end()) {
@@ -244,28 +266,42 @@ bool Uniform::Handler::validatePipelineLayout(const Descriptor::bindingMap& map)
     return true;
 }
 
-bool Uniform::Handler::validateUniformOffsets(const std::pair<DESCRIPTOR, UNIFORM_INDEX>& pair) {
-    if (DESCRIPTOR_UNIFORM_ALL.count(pair.first)) {
-        return pair.second < getUniforms(pair.first).size();
+bool Uniform::Handler::validateUniformOffsets(const std::pair<DESCRIPTOR, index>& pair) {
+    if (std::visit(Descriptor::IsUniform{}, pair.first)) {
+        return pair.second < getItems(pair.first).size();
     }
     return true;
 }
 
-std::vector<VkDescriptorBufferInfo> Uniform::Handler::getWriteInfos(const Descriptor::bindingMapValue& value) {
+std::vector<VkDescriptorBufferInfo> Uniform::Handler::getWriteInfos(const DESCRIPTOR& descType,
+                                                                    const Uniform::offsets& offsets) {
     std::vector<VkDescriptorBufferInfo> infos;
-    auto& uniforms = getUniforms(std::get<0>(value));
-    auto offsets = getBindingOffsets(value);
-    for (const auto& offset : offsets) infos.push_back(uniforms[offset]->BUFFER_INFO.bufferInfo);
+    auto& pItems = getItems(descType);
+    auto resolvedOffsets = getBindingOffsets(pItems, offsets);
+    assert(*std::prev(resolvedOffsets.end()) < pItems.size());  // Not enough uniforms for highest offset
+    for (const auto& offset : resolvedOffsets) infos.push_back(pItems[offset]->BUFFER_INFO.bufferInfo);
     return infos;
 }
 
-void Uniform::Handler::shaderTextReplace(std::string& text) const {
+void Uniform::Handler::shaderTextReplace(const Descriptor::Set::textReplaceTuples& replaceTuples, std::string& text) const {
     auto replaceInfo = helpers::getMacroReplaceInfo(UNIFORM_MACRO_ID_PREFIX, text);
     for (auto& info : replaceInfo) {
         bool isValid = false;
+        // Find the manager in charge of the descriptor type.
         for (auto& manager : managers_) {
-            if (std::get<0>(info).compare(std::visit(MacroName{}, manager)) == 0) {
-                auto itemCount = std::visit(ItemCount{}, manager);
+            if (std::get<0>(info) == std::visit(GetMacroName{}, manager)) {
+                // Find the item count for the offsets.
+                const auto& pItems = std::visit(GetItems{}, manager);
+                const auto& descType = std::visit(GetType{}, manager);
+                int itemCount = -1;
+                for (const auto& tuple : replaceTuples) {
+                    auto search = std::get<2>(tuple).map().find(descType);
+                    if (search != std::get<2>(tuple).map().end()) {
+                        itemCount = static_cast<int>(getDescriptorCount(pItems, search->second));
+                    }
+                }
+                assert(itemCount != -1);
+                // TODO: not sure about below anymore. It was written a long time ago at this point.
                 auto reqCount = std::get<3>(info);
                 if (reqCount > 0) {
                     // If the value for the macro in the shader text is greater than zero

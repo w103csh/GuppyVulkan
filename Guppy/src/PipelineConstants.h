@@ -1,22 +1,24 @@
-
 #ifndef PIPELINE_CONSTANTS_H
 #define PIPELINE_CONSTANTS_H
 
 #include <map>
+#include <memory>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "RenderPassConstants.h"
+#include "DescriptorConstants.h"
 
+enum class DESCRIPTOR_SET;
 enum class PUSH_CONSTANT;
+enum class RENDER_PASS : uint32_t;
+enum class SHADER;
 enum class VERTEX;
 
-enum class PIPELINE {
-    DONT_CARE = -1,
-    // These are index values, so the order here
-    // must match order in ALL...
+// These are index values, so the order here must match order in ALL...
+enum class PIPELINE : uint32_t {
     // DEFAULT
     TRI_LIST_COLOR = 0,
     LINE,
@@ -30,6 +32,8 @@ enum class PIPELINE {
     // PARALLAX
     PARALLAX_SIMPLE,
     PARALLAX_STEEP,
+    // Used to indicate bad data, and "all" in uniform offsets
+    ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP
     // in code file.
 };
@@ -39,7 +43,33 @@ extern const std::map<VERTEX, std::set<PIPELINE>> VERTEX_PIPELINE_MAP;
 
 namespace Pipeline {
 
-struct CreateInfoResources {
+struct BindData {
+    const VkPipelineBindPoint bindPoint;
+    const VkPipelineLayout layout;
+    VkPipeline pipeline;
+    VkShaderStageFlags pushConstantStages;
+    const std::vector<PUSH_CONSTANT> pushConstantTypes;
+};
+
+// Map of pipeline/pass to bind data shared pointers
+using pipelineBindDataMapKey = std::pair<PIPELINE, RENDER_PASS>;
+using pipelineBindDataMapKeyValue = std::pair<const pipelineBindDataMapKey, const std::shared_ptr<Pipeline::BindData>>;
+using pipelineBindDataMap = std::map<pipelineBindDataMapKey, const std::shared_ptr<Pipeline::BindData>>;
+
+// Map of pass types to descriptor set text replace tuples
+using shaderTextReplaceInfoMap = std::map<std::set<RENDER_PASS>, Descriptor::Set::textReplaceTuples>;
+
+struct CreateInfo {
+    PIPELINE type;
+    std::string name = "";
+    std::set<SHADER> shaderTypes;
+    std::vector<DESCRIPTOR_SET> descriptorSets;
+    Descriptor::OffsetsMap uniformOffsets;
+    VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    std::vector<PUSH_CONSTANT> pushConstantTypes;
+};
+
+struct CreateInfoVkResources {
     // BLENDING
     VkPipelineColorBlendAttachmentState blendAttach = {};
     VkPipelineColorBlendStateCreateInfo colorBlendStateInfo = {};
@@ -61,20 +91,19 @@ struct CreateInfoResources {
     std::vector<VkPipelineShaderStageCreateInfo> stagesInfo;
 };
 
-// key:     pipeline type
-// value:   render pass handler offset
-using pipelineMapKey = std::pair<PIPELINE, RenderPass::offset>;
-using pipelineMapKeyValue = std::pair<const pipelineMapKey, VkPipeline>;
-using pipelineMap = std::map<pipelineMapKey, VkPipeline>;
-using pipelineMapKeys = std::vector<Pipeline::pipelineMapKey>;
-
-struct Reference {
-    VkPipelineBindPoint bindPoint;
-    VkPipelineLayout layout;
-    VkPipeline pipeline;
-    VkShaderStageFlags pushConstantStages;
-    std::vector<PUSH_CONSTANT> pushConstantTypes;
+namespace Default {
+struct PushConstant {
+    glm::mat4 model;
 };
+extern const Pipeline::CreateInfo TRI_LIST_COLOR_CREATE_INFO;
+extern const Pipeline::CreateInfo LINE_CREATE_INFO;
+extern const Pipeline::CreateInfo TRI_LIST_TEX_CREATE_INFO;
+extern const Pipeline::CreateInfo CUBE_CREATE_INFO;
+}  // namespace Default
+
+namespace BP {
+extern const Pipeline::CreateInfo TEX_CULL_NONE_CREATE_INFO;
+}  // namespace BP
 
 }  // namespace Pipeline
 

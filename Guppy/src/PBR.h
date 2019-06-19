@@ -128,9 +128,6 @@ extern const CreateInfo MATERIAL_CREATE_INFO;
 // **********************
 
 namespace Pipeline {
-
-struct CreateInfoResources;
-
 namespace PBR {
 
 class Color : public Pipeline::Base {

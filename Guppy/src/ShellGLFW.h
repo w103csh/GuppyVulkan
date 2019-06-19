@@ -24,8 +24,8 @@ class ShellGLFW : public TShell {
     static_assert(std::is_base_of<Shell, TShell>::value, "T must be derived from of Shell");
 
    public:
-    ShellGLFW(Game& game) : TShell(game){};
-    ~ShellGLFW(){};
+    ShellGLFW(Game& game) : TShell(game), window_(nullptr) {}
+    ~ShellGLFW() {}
 
     void run() override {
         // Setup window

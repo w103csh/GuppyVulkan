@@ -244,12 +244,6 @@ static FlagBits incrementByteFlag(FlagBits flags, T1 firstBit, T2 allBits) {
 //    std::vector<std::pair<TKey, TValue>> container_;
 //};
 
-static inline bool isDescriptorTypeDynamic(const DESCRIPTOR &type) {
-    const auto &descriptorType = DESCRIPTOR_TYPE_MAP.at(type);
-    return descriptorType == VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC ||
-           descriptorType == VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC;
-}
-
 static void destroyImageResource(const VkDevice &dev, ImageResource &res) {
     if (res.view != VK_NULL_HANDLE) vkDestroyImageView(dev, res.view, nullptr);
     res.view = VK_NULL_HANDLE;
