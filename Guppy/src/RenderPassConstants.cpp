@@ -1,12 +1,15 @@
 
 #include "RenderPassConstants.h"
 
+#include <variant>
 #include <vulkan/vulkan.h>
 
-#include "RenderPass.h"
 #include "Constants.h"
+#include "RenderPass.h"
 
-const std::vector<RENDER_PASS> RENDER_PASS_ALL = {
+namespace RenderPass {
+
+const std::vector<RENDER_PASS> ALL = {
     RENDER_PASS::SAMPLER,
     RENDER_PASS::DEFAULT,
 // UI pass needs to always be last since it
@@ -15,8 +18,6 @@ const std::vector<RENDER_PASS> RENDER_PASS_ALL = {
     RENDER_PASS::IMGUI,
 #endif
 };
-
-namespace RenderPass {
 
 void AddDefaultSubpasses(RenderPass::Resources& resources, uint64_t count) {
     VkSubpassDependency dependency = {};
@@ -46,10 +47,11 @@ const CreateInfo DEFAULT_CREATE_INFO = {
         PIPELINE::TRI_LIST_TEX,
         PIPELINE::PARALLAX_SIMPLE,
         PIPELINE::PARALLAX_STEEP,
-        // This needs to come second becuase it has transparent textures.
-        // It looks to be like its blending where the transparent edges meet
-        // the fragment behind it. In the case I was seeing when BP_TEX_CULL_NONE
-        // came before the ground plane pass it was blending the black clear color.
+        /* This needs to come second becuase it has transparent textures.
+         *  It looks to be like its blending where the transparent edges meet
+         *  the fragment behind it. In the case I was seeing when BP_TEX_CULL_NONE
+         *  came before the ground plane pass it was blending the black clear color.
+         */
         PIPELINE::BP_TEX_CULL_NONE,
         PIPELINE::PBR_TEX,
         /* TODO: come up with a clever way to render the skybox last.
@@ -68,6 +70,11 @@ const CreateInfo SAMPLER_CREATE_INFO = {
         PIPELINE::TRI_LIST_COLOR,
     },
     false,
+    true,
+    {
+        {{UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, PIPELINE::ALL_ENUM}, {1}},
+        {{UNIFORM::LIGHT_POSITIONAL_DEFAULT, PIPELINE::ALL_ENUM}, {0}},
+    },
 };
 
 // 2D

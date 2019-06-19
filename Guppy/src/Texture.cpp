@@ -9,9 +9,8 @@ Texture::Base::Base(const uint32_t&& offset, const CreateInfo* pCreateInfo)
       aspect(0.0f),
       pLdgRes(nullptr) {}
 
-void Texture::Base::setWriteInfo(VkWriteDescriptorSet& write) const {
-    assert(write.dstBinding < samplers.size());
+void Texture::Base::setWriteInfo(VkWriteDescriptorSet& write, uint32_t index) const {
     assert(status == STATUS::READY);
     write.descriptorCount = 1;
-    write.pImageInfo = &samplers[write.dstBinding].imgDescInfo;
+    write.pImageInfo = &samplers[index].imgDescInfo;
 }

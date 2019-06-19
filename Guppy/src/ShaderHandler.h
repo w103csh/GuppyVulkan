@@ -19,7 +19,8 @@ class Handler : public Game::Handler {
     void init() override;
     inline void destroy() override { reset(); }
 
-    void getStagesInfo(const shaderInfoMapKey &key, std::vector<VkPipelineShaderStageCreateInfo> &stagesInfo) const;
+    void getStagesInfo(const SHADER &shaderType, const PIPELINE &pipelineType, const RENDER_PASS &passType,
+                       std::vector<VkPipelineShaderStageCreateInfo> &stagesInfo) const;
     VkShaderStageFlags getStageFlags(const std::set<SHADER> &shaderTypes) const;
 
     void recompileShader(std::string);
@@ -29,9 +30,9 @@ class Handler : public Game::Handler {
    private:
     void reset() override;
 
-    bool make(shaderInfoMapKeyValue &keyValue, bool doAssert, bool isInit);
-    std::vector<std::string> loadText(const shaderInfoMapKey &keyValue);
-    void textReplace(const descSetMacroSlotMap &slotMap, std::string &text) const;
+    bool make(infoMapKeyValue &keyValue, bool doAssert, bool isInit);
+    std::vector<std::string> loadText(const infoMapKeyValue &keyValue);
+    void textReplace(const Descriptor::Set::textReplaceTuples &replaceTuples, std::string &text) const;
 
     // SHADERS
     void getShaderTypes(const SHADER_LINK &linkType, std::vector<SHADER> &types);
@@ -40,7 +41,7 @@ class Handler : public Game::Handler {
     std::map<SHADER, std::string> shaderTexts_;
     std::map<SHADER_LINK, std::string> shaderLinkTexts_;
 
-    shaderInfoMap shaderInfoMap_;
+    infoMap infoMap_;
 
     std::queue<PIPELINE> updateQueue_;
     std::vector<VkShaderModule> oldModules_;

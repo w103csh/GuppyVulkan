@@ -35,15 +35,18 @@ extern const CreateInfo STEEP_CREATE_INFO;
 }  // namespace Shader
 
 namespace Pipeline {
-struct CreateInfoResources;
 namespace Parallax {
+
+extern const Pipeline::CreateInfo SIMPLE_CREATE_INFO;
 class Simple : public Pipeline::Base {
    public:
-    Simple(Pipeline::Handler &handler);
+    Simple(Pipeline::Handler &handler) : Base(handler, &SIMPLE_CREATE_INFO) {}
 };
+
+extern const Pipeline::CreateInfo STEEP_CREATE_INFO;
 class Steep : public Pipeline::Base {
    public:
-    Steep(Pipeline::Handler &handler);
+    Steep(Pipeline::Handler &handler) : Base(handler, &STEEP_CREATE_INFO) {}
 };
 }  // namespace Parallax
 }  // namespace Pipeline

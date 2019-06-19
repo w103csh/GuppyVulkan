@@ -31,7 +31,7 @@ class Handler;
 
 typedef struct CreateInfo {
     bool isIndexed = true;  // This is dumb
-    PIPELINE pipelineType = PIPELINE::DONT_CARE;
+    PIPELINE pipelineType = PIPELINE::ALL_ENUM;
     bool selectable = true;
     bool mappable = false;
     Geometry::CreateInfo geometryCreateInfo = {};
@@ -63,7 +63,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     inline FlagBits getStatus() const { return status_; }
 
     // MATERIAL
-    inline auto& getMaterial() { return pMaterial_; }
+    inline auto& getMaterial() const { return pMaterial_; }
     inline bool hasNormalMap() const {
         return pMaterial_->hasTexture() && pMaterial_->getTexture()->flags & ::Sampler::USE::NORMAL;
     }
@@ -106,7 +106,8 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     void updateTangentSpaceData();
 
     // DRAWING
-    void draw(const Pipeline::Reference& pipelineReference, const VkCommandBuffer& cmd, const uint8_t& frameIndex) const;
+    void draw(const RENDER_PASS& passType, const std::shared_ptr<Pipeline::BindData>& pipelineBindData,
+              const VkCommandBuffer& cmd, const uint8_t& frameIndex) const;
 
     virtual void destroy();
 
@@ -135,11 +136,14 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     }
 
     FlagBits status_;
+
     // INFO
     bool isIndexed_;
     bool selectable_;
-    // REFERENCE
-    Descriptor::Reference descriptorReference_;
+
+    // DSECRIPTOR
+    const Descriptor::Set::BindData& getDescriptorSetBindData(const RENDER_PASS& passType) const;
+    std::map<std::set<RENDER_PASS>, Descriptor::Set::BindData> descriptorBindDataMap_;
 
     BufferResource vertexRes_;
     std::vector<VB_INDEX_TYPE> indices_;

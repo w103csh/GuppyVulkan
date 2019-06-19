@@ -56,7 +56,7 @@ set(SOURCE
     BufferItem.h
     BufferManager.h
     # Descriptor
-    BufferManagerDescriptor.h
+    DescriptorManager.h
     Descriptor.cpp
     Descriptor.h
     DescriptorConstants.cpp
@@ -143,6 +143,10 @@ set(SOURCE
     # Uniform
     Uniform.cpp
     Uniform.h
+    UniformConstants.cpp
+    UniformConstants.h
+    UniformOffsetsManager.cpp
+    UniformOffsetsManager.h
     UniformHandler.cpp
     UniformHandler.h
     )

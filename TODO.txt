@@ -1,4 +1,15 @@
 
+ - Move the scene creation code into the a scene instead of the handler init.
+
+ - Now that you can override the default descriptor offsets for sets/pipelines/passes there
+    is a lot more testing to do. I know that there is a lot of redundant things created like
+    descriptor layouts/sets, shader modules, pipelines layouts/pipelines (including the helper
+    data structures). The easiest next step is to create dump routines so that you can just
+    look at everything that is created and see what is wrong. Also, I never culled the shader
+    module creation at all, so it is the worst as far as redundancy.
+
+ - Cull the shaderInfoMap to get rid of redundant shader creation.
+
  - SHOULD THERE BE VIEWS FOR EACH FRAMEBUFFER THAT IS CREATED OR IS IT OKAY TO SHARE THEM?
     THE SWAPCHAIN HAS A VIEW PER FRAMEBUFFER!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     WHICH IS RIGHT ????????
@@ -69,5 +80,11 @@
 
  - The variant code in the uniform handler is a nightmare. Either use the variant properly
     or remove it.
+
+ - There are comments in OffsetsManager.cpp in the default map declaration about a good
+    descriptor (set) offsets merging scenario. You could potentially not have to create
+    duplicate descriptor set layouts if you can resolve some things. This is very hard to
+    figure out and should only be tackled if it becomes an issue. The code there is
+    already a nightmare.
 
  - Countless more...

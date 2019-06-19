@@ -149,7 +149,7 @@ class Base {
         info.bufferInfo.buffer = resource.buffer;
         info.bufferInfo.range = alignment_;
         // Note: The offset for descriptor buffer info is 0 for a dynamic buffer. This
-        // is overriden in Buffer::Manager::Descriptor::setInfo.
+        // is overriden in "Descriptor::Manager::setInfo".
         info.memoryOffset = info.bufferInfo.offset = info.bufferInfo.range * resource.currentOffset;
         info.resourcesOffset = resources_.size() - 1;
         info.dataOffset = resource.currentOffset;

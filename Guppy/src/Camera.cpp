@@ -6,7 +6,7 @@
 #include "Constants.h"
 #include "InputHandler.h"
 
-Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData, Perspective::CreateInfo *pCreateInfo)
+Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData, const Perspective::CreateInfo *pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
       Obj3d(),
       Uniform::Base(),

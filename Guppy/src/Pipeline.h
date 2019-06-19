@@ -1,29 +1,36 @@
 #ifndef PIPELINE_H
 #define PIPELINE_H
 
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
 
 #include "Constants.h"
+#include "DescriptorSet.h"
 #include "Handlee.h"
 #include "Helpers.h"
 #include "Obj3d.h"
 #include "Material.h"
 #include "RenderPass.h"
 
+#include "RenderPassConstants.h"
+
 namespace Pipeline {
 
-struct CreateInfoResources;
+struct CreateInfoVkResources;
 class Handler;
 
-void GetDefaultColorInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
-void GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
+void GetDefaultColorInputAssemblyInfoResources(CreateInfoVkResources &createInfoRes);
+void GetDefaultTextureInputAssemblyInfoResources(CreateInfoVkResources &createInfoRes);
 
-// **********************
-//      BASE
-// **********************
+struct Layouts {
+    VkPipelineLayout pipelineLayout;
+    std::vector<VkDescriptorSetLayout> descSetLayouts;
+};
+
+// BASE
 
 class Base : public Handlee<Pipeline::Handler> {
     friend class Handler;
@@ -41,47 +48,45 @@ class Base : public Handlee<Pipeline::Handler> {
     virtual void init();
     virtual void updateStatus();
 
-    Pipeline::Reference makeReference();
-
-    inline const STATUS &getStatus() const { return status_; }
-    inline const VkPipelineLayout &getLayout() const { return layout_; }
-
-    // DESCRIPTOR SET
-    Shader::descSetMacroSlotMap getDescSetMacroSlotMap() { return descSetMacroSlotMap_; }
+    inline const auto &getStatus() const { return status_; }
+    inline const auto &getShaderTextReplaceInfoMap() { return shaderTextReplaceInfoMap_; }
+    inline const auto &getDescriptorOffsets() { return descriptorOffsets_; }
 
    protected:
-    Base(Pipeline::Handler &handler, const PIPELINE &&type, const VkPipelineBindPoint &&bindPoint, const std::string &&name,
-         const std::set<SHADER> &&shaderTypes, const std::vector<PUSH_CONSTANT> &&pushConstantTypes = {},
-         std::vector<DESCRIPTOR_SET> &&descriptorSets = {});
+    Base(Pipeline::Handler &handler, const Pipeline::CreateInfo *pCreateInfo);
 
     // INFOS
-    virtual void getBlendInfoResources(CreateInfoResources &createInfoRes);
-    virtual void getDepthInfoResources(CreateInfoResources &createInfoRes);
-    virtual void getDynamicStateInfoResources(CreateInfoResources &createInfoRes);
-    virtual void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
-    virtual void getMultisampleStateInfoResources(CreateInfoResources &createInfoRes);
-    virtual void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes);
-    virtual void getShaderInfoResources(CreateInfoResources &createInfoRes);
-    virtual void getTesselationInfoResources(CreateInfoResources &createInfoRes);
-    virtual void getViewportStateInfoResources(CreateInfoResources &createInfoRes);
+    virtual void getBlendInfoResources(CreateInfoVkResources &createInfoRes);
+    virtual void getDepthInfoResources(CreateInfoVkResources &createInfoRes);
+    virtual void getDynamicStateInfoResources(CreateInfoVkResources &createInfoRes);
+    virtual void getInputAssemblyInfoResources(CreateInfoVkResources &createInfoRes);
+    virtual void getMultisampleStateInfoResources(CreateInfoVkResources &createInfoRes);
+    virtual void getRasterizationStateInfoResources(CreateInfoVkResources &createInfoRes);
+    virtual void getTesselationInfoResources(CreateInfoVkResources &createInfoRes);
+    virtual void getViewportStateInfoResources(CreateInfoVkResources &createInfoRes);
 
-    virtual void setInfo(CreateInfoResources &createInfoRes, VkGraphicsPipelineCreateInfo &pipelineCreateInfo);
+    virtual void setInfo(CreateInfoVkResources &createInfoRes, VkGraphicsPipelineCreateInfo &pipelineCreateInfo);
+
+    const std::shared_ptr<Pipeline::BindData> &getBindData(const RENDER_PASS &passType);
 
     // DESCRIPTOR SET
     void validatePipelineDescriptorSets();
-    // SHADER / DESCRIPTOR SET
-    std::vector<VkDescriptorSetLayout> prepareDescSetInfo();
+    void prepareDescriptorSetInfo();
 
-    void createPipelineLayout();
+    void makePipelineLayouts();
 
     void destroy();
 
     STATUS status_;
-    VkPipelineLayout layout_;
+    Descriptor::OffsetsMap descriptorOffsets_;
+    std::map<std::set<RENDER_PASS>, Layouts> layoutsMap_;
+    std::map<std::set<RENDER_PASS>, std::shared_ptr<Pipeline::BindData>> bindDataMap_;
 
    private:
+    std::shared_ptr<Pipeline::BindData> makeBindData(const VkPipelineLayout &layout);
+
     // DESCRIPTOR SET
-    Shader::descSetMacroSlotMap descSetMacroSlotMap_;
+    shaderTextReplaceInfoMap shaderTextReplaceInfoMap_;
     // PUSH CONSTANT
     std::vector<VkPushConstantRange> pushConstantRanges_;
     // TEXTURE
@@ -90,49 +95,47 @@ class Base : public Handlee<Pipeline::Handler> {
 
 namespace Default {
 
-struct PushConstant {
-    glm::mat4 model;
-};
-
 // TRIANGLE LIST COLOR
 class TriListColor : public Base {
    public:
-    TriListColor(Pipeline::Handler &handler);
+    TriListColor(Pipeline::Handler &handler) : Base(handler, &TRI_LIST_COLOR_CREATE_INFO) {}
 };
 
 // LINE
 class Line : public Base {
    public:
-    Line(Pipeline::Handler &handler);
+    Line(Pipeline::Handler &handler) : Base(handler, &LINE_CREATE_INFO) {}
     // INFOS
-    void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
+    void getInputAssemblyInfoResources(CreateInfoVkResources &createInfoRes) override;
 };
 
 // TRIANGLE LIST TEXTURE
 class TriListTexture : public Base {
    public:
-    TriListTexture(Pipeline::Handler &handler);
+    TriListTexture(Pipeline::Handler &handler) : Base(handler, &TRI_LIST_TEX_CREATE_INFO) {}
 };
 
 // CUBE
 class Cube : public Base {
    public:
-    Cube(Pipeline::Handler &handler);
+    Cube(Pipeline::Handler &handler) : Base(handler, &CUBE_CREATE_INFO) {}
     // INFOS
-    void getDepthInfoResources(CreateInfoResources &createInfoRes) override;
+    void getDepthInfoResources(CreateInfoVkResources &createInfoRes) override;
 };
 
 }  // namespace Default
 
+// BLINN PHONG
 namespace BP {
 
-// BLINN PHONG TEXTURE CULL NONE
+// TEXTURE CULL NONE
 class TextureCullNone : public Base {
    public:
-    TextureCullNone(Pipeline::Handler &handler);
+    TextureCullNone(Pipeline::Handler &handler) : Base(handler, &TEX_CULL_NONE_CREATE_INFO) {}
     // INFOS
-    void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes) override;
+    void getRasterizationStateInfoResources(CreateInfoVkResources &createInfoRes) override;
 };
+
 }  // namespace BP
 
 }  // namespace Pipeline

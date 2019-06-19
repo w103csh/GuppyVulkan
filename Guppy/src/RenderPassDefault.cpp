@@ -26,7 +26,7 @@ void RenderPass::Default::init() {
 #ifdef USE_DEBUG_UI
     finalLayout_ = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 #endif
-    samples_ = ctx.samples;
+    pipelineData_.samples = ctx.samples;
 
     // SYNC
     commandCount_ = ctx.imageCount;
@@ -78,7 +78,7 @@ void RenderPass::Default::createColorResources() {
         images_.push_back({});
 
         helpers::createImage(ctx.dev, ctx.mem_props, handler().commandHandler().getUniqueQueueFamilies(true, false, true),
-                             samples_, format_, VK_IMAGE_TILING_OPTIMAL,
+                             pipelineData_.samples, format_, VK_IMAGE_TILING_OPTIMAL,
                              VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, images_.back().image,
                              images_.back().memory);
@@ -97,7 +97,7 @@ void RenderPass::Default::createColorResources() {
 
 void RenderPass::Default::createDepthResource() {
     auto& ctx = handler().shell().context();
-    if (includeDepth_) {
+    if (pipelineData_.includeDepth) {
         VkImageTiling tiling;
         VkFormatProperties props;
         vkGetPhysicalDeviceFormatProperties(ctx.physical_dev, depthFormat_, &props);
@@ -112,7 +112,7 @@ void RenderPass::Default::createDepthResource() {
         }
 
         helpers::createImage(ctx.dev, ctx.mem_props, handler().commandHandler().getUniqueQueueFamilies(true, false, true),
-                             samples_, depthFormat_, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+                             pipelineData_.samples, depthFormat_, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, depth_.image,
                              depth_.memory);
 
@@ -131,7 +131,7 @@ void RenderPass::Default::createDepthResource() {
 
 void RenderPass::Default::createAttachmentsAndSubpasses() {
     // DEPTH ATTACHMENT
-    if (includeDepth_) {
+    if (pipelineData_.includeDepth) {
         resources_.attachments.push_back({});
         resources_.attachments.back().format = getDepthFormat();
         resources_.attachments.back().samples = getSamples();
@@ -211,7 +211,7 @@ void RenderPass::Default::createAttachmentsAndSubpasses() {
 }
 
 void RenderPass::Default::createDependencies() {
-    AddDefaultSubpasses(resources_, pipelineTypeReferenceMap_.size());
+    AddDefaultSubpasses(resources_, pipelineTypeBindDataMap_.size());
 
     //// Desparate attempt to understand the pipline ordering issue below...
     // VkSubpassDependency dependency = {};
@@ -255,7 +255,7 @@ void RenderPass::Default::updateClearValues() {
      */
     clearValues_.clear();
     // DEPTH ATTACHMENT
-    if (includeDepth_) {
+    if (pipelineData_.includeDepth) {
         clearValues_.push_back({});
         clearValues_.back().depthStencil = DEFAULT_CLEAR_DEPTH_STENCIL_VALUE;
     }
@@ -277,7 +277,7 @@ void RenderPass::Default::createFramebuffers() {
      */
     std::vector<VkImageView> attachmentViews;
     // DEPTH
-    if (includeDepth_) {
+    if (pipelineData_.includeDepth) {
         assert(depth_.view != VK_NULL_HANDLE);
         attachmentViews.push_back(depth_.view);
     }

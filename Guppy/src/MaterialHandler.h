@@ -4,7 +4,7 @@
 #include <memory>
 #include <string>
 
-#include "BufferManagerDescriptor.h"
+#include "DescriptorManager.h"
 #include "Game.h"
 #include "Material.h"
 #include "PBR.h"
@@ -13,9 +13,9 @@ namespace Material {
 
 template <class TBase>
 using ItemPointer = std::shared_ptr<TBase>;
-    
+
 template <class TDerived>
-using ManagerType = Buffer::Manager::Descriptor<Material::Base, TDerived, ItemPointer>;
+using ManagerType = Descriptor::Manager<Material::Base, TDerived, ItemPointer>;
 
 // TODO: inner class of Handler?
 template <class TDerived>
@@ -54,7 +54,7 @@ class Handler : public Game::Handler {
         return std::ref(*(Material::Default::Base *)(getManager<T>().pItems[offset].get()));
     }
 
-    inline void update(std::shared_ptr<Material::Base> &pMaterial) {
+    inline void update(const std::shared_ptr<Material::Base> &pMaterial) {
         if (pMaterial->DIRTY) {
             switch (pMaterial->TYPE) {
                 case MATERIAL::DEFAULT:

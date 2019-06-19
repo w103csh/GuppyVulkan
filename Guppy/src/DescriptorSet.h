@@ -1,43 +1,31 @@
 #ifndef DESCRIPTOR_SET_H
 #define DESCRIPTOR_SET_H
 
+#include <iterator>
 #include <map>
 #include <set>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "Helpers.h"
+#include "Constants.h"
+#include "DescriptorConstants.h"
 
 namespace Descriptor {
 
 class Handler;
 
-// **********************
-//      Binding map
-// **********************
-
 // key:     { binding, arrayElement }
 typedef std::pair<uint32_t, uint32_t> bindingMapKey;
-// value:   { descriptorType, offsets, (optional) descriptor ID } // TODO: proper ID instead of string
-typedef std::tuple<DESCRIPTOR, std::set<uint32_t>, std::string> bindingMapValue;
+// value:   { descriptorType, (optional) descriptor ID } // TODO: proper ID instead of string
+typedef std::tuple<DESCRIPTOR, std::string> bindingMapValue;
 typedef std::pair<const bindingMapKey, bindingMapValue> bindingMapKeyValue;
 typedef std::map<bindingMapKey, bindingMapValue> bindingMap;
 
-// **********************
-//      Set
-// **********************
-
+//  SET
 namespace Set {
 
 const uint32_t OFFSET_ALL = UINT32_MAX;
-
-struct Resource {
-    Resource(uint32_t offset) : offset(offset), status(STATUS::PENDING) {}
-    const uint32_t offset;
-    STATUS status;
-    std::vector<VkDescriptorSet> descriptorSets;
-};
 
 class Base {
     friend class Descriptor::Handler;
@@ -49,19 +37,33 @@ class Base {
     const std::string MACRO_NAME;
     const Descriptor::bindingMap BINDING_MAP;
 
-    VkDescriptorSetLayout layout;
-    VkShaderStageFlags stages;
+    inline bool isInitialized() const { return !resources_[defaultResourceOffset_].pipelineTypes.empty(); }
 
-    Descriptor::Set::Resource& getResource(const uint32_t& offset);
+    inline const auto& getResource(const uint32_t& offset) const { return resources_[offset]; }
+    const Descriptor::OffsetsMap getDescriptorOffsets(const resourceTuple& tuple) const;
+    inline auto& getDefaultResourceOffset() const { return defaultResourceOffset_; }
+
+    void updateOffsets(const Uniform::offsetsMap offsetsMap, const Descriptor::bindingMapKeyValue& bindingMapKeyValue,
+                       const PIPELINE& pipelineType);
+
+    // ITERATOR
+    void findResourceForPipeline(std::vector<Resource>::iterator& it, const PIPELINE& type);
+    void findResourceForDefaultPipeline(std::vector<Resource>::iterator& it, const PIPELINE& type);
+    void findResourceSimilar(std::vector<Resource>::iterator& it, const PIPELINE& piplineType,
+                             const std::set<RENDER_PASS>& passTypes, const DESCRIPTOR& descType,
+                             const Uniform::offsets& offsets);
 
    private:
-    std::vector<Descriptor::Set::Resource> resources_;
+    inline auto& getDefaultResource() { return resources_[defaultResourceOffset_]; }
+
+    const uint32_t defaultResourceOffset_;
+    std::vector<Resource> resources_;
+    Uniform::offsetsMap uniformOffsets_;
+    // Texture offsets (0 if no texture) to resource offset map
+    std::map<uint32_t, std::map<uint32_t, std::vector<VkDescriptorSet>>> descriptorSetsMap_;
 };
 
-// **********************
-//      Default
-// **********************
-
+//  DEFAULT
 namespace Default {
 class Uniform : public Set::Base {
    public:
@@ -82,7 +84,6 @@ class ProjectorSampler : public Set::Base {
 }  // namespace Default
 
 }  // namespace Set
-
 }  // namespace Descriptor
 
 #endif  // !DESCRIPTOR_SET_H

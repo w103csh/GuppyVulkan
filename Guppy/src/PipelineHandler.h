@@ -35,21 +35,24 @@ class Handler : public Game::Handler {
                                                            const std::vector<PUSH_CONSTANT> &pushConstantTypes) const;
 
     // PIPELINES
-    const std::vector<Pipeline::Reference> createPipelines(
-        const std::multiset<std::pair<PIPELINE, RenderPass::offset>> &set);
+    void createPipelines(const pipelinePassSet &set);
     void createPipeline(const std::string &&name, VkGraphicsPipelineCreateInfo &createInfo, VkPipeline &pipeline);
+    inline const auto &getPipelineBindDataMap() { return pipelineBindDataMap_; }
 
     // DESCRIPTOR SET
-    VkShaderStageFlags getDescriptorSetStages(const DESCRIPTOR_SET &setType);
-    void initShaderInfoMap(Shader::shaderInfoMap &map);
+    Uniform::offsetsMap makeUniformOffsetsMap();
+    void makeShaderInfoMap(Shader::infoMap &map);
 
     inline const std::unique_ptr<Pipeline::Base> &getPipeline(const PIPELINE &pipelineType) const {
         // Make sure the pipeline that is being accessed is available.
-        assert(static_cast<int>(pipelineType) > static_cast<int>(PIPELINE::DONT_CARE) &&
-               static_cast<int>(pipelineType) < pPipelines_.size());
-        return pPipelines_[static_cast<uint64_t>(pipelineType)];
+        assert(static_cast<uint32_t>(pipelineType) >= 0);
+        assert(static_cast<uint32_t>(pipelineType) < pPipelines_.size());
+        return pPipelines_[static_cast<uint32_t>(pipelineType)];
     }
     inline const std::vector<std::unique_ptr<Pipeline::Base>> &getPipelines() const { return pPipelines_; }
+
+    // SHADER
+    void getShaderStages(const std::set<PIPELINE> &pipelineTypes, VkShaderStageFlags &stages);
 
     // CLEAN UP
     void needsUpdate(const std::vector<SHADER> types);
@@ -68,7 +71,7 @@ class Handler : public Game::Handler {
     // PIPELINES
     void createPipelineCache(VkPipelineCache &cache);
     std::vector<std::unique_ptr<Pipeline::Base>> pPipelines_;
-    pipelineMap pipelineMap_;
+    pipelineBindDataMap pipelineBindDataMap_;
 
     // CLEAN UP
     std::set<PIPELINE> needsUpdateSet_;

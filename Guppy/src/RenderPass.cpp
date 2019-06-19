@@ -15,24 +15,27 @@ RenderPass::Base::Base(RenderPass::Handler& handler, const uint32_t&& offset, co
       TYPE(pCreateInfo->type),
       pass(VK_NULL_HANDLE),
       data{},
+      pipelineData_{
+          pCreateInfo->includeDepth,
+          VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM,
+      },
       scissor_{},
       viewport_{},
       beginInfo_{},
-      includeDepth_(pCreateInfo->includeDepth),
       format_(VK_FORMAT_UNDEFINED),
       depthFormat_(VK_FORMAT_UNDEFINED),
       finalLayout_(VK_IMAGE_LAYOUT_PRESENT_SRC_KHR),
-      samples_(VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM),
       commandCount_(0),
       semaphoreCount_(0),
       extent_{0, 0},
-      depth_{}  //
+      depth_{},
+      descPipelineOffsets_(pCreateInfo->descPipelineOffsets)  //
 {
     for (const auto& pipelineType : pCreateInfo->pipelineTypes) {
         // If changed from set then a lot of work needs to be done, so I am
         // adding some validation here.
-        assert(pipelineTypeReferenceMap_.count(pipelineType) == 0);
-        pipelineTypeReferenceMap_.insert({pipelineType, {}});
+        assert(pipelineTypeBindDataMap_.count(pipelineType) == 0);
+        pipelineTypeBindDataMap_.insert({pipelineType, {}});
     }
 }
 
@@ -54,7 +57,7 @@ void RenderPass::Base::create() {
     // Not sure if this is the right place for validation since the
     // base doesn't use these.
     assert(format_ != VK_FORMAT_UNDEFINED);
-    if (includeDepth_)  //
+    if (pipelineData_.includeDepth)  //
         assert(depthFormat_ != VK_FORMAT_UNDEFINED);
 }
 
@@ -85,11 +88,11 @@ void RenderPass::Base::createTarget() {
     assert(data.semaphores.size() <= RESOURCE_SIZE);
 }
 
-void RenderPass::Base::overridePipelineCreateInfo(const PIPELINE& type, Pipeline::CreateInfoResources& createInfoRes) {
-    createInfoRes.depthStencilStateInfo.depthTestEnable = includeDepth_;
-    createInfoRes.depthStencilStateInfo.depthWriteEnable = includeDepth_;
-    assert(samples_ != VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM);
-    createInfoRes.multisampleStateInfo.rasterizationSamples = samples_;
+void RenderPass::Base::overridePipelineCreateInfo(const PIPELINE& type, Pipeline::CreateInfoVkResources& createInfoRes) {
+    assert(pipelineData_.samples != VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM);
+    createInfoRes.depthStencilStateInfo.depthTestEnable = pipelineData_.includeDepth;
+    createInfoRes.depthStencilStateInfo.depthWriteEnable = pipelineData_.includeDepth;
+    createInfoRes.multisampleStateInfo.rasterizationSamples = pipelineData_.samples;
 }
 
 void RenderPass::Base::record(const uint32_t& frameIndex) {
@@ -101,13 +104,13 @@ void RenderPass::Base::record(const uint32_t& frameIndex) {
     auto& secCmd = data.secCmds[frameIndex];
     auto& pScene = handler().sceneHandler().getActiveScene();
 
-    auto it = pipelineTypeReferenceMap_.begin();
-    while (it != pipelineTypeReferenceMap_.end()) {
+    auto it = pipelineTypeBindDataMap_.begin();
+    while (it != pipelineTypeBindDataMap_.end()) {
         // Record the scene
-        pScene->record((*it).first, pipelineTypeReferenceMap_.at((*it).first), priCmd, secCmd, frameIndex);
+        pScene->record(TYPE, it->first, it->second, priCmd, secCmd, frameIndex);
 
         std::advance(it, 1);
-        if (it != pipelineTypeReferenceMap_.end()) {
+        if (it != pipelineTypeBindDataMap_.end()) {
             vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
             // vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
         }
@@ -230,15 +233,15 @@ void RenderPass::Base::updateSubmitResource(SubmitResource& resource, const uint
 
 uint32_t RenderPass::Base::getSubpassId(const PIPELINE& type) const {
     uint32_t id = 0;
-    for (const auto keyValue : pipelineTypeReferenceMap_) {
+    for (const auto keyValue : pipelineTypeBindDataMap_) {
         if (keyValue.first == type) break;
         id++;
     }
     return id;  // TODO: is returning 0 for no types okay? Try using std::optional maybe?
-};
+}
 
-void RenderPass::Base::setPipelineReference(const PIPELINE& pipelineType, const Pipeline::Reference& reference) {
-    pipelineTypeReferenceMap_.at(pipelineType) = reference;
+void RenderPass::Base::setBindData(const PIPELINE& pipelineType, const std::shared_ptr<Pipeline::BindData>& pBindData) {
+    pipelineTypeBindDataMap_[pipelineType] = pBindData;
 }
 
 void RenderPass::Base::destroy() {

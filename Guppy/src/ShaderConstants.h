@@ -1,14 +1,16 @@
-
 #ifndef SHADER_CONSTANTS_H
 #define SHADER_CONSTANTS_H
 
 #include <map>
-#include <memory>
 #include <set>
 #include <string>
 #include <utility>
-#include <vector>
 #include <vulkan/vulkan.h>
+
+#include "DescriptorConstants.h"
+
+enum class PIPELINE : uint32_t;
+enum class RENDER_PASS : uint32_t;
 
 enum class SHADER {
     LINK = -1,
@@ -58,16 +60,11 @@ struct CreateInfo {
     std::set<SHADER_LINK> linkTypes;
 };
 
-// key:     Universal macro ID that will be used to define the descriptor slot in the shader
-// value:   Slot number that will be set for the macro
-typedef std::map<std::string, uint8_t> descSetMacroSlotMap;
-
-// Shader type to descriptor set slots
-typedef std::pair<SHADER, descSetMacroSlotMap> shaderInfoMapKey;
-typedef VkPipelineShaderStageCreateInfo shaderInfoMapValue;
-typedef std::pair<const shaderInfoMapKey, shaderInfoMapValue> shaderInfoMapKeyValue;
-// Shader handler's data structure for shader types -> descriptor set slots - module handles
-typedef std::map<shaderInfoMapKey, shaderInfoMapValue> shaderInfoMap;
+// Pipeline shader stage create info map
+using infoMapKey = std::tuple<SHADER, PIPELINE, std::set<RENDER_PASS>>;
+using infoMapValue = std::pair<Descriptor::Set::textReplaceTuples, VkPipelineShaderStageCreateInfo>;
+using infoMapKeyValue = std::pair<const infoMapKey, infoMapValue>;
+using infoMap = std::multimap<infoMapKey, infoMapValue>;
 
 namespace Link {
 

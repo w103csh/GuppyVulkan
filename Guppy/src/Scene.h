@@ -29,7 +29,8 @@ class Base : public Handlee<Scene::Handler> {
 
     inline size_t getOffset() { return offset_; }
 
-    void record(const PIPELINE& pipelineType, const Pipeline::Reference& pipelineReference, const VkCommandBuffer& priCmd,
+    void record(const RENDER_PASS& passType, const PIPELINE& pipelineType,
+                const std::shared_ptr<Pipeline::BindData>& pipelineBindData, const VkCommandBuffer& priCmd,
                 const VkCommandBuffer& secCmd, const uint8_t& frameIndex);
 
     // SELECTION

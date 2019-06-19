@@ -1,8 +1,6 @@
 
 #include "ShaderConstants.h"
 
-#include <string>
-
 #include "PBR.h"
 #include "Parallax.h"
 

@@ -30,8 +30,6 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
       // INFO
       isIndexed_(pCreateInfo->isIndexed),
       selectable_(pCreateInfo->selectable),
-      // REFERENCE
-      descriptorReference_{},
       //
       vertexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
       indexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
@@ -40,6 +38,7 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
       offset_(BAD_OFFSET)
 //
 {
+    assert(PIPELINE_TYPE != PIPELINE::ALL_ENUM);
     assert(helpers::checkVertexPipelineMap(VERTEX_TYPE, PIPELINE_TYPE));
     assert(pInstanceData_ != nullptr);
     assert(pMaterial_ != nullptr);
@@ -78,10 +77,17 @@ void Mesh::Base::prepare() {
         can allocate and update all at once.
     */
     if (status_ == STATUS::READY) {
-        handler().descriptorHandler().getReference(std::ref(*this));
+        handler().descriptorHandler().getBindData(std::ref(*this));
     } else {
         handler().ldgOffsets_.insert({TYPE, getOffset()});
     }
+}
+
+const Descriptor::Set::BindData& Mesh::Base::getDescriptorSetBindData(const RENDER_PASS& passType) const {
+    for (const auto& keyValue : descriptorBindDataMap_) {
+        if (keyValue.first.find(passType) != keyValue.first.end()) return keyValue.second;
+    }
+    return descriptorBindDataMap_.at(Uniform::RENDER_PASS_ALL_SET);
 }
 
 // thread sync
@@ -356,17 +362,19 @@ void Mesh::Base::updateTangentSpaceData() {
     }
 }
 
-void Mesh::Base::draw(const Pipeline::Reference& pipelineReference, const VkCommandBuffer& cmd,
-                      const uint8_t& frameIndex) const {
-    vkCmdBindPipeline(cmd, pipelineReference.bindPoint, pipelineReference.pipeline);
+void Mesh::Base::draw(const RENDER_PASS& passType, const std::shared_ptr<Pipeline::BindData>& pipelineBindData,
+                      const VkCommandBuffer& cmd, const uint8_t& frameIndex) const {
+    vkCmdBindPipeline(cmd, pipelineBindData->bindPoint, pipelineBindData->pipeline);
+
+    const auto& descriptorBindData = getDescriptorSetBindData(passType);
 
     // bindPushConstants(cmd);
 
-    vkCmdBindDescriptorSets(cmd, pipelineReference.bindPoint, pipelineReference.layout, descriptorReference_.firstSet,
-                            static_cast<uint32_t>(descriptorReference_.descriptorSets[frameIndex].size()),
-                            descriptorReference_.descriptorSets[frameIndex].data(),
-                            static_cast<uint32_t>(descriptorReference_.dynamicOffsets.size()),
-                            descriptorReference_.dynamicOffsets.data());
+    vkCmdBindDescriptorSets(cmd, pipelineBindData->bindPoint, pipelineBindData->layout, descriptorBindData.firstSet,
+                            static_cast<uint32_t>(descriptorBindData.descriptorSets[frameIndex].size()),
+                            descriptorBindData.descriptorSets[frameIndex].data(),
+                            static_cast<uint32_t>(descriptorBindData.dynamicOffsets.size()),
+                            descriptorBindData.dynamicOffsets.data());
 
     // VERTEX
     VkBuffer vertexBuffers[] = {vertexRes_.buffer};

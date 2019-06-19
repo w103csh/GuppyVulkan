@@ -20,7 +20,7 @@ class Base : public Descriptor::Interface {
     virtual ~Base() = default;
 
     // DESCRIPTOR
-    void setWriteInfo(VkWriteDescriptorSet &write) const override;
+    void setWriteInfo(VkWriteDescriptorSet &write, uint32_t index = 0) const override;
 
     const std::string NAME;
     const uint32_t OFFSET;

@@ -3,20 +3,21 @@
 
 #include <memory>
 #include <string>
+#include <variant>
 #include <vulkan/vulkan.h>
 
+#include "Constants.h"
 #include "BufferManager.h"
 
-namespace Buffer {
-namespace Manager {
+namespace Descriptor {
 
 template <class TBase, class TDerived, template <typename> class TSmartPointer>
-class Descriptor : public Buffer::Manager::Base<TBase, TDerived, TSmartPointer> {
+class Manager : public Buffer::Manager::Base<TBase, TDerived, TSmartPointer> {
    public:
-    Descriptor(const std::string &&name, const DESCRIPTOR &&descriptorType, const VkDeviceSize &&maxSize,
-               const bool &&keepMapped, const VkBufferUsageFlagBits &&usage, const VkMemoryPropertyFlagBits &&properties,
-               const std::string &&macroName = "N/A", const VkSharingMode &&sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-               const VkBufferCreateFlags &&flags = 0)
+    Manager(const std::string &&name, const DESCRIPTOR &&descriptorType, const VkDeviceSize &&maxSize,
+            const bool &&keepMapped, const VkBufferUsageFlagBits &&usage, const VkMemoryPropertyFlagBits &&properties,
+            const std::string &&macroName = "N/A", const VkSharingMode &&sharingMode = VK_SHARING_MODE_EXCLUSIVE,
+            const VkBufferCreateFlags &&flags = 0)
         : Buffer::Manager::Base<TBase, TDerived, TSmartPointer>(std::forward<const std::string>(name),                     //
                                                                 std::forward<const VkDeviceSize>(maxSize),                 //
                                                                 std::forward<const bool>(keepMapped),                      //
@@ -45,11 +46,10 @@ class Descriptor : public Buffer::Manager::Base<TBase, TDerived, TSmartPointer> 
 
    private:
     void setInfo(Buffer::Info &info) override {
-        if (helpers::isDescriptorTypeDynamic(DESCRIPTOR_TYPE)) info.bufferInfo.offset = 0;
+        if (std::visit(Descriptor::IsUniformDynamic{}, DESCRIPTOR_TYPE)) info.bufferInfo.offset = 0;
     }
 };
 
-}  // namespace Manager
-}  // namespace Buffer
+}  // namespace Descriptor
 
 #endif  // !BUFFER_MANAGER_DESCRIPTOR_H
