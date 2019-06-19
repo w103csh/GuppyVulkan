@@ -311,7 +311,6 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
 
                             if (itNonDefault->passTypes == passTypes) {
                                 // The pass types are identical so just add incoming offsets
-                                assert(false);  // Should work, but was not tested.
 
                                 // Make sure the descriptor is not in the map. If it is then there
                                 // are conflicting pipeline defaults.
