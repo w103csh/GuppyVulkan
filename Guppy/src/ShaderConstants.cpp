@@ -3,6 +3,7 @@
 
 #include "PBR.h"
 #include "Parallax.h"
+#include "ScreenSpace.h"
 
 //#define MULTILINE(...) #__VA_ARGS__
 
@@ -143,9 +144,7 @@ const CreateInfo DEFAULT_MATERIAL_CREATE_INFO = {
 //    //
 //);
 
-}  // namespace Shader
-
-const std::map<SHADER, Shader::CreateInfo> SHADER_ALL = {
+const std::map<SHADER, Shader::CreateInfo> ALL = {
     // DEFAULT
     {SHADER::COLOR_VERT, Shader::COLOR_VERT_CREATE_INFO},
     {SHADER::COLOR_FRAG, Shader::COLOR_FRAG_CREATE_INFO},
@@ -161,9 +160,12 @@ const std::map<SHADER, Shader::CreateInfo> SHADER_ALL = {
     {SHADER::PARALLAX_VERT, Shader::Parallax::VERT_CREATE_INFO},
     {SHADER::PARALLAX_SIMPLE_FRAG, Shader::Parallax::SIMPLE_CREATE_INFO},
     {SHADER::PARALLAX_STEEP_FRAG, Shader::Parallax::STEEP_CREATE_INFO},
+    // SCREEN SPACE
+    {SHADER::SCREEN_SPACE_VERT, Shader::ScreenSpace::VERT_CREATE_INFO},
+    {SHADER::SCREEN_SPACE_FRAG, Shader::ScreenSpace::FRAG_CREATE_INFO},
 };
 
-const std::map<SHADER_LINK, Shader::Link::CreateInfo> SHADER_LINK_ALL = {
+const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {
     // DEFAULT
     {SHADER_LINK::COLOR_FRAG, Shader::Link::COLOR_FRAG_CREATE_INFO},
     {SHADER_LINK::TEX_FRAG, Shader::Link::TEX_FRAG_CREATE_INFO},
@@ -176,7 +178,7 @@ const std::map<SHADER_LINK, Shader::Link::CreateInfo> SHADER_LINK_ALL = {
     {SHADER_LINK::PBR_MATERIAL, Shader::Link::PBR::MATERIAL_CREATE_INFO},
 };
 
-const std::map<SHADER, std::set<SHADER_LINK>> SHADER_LINK_MAP = {
+const std::map<SHADER, std::set<SHADER_LINK>> LINK_MAP = {
     // This map is used to recompile the shaders on the fly.
     // VERTEX
     {SHADER::COLOR_VERT,
@@ -223,3 +225,5 @@ const std::map<SHADER, std::set<SHADER_LINK>> SHADER_LINK_MAP = {
          SHADER_LINK::PBR_MATERIAL,
      }},
 };
+
+}  // namespace Shader

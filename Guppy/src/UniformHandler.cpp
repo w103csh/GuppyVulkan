@@ -39,6 +39,8 @@ Uniform::Handler::Handler(Game* pGame)
           {"Default Fog", UNIFORM::FOG_DEFAULT, 5, "_U_UNI_DEF_FOG"},
           Uniform::Manager<Uniform::Default::Projector::Base>  //
           {"Default Projector", UNIFORM::PROJECTOR_DEFAULT, 5, "_U_UNI_DEF_PRJ"},
+          Uniform::Manager<Uniform::ScreenSpace::Default>  //
+          {"Screen Space Default", UNIFORM::SCREEN_SPACE_DEFAULT, 5, "_U_UNI_SCR_DEF"},
           //
       },
       hasVisualHelpers(false),
@@ -62,6 +64,7 @@ void Uniform::Handler::init() {
     lgtDefSptMgr().init(shell().context(), settings());
     uniDefFogMgr().init(shell().context(), settings());
     uniDefPrjMgr().init(shell().context(), settings());
+    uniScrDefMgr().init(shell().context(), settings());
 
     createCameras();
     createLights();
@@ -79,6 +82,7 @@ void Uniform::Handler::reset() {
     // MISCELLANEOUS
     uniDefFogMgr().destroy(dev);
     uniDefPrjMgr().destroy(dev);
+    uniScrDefMgr().destroy(dev);
 }
 
 void Uniform::Handler::createCameras() {
@@ -131,8 +135,10 @@ void Uniform::Handler::createMiscellaneous() {
     const auto& dev = shell().context().dev;
 
     // FOG
-    uniDefFogMgr().insert(dev);
-    uniDefFogMgr().insert(dev);
+    {
+        uniDefFogMgr().insert(dev);
+        uniDefFogMgr().insert(dev);
+    }
 
     // PROJECTOR
     {
@@ -152,6 +158,11 @@ void Uniform::Handler::createMiscellaneous() {
         auto projector = bias * proj * view;
 
         uniDefPrjMgr().insert(dev, true, {{projector}});
+    }
+
+    // SCREEN SPACE
+    {
+        uniScrDefMgr().insert(dev);  //
     }
 }
 

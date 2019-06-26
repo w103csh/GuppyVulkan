@@ -1,4 +1,3 @@
-
 #ifndef CONSTANTS_H
 #define CONSTANTS_H
 
@@ -8,17 +7,6 @@
 #include <utility>
 #include <vector>
 #include <vulkan/vulkan.h>
-
-#include "Enum.h"
-#include "Types.h"
-// CONSTANTS
-#include "DescriptorConstants.h"
-#include "PipelineConstants.h"
-#include "RenderPassConstants.h"
-#include "SamplerConstants.h"
-#include "ShaderConstants.h"
-#include "TextureConstants.h"
-#include "UniformConstants.h"
 
 #define USE_DEBUG_UI
 
@@ -35,13 +23,14 @@ constexpr bool PRIMARY_MONITOR = 0;
 */
 constexpr uint32_t TEXTURE_LIMIT = 30;
 constexpr auto APP_SHORT_NAME = "Guppy";
+constexpr VkExtent2D BAD_EXTENT_2D = {UINT32_MAX, UINT32_MAX};
 
-const float T_MAX = 1.0f;
+constexpr float T_MAX = 1.0f;
 
 #ifdef NDEBUG
-const bool ENABLE_VALIDATION_LAYERS = false;
+constexpr bool ENABLE_VALIDATION_LAYERS = false;
 #else
-const bool ENABLE_VALIDATION_LAYERS = true;
+constexpr bool ENABLE_VALIDATION_LAYERS = true;
 #endif
 
 #define M_PI_FLT static_cast<float>(M_PI)      // pi

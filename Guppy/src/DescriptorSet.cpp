@@ -30,11 +30,11 @@ Descriptor::Set::Base::Base(const DESCRIPTOR_SET&& type, const std::string&& mac
     getDefaultResource().passTypes = Uniform::RENDER_PASS_ALL_SET;
 }
 
-const Descriptor::OffsetsMap Descriptor::Set::Base::getDescriptorOffsets(const resourceTuple& tuple) const {
+const Descriptor::OffsetsMap Descriptor::Set::Base::getDescriptorOffsets(const uint32_t& offset) const {
     auto descriptorOffsets = resources_[defaultResourceOffset_].offsets;
     // If the resource in the helper tuple is not default replace with the overriden offsets.
-    if (std::get<2>(tuple) != defaultResourceOffset_) {
-        for (const auto& [descType, offsets] : std::get<1>(tuple)->offsets.map()) {
+    if (offset != defaultResourceOffset_) {
+        for (const auto& [descType, offsets] : resources_[offset].offsets.map()) {
             descriptorOffsets.insert(descType, offsets);
         }
     }
@@ -86,6 +86,13 @@ void Descriptor::Set::Base::updateOffsets(const Uniform::offsetsMap offsetsMap,
 
     // Make sure default offsets are found.
     assert(foundPassAll);
+}
+
+bool Descriptor::Set::Base::hasTextureMaterial() const {
+    for (const auto& keyValue : BINDING_MAP) {
+        if (std::visit(IsCombinedSamplerMaterial{}, std::get<0>(keyValue.second))) return true;
+    }
+    return false;
 }
 
 void Descriptor::Set::Base::findResourceForPipeline(std::vector<Resource>::iterator& it, const PIPELINE& type) {
@@ -159,7 +166,7 @@ Descriptor::Set::Default::ProjectorSampler::ProjectorSampler()
           "_DS_PRJ_DEF",
           {
               //{{0, 0}, {DESCRIPTOR::SAMPLER_PIPELINE_COMBINED, Texture::STATUE_CREATE_INFO.name}},
-              {{0, 0}, {COMBINED_SAMPLER::PIPELINE, RenderPass::TEXTURE_2D_CREATE_INFO.name}},
+              {{0, 0}, {COMBINED_SAMPLER::PIPELINE, RenderPass::PROJECT_2D_TEXTURE_CREATE_INFO.name}},
               {{1, 0}, {UNIFORM::PROJECTOR_DEFAULT, ""}},
           },
       } {}

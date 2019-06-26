@@ -1,7 +1,7 @@
 
 #include "SamplerConstants.h"
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "Sampler.h"
 
 // IMAGES
@@ -41,9 +41,9 @@ namespace Sampler {
 
 // STATUE
 const CreateInfo STATUE_CREATE_INFO = {
-    "Statue Color Sampler",                    //
-    {{Sampler::USE::COLOR, STATUE_TEX_PATH}},  //
-    VK_IMAGE_VIEW_TYPE_2D,                     //
+    "Statue Color Sampler",                      //
+    {{Sampler::USAGE::COLOR, STATUE_TEX_PATH}},  //
+    VK_IMAGE_VIEW_TYPE_2D,                       //
     0,
     SAMPLER::CLAMP_TO_BORDER,
 };
@@ -51,14 +51,14 @@ const CreateInfo STATUE_CREATE_INFO = {
 // VULKAN LOGO
 const CreateInfo VULKAN_CREATE_INFO = {
     "Vulkan Color Sampler",
-    {{Sampler::USE::COLOR, VULKAN_TEX_PATH}},
+    {{Sampler::USAGE::COLOR, VULKAN_TEX_PATH}},
     VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 };
 
 // HARDWOOD
 const CreateInfo HARDWOOD_CREATE_INFO = {
     "Hardwood Color Sampler",
-    {{Sampler::USE::COLOR, HARDWOOD_FLOOR_TEX_PATH}},
+    {{Sampler::USAGE::COLOR, HARDWOOD_FLOOR_TEX_PATH}},
     VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 };
 
@@ -66,9 +66,9 @@ const CreateInfo HARDWOOD_CREATE_INFO = {
 const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO = {
     "Medieval Color/Normal/Specular Sampler",
     {
-        {Sampler::USE::COLOR, MED_H_DIFF_TEX_PATH},
-        {Sampler::USE::NORMAL, MED_H_NORM_TEX_PATH},
-        {Sampler::USE::SPECULAR, MED_H_SPEC_TEX_PATH},
+        {Sampler::USAGE::COLOR, MED_H_DIFF_TEX_PATH},
+        {Sampler::USAGE::NORMAL, MED_H_NORM_TEX_PATH},
+        {Sampler::USAGE::SPECULAR, MED_H_SPEC_TEX_PATH},
     },
     VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 };
@@ -77,8 +77,8 @@ const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO = {
 const CreateInfo WOOD_CREATE_INFO = {
     "Wood Color/Normal Sampler",
     {
-        {Sampler::USE::COLOR, WOOD_007_DIFF_TEX_PATH},
-        {Sampler::USE::NORMAL, WOOD_007_NORM_TEX_PATH},
+        {Sampler::USAGE::COLOR, WOOD_007_DIFF_TEX_PATH},
+        {Sampler::USAGE::NORMAL, WOOD_007_NORM_TEX_PATH},
     },
     VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 };
@@ -86,12 +86,12 @@ const CreateInfo WOOD_CREATE_INFO = {
 // MYBRICK
 const CreateInfo MYBRICK_COLOR_CREATE_INFO = {
     "Mybrick Color Sampler",
-    {{Sampler::USE::COLOR, MYBRICK_DIFF_TEX_PATH}},
+    {{Sampler::USAGE::COLOR, MYBRICK_DIFF_TEX_PATH}},
 };
 const CreateInfo MYBRICK_NORMAL_CREATE_INFO = {
     "Mybrick Normal Sampler",
     {
-        {Sampler::USE::NORMAL,
+        {Sampler::USAGE::NORMAL,
          MYBRICK_NORM_TEX_PATH,
          {
              {MYBRICK_HGHT_TEX_PATH, Sampler::CHANNELS::_1, 3},
@@ -131,12 +131,12 @@ const std::string SKYBOX_NEG_Z_TEX_PATH = SKYBOX_PATH + "back.jpg";
 const CreateInfo PISA_HDR_CREATE_INFO = {
     "Pisa HDR Cube Sampler",
     {
-        {Sampler::USE::COLOR, PISA_HDR_POS_X_TEX_PATH},
-        {Sampler::USE::COLOR, PISA_HDR_NEG_X_TEX_PATH},
-        {Sampler::USE::COLOR, PISA_HDR_POS_Y_TEX_PATH},
-        {Sampler::USE::COLOR, PISA_HDR_NEG_Y_TEX_PATH},
-        {Sampler::USE::COLOR, PISA_HDR_POS_Z_TEX_PATH},
-        {Sampler::USE::COLOR, PISA_HDR_NEG_Z_TEX_PATH},
+        {Sampler::USAGE::COLOR, PISA_HDR_POS_X_TEX_PATH},
+        {Sampler::USAGE::COLOR, PISA_HDR_NEG_X_TEX_PATH},
+        {Sampler::USAGE::COLOR, PISA_HDR_POS_Y_TEX_PATH},
+        {Sampler::USAGE::COLOR, PISA_HDR_NEG_Y_TEX_PATH},
+        {Sampler::USAGE::COLOR, PISA_HDR_POS_Z_TEX_PATH},
+        {Sampler::USAGE::COLOR, PISA_HDR_NEG_Z_TEX_PATH},
     },
     VK_IMAGE_VIEW_TYPE_CUBE,
     VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
@@ -149,12 +149,12 @@ const CreateInfo PISA_HDR_CREATE_INFO = {
 const CreateInfo SKYBOX_CREATE_INFO = {
     "Skybox Cube Sampler",
     {
-        {Sampler::USE::COLOR, SKYBOX_POS_X_TEX_PATH},
-        {Sampler::USE::COLOR, SKYBOX_NEG_X_TEX_PATH},
-        {Sampler::USE::COLOR, SKYBOX_POS_Y_TEX_PATH},
-        {Sampler::USE::COLOR, SKYBOX_NEG_Y_TEX_PATH},
-        {Sampler::USE::COLOR, SKYBOX_POS_Z_TEX_PATH},
-        {Sampler::USE::COLOR, SKYBOX_NEG_Z_TEX_PATH},
+        {Sampler::USAGE::COLOR, SKYBOX_POS_X_TEX_PATH},
+        {Sampler::USAGE::COLOR, SKYBOX_NEG_X_TEX_PATH},
+        {Sampler::USAGE::COLOR, SKYBOX_POS_Y_TEX_PATH},
+        {Sampler::USAGE::COLOR, SKYBOX_NEG_Y_TEX_PATH},
+        {Sampler::USAGE::COLOR, SKYBOX_POS_Z_TEX_PATH},
+        {Sampler::USAGE::COLOR, SKYBOX_NEG_Z_TEX_PATH},
     },
     VK_IMAGE_VIEW_TYPE_CUBE,
     VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,

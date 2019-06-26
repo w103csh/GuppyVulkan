@@ -3,7 +3,7 @@
 
 #include <vulkan/vulkan.h>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "RenderPass.h"
 
 struct SubmitResource;
@@ -16,16 +16,13 @@ class ImGui : public Base {
    public:
     ImGui(Handler& handler, const uint32_t&& offset);
 
-    void init() override;
     void postCreate() override;
-    void setSwapchainInfo() override;
     void record(const uint32_t& frameIndex) override;
 
    private:
     void createAttachmentsAndSubpasses() override;
     void createDependencies() override;
     void updateClearValues() override;
-    void createFramebuffers() override;
 };
 
 }  // namespace RenderPass

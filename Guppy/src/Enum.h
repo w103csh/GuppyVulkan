@@ -18,6 +18,7 @@ typedef enum STATUS {
     PENDING_PIPELINE =  0x00000020,
     REDRAW =            0x00000040,
     UPDATE_BUFFERS =    0x00000080,
+    DESTROYED =         0x00000100,
     PENDING =           0x7FFFFFFF,
 } STATUS;
 // clang-format on
@@ -25,7 +26,7 @@ typedef enum STATUS {
 enum class VERTEX {
     //
     COLOR = 0,
-    TEXTURE
+    TEXTURE,
 };
 
 enum class PUSH_CONSTANT {
@@ -80,6 +81,7 @@ enum class UNIFORM {
     // GENERAL
     FOG_DEFAULT,
     PROJECTOR_DEFAULT,
+    SCREEN_SPACE_DEFAULT,
     //
     DONT_CARE,
 };

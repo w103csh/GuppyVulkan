@@ -5,7 +5,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "Helpers.h"
 
 class Shell;
@@ -67,7 +67,7 @@ inline FlagBits GetChannelMask(const CHANNELS &c) { return 1 << (c - 1); }
 
 VkSamplerCreateInfo GetVkSamplerCreateInfo(const Sampler::Base &sampler);
 
-LayerInfo GetDef4Comb3And1LayerInfo(const Sampler::USE &&type, const std::string &path, const std::string &fileName,
+LayerInfo GetDef4Comb3And1LayerInfo(const Sampler::USAGE &&type, const std::string &path, const std::string &fileName,
                                     const std::string &combineFileName = "");
 
 }  // namespace Sampler

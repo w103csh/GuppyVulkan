@@ -10,6 +10,8 @@
 #include "Parallax.h"
 #include "PBR.h"
 #include "Pipeline.h"
+#include "RenderPass.h"
+#include "ScreenSpace.h"
 // HANDLERS
 #include "PipelineHandler.h"
 #include "RenderPassHandler.h"
@@ -20,29 +22,18 @@
 Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_HANDLE) {
     for (const auto& type : Descriptor::Set::ALL) {
         switch (type) {
-            case DESCRIPTOR_SET::UNIFORM_DEFAULT:
-                pDescriptorSets_.push_back(std::make_unique<Set::Default::Uniform>());
-                break;
-            case DESCRIPTOR_SET::SAMPLER_DEFAULT:
-                pDescriptorSets_.push_back(std::make_unique<Set::Default::Sampler>());
-                break;
-            case DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT:
-                pDescriptorSets_.push_back(std::make_unique<Set::Default::CubeSampler>());
-                break;
-            case DESCRIPTOR_SET::PROJECTOR_DEFAULT:
-                pDescriptorSets_.push_back(std::make_unique<Set::Default::ProjectorSampler>());
-                break;
-            case DESCRIPTOR_SET::UNIFORM_PBR:
-                pDescriptorSets_.push_back(std::make_unique<Set::PBR::Uniform>());
-                break;
-            case DESCRIPTOR_SET::UNIFORM_PARALLAX:
-                pDescriptorSets_.push_back(std::make_unique<Set::Parallax::Uniform>());
-                break;
-            case DESCRIPTOR_SET::SAMPLER_PARALLAX:
-                pDescriptorSets_.push_back(std::make_unique<Set::Parallax::Sampler>());
-                break;
-            default:
-                assert(false);  // add new pipelines here
+                // clang-format off
+            case DESCRIPTOR_SET::UNIFORM_DEFAULT: pDescriptorSets_.push_back(std::make_unique<Set::Default::Uniform>()); break;
+            case DESCRIPTOR_SET::SAMPLER_DEFAULT: pDescriptorSets_.push_back(std::make_unique<Set::Default::Sampler>()); break;
+            case DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT: pDescriptorSets_.push_back(std::make_unique<Set::Default::CubeSampler>()); break;
+            case DESCRIPTOR_SET::PROJECTOR_DEFAULT: pDescriptorSets_.push_back(std::make_unique<Set::Default::ProjectorSampler>()); break;
+            case DESCRIPTOR_SET::UNIFORM_PBR: pDescriptorSets_.push_back(std::make_unique<Set::PBR::Uniform>()); break;
+            case DESCRIPTOR_SET::UNIFORM_PARALLAX: pDescriptorSets_.push_back(std::make_unique<Set::Parallax::Uniform>()); break;
+            case DESCRIPTOR_SET::SAMPLER_PARALLAX: pDescriptorSets_.push_back(std::make_unique<Set::Parallax::Sampler>()); break;
+            case DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT: pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::DefaultUniform>()); break;
+            case DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT: pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::DefaultSampler>()); break;
+            default: assert(false);  // add new pipelines here
+                // clang-format on
         }
         assert(pDescriptorSets_.back()->TYPE == type);
     }
@@ -56,17 +47,19 @@ void Descriptor::Handler::init() {
 
 void Descriptor::Handler::createPool() {
     // TODO: an actaul allocator that works, and doesn't waste a ton of memory
-    std::vector<VkDescriptorPoolSize> poolSizes = {{VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
-                                                   {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000}};
+    std::vector<VkDescriptorPoolSize> poolSizes = {
+        {VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
+        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
+        {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
+        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
+        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
+        {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000},
+    };
     VkDescriptorPoolCreateInfo poolInfo = {};
     poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
     poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
@@ -521,24 +514,20 @@ void Descriptor::Handler::getBindData(Mesh::Base& mesh) {
 
     for (const auto& resourceTuples : helpers) {
         assert(resourceTuples.size());
-        const auto& setType = std::get<3>(resourceTuples.front());
+        auto& pSet = getSet(std::get<3>(resourceTuples.front()));
 
-        // Check for a material offset.
-        uint32_t materialOffset = 0;
-        switch (setType) {
-            case DESCRIPTOR_SET::SAMPLER_DEFAULT: {
-                materialOffset = mesh.getMaterial()->getTexture()->OFFSET;
-            } break;
-            default:;
+        // Check for a texture offset.
+        uint32_t textureOffset = 0;
+        if (pSet->hasTextureMaterial()) {
+            assert(mesh.getMaterial()->hasTexture());
+            textureOffset = mesh.getMaterial()->getTexture()->OFFSET;
         }
-
-        auto& pSet = getSet(setType);
 
         // Get/create the resource offset map for the material (or 0 if no material).
-        if (pSet->descriptorSetsMap_.count(materialOffset) == 0) {
-            pSet->descriptorSetsMap_.insert({materialOffset, {}});
+        if (pSet->descriptorSetsMap_.count(textureOffset) == 0) {
+            pSet->descriptorSetsMap_.insert({textureOffset, {}});
         }
-        auto& resourceOffsetsMap = pSet->descriptorSetsMap_.at(materialOffset);
+        auto& resourceOffsetsMap = pSet->descriptorSetsMap_.at(textureOffset);
 
         for (const auto& resourceTuple : resourceTuples) {
             // Get/create the descriptor sets map element for the resource.
@@ -546,8 +535,8 @@ void Descriptor::Handler::getBindData(Mesh::Base& mesh) {
                 resourceOffsetsMap.insert({std::get<2>(resourceTuple), {}});
 
                 allocateDescriptorSets(*std::get<1>(resourceTuple), resourceOffsetsMap.at(std::get<2>(resourceTuple)));
-                updateDescriptorSets(pSet, mesh, pSet->getDescriptorOffsets(resourceTuple),
-                                     resourceOffsetsMap.at(std::get<2>(resourceTuple)));
+                updateDescriptorSets(pSet->BINDING_MAP, pSet->getDescriptorOffsets(std::get<2>(resourceTuple)),
+                                     resourceOffsetsMap.at(std::get<2>(resourceTuple)), &mesh);
             }
 
             // Add bind data for mesh
@@ -564,6 +553,22 @@ void Descriptor::Handler::getBindData(Mesh::Base& mesh) {
                 bindData.descriptorSets[i].push_back(resourceOffsetsMap.at(std::get<2>(resourceTuple))[i]);
             }
             getDynamicOffsets(pSet, bindData.dynamicOffsets, mesh);
+        }
+    }
+}
+
+void Descriptor::Handler::updateBindData(const std::shared_ptr<Texture::Base>& pTexture) {
+    // Find the descriptor set(s)
+    for (const auto& pSet : pDescriptorSets_) {
+        for (const auto& [key, descTypeTextureIdPair] : pSet->BINDING_MAP) {
+            if (std::get<1>(descTypeTextureIdPair) == pTexture->NAME) {
+                // Not trying to make this work for anything else atm.
+                assert(std::visit(IsCombinedSamplerPipeline{}, std::get<0>(descTypeTextureIdPair)));
+                assert(pSet->descriptorSetsMap_.size() == 1);
+                for (auto& [resourceOffset, descriptorSets] : pSet->descriptorSetsMap_.at(0)) {
+                    updateDescriptorSets(pSet->BINDING_MAP, pSet->getDescriptorOffsets(resourceOffset), descriptorSets);
+                }
+            }
         }
     }
 }
@@ -585,16 +590,16 @@ void Descriptor::Handler::allocateDescriptorSets(const Descriptor::Set::Resource
     vk::assert_success(vkAllocateDescriptorSets(shell().context().dev, &allocInfo, descriptorSets.data()));
 }
 
-void Descriptor::Handler::updateDescriptorSets(const std::unique_ptr<Descriptor::Set::Base>& pSet, const Mesh::Base& mesh,
+void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bindingMap,
                                                const Descriptor::OffsetsMap& offsets,
-                                               std::vector<VkDescriptorSet>& descriptorSets) const {
+                                               std::vector<VkDescriptorSet>& descriptorSets, const Mesh::Base* pMesh) const {
     // std::vector<VkDescriptorImageInfo> imageInfos;
     std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos;
     // std::vector<VkBufferView> texelBufferViews;
     std::vector<VkWriteDescriptorSet> writes;
 
     uint32_t samplerIndex = 0;
-    for (const auto& keyValue : pSet->BINDING_MAP) {
+    for (const auto& keyValue : bindingMap) {
         const auto& descType = std::get<0>(keyValue.second);
 
         // Set binding info
@@ -619,7 +624,8 @@ void Descriptor::Handler::updateDescriptorSets(const std::unique_ptr<Descriptor:
         // WRITE INFO
         if (std::visit(IsUniformDynamic{}, descType)) {
             // MATERIAL
-            mesh.pMaterial_->setWriteInfo(writes.back());
+            assert(pMesh != nullptr);
+            pMesh->pMaterial_->setWriteInfo(writes.back());
         } else if (std::visit(IsUniform{}, descType)) {
             // UNIFORM
             bufferInfos.push_back(uniformHandler().getWriteInfos(descType, *pOffsets));
@@ -627,8 +633,8 @@ void Descriptor::Handler::updateDescriptorSets(const std::unique_ptr<Descriptor:
             writes.back().pBufferInfo = bufferInfos.back().data();
         } else if (std::visit(IsCombinedSamplerMaterial{}, std::get<0>(keyValue.second))) {
             // MATERIAL SAMPLER
-            assert(mesh.getMaterial()->getTexture() != nullptr);
-            mesh.getMaterial()->getTexture()->setWriteInfo(writes.back(), samplerIndex++);
+            assert(pMesh != nullptr && pMesh->getMaterial()->hasTexture());
+            pMesh->getMaterial()->getTexture()->setWriteInfo(writes.back(), samplerIndex++);
         } else if (std::visit(IsCombinedSamplerPipeline{}, descType)) {
             // PIPELINE SAMPLER
             textureHandler().getTextureByName(std::get<1>(keyValue.second))->setWriteInfo(writes.back(), samplerIndex++);

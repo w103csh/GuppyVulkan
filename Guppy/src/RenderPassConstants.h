@@ -6,6 +6,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -29,9 +30,12 @@ const VkClearColorValue DEFAULT_CLEAR_COLOR_VALUE = {{CLEAR_COLOR.x, CLEAR_COLOR
 const VkClearDepthStencilValue DEFAULT_CLEAR_DEPTH_STENCIL_VALUE = {1.0f, 0};
 
 enum class RENDER_PASS : uint32_t {
-    DEFAULT = 0,
-    IMGUI,
-    SAMPLER,
+    DEFAULT = 0,           // Swapchain
+    IMGUI,                 // Swapchain
+    SAMPLER_DEFAULT,       // Sampler
+    PROJECT,               // Sampler
+    SCREEN_SPACE,          // Swapchain
+    SCREEN_SPACE_SAMPLER,  // Sampler
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
 };
@@ -39,28 +43,33 @@ enum class RENDER_PASS : uint32_t {
 namespace RenderPass {
 
 using offset = uint32_t;
-constexpr uint8_t RESOURCE_SIZE = 20;
-extern const std::vector<RENDER_PASS> ALL;
-
 using descriptorPipelineOffsetsMap = std::map<Uniform::offsetsMapKey, Uniform::offsets>;
 
+constexpr uint8_t RESOURCE_SIZE = 20;
+constexpr std::string_view SWAPCHAIN_TARGET_ID = "Swapchain";
+extern const std::vector<RENDER_PASS> ALL;
+
+// clang-format off
+using FLAG = enum : FlagBits {
+    NONE =                  0x00000000,
+    SWAPCHAIN =             0x00000001,
+    DEPTH =                 0x00000002,
+    MULTISAMPLE =           0x00000004,
+    SECONDARY_COMMANDS =    0x00000008,
+};
+// clang-format off
+
 struct PipelineData {
-    constexpr bool operator==(const PipelineData &other) {
-        return includeDepth == other.includeDepth &&  //
+    constexpr bool operator==(const PipelineData &other) const {
+        return usesDepth == other.usesDepth &&  //
                samples == other.samples;
     }
     constexpr bool operator!=(const PipelineData &other) { return !(*this == other); }
-    VkBool32 includeDepth;
+    VkBool32 usesDepth;
     VkSampleCountFlagBits samples;
 };
 
 struct SwapchainResources {
-    /* The "cleared" value should be set by the pass that clears the
-     *  swapchain attachment (probably the first "SWAPCHAIN_DEPENDENT"
-     *  pass), so that that any subsequent passes that do work on it
-     *  know not to clear it.
-     */
-    bool cleared = false;
     std::vector<VkImage> images;
     std::vector<VkImageView> views;
 };
@@ -98,23 +107,27 @@ struct Resources {
     std::vector<VkSubpassDependency> dependencies;
 };
 
-void AddDefaultSubpasses(RenderPass::Resources &resources, uint64_t count);
-
 struct CreateInfo {
     RENDER_PASS type;
     std::string name;
     std::unordered_set<PIPELINE> pipelineTypes;
-    bool swapchainDependent = true;
-    bool includeDepth = true;
+    FlagBits flags = (FLAG::SWAPCHAIN | FLAG::DEPTH | FLAG::MULTISAMPLE);
+    std::vector<std::string> textureIds;
     descriptorPipelineOffsetsMap descPipelineOffsets;
 };
 
-extern const CreateInfo DEFAULT_CREATE_INFO;
-extern const CreateInfo SAMPLER_CREATE_INFO;
-
 // TEXTURE
-extern const Texture::CreateInfo TEXTURE_2D_CREATE_INFO;
-extern const Texture::CreateInfo TEXTURE_2D_ARRAY_CREATE_INFO;
+constexpr std::string_view DEFAULT_2D_TEXTURE_ID = "Render Pass Texture 2D Texture";
+extern const Texture::CreateInfo DEFAULT_2D_TEXTURE_CREATE_INFO;
+constexpr std::string_view PROJECT_2D_TEXTURE_ID = "Render Pass Project 2D Texture";
+extern const Texture::CreateInfo PROJECT_2D_TEXTURE_CREATE_INFO;
+constexpr std::string_view PROJECT_2D_ARRAY_TEXTURE_ID = "Render Pass Project 2D Array Texture";
+extern const Texture::CreateInfo PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO;
+
+// RENDER PASS
+extern const CreateInfo DEFAULT_CREATE_INFO;
+extern const CreateInfo SAMPLER_DEFAULT_CREATE_INFO;
+extern const CreateInfo PROJECT_CREATE_INFO;
 
 }  // namespace RenderPass
 

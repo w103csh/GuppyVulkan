@@ -23,6 +23,7 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
       FLAGS(flags),
       MAPPABLE(pCreateInfo->mappable),
       NAME(name),
+      PASS_TYPES(pCreateInfo->passTypes),
       PIPELINE_TYPE(pCreateInfo->pipelineType),
       TYPE(type),
       VERTEX_TYPE(vertexType),
@@ -38,8 +39,9 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
       offset_(BAD_OFFSET)
 //
 {
+    assert(PASS_TYPES.size());
     assert(PIPELINE_TYPE != PIPELINE::ALL_ENUM);
-    assert(helpers::checkVertexPipelineMap(VERTEX_TYPE, PIPELINE_TYPE));
+    assert(Mesh::Base::handler().pipelineHandler().checkVertexPipelineMap(VERTEX_TYPE, PIPELINE_TYPE));
     assert(pInstanceData_ != nullptr);
     assert(pMaterial_ != nullptr);
 }
@@ -360,6 +362,14 @@ void Mesh::Base::updateTangentSpaceData() {
         face.calculateTangentSpaceVectors();
         addVertex(face);
     }
+}
+
+bool Mesh::Base::shouldDraw(const RENDER_PASS& passTypeComp, const PIPELINE& pipelineType) const {
+    if (pipelineType != PIPELINE_TYPE) return false;
+    if (status_ != STATUS::READY) return false;
+    for (const auto& passType : PASS_TYPES)
+        if (passType == RENDER_PASS::ALL_ENUM || passType == passTypeComp) return true;
+    return false;
 }
 
 void Mesh::Base::draw(const RENDER_PASS& passType, const std::shared_ptr<Pipeline::BindData>& pipelineBindData,

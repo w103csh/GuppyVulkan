@@ -50,7 +50,7 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
     std::vector<const char*> texts;
     for (auto& s : stringTexts) texts.push_back(s.c_str());
 
-    const auto& createInfo = SHADER_ALL.at(std::get<0>(keyValue.first));
+    const auto& createInfo = ALL.at(std::get<0>(keyValue.first));
     std::vector<unsigned int> spv;
     bool success = GLSLtoSPV(createInfo.stage, texts, spv);
 
@@ -91,7 +91,7 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
 
 std::vector<std::string> Shader::Handler::loadText(const infoMapKeyValue& keyValue) {
     std::vector<std::string> texts;
-    const auto& createInfo = SHADER_ALL.at(std::get<0>(keyValue.first));
+    const auto& createInfo = ALL.at(std::get<0>(keyValue.first));
 
     // main shader text
     if (shaderTexts_.count(std::get<0>(keyValue.first)) == 0) {
@@ -103,7 +103,7 @@ std::vector<std::string> Shader::Handler::loadText(const infoMapKeyValue& keyVal
 
     // link shader text
     for (const auto& linkShaderType : createInfo.linkTypes) {
-        const auto& linkCreateInfo = SHADER_LINK_ALL.at(linkShaderType);
+        const auto& linkCreateInfo = LINK_ALL.at(linkShaderType);
         if (shaderLinkTexts_.count(linkShaderType) == 0) {
             shaderLinkTexts_[linkShaderType] = FileLoader::readFile(BASE_DIRNAME + linkCreateInfo.fileName);
         }
@@ -156,7 +156,7 @@ void Shader::Handler::getStagesInfo(const SHADER& shaderType, const PIPELINE& pi
 
 VkShaderStageFlags Shader::Handler::getStageFlags(const std::set<SHADER>& shaderTypes) const {
     VkShaderStageFlags stages = 0;
-    for (const auto& shaderType : shaderTypes) stages |= SHADER_ALL.at(shaderType).stage;
+    for (const auto& shaderType : shaderTypes) stages |= ALL.at(shaderType).stage;
     return stages;
 }
 
@@ -168,7 +168,7 @@ void Shader::Handler::recompileShader(std::string fileName) {
     std::vector<SHADER> needsUpdateTypes;
 
     // Check for main shader
-    for (const auto& [shaderType, createInfo] : SHADER_ALL) {
+    for (const auto& [shaderType, createInfo] : ALL) {
         if (createInfo.fileName == fileName) {
             for (auto& stageInfoKeyValue : infoMap_) {
                 if (std::get<0>(stageInfoKeyValue.first) == shaderType) {
@@ -181,7 +181,7 @@ void Shader::Handler::recompileShader(std::string fileName) {
     }
 
     // Check for link shader
-    for (const auto& [linkShaderType, createInfo] : SHADER_LINK_ALL) {
+    for (const auto& [linkShaderType, createInfo] : LINK_ALL) {
         if (createInfo.fileName == fileName) {
             // Get the mains mapped to this link shader...
             std::vector<SHADER> shaderTypes;
@@ -210,7 +210,7 @@ void Shader::Handler::recompileShader(std::string fileName) {
 }
 
 void Shader::Handler::getShaderTypes(const SHADER_LINK& linkType, std::vector<SHADER>& types) {
-    for (const auto& keyValue : SHADER_LINK_MAP) {
+    for (const auto& keyValue : LINK_MAP) {
         for (const auto& setItem : keyValue.second) {
             if (setItem == linkType) types.push_back(keyValue.first);
         }

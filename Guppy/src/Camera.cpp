@@ -3,7 +3,7 @@
 #include <glm/gtc/matrix_access.hpp>
 
 #include "Camera.h"
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "InputHandler.h"
 
 Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData, const Perspective::CreateInfo *pCreateInfo)

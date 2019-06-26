@@ -17,7 +17,7 @@
 #include <string>
 #include <vector>
 
-#include "Constants.h"  // for USE_DEBUG_UI macro
+#include "ConstantsAll.h"  // for USE_DEBUG_UI macro
 #include "Guppy.h"
 
 namespace {
@@ -124,7 +124,7 @@ int main(int argc, char **argv) {
 #endif
     }
     delete game;
-    
+
     return 0;
 }
 

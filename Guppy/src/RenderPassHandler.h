@@ -7,7 +7,7 @@
 #include <utility>
 #include <vector>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "Game.h"
 #include "RenderPass.h"
 
@@ -22,7 +22,7 @@ class Handler : public Game::Handler {
 
     Uniform::offsetsMap makeUniformOffsetsMap();
     // NOTE: this is not in order!!!
-    std::set<RENDER_PASS> getActivePassTypes(const PIPELINE& pipelineType = PIPELINE::ALL_ENUM);
+    std::set<RENDER_PASS> getActivePassTypes(const PIPELINE& pipelineTypeIn = PIPELINE::ALL_ENUM);
 
     void init() override;
     void destroy() override;
@@ -46,14 +46,12 @@ class Handler : public Game::Handler {
     void attachSwapchain();
     void detachSwapchain();
 
-    inline bool getSwapchainCleared() {
-        bool cleared = swpchnRes_.cleared;
-        if (!cleared) swpchnRes_.cleared = true;
-        return cleared;
-    }
-    inline auto getSwapchainImageCount() const { return swpchnRes_.images.size(); }
-    inline const VkImage* getSwapchainImages() const { return swpchnRes_.images.data(); }
-    inline const VkImageView* getSwapchainViews() const { return swpchnRes_.views.data(); }
+    inline const auto* getSwapchainImages() const { return swpchnRes_.images.data(); }
+    inline const auto* getSwapchainViews() const { return swpchnRes_.views.data(); }
+
+    // TARGET
+    bool shouldClearTarget(const std::string& targetId);
+    std::set<std::string> targetClearFlags_;
 
     // PIPELINE
     void updateBindData(const pipelinePassSet& set);
@@ -69,6 +67,7 @@ class Handler : public Game::Handler {
     // FENCES
     void createFences(VkFenceCreateFlags flags = VK_FENCE_CREATE_SIGNALED_BIT);
     std::vector<VkFence> fences_;
+    std::vector<VkFence> frameFences_;
 
     // SWAPCHAIN
     void createSwapchainResources();

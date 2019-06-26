@@ -3,7 +3,7 @@
 
 #include <algorithm>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "Instance.h"
 #include "Vertex.h"
 // HANDLERS
@@ -130,7 +130,7 @@ void Pipeline::Base::prepareDescriptorSetInfo() {
                 .push_back({
                     descSet.MACRO_NAME,
                     setIndex,
-                    descSet.getDescriptorOffsets(resourceTuple),
+                    descSet.getDescriptorOffsets(std::get<2>(resourceTuple)),
                     std::get<4>(resourceTuple),
                 });
 
@@ -138,11 +138,11 @@ void Pipeline::Base::prepareDescriptorSetInfo() {
             // the pipeline layouts.
             if (layoutsMap_.count(std::get<0>(resourceTuple)) == 0) {
                 layoutsMap_.insert(std::pair<std::set<RENDER_PASS>, Layouts>{
-                    std::get<0>(resourceTuple),
+                    std::get<4>(resourceTuple),
                     {VK_NULL_HANDLE, {}},
                 });
             }
-            layoutsMap_.at(std::get<0>(resourceTuple)).descSetLayouts.push_back(std::get<1>(resourceTuple)->layout);
+            layoutsMap_.at(std::get<4>(resourceTuple)).descSetLayouts.push_back(std::get<1>(resourceTuple)->layout);
         }
     }
 
@@ -237,12 +237,12 @@ const std::shared_ptr<Pipeline::BindData>& Pipeline::Base::getBindData(const REN
     // Find the layout map element for the pass type.
     auto itLayoutMap = layoutsMap_.begin();
     // Look for non-default.
-    for (; itLayoutMap != layoutsMap_.end(); std::advance(itLayoutMap, 1))
+    for (; itLayoutMap != layoutsMap_.end(); ++itLayoutMap)
         if (itLayoutMap->first.find(passType) != itLayoutMap->first.end()) break;
     // Look for default if a non-default wasn't found.
     if (itLayoutMap == layoutsMap_.end()) {
         itLayoutMap = layoutsMap_.begin();
-        for (; itLayoutMap != layoutsMap_.end(); std::advance(itLayoutMap, 1))
+        for (; itLayoutMap != layoutsMap_.end(); ++itLayoutMap, 1)
             if (itLayoutMap->first == Uniform::RENDER_PASS_ALL_SET) break;
     }
     assert(itLayoutMap != layoutsMap_.end());
@@ -254,7 +254,7 @@ const std::shared_ptr<Pipeline::BindData>& Pipeline::Base::getBindData(const REN
         std::set_difference(itBindData->first.begin(), itBindData->first.end(), itLayoutMap->first.begin(),
                             itLayoutMap->first.end(), std::inserter(tempSet, tempSet.begin()));
 
-        // If there size of the difference is not the same as the bind data key then the
+        // If the size of the difference is not the same as the bind data key then the
         // pass type needed is already in the bind data map.
         if (tempSet.size() != itBindData->first.size()) {
             // Compare the pipeline data to see if the pipeline bind data is compatible.
@@ -270,8 +270,11 @@ const std::shared_ptr<Pipeline::BindData>& Pipeline::Base::getBindData(const REN
             }
 
             if (isCompatible) {
-                // Bind data is compatible so extract the bind data, update the key with the new pass type, and
+                // If the pass type is already in the key then return the value
+                if (itBindData->first.count(passType) == 0) return itBindData->second;
+                // The bind data is compatible so extract the bind data, update the key with the new pass type, and
                 // add the extracted element back into the map.
+                assert(false);
                 auto nh = bindDataMap_.extract(itBindData->first);
                 nh.key().insert(passType);
                 auto& key = nh.key();
@@ -312,12 +315,12 @@ void Pipeline::Base::getDynamicStateInfoResources(CreateInfoVkResources& createI
 }
 
 void Pipeline::Base::getInputAssemblyInfoResources(CreateInfoVkResources& createInfoRes) {
-    auto range = VERTEX_PIPELINE_MAP.equal_range(VERTEX::COLOR);
+    auto range = VERTEX_MAP.equal_range(VERTEX::COLOR);
     if (range.first != range.second && range.first->second.count(TYPE)) {
         GetDefaultColorInputAssemblyInfoResources(createInfoRes);
         return;
     }
-    range = VERTEX_PIPELINE_MAP.equal_range(VERTEX::TEXTURE);
+    range = VERTEX_MAP.equal_range(VERTEX::TEXTURE);
     if (range.first != range.second && range.first->second.count(TYPE)) {
         GetDefaultTextureInputAssemblyInfoResources(createInfoRes);
         return;

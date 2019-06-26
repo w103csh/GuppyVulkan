@@ -34,6 +34,8 @@ class Handler : public Game::Handler {
     void loadSubmit(std::unique_ptr<Loading::Resources> pLdgRes);
     void cleanup();
 
+    void getFences(std::vector<VkFence> &fences);
+
    private:
     void reset() override{};
     bool destroyResource(Loading::Resources &resource) const;

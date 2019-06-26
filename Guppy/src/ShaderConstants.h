@@ -31,6 +31,9 @@ enum class SHADER {
     PARALLAX_VERT,
     PARALLAX_SIMPLE_FRAG,
     PARALLAX_STEEP_FRAG,
+    // SCREEN SPACE
+    SCREEN_SPACE_VERT,
+    SCREEN_SPACE_FRAG,
     // Add new to SHADER_ALL and SHADER_LINK_MAP.
 };
 
@@ -78,10 +81,10 @@ struct CreateInfo {
 // extern const std::string LIGHT_DEFAULT_POSITIONAL_STRUCT_STRING;
 // extern const std::string LIGHT_DEFAULT_SPOT_STRUCT_STRING;
 
-}  // namespace Shader
+extern const std::map<SHADER, Shader::CreateInfo> ALL;
+extern const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL;
+extern const std::map<SHADER, std::set<SHADER_LINK>> LINK_MAP;
 
-extern const std::map<SHADER, Shader::CreateInfo> SHADER_ALL;
-extern const std::map<SHADER_LINK, Shader::Link::CreateInfo> SHADER_LINK_ALL;
-extern const std::map<SHADER, std::set<SHADER_LINK>> SHADER_LINK_MAP;
+}  // namespace Shader
 
 #endif  // !SHADER_CONSTANTS_H
