@@ -4,41 +4,78 @@
 #include <variant>
 #include <vulkan/vulkan.h>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "RenderPass.h"
+
+#define RENDER_PASS_CONSTANTS
 
 namespace RenderPass {
 
+// clang-format off
 const std::vector<RENDER_PASS> ALL = {
-    RENDER_PASS::SAMPLER,
-    RENDER_PASS::DEFAULT,
+    RENDER_PASS::PROJECT,
+    //RENDER_PASS::DEFAULT,
+    RENDER_PASS::SAMPLER_DEFAULT,
+    //RENDER_PASS::SCREEN_SPACE_SAMPLER,
+    RENDER_PASS::SCREEN_SPACE,
 // UI pass needs to always be last since it
 // is optional
 #ifdef USE_DEBUG_UI
     RENDER_PASS::IMGUI,
 #endif
 };
+// clang-format on
 
-void AddDefaultSubpasses(RenderPass::Resources& resources, uint64_t count) {
-    VkSubpassDependency dependency = {};
-    for (uint32_t i = 0; i < count - 1; i++) {
-        dependency = {};
-        dependency.srcSubpass = i;
-        dependency.dstSubpass = i + 1;
-        dependency.dependencyFlags = 0;
-        dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-        dependency.dstAccessMask =
-            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-        dependency.srcAccessMask =
-            VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-        resources.dependencies.push_back(dependency);
-    }
-}
+// SAMPLER
+const Sampler::CreateInfo DEFAULT_2D_SAMPLER_CREATE_INFO = {
+    "Render Pass Default 2D Color Sampler",  //
+    {{::Sampler::USAGE::COLOR}},             //
+    VK_IMAGE_VIEW_TYPE_2D,                   //
+    0,
+    SAMPLER::CLAMP_TO_BORDER,
+    BAD_EXTENT_2D,
+    false,
+};
+const Sampler::CreateInfo PROJECT_2D_SAMPLER_CREATE_INFO = {
+    "Render Pass Project 2D Color Sampler",  //
+    {{::Sampler::USAGE::COLOR}},             //
+    VK_IMAGE_VIEW_TYPE_2D,                   //
+    0,
+    SAMPLER::CLAMP_TO_BORDER,
+    {640, 480},
+    false,
+};
+const Sampler::CreateInfo PROJECT_2D_ARRAY_SAMPLER_CREATE_INFO = {
+    "Render Pass Project 2D Array Color Sampler",  //
+    {{::Sampler::USAGE::COLOR}},                   //
+    VK_IMAGE_VIEW_TYPE_2D_ARRAY,                   //
+    0,
+    SAMPLER::CLAMP_TO_BORDER,
+    {1024, 768},
+    false,
+};
 
+// TEXTURE
+const Texture::CreateInfo DEFAULT_2D_TEXTURE_CREATE_INFO = {
+    std::string(DEFAULT_2D_TEXTURE_ID),
+    {DEFAULT_2D_SAMPLER_CREATE_INFO},
+    false,
+};
+const Texture::CreateInfo PROJECT_2D_TEXTURE_CREATE_INFO = {
+    std::string(PROJECT_2D_TEXTURE_ID),
+    {PROJECT_2D_SAMPLER_CREATE_INFO},
+    false,
+};
+const Texture::CreateInfo PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO = {
+    std::string(PROJECT_2D_ARRAY_TEXTURE_ID),
+    {PROJECT_2D_ARRAY_SAMPLER_CREATE_INFO},
+    false,
+};
+
+// DEFAULT
 const CreateInfo DEFAULT_CREATE_INFO = {
     RENDER_PASS::DEFAULT,
-    "Default",
+    "Default Render Pass",
     {
         // Order of the subpasses
         PIPELINE::TRI_LIST_COLOR,  //
@@ -63,50 +100,39 @@ const CreateInfo DEFAULT_CREATE_INFO = {
     },
 };
 
-const CreateInfo SAMPLER_CREATE_INFO = {
-    RENDER_PASS::SAMPLER,
-    "Sampler",
+// SAMPLER DEFAULT
+const CreateInfo SAMPLER_DEFAULT_CREATE_INFO = {
+    RENDER_PASS::SAMPLER_DEFAULT,
+    "Sampler Default Render Pass",
+    {
+        // Order of the subpasses
+        PIPELINE::TRI_LIST_COLOR,  //
+        PIPELINE::PBR_COLOR,
+        PIPELINE::LINE,
+        PIPELINE::TRI_LIST_TEX,
+        PIPELINE::PARALLAX_SIMPLE,
+        PIPELINE::PARALLAX_STEEP,
+        PIPELINE::BP_TEX_CULL_NONE,
+        PIPELINE::PBR_TEX,
+        PIPELINE::CUBE,
+    },
+    (FLAG::SWAPCHAIN | FLAG::DEPTH | FLAG::MULTISAMPLE),
+    {std::string(DEFAULT_2D_TEXTURE_ID)},
+};
+
+// PROJECT
+const CreateInfo PROJECT_CREATE_INFO = {
+    RENDER_PASS::PROJECT,
+    "Project Render Pass",
     {
         PIPELINE::TRI_LIST_COLOR,
     },
-    false,
-    true,
+    FLAG::DEPTH,
+    {PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO.name},
     {
         {{UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, PIPELINE::ALL_ENUM}, {1}},
-        {{UNIFORM::LIGHT_POSITIONAL_DEFAULT, PIPELINE::ALL_ENUM}, {0}},
+        //{{UNIFORM::LIGHT_SPOT_DEFAULT, PIPELINE::ALL_ENUM}, {1}},
     },
-};
-
-// 2D
-const Sampler::CreateInfo SAMPLER_2D_CREATE_INFO = {
-    "Render Pass 2D Color Sampler",  //
-    {{::Sampler::USE::COLOR}},       //
-    VK_IMAGE_VIEW_TYPE_2D,           //
-    0,
-    SAMPLER::CLAMP_TO_BORDER,
-    {640, 480},
-    false,
-};
-const Texture::CreateInfo TEXTURE_2D_CREATE_INFO = {
-    "Render Pass 2D Texture",
-    {SAMPLER_2D_CREATE_INFO},
-    false,
-};
-
-// 2D ARRAY
-const Sampler::CreateInfo SAMPLER_2D_ARRAY_CREATE_INFO = {
-    "Render Pass 2D Array Color Sampler",  //
-    {{::Sampler::USE::COLOR}},             //
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,           //
-    0,
-    SAMPLER::CLAMP_TO_BORDER,
-    {640, 480},
-    false,
-};
-const Texture::CreateInfo TEXTURE_2D_ARRAY_CREATE_INFO = {
-    "Render Pass 2D Array Texture",
-    {SAMPLER_2D_ARRAY_CREATE_INFO},
-    false,
 };
 
 }  // namespace RenderPass

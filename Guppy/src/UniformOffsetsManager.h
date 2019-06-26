@@ -1,7 +1,7 @@
 #ifndef UNIFORM_OFFSETS_MANAGER_H
 #define UNIFORM_OFFSETS_MANAGER_H
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 
 namespace Uniform {
 

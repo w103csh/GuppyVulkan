@@ -65,6 +65,10 @@ const offsetsMap DEFAULT_OFFSETS_MAP = {
         {UNIFORM::PROJECTOR_DEFAULT, PIPELINE::ALL_ENUM},
         OFFSET_SINGLE_DEFAULT_MAP,
     },
+    {
+        {UNIFORM::SCREEN_SPACE_DEFAULT, PIPELINE::ALL_ENUM},
+        OFFSET_SINGLE_DEFAULT_MAP,
+    },
 };
 
 }  // namespace Uniform

@@ -5,39 +5,44 @@
 #include <functional>
 #include <glm/glm.hpp>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "BufferItem.h"
 #include "Descriptor.h"
 #include "Texture.h"
 
 namespace Material {
 
+// clang-format off
 enum SHININESS {
-    EGGSHELL = 10,
-    MILDLY_SHINY = 100,
-    GLOSSY = 1000,
-    MIRROR_LIKE = 10000,
+    EGGSHELL =      10,
+    MILDLY_SHINY =  100,
+    GLOSSY =        1000,
+    MIRROR_LIKE =   10000,
 };
-
-typedef enum FLAG {
-    PER_MATERIAL_COLOR = 0x00000001,
-    PER_VERTEX_COLOR = 0x00000002,
-    PER_TEXTURE_COLOR = 0x00000004,
-    // THROUGH 0x00000008
-    PER_MAX_ENUM = 0x0000000F,
-    MODE_LAMERTIAN = 0x00000010,
-    MODE_BLINN_PHONG = 0x00000020,
-    MODE_TOON_SHADE = 0x00000040,
-    // THROUGH 0x00000080
-    HIDE = 0x00000100,
-    SKYBOX = 0x00000200,
-    REFLECT = 0x00000400,
-    REFRACT = 0x00000800,
-    // THROUGH 0x00000800
-    METAL = 0x00001000,
-    // THROUGH 0x00008000
-    BITS_MAX_ENUM = 0x7FFFFFFF
-} FLAG;
+using FLAG = enum : FlagBits {
+    PER_MATERIAL_COLOR =        0x00000001,
+    PER_VERTEX_COLOR =          0x00000002,
+    PER_TEXTURE_COLOR =         0x00000004,
+    //
+    PER_MAX_ENUM =              0x0000000F,
+    MODE_LAMERTIAN =            0x00000010,
+    MODE_BLINN_PHONG =          0x00000020,
+    MODE_TOON_SHADE =           0x00000040,
+    //
+    HIDE =                      0x00000100,
+    SKYBOX =                    0x00000200,
+    REFLECT =                   0x00000400,
+    REFRACT =                   0x00000800,
+    //
+    METAL =                     0x00001000,
+    //
+    SCREEN_SPACE_EDGE =         0x00010000,
+    SCREEN_SPACE_BLUR_PASS1 =   0x00020000,
+    SCREEN_SPACE_BLUR_PASS2 =   0x00040000,
+    //
+    BITS_MAX_ENUM =             0x7FFFFFFF
+};
+// clang-format on
 
 struct CreateInfo : public Buffer::CreateInfo {
     std::shared_ptr<Texture::Base> pTexture = nullptr;

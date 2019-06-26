@@ -130,12 +130,12 @@ class Game {
     };
 
     // SETTINGS
-    inline const Settings &settings() const { return settings_; }
+    constexpr const auto &settings() const { return settings_; }
 
     // SHELL
     virtual void attachShell(Shell &shell) { shell_ = &shell; }
     virtual void detachShell() { shell_ = nullptr; }
-    inline const Shell &shell() const { return std::ref(*shell_); }
+    constexpr const auto &shell() const { return *shell_; }
 
     // SWAPCHAIN
     virtual void attachSwapchain() = 0;
@@ -172,8 +172,8 @@ class Game {
         virtual void init() = 0;
         virtual void destroy() { reset(); };
 
-        inline const Settings &settings() const { return pGame_->settings(); }
-        inline const Shell &shell() const { return pGame_->shell(); }
+        constexpr const auto &settings() const { return pGame_->settings(); }
+        constexpr const auto &shell() const { return pGame_->shell(); }
 
         inline Command::Handler &commandHandler() const { return std::ref(*pGame_->handlers_.pCommand); }
         inline Descriptor::Handler &descriptorHandler() const { return std::ref(*pGame_->handlers_.pDescriptor); }

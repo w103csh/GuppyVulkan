@@ -96,6 +96,9 @@ std::vector<Face> Plane::make(const Geometry::CreateInfo& geoInfo) {
     }
 
     // TODO: validate face size is DEFAULT_DIMENSION
+
+    for (auto& face : faces) face.transform(geoInfo.transform);
+
     return faces;
 }
 

@@ -7,37 +7,37 @@ namespace Texture {
 
 // STATUE
 const CreateInfo STATUE_CREATE_INFO = {
-    "Statue Texture",
+    std::string(STATUE_ID),
     {Sampler::STATUE_CREATE_INFO},
 };
 
 // VULKAN LOGO
 const CreateInfo VULKAN_CREATE_INFO = {
-    "Vulkan Texture",
+    std::string(VULKAN_ID),
     {Sampler::VULKAN_CREATE_INFO},
 };
 
 // HARDWOOD
 const CreateInfo HARDWOOD_CREATE_INFO = {
-    "Hardwood Texture",
+    std::string(HARDWOOD_ID),
     {Sampler::HARDWOOD_CREATE_INFO},
 };
 
 // MEDIEVAL HOUSE
 const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO = {
-    "Medieval House Texture",
+    std::string(MEDIEVAL_HOUSE_ID),
     {Sampler::MEDIEVAL_HOUSE_CREATE_INFO},
 };
 
 // WOOD
 const CreateInfo WOOD_CREATE_INFO = {
-    "Wood Texture",
+    std::string(WOOD_ID),
     {Sampler::WOOD_CREATE_INFO},
 };
 
 // MYBRICK
 const CreateInfo MYBRICK_CREATE_INFO = {
-    "Mybrick Texture",
+    std::string(MYBRICK_ID),
     {
         Sampler::MYBRICK_COLOR_CREATE_INFO,
         Sampler::MYBRICK_NORMAL_CREATE_INFO,
@@ -46,13 +46,13 @@ const CreateInfo MYBRICK_CREATE_INFO = {
 
 // PISA HDR
 const CreateInfo PISA_HDR_CREATE_INFO = {
-    "Pisa HDR Texture",
+    std::string(PISA_HDR_ID),
     {Sampler::PISA_HDR_CREATE_INFO},
 };
 
 // PISA HDR
 const CreateInfo SKYBOX_CREATE_INFO = {
-    "Skybox Texture",
+    std::string(SKYBOX_ID),
     {Sampler::SKYBOX_CREATE_INFO},
 };
 

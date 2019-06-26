@@ -32,16 +32,18 @@ enum class PIPELINE : uint32_t {
     // PARALLAX
     PARALLAX_SIMPLE,
     PARALLAX_STEEP,
+    // SCREEN SPACE
+    SCREEN_SPACE_DEFAULT,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP
     // in code file.
 };
 
-extern const std::vector<PIPELINE> PIPELINE_ALL;
-extern const std::map<VERTEX, std::set<PIPELINE>> VERTEX_PIPELINE_MAP;
-
 namespace Pipeline {
+
+extern const std::vector<PIPELINE> ALL;
+extern const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP;
 
 struct BindData {
     const VkPipelineBindPoint bindPoint;

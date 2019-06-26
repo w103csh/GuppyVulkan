@@ -1,7 +1,7 @@
 
 #include "DescriptorConstants.h"
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 
 namespace Descriptor {
 
@@ -48,6 +48,9 @@ const std::set<DESCRIPTOR_SET> ALL = {
     // PARALLAX
     DESCRIPTOR_SET::UNIFORM_PARALLAX,
     DESCRIPTOR_SET::SAMPLER_PARALLAX,
+    // SCREEN SPACE
+    DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT,
+    DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT,
 };
 
 }  // namespace Set

@@ -8,6 +8,7 @@ set(SOURCE
     CMakeLists.txt
     Constants.cpp
     Constants.h
+    ConstantsAll.h
     Enum.h
     EventHandlers.h
     Extensions.h
@@ -44,6 +45,8 @@ set(SOURCE
     Scene.h
     SceneHandler.cpp
     SceneHandler.h
+    ScreenSpace.cpp
+    ScreenSpace.h
     SelectionManager.cpp
     SelectionManager.h
     Singleton.h
@@ -109,10 +112,6 @@ set(SOURCE
     # Render Pass
     RenderPass.cpp
     RenderPass.h
-    RenderPassDefault.cpp
-    RenderPassDefault.h
-    RenderPassSampler.cpp
-    RenderPassSampler.h
     RenderPassConstants.cpp
     RenderPassConstants.h
     RenderPassHandler.cpp

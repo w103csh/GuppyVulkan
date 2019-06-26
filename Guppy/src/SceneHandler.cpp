@@ -37,7 +37,7 @@ void Scene::Handler::init() {
     uint32_t count = 4;
 
     // ORIGIN AXES
-    if (!suppress || true) {
+    if (!suppress || false) {
         axesInfo = {};
         axesInfo.lineSize = 500.f;
         axesInfo.showNegative = true;
@@ -77,7 +77,7 @@ void Scene::Handler::init() {
         groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
     }
 
-    // SINGLE PLANE
+    // PROJECT PLANE
     if (!suppress || false) {
         meshInfo = {};
         meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
@@ -91,9 +91,56 @@ void Scene::Handler::init() {
         defMatInfo = {};
         defMatInfo.shininess = Material::SHININESS::EGGSHELL;
         // defMatInfo.pTexture = textureHandler().getTextureByName(RenderPass::TEXTURE_2D_CREATE_INFO.name);
-        defMatInfo.pTexture = textureHandler().getTextureByName(RenderPass::TEXTURE_2D_ARRAY_CREATE_INFO.name);
+        defMatInfo.pTexture = textureHandler().getTextureByName(RenderPass::PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO.name);
         defMatInfo.color = {0.5f, 0.5f, 0.5f};
         meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
+    }
+
+    // SCREEN SPACE
+    if (!suppress || true) {
+        /* The scren space operations rely on the order of declaration here. There should probably be some
+         *   way to explicitly order the screen space passes.
+         */
+
+        // EDGE DETECTION
+        if (!suppress || false) {
+            meshInfo = {};
+            meshInfo.pipelineType = PIPELINE::SCREEN_SPACE_DEFAULT;
+            // meshInfo.passTypes = {RENDER_PASS::SCREEN_SPACE_SAMPLER};
+            meshInfo.selectable = false;
+            meshInfo.geometryCreateInfo.transform = helpers::affine(glm::vec3{2.0f});
+            meshInfo.geometryCreateInfo.invert = true;
+            defInstInfo = {};
+            defMatInfo = {};
+            defMatInfo.flags |= Material::FLAG::SCREEN_SPACE_EDGE;
+            meshHandler().makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+        }
+
+        // BLUR
+        if (!suppress && false) {
+            // PASS 1
+            meshInfo = {};
+            meshInfo.pipelineType = PIPELINE::SCREEN_SPACE_DEFAULT;
+            // meshInfo.passTypes = {RENDER_PASS::SCREEN_SPACE_SAMPLER};
+            meshInfo.selectable = false;
+            meshInfo.geometryCreateInfo.transform = helpers::affine(glm::vec3{2.0f});
+            meshInfo.geometryCreateInfo.invert = true;
+            defInstInfo = {};
+            defMatInfo = {};
+            defMatInfo.flags |= Material::FLAG::SCREEN_SPACE_BLUR_PASS1;
+            meshHandler().makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+            // PASS 2
+            meshInfo = {};
+            meshInfo.pipelineType = PIPELINE::SCREEN_SPACE_DEFAULT;
+            // meshInfo.passTypes = {RENDER_PASS::SCREEN_SPACE};
+            meshInfo.selectable = false;
+            meshInfo.geometryCreateInfo.transform = helpers::affine(glm::vec3{2.0f});
+            meshInfo.geometryCreateInfo.invert = true;
+            defInstInfo = {};
+            defMatInfo = {};
+            defMatInfo.flags |= Material::FLAG::SCREEN_SPACE_BLUR_PASS2;
+            meshHandler().makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+        }
     }
 
     // SKYBOX

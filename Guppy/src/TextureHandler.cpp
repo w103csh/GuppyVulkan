@@ -5,19 +5,14 @@
 #include <future>
 #include <stb_image.h>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
+#include "ScreenSpace.h"
 #include "Shell.h"
 // HANDLERS
 #include "CommandHandler.h"
 #include "LoadingHandler.h"
 #include "MaterialHandler.h"
 #include "ShaderHandler.h"
-
-namespace {
-constexpr bool extentWasSet(const Sampler::CreateInfo& info) {
-    return info.extent.width != Sampler::BAD_EXTENT_2D.width && info.extent.height != Sampler::BAD_EXTENT_2D.height;
-}
-}  // namespace
 
 Texture::Handler::Handler(Game* pGame) : Game::Handler(pGame) {}
 
@@ -32,15 +27,19 @@ void Texture::Handler::init() {
     make(&Texture::MYBRICK_CREATE_INFO);
     make(&Texture::PISA_HDR_CREATE_INFO);
     make(&Texture::SKYBOX_CREATE_INFO);
-    make(&RenderPass::TEXTURE_2D_CREATE_INFO);
-    make(&RenderPass::TEXTURE_2D_ARRAY_CREATE_INFO);
+    make(&RenderPass::DEFAULT_2D_TEXTURE_CREATE_INFO);
+    make(&RenderPass::PROJECT_2D_TEXTURE_CREATE_INFO);
+    make(&RenderPass::PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO);
+    make(&Texture::ScreenSpace::DEFAULT_2D_TEXTURE_CREATE_INFO);
 }
 
 void Texture::Handler::reset() {
     const auto& dev = shell().context().dev;
     for (auto& pTexture : pTextures_) {
         for (auto& sampler : pTexture->samplers) {
-            sampler.destroy(dev);
+            if (pTexture->status != STATUS::DESTROYED) {
+                sampler.destroy(dev);
+            }
         }
     }
     pTextures_.clear();
@@ -48,7 +47,12 @@ void Texture::Handler::reset() {
 
 std::shared_ptr<Texture::Base>& Texture::Handler::make(const Texture::CreateInfo* pCreateInfo) {
     // Using the name as an ID for now, so make sure its unique.
-    for (const auto& pTexture : pTextures_) assert(pTexture->NAME.compare(pCreateInfo->name) != 0);
+    for (const auto& pTexture : pTextures_) {
+        assert(pTexture->NAME.compare(pCreateInfo->name) != 0);
+        // Using the string ids in the render handler currently, so also check against
+        // the swapchain target id.
+        assert(pCreateInfo->name.compare(RenderPass::SWAPCHAIN_TARGET_ID) != 0);
+    }
 
     pTextures_.emplace_back(std::make_shared<Texture::Base>(static_cast<uint32_t>(pTextures_.size()), pCreateInfo));
 
@@ -68,7 +72,7 @@ std::shared_ptr<Texture::Base>& Texture::Handler::make(const Texture::CreateInfo
     return pTextures_.back();
 }
 
-const std::shared_ptr<Texture::Base> Texture::Handler::getTextureByName(std::string name) const {
+const std::shared_ptr<Texture::Base> Texture::Handler::getTextureByName(const std::string_view& name) const {
     auto it = std::find_if(pTextures_.begin(), pTextures_.end(), [&name](auto& pTexture) { return pTexture->NAME == name; });
     return it == pTextures_.end() ? nullptr : (*it);
 }
@@ -106,10 +110,10 @@ std::shared_ptr<Texture::Base> Texture::Handler::asyncLoad(std::shared_ptr<Textu
 void Texture::Handler::load(std::shared_ptr<Texture::Base>& pTexture, const CreateInfo* pCreateInfo) {
     pTexture->aspect = FLT_MAX;
     for (auto& samplerCreateInfo : pCreateInfo->samplerCreateInfos) {
-        if (extentWasSet(samplerCreateInfo)) {
-            pTexture->samplers.emplace_back(&samplerCreateInfo);
-        } else {
+        if (pCreateInfo->hasData) {
             pTexture->samplers.emplace_back(Sampler::make(shell(), &samplerCreateInfo));
+        } else {
+            pTexture->samplers.emplace_back(&samplerCreateInfo);
         }
 
         assert(!pTexture->samplers.empty());

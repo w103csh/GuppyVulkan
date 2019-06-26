@@ -255,7 +255,8 @@ Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo) {
             validateDimensions(shell, sampler, layerInfo.path, w, h);
 
             // Mix combined data in.
-            VkDeviceSize size = static_cast<VkDeviceSize>(sampler.extent.width) * static_cast<VkDeviceSize>(sampler.extent.height);
+            VkDeviceSize size =
+                static_cast<VkDeviceSize>(sampler.extent.width) * static_cast<VkDeviceSize>(sampler.extent.height);
             for (VkDeviceSize i = 0; i < size; i++) {
                 // combineInfo { path, number of channels, combine offset }
                 auto offset = (i * sampler.NUM_CHANNELS) + std::get<2>(combineInfo);
@@ -320,7 +321,7 @@ VkSamplerCreateInfo Sampler::GetVkSamplerCreateInfo(const Sampler::Base& sampler
     return info;
 }
 
-Sampler::LayerInfo Sampler::GetDef4Comb3And1LayerInfo(const Sampler::USE&& type, const std::string& path,
+Sampler::LayerInfo Sampler::GetDef4Comb3And1LayerInfo(const Sampler::USAGE&& type, const std::string& path,
                                                       const std::string& fileName, const std::string& combineFileName) {
     LayerInfo layerInfo = {type, path + fileName};
     if (!combineFileName.empty()) {

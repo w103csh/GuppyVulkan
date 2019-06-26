@@ -122,6 +122,10 @@ void Loading::Handler::cleanup() {
     }
 }
 
+void Loading::Handler::getFences(std::vector<VkFence>& fences) {
+    for (const auto& res : ldgResources_) fences.insert(fences.end(), res->fences.begin(), res->fences.end());
+}
+
 bool Loading::Handler::destroyResource(Loading::Resources& resource) const {
     // Check fences for cleanup
     bool ready = true;

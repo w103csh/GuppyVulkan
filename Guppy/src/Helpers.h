@@ -10,7 +10,7 @@
 #include <vulkan/vulkan.h>
 #include <utility>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "Extensions.h"  // This is here for convenience
 
 namespace vk {
@@ -18,7 +18,8 @@ inline VkResult assert_success(VkResult res) {
     if (res != VK_SUCCESS) {
         std::stringstream ss;
         ss << "VkResult " << res << " returned";
-        throw std::runtime_error(ss.str());
+        assert(false && ss.str().c_str());
+        exit(EXIT_FAILURE);
     }
     return res;
 }
@@ -99,13 +100,6 @@ static MODEL_FILE_TYPE getModelFileType(std::string s) {
         return MODEL_FILE_TYPE::OBJ;
     }
     return MODEL_FILE_TYPE::UNKNOWN;
-}
-
-static bool checkVertexPipelineMap(VERTEX key, PIPELINE value) {
-    for (const auto &type : VERTEX_PIPELINE_MAP.at(key)) {
-        if (type == value) return true;
-    }
-    return false;
 }
 
 // The point of this is to turn the glm::lookAt into an affine transform for

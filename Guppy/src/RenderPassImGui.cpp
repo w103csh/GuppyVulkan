@@ -5,7 +5,7 @@
 #include <imgui_impl_vulkan.h>
 #include <utility>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "Helpers.h"
 // HANDLERS
 #include "CommandHandler.h"
@@ -15,25 +15,11 @@
 #include "UIHandler.h"
 
 namespace {
-const RenderPass::CreateInfo CREATE_INFO = {
-    RENDER_PASS::IMGUI, "ImGui", {}, true, false,
-};
+const RenderPass::CreateInfo CREATE_INFO = {RENDER_PASS::IMGUI, "ImGui", {}, RenderPass::FLAG::SWAPCHAIN};
 }
 
 RenderPass::ImGui::ImGui(RenderPass::Handler& handler, const uint32_t&& offset)
     : RenderPass::Base{handler, std::forward<const uint32_t>(offset), &CREATE_INFO} {}
-
-void RenderPass::ImGui::init() {
-    auto& ctx = handler().shell().context();
-    // FRAME DATA
-    format_ = ctx.surfaceFormat.format;
-    // SYNC
-    commandCount_ = ctx.imageCount;
-}
-
-void RenderPass::ImGui::setSwapchainInfo() {
-    extent_ = handler().shell().context().extent;  //
-}
 
 void RenderPass::ImGui::postCreate() {
     // Let the ImGui code create its own pipeline...
@@ -80,7 +66,7 @@ void RenderPass::ImGui::record(const uint32_t& frameIndex) {
 }
 
 void RenderPass::ImGui::createAttachmentsAndSubpasses() {
-    bool clearAttachment = !handler().getSwapchainCleared();
+    bool clearTarget = handler().shouldClearTarget(getTargetId());
     /*
         THESE SETTINGS ARE COPIED DIRECTLY FROM THE IMGUI VULKAN SAMPLE.
         IF IMGUI IS UPDATED THIS SHOULD BE REPLACED WITH THE NEW SETTINGS, OR
@@ -94,15 +80,11 @@ void RenderPass::ImGui::createAttachmentsAndSubpasses() {
     VkAttachmentDescription attachment = {};
     attachment.format = format_;
     attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    attachment.loadOp = clearAttachment ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    attachment.loadOp = clearTarget ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
     attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    if (OFFSET == 0) {
-        attachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    } else {
-        attachment.initialLayout = handler().getPass(OFFSET - 1)->getFinalLayout();
-    }
+    attachment.initialLayout = clearTarget ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     attachment.finalLayout = finalLayout_;
 
     resources_.attachments.push_back(attachment);
@@ -139,24 +121,4 @@ void RenderPass::ImGui::updateClearValues() {
     // SWAPCHAIN ATTACHMENT
     clearValues_.push_back({});
     clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
-}
-
-void RenderPass::ImGui::createFramebuffers() {
-    /* These are the potential views for framebuffer.
-     *  - swapchain
-     */
-    VkFramebufferCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-    createInfo.renderPass = pass;
-    createInfo.attachmentCount = 1;
-    createInfo.width = extent_.width;
-    createInfo.height = extent_.height;
-    createInfo.layers = 1;
-
-    data.framebuffers.resize(handler().getSwapchainImageCount());
-    for (auto i = 0; i < data.framebuffers.size(); i++) {
-        createInfo.pAttachments = &handler().getSwapchainViews()[i];
-        vk::assert_success(
-            vkCreateFramebuffer(handler().shell().context().dev, &createInfo, nullptr, &data.framebuffers[i]));
-    }
 }

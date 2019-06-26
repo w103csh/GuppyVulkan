@@ -8,9 +8,10 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "Handlee.h"
 #include "Helpers.h"
+#include "Texture.h"
 
 // clang-format off
 namespace Pipeline { class Base; }
@@ -24,22 +25,25 @@ class Base : public Handlee<RenderPass::Handler> {
     friend class Pipeline::Base;
 
    public:
+    Base(RenderPass::Handler &handler, const uint32_t &&offset, const RenderPass::CreateInfo *pCreateInfo);
     virtual ~Base() = default;
 
+    const FlagBits FLAGS;
     const std::string NAME;
     const offset OFFSET;
-    const bool SWAPCHAIN_DEPENDENT;
     const RENDER_PASS TYPE;
 
+    virtual void init(bool isFinal = false);
+
     // LIFECYCLE
-    virtual void init() = 0;
     void create();
     virtual void postCreate() {}
-    virtual void setSwapchainInfo() {}
+    virtual void setSwapchainInfo();
     void createTarget();
     void overridePipelineCreateInfo(const PIPELINE &type, Pipeline::CreateInfoVkResources &createInfoRes);
     virtual void record(const uint32_t &frameIndex);
 
+    // PRIMARY
     virtual void beginPass(const uint8_t &frameIndex,
                            VkCommandBufferUsageFlags &&primaryCommandUsage = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
                            VkSubpassContents &&subpassContents = VK_SUBPASS_CONTENTS_INLINE);
@@ -52,39 +56,48 @@ class Base : public Handlee<RenderPass::Handler> {
         vk::assert_success(vkEndCommandBuffer(primaryCmd));
     }
 
-    virtual void beginSecondary(const uint8_t &frameIndex) {}
-    virtual void endSecondary(const uint8_t &frameIndex, const VkCommandBuffer &priCmd) {}
+    // SECONDARY
+    virtual void beginSecondary(const uint8_t &frameIndex);
+    virtual void endSecondary(const uint8_t &frameIndex, const VkCommandBuffer &priCmd);
 
     virtual void updateSubmitResource(SubmitResource &resource, const uint32_t &frameIndex) const;
 
     // SETTINGS
-    const VkFormat &getFormat() const { return format_; }
-    const VkFormat &getDepthFormat() const { return depthFormat_; }
-    const VkImageLayout &getFinalLayout() const { return finalLayout_; }
-    const VkSampleCountFlagBits &getSamples() const { return pipelineData_.samples; }
+    constexpr const auto &getFormat() const { return format_; }
+    constexpr const auto &getDepthFormat() const { return depthFormat_; }
+    constexpr const auto &getFinalLayout() const { return finalLayout_; }
+    constexpr const auto &getSamples() const { return pipelineData_.samples; }
+    constexpr bool usesSwapchain() const { return FLAGS & FLAG::SWAPCHAIN; }
+    constexpr bool usesDepth() const { return FLAGS & FLAG::DEPTH; }
+    constexpr bool usesMultiSample() const { return FLAGS & FLAG::MULTISAMPLE; }
+    constexpr bool usesSecondaryCommands() const { return FLAGS & FLAG::SECONDARY_COMMANDS; }
+    inline bool hasTargetSampler() const { return pTexture_ != nullptr; }
+    inline bool hasTargetSwapchain() const { return pTexture_ == nullptr; }
 
     // SUBPASS
     uint32_t getSubpassId(const PIPELINE &type) const;
 
     // PIPELINE
-    const auto &getPipelineBindDataMap() const { return pipelineTypeBindDataMap_; }
-    void setBindData(const PIPELINE &pipelineType, const std::shared_ptr<Pipeline::BindData> &pBindData);
+    constexpr const auto &getPipelineBindDataMap() const { return pipelineTypeBindDataMap_; }
+    constexpr const auto &getPipelineData() const { return pipelineData_; }
     inline auto getPipelineCount() const { return pipelineTypeBindDataMap_.size(); }
     inline std::set<PIPELINE> getPipelineTypes() {
         std::set<PIPELINE> types;
         for (const auto &keyValue : pipelineTypeBindDataMap_) types.insert(keyValue.first);
         return types;
     }
-    inline void addPipelineTypes(std::set<PIPELINE> &pipelineTypes) {
+    inline void addPipelineTypes(std::set<PIPELINE> &pipelineTypes) const {
         for (const auto &keyValue : pipelineTypeBindDataMap_) pipelineTypes.insert(keyValue.first);
     }
-    inline const auto &getPipelineData() { return pipelineData_; }
-    inline bool comparePipelineData(const std::unique_ptr<Base> &pOther) {
+    constexpr bool comparePipelineData(const std::unique_ptr<Base> &pOther) const {
         return pipelineData_ == pOther->getPipelineData();
     }
+    void setBindData(const PIPELINE &pipelineType, const std::shared_ptr<Pipeline::BindData> &pBindData);
 
     // UNIFORM
-    const auto &getDescriptorPipelineOffsets() { return descPipelineOffsets_; }
+    inline constexpr const auto &getDescriptorPipelineOffsets() { return descPipelineOffsets_; }
+
+    const auto &getTargetId() { return textureIds_[0]; }
 
     virtual void destroy();  // calls destroyFrameData
     virtual void destroyTargetResources();
@@ -94,8 +107,6 @@ class Base : public Handlee<RenderPass::Handler> {
     Data data;
 
    protected:
-    Base(RenderPass::Handler &handler, const uint32_t &&offset, const RenderPass::CreateInfo *pCreateInfo);
-
     // PIPELINE
     PipelineData pipelineData_;
     std::unordered_map<PIPELINE, std::shared_ptr<Pipeline::BindData>> pipelineTypeBindDataMap_;  // Is this still necessary?
@@ -110,17 +121,22 @@ class Base : public Handlee<RenderPass::Handler> {
     VkRenderPassBeginInfo beginInfo_;
 
     // SUBPASS
-    virtual void createAttachmentsAndSubpasses() = 0;
-    virtual void createDependencies() = 0;
+    virtual void createAttachmentsAndSubpasses();
+    virtual void createDependencies();
     Resources resources_;
 
     // FRAME DATA
     virtual void createCommandBuffers();
-    virtual void createColorResources() {}
-    virtual void createDepthResource() {}
-    virtual void updateClearValues() = 0;
-    virtual void createFramebuffers() {}
+    virtual void createImageResources();
+    virtual void createDepthResource();
+    virtual void updateClearValues();
+    virtual void createFramebuffers();
     std::vector<VkClearValue> clearValues_;
+
+    // SECONDARY
+    VkCommandBufferInheritanceInfo inheritInfo_;
+    VkCommandBufferBeginInfo secCmdBeginInfo_;
+    bool secCmdFlag_;
 
     // SETTINGS
     VkFormat format_;
@@ -136,6 +152,10 @@ class Base : public Handlee<RenderPass::Handler> {
 
     // UNIFORM
     descriptorPipelineOffsetsMap descPipelineOffsets_;
+
+    // SAMPLER
+    std::vector<std::string> textureIds_;  // oh well, and it should be const
+    std::shared_ptr<Texture::Base> pTexture_;
 
    private:
     void createSemaphores();

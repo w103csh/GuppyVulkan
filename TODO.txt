@@ -1,4 +1,18 @@
 
+ - Meshes that are created that do no have an active pass/pipeline still look for descriptor
+    data. This causes the program to crash because meshes always look for the data after the
+    vertex buffers are loaded. The solution should be to have a queue of meshes that
+    are loaded but will not be apart of the the render loop or have descriptor sets allocated.
+
+ - Do light position/direction transforms in the shaders instead of onFrame.
+
+ - Add texture sampler descriptor set offset overrides.
+
+ - Add DESTROYED status to everything that has a status and is destroyed. Then move the sampler
+    creation code out of the render pass, so that I don't get confused again for an hour. This
+    should also let the descriptor set update code get closer to the same place as the texture
+    update notification.
+
  - Move the scene creation code into the a scene instead of the handler init.
 
  - Now that you can override the default descriptor offsets for sets/pipelines/passes there

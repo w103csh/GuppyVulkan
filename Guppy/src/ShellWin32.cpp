@@ -22,7 +22,7 @@
 #include <tchar.h>
 #include <windowsx.h>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "Game.h"
 #include "Helpers.h"
 #include "ShellWin32.h"

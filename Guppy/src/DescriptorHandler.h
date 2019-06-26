@@ -6,13 +6,14 @@
 #include <string>
 #include <vulkan/vulkan.h>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "Game.h"
 #include "DescriptorSet.h"
 
 // clang-format off
 namespace Mesh      { class Base; }
 namespace Pipeline  { class Base; }
+namespace Texture   { class Base; }
 namespace Shader    { class Base; }
 // clang-format on
 
@@ -35,6 +36,7 @@ class Handler : public Game::Handler {
     const Descriptor::Set::Base& getDescriptorSet(const DESCRIPTOR_SET& type) { return std::ref(*getSet(type).get()); }
     // DESCRIPTOR
     void getBindData(Mesh::Base& pMesh);
+    void updateBindData(const std::shared_ptr<Texture::Base>& pTexture);
 
    private:
     void reset() override;
@@ -62,8 +64,8 @@ class Handler : public Game::Handler {
                                                         const std::vector<DESCRIPTOR_SET>& descSetTypes);
 
     void allocateDescriptorSets(const Descriptor::Set::Resource& resource, std::vector<VkDescriptorSet>& descriptorSets);
-    void updateDescriptorSets(const std::unique_ptr<Descriptor::Set::Base>& pSet, const Mesh::Base& mesh,
-                              const Descriptor::OffsetsMap& offsets, std::vector<VkDescriptorSet>& descriptorSets) const;
+    void updateDescriptorSets(const Descriptor::bindingMap& bindingMap, const Descriptor::OffsetsMap& offsets,
+                              std::vector<VkDescriptorSet>& descriptorSets, const Mesh::Base* pMesh = nullptr) const;
 
     VkWriteDescriptorSet getWrite(const Descriptor::bindingMapKeyValue& keyValue) const;
     void getDynamicOffsets(const std::unique_ptr<Descriptor::Set::Base>& pSet, std::vector<uint32_t>& dynamicOffsets,

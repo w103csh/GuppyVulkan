@@ -5,10 +5,11 @@
 #include <map>
 #include <set>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "DescriptorConstants.h"
 
 namespace Descriptor {
@@ -18,7 +19,7 @@ class Handler;
 // key:     { binding, arrayElement }
 typedef std::pair<uint32_t, uint32_t> bindingMapKey;
 // value:   { descriptorType, (optional) descriptor ID } // TODO: proper ID instead of string
-typedef std::tuple<DESCRIPTOR, std::string> bindingMapValue;
+typedef std::pair<DESCRIPTOR, std::string_view> bindingMapValue;
 typedef std::pair<const bindingMapKey, bindingMapValue> bindingMapKeyValue;
 typedef std::map<bindingMapKey, bindingMapValue> bindingMap;
 
@@ -40,11 +41,13 @@ class Base {
     inline bool isInitialized() const { return !resources_[defaultResourceOffset_].pipelineTypes.empty(); }
 
     inline const auto& getResource(const uint32_t& offset) const { return resources_[offset]; }
-    const Descriptor::OffsetsMap getDescriptorOffsets(const resourceTuple& tuple) const;
-    inline auto& getDefaultResourceOffset() const { return defaultResourceOffset_; }
+    const Descriptor::OffsetsMap getDescriptorOffsets(const uint32_t& offset) const;
+    constexpr const auto& getDefaultResourceOffset() const { return defaultResourceOffset_; }
 
     void updateOffsets(const Uniform::offsetsMap offsetsMap, const Descriptor::bindingMapKeyValue& bindingMapKeyValue,
                        const PIPELINE& pipelineType);
+
+    bool hasTextureMaterial() const;
 
     // ITERATOR
     void findResourceForPipeline(std::vector<Resource>::iterator& it, const PIPELINE& type);

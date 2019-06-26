@@ -4,9 +4,10 @@
 
 #include <future>
 #include <glm/glm.hpp>
+#include <set>
 #include <vector>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "Geometry.h"
 #include "Handlee.h"
 #include "Helpers.h"
@@ -29,13 +30,14 @@ constexpr Mesh::INDEX BAD_OFFSET = UINT32_MAX;
 
 class Handler;
 
-typedef struct CreateInfo {
-    bool isIndexed = true;  // This is dumb
-    PIPELINE pipelineType = PIPELINE::ALL_ENUM;
-    bool selectable = true;
-    bool mappable = false;
+using CreateInfo = struct {
     Geometry::CreateInfo geometryCreateInfo = {};
-} CreateInfo;
+    bool isIndexed = true;  // This is dumb
+    bool mappable = false;
+    PIPELINE pipelineType = PIPELINE::ALL_ENUM;
+    std::set<RENDER_PASS> passTypes = Uniform::RENDER_PASS_ALL_SET;
+    bool selectable = true;
+};
 
 // **********************
 //      Base
@@ -55,6 +57,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     const FlagBits FLAGS;
     const bool MAPPABLE;
     const std::string NAME;
+    const std::set<RENDER_PASS> PASS_TYPES;
     const PIPELINE PIPELINE_TYPE;
     const MESH TYPE;
     const VERTEX VERTEX_TYPE;
@@ -65,7 +68,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     // MATERIAL
     inline auto& getMaterial() const { return pMaterial_; }
     inline bool hasNormalMap() const {
-        return pMaterial_->hasTexture() && pMaterial_->getTexture()->flags & ::Sampler::USE::NORMAL;
+        return pMaterial_->hasTexture() && pMaterial_->getTexture()->flags & ::Sampler::USAGE::NORMAL;
     }
 
     inline void setStatus(const STATUS&& status) {
@@ -106,6 +109,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     void updateTangentSpaceData();
 
     // DRAWING
+    bool shouldDraw(const RENDER_PASS& passTypeComp, const PIPELINE& pipelineType) const;
     void draw(const RENDER_PASS& passType, const std::shared_ptr<Pipeline::BindData>& pipelineBindData,
               const VkCommandBuffer& cmd, const uint8_t& frameIndex) const;
 

@@ -6,7 +6,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "Game.h"
 #include "Material.h"
 #include "Mesh.h"
@@ -28,7 +28,7 @@ class Handler : public Game::Handler {
     }
 
     // CACHE
-    inline const VkPipelineCache &getPipelineCache() { return cache_; }
+    constexpr const VkPipelineCache &getPipelineCache() const { return cache_; }
 
     // PUSH CONSTANT
     std::vector<VkPushConstantRange> getPushConstantRanges(const PIPELINE &pipelineType,
@@ -37,7 +37,8 @@ class Handler : public Game::Handler {
     // PIPELINES
     void createPipelines(const pipelinePassSet &set);
     void createPipeline(const std::string &&name, VkGraphicsPipelineCreateInfo &createInfo, VkPipeline &pipeline);
-    inline const auto &getPipelineBindDataMap() { return pipelineBindDataMap_; }
+    constexpr const auto &getPipelineBindDataMap() const { return pipelineBindDataMap_; }
+    bool checkVertexPipelineMap(VERTEX key, PIPELINE value) const;
 
     // DESCRIPTOR SET
     Uniform::offsetsMap makeUniformOffsetsMap();
@@ -49,7 +50,7 @@ class Handler : public Game::Handler {
         assert(static_cast<uint32_t>(pipelineType) < pPipelines_.size());
         return pPipelines_[static_cast<uint32_t>(pipelineType)];
     }
-    inline const std::vector<std::unique_ptr<Pipeline::Base>> &getPipelines() const { return pPipelines_; }
+    constexpr const std::vector<std::unique_ptr<Pipeline::Base>> &getPipelines() const { return pPipelines_; }
 
     // SHADER
     void getShaderStages(const std::set<PIPELINE> &pipelineTypes, VkShaderStageFlags &stages);

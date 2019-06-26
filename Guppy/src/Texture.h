@@ -19,11 +19,15 @@ class Base : public Descriptor::Interface {
     Base(const uint32_t &&offset, const CreateInfo *pCreateInfo);
     virtual ~Base() = default;
 
+    void destroy(const VkDevice &dev);
+
     // DESCRIPTOR
     void setWriteInfo(VkWriteDescriptorSet &write, uint32_t index = 0) const override;
 
+    const bool HAS_DATA;
     const std::string NAME;
     const uint32_t OFFSET;
+
     STATUS status;
     FlagBits flags;  // TODO: Still needed?
     float aspect;    // TODO: Set per sampler passing a dynamic list to shaders?

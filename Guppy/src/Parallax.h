@@ -7,7 +7,7 @@
 #ifndef PARALLAX_H
 #define PARALLAX_H
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "DescriptorSet.h"
 #include "Pipeline.h"
 

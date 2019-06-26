@@ -1,12 +1,13 @@
 
 #include "PipelineHandler.h"
 
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "Material.h"
 #include "Mesh.h"
 #include "Parallax.h"
 #include "PBR.h"
 #include "Pipeline.h"
+#include "ScreenSpace.h"
 #include "Shell.h"
 // HANDLERS
 #include "DescriptorHandler.h"
@@ -28,42 +29,26 @@ void setBase(const VkPipeline& pipeline, VkGraphicsPipelineCreateInfo& info, boo
 }  // namespace
 
 Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_HANDLE), maxPushConstantsSize_(UINT32_MAX) {
-    for (const auto& type : PIPELINE_ALL) {
+    for (const auto& type : ALL) {
+        // clang-format off
         switch (type) {
-            case PIPELINE::TRI_LIST_COLOR:
-                pPipelines_.emplace_back(std::make_unique<Default::TriListColor>(std::ref(*this)));
-                break;
-            case PIPELINE::LINE:
-                pPipelines_.emplace_back(std::make_unique<Default::Line>(std::ref(*this)));
-                break;
-            case PIPELINE::TRI_LIST_TEX:
-                pPipelines_.emplace_back(std::make_unique<Default::TriListTexture>(std::ref(*this)));
-                break;
-            case PIPELINE::CUBE:
-                pPipelines_.emplace_back(std::make_unique<Default::Cube>(std::ref(*this)));
-                break;
-            case PIPELINE::PBR_COLOR:
-                pPipelines_.emplace_back(std::make_unique<PBR::Color>(std::ref(*this)));
-                break;
-            case PIPELINE::PBR_TEX:
-                pPipelines_.emplace_back(std::make_unique<PBR::Texture>(std::ref(*this)));
-                break;
-            case PIPELINE::BP_TEX_CULL_NONE:
-                pPipelines_.emplace_back(std::make_unique<BP::TextureCullNone>(std::ref(*this)));
-                break;
-            case PIPELINE::PARALLAX_SIMPLE:
-                pPipelines_.emplace_back(std::make_unique<Parallax::Simple>(std::ref(*this)));
-                break;
-            case PIPELINE::PARALLAX_STEEP:
-                pPipelines_.emplace_back(std::make_unique<Parallax::Steep>(std::ref(*this)));
-                break;
-            default:
-                assert(false);  // add new pipelines here
+            case PIPELINE::TRI_LIST_COLOR:          pPipelines_.emplace_back(std::make_unique<Default::TriListColor>(std::ref(*this))); break;
+            case PIPELINE::LINE:                    pPipelines_.emplace_back(std::make_unique<Default::Line>(std::ref(*this))); break;
+            case PIPELINE::TRI_LIST_TEX:            pPipelines_.emplace_back(std::make_unique<Default::TriListTexture>(std::ref(*this))); break;
+            case PIPELINE::CUBE:                    pPipelines_.emplace_back(std::make_unique<Default::Cube>(std::ref(*this))); break;
+            case PIPELINE::PBR_COLOR:               pPipelines_.emplace_back(std::make_unique<PBR::Color>(std::ref(*this))); break;
+            case PIPELINE::PBR_TEX:                 pPipelines_.emplace_back(std::make_unique<PBR::Texture>(std::ref(*this))); break;
+            case PIPELINE::BP_TEX_CULL_NONE:        pPipelines_.emplace_back(std::make_unique<BP::TextureCullNone>(std::ref(*this))); break;
+            case PIPELINE::PARALLAX_SIMPLE:         pPipelines_.emplace_back(std::make_unique<Parallax::Simple>(std::ref(*this))); break;
+            case PIPELINE::PARALLAX_STEEP:          pPipelines_.emplace_back(std::make_unique<Parallax::Steep>(std::ref(*this))); break;
+            case PIPELINE::SCREEN_SPACE_DEFAULT:    pPipelines_.emplace_back(std::make_unique<ScreenSpace::Default>(std::ref(*this))); break;
+            default: assert(false);  // add new pipelines here
         }
+        // clang-format on
         assert(pPipelines_.back()->TYPE == type);
     }
     // Validate the list of instantiated pipelines.
-    assert(pPipelines_.size() == PIPELINE_ALL.size());
+    assert(pPipelines_.size() == ALL.size());
     for (const auto& pPipeline : pPipelines_) assert(pPipeline != nullptr);
 }
 
@@ -172,6 +157,13 @@ void Pipeline::Handler::createPipeline(const std::string&& name, VkGraphicsPipel
     }
 }
 
+bool Pipeline::Handler::checkVertexPipelineMap(VERTEX key, PIPELINE value) const {
+    for (const auto& type : Pipeline::VERTEX_MAP.at(key)) {
+        if (type == value) return true;
+    }
+    return false;
+}
+
 void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
     VkGraphicsPipelineCreateInfo createInfo;
     CreateInfoVkResources createInfoRes;
@@ -252,7 +244,7 @@ void Pipeline::Handler::getShaderStages(const std::set<PIPELINE>& pipelineTypes,
     for (const auto& pPipeline : pPipelines_) {
         if (pipelineTypes.find(pPipeline->TYPE) == pipelineTypes.end()) continue;
         for (const auto& shaderType : pPipeline->SHADER_TYPES) {
-            stages |= SHADER_ALL.at(shaderType).stage;
+            stages |= Shader::ALL.at(shaderType).stage;
         }
     }
 }

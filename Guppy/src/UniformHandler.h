@@ -12,11 +12,12 @@
 #include <vulkan/vulkan.h>
 
 #include "Camera.h"
-#include "Constants.h"
+#include "ConstantsAll.h"
 #include "DescriptorManager.h"
 #include "Helpers.h"
 #include "Light.h"
 #include "PBR.h"
+#include "ScreenSpace.h"
 #include "Uniform.h"
 #include "UniformOffsetsManager.h"
 
@@ -66,6 +67,8 @@ class Handler : public Game::Handler {
                 return uniDefFogMgr().pItems;
             case UNIFORM::PROJECTOR_DEFAULT:
                 return uniDefPrjMgr().pItems;
+            case UNIFORM::SCREEN_SPACE_DEFAULT:
+                return uniScrDefMgr().pItems;
             default:
                 assert(false);
                 throw std::runtime_error("Unhandled uniform type");
@@ -130,6 +133,7 @@ class Handler : public Game::Handler {
     inline Uniform::Manager<Light::Default::Spot::Base>& lgtDefSptMgr() { return std::get<Uniform::Manager<Light::Default::Spot::Base>>(managers_[3]);};
     inline Uniform::Manager<Uniform::Default::Fog::Base>& uniDefFogMgr() { return std::get<Uniform::Manager<Uniform::Default::Fog::Base>>(managers_[4]);};
     inline Uniform::Manager<Uniform::Default::Projector::Base>& uniDefPrjMgr() { return std::get<Uniform::Manager<Uniform::Default::Projector::Base>>(managers_[5]);};
+    inline Uniform::Manager<Uniform::ScreenSpace::Default>& uniScrDefMgr() { return std::get<Uniform::Manager<Uniform::ScreenSpace::Default>>(managers_[6]);};
 
     template <class T> inline Uniform::Manager<T>& getManager() { assert(false); }
     template <> inline Uniform::Manager<Camera::Default::Perspective::Base>& getManager() { return camDefPersMgr(); }
@@ -138,6 +142,7 @@ class Handler : public Game::Handler {
     template <> inline Uniform::Manager<Light::Default::Spot::Base>& getManager() { return lgtDefSptMgr(); }
     template <> inline Uniform::Manager<Uniform::Default::Fog::Base>& getManager() { return uniDefFogMgr(); }
     template <> inline Uniform::Manager<Uniform::Default::Projector::Base>& getManager() { return uniDefPrjMgr(); }
+    template <> inline Uniform::Manager<Uniform::ScreenSpace::Default>& getManager() { return uniScrDefMgr(); }
     // clang-format on
 
     void createCameras();
@@ -151,9 +156,10 @@ class Handler : public Game::Handler {
         Uniform::Manager<Light::PBR::Positional::Base>,        //
         Uniform::Manager<Light::Default::Spot::Base>,          //
         Uniform::Manager<Uniform::Default::Fog::Base>,         //
-        Uniform::Manager<Uniform::Default::Projector::Base>    //
+        Uniform::Manager<Uniform::Default::Projector::Base>,   //
+        Uniform::Manager<Uniform::ScreenSpace::Default>        //
         >;
-    std::array<Manager, 6> managers_;
+    std::array<Manager, 7> managers_;
 
     // DESCRIPTOR
     OffsetsManager offsetsManager_;

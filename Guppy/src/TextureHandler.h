@@ -21,7 +21,7 @@ class Handler : public Game::Handler {
     // the members of Texture::CreateInfo should be trivial.
     std::shared_ptr<Texture::Base>& make(const Texture::CreateInfo* pCreateInfo);
 
-    const std::shared_ptr<Texture::Base> getTextureByName(std::string name) const;
+    const std::shared_ptr<Texture::Base> getTextureByName(const std::string_view& name) const;
     void update();
 
     const std::shared_ptr<Texture::Base> getTexture(uint32_t index) {
