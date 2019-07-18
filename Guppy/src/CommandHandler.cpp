@@ -68,26 +68,58 @@ void Command::Handler::resetCmdBuffers() {
     }
 }
 
-// INDEX
-uint32_t Command::Handler::graphicsIndex() const { return shell().context().graphics_index; }
-uint32_t Command::Handler::presentIndex() const { return shell().context().present_index; }
-uint32_t Command::Handler::transferIndex() const { return shell().context().transfer_index; }
-// QUEUE
-const VkQueue& Command::Handler::graphicsQueue() const { return shell().context().queues.at(shell().context().graphics_index); }
-const VkQueue& Command::Handler::presentQueue() const { return shell().context().queues.at(shell().context().present_index); }
-const VkQueue& Command::Handler::transferQueue() const { return shell().context().queues.at(shell().context().transfer_index); }
-// POOLS
-const VkCommandPool& Command::Handler::graphicsCmdPool() const { return pools_.at(shell().context().graphics_index); }
-const VkCommandPool& Command::Handler::presentCmdPool() const { return pools_.at(shell().context().present_index); }
-const VkCommandPool& Command::Handler::transferCmdPool() const { return pools_.at(shell().context().transfer_index); }
-// COMMANDS
-const VkCommandBuffer& Command::Handler::graphicsCmd() const { return cmds_.at(shell().context().graphics_index); }
-const VkCommandBuffer& Command::Handler::presentCmd() const { return cmds_.at(shell().context().present_index); }
-const VkCommandBuffer& Command::Handler::transferCmd() const { return cmds_.at(shell().context().transfer_index); }
+const uint32_t& Command::Handler::getIndex(const QUEUE type) {
+    // clang-format off
+    switch (type) {
+        case QUEUE::GRAPHICS: return shell().context().graphicsIndex;
+        case QUEUE::PRESENT:  return shell().context().presentIndex;
+        case QUEUE::TRANSFER: return shell().context().transferIndex;
+        case QUEUE::COMPUTE:  return shell().context().computeIndex;
+        default: assert(false); exit(EXIT_FAILURE);
+    }
+    // clang-format on
+}
+
+const VkQueue& Command::Handler::getQueue(const QUEUE type) {
+    // clang-format off
+    switch (type) {
+        case QUEUE::GRAPHICS: return shell().context().queues.at(shell().context().graphicsIndex);
+        case QUEUE::PRESENT:  return shell().context().queues.at(shell().context().presentIndex);
+        case QUEUE::TRANSFER: return shell().context().queues.at(shell().context().transferIndex);
+        case QUEUE::COMPUTE:  return shell().context().queues.at(shell().context().computeIndex);
+        default: assert(false); exit(EXIT_FAILURE);
+    }
+    // clang-format on
+}
+
+const VkCommandPool& Command::Handler::getCmdPool(const QUEUE type) {
+    // clang-format off
+    switch (type) {
+        case QUEUE::GRAPHICS: return pools_.at(shell().context().graphicsIndex);
+        case QUEUE::PRESENT:  return pools_.at(shell().context().presentIndex);
+        case QUEUE::TRANSFER: return pools_.at(shell().context().transferIndex);
+        case QUEUE::COMPUTE:  return pools_.at(shell().context().computeIndex);
+        default: assert(false); exit(EXIT_FAILURE);
+    }
+    // clang-format on
+}
+
+const VkCommandBuffer& Command::Handler::getCmd(const QUEUE type) {
+    // clang-format off
+    switch (type) {
+        case QUEUE::GRAPHICS: return cmds_.at(shell().context().graphicsIndex);
+        case QUEUE::PRESENT: return cmds_.at(shell().context().presentIndex);
+        case QUEUE::TRANSFER: return cmds_.at(shell().context().transferIndex);
+        case QUEUE::COMPUTE: return cmds_.at(shell().context().computeIndex);
+        default: assert(false); exit(EXIT_FAILURE);
+    }
+    // clang-format on
+}
 
 std::vector<uint32_t> Command::Handler::getUniqueQueueFamilies(bool graphics, bool present, bool transfer) const {
     std::vector<uint32_t> fams;
     std::vector<uint32_t>::iterator it;
+
     // graphics
     it = std::find(fams.begin(), fams.end(), graphicsIndex());
     if (graphics && it == fams.end()) fams.push_back(graphicsIndex());
@@ -97,6 +129,9 @@ std::vector<uint32_t> Command::Handler::getUniqueQueueFamilies(bool graphics, bo
     // transfer
     it = std::find(fams.begin(), fams.end(), transferIndex());
     if (graphics && it == fams.end()) fams.push_back(transferIndex());
+    // compute
+    it = std::find(fams.begin(), fams.end(), computeIndex());
+    if (graphics && it == fams.end()) fams.push_back(computeIndex());
 
     return fams;
 }
@@ -107,7 +142,7 @@ void Command::Handler::beginCmd(const VkCommandBuffer& cmd, const VkCommandBuffe
     begin_info.pNext = nullptr;
     begin_info.flags = inheritanceInfo == nullptr
                            ? 0
-                           : VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+                           : VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_PASS_CONTINUE_BIT;
     begin_info.pInheritanceInfo = inheritanceInfo;
     vk::assert_success(vkBeginCommandBuffer(cmd, &begin_info));
 }

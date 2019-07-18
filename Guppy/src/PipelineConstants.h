@@ -13,7 +13,7 @@
 
 enum class DESCRIPTOR_SET;
 enum class PUSH_CONSTANT;
-enum class RENDER_PASS : uint32_t;
+enum class PASS : uint32_t;
 enum class SHADER;
 enum class VERTEX;
 
@@ -34,6 +34,7 @@ enum class PIPELINE : uint32_t {
     PARALLAX_STEEP,
     // SCREEN SPACE
     SCREEN_SPACE_DEFAULT,
+    SCREEN_SPACE_COMPUTE_DEFAULT,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP
@@ -54,12 +55,12 @@ struct BindData {
 };
 
 // Map of pipeline/pass to bind data shared pointers
-using pipelineBindDataMapKey = std::pair<PIPELINE, RENDER_PASS>;
+using pipelineBindDataMapKey = std::pair<PIPELINE, PASS>;
 using pipelineBindDataMapKeyValue = std::pair<const pipelineBindDataMapKey, const std::shared_ptr<Pipeline::BindData>>;
 using pipelineBindDataMap = std::map<pipelineBindDataMapKey, const std::shared_ptr<Pipeline::BindData>>;
 
 // Map of pass types to descriptor set text replace tuples
-using shaderTextReplaceInfoMap = std::map<std::set<RENDER_PASS>, Descriptor::Set::textReplaceTuples>;
+using shaderTextReplaceInfoMap = std::map<std::set<PASS>, Descriptor::Set::textReplaceTuples>;
 
 struct CreateInfo {
     PIPELINE type;
@@ -67,11 +68,10 @@ struct CreateInfo {
     std::set<SHADER> shaderTypes;
     std::vector<DESCRIPTOR_SET> descriptorSets;
     Descriptor::OffsetsMap uniformOffsets;
-    VkPipelineBindPoint bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     std::vector<PUSH_CONSTANT> pushConstantTypes;
 };
 
-struct CreateInfoVkResources {
+struct CreateInfoResources {
     // BLENDING
     VkPipelineColorBlendAttachmentState blendAttach = {};
     VkPipelineColorBlendStateCreateInfo colorBlendStateInfo = {};

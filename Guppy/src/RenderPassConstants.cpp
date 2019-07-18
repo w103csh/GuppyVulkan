@@ -7,23 +7,34 @@
 #include "ConstantsAll.h"
 #include "RenderPass.h"
 
-#define RENDER_PASS_CONSTANTS
+#define PASS_CONSTANTS
 
 namespace RenderPass {
 
 // clang-format off
-const std::vector<RENDER_PASS> ALL = {
-    RENDER_PASS::PROJECT,
-    //RENDER_PASS::DEFAULT,
-    RENDER_PASS::SAMPLER_DEFAULT,
-    //RENDER_PASS::SCREEN_SPACE_SAMPLER,
-    RENDER_PASS::SCREEN_SPACE,
+
+const std::set<PASS> ALL = {
+    PASS::DEFAULT,
+    PASS::IMGUI,
+    PASS::SCREEN_SPACE,
+    PASS::SAMPLER_DEFAULT,
+    PASS::SAMPLER_PROJECT,
+    PASS::SAMPLER_SCREEN_SPACE, 
+};
+
+const std::vector<PASS> ACTIVE = {
+    PASS::SAMPLER_PROJECT,
+    PASS::DEFAULT,
+    //PASS::SAMPLER_DEFAULT,
+    //PASS::SAMPLER_SCREEN_SPACE,
+    //PASS::SCREEN_SPACE,
 // UI pass needs to always be last since it
 // is optional
 #ifdef USE_DEBUG_UI
-    RENDER_PASS::IMGUI,
+    PASS::IMGUI,
 #endif
 };
+
 // clang-format on
 
 // SAMPLER
@@ -35,7 +46,12 @@ const Sampler::CreateInfo DEFAULT_2D_SAMPLER_CREATE_INFO = {
     SAMPLER::CLAMP_TO_BORDER,
     BAD_EXTENT_2D,
     false,
+    true,
+    (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
+    Sampler::CHANNELS::_4,
+    VK_FORMAT_R8G8B8A8_UNORM,  // This is probably not enough for HDR
 };
+
 const Sampler::CreateInfo PROJECT_2D_SAMPLER_CREATE_INFO = {
     "Render Pass Project 2D Color Sampler",  //
     {{::Sampler::USAGE::COLOR}},             //
@@ -44,6 +60,8 @@ const Sampler::CreateInfo PROJECT_2D_SAMPLER_CREATE_INFO = {
     SAMPLER::CLAMP_TO_BORDER,
     {640, 480},
     false,
+    false,
+    (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
 };
 const Sampler::CreateInfo PROJECT_2D_ARRAY_SAMPLER_CREATE_INFO = {
     "Render Pass Project 2D Array Color Sampler",  //
@@ -53,6 +71,8 @@ const Sampler::CreateInfo PROJECT_2D_ARRAY_SAMPLER_CREATE_INFO = {
     SAMPLER::CLAMP_TO_BORDER,
     {1024, 768},
     false,
+    false,
+    (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
 };
 
 // TEXTURE
@@ -60,6 +80,7 @@ const Texture::CreateInfo DEFAULT_2D_TEXTURE_CREATE_INFO = {
     std::string(DEFAULT_2D_TEXTURE_ID),
     {DEFAULT_2D_SAMPLER_CREATE_INFO},
     false,
+    false,  // TODO: Not sure if this actually helps. Need to test subpass dependencies.
 };
 const Texture::CreateInfo PROJECT_2D_TEXTURE_CREATE_INFO = {
     std::string(PROJECT_2D_TEXTURE_ID),
@@ -74,7 +95,7 @@ const Texture::CreateInfo PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO = {
 
 // DEFAULT
 const CreateInfo DEFAULT_CREATE_INFO = {
-    RENDER_PASS::DEFAULT,
+    PASS::DEFAULT,
     "Default Render Pass",
     {
         // Order of the subpasses
@@ -102,7 +123,7 @@ const CreateInfo DEFAULT_CREATE_INFO = {
 
 // SAMPLER DEFAULT
 const CreateInfo SAMPLER_DEFAULT_CREATE_INFO = {
-    RENDER_PASS::SAMPLER_DEFAULT,
+    PASS::SAMPLER_DEFAULT,
     "Sampler Default Render Pass",
     {
         // Order of the subpasses
@@ -122,13 +143,13 @@ const CreateInfo SAMPLER_DEFAULT_CREATE_INFO = {
 
 // PROJECT
 const CreateInfo PROJECT_CREATE_INFO = {
-    RENDER_PASS::PROJECT,
+    PASS::SAMPLER_PROJECT,
     "Project Render Pass",
     {
         PIPELINE::TRI_LIST_COLOR,
     },
     FLAG::DEPTH,
-    {PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO.name},
+    {std::string(PROJECT_2D_ARRAY_TEXTURE_ID)},
     {
         {{UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, PIPELINE::ALL_ENUM}, {1}},
         //{{UNIFORM::LIGHT_SPOT_DEFAULT, PIPELINE::ALL_ENUM}, {1}},

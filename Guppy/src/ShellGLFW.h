@@ -43,7 +43,7 @@ class ShellGLFW : public TShell {
         }
 
         setPlatformSpecificExtensions();
-        TShell::init_vk();
+        TShell::initVk();
 
         // input listeners (set before imgui init because it installs it own callbacks)
         glfwSetCursorPosCallback(window_, glfw_cursor_pos_callback);
@@ -101,7 +101,7 @@ class ShellGLFW : public TShell {
 
         glfwDestroyWindow(window_);
 
-        TShell::destroy_context();
+        TShell::destroyContext();
 
         glfwTerminate();
     }
@@ -112,7 +112,7 @@ class ShellGLFW : public TShell {
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
 
-        TShell::create_context();
+        TShell::createContext();
 
         int w, h;
         // glfwGetFramebufferSize(window_, &w, &h); // Why is this so different on mac???
@@ -169,7 +169,7 @@ class ShellGLFW : public TShell {
         uint32_t extensions_count = 0;
         const char** extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
 
-        for (uint32_t i = 0; i < extensions_count; i++) TShell::instance_extensions_.push_back(extensions[i]);
+        for (uint32_t i = 0; i < extensions_count; i++) TShell::instanceExtensions_.push_back(extensions[i]);
 
         TShell::setPlatformSpecificExtensions();
     }

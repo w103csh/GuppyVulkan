@@ -50,6 +50,8 @@ set(SOURCE
     SelectionManager.cpp
     SelectionManager.h
     Singleton.h
+    Storage.cpp
+    Storage.h
     Types.h
     UIHandler.cpp
     UIHandler.h
@@ -58,10 +60,15 @@ set(SOURCE
     # Buffer
     BufferItem.h
     BufferManager.h
+    # Compute
+    Compute.cpp
+    Compute.h
+    ComputeHandler.cpp
+    ComputeHandler.h
     # Descriptor
-    DescriptorManager.h
     Descriptor.cpp
     Descriptor.h
+    DescriptorManager.h
     DescriptorConstants.cpp
     DescriptorConstants.h
     DescriptorHandler.cpp

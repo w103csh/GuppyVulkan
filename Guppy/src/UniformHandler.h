@@ -3,6 +3,7 @@
 #define UNIFORM_HANDLER_H
 
 #include <functional>
+#include <memory>
 #include <optional>
 #include <set>
 #include <string>
@@ -13,11 +14,14 @@
 
 #include "Camera.h"
 #include "ConstantsAll.h"
+#include "Descriptor.h"
 #include "DescriptorManager.h"
+#include "Game.h"
 #include "Helpers.h"
 #include "Light.h"
 #include "PBR.h"
 #include "ScreenSpace.h"
+#include "Storage.h"
 #include "Uniform.h"
 #include "UniformOffsetsManager.h"
 
@@ -29,7 +33,7 @@ template <class TBase>
 using ItemPointer = std::unique_ptr<TBase>;
 
 template <class TDerived>
-using ManagerType = Descriptor::Manager<Uniform::Base, TDerived, ItemPointer>;
+using ManagerType = Descriptor::Manager<Descriptor::Base, TDerived, ItemPointer>;
 
 // TODO: inner class of Handler?
 template <class TDerived>
@@ -37,43 +41,22 @@ class Manager : public ManagerType<TDerived> {
    public:
     Manager(const std::string&& name, const DESCRIPTOR&& descriptorType, const index&& maxSize,
             const std::string&& macroName)
-        : ManagerType<TDerived>{std::forward<const std::string>(name),
-                                std::forward<const DESCRIPTOR>(descriptorType),
-                                std::forward<const index>(maxSize),
-                                true,
-                                VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-                                static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                                                      VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-                                std::forward<const std::string>(macroName),
-                                VK_SHARING_MODE_EXCLUSIVE,
-                                0} {}
+        : ManagerType<TDerived>{
+              std::forward<const std::string>(name),
+              std::forward<const DESCRIPTOR>(descriptorType),
+              std::forward<const index>(maxSize),
+              true,
+              std::forward<const std::string>(macroName),
+              VK_SHARING_MODE_EXCLUSIVE,
+              0,
+          } {}
 };
 
 // HANDLER
 
 class Handler : public Game::Handler {
    private:
-    inline auto& getItems(const DESCRIPTOR& type) {
-        switch (std::visit(Descriptor::GetUniform{}, type)) {
-            case UNIFORM::CAMERA_PERSPECTIVE_DEFAULT:
-                return camDefPersMgr().pItems;
-            case UNIFORM::LIGHT_POSITIONAL_DEFAULT:
-                return lgtDefPosMgr().pItems;
-            case UNIFORM::LIGHT_POSITIONAL_PBR:
-                return lgtPbrPosMgr().pItems;
-            case UNIFORM::LIGHT_SPOT_DEFAULT:
-                return lgtDefSptMgr().pItems;
-            case UNIFORM::FOG_DEFAULT:
-                return uniDefFogMgr().pItems;
-            case UNIFORM::PROJECTOR_DEFAULT:
-                return uniDefPrjMgr().pItems;
-            case UNIFORM::SCREEN_SPACE_DEFAULT:
-                return uniScrDefMgr().pItems;
-            default:
-                assert(false);
-                throw std::runtime_error("Unhandled uniform type");
-        }
-    }
+    std::vector<std::unique_ptr<Descriptor::Base>>& getItems(const DESCRIPTOR& type);
 
    public:
     Handler(Game* pGame);
@@ -82,11 +65,12 @@ class Handler : public Game::Handler {
 
     // DESCRIPTOR
     uint32_t getDescriptorCount(const DESCRIPTOR& descType, const Uniform::offsets& offsets);
-    bool validatePipelineLayout(const Descriptor::bindingMap& map);
     bool validateUniformOffsets(const std::pair<DESCRIPTOR, index>& keyValue);
-    std::vector<VkDescriptorBufferInfo> getWriteInfos(const DESCRIPTOR& descType, const Uniform::offsets& offsets);
+    void getWriteInfos(const DESCRIPTOR& descType, const Uniform::offsets& offsets,
+                       Descriptor::Set::ResourceInfo& setResInfo);
 
     void createVisualHelpers();
+    void attachSwapchain();
     void update();
 
     // MAIN CAMERA
@@ -111,8 +95,8 @@ class Handler : public Game::Handler {
     }
 
     template <class T>
-    inline void update(T& uniform) {
-        getManager<T>().updateData(shell().context().dev, uniform.BUFFER_INFO);
+    inline void update(T& uniform, const int index = -1) {
+        getManager<T>().updateData(shell().context().dev, uniform.BUFFER_INFO, index);
     }
 
     // DESCRIPTOR
@@ -121,9 +105,9 @@ class Handler : public Game::Handler {
    private:
     void reset() override;
 
-    uint32_t getDescriptorCount(const std::vector<ItemPointer<Uniform::Base>>& pItems,
+    uint32_t getDescriptorCount(const std::vector<ItemPointer<Descriptor::Base>>& pItems,
                                 const Uniform::offsets& offsets) const;
-    std::set<uint32_t> getBindingOffsets(const std::vector<ItemPointer<Uniform::Base>>& pItems,
+    std::set<uint32_t> getBindingOffsets(const std::vector<ItemPointer<Descriptor::Base>>& pItems,
                                          const Uniform::offsets& offsets) const;
 
     // clang-format off
@@ -134,6 +118,7 @@ class Handler : public Game::Handler {
     inline Uniform::Manager<Uniform::Default::Fog::Base>& uniDefFogMgr() { return std::get<Uniform::Manager<Uniform::Default::Fog::Base>>(managers_[4]);};
     inline Uniform::Manager<Uniform::Default::Projector::Base>& uniDefPrjMgr() { return std::get<Uniform::Manager<Uniform::Default::Projector::Base>>(managers_[5]);};
     inline Uniform::Manager<Uniform::ScreenSpace::Default>& uniScrDefMgr() { return std::get<Uniform::Manager<Uniform::ScreenSpace::Default>>(managers_[6]);};
+    inline Uniform::Manager<Storage::ScreenSpace::PostProcess>& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::ScreenSpace::PostProcess>>(managers_[7]);};
 
     template <class T> inline Uniform::Manager<T>& getManager() { assert(false); }
     template <> inline Uniform::Manager<Camera::Default::Perspective::Base>& getManager() { return camDefPersMgr(); }
@@ -143,6 +128,7 @@ class Handler : public Game::Handler {
     template <> inline Uniform::Manager<Uniform::Default::Fog::Base>& getManager() { return uniDefFogMgr(); }
     template <> inline Uniform::Manager<Uniform::Default::Projector::Base>& getManager() { return uniDefPrjMgr(); }
     template <> inline Uniform::Manager<Uniform::ScreenSpace::Default>& getManager() { return uniScrDefMgr(); }
+    template <> inline Uniform::Manager<Storage::ScreenSpace::PostProcess>& getManager() { return strPstPrcMgr(); }
     // clang-format on
 
     void createCameras();
@@ -157,9 +143,10 @@ class Handler : public Game::Handler {
         Uniform::Manager<Light::Default::Spot::Base>,          //
         Uniform::Manager<Uniform::Default::Fog::Base>,         //
         Uniform::Manager<Uniform::Default::Projector::Base>,   //
-        Uniform::Manager<Uniform::ScreenSpace::Default>        //
+        Uniform::Manager<Uniform::ScreenSpace::Default>,       //
+        Uniform::Manager<Storage::ScreenSpace::PostProcess>    //
         >;
-    std::array<Manager, 7> managers_;
+    std::array<Manager, 8> managers_;
 
     // DESCRIPTOR
     OffsetsManager offsetsManager_;

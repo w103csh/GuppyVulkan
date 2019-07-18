@@ -1,17 +1,5 @@
 /*
- * Copyright (C) 2016 Google, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This came from LunarG Hologram sample, but has been radically altered at this point.
  */
 
 #ifndef GAME_H
@@ -22,10 +10,13 @@
 #include <string>
 #include <vector>
 
+#include "Enum.h"
+
 class Shell;
 
 // clang-format off
 namespace Command       { class Handler; }
+namespace Compute       { class Handler; }
 namespace Descriptor    { class Handler; }
 namespace Loading       { class Handler; }
 namespace Material      { class Handler; }
@@ -35,61 +26,11 @@ namespace Pipeline      { class Handler; }
 namespace RenderPass    { class Handler; }
 namespace Scene         { class Handler; }
 namespace Shader        { class Handler; }
+namespace Storage       { class Handler; }
 namespace Texture       { class Handler; }
 namespace UI            { class Handler; }
 namespace Uniform       { class Handler; }
 // clang-format on
-
-enum class GAME_KEY {
-    // virtual keys
-    KEY_SHUTDOWN,
-    // physical keys
-    KEY_UNKNOWN,
-    KEY_ESC,
-    KEY_UP,
-    KEY_DOWN,
-    KEY_LEFT,
-    KEY_RIGHT,
-    KEY_SPACE,
-    KEY_TAB,
-    KEY_F,
-    KEY_W,
-    KEY_A,
-    KEY_S,
-    KEY_D,
-    KEY_E,
-    KEY_Q,
-    // number keys
-    KEY_1,
-    KEY_2,
-    KEY_3,
-    KEY_4,
-    KEY_5,
-    KEY_6,
-    KEY_7,
-    KEY_8,
-    KEY_9,
-    KEY_0,
-    KEY_MINUS,
-    KEY_EQUAL,
-    // function keys
-    KEY_F1,
-    KEY_F2,
-    KEY_F3,
-    KEY_F4,
-    KEY_F5,
-    KEY_F6,
-    KEY_F7,
-    KEY_F8,
-    KEY_F9,
-    KEY_F10,
-    KEY_F11,
-    KEY_F12,
-    // modifiers
-    KEY_ALT,
-    KEY_CTRL,
-    KEY_SHFT,
-};
 
 struct MouseInput {
     float xPos, yPos, zDelta;
@@ -103,30 +44,31 @@ class Game {
     virtual ~Game();
 
     struct Settings {
+        Settings();
         std::string name;
-        int initial_width = 1920;
-        int initial_height = 1080;
-        int queue_count = 1;
-        int back_buffer_count = 3;
-        int ticks_per_second = 30;
-        bool vsync = true;
-        bool animate = true;
+        int initial_width;
+        int initial_height;
+        int queue_count;
+        int back_buffer_count;
+        int ticks_per_second;
+        bool vsync;
+        bool animate;
 
-        bool validate = false;
-        bool validate_verbose = false;
+        bool validate;
+        bool validate_verbose;
 
-        bool no_tick = false;
-        bool no_render = false;
-        bool no_present = false;
+        bool no_tick;
+        bool no_render;
 
         // *
-        bool try_sampler_anisotropy = true;  // TODO: Not sure what this does
-        bool try_sample_rate_shading = true;
-        bool enable_sample_shading = true;
-        bool enable_double_clicks = false;
-        bool enable_debug_markers = false;
-        bool enable_directory_listener = true;
-        bool assert_on_recompile_shader = false;
+        bool try_sampler_anisotropy;  // TODO: Not sure what this does
+        bool try_sample_rate_shading;
+        bool try_compute_shading;
+        bool enable_sample_shading;
+        bool enable_double_clicks;
+        bool enable_debug_markers;
+        bool enable_directory_listener;
+        bool assert_on_recompile_shader;
     };
 
     // SETTINGS
@@ -150,6 +92,7 @@ class Game {
     // HANDLER
     struct Handlers {
         std::unique_ptr<Command::Handler> pCommand;
+        std::unique_ptr<Compute::Handler> pCompute;
         std::unique_ptr<Descriptor::Handler> pDescriptor;
         std::unique_ptr<Loading::Handler> pLoading;
         std::unique_ptr<Material::Handler> pMaterial;
@@ -176,6 +119,7 @@ class Game {
         constexpr const auto &shell() const { return pGame_->shell(); }
 
         inline Command::Handler &commandHandler() const { return std::ref(*pGame_->handlers_.pCommand); }
+        inline Compute::Handler &computeHandler() const { return std::ref(*pGame_->handlers_.pCompute); }
         inline Descriptor::Handler &descriptorHandler() const { return std::ref(*pGame_->handlers_.pDescriptor); }
         inline Loading::Handler &loadingHandler() const { return std::ref(*pGame_->handlers_.pLoading); }
         inline Material::Handler &materialHandler() const { return std::ref(*pGame_->handlers_.pMaterial); }
@@ -230,8 +174,6 @@ class Game {
                 settings_.no_tick = true;
             } else if (*it == "-nr") {
                 settings_.no_render = true;
-            } else if (*it == "-np") {
-                settings_.no_present = true;
             } else if (*it == "-dbgm") {
                 settings_.enable_debug_markers = true;
             }

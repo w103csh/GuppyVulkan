@@ -1,13 +1,19 @@
 
 #include "Texture.h"
 
+// HANDLERS
+#include "LoadingHandler.h"
+
 Texture::Base::Base(const uint32_t&& offset, const CreateInfo* pCreateInfo)
-    : HAS_DATA(pCreateInfo->hasData),
+    : DESCRIPTOR_TYPE(pCreateInfo->descriptorType),
+      HAS_DATA(pCreateInfo->hasData),
       NAME(pCreateInfo->name.data(), pCreateInfo->name.size()),
       OFFSET(offset),
+      PER_FRAMEBUFFER(pCreateInfo->perFramebuffer),
       status(STATUS::PENDING),
       flags(0),
-      aspect(0.0f),
+      usesSwapchain(false),
+      aspect(BAD_ASPECT),
       pLdgRes(nullptr) {}
 
 void Texture::Base::destroy(const VkDevice& dev) {
@@ -15,10 +21,4 @@ void Texture::Base::destroy(const VkDevice& dev) {
         sampler.destroy(dev);
     }
     status = STATUS::DESTROYED;
-}
-
-void Texture::Base::setWriteInfo(VkWriteDescriptorSet& write, uint32_t index) const {
-    assert(status == STATUS::READY);
-    write.descriptorCount = 1;
-    write.pImageInfo = &samplers[index].imgDescInfo;
 }

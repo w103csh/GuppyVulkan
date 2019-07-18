@@ -10,7 +10,7 @@
 #include "DescriptorConstants.h"
 
 enum class PIPELINE : uint32_t;
-enum class RENDER_PASS : uint32_t;
+enum class PASS : uint32_t;
 
 enum class SHADER {
     LINK = -1,
@@ -34,6 +34,7 @@ enum class SHADER {
     // SCREEN SPACE
     SCREEN_SPACE_VERT,
     SCREEN_SPACE_FRAG,
+    SCREEN_SPACE_COMP,
     // Add new to SHADER_ALL and SHADER_LINK_MAP.
 };
 
@@ -64,7 +65,7 @@ struct CreateInfo {
 };
 
 // Pipeline shader stage create info map
-using infoMapKey = std::tuple<SHADER, PIPELINE, std::set<RENDER_PASS>>;
+using infoMapKey = std::tuple<SHADER, PIPELINE, std::set<PASS>>;
 using infoMapValue = std::pair<Descriptor::Set::textReplaceTuples, VkPipelineShaderStageCreateInfo>;
 using infoMapKeyValue = std::pair<const infoMapKey, infoMapValue>;
 using infoMap = std::multimap<infoMapKey, infoMapValue>;

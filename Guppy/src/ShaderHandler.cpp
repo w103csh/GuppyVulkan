@@ -126,12 +126,12 @@ void Shader::Handler::textReplace(const Descriptor::Set::textReplaceTuples& repl
     }
 }
 
-void Shader::Handler::getStagesInfo(const SHADER& shaderType, const PIPELINE& pipelineType, const RENDER_PASS& passType,
+void Shader::Handler::getStagesInfo(const SHADER& shaderType, const PIPELINE& pipelineType, const PASS& passType,
                                     std::vector<VkPipelineShaderStageCreateInfo>& stagesInfo) const {
     auto it1 = infoMap_.begin();
     auto it2 = infoMap_.end();
     // Look for a specific stage info
-    for (; it1 != infoMap_.end(); std::advance(it1, 1)) {
+    for (; it1 != infoMap_.end(); ++it1) {
         if (std::get<0>(it1->first) != shaderType) continue;
         if (std::get<1>(it1->first) != pipelineType) continue;
         if (it2 == infoMap_.end()) it2 = it1;  // Save the spot where the relevant info begins
@@ -143,10 +143,10 @@ void Shader::Handler::getStagesInfo(const SHADER& shaderType, const PIPELINE& pi
     assert(it2 != infoMap_.end());
     it1 = it2;
     // Look for a default stage info
-    for (; it1 != infoMap_.end(); std::advance(it1, 1)) {
+    for (; it1 != infoMap_.end(); ++it1) {
         if (std::get<0>(it1->first) != shaderType) continue;
         if (std::get<1>(it1->first) != pipelineType) continue;
-        if (std::get<2>(it1->first) == Uniform::RENDER_PASS_ALL_SET) {
+        if (std::get<2>(it1->first) == Uniform::PASS_ALL_SET) {
             stagesInfo.push_back(it1->second.second);
             return;
         };

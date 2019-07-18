@@ -2,6 +2,7 @@
 #ifndef HELPERS_H
 #define HELPERS_H
 
+#include <algorithm>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <limits>
@@ -18,7 +19,7 @@ inline VkResult assert_success(VkResult res) {
     if (res != VK_SUCCESS) {
         std::stringstream ss;
         ss << "VkResult " << res << " returned";
-        assert(false && ss.str().c_str());
+        assert(false);
         exit(EXIT_FAILURE);
     }
     return res;
@@ -37,7 +38,8 @@ typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type almost_
            || std::abs(x - y) < (std::numeric_limits<T>::min)();
 }
 
-static std::string replaceFirstOccurrence(const std::string &toReplace, const std::string &replaceWith, std::string &s) {
+static std::string replaceFirstOccurrence(const std::string &toReplace, const std::string_view &replaceWith,
+                                          std::string &s) {
     std::size_t pos = s.find(toReplace);
     if (pos == std::string::npos) return s;
     return s.replace(pos, toReplace.length(), replaceWith);
@@ -55,7 +57,7 @@ static std::string textReplace(std::string &text, std::string s1, std::string s2
 // { macro identifier, line to replace, line to append to, value }
 typedef std::tuple<std::string, std::string, std::string, int> macroInfo;
 
-std::vector<macroInfo> getMacroReplaceInfo(const std::string &macroIdentifierPrefix, const std::string &text);
+std::vector<macroInfo> getMacroReplaceInfo(const std::string_view &macroIdentifierPrefix, const std::string &text);
 
 void macroReplace(const macroInfo &info, int itemCount, std::string &text);
 
@@ -192,6 +194,8 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
                            const VkImageLayout &oldLayout, const VkImageLayout &newLayout, VkPipelineStageFlags srcStages,
                            VkPipelineStageFlags dstStages, uint32_t mipLevels, uint32_t arrayLayers);
 
+void validatePassTypeStructures();
+
 void cramers3(glm::vec3 c1, glm::vec3 c2, glm::vec3 c3, glm::vec3 c4);
 
 static glm::vec3 triangleNormal(const glm::vec3 &a, const glm::vec3 &b, const glm::vec3 &c) {
@@ -246,6 +250,37 @@ static void destroyImageResource(const VkDevice &dev, ImageResource &res) {
     if (res.memory != VK_NULL_HANDLE) vkFreeMemory(dev, res.memory, nullptr);
     res.memory = VK_NULL_HANDLE;
 }
+
+constexpr bool compExtent2D(const VkExtent2D &a, const VkExtent2D &b) { return a.height == b.height && a.width == b.width; }
+
+static bool isNumber(const std::string_view &sv) {
+    return std::find_if(sv.begin(), sv.end(), [](const auto &c) { return !std::isdigit(c); }) == sv.end();
+}
+
+void attachementImageBarrierWriteToSamplerRead(const VkImage &image, BarrierResource &resource,
+                                               const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                                               const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
+
+void attachementImageBarrierWriteToStorageWrite(const VkImage &image, BarrierResource &resource,
+                                                const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                                                const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
+
+void attachementImageBarrierWriteToWrite(const VkImage &image, BarrierResource &resource,
+                                         const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                                         const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
+
+void storageImageBarrierWriteToRead(const VkImage &image, BarrierResource &resource,
+                                    const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                                    const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
+
+void bufferBarrierWriteToRead(const VkDescriptorBufferInfo &bufferInfo, BarrierResource &resource,
+                              const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                              const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
+
+void globalDebugBarrierWriteToRead(BarrierResource &resource);
+
+void recordBarriers(const BarrierResource &resource, const VkCommandBuffer &cmd, const VkPipelineStageFlags srcStageMask,
+                    const VkPipelineStageFlags dstStageMask, const VkDependencyFlags dependencyFlags = 0);
 
 }  // namespace helpers
 

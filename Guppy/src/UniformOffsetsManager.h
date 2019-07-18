@@ -18,7 +18,7 @@ class OffsetsManager {
 
     inline const auto& getOffsetMap() const { return offsetsMap_; }
 
-    void validateInitialMap();
+    void initializeMap();
     void validateAddType(const offsetsMap& map, const ADD_TYPE& addType);
 
    private:

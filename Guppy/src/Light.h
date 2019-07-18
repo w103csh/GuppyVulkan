@@ -35,17 +35,13 @@ struct CreateInfo : public Buffer::CreateInfo {
     glm::mat4 model{1.0f};
 };
 
-// **********************
-//      Base
-// **********************
+// BASE
 
-template <typename T>
-class Base : public Obj3d, public Uniform::Base, public Buffer::DataItem<T> {
+template <typename TDATA>
+class Base : public Obj3d, public Descriptor::Base, public Buffer::PerFramebufferDataItem<TDATA> {
    public:
-    Base(T *pData, CreateInfo *pCreateInfo)
-        : Obj3d(),          //
-          Uniform::Base(),  //
-          Buffer::DataItem<T>(pData),
+    Base(TDATA *pData, CreateInfo *pCreateInfo)
+        : Buffer::PerFramebufferDataItem<TDATA>(pData),  //
           model_(pCreateInfo->model) {}
 
     inline const glm::mat4 &model(uint32_t index = 0) const override { return model_; }
@@ -56,9 +52,7 @@ class Base : public Obj3d, public Uniform::Base, public Buffer::DataItem<T> {
 
 namespace Default {
 
-// **********************
-//      Positional
-// **********************
+// POSITIONAL
 
 namespace Positional {
 struct DATA {
@@ -73,7 +67,7 @@ class Base : public Light::Base<DATA> {
    public:
     Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo);
 
-    void update(glm::vec3 &&position);
+    void update(glm::vec3 &&position, const uint32_t frameIndex);
 
     inline const glm::vec3 &getPosition() { return position; }
 
@@ -83,10 +77,10 @@ class Base : public Light::Base<DATA> {
     }
 
     // FLAG
-    inline FlagBits getFlags() const { return pData_->flags; }
+    inline FlagBits getFlags() const { return data_.flags; }
     inline void setFlags(const FlagBits &flags) {
-        pData_->flags = flags;
-        DIRTY = true;
+        data_.flags = flags;
+        dirty = true;
     }
 
    private:
@@ -94,9 +88,7 @@ class Base : public Light::Base<DATA> {
 };
 }  // namespace Positional
 
-// **********************
-//      Spot
-// **********************
+// SPOT
 
 namespace Spot {
 struct CreateInfo : public Light::CreateInfo {
@@ -122,13 +114,13 @@ class Base : public Light::Base<DATA> {
         direction = getWorldSpaceDirection();
     }
 
-    void update(glm::vec3 &&position, glm::vec3 &&direction);
+    void update(glm::vec3 &&position, glm::vec3 &&direction, const uint32_t frameIndex);
 
     inline const glm::vec3 &getDirection() { return direction; }
     inline const glm::vec3 &getPosition() { return position; }
 
-    inline void setCutoff(float f) { pData_->cutoff = f; }
-    inline void setExponent(float f) { pData_->exponent = f; }
+    inline void setCutoff(float f) { data_.cutoff = f; }
+    inline void setExponent(float f) { data_.exponent = f; }
 
    private:
     glm::vec3 direction;  // (world space)

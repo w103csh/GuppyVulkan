@@ -19,11 +19,11 @@
 
 namespace Pipeline {
 
-struct CreateInfoVkResources;
+struct CreateInfoResources;
 class Handler;
 
-void GetDefaultColorInputAssemblyInfoResources(CreateInfoVkResources &createInfoRes);
-void GetDefaultTextureInputAssemblyInfoResources(CreateInfoVkResources &createInfoRes);
+void GetDefaultColorInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
+void GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
 
 struct Layouts {
     VkPipelineLayout pipelineLayout;
@@ -52,24 +52,17 @@ class Base : public Handlee<Pipeline::Handler> {
     inline const auto &getShaderTextReplaceInfoMap() { return shaderTextReplaceInfoMap_; }
     inline const auto &getDescriptorOffsets() { return descriptorOffsets_; }
 
+    // I can't think of anything better atm.
+    virtual void setInfo(CreateInfoResources &createInfoRes, VkGraphicsPipelineCreateInfo *pGraphicsInfo,
+                         VkComputePipelineCreateInfo *pComputeInfo) = 0;
+
    protected:
-    Base(Pipeline::Handler &handler, const Pipeline::CreateInfo *pCreateInfo);
+    Base(Pipeline::Handler &handler, const VkPipelineBindPoint &&bindPoint, const Pipeline::CreateInfo *pCreateInfo);
 
-    // INFOS
-    virtual void getBlendInfoResources(CreateInfoVkResources &createInfoRes);
-    virtual void getDepthInfoResources(CreateInfoVkResources &createInfoRes);
-    virtual void getDynamicStateInfoResources(CreateInfoVkResources &createInfoRes);
-    virtual void getInputAssemblyInfoResources(CreateInfoVkResources &createInfoRes);
-    virtual void getMultisampleStateInfoResources(CreateInfoVkResources &createInfoRes);
-    virtual void getRasterizationStateInfoResources(CreateInfoVkResources &createInfoRes);
-    virtual void getTesselationInfoResources(CreateInfoVkResources &createInfoRes);
-    virtual void getViewportStateInfoResources(CreateInfoVkResources &createInfoRes);
-
-    virtual void setInfo(CreateInfoVkResources &createInfoRes, VkGraphicsPipelineCreateInfo &pipelineCreateInfo);
-
-    const std::shared_ptr<Pipeline::BindData> &getBindData(const RENDER_PASS &passType);
+    const std::shared_ptr<Pipeline::BindData> &getBindData(const PASS &passType);
 
     // DESCRIPTOR SET
+    bool checkTextureStatus(const std::string &id);
     void validatePipelineDescriptorSets();
     void prepareDescriptorSetInfo();
 
@@ -79,8 +72,8 @@ class Base : public Handlee<Pipeline::Handler> {
 
     STATUS status_;
     Descriptor::OffsetsMap descriptorOffsets_;
-    std::map<std::set<RENDER_PASS>, Layouts> layoutsMap_;
-    std::map<std::set<RENDER_PASS>, std::shared_ptr<Pipeline::BindData>> bindDataMap_;
+    std::map<std::set<PASS>, Layouts> layoutsMap_;
+    std::map<std::set<PASS>, std::shared_ptr<Pipeline::BindData>> bindDataMap_;
 
    private:
     std::shared_ptr<Pipeline::BindData> makeBindData(const VkPipelineLayout &layout);
@@ -93,34 +86,68 @@ class Base : public Handlee<Pipeline::Handler> {
     std::vector<uint32_t> pendingTexturesOffsets_;
 };
 
+// COMPUTE
+
+class Compute : public Base {
+   public:
+    void setInfo(CreateInfoResources &createInfoRes, VkGraphicsPipelineCreateInfo *pGraphicsInfo,
+                 VkComputePipelineCreateInfo *pComputeInfo) override final;
+
+   protected:
+    Compute(Pipeline::Handler &handler, const Pipeline::CreateInfo *pCreateInfo)
+        : Base(handler, VK_PIPELINE_BIND_POINT_COMPUTE, pCreateInfo) {}
+};
+
+// GRAPHICS
+
+class Graphics : public Base {
+   public:
+    void setInfo(CreateInfoResources &createInfoRes, VkGraphicsPipelineCreateInfo *pGraphicsInfo,
+                 VkComputePipelineCreateInfo *pComputeInfo) override final;
+
+   protected:
+    Graphics(Pipeline::Handler &handler, const Pipeline::CreateInfo *pCreateInfo)
+        : Base(handler, VK_PIPELINE_BIND_POINT_GRAPHICS, pCreateInfo) {}
+
+    // INFOS
+    virtual void getBlendInfoResources(CreateInfoResources &createInfoRes);
+    virtual void getDepthInfoResources(CreateInfoResources &createInfoRes);
+    virtual void getDynamicStateInfoResources(CreateInfoResources &createInfoRes);
+    virtual void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
+    virtual void getMultisampleStateInfoResources(CreateInfoResources &createInfoRes);
+    virtual void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes);
+    virtual void getTesselationInfoResources(CreateInfoResources &createInfoRes);
+    virtual void getViewportStateInfoResources(CreateInfoResources &createInfoRes);
+};
+
 namespace Default {
 
 // TRIANGLE LIST COLOR
-class TriListColor : public Base {
+class TriListColor : public Graphics {
    public:
-    TriListColor(Pipeline::Handler &handler) : Base(handler, &TRI_LIST_COLOR_CREATE_INFO) {}
+    TriListColor(Pipeline::Handler &handler) : Graphics(handler, &TRI_LIST_COLOR_CREATE_INFO) {}
 };
 
 // LINE
-class Line : public Base {
+class Line : public Graphics {
    public:
-    Line(Pipeline::Handler &handler) : Base(handler, &LINE_CREATE_INFO) {}
+    Line(Pipeline::Handler &handler) : Graphics(handler, &LINE_CREATE_INFO) {}
     // INFOS
-    void getInputAssemblyInfoResources(CreateInfoVkResources &createInfoRes) override;
+    void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
 };
 
 // TRIANGLE LIST TEXTURE
-class TriListTexture : public Base {
+class TriListTexture : public Graphics {
    public:
-    TriListTexture(Pipeline::Handler &handler) : Base(handler, &TRI_LIST_TEX_CREATE_INFO) {}
+    TriListTexture(Pipeline::Handler &handler) : Graphics(handler, &TRI_LIST_TEX_CREATE_INFO) {}
 };
 
 // CUBE
-class Cube : public Base {
+class Cube : public Graphics {
    public:
-    Cube(Pipeline::Handler &handler) : Base(handler, &CUBE_CREATE_INFO) {}
+    Cube(Pipeline::Handler &handler) : Graphics(handler, &CUBE_CREATE_INFO) {}
     // INFOS
-    void getDepthInfoResources(CreateInfoVkResources &createInfoRes) override;
+    void getDepthInfoResources(CreateInfoResources &createInfoRes) override;
 };
 
 }  // namespace Default
@@ -129,11 +156,11 @@ class Cube : public Base {
 namespace BP {
 
 // TEXTURE CULL NONE
-class TextureCullNone : public Base {
+class TextureCullNone : public Graphics {
    public:
-    TextureCullNone(Pipeline::Handler &handler) : Base(handler, &TEX_CULL_NONE_CREATE_INFO) {}
+    TextureCullNone(Pipeline::Handler &handler) : Graphics(handler, &TEX_CULL_NONE_CREATE_INFO) {}
     // INFOS
-    void getRasterizationStateInfoResources(CreateInfoVkResources &createInfoRes) override;
+    void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes) override;
 };
 
 }  // namespace BP

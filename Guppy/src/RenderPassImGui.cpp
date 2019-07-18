@@ -15,7 +15,7 @@
 #include "UIHandler.h"
 
 namespace {
-const RenderPass::CreateInfo CREATE_INFO = {RENDER_PASS::IMGUI, "ImGui", {}, RenderPass::FLAG::SWAPCHAIN};
+const RenderPass::CreateInfo CREATE_INFO = {PASS::IMGUI, "ImGui", {}, RenderPass::FLAG::SWAPCHAIN};
 }
 
 RenderPass::ImGui::ImGui(RenderPass::Handler& handler, const uint32_t&& offset)
@@ -29,10 +29,10 @@ void RenderPass::ImGui::postCreate() {
     // VULKAN INIT
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = ctx.instance;
-    init_info.PhysicalDevice = ctx.physical_dev;
+    init_info.PhysicalDevice = ctx.physicalDev;
     init_info.Device = ctx.dev;
-    init_info.QueueFamily = ctx.graphics_index;
-    init_info.Queue = ctx.queues.at(ctx.graphics_index);
+    init_info.QueueFamily = ctx.graphicsIndex;
+    init_info.Queue = ctx.queues.at(ctx.graphicsIndex);
     init_info.PipelineCache = handler().pipelineHandler().getPipelineCache();
     init_info.DescriptorPool = handler().descriptorHandler().getPool();
     init_info.Allocator = nullptr;
@@ -48,7 +48,7 @@ void RenderPass::ImGui::postCreate() {
     end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     end_info.commandBufferCount = 1;
     end_info.pCommandBuffers = &handler().commandHandler().graphicsCmd();
-    vk::assert_success(vkQueueSubmit(ctx.queues.at(ctx.graphics_index), 1, &end_info, VK_NULL_HANDLE));
+    vk::assert_success(vkQueueSubmit(ctx.queues.at(ctx.graphicsIndex), 1, &end_info, VK_NULL_HANDLE));
 
     vk::assert_success(vkDeviceWaitIdle(ctx.dev));
 
@@ -59,10 +59,25 @@ void RenderPass::ImGui::postCreate() {
     ImGui_ImplVulkan_InvalidateFontUploadObjects();
 }
 
-void RenderPass::ImGui::record(const uint32_t& frameIndex) {
+void RenderPass::ImGui::record(const uint8_t frameIndex) {
+    beginInfo_.framebuffer = data.framebuffers[frameIndex];
+    auto& priCmd = data.priCmds[frameIndex];
+
+    // RESET BUFFERS
+    vkResetCommandBuffer(priCmd, 0);
+
+    // BEGIN BUFFERS
+    VkCommandBufferBeginInfo bufferInfo;
+    // PRIMARY
+    bufferInfo = {};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
+
     beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
     handler().uiHandler().draw(data.priCmds[frameIndex], frameIndex);
     endPass(frameIndex);
+    vk::assert_success(vkEndCommandBuffer(data.priCmds[frameIndex]));
 }
 
 void RenderPass::ImGui::createAttachmentsAndSubpasses() {

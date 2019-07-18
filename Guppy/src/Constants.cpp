@@ -1,4 +1,4 @@
 
 #include "Constants.h"
 
-const bool LIMIT_FRAMERATE = true;
+const bool LIMIT_FRAMERATE = false;

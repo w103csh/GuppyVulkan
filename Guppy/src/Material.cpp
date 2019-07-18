@@ -1,9 +1,10 @@
 #include "Material.h"
 
 #include "Material.h"
-
 // HANDLERS
 #include "MaterialHandler.h"
+
+// BASE
 
 Material::Base::Base(const MATERIAL &&type, Material::CreateInfo *pCreateInfo)  //
     : TYPE(type),                                                               //
@@ -12,10 +13,12 @@ Material::Base::Base(const MATERIAL &&type, Material::CreateInfo *pCreateInfo)  
     status_ = (hasTexture() && pTexture_->status != STATUS::READY) ? STATUS::PENDING_TEXTURE : STATUS::READY;
 }
 
+// DEFAULT
+
 Material::Default::Base::Base(const Buffer::Info &&info, Default::DATA *pData, Default::CreateInfo *pCreateInfo)
-    : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-      Buffer::DataItem<Default::DATA>(pData),                //
-      Material::Base(MATERIAL::DEFAULT, pCreateInfo)         //
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),
+      Material::Base(MATERIAL::DEFAULT, pCreateInfo),
+      Buffer::DataItem<Default::DATA>(pData)  //
 {
     pData_->color = pCreateInfo->color;
     pData_->flags = pCreateInfo->flags;
@@ -56,7 +59,7 @@ void Material::Default::Base::setTextureData() {
     if (status_ == STATUS::PENDING_TEXTURE && pTexture_->status == STATUS::READY)  //
         status_ = STATUS::READY;
 
-    DIRTY = true;
+    dirty = true;
 }
 
 void Material::Default::Base::setTinyobjData(const tinyobj::material_t &m) {

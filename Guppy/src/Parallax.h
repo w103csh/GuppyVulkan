@@ -16,11 +16,11 @@ namespace Set {
 namespace Parallax {
 class Uniform : public Set::Base {
    public:
-    Uniform();
+    Uniform(Handler &handler);
 };
 class Sampler : public Set::Base {
    public:
-    Sampler();
+    Sampler(Handler &handler);
 };
 }  // namespace Parallax
 }  // namespace Set
@@ -38,15 +38,15 @@ namespace Pipeline {
 namespace Parallax {
 
 extern const Pipeline::CreateInfo SIMPLE_CREATE_INFO;
-class Simple : public Pipeline::Base {
+class Simple : public Pipeline::Graphics {
    public:
-    Simple(Pipeline::Handler &handler) : Base(handler, &SIMPLE_CREATE_INFO) {}
+    Simple(Pipeline::Handler &handler) : Graphics(handler, &SIMPLE_CREATE_INFO) {}
 };
 
 extern const Pipeline::CreateInfo STEEP_CREATE_INFO;
-class Steep : public Pipeline::Base {
+class Steep : public Pipeline::Graphics {
    public:
-    Steep(Pipeline::Handler &handler) : Base(handler, &STEEP_CREATE_INFO) {}
+    Steep(Pipeline::Handler &handler) : Graphics(handler, &STEEP_CREATE_INFO) {}
 };
 }  // namespace Parallax
 }  // namespace Pipeline

@@ -29,25 +29,19 @@ const VkClearColorValue DEFAULT_CLEAR_COLOR_VALUE = {{CLEAR_COLOR.x, CLEAR_COLOR
 
 const VkClearDepthStencilValue DEFAULT_CLEAR_DEPTH_STENCIL_VALUE = {1.0f, 0};
 
-enum class RENDER_PASS : uint32_t {
-    DEFAULT = 0,           // Swapchain
-    IMGUI,                 // Swapchain
-    SAMPLER_DEFAULT,       // Sampler
-    PROJECT,               // Sampler
-    SCREEN_SPACE,          // Swapchain
-    SCREEN_SPACE_SAMPLER,  // Sampler
-    // Used to indicate bad data, and "all" in uniform offsets
-    ALL_ENUM = UINT32_MAX,
-};
-
 namespace RenderPass {
+
+constexpr uint8_t RESOURCE_SIZE = 20;
+constexpr std::string_view SWAPCHAIN_TARGET_ID = "Swapchain";
+
+using SubmitResource = ::SubmitResource<RESOURCE_SIZE>;
+using SubmitResources = std::array<SubmitResource, RESOURCE_SIZE>;
 
 using offset = uint32_t;
 using descriptorPipelineOffsetsMap = std::map<Uniform::offsetsMapKey, Uniform::offsets>;
 
-constexpr uint8_t RESOURCE_SIZE = 20;
-constexpr std::string_view SWAPCHAIN_TARGET_ID = "Swapchain";
-extern const std::vector<RENDER_PASS> ALL;
+extern const std::set<PASS> ALL;
+extern const std::vector<PASS> ACTIVE;
 
 // clang-format off
 using FLAG = enum : FlagBits {
@@ -74,18 +68,6 @@ struct SwapchainResources {
     std::vector<VkImageView> views;
 };
 
-struct SubmitResource {
-    uint32_t waitSemaphoreCount = 0;
-    std::array<VkSemaphore, RESOURCE_SIZE> waitSemaphores = {};
-    std::array<VkPipelineStageFlags, RESOURCE_SIZE> waitDstStageMasks = {};
-    uint32_t commandBufferCount = 0;
-    std::array<VkCommandBuffer, RESOURCE_SIZE> commandBuffers = {};
-    uint32_t signalSemaphoreCount = 0;
-    std::array<VkSemaphore, RESOURCE_SIZE> signalSemaphores = {};
-    // Set below for stages the signal semaphores should wait on.
-    std::array<VkPipelineStageFlags, RESOURCE_SIZE> signalSrcStageMasks = {};
-};
-
 struct Data {
     std::vector<VkFramebuffer> framebuffers;
     std::vector<VkCommandBuffer> priCmds;
@@ -108,7 +90,7 @@ struct Resources {
 };
 
 struct CreateInfo {
-    RENDER_PASS type;
+    PASS type;
     std::string name;
     std::unordered_set<PIPELINE> pipelineTypes;
     FlagBits flags = (FLAG::SWAPCHAIN | FLAG::DEPTH | FLAG::MULTISAMPLE);
@@ -117,7 +99,7 @@ struct CreateInfo {
 };
 
 // TEXTURE
-constexpr std::string_view DEFAULT_2D_TEXTURE_ID = "Render Pass Texture 2D Texture";
+constexpr std::string_view DEFAULT_2D_TEXTURE_ID = "Render Pass Default 2D Texture";
 extern const Texture::CreateInfo DEFAULT_2D_TEXTURE_CREATE_INFO;
 constexpr std::string_view PROJECT_2D_TEXTURE_ID = "Render Pass Project 2D Texture";
 extern const Texture::CreateInfo PROJECT_2D_TEXTURE_CREATE_INFO;

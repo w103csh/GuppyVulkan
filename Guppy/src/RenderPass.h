@@ -14,7 +14,7 @@
 #include "Texture.h"
 
 // clang-format off
-namespace Pipeline { class Base; }
+namespace Pipeline { class Graphics; }
 // clang-format on
 
 namespace RenderPass {
@@ -22,7 +22,7 @@ namespace RenderPass {
 class Handler;
 
 class Base : public Handlee<RenderPass::Handler> {
-    friend class Pipeline::Base;
+    friend class Pipeline::Graphics;
 
    public:
     Base(RenderPass::Handler &handler, const uint32_t &&offset, const RenderPass::CreateInfo *pCreateInfo);
@@ -31,7 +31,7 @@ class Base : public Handlee<RenderPass::Handler> {
     const FlagBits FLAGS;
     const std::string NAME;
     const offset OFFSET;
-    const RENDER_PASS TYPE;
+    const PASS TYPE;
 
     virtual void init(bool isFinal = false);
 
@@ -40,11 +40,12 @@ class Base : public Handlee<RenderPass::Handler> {
     virtual void postCreate() {}
     virtual void setSwapchainInfo();
     void createTarget();
-    void overridePipelineCreateInfo(const PIPELINE &type, Pipeline::CreateInfoVkResources &createInfoRes);
-    virtual void record(const uint32_t &frameIndex);
+    void overridePipelineCreateInfo(const PIPELINE &type, Pipeline::CreateInfoResources &createInfoRes);
+    virtual void record(const uint8_t frameIndex);
+    virtual void postDraw(const VkCommandBuffer &cmd, const uint8_t frameIndex);
 
     // PRIMARY
-    virtual void beginPass(const uint8_t &frameIndex,
+    virtual void beginPass(const uint8_t frameIndex,
                            VkCommandBufferUsageFlags &&primaryCommandUsage = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
                            VkSubpassContents &&subpassContents = VK_SUBPASS_CONTENTS_INLINE);
 
@@ -53,14 +54,14 @@ class Base : public Handlee<RenderPass::Handler> {
         vkCmdEndRenderPass(primaryCmd);
         //// End current debug marker region
         // ext::DebugMarkerEnd(priCmd);
-        vk::assert_success(vkEndCommandBuffer(primaryCmd));
+        // vk::assert_success(vkEndCommandBuffer(primaryCmd));
     }
 
     // SECONDARY
-    virtual void beginSecondary(const uint8_t &frameIndex);
-    virtual void endSecondary(const uint8_t &frameIndex, const VkCommandBuffer &priCmd);
+    virtual void beginSecondary(const uint8_t frameIndex);
+    virtual void endSecondary(const uint8_t frameIndex, const VkCommandBuffer &priCmd);
 
-    virtual void updateSubmitResource(SubmitResource &resource, const uint32_t &frameIndex) const;
+    virtual void updateSubmitResource(SubmitResource &resource, const uint8_t frameIndex) const;
 
     // SETTINGS
     constexpr const auto &getFormat() const { return format_; }
@@ -71,8 +72,8 @@ class Base : public Handlee<RenderPass::Handler> {
     constexpr bool usesDepth() const { return FLAGS & FLAG::DEPTH; }
     constexpr bool usesMultiSample() const { return FLAGS & FLAG::MULTISAMPLE; }
     constexpr bool usesSecondaryCommands() const { return FLAGS & FLAG::SECONDARY_COMMANDS; }
-    inline bool hasTargetSampler() const { return pTexture_ != nullptr; }
-    inline bool hasTargetSwapchain() const { return pTexture_ == nullptr; }
+    inline bool hasTargetSampler() const { return pTextures_.size(); }
+    inline bool hasTargetSwapchain() const { return getTargetId() == SWAPCHAIN_TARGET_ID; }
 
     // SUBPASS
     uint32_t getSubpassId(const PIPELINE &type) const;
@@ -97,7 +98,7 @@ class Base : public Handlee<RenderPass::Handler> {
     // UNIFORM
     inline constexpr const auto &getDescriptorPipelineOffsets() { return descPipelineOffsets_; }
 
-    const auto &getTargetId() { return textureIds_[0]; }
+    const std::string &getTargetId() const { return textureIds_[0]; }
 
     virtual void destroy();  // calls destroyFrameData
     virtual void destroyTargetResources();
@@ -155,7 +156,10 @@ class Base : public Handlee<RenderPass::Handler> {
 
     // SAMPLER
     std::vector<std::string> textureIds_;  // oh well, and it should be const
-    std::shared_ptr<Texture::Base> pTexture_;
+    std::vector<std::shared_ptr<Texture::Base>> pTextures_;
+
+    // BARRIER
+    BarrierResource barrierResource_;
 
    private:
     void createSemaphores();

@@ -1,17 +1,5 @@
 /*
- * Copyright (C) 2016 Google, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This came from LunarG Hologram sample, but has been radically altered at this point.
  */
 
 #include <cassert>
@@ -58,11 +46,11 @@ ShellWin32::ShellWin32(Game& game)
     : Shell(game), hinstance_(nullptr), hwnd_(nullptr), hmodule_(nullptr), minimized_(false) {}
 
 ShellWin32::~ShellWin32() {
-    cleanup_vk();
+    cleanupVk();
     FreeLibrary(hmodule_);
 }
 
-void ShellWin32::setPlatformSpecificExtensions() { instance_extensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME); }
+void ShellWin32::setPlatformSpecificExtensions() { instanceExtensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME); }
 
 void ShellWin32::createWindow() {
     const std::string class_name(settings_.name + "WindowClass");
@@ -92,7 +80,7 @@ void ShellWin32::createWindow() {
     SetWindowLongPtr(hwnd_, GWLP_USERDATA, (LONG_PTR)this);
 }
 
-PFN_vkGetInstanceProcAddr ShellWin32::load_vk() {
+PFN_vkGetInstanceProcAddr ShellWin32::loadVk() {
     const char filename[] = "vulkan-1.dll";
     HMODULE mod;
     PFN_vkGetInstanceProcAddr get_proc = nullptr;
@@ -397,11 +385,11 @@ void ShellWin32::quit() const { PostQuitMessage(0); }
 
 void ShellWin32::run() {
     setPlatformSpecificExtensions();
-    init_vk();
+    initVk();
 
     createWindow();
 
-    create_context();
+    createContext();
     resizeSwapchain(settings_.initial_width, settings_.initial_height, false);
 
     Win32Timer timer;
@@ -462,7 +450,7 @@ void ShellWin32::run() {
         CloseHandle(dirInst.hDir);
     }
 
-    destroy_context();
+    destroyContext();
 
     DestroyWindow(hwnd_);
 }

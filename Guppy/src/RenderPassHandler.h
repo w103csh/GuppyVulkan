@@ -1,7 +1,6 @@
 #ifndef RENDER_PASS_HANDLER_H
 #define RENDER_PASS_HANDLER_H
 
-#include <array>
 #include <memory>
 #include <set>
 #include <utility>
@@ -21,8 +20,10 @@ class Handler : public Game::Handler {
     Handler(Game* pGame);
 
     Uniform::offsetsMap makeUniformOffsetsMap();
+
+    constexpr const auto& getPasses() { return pPasses_; }
     // NOTE: this is not in order!!!
-    std::set<RENDER_PASS> getActivePassTypes(const PIPELINE& pipelineTypeIn = PIPELINE::ALL_ENUM);
+    void getActivePassTypes(std::set<PASS>& types, const PIPELINE& pipelineTypeIn = PIPELINE::ALL_ENUM);
 
     void init() override;
     void destroy() override;
@@ -30,12 +31,13 @@ class Handler : public Game::Handler {
     void acquireBackBuffer();
     void recordPasses();
     void update();
+    void updateFrameIndex();
 
     inline const auto& getPass(const offset& offset) {
         assert(offset >= 0 && offset < pPasses_.size());
         return pPasses_[offset];
     }
-    inline const auto& getPass(const RENDER_PASS& type) {
+    inline const auto& getPass(const PASS& type) {
         for (const auto& pPass : pPasses_)
             if (pPass->TYPE == type) return pPass;
         assert(false);
@@ -46,6 +48,7 @@ class Handler : public Game::Handler {
     void attachSwapchain();
     void detachSwapchain();
 
+    inline const auto& getCurrentFramebufferImage() const { return swpchnRes_.images[frameIndex_]; }
     inline const auto* getSwapchainImages() const { return swpchnRes_.images.data(); }
     inline const auto* getSwapchainViews() const { return swpchnRes_.views.data(); }
 
@@ -54,29 +57,33 @@ class Handler : public Game::Handler {
     std::set<std::string> targetClearFlags_;
 
     // PIPELINE
+    void addPipelinePassPairs(pipelinePassSet& set);
     void updateBindData(const pipelinePassSet& set);
+
+    inline const auto& getFrameFence(const uint8_t frameIndex) const { return frameFences_[frameIndex]; }
 
    private:
     void reset() override;
 
     uint8_t frameIndex_;
 
-    // PIPELINE
-    void createPipelines();
-
     // FENCES
     void createFences(VkFenceCreateFlags flags = VK_FENCE_CREATE_SIGNALED_BIT);
     std::vector<VkFence> fences_;
     std::vector<VkFence> frameFences_;
 
+   private:
     // SWAPCHAIN
     void createSwapchainResources();
     void destroySwapchainResources();
     SwapchainResources swpchnRes_;
 
+    // BARRIER
+    BarrierResource barrierResource_;
+
     // SUBMIT
-    void submit();
-    std::array<SubmitResource, RESOURCE_SIZE> submitResources_;
+    void submit(const uint8_t submitCount);
+    SubmitResources submitResources_;
     std::vector<VkSubmitInfo> submitInfos_;
 
     std::vector<std::unique_ptr<RenderPass::Base>> pPasses_;

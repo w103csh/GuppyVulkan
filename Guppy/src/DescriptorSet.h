@@ -11,41 +11,33 @@
 
 #include "ConstantsAll.h"
 #include "DescriptorConstants.h"
+#include "Handlee.h"
 
 namespace Descriptor {
 
 class Handler;
 
-// key:     { binding, arrayElement }
-typedef std::pair<uint32_t, uint32_t> bindingMapKey;
-// value:   { descriptorType, (optional) descriptor ID } // TODO: proper ID instead of string
-typedef std::pair<DESCRIPTOR, std::string_view> bindingMapValue;
-typedef std::pair<const bindingMapKey, bindingMapValue> bindingMapKeyValue;
-typedef std::map<bindingMapKey, bindingMapValue> bindingMap;
-
-//  SET
 namespace Set {
 
 const uint32_t OFFSET_ALL = UINT32_MAX;
 
-class Base {
+class Base : public Handlee<Descriptor::Handler> {
     friend class Descriptor::Handler;
 
    public:
-    Base(const DESCRIPTOR_SET&& type, const std::string&& macroName, const Descriptor::bindingMap&& bindingMap);
-
     const DESCRIPTOR_SET TYPE;
     const std::string MACRO_NAME;
-    const Descriptor::bindingMap BINDING_MAP;
 
     inline bool isInitialized() const { return !resources_[defaultResourceOffset_].pipelineTypes.empty(); }
 
+    constexpr const auto& getBindingMap() const { return bindingMap_; }
     inline const auto& getResource(const uint32_t& offset) const { return resources_[offset]; }
     const Descriptor::OffsetsMap getDescriptorOffsets(const uint32_t& offset) const;
     constexpr const auto& getDefaultResourceOffset() const { return defaultResourceOffset_; }
+    constexpr const auto& getSetCount() const { return setCount_; }
 
-    void updateOffsets(const Uniform::offsetsMap offsetsMap, const Descriptor::bindingMapKeyValue& bindingMapKeyValue,
-                       const PIPELINE& pipelineType);
+    void update(const uint32_t imageCount);
+    void updateOffsets(const Uniform::offsetsMap offsetsMap, const DESCRIPTOR& descType, const PIPELINE& pipelineType);
 
     bool hasTextureMaterial() const;
 
@@ -53,36 +45,42 @@ class Base {
     void findResourceForPipeline(std::vector<Resource>::iterator& it, const PIPELINE& type);
     void findResourceForDefaultPipeline(std::vector<Resource>::iterator& it, const PIPELINE& type);
     void findResourceSimilar(std::vector<Resource>::iterator& it, const PIPELINE& piplineType,
-                             const std::set<RENDER_PASS>& passTypes, const DESCRIPTOR& descType,
-                             const Uniform::offsets& offsets);
+                             const std::set<PASS>& passTypes, const DESCRIPTOR& descType, const Uniform::offsets& offsets);
+
+   protected:
+    Base(Handler& handler, const DESCRIPTOR_SET&& type, const std::string&& macroName,
+         const Descriptor::bindingMap&& bindingMap);
 
    private:
     inline auto& getDefaultResource() { return resources_[defaultResourceOffset_]; }
 
+    Descriptor::bindingMap bindingMap_;
+    uint8_t setCount_;
     const uint32_t defaultResourceOffset_;
     std::vector<Resource> resources_;
     Uniform::offsetsMap uniformOffsets_;
+
     // Texture offsets (0 if no texture) to resource offset map
-    std::map<uint32_t, std::map<uint32_t, std::vector<VkDescriptorSet>>> descriptorSetsMap_;
+    std::map<uint32_t, std::map<uint32_t, resourceInfoMapSetsPair>> descriptorSetsMap_;
 };
 
 //  DEFAULT
 namespace Default {
 class Uniform : public Set::Base {
    public:
-    Uniform();
+    Uniform(Handler& handler);
 };
 class Sampler : public Set::Base {
    public:
-    Sampler();
+    Sampler(Handler& handler);
 };
 class CubeSampler : public Set::Base {
    public:
-    CubeSampler();
+    CubeSampler(Handler& handler);
 };
 class ProjectorSampler : public Set::Base {
    public:
-    ProjectorSampler();
+    ProjectorSampler(Handler& handler);
 };
 }  // namespace Default
 

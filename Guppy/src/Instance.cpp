@@ -42,5 +42,5 @@ Instance::Default::Base::Base(const Buffer::Info&& info, Default::DATA* pData)
     : Instance::Base(),  //
       Buffer::DataItem<Default::DATA>(pData),
       Buffer::Item(std::forward<const Buffer::Info>(info)) {
-    DIRTY = true;
+    dirty = true;
 }

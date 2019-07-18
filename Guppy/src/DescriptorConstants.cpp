@@ -51,7 +51,51 @@ const std::set<DESCRIPTOR_SET> ALL = {
     // SCREEN SPACE
     DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT,
     DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT,
+    DESCRIPTOR_SET::STORAGE_SCREEN_SPACE_COMPUTE_POST_PROCESS,
+    DESCRIPTOR_SET::STORAGE_IMAGE_SCREEN_SPACE_COMPUTE_DEFAULT,
 };
+
+void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& write) const {
+    auto offset = (std::min)(index, uniqueDataSets - 1);
+
+    if (imageInfos.size()) {
+        // IMAGE
+        assert(bufferInfos.empty() && texelBufferView == VK_NULL_HANDLE);
+
+        assert(descCount == 1);  // I haven't thought about this yet.
+
+        write.descriptorCount = descCount;
+        write.pImageInfo = &imageInfos.at(offset).descInfo;
+
+    } else if (bufferInfos.size()) {
+        // BUFFER
+        assert(imageInfos.empty() && texelBufferView == VK_NULL_HANDLE);
+
+        offset *= descCount;
+        assert((offset + descCount) <= bufferInfos.size());
+
+        write.descriptorCount = descCount;
+        write.pBufferInfo = &bufferInfos.at(offset);
+
+    } else if (texelBufferView != VK_NULL_HANDLE) {
+        // TEXEL BUFFER
+        assert(bufferInfos.empty() && imageInfos.empty());
+
+        write.descriptorCount = 1;
+        write.pTexelBufferView = &texelBufferView;
+    }
+
+    assert(write.pBufferInfo != VK_NULL_HANDLE || write.pImageInfo != VK_NULL_HANDLE ||
+           write.pTexelBufferView != VK_NULL_HANDLE);
+}
+
+void ResourceInfo::reset() {
+    uniqueDataSets = 0;
+    descCount = 0;
+    imageInfos.clear();
+    bufferInfos.clear();
+    texelBufferView = VK_NULL_HANDLE;
+}
 
 }  // namespace Set
 

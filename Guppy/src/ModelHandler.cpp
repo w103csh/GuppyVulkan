@@ -30,7 +30,7 @@ void Model::Handler::makeTexture(const tinyobj::material_t &tinyobj_mat, const s
     if (!hasTexture) {
         if (!tinyobj_mat.diffuse_texname.empty() /*|| !to_m.specular_texname.empty() || !to_m.bump_texname.empty()*/) {
             // See if the texture already exists...
-            pCreateInfo->pTexture = textureHandler().getTextureByName(tinyobj_mat.name);
+            pCreateInfo->pTexture = textureHandler().getTexture(tinyobj_mat.name);
 
             if (pCreateInfo->pTexture != nullptr) return;
 

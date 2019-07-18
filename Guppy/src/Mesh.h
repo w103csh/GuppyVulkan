@@ -35,7 +35,7 @@ using CreateInfo = struct {
     bool isIndexed = true;  // This is dumb
     bool mappable = false;
     PIPELINE pipelineType = PIPELINE::ALL_ENUM;
-    std::set<RENDER_PASS> passTypes = Uniform::RENDER_PASS_ALL_SET;
+    std::set<PASS> passTypes = Uniform::PASS_ALL_SET;
     bool selectable = true;
 };
 
@@ -57,7 +57,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     const FlagBits FLAGS;
     const bool MAPPABLE;
     const std::string NAME;
-    const std::set<RENDER_PASS> PASS_TYPES;
+    const std::set<PASS> PASS_TYPES;
     const PIPELINE PIPELINE_TYPE;
     const MESH TYPE;
     const VERTEX VERTEX_TYPE;
@@ -109,9 +109,9 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     void updateTangentSpaceData();
 
     // DRAWING
-    bool shouldDraw(const RENDER_PASS& passTypeComp, const PIPELINE& pipelineType) const;
-    void draw(const RENDER_PASS& passType, const std::shared_ptr<Pipeline::BindData>& pipelineBindData,
-              const VkCommandBuffer& cmd, const uint8_t& frameIndex) const;
+    bool shouldDraw(const PASS& passTypeComp, const PIPELINE& pipelineType) const;
+    void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pipelineBindData, const VkCommandBuffer& cmd,
+              const uint8_t frameIndex) const;
 
     virtual void destroy();
 
@@ -146,8 +146,8 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     bool selectable_;
 
     // DSECRIPTOR
-    const Descriptor::Set::BindData& getDescriptorSetBindData(const RENDER_PASS& passType) const;
-    std::map<std::set<RENDER_PASS>, Descriptor::Set::BindData> descriptorBindDataMap_;
+    const Descriptor::Set::BindData& getDescriptorSetBindData(const PASS& passType) const;
+    Descriptor::Set::bindDataMap bindDataMap_;
 
     BufferResource vertexRes_;
     std::vector<VB_INDEX_TYPE> indices_;

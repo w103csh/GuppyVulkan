@@ -4,33 +4,63 @@
 #include <algorithm>
 #include <future>
 #include <stb_image.h>
+#include <variant>
 
 #include "ConstantsAll.h"
 #include "ScreenSpace.h"
 #include "Shell.h"
 // HANDLERS
 #include "CommandHandler.h"
+#include "DescriptorHandler.h"
 #include "LoadingHandler.h"
 #include "MaterialHandler.h"
 #include "ShaderHandler.h"
 
-Texture::Handler::Handler(Game* pGame) : Game::Handler(pGame) {}
+Texture::Handler::Handler(Game* pGame)
+    : Game::Handler(pGame),  //
+      perFramebufferSuffix_("(.*) #(\\d+)$") {}
 
 void Texture::Handler::init() {
     reset();
 
-    make(&Texture::STATUE_CREATE_INFO);
-    make(&Texture::VULKAN_CREATE_INFO);
-    make(&Texture::HARDWOOD_CREATE_INFO);
-    make(&Texture::MEDIEVAL_HOUSE_CREATE_INFO);
-    make(&Texture::WOOD_CREATE_INFO);
-    make(&Texture::MYBRICK_CREATE_INFO);
-    make(&Texture::PISA_HDR_CREATE_INFO);
-    make(&Texture::SKYBOX_CREATE_INFO);
-    make(&RenderPass::DEFAULT_2D_TEXTURE_CREATE_INFO);
-    make(&RenderPass::PROJECT_2D_TEXTURE_CREATE_INFO);
-    make(&RenderPass::PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO);
-    make(&Texture::ScreenSpace::DEFAULT_2D_TEXTURE_CREATE_INFO);
+    // Transition storage images. I can't think of a better time to do this. Its
+    // not great but oh well.
+    std::vector<const CreateInfo*> pCreateInfos = {
+        &Texture::STATUE_CREATE_INFO,
+        &Texture::VULKAN_CREATE_INFO,
+        &Texture::HARDWOOD_CREATE_INFO,
+        &Texture::MEDIEVAL_HOUSE_CREATE_INFO,
+        &Texture::WOOD_CREATE_INFO,
+        &Texture::MYBRICK_CREATE_INFO,
+        &Texture::PISA_HDR_CREATE_INFO,
+        &Texture::SKYBOX_CREATE_INFO,
+        &RenderPass::DEFAULT_2D_TEXTURE_CREATE_INFO,
+        &RenderPass::PROJECT_2D_TEXTURE_CREATE_INFO,
+        &RenderPass::PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO,
+        &Texture::ScreenSpace::DEFAULT_2D_TEXTURE_CREATE_INFO,
+        &Texture::ScreenSpace::COMPUTE_2D_TEXTURE_CREATE_INFO,
+    };
+
+    // I think this does not get set properly, so I am not sure where the texture generation
+    // should be initialized.
+    assert(shell().context().imageCount == 3);
+
+    for (const auto& pCreateInfo : pCreateInfos) {
+        if (!pCreateInfo->perFramebuffer) {
+            // Just make normally.
+            make(pCreateInfo);
+        } else {
+            // Make a texture per framebuffer.
+            for (uint32_t i = 0; i < shell().context().imageCount; i++) {
+                auto textureInfo = *pCreateInfo;
+                // Append frame index suffixes so that the id's are unique.
+                textureInfo.name += Texture::Handler::getIdSuffix(i);
+                for (auto& sampInfo : textureInfo.samplerCreateInfos) sampInfo.name += Texture::Handler::getIdSuffix(i);
+                // Make texture
+                make(&textureInfo);
+            }
+        }
+    }
 }
 
 void Texture::Handler::reset() {
@@ -67,17 +97,54 @@ std::shared_ptr<Texture::Base>& Texture::Handler::make(const Texture::CreateInfo
         }
     } else {
         load(pTextures_.back(), pCreateInfo);
+        // Check if the texture is ready to be created on the device.
+        bool isReady = true;
+        for (auto& sampler : pTextures_.back()->samplers) {
+            if (sampler.usesSwapchain) {
+                isReady = false;
+                break;
+            }
+        }
+
+        if (isReady) {
+            createTexture(pTextures_.back(), false);
+        } else {
+            pTextures_.back()->status = STATUS::PENDING_SWAPCHAIN;
+        }
     }
 
     return pTextures_.back();
 }
 
-const std::shared_ptr<Texture::Base> Texture::Handler::getTextureByName(const std::string_view& name) const {
-    auto it = std::find_if(pTextures_.begin(), pTextures_.end(), [&name](auto& pTexture) { return pTexture->NAME == name; });
-    return it == pTextures_.end() ? nullptr : (*it);
+const std::shared_ptr<Texture::Base> Texture::Handler::getTexture(const std::string_view& textureId) const {
+    for (const auto& pTexture : pTextures_)
+        if (pTexture->NAME == textureId) return pTexture;
+    return nullptr;
 }
 
-void Texture::Handler::update() {
+const std::shared_ptr<Texture::Base> Texture::Handler::getTexture(const uint32_t index) const {
+    if (index < pTextures_.size()) return pTextures_[index];
+    return nullptr;
+}
+
+const std::shared_ptr<Texture::Base> Texture::Handler::getTexture(const std::string_view& textureId,
+                                                                  const uint8_t frameIndex) const {
+    auto textureIdWithSuffix = std::string(textureId) + Texture::Handler::getIdSuffix(frameIndex);
+    return getTexture(textureIdWithSuffix);
+}
+
+bool Texture::Handler::update(std::shared_ptr<Texture::Base> pTexture) {
+    // Update swapchain dependent textures
+    if (pTexture != nullptr) {
+        assert(pTexture->status != STATUS::READY);
+        // Currently this way of creation is only going to be used for dataless textures
+        // that rely on the parameters of the swapchain.
+        assert(pTexture->usesSwapchain);
+        bool wasDestroyed = pTexture->status == STATUS::DESTROYED;
+        createTexture(pTexture, false);
+        return wasDestroyed;
+    }
+
     // Check texture futures
     if (!texFutures_.empty()) {
         auto itFut = texFutures_.begin();
@@ -100,6 +167,8 @@ void Texture::Handler::update() {
             }
         }
     }
+
+    return false;
 }
 
 std::shared_ptr<Texture::Base> Texture::Handler::asyncLoad(std::shared_ptr<Texture::Base> pTexture, CreateInfo createInfo) {
@@ -108,101 +177,115 @@ std::shared_ptr<Texture::Base> Texture::Handler::asyncLoad(std::shared_ptr<Textu
 }
 
 void Texture::Handler::load(std::shared_ptr<Texture::Base>& pTexture, const CreateInfo* pCreateInfo) {
-    pTexture->aspect = FLT_MAX;
     for (auto& samplerCreateInfo : pCreateInfo->samplerCreateInfos) {
-        if (pCreateInfo->hasData) {
-            pTexture->samplers.emplace_back(Sampler::make(shell(), &samplerCreateInfo));
-        } else {
-            pTexture->samplers.emplace_back(&samplerCreateInfo);
-        }
+        pTexture->samplers.emplace_back(Sampler::make(shell(), &samplerCreateInfo, pCreateInfo->hasData));
 
         assert(!pTexture->samplers.empty());
         auto& sampler = pTexture->samplers.back();
 
-        // set texture-wide info
-        pTexture->flags |= sampler.flags;
+        if (pCreateInfo->hasData) assert(sampler.aspect != BAD_ASPECT);
 
-        float aspect = static_cast<float>(sampler.extent.width) / static_cast<float>(sampler.extent.height);
-        if (pTexture->aspect == FLT_MAX) {
-            pTexture->aspect = aspect;
-        } else if (!helpers::almost_equal(aspect, pTexture->aspect, 1)) {
-            std::string msg = "\nSampler \"" + samplerCreateInfo.name + "\" has an inconsistent aspect.\n";
-            shell().log(Shell::LOG_WARN, msg.c_str());
+        // Set texture-wide info
+        pTexture->flags |= sampler.flags;
+        pTexture->usesSwapchain |= sampler.usesSwapchain;
+
+        if (sampler.aspect != BAD_ASPECT) {
+            if (pTexture->aspect == BAD_ASPECT) {
+                pTexture->aspect = sampler.aspect;
+            } else if (!helpers::almost_equal(sampler.aspect, pTexture->aspect, 1)) {
+                std::string msg = "\nSampler \"" + samplerCreateInfo.name + "\" has an inconsistent aspect.\n";
+                shell().log(Shell::LOG_WARN, msg.c_str());
+            }
         }
     }
     assert(pTexture->samplers.size() && pTexture->samplers.size() == pCreateInfo->samplerCreateInfos.size());
 }
 
 // thread sync
-void Texture::Handler::createTexture(std::shared_ptr<Texture::Base> pTexture) {
+void Texture::Handler::createTexture(std::shared_ptr<Texture::Base> pTexture, bool stageResources) {
     assert(pTexture->samplers.size());
-    pTexture->pLdgRes = loadingHandler().createLoadingResources();
+
+    // Dataless textures don't need to be staged
+    if (stageResources) pTexture->pLdgRes = loadingHandler().createLoadingResources();
+    // Create the texture on the device
     for (auto& sampler : pTexture->samplers) createTextureSampler(pTexture, sampler);
-    loadingHandler().loadSubmit(std::move(pTexture->pLdgRes));
+
+    if (stageResources) loadingHandler().loadSubmit(std::move(pTexture->pLdgRes));
     pTexture->status = STATUS::READY;
+
     // Notify any materials to update their data
     materialHandler().updateTexture(pTexture);
 }
 
 void Texture::Handler::createTextureSampler(const std::shared_ptr<Texture::Base> pTexture, Sampler::Base& sampler) {
-    assert(sampler.arrayLayers > 0 && sampler.arrayLayers == sampler.pPixels.size());
+    assert(sampler.arrayLayers > 0);
 
     createImage(sampler, pTexture->pLdgRes);
     if (sampler.mipLevels > 1) {
         generateMipmaps(sampler, pTexture->pLdgRes);
-    } else {
+    } else if (pTexture->pLdgRes != nullptr) {
         /* As of now there are memory barries (transitions) in "createImages", "generateMipmaps",
          *	and here. Its kind of confusing and should potentionally be combined into one call
          *	to vkCmdPipelineBarrier. A single call might not be possible because you
          *	can/should use different queues based on staging and things.
          */
-        helpers::transitionImageLayout(pTexture->pLdgRes->graphicsCmd, sampler.image, sampler.FORMAT,
+        helpers::transitionImageLayout(pTexture->pLdgRes->graphicsCmd, sampler.image, sampler.format,
                                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                                        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                                        sampler.mipLevels, sampler.arrayLayers);
     }
     createImageView(shell().context().dev, sampler);
     createSampler(shell().context().dev, sampler);
-    createDescInfo(sampler);
+    createDescInfo(pTexture->DESCRIPTOR_TYPE, sampler);
 
     sampler.cleanup();
 }
 
 void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes) {
-    BufferResource stgRes = {};
-    VkDeviceSize memorySize = sampler.size();
-    auto memReqsSize = helpers::createBuffer(shell().context().dev, memorySize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                             VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                             shell().context().mem_props, stgRes.buffer, stgRes.memory);
-
-    void* pData;
-    size_t offset = 0;
-    vk::assert_success(vkMapMemory(shell().context().dev, stgRes.memory, 0, memReqsSize, 0, &pData));
-    // Copy data to memory
-    sampler.copyData(pData, offset);
-
-    vkUnmapMemory(shell().context().dev, stgRes.memory);
-
     VkImageCreateInfo imageInfo = sampler.getImageCreateInfo();
 
-    imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    // Loading data only settings for image
+    if (pLdgRes != nullptr) {
+        assert(sampler.arrayLayers == sampler.pPixels.size());
+        imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+    } else {
+        assert(sampler.pPixels.empty());
+    }
+
     // Using CmdBufHandler::getUniqueQueueFamilies(true, false, true) here might not be wise... To work
     // right it relies on the the two command buffers being created with the same data.
     auto queueFamilyIndices = commandHandler().getUniqueQueueFamilies(true, false, true);
     imageInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
     imageInfo.pQueueFamilyIndices = queueFamilyIndices.data();
 
-    helpers::createImage(shell().context().dev, imageInfo, shell().context().mem_props, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    helpers::createImage(shell().context().dev, imageInfo, shell().context().memProps, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
                          sampler.image, sampler.memory);
 
-    helpers::transitionImageLayout(pLdgRes->transferCmd, sampler.image, sampler.FORMAT, VK_IMAGE_LAYOUT_UNDEFINED,
-                                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                   VK_PIPELINE_STAGE_TRANSFER_BIT, sampler.mipLevels, sampler.arrayLayers);
+    // If loading data create a staging buffer, and copy/transition the data to the image.
+    if (pLdgRes != nullptr) {
+        BufferResource stgRes = {};
+        VkDeviceSize memorySize = sampler.size();
+        auto memReqsSize = helpers::createBuffer(shell().context().dev, memorySize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+                                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+                                                 shell().context().memProps, stgRes.buffer, stgRes.memory);
 
-    helpers::copyBufferToImage(pLdgRes->graphicsCmd, sampler.extent.width, sampler.extent.height, sampler.arrayLayers,
-                               stgRes.buffer, sampler.image);
+        void* pData;
+        size_t offset = 0;
+        vk::assert_success(vkMapMemory(shell().context().dev, stgRes.memory, 0, memReqsSize, 0, &pData));
+        // Copy data to memory
+        sampler.copyData(pData, offset);
 
-    pLdgRes->stgResources.push_back(stgRes);
+        vkUnmapMemory(shell().context().dev, stgRes.memory);
+
+        helpers::transitionImageLayout(pLdgRes->transferCmd, sampler.image, sampler.format, VK_IMAGE_LAYOUT_UNDEFINED,
+                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                                       VK_PIPELINE_STAGE_TRANSFER_BIT, sampler.mipLevels, sampler.arrayLayers);
+
+        helpers::copyBufferToImage(pLdgRes->graphicsCmd, sampler.extent.width, sampler.extent.height, sampler.arrayLayers,
+                                   stgRes.buffer, sampler.image);
+
+        pLdgRes->stgResources.push_back(stgRes);
+    }
 }
 
 void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes) {
@@ -293,7 +376,7 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
 }
 
 void Texture::Handler::createImageView(const VkDevice& dev, Sampler::Base& sampler) {
-    helpers::createImageView(dev, sampler.image, sampler.mipLevels, sampler.FORMAT, VK_IMAGE_ASPECT_COLOR_BIT,
+    helpers::createImageView(dev, sampler.image, sampler.mipLevels, sampler.format, VK_IMAGE_ASPECT_COLOR_BIT,
                              sampler.imageViewType, sampler.arrayLayers, sampler.view);
 }
 
@@ -305,8 +388,76 @@ void Texture::Handler::createSampler(const VkDevice& dev, Sampler::Base& sampler
                                   (sampler.NAME + " sampler").c_str());
 }
 
-void Texture::Handler::createDescInfo(Sampler::Base& sampler) {
-    sampler.imgDescInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    sampler.imgDescInfo.imageView = sampler.view;
-    sampler.imgDescInfo.sampler = sampler.sampler;
+void Texture::Handler::createDescInfo(const DESCRIPTOR& descType, Sampler::Base& sampler) {
+    sampler.imgInfo.descInfo.imageLayout = std::visit(Descriptor::GetTextureImageLayout{}, descType);
+    sampler.imgInfo.descInfo.imageView = sampler.view;
+    sampler.imgInfo.descInfo.sampler = sampler.sampler;
+    sampler.imgInfo.image = sampler.image;
+}
+
+void Texture::Handler::attachSwapchain() {
+    const auto& ctx = shell().context();
+
+    // Update swapchain dependent textures
+    std::vector<std::string> updateList;
+    for (auto& pTexture : pTextures_) {
+        if (pTexture->usesSwapchain && pTexture->status != STATUS::READY) {
+            for (auto& sampler : pTexture->samplers) {
+                if (sampler.usesSwapchain) {
+                    sampler.extent = ctx.extent;
+                    sampler.format = ctx.surfaceFormat.format;
+                    if (update(pTexture)) {
+                        std::smatch sm;
+                        if (std::regex_match(pTexture->NAME, sm, perFramebufferSuffix_)) {
+                            assert(sm.size() == 3);
+                            if (std::stoi(sm[2]) == 0) updateList.push_back(sm[1]);
+                        } else {
+                            updateList.push_back(pTexture->NAME);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // Notify the descriptor handler of all the remade textures
+    if (updateList.size()) descriptorHandler().updateBindData(updateList);
+
+    // Transition storage images. I can't think of a better time to do this. Its
+    // not great, but oh well.
+    for (const auto& pTexture : pTextures_) {
+        if (std::visit(Descriptor::IsStorageImage{}, pTexture->DESCRIPTOR_TYPE) && pTexture->PER_FRAMEBUFFER) {
+            for (const auto& sampler : pTexture->samplers) {
+                // TODO: Make an actual barrier. Not sure if it will ever be necessary
+                helpers::transitionImageLayout(commandHandler().transferCmd(), sampler.image, sampler.format,
+                                               VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
+                                               VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 1, 1);
+            }
+        }
+    }
+    // This will leave the global transfer command in a bad spot, but I don't like any of
+    // the command handler. It was the first thing I wrote, and makes no sense now that I
+    // know better.
+    commandHandler().endCmd(commandHandler().transferCmd());
+
+    VkSubmitInfo submitInfo = {};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandHandler().transferCmd();
+    vk::assert_success(vkQueueSubmit(commandHandler().transferQueue(), 1, &submitInfo, nullptr));
+}
+
+void Texture::Handler::detachSwapchain() {
+    for (auto& pTexture : pTextures_) {
+        if (pTexture->usesSwapchain) {
+            for (auto& sampler : pTexture->samplers) {
+                if (sampler.usesSwapchain) {
+                    pTexture->destroy(shell().context().dev);
+                }
+            }
+        }
+        // TODO: Will the imageCount ever change? If it can then
+        // PER_FRAMEBUFFER images need to also be remade/or checked
+        // here.
+    }
 }

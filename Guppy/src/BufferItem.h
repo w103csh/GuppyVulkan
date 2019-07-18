@@ -9,6 +9,7 @@
 namespace Buffer {
 
 struct CreateInfo {
+    uint32_t dataCount = 1;
     bool update = true;
 };
 
@@ -24,13 +25,13 @@ struct Info {
 class Item {
    public:
     Item(const Buffer::Info&& info)  //
-        : BUFFER_INFO(info), DIRTY(false) {
+        : BUFFER_INFO(info), dirty(false) {
         assert(BUFFER_INFO.bufferInfo.buffer != VK_NULL_HANDLE);
     }
     virtual ~Item() = default;
 
     const Buffer::Info BUFFER_INFO;
-    bool DIRTY;
+    bool dirty;
 
    protected:
     /*  Virtual inheritance only.
@@ -41,22 +42,42 @@ class Item {
         most derived class calls the constructor" of the virtually inherited
         class (this), so just add the public constructor above to that level.
     */
-    Item() : DIRTY(false) { assert(false); }
+    Item() : dirty(false) { assert(false); }
 };
 
-template <typename T>
+template <typename TDATA>
 class DataItem : public virtual Buffer::Item {
    public:
-    typedef T DATA;
+    typedef TDATA DATA;
 
-    DataItem(T* pData) : pData_(pData) { assert(pData_); }
+    DataItem(TDATA* pData) : pData_(pData) { assert(pData_); }
 
-    T& getRef() { return std::ref(*pData_); }
-    virtual void setData() {}
+    TDATA& getRef() { return std::ref(*pData_); }
+    virtual void setData(const uint32_t index = 0) {}
 
    protected:
-    T* pData_;
+    TDATA* pData_;
 };  // namespace Buffer
+
+// This is pretty slow on a bunch of levels, but I'd rather just have it work atm.
+template <typename TDATA>
+class PerFramebufferDataItem : public Buffer::DataItem<TDATA> {
+   public:
+    PerFramebufferDataItem(TDATA* pData) : Buffer::DataItem<TDATA>(pData) {}
+
+   protected:
+    void setData(const uint32_t index = UINT32_MAX) override {
+        if (index == UINT32_MAX) {
+            for (uint32_t i = 0; i < BUFFER_INFO.count; i++) std::memcpy(&pData_[i], &data_, sizeof(TDATA));
+        } else {
+            assert(index < BUFFER_INFO.count);
+            std::memcpy(&pData_[index], &data_, sizeof(TDATA));
+        }
+        dirty = true;
+    }
+
+    TDATA data_;
+};
 
 }  // namespace Buffer
 

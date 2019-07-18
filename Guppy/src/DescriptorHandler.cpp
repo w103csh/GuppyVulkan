@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <set>
 #include <sstream>
+#include <utility>
 #include <variant>
 
 #include "Mesh.h"
@@ -13,6 +14,7 @@
 #include "RenderPass.h"
 #include "ScreenSpace.h"
 // HANDLERS
+#include "ComputeHandler.h"
 #include "PipelineHandler.h"
 #include "RenderPassHandler.h"
 #include "ShaderHandler.h"
@@ -23,15 +25,17 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
     for (const auto& type : Descriptor::Set::ALL) {
         switch (type) {
                 // clang-format off
-            case DESCRIPTOR_SET::UNIFORM_DEFAULT: pDescriptorSets_.push_back(std::make_unique<Set::Default::Uniform>()); break;
-            case DESCRIPTOR_SET::SAMPLER_DEFAULT: pDescriptorSets_.push_back(std::make_unique<Set::Default::Sampler>()); break;
-            case DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT: pDescriptorSets_.push_back(std::make_unique<Set::Default::CubeSampler>()); break;
-            case DESCRIPTOR_SET::PROJECTOR_DEFAULT: pDescriptorSets_.push_back(std::make_unique<Set::Default::ProjectorSampler>()); break;
-            case DESCRIPTOR_SET::UNIFORM_PBR: pDescriptorSets_.push_back(std::make_unique<Set::PBR::Uniform>()); break;
-            case DESCRIPTOR_SET::UNIFORM_PARALLAX: pDescriptorSets_.push_back(std::make_unique<Set::Parallax::Uniform>()); break;
-            case DESCRIPTOR_SET::SAMPLER_PARALLAX: pDescriptorSets_.push_back(std::make_unique<Set::Parallax::Sampler>()); break;
-            case DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT: pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::DefaultUniform>()); break;
-            case DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT: pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::DefaultSampler>()); break;
+            case DESCRIPTOR_SET::UNIFORM_DEFAULT:                           pDescriptorSets_.push_back(std::make_unique<Set::Default::Uniform>(std::ref(*this))); break;
+            case DESCRIPTOR_SET::SAMPLER_DEFAULT:                           pDescriptorSets_.push_back(std::make_unique<Set::Default::Sampler>(std::ref(*this))); break;
+            case DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT:                      pDescriptorSets_.push_back(std::make_unique<Set::Default::CubeSampler>(std::ref(*this))); break;
+            case DESCRIPTOR_SET::PROJECTOR_DEFAULT:                         pDescriptorSets_.push_back(std::make_unique<Set::Default::ProjectorSampler>(std::ref(*this))); break;
+            case DESCRIPTOR_SET::UNIFORM_PBR:                               pDescriptorSets_.push_back(std::make_unique<Set::PBR::Uniform>(std::ref(*this))); break;
+            case DESCRIPTOR_SET::UNIFORM_PARALLAX:                          pDescriptorSets_.push_back(std::make_unique<Set::Parallax::Uniform>(std::ref(*this))); break;
+            case DESCRIPTOR_SET::SAMPLER_PARALLAX:                          pDescriptorSets_.push_back(std::make_unique<Set::Parallax::Sampler>(std::ref(*this))); break;
+            case DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT:              pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::DefaultUniform>(std::ref(*this))); break;
+            case DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT:              pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::DefaultSampler>(std::ref(*this))); break;
+            case DESCRIPTOR_SET::STORAGE_SCREEN_SPACE_COMPUTE_POST_PROCESS: pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::StorageComputePostProcess>(std::ref(*this))); break;
+            case DESCRIPTOR_SET::STORAGE_IMAGE_SCREEN_SPACE_COMPUTE_DEFAULT:pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::StorageImageComputeDefault>(std::ref(*this))); break;
             default: assert(false);  // add new pipelines here
                 // clang-format on
         }
@@ -43,6 +47,10 @@ void Descriptor::Handler::init() {
     reset();
     createPool();
     createLayouts();
+
+    assert(shell().context().imageCount == 3);  // Potential imageCount problem
+    // Determine the number of sets required
+    for (auto& pSet : pDescriptorSets_) pSet->update(shell().context().imageCount);
 }
 
 void Descriptor::Handler::createPool() {
@@ -115,10 +123,10 @@ void Descriptor::Handler::createLayouts() {
 
             // Gather bindings...
             std::vector<VkDescriptorSetLayoutBinding> bindings;
-            for (auto& bindingKeyValue : pSet->BINDING_MAP) {
-                auto it = res.offsets.map().find(std::get<0>(bindingKeyValue.second));
+            for (auto& bindingKeyValue : pSet->getBindingMap()) {
+                auto it = res.offsets.map().find(bindingKeyValue.second.descType);
                 if (it == res.offsets.map().end()) {
-                    it = pSet->getDefaultResource().offsets.map().find(std::get<0>(bindingKeyValue.second));
+                    it = pSet->getDefaultResource().offsets.map().find(bindingKeyValue.second.descType);
                     assert(it != pSet->getDefaultResource().offsets.map().end());
                 }
                 auto binding = getDecriptorSetLayoutBinding(bindingKeyValue, res.stages, it->second);
@@ -144,15 +152,15 @@ void Descriptor::Handler::createLayouts() {
 
 uint32_t Descriptor::Handler::getDescriptorCount(const DESCRIPTOR& descType, const Uniform::offsets& offsets) const {
     if (offsets.empty()) {
-        // If offsets is empty then it should not be a uniform descriptor, and the
+        // If offsets is empty then it should not have offsets, and the
         // count should always be 1. For now.
-        assert(!std::visit(IsUniform{}, descType));
+        assert(!std::visit(HasOffsets{}, descType));
         return 1;
     }
     const auto& min = *offsets.begin();
     if (offsets.size() == 1) {
         if (min == Descriptor::Set::OFFSET_ALL) {
-            if (std::visit(IsUniform{}, descType))
+            if (std::visit(HasOffsets{}, descType))
                 return static_cast<uint32_t>(uniformHandler().getDescriptorCount(descType, offsets));
             else
                 assert(false && "Unaccounted for scenario");
@@ -170,11 +178,11 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
 
     // Determine the number of layouts needed based on unique offsets for uniforms. gatherDescriptorSetOffsets
     // will fill out a Resource struct for the default, and all necessary pipeline defaults, and non-defaults.
-    for (const auto& keyValue : pSet->BINDING_MAP) {
+    for (const auto& [key, bindingInfo] : pSet->getBindingMap()) {
         for (const auto& pipelineType : pipelineTypes) {
             // Add the offsets to the offsets map (UNIFORMs are the only type that can have unique offsets so far).
-            if (std::visit(Descriptor::IsUniform{}, std::get<0>(keyValue.second))) {
-                pSet->updateOffsets(uniformHandler().getOffsetsMgr().getOffsetMap(), keyValue, pipelineType);
+            if (std::visit(Descriptor::HasOffsets{}, bindingInfo.descType)) {
+                pSet->updateOffsets(uniformHandler().getOffsetsMgr().getOffsetMap(), bindingInfo.descType, pipelineType);
             }
             // Add the pipeline type to the resource pipeline types set.
             pSet->getDefaultResource().pipelineTypes.insert(pipelineType);
@@ -189,8 +197,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
 
         for (const auto& [descriptorOffsets, passTypes] : descPipelineTypeKeyValue.second) {
             // Default offsets should never get here.
-            assert(
-                !(descPipelineTypeKeyValue.first.second == PIPELINE::ALL_ENUM && passTypes == Uniform::RENDER_PASS_ALL_SET));
+            assert(!(descPipelineTypeKeyValue.first.second == PIPELINE::ALL_ENUM && passTypes == Uniform::PASS_ALL_SET));
 
             pipelineTypes = {descPipelineTypeKeyValue.first.second};
 
@@ -198,7 +205,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
             // If pipeline type is ALL_ENUM the offsets come from a render pass(es), so ask
             // the render pass(es) what pipeline types are necessary.
             if (*pipelineTypes.begin() == PIPELINE::ALL_ENUM) {
-                assert(passTypes != Uniform::RENDER_PASS_ALL_SET);
+                assert(passTypes != Uniform::PASS_ALL_SET);
 
                 // Set a flag so that later you know it came from ALL_ENUM, and remove
                 // ALL_ENUM from the list.
@@ -207,7 +214,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
 
                 // Add the specific types that need to be iterated through for ALL_ENUM.
                 for (const auto& passType : passTypes) {
-                    assert(passType != RENDER_PASS::ALL_ENUM);
+                    assert(passType != PASS::ALL_ENUM);
                     passHandler().getPass(passType)->addPipelineTypes(pipelineTypes);
                 }
             }
@@ -219,9 +226,9 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
              *      the pipeline.
              *
              *      PIPELINE::ALL_ENUM should NOT be used.
-             *      RENDER_PASS::ALL_ENUM is required.
+             *      PASS::ALL_ENUM is required.
              *
-             *      (ex: PIPELINE::TRI_LIST_COLOR, RENDER_PASS::ALL_ENUM)
+             *      (ex: PIPELINE::TRI_LIST_COLOR, PASS::ALL_ENUM)
              *
              *      TODO: add the create info stuff mentioned above, and validate the types.
              *
@@ -230,9 +237,9 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
              *      be declared in the create info for the pass.
              *
              *      PIPELINE::ALL_ENUM can be used.
-             *      RENDER_PASS::ALL_ENUM should NOT be used.
+             *      PASS::ALL_ENUM should NOT be used.
              *
-             *      (ex: PIPELINE::ALL_ENUM, RENDER_PASS::SAMPLER)
+             *      (ex: PIPELINE::ALL_ENUM, PASS::SAMPLER)
              *
              *   Non-defaults should override any pipeline defaults, and pipeline defaults
              *   should override the main defualts declared in the OffsetsManager map.
@@ -241,7 +248,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
             for (const auto& pipelineType : pipelineTypes) {
                 assert(pSet->resources_.size());
 
-                if (passTypes == Uniform::RENDER_PASS_ALL_SET) {
+                if (passTypes == Uniform::PASS_ALL_SET) {
                     // PIPELINE DEFAULT
 
                     auto itDefault = ++pSet->resources_.begin();
@@ -259,7 +266,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
                         pSet->resources_.back().passTypes.insert(passTypes.begin(), passTypes.end());
                         // Update the iterator for use below.
                         itDefault = std::prev(pSet->resources_.end());
-                        assert(itDefault->passTypes == Uniform::RENDER_PASS_ALL_SET);
+                        assert(itDefault->passTypes == Uniform::PASS_ALL_SET);
                     }
 
                     // Update all non-defaults with the new info.
@@ -267,7 +274,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
                     pSet->findResourceForPipeline(itNonDefault, pipelineType);
 
                     while (itNonDefault != pSet->resources_.end()) {
-                        if (itNonDefault->passTypes != Uniform::RENDER_PASS_ALL_SET) {
+                        if (itNonDefault->passTypes != Uniform::PASS_ALL_SET) {
                             // Update the layout with the default offsets.
                             for (const auto& keyValue : itDefault->offsets.map()) {
                                 auto search = itNonDefault->offsets.map().find(keyValue.first);
@@ -299,7 +306,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
 
                     bool workFinished = false;
                     while (itNonDefault != pSet->resources_.end()) {
-                        if (itNonDefault->passTypes != Uniform::RENDER_PASS_ALL_SET) {
+                        if (itNonDefault->passTypes != Uniform::PASS_ALL_SET) {
                             // TODO: Doing it slowly here. Come back and speed it up if you want.
 
                             if (itNonDefault->passTypes == passTypes) {
@@ -321,7 +328,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
 
                                 // Copy the resource
                                 std::vector<Descriptor::Set::Resource> newLayoutResources;
-                                std::set<RENDER_PASS> tempSet;
+                                std::set<PASS> tempSet;
 
                                 // Get the set of passes in itNonDefault that are not in the incoming passes.
                                 std::set_difference(itNonDefault->passTypes.begin(), itNonDefault->passTypes.end(),
@@ -422,14 +429,13 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
     }
 }
 
-Descriptor::Set::resourceHelpers Descriptor::Handler::getResourceHelpers(const std::set<RENDER_PASS> passTypes,
-                                                                         const PIPELINE& pipelineType,
-                                                                         const std::vector<DESCRIPTOR_SET>& descSetTypes) {
+Descriptor::Set::resourceHelpers Descriptor::Handler::getResourceHelpers(
+    const std::set<PASS> passTypes, const PIPELINE& pipelineType, const std::vector<DESCRIPTOR_SET>& descSetTypes) const {
     // I don't care that this is redundant and slow atm.
 
     Set::resourceHelpers helpers;
     for (const auto& setType : descSetTypes) {
-        const auto& pSet = getSet(setType);
+        const auto& set = getDescriptorSet(setType);
 
         // Organize the descriptor set layout resources in a temporary structure that
         // will be used to attempt to cull redunancies.
@@ -437,26 +443,25 @@ Descriptor::Set::resourceHelpers Descriptor::Handler::getResourceHelpers(const s
         for (const auto& passType : passTypes) {
             // Look for non-default offsets first
             uint32_t i = 1;
-            for (; i < pSet->resources_.size(); i++) {
-                const auto& res = pSet->resources_[i];
+            for (; i < set.resources_.size(); i++) {
+                const auto& res = set.resources_[i];
                 if (res.pipelineTypes.count(pipelineType) && res.passTypes.count(passType)) {
-                    helpers.back().push_back({{passType}, &res, i, pSet->TYPE, res.passTypes});
+                    helpers.back().push_back({{passType}, &res, i, set.TYPE, res.passTypes});
                     break;
                 }
             }
-            if (i == pSet->resources_.size()) {
+            if (i == set.resources_.size()) {
                 // Look for default offsets second
-                for (i = 1; i < pSet->resources_.size(); i++) {
-                    const auto& res = pSet->resources_[i];
-                    if (res.pipelineTypes.count(pipelineType) && res.passTypes == Uniform::RENDER_PASS_ALL_SET) {
-                        helpers.back().push_back({{passType}, &res, i, pSet->TYPE, res.passTypes});
+                for (i = 1; i < set.resources_.size(); i++) {
+                    const auto& res = set.resources_[i];
+                    if (res.pipelineTypes.count(pipelineType) && res.passTypes == Uniform::PASS_ALL_SET) {
+                        helpers.back().push_back({{passType}, &res, i, set.TYPE, res.passTypes});
                         break;
                     }
                 }
                 // Add the default if no override exist
-                if (i == pSet->resources_.size()) {
-                    helpers.back().push_back(
-                        {{passType}, &pSet->resources_.front(), 0, pSet->TYPE, Uniform::RENDER_PASS_ALL_SET});
+                if (i == set.resources_.size()) {
+                    helpers.back().push_back({{passType}, &set.resources_.front(), 0, set.TYPE, Uniform::PASS_ALL_SET});
                 }
             }
         }
@@ -473,14 +478,14 @@ Descriptor::Set::resourceHelpers Descriptor::Handler::getResourceHelpers(const s
             auto setIndex = 0;
             // Compare each set at index0 with set at index1.
             for (; setIndex < helpers.size(); setIndex++) {
-                if (std::get<4>(helpers[setIndex][resourceIndex0]) != std::get<4>(helpers[setIndex][resourceIndex1])) break;
+                if (helpers[setIndex][resourceIndex0].passTypes2 != helpers[setIndex][resourceIndex1].passTypes2) break;
             }
             if (setIndex == helpers.size()) {
                 for (setIndex = 0; setIndex < helpers.size(); setIndex++) {
                     auto it = helpers[setIndex].begin() + resourceIndex1;
                     // Copy the pass types from the helper to be erased, to retain the info about the pass type the
                     // helper was created for.
-                    std::get<0>(helpers[setIndex][resourceIndex0]).insert(std::get<0>(*it).begin(), std::get<0>(*it).end());
+                    helpers[setIndex][resourceIndex0].passTypes1.insert(it->passTypes1.begin(), it->passTypes1.end());
                     helpers[setIndex].erase(it);
                 }
                 --resourceIndex1;
@@ -497,89 +502,114 @@ VkDescriptorSetLayoutBinding Descriptor::Handler::getDecriptorSetLayoutBinding(
     const Uniform::offsets& offsets) const {
     VkDescriptorSetLayoutBinding layoutBinding = {};
     layoutBinding.binding = keyValue.first.first;
-    layoutBinding.descriptorType = std::visit(GetVkType{}, std::get<0>(keyValue.second));
-    layoutBinding.descriptorCount = getDescriptorCount(std::get<0>(keyValue.second), offsets);
+    layoutBinding.descriptorType = std::visit(GetVkDescriptorType{}, keyValue.second.descType);
+    layoutBinding.descriptorCount = getDescriptorCount(keyValue.second.descType, offsets);
     layoutBinding.stageFlags = stageFlags;
     layoutBinding.pImmutableSamplers = nullptr;  // TODO: use this
     return layoutBinding;
 }
 
 // TODO: add params that can indicate to free/reallocate
-void Descriptor::Handler::getBindData(Mesh::Base& mesh) {
-    mesh.descriptorBindDataMap_.clear();
+void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::Set::bindDataMap& bindDataMap,
+                                      const std::shared_ptr<Material::Base>& pMaterial,
+                                      const std::shared_ptr<Texture::Base>& pTexture) {
+    bindDataMap.clear();
+
+    // Get a list of active passes for the pipeline type.
+    std::set<PASS> passTypes;
+    passHandler().getActivePassTypes(passTypes, pipelineType);
+    computeHandler().getActivePassTypes(passTypes, pipelineType);
 
     // Get the same descriptor sets info as the pipeline layouts.
-    auto helpers = getResourceHelpers(passHandler().getActivePassTypes(mesh.PIPELINE_TYPE), mesh.PIPELINE_TYPE,
-                                      pipelineHandler().getPipeline(mesh.PIPELINE_TYPE)->DESCRIPTOR_SET_TYPES);
+    auto resHelpers =
+        getResourceHelpers(passTypes, pipelineType, pipelineHandler().getPipeline(pipelineType)->DESCRIPTOR_SET_TYPES);
 
-    for (const auto& resourceTuples : helpers) {
-        assert(resourceTuples.size());
-        auto& pSet = getSet(std::get<3>(resourceTuples.front()));
+    for (const auto& helpers : resHelpers) {
+        assert(helpers.size());
+        auto& pSet = getSet(helpers.front().setType);
 
         // Check for a texture offset.
         uint32_t textureOffset = 0;
         if (pSet->hasTextureMaterial()) {
-            assert(mesh.getMaterial()->hasTexture());
-            textureOffset = mesh.getMaterial()->getTexture()->OFFSET;
+            assert(pTexture != nullptr);
+            textureOffset = pTexture->OFFSET;
         }
+
+        // TODO: there are double fetches from the maps here.
 
         // Get/create the resource offset map for the material (or 0 if no material).
-        if (pSet->descriptorSetsMap_.count(textureOffset) == 0) {
-            pSet->descriptorSetsMap_.insert({textureOffset, {}});
+        auto itDescSetsMap = pSet->descriptorSetsMap_.find(textureOffset);
+        if (itDescSetsMap == pSet->descriptorSetsMap_.end()) {
+            // Add a element with the proper number of sets
+            auto it = pSet->descriptorSetsMap_.insert({textureOffset, {}});
+            assert(it.second);
+            itDescSetsMap = it.first;
         }
-        auto& resourceOffsetsMap = pSet->descriptorSetsMap_.at(textureOffset);
 
-        for (const auto& resourceTuple : resourceTuples) {
+        for (const auto& helper : helpers) {
             // Get/create the descriptor sets map element for the resource.
-            if (resourceOffsetsMap.count(std::get<2>(resourceTuple)) == 0) {
-                resourceOffsetsMap.insert({std::get<2>(resourceTuple), {}});
+            auto itResOffsetsMap = itDescSetsMap->second.find(helper.resourceOffset);
+            if (itResOffsetsMap == itDescSetsMap->second.end()) {
+                // Add a element with the proper number of sets
+                auto it = itDescSetsMap->second.insert({
+                    helper.resourceOffset,
+                    {
+                        std::make_shared<Set::resourceInfoMap>(),
+                        std::vector<VkDescriptorSet>(pSet->getSetCount()),
+                    },
+                });
+                assert(it.second);
+                itResOffsetsMap = it.first;
 
-                allocateDescriptorSets(*std::get<1>(resourceTuple), resourceOffsetsMap.at(std::get<2>(resourceTuple)));
-                updateDescriptorSets(pSet->BINDING_MAP, pSet->getDescriptorOffsets(std::get<2>(resourceTuple)),
-                                     resourceOffsetsMap.at(std::get<2>(resourceTuple)), &mesh);
+                // Allocate
+                allocateDescriptorSets(std::ref(*helper.pResource), itResOffsetsMap->second.second);
+
+                // Update
+                updateDescriptorSets(pSet->getBindingMap(), pSet->getDescriptorOffsets(helper.resourceOffset),
+                                     itResOffsetsMap->second, pMaterial, pTexture);
+            }
+            const auto& [pInfoMap, sets] = itResOffsetsMap->second;
+
+            // Not sure what to do atm if this is not true. Sets probably need to be allocated, and
+            // updated. But I am not sure if this will ever happen.
+            assert(sets.size() == pSet->getSetCount());
+
+            auto itBindDataMap = bindDataMap.find(helper.passTypes1);
+            if (itBindDataMap == bindDataMap.end()) {
+                auto it = bindDataMap.insert({
+                    helper.passTypes1,
+                    {0, std::vector<std::vector<VkDescriptorSet>>(sets.size())},
+                });
+                assert(it.second);
+                itBindDataMap = it.first;
             }
 
-            // Add bind data for mesh
-
-            if (mesh.descriptorBindDataMap_.count(std::get<0>(resourceTuple)) == 0) {
-                mesh.descriptorBindDataMap_.insert(
-                    {std::get<0>(resourceTuple),
-                     {0, std::vector<std::vector<VkDescriptorSet>>(shell().context().imageCount)}});
+            if (sets.size() > itBindDataMap->second.descriptorSets.size()) {
+                while (sets.size() != itBindDataMap->second.descriptorSets.size())  //
+                    itBindDataMap->second.descriptorSets.push_back(itBindDataMap->second.descriptorSets.front());
+            } else if (sets.size() != itBindDataMap->second.descriptorSets.size()) {
+                // Set needs to be duplicated for existing image count depenedent sets
+                assert(itBindDataMap->second.descriptorSets.size() == shell().context().imageCount);
             }
-            auto& bindData = mesh.descriptorBindDataMap_.at(std::get<0>(resourceTuple));
 
-            assert(bindData.descriptorSets.size() == resourceOffsetsMap.at(std::get<2>(resourceTuple)).size());
-            for (auto i = 0; i < bindData.descriptorSets.size(); i++) {
-                bindData.descriptorSets[i].push_back(resourceOffsetsMap.at(std::get<2>(resourceTuple))[i]);
+            for (auto i = 0; i < itBindDataMap->second.descriptorSets.size(); i++) {
+                itBindDataMap->second.descriptorSets[i].push_back(sets[i < sets.size() ? i : 0]);
             }
-            getDynamicOffsets(pSet, bindData.dynamicOffsets, mesh);
-        }
-    }
-}
 
-void Descriptor::Handler::updateBindData(const std::shared_ptr<Texture::Base>& pTexture) {
-    // Find the descriptor set(s)
-    for (const auto& pSet : pDescriptorSets_) {
-        for (const auto& [key, descTypeTextureIdPair] : pSet->BINDING_MAP) {
-            if (std::get<1>(descTypeTextureIdPair) == pTexture->NAME) {
-                // Not trying to make this work for anything else atm.
-                assert(std::visit(IsCombinedSamplerPipeline{}, std::get<0>(descTypeTextureIdPair)));
-                assert(pSet->descriptorSetsMap_.size() == 1);
-                for (auto& [resourceOffset, descriptorSets] : pSet->descriptorSetsMap_.at(0)) {
-                    updateDescriptorSets(pSet->BINDING_MAP, pSet->getDescriptorOffsets(resourceOffset), descriptorSets);
-                }
-            }
+            // DYNAMIC OFFSETS
+            getDynamicOffsets(pSet, itBindDataMap->second.dynamicOffsets, pMaterial);
+
+            // This is for convenience. Might be more of a pain than its worth. I already
+            // had to change it to a shared_ptr.
+            assert(itBindDataMap->second.setResourceInfoMap.count(pSet->TYPE) == 0);
+            itBindDataMap->second.setResourceInfoMap[pSet->TYPE] = pInfoMap;
         }
     }
 }
 
 void Descriptor::Handler::allocateDescriptorSets(const Descriptor::Set::Resource& resource,
                                                  std::vector<VkDescriptorSet>& descriptorSets) {
-    auto setCount = static_cast<uint32_t>(shell().context().imageCount);
-    assert(setCount > 0);
-
-    descriptorSets.resize(setCount);
-    std::vector<VkDescriptorSetLayout> layouts(setCount, resource.layout);
+    std::vector<VkDescriptorSetLayout> layouts(descriptorSets.size(), resource.layout);
 
     VkDescriptorSetAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -591,79 +621,156 @@ void Descriptor::Handler::allocateDescriptorSets(const Descriptor::Set::Resource
 }
 
 void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bindingMap,
-                                               const Descriptor::OffsetsMap& offsets,
-                                               std::vector<VkDescriptorSet>& descriptorSets, const Mesh::Base* pMesh) const {
-    // std::vector<VkDescriptorImageInfo> imageInfos;
-    std::vector<std::vector<VkDescriptorBufferInfo>> bufferInfos;
-    // std::vector<VkBufferView> texelBufferViews;
-    std::vector<VkWriteDescriptorSet> writes;
+                                               const Descriptor::OffsetsMap& offsets, Set::resourceInfoMapSetsPair& pair,
+                                               const std::shared_ptr<Material::Base>& pMaterial,
+                                               const std::shared_ptr<Texture::Base>& pTexture) const {
+    std::vector<std::vector<VkWriteDescriptorSet>> writesList(pair.second.size());
+    assert(writesList.size() == pair.second.size());
 
-    uint32_t samplerIndex = 0;
-    for (const auto& keyValue : bindingMap) {
-        const auto& descType = std::get<0>(keyValue.second);
-
-        // Set binding info
-        writes.push_back(getWrite(keyValue));
-
-        // This stuff is not great but oh well.
-        const Uniform::offsets* pOffsets = nullptr;
-        if (std::visit(IsCombinedSampler{}, descType)) {
-            // There are no offsets for samplers. Yikes. Maybe one day...
-            assert(samplerIndex < offsets.map().count(descType));
-            auto it = offsets.map().equal_range(descType).first;
-            std::advance(it, samplerIndex);
-            pOffsets = &it->second;
+    for (const auto& [key, bindingInfo] : bindingMap) {
+        // Perpare the set resource info map
+        auto infoMapKey = std::make_pair(key.first, bindingInfo.descType);
+        auto itInfoMap = pair.first->find(infoMapKey);
+        if (itInfoMap == pair.first->end()) {
+            auto it = pair.first->insert({infoMapKey, {}});
+            assert(it.second);
+            itInfoMap = it.first;
         } else {
-            assert(offsets.map().count(descType) == 1);
-            pOffsets = &offsets.map().find(descType)->second;
+            itInfoMap->second.reset();
         }
-        assert(pOffsets != nullptr);
 
-        writes.back().descriptorCount = getDescriptorCount(descType, *pOffsets);
+        /* Let the set info resource helper struct know how many different data sets are
+         *  required, so that everything needed to interpret its contents is known (I don't
+         *  like copying this count here because who knows where it can fall out of sync, but
+         *  I can't think of anything else atm...).
+         */
+        itInfoMap->second.uniqueDataSets = bindingInfo.uniqueDataSets;
+        assert(itInfoMap->second.uniqueDataSets > 0);
 
-        // WRITE INFO
-        if (std::visit(IsUniformDynamic{}, descType)) {
+        // Set the basic binding info
+        for (auto i = 0; i < writesList.size(); i++) {
+            writesList[i].push_back(getWrite({key, bindingInfo}, pair.second[i]));
+        }
+
+        if (std::visit(HasOffsets{}, bindingInfo.descType)) {
+            // HAS OFFSETS
+
+            assert(offsets.map().count(bindingInfo.descType) == 1);
+            auto itOffsetsMap = offsets.map().find(bindingInfo.descType);
+            assert(itOffsetsMap->second.size());
+
+            uniformHandler().getWriteInfos(bindingInfo.descType, itOffsetsMap->second, itInfoMap->second);
+
+            assert(itInfoMap->second.bufferInfos.size() == (itInfoMap->second.uniqueDataSets * itInfoMap->second.descCount));
+
+        } else if (std::visit(IsUniformDynamic{}, bindingInfo.descType)) {
             // MATERIAL
-            assert(pMesh != nullptr);
-            pMesh->pMaterial_->setWriteInfo(writes.back());
-        } else if (std::visit(IsUniform{}, descType)) {
-            // UNIFORM
-            bufferInfos.push_back(uniformHandler().getWriteInfos(descType, *pOffsets));
-            writes.back().descriptorCount = static_cast<uint32_t>(bufferInfos.back().size());
-            writes.back().pBufferInfo = bufferInfos.back().data();
-        } else if (std::visit(IsCombinedSamplerMaterial{}, std::get<0>(keyValue.second))) {
+
+            assert(pMaterial != nullptr);
+            pMaterial->setDescriptorInfo(itInfoMap->second, 0);
+
+        } else if (std::visit(IsCombinedSamplerMaterial{}, bindingInfo.descType)) {
             // MATERIAL SAMPLER
-            assert(pMesh != nullptr && pMesh->getMaterial()->hasTexture());
-            pMesh->getMaterial()->getTexture()->setWriteInfo(writes.back(), samplerIndex++);
-        } else if (std::visit(IsCombinedSamplerPipeline{}, descType)) {
-            // PIPELINE SAMPLER
-            textureHandler().getTextureByName(std::get<1>(keyValue.second))->setWriteInfo(writes.back(), samplerIndex++);
+
+            assert(pTexture != nullptr);
+            uint32_t offset = 0;
+            const auto textureId = std::string(bindingInfo.textureId);
+            if (textureId.size()) {
+                // There are multiple samplers
+                offset = std::stoul(textureId);
+                assert(offset < pTexture->samplers.size());
+            }
+            itInfoMap->second.imageInfos.push_back(pTexture->samplers[offset].imgInfo);
+            itInfoMap->second.descCount = 1;
+
+        } else if (std::visit(IsPipelineImage{}, bindingInfo.descType)) {
+            // PIPELINE IMAGE/SAMPLER
+
+            auto pPipelineTexture = textureHandler().getTexture(bindingInfo.textureId);
+            if (pPipelineTexture != nullptr) {
+                // Single texture required
+                assert(itInfoMap->second.uniqueDataSets == 1);
+                // TODO: Maybe treat this scenario like above.
+                assert(pPipelineTexture->samplers.size() == 1);
+                itInfoMap->second.imageInfos.push_back(pPipelineTexture->samplers[0].imgInfo);
+
+            } else {
+                assert(itInfoMap->second.uniqueDataSets > 1);
+                for (uint32_t i = 0; i < itInfoMap->second.uniqueDataSets; i++) {
+                    // Check for per frame texture id suffix. This is for per swap
+                    pPipelineTexture = textureHandler().getTexture(bindingInfo.textureId, i);
+                    assert(pPipelineTexture != nullptr);
+                    // Never tested/thought about otherwise
+                    assert(pPipelineTexture->samplers.size() == 1);
+                    itInfoMap->second.imageInfos.push_back(pPipelineTexture->samplers[0].imgInfo);
+                }
+                assert(itInfoMap->second.imageInfos.size() <= writesList.size());
+            }
+            itInfoMap->second.descCount = 1;
+
+            assert(itInfoMap->second.uniqueDataSets == itInfoMap->second.imageInfos.size());
+
         } else {
             assert(false);
             throw std::runtime_error("Unhandled descriptor type");
         }
+
+        // Make sure descCount was set.
+        assert(itInfoMap->second.descCount);
+
+        for (uint32_t i = 0; i < writesList.size(); i++) {
+            auto& writes = writesList[i];
+            itInfoMap->second.setWriteInfo(i, writes.back());
+        }
     }
 
-    for (uint32_t i = 0; i < descriptorSets.size(); i++) {
-        for (auto& write : writes) write.dstSet = descriptorSets[i];
+    for (auto& writes : writesList) {
         vkUpdateDescriptorSets(shell().context().dev, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
     }
 }
 
-VkWriteDescriptorSet Descriptor::Handler::getWrite(const Descriptor::bindingMapKeyValue& keyValue) const {
+void Descriptor::Handler::updateBindData(const std::vector<std::string> textureIds) {
+    // Find the descriptor set(s)
+    for (const auto& pSet : pDescriptorSets_) {
+        for (const auto& [key, bindingInfo] : pSet->getBindingMap()) {
+            if (bindingInfo.textureId.size()) {
+                for (const auto& textureId : textureIds) {
+                    assert(textureId.size());
+                    // Because of the regex check for per framebuffer textures in the the texture
+                    // handler there can be a straight equivalence check here.
+                    if (textureId == bindingInfo.textureId) {
+                        // Not trying to make this work for anything else atm.
+                        assert(std::visit(IsPipelineImage{}, bindingInfo.descType));
+                        assert(pSet->descriptorSetsMap_.size() == 1);
+                        for (auto& [resourceOffset, descriptorSets] : pSet->descriptorSetsMap_.at(0)) {
+                            updateDescriptorSets(pSet->getBindingMap(), pSet->getDescriptorOffsets(resourceOffset),
+                                                 descriptorSets);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+VkWriteDescriptorSet Descriptor::Handler::getWrite(const Descriptor::bindingMapKeyValue& keyValue,
+                                                   const VkDescriptorSet& set) const {
     VkWriteDescriptorSet write = {};
     write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
     write.dstBinding = keyValue.first.first;
     write.dstArrayElement = keyValue.first.second;
-    write.descriptorType = std::visit(GetVkType{}, std::get<0>(keyValue.second));
+    write.descriptorType = std::visit(GetVkDescriptorType{}, keyValue.second.descType);
+    write.dstSet = set;
     return write;
 }
 
 void Descriptor::Handler::getDynamicOffsets(const std::unique_ptr<Descriptor::Set::Base>& pSet,
-                                            std::vector<uint32_t>& dynamicOffsets, Mesh::Base& mesh) {
-    for (auto& keyValue : pSet->BINDING_MAP) {
-        if (std::visit(IsUniformDynamic{}, std::get<0>(keyValue.second))) {
-            dynamicOffsets.push_back(static_cast<uint32_t>(mesh.getMaterial()->BUFFER_INFO.memoryOffset));
+                                            std::vector<uint32_t>& dynamicOffsets,
+                                            const std::shared_ptr<Material::Base>& pMaterial) {
+    for (auto& [key, bindingInfo] : pSet->getBindingMap()) {
+        if (std::visit(IsUniformDynamic{}, bindingInfo.descType)) {
+            assert(pMaterial != nullptr);
+            dynamicOffsets.push_back(static_cast<uint32_t>(pMaterial->BUFFER_INFO.memoryOffset));
         }
     }
 }

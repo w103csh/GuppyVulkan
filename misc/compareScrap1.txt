@@ -1,14 +1,27 @@
-validation layer: vkUpdateDescriptorSets()
+// MANAGER
 
-failed write update validation for Descriptor Set 0xa2 with error:
+template <class TBase>
+using ItemPointer = std::unique_ptr<TBase>;
 
-Write update to VkDescriptorSet 0xa2allocated with VkDescriptorSetLayout 0x2a binding #0 failed with error message:
+template <class TDerived>
+using ManagerType = Descriptor::Manager<Storage::Base, TDerived, ItemPointer>;
 
-Attempted write update to combined image sampler descriptor failed due to:
-
-Descriptor update with descriptorType VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER is being updated with
-invalid imageLayout VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL. Allowed layouts are: VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
-VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL, VK_IMAGE_LAYOUT_GENERAL, VK_IMAGE_LAYOUT_DEPTH_READ_ONLY_STENCIL_ATTACHMENT_OPTIMAL,
-VK_IMAGE_LAYOUT_DEPTH_ATTACHMENT_STENCIL_READ_ONLY_OPTIMAL. The Vulkan spec states: If descriptorType is VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE
-or VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, the imageLayout member of each element of pImageInfo must be a member of the list given
-in Sampled Image or Combined Image Sampler, corresponding to its type (https://www.khronos.org/registry/vulkan/specs/1.1-extensions/html/vkspec.html#VUID-VkWriteDescriptorSet-descriptorType-01403)
+// TODO: inner class of Handler?
+template <class TDerived>
+class Manager : public ManagerType<TDerived> {
+   public:
+    Manager(const std::string&& name, const DESCRIPTOR&& descriptorType, const uint8_t&& maxSize,
+            const std::string&& macroName)
+        : ManagerType<TDerived>{
+              std::forward<const std::string>(name),
+              std::forward<const DESCRIPTOR>(descriptorType),
+              std::forward<const uint8_t>(maxSize),
+              true,
+              VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
+              static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+              std::forward<const std::string>(macroName),
+              VK_SHARING_MODE_EXCLUSIVE,
+              0,
+          } {}
+};

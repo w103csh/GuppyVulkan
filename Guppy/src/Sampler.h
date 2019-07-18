@@ -33,7 +33,8 @@ class Base {
 
     void destroy(const VkDevice &dev);
 
-    const VkFormat FORMAT;
+    // TODO: Get rid of all these creation info members
+
     const VkImageCreateFlags IMAGE_FLAGS;
     const std::string NAME;
     const FlagBits NUM_CHANNELS;
@@ -41,7 +42,12 @@ class Base {
     const SAMPLER TYPE;
 
     FlagBits flags;  // TODO: remove this instead of passing a dynamic list to shaders?
+    bool usesSwapchain;
+    VkFormat format;
+    VkSampleCountFlagBits samples;
+    VkImageUsageFlags usage;
     VkExtent2D extent;
+    float aspect;
     uint32_t mipLevels, arrayLayers;
     VkImageType imageType;
     VkImage image;
@@ -50,12 +56,12 @@ class Base {
     VkImageView view;
     VkSampler sampler;
     std::vector<stbi_uc *> pPixels;
-    VkDescriptorImageInfo imgDescInfo;
+    ImageInfo imgInfo;
 };
 
 // FUNCTIONS
 
-Sampler::Base make(const Shell &shell, const CreateInfo *pCreateInfo);
+Sampler::Base make(const Shell &shell, const CreateInfo *pCreateInfo, const bool hasData);
 
 /*	FlagBits mask for CHANNELS:
         _1 -> 0x01

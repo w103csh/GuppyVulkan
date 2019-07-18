@@ -2,6 +2,8 @@
 #define TEXTURE_HANDLER_H
 
 #include <future>
+#include <regex>
+#include <string>
 #include <unordered_map>
 #include <vector>
 
@@ -21,18 +23,21 @@ class Handler : public Game::Handler {
     // the members of Texture::CreateInfo should be trivial.
     std::shared_ptr<Texture::Base>& make(const Texture::CreateInfo* pCreateInfo);
 
-    const std::shared_ptr<Texture::Base> getTextureByName(const std::string_view& name) const;
-    void update();
-
-    const std::shared_ptr<Texture::Base> getTexture(uint32_t index) {
-        if (index < pTextures_.size()) return pTextures_[index];
-        return nullptr;
-    }
+    const std::shared_ptr<Texture::Base> getTexture(const std::string_view& name) const;
+    const std::shared_ptr<Texture::Base> getTexture(const uint32_t index) const;
+    const std::shared_ptr<Texture::Base> getTexture(const std::string_view& name, const uint8_t frameIndex) const;
+    bool update(std::shared_ptr<Texture::Base> pTexture = nullptr);
     inline uint32_t getCount() { return static_cast<uint32_t>(pTextures_.size()); }
 
     // TODO: should these be public? Moved these for render to sampler.
     void createSampler(const VkDevice& dev, Sampler::Base& texSampler);
-    void createDescInfo(Sampler::Base& texSampler);
+    void createDescInfo(const DESCRIPTOR& descType, Sampler::Base& texSampler);
+
+    // SWAPCHAIN
+    void attachSwapchain();
+    void detachSwapchain();
+
+    static inline std::string getIdSuffix(const uint32_t index) { return (" #" + std::to_string(index)); }
 
    private:
     void reset() override;
@@ -40,7 +45,7 @@ class Handler : public Game::Handler {
     std::shared_ptr<Texture::Base> asyncLoad(std::shared_ptr<Texture::Base> pTexture, CreateInfo createInfo);
     void load(std::shared_ptr<Texture::Base>& pTexture, const CreateInfo* pCreateInfo);
 
-    void createTexture(std::shared_ptr<Texture::Base> pTexture);
+    void createTexture(std::shared_ptr<Texture::Base> pTexture, bool stageResources = true);
     void createTextureSampler(const std::shared_ptr<Texture::Base> pTexture, Sampler::Base& texSampler);
     void createImage(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes);
     void generateMipmaps(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes);
@@ -48,6 +53,9 @@ class Handler : public Game::Handler {
 
     std::vector<std::shared_ptr<Texture::Base>> pTextures_;
     std::vector<std::future<std::shared_ptr<Texture::Base>>> texFutures_;
+
+    // REGEX
+    std::regex perFramebufferSuffix_;
 };
 
 }  // namespace Texture

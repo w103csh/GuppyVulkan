@@ -64,18 +64,16 @@ struct DATA {
     // 16
 };
 
-// **********************
-//      Base
-// **********************
+// BASE
 
-class Base : public virtual Buffer::Item, public Descriptor::Interface {
+class Base : public Descriptor::Base {
    public:
     const MATERIAL TYPE;
 
     const STATUS& getStatus() const { return status_; }
 
     inline bool hasTexture() const { return pTexture_ != nullptr; }
-    inline const std::shared_ptr<Texture::Base>& getTexture() const { return pTexture_; }
+    constexpr const auto& getTexture() const { return pTexture_; }
 
     virtual FlagBits getFlags() = 0;
     virtual void setFlags(FlagBits flags) = 0;
@@ -83,11 +81,6 @@ class Base : public virtual Buffer::Item, public Descriptor::Interface {
 
     // OBJ
     virtual void setTinyobjData(const tinyobj::material_t& m){};
-
-    // DESCRIPTOR
-    inline void setWriteInfo(VkWriteDescriptorSet& write, uint32_t index = 0) const override {
-        write.pBufferInfo = &BUFFER_INFO.bufferInfo;
-    }
 
    protected:
     Base(const MATERIAL&& type, Material::CreateInfo* pCreateInfo);
@@ -99,9 +92,7 @@ class Base : public virtual Buffer::Item, public Descriptor::Interface {
     float repeat_;
 };
 
-// **********************
-//      Default
-// **********************
+// DEFAULT
 
 namespace Default {
 
@@ -123,7 +114,7 @@ struct CreateInfo : public Material::CreateInfo {
     float reflectionFactor = 0.85f;
 };
 
-class Base : public Buffer::DataItem<DATA>, public Material::Base {
+class Base : public Material::Base, public Buffer::DataItem<DATA> {
    public:
     Base(const Buffer::Info&& info, Default::DATA* pData, Default::CreateInfo* pCreateInfo);
 
@@ -137,7 +128,7 @@ class Base : public Buffer::DataItem<DATA>, public Material::Base {
     void setTinyobjData(const tinyobj::material_t& m) override;
 
    private:
-    void setData() override { DIRTY = true; };
+    void setData(const uint32_t index = 0) override { dirty = true; };
 };
 
 static void copyTinyobjData(const tinyobj::material_t& m, Default::CreateInfo& materialInfo) {

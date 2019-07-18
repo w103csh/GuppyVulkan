@@ -29,7 +29,7 @@ void UI::ImGuiHandler::update() {
     ImGui::Render();
 }
 
-void UI::ImGuiHandler::draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) {
+void UI::ImGuiHandler::draw(const VkCommandBuffer& cmd, const uint8_t frameIndex) {
     // Record Imgui Draw Data and draw funcs into command buffer
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd, frameIndex);
 }

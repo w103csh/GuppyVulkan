@@ -1,6 +1,7 @@
 
 #include "RenderPass.h"
 
+#include "Helpers.h"
 #include "Shell.h"
 // HANDLERS
 #include "CommandHandler.h"
@@ -38,9 +39,7 @@ RenderPass::Base::Base(RenderPass::Handler& handler, const uint32_t&& offset, co
       extent_(BAD_EXTENT_2D),
       depth_{},
       descPipelineOffsets_(pCreateInfo->descPipelineOffsets),
-      textureIds_(pCreateInfo->textureIds),
-      pTexture_(nullptr)  //
-{
+      textureIds_(pCreateInfo->textureIds) {
     // This is sloppy, but I don't really feel like changing a bunch of things.
     if (textureIds_.empty()) textureIds_.emplace_back(std::string(SWAPCHAIN_TARGET_ID));
     assert(textureIds_.size());
@@ -56,27 +55,49 @@ RenderPass::Base::Base(RenderPass::Handler& handler, const uint32_t&& offset, co
 void RenderPass::Base::init(bool isFinal) {
     auto& ctx = handler().shell().context();
 
-    // SAMPLER
-    if (getTargetId().compare(RenderPass::SWAPCHAIN_TARGET_ID) != 0) {
-        // Force only one texture, for now.
-        assert(textureIds_.size() == 1);
-        pTexture_ = RenderPass::Base::handler().textureHandler().getTextureByName(getTargetId());
-        // Force only one sampler, for now, and just assume its the target.
-        assert(pTexture_->samplers.size() == 1);
-        extent_ = pTexture_->samplers[0].extent;
-        assert(pTexture_ != nullptr && pTexture_->samplers.size());
+    // Find a texture target if necessary
+    if (getTargetId() != RenderPass::SWAPCHAIN_TARGET_ID) {
+        auto pTexture = handler().textureHandler().getTexture(getTargetId());
+        if (pTexture != nullptr) {
+            pTextures_.push_back(pTexture);
+        } else {
+            uint8_t frameIndex = 0;
+            do {
+                pTexture = handler().textureHandler().getTexture(getTargetId(), frameIndex++);
+                if (pTexture != nullptr) pTextures_.push_back(pTexture);
+            } while (pTexture != nullptr);
+        }
+        assert(pTextures_.size());
     }
 
-    // FRAME
-    format_ = ctx.surfaceFormat.format;
-    depthFormat_ = usesDepth() ? ctx.depthFormat : VK_FORMAT_UNDEFINED;
-    pipelineData_.samples = usesMultiSample() ? ctx.samples : VK_SAMPLE_COUNT_1_BIT;
     if (hasTargetSampler()) {
-        finalLayout_ = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    } else if (hasTargetSwapchain()) {
+        if (!usesSwapchain()) {
+            assert(pTextures_.size());
+            // Force only one sampler, for now, and just assume its the target.
+            for (auto i = 0; i < pTextures_.size(); i++) {
+                assert(pTextures_[i]->samplers.size() == 1);
+                if (i == 0) {
+                    extent_ = pTextures_[i]->samplers[0].extent;
+                    format_ = pTextures_[i]->samplers[0].format;
+                } else {
+                    assert(helpers::compExtent2D(extent_, pTextures_[i]->samplers[0].extent));
+                    assert(format_ = pTextures_[i]->samplers[0].format);
+                }
+            }
+        } else {
+            format_ = ctx.surfaceFormat.format;
+        }
+        //////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // finalLayout_ = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        finalLayout_ = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    } else {
+        format_ = ctx.surfaceFormat.format;
         // Check if this is the last swapchain dependent pass.
         finalLayout_ = isFinal ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
+
+    depthFormat_ = usesDepth() ? ctx.depthFormat : VK_FORMAT_UNDEFINED;
+    pipelineData_.samples = usesMultiSample() ? ctx.samples : VK_SAMPLE_COUNT_1_BIT;
 
     // Validate frame settings.
     assert(finalLayout_ != VK_IMAGE_LAYOUT_UNDEFINED);
@@ -104,13 +125,13 @@ void RenderPass::Base::create() {
 
     if (handler().settings().enable_debug_markers) {
         std::string markerName = NAME + " render pass";
-        ext::DebugMarkerSetObjectName(handler().shell().context().dev, (uint64_t)pass,
-                                      VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, markerName.c_str());
+        ext::DebugMarkerSetObjectName(handler().shell().context().dev, (uint64_t)pass, VK_DEBUG_REPORT_OBJECT_TYPE_PASS_EXT,
+                                      markerName.c_str());
     }
 }
 
 void RenderPass::Base::setSwapchainInfo() {
-    assert(extent_.height == BAD_EXTENT_2D.height && extent_.width == BAD_EXTENT_2D.width);
+    assert(helpers::compExtent2D(extent_, BAD_EXTENT_2D));
     extent_ = handler().shell().context().extent;
 }
 
@@ -143,39 +164,14 @@ void RenderPass::Base::createTarget() {
     assert(data.semaphores.size() <= RESOURCE_SIZE);
 }
 
-void RenderPass::Base::overridePipelineCreateInfo(const PIPELINE& type, Pipeline::CreateInfoVkResources& createInfoRes) {
+void RenderPass::Base::overridePipelineCreateInfo(const PIPELINE& type, Pipeline::CreateInfoResources& createInfoRes) {
     assert(pipelineData_.samples != VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM);
     createInfoRes.depthStencilStateInfo.depthTestEnable = pipelineData_.usesDepth;
     createInfoRes.depthStencilStateInfo.depthWriteEnable = pipelineData_.usesDepth;
     createInfoRes.multisampleStateInfo.rasterizationSamples = pipelineData_.samples;
 }
 
-void RenderPass::Base::record(const uint32_t& frameIndex) {
-    beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-    // pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-    // VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-
-    auto& priCmd = data.priCmds[frameIndex];
-    auto& secCmd = data.secCmds[frameIndex];
-    auto& pScene = handler().sceneHandler().getActiveScene();
-
-    auto it = pipelineTypeBindDataMap_.begin();
-    while (it != pipelineTypeBindDataMap_.end()) {
-        // Record the scene
-        pScene->record(TYPE, it->first, it->second, priCmd, secCmd, frameIndex);
-
-        std::advance(it, 1);
-        if (it != pipelineTypeBindDataMap_.end()) {
-            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
-            // vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
-        }
-    }
-
-    endPass(frameIndex);
-}
-
-void RenderPass::Base::beginPass(const uint8_t& frameIndex, VkCommandBufferUsageFlags&& primaryCommandUsage,
-                                 VkSubpassContents&& subpassContents) {
+void RenderPass::Base::record(const uint8_t frameIndex) {
     // FRAME UPDATE
     beginInfo_.framebuffer = data.framebuffers[frameIndex];
     auto& priCmd = data.priCmds[frameIndex];
@@ -188,16 +184,81 @@ void RenderPass::Base::beginPass(const uint8_t& frameIndex, VkCommandBufferUsage
     // PRIMARY
     bufferInfo = {};
     bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    bufferInfo.flags = primaryCommandUsage;
+    bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
 
-    // FRAME COMMANDS
-    vkCmdSetScissor(priCmd, 0, 1, &scissor_);
-    vkCmdSetViewport(priCmd, 0, 1, &viewport_);
+    // PRE-PASS BARRIERS
+    // for (const auto& barrierType : PRE_PASS_BARRIER_TYPES) {
+    //    switch (barrierType) {
+    //        case RENDER_PASS_BARRIER::FRAMEBUFFER_WRITE_TO_WRITE: {
+    //            barrierResource_.reset();
+    //            helpers::attachementImageBarrierWriteToWrite(handler().getCurrentFramebufferImage(), barrierResource_);
+    //            helpers::recordBarriers(barrierResource_, priCmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+    //                                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    //        } break;
+    //    }
+    //}
+
+    beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, VK_SUBPASS_CONTENTS_INLINE);
+    // pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
+    // VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+
+    auto& secCmd = data.secCmds[frameIndex];
+    auto& pScene = handler().sceneHandler().getActiveScene();
+
+    auto it = pipelineTypeBindDataMap_.begin();
+    while (it != pipelineTypeBindDataMap_.end()) {
+        pScene->record(TYPE, it->first, it->second, priCmd, secCmd, frameIndex);
+
+        ++it;
+
+        if (it != pipelineTypeBindDataMap_.end()) {
+            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+            // vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
+        }
+    }
+
+    endPass(frameIndex);
+
+    postDraw(priCmd, frameIndex);
+
+    vk::assert_success(vkEndCommandBuffer(priCmd));
+}
+
+void RenderPass::Base::postDraw(const VkCommandBuffer& cmd, const uint8_t frameIndex) {
+    if (hasTargetSampler()) {
+        barrierResource_.reset();
+        auto texIndex = (std::min)(static_cast<uint8_t>(pTextures_.size() - 1), frameIndex);
+        helpers::attachementImageBarrierWriteToSamplerRead(pTextures_[texIndex]->samplers[0].image, barrierResource_);
+        helpers::recordBarriers(barrierResource_, cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    }
+}
+
+void RenderPass::Base::beginPass(const uint8_t frameIndex, VkCommandBufferUsageFlags&& primaryCommandUsage,
+                                 VkSubpassContents&& subpassContents) {
+    //// FRAME UPDATE
+    // beginInfo_.framebuffer = data.framebuffers[frameIndex];
+    auto& priCmd = data.priCmds[frameIndex];
+
+    //// RESET BUFFERS
+    // vkResetCommandBuffer(priCmd, 0);
+
+    //// BEGIN BUFFERS
+    // VkCommandBufferBeginInfo bufferInfo;
+    //// PRIMARY
+    // bufferInfo = {};
+    // bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    // bufferInfo.flags = primaryCommandUsage;
+    // vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
 
     //// Start a new debug marker region
     // ext::DebugMarkerBegin(primaryCmd, "Render x scene", glm::vec4(0.2f, 0.3f, 0.4f, 1.0f));
     vkCmdBeginRenderPass(priCmd, &beginInfo_, subpassContents);
+
+    // FRAME COMMANDS
+    vkCmdSetScissor(priCmd, 0, 1, &scissor_);
+    vkCmdSetViewport(priCmd, 0, 1, &viewport_);
 }
 
 void RenderPass::Base::createPass() {
@@ -219,7 +280,7 @@ void RenderPass::Base::createPass() {
 
 void RenderPass::Base::createBeginInfo() {
     beginInfo_ = {};
-    beginInfo_.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    beginInfo_.sType = VK_STRUCTURE_TYPE_PASS_BEGIN_INFO;
     beginInfo_.renderPass = pass;
 
     if (usesSecondaryCommands()) {
@@ -238,8 +299,7 @@ void RenderPass::Base::createBeginInfo() {
         secCmdBeginInfo_ = {};
         secCmdBeginInfo_.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         secCmdBeginInfo_.pNext = nullptr;
-        secCmdBeginInfo_.flags =
-            VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
+        secCmdBeginInfo_.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_PASS_CONTINUE_BIT;
         secCmdBeginInfo_.pInheritanceInfo = &inheritInfo_;
     }
 }
@@ -367,15 +427,15 @@ void RenderPass::Base::createDependencies() {
 }
 
 void RenderPass::Base::createCommandBuffers() {
+    // PRIMARY
     data.priCmds.resize(commandCount_);
     handler().commandHandler().createCmdBuffers(handler().commandHandler().graphicsCmdPool(), data.priCmds.data(),
-                                                VK_COMMAND_BUFFER_LEVEL_PRIMARY, handler().shell().context().imageCount);
+                                                VK_COMMAND_BUFFER_LEVEL_PRIMARY, commandCount_);
     if (usesSecondaryCommands() || true) {  // TODO: these things are never used
         // SECONDARY
-        data.secCmds.resize(handler().shell().context().imageCount);
+        data.secCmds.resize(commandCount_);
         handler().commandHandler().createCmdBuffers(handler().commandHandler().graphicsCmdPool(), data.secCmds.data(),
-                                                    VK_COMMAND_BUFFER_LEVEL_SECONDARY,
-                                                    handler().shell().context().imageCount);
+                                                    VK_COMMAND_BUFFER_LEVEL_SECONDARY, commandCount_);
     }
 }
 
@@ -383,33 +443,20 @@ void RenderPass::Base::createImageResources() {
     auto& ctx = handler().shell().context();
 
     if (hasTargetSampler()) {
-        auto& sampler = pTexture_->samplers.back();
-
-        helpers::createImage(ctx.dev, ctx.mem_props, handler().commandHandler().getUniqueQueueFamilies(true, false, true),
-                             (usesMultiSample() ? VK_SAMPLE_COUNT_1_BIT : getSamples()), format_, sampler.TILING,
-                             VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
-                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, sampler.image,
-                             sampler.memory);
-
-        helpers::createImageView(ctx.dev, sampler.image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, sampler.imageViewType, 1,
-                                 pTexture_->samplers.back().view);
-
-        handler().textureHandler().createSampler(ctx.dev, sampler);
-
-        sampler.imgDescInfo.imageLayout = finalLayout_;
-        sampler.imgDescInfo.imageView = sampler.view;
-        sampler.imgDescInfo.sampler = sampler.sampler;
-
-        // TODO: This is getting a little too similar here. Maybe find a way to
-        // move this stuff to the texture handler.
-        bool wasRemade = pTexture_->status == STATUS::DESTROYED;
-        pTexture_->status = STATUS::READY;
-        handler().materialHandler().updateTexture(pTexture_);
-        if (wasRemade) {
-            handler().descriptorHandler().updateBindData(pTexture_);
+        for (auto& pTexture : pTextures_) {
+            // Force only one sampler, for now, and just assume its the target.
+            assert(pTexture->samplers.size() == 1);
+            auto& sampler = pTexture->samplers.back();
+            if (!usesSwapchain()) {
+                // I did not test or think this through. This might require postponing
+                // texture creation to here like the swapchain dependent samplers above.
+                assert(!usesMultiSample());
+            }
+            assert(pTexture->status == STATUS::READY);
+            assert((sampler.usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) > 0);
         }
     } else {
-        assert(pTexture_ == nullptr);
+        assert(pTextures_.empty());
     }
 
     if (usesMultiSample()) {
@@ -417,7 +464,7 @@ void RenderPass::Base::createImageResources() {
 
         images_.push_back({});
 
-        helpers::createImage(ctx.dev, ctx.mem_props, handler().commandHandler().getUniqueQueueFamilies(true, false, true),
+        helpers::createImage(ctx.dev, ctx.memProps, handler().commandHandler().getUniqueQueueFamilies(true, false, true),
                              pipelineData_.samples, format_, VK_IMAGE_TILING_OPTIMAL,
                              VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, images_.back().image,
@@ -435,7 +482,7 @@ void RenderPass::Base::createDepthResource() {
     if (pipelineData_.usesDepth) {
         VkImageTiling tiling;
         VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(ctx.physical_dev, depthFormat_, &props);
+        vkGetPhysicalDeviceFormatProperties(ctx.physicalDev, depthFormat_, &props);
 
         if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
             tiling = VK_IMAGE_TILING_LINEAR;
@@ -446,7 +493,7 @@ void RenderPass::Base::createDepthResource() {
             throw std::runtime_error(("depth format unsupported"));
         }
 
-        helpers::createImage(ctx.dev, ctx.mem_props, handler().commandHandler().getUniqueQueueFamilies(true, false, true),
+        helpers::createImage(ctx.dev, ctx.memProps, handler().commandHandler().getUniqueQueueFamilies(true, false, true),
                              pipelineData_.samples, depthFormat_, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, depth_.image,
                              depth_.memory);
@@ -497,48 +544,50 @@ void RenderPass::Base::createFramebuffers() {
      *  - target
      *      - swapchain
      *      - sampler
+     *
+     * TODO: Should it always be imageCount based?
      */
-    std::vector<VkImageView> attachmentViews;
-    // DEPTH
-    if (pipelineData_.usesDepth) {
-        assert(depth_.view != VK_NULL_HANDLE);
-        attachmentViews.push_back(depth_.view);
-    }
-    // MULTI-SAMPLE
-    if (usesMultiSample()) {
-        assert(images_.size() == 1);
-        assert(images_[0].view != VK_NULL_HANDLE);
-        attachmentViews.push_back(images_[0].view);
-    }
-    // TARGET
-    if (hasTargetSwapchain()) {
-        // SWAPCHAIN
-        attachmentViews.push_back({});
-    } else {
-        // SAMPLER
-        assert(pTexture_->samplers.size() == 1 && pTexture_->samplers[0].view != VK_NULL_HANDLE);
-        attachmentViews.push_back(pTexture_->samplers[0].view);
-    }
+    std::vector<std::vector<VkImageView>> attachmentViewsList(handler().shell().context().imageCount);
+    data.framebuffers.resize(attachmentViewsList.size());
 
     VkFramebufferCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
     createInfo.renderPass = pass;
-    createInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
-    createInfo.pAttachments = attachmentViews.data();
+    // createInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
+    // createInfo.pAttachments = attachmentViews.data();
     createInfo.width = extent_.width;
     createInfo.height = extent_.height;
     createInfo.layers = 1;
 
-    data.framebuffers.resize(handler().shell().context().imageCount);  // Should this count always be this?
-    for (auto i = 0; i < data.framebuffers.size(); i++) {
-        // TODO: HOLY SHIT DOES THIS MEAN THAT THERE SHOULD BE VIEWS
-        // FOR EVERY PASS FRAMEBUFFER???????????
-        if (hasTargetSwapchain()) {
-            attachmentViews.back() = handler().getSwapchainViews()[i];
+    for (uint8_t frameIndex = 0; frameIndex < attachmentViewsList.size(); frameIndex++) {
+        auto& attachmentViews = attachmentViewsList[frameIndex];
+        // DEPTH
+        if (pipelineData_.usesDepth) {
+            assert(depth_.view != VK_NULL_HANDLE);
+            attachmentViews.push_back(depth_.view);
         }
-        // Create the framebuffer...
+        // MULTI-SAMPLE
+        if (usesMultiSample()) {
+            assert(images_.size() == 1);
+            assert(images_[0].view != VK_NULL_HANDLE);
+            attachmentViews.push_back(images_[0].view);
+        }
+        // TARGET
+        if (hasTargetSwapchain()) {
+            // SWAPCHAIN
+            attachmentViews.push_back(handler().getSwapchainViews()[frameIndex]);
+        } else {
+            // SAMPLER
+            auto texIndex = (std::min)(static_cast<uint8_t>(pTextures_.size() - 1), frameIndex);
+            assert(pTextures_[texIndex]->samplers.size() == 1 && pTextures_[texIndex]->samplers[0].view != VK_NULL_HANDLE);
+            attachmentViews.push_back(pTextures_[texIndex]->samplers[0].view);
+        }
+
+        createInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
+        createInfo.pAttachments = attachmentViews.data();
+
         vk::assert_success(
-            vkCreateFramebuffer(handler().shell().context().dev, &createInfo, nullptr, &data.framebuffers[i]));
+            vkCreateFramebuffer(handler().shell().context().dev, &createInfo, nullptr, &data.framebuffers[frameIndex]));
     }
 }
 
@@ -565,29 +614,31 @@ void RenderPass::Base::updateBeginInfo() {
 void RenderPass::Base::destroyTargetResources() {
     auto& dev = handler().shell().context().dev;
 
-    // SAMPLER
-    if (usesSwapchain() && hasTargetSampler()) pTexture_->destroy(dev);
     // COLOR
     for (auto& color : images_) helpers::destroyImageResource(dev, color);
     images_.clear();
+
     // DEPTH
     helpers::destroyImageResource(dev, depth_);
+
     // FRAMEBUFFER
     for (auto& framebuffer : data.framebuffers) vkDestroyFramebuffer(dev, framebuffer, nullptr);
     data.framebuffers.clear();
 
+    // EXTENT
     extent_ = BAD_EXTENT_2D;
 
     // COMMAND
     helpers::destroyCommandBuffers(dev, handler().commandHandler().graphicsCmdPool(), data.priCmds);
     helpers::destroyCommandBuffers(dev, handler().commandHandler().graphicsCmdPool(), data.secCmds);
+
     // SEMAPHORE
     for (auto& semaphore : data.semaphores) vkDestroySemaphore(dev, semaphore, nullptr);
 
     data.semaphores.clear();
 }
 
-void RenderPass::Base::beginSecondary(const uint8_t& frameIndex) {
+void RenderPass::Base::beginSecondary(const uint8_t frameIndex) {
     if (secCmdFlag_) return;
     // FRAME UPDATE
     auto& secCmd = data.secCmds[frameIndex];
@@ -602,7 +653,7 @@ void RenderPass::Base::beginSecondary(const uint8_t& frameIndex) {
     secCmdFlag_ = true;
 }
 
-void RenderPass::Base::endSecondary(const uint8_t& frameIndex, const VkCommandBuffer& priCmd) {
+void RenderPass::Base::endSecondary(const uint8_t frameIndex, const VkCommandBuffer& priCmd) {
     if (!secCmdFlag_) return;
     // EXECUTE SECONDARY
     auto& secCmd = data.secCmds[frameIndex];
@@ -612,18 +663,18 @@ void RenderPass::Base::endSecondary(const uint8_t& frameIndex, const VkCommandBu
     secCmdFlag_ = false;
 }
 
-void RenderPass::Base::updateSubmitResource(SubmitResource& resource, const uint32_t& frameIndex) const {
-    if (data.signalSrcStageMask != VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM) {
-        std::memcpy(                                                    //
-            &resource.signalSemaphores[resource.signalSemaphoreCount],  //
-            &data.semaphores[frameIndex], sizeof(VkSemaphore)           //
-        );
-        std::memcpy(                                                       //
-            &resource.signalSrcStageMasks[resource.signalSemaphoreCount],  //
-            &data.signalSrcStageMask, sizeof(VkPipelineStageFlags)         //
-        );
-        resource.signalSemaphoreCount++;
-    }
+void RenderPass::Base::updateSubmitResource(SubmitResource& resource, const uint8_t frameIndex) const {
+    // if (data.signalSrcStageMask != VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM) {
+    //    std::memcpy(                                                    //
+    //        &resource.signalSemaphores[resource.signalSemaphoreCount],  //
+    //        &data.semaphores[frameIndex], sizeof(VkSemaphore)           //
+    //    );
+    //    std::memcpy(                                                       //
+    //        &resource.signalSrcStageMasks[resource.signalSemaphoreCount],  //
+    //        &data.signalSrcStageMask, sizeof(VkPipelineStageFlags)         //
+    //    );
+    //    resource.signalSemaphoreCount++;
+    //}
     std::memcpy(                                                //
         &resource.commandBuffers[resource.commandBufferCount],  //
         &data.priCmds[frameIndex], sizeof(VkCommandBuffer)      //

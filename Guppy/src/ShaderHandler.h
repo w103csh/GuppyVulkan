@@ -19,7 +19,7 @@ class Handler : public Game::Handler {
     void init() override;
     inline void destroy() override { reset(); }
 
-    void getStagesInfo(const SHADER &shaderType, const PIPELINE &pipelineType, const RENDER_PASS &passType,
+    void getStagesInfo(const SHADER &shaderType, const PIPELINE &pipelineType, const PASS &passType,
                        std::vector<VkPipelineShaderStageCreateInfo> &stagesInfo) const;
     VkShaderStageFlags getStageFlags(const std::set<SHADER> &shaderTypes) const;
 

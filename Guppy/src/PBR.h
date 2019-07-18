@@ -33,7 +33,7 @@ class Base : public Light::Base<DATA> {
    public:
     Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo);
 
-    void update(glm::vec3 &&position);
+    void update(glm::vec3 &&position, const uint32_t frameIndex);
 
     inline const glm::vec3 &getPosition() { return position; }
 
@@ -67,7 +67,7 @@ struct CreateInfo : public Material::CreateInfo {
     float roughness = 0.43f;
 };
 
-class Base : public Buffer::DataItem<DATA>, public Material::Base {
+class Base : public Material::Base, public Buffer::DataItem<DATA> {
    public:
     Base(const Buffer::Info &&info, PBR::DATA *pData, PBR::CreateInfo *pCreateInfo);
 
@@ -83,7 +83,7 @@ class Base : public Buffer::DataItem<DATA>, public Material::Base {
     void setRoughness(float r);
 
    private:
-    inline void setData() override { DIRTY = true; };
+    inline void setData(const uint32_t index = 0) override { dirty = true; };
 };
 
 }  // namespace PBR
@@ -98,7 +98,7 @@ namespace Set {
 namespace PBR {
 class Uniform : public Set::Base {
    public:
-    Uniform();
+    Uniform(Handler &handler);
 };
 }  // namespace PBR
 }  // namespace Set
@@ -130,12 +130,12 @@ extern const CreateInfo MATERIAL_CREATE_INFO;
 namespace Pipeline {
 namespace PBR {
 
-class Color : public Pipeline::Base {
+class Color : public Pipeline::Graphics {
    public:
     Color(Pipeline::Handler &handler);
 };
 
-class Texture : public Pipeline::Base {
+class Texture : public Pipeline::Graphics {
    public:
     Texture(Pipeline::Handler &handler);
 };
