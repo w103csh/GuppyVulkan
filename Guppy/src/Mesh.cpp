@@ -79,17 +79,17 @@ void Mesh::Base::prepare() {
         can allocate and update all at once.
     */
     if (status_ == STATUS::READY) {
-        handler().descriptorHandler().getBindData(std::ref(*this));
+        handler().descriptorHandler().getBindData(PIPELINE_TYPE, bindDataMap_, pMaterial_, pMaterial_->getTexture());
     } else {
         handler().ldgOffsets_.insert({TYPE, getOffset()});
     }
 }
 
-const Descriptor::Set::BindData& Mesh::Base::getDescriptorSetBindData(const RENDER_PASS& passType) const {
-    for (const auto& keyValue : descriptorBindDataMap_) {
-        if (keyValue.first.find(passType) != keyValue.first.end()) return keyValue.second;
+const Descriptor::Set::BindData& Mesh::Base::getDescriptorSetBindData(const PASS& passType) const {
+    for (const auto& [passTypes, bindData] : bindDataMap_) {
+        if (passTypes.find(passType) != passTypes.end()) return bindData;
     }
-    return descriptorBindDataMap_.at(Uniform::RENDER_PASS_ALL_SET);
+    return bindDataMap_.at(Uniform::PASS_ALL_SET);
 }
 
 // thread sync
@@ -127,7 +127,7 @@ void Mesh::Base::createBufferData(const VkCommandBuffer& cmd, BufferResource& st
     // STAGING RESOURCE
     res.memoryRequirements.size =
         helpers::createBuffer(ctx.dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ctx.mem_props,
+                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ctx.memProps,
                               stgRes.buffer, stgRes.memory);
 
     // FILL STAGING BUFFER ON DEVICE
@@ -153,7 +153,7 @@ void Mesh::Base::createBufferData(const VkCommandBuffer& cmd, BufferResource& st
     if (MAPPABLE) memProps |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
     helpers::createBuffer(ctx.dev, bufferSize,
                           // TODO: probably don't need to check memory requirements again
-                          usage, memProps, ctx.mem_props, res.buffer, res.memory);
+                          usage, memProps, ctx.memProps, res.buffer, res.memory);
 
     // COPY FROM STAGING TO FAST
     helpers::copyBuffer(cmd, stgRes.buffer, res.buffer, res.memoryRequirements.size);
@@ -364,27 +364,29 @@ void Mesh::Base::updateTangentSpaceData() {
     }
 }
 
-bool Mesh::Base::shouldDraw(const RENDER_PASS& passTypeComp, const PIPELINE& pipelineType) const {
+bool Mesh::Base::shouldDraw(const PASS& passTypeComp, const PIPELINE& pipelineType) const {
     if (pipelineType != PIPELINE_TYPE) return false;
     if (status_ != STATUS::READY) return false;
     for (const auto& passType : PASS_TYPES)
-        if (passType == RENDER_PASS::ALL_ENUM || passType == passTypeComp) return true;
+        if (passType == PASS::ALL_ENUM || passType == passTypeComp) return true;
     return false;
 }
 
-void Mesh::Base::draw(const RENDER_PASS& passType, const std::shared_ptr<Pipeline::BindData>& pipelineBindData,
-                      const VkCommandBuffer& cmd, const uint8_t& frameIndex) const {
+void Mesh::Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pipelineBindData,
+                      const VkCommandBuffer& cmd, const uint8_t frameIndex) const {
     vkCmdBindPipeline(cmd, pipelineBindData->bindPoint, pipelineBindData->pipeline);
 
-    const auto& descriptorBindData = getDescriptorSetBindData(passType);
+    const auto& descSetBindData = getDescriptorSetBindData(passType);
 
     // bindPushConstants(cmd);
 
-    vkCmdBindDescriptorSets(cmd, pipelineBindData->bindPoint, pipelineBindData->layout, descriptorBindData.firstSet,
-                            static_cast<uint32_t>(descriptorBindData.descriptorSets[frameIndex].size()),
-                            descriptorBindData.descriptorSets[frameIndex].data(),
-                            static_cast<uint32_t>(descriptorBindData.dynamicOffsets.size()),
-                            descriptorBindData.dynamicOffsets.data());
+    auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
+
+    vkCmdBindDescriptorSets(cmd, pipelineBindData->bindPoint, pipelineBindData->layout, descSetBindData.firstSet,
+                            static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
+                            descSetBindData.descriptorSets[setIndex].data(),
+                            static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
+                            descSetBindData.dynamicOffsets.data());
 
     // VERTEX
     VkBuffer vertexBuffers[] = {vertexRes_.buffer};

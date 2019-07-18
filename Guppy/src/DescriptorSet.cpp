@@ -2,13 +2,18 @@
 
 #include "DescriptorSet.h"
 
+#include <variant>
+
 #include "Texture.h"
+// HANDLERS
+#include "DescriptorHandler.h"
+#include "TextureHandler.h"
 
 namespace {
 Uniform::offsetsMapValue getOffsetsValueMapSansDefault(Uniform::offsetsMapValue map) {
     // Uniform::offsetsMapValue newMap = map;
     for (auto it = map.begin(); it != map.end();) {
-        if (it->second == Uniform::RENDER_PASS_ALL_SET)
+        if (it->second == Uniform::PASS_ALL_SET)
             it = map.erase(it);
         else
             ++it;
@@ -17,17 +22,20 @@ Uniform::offsetsMapValue getOffsetsValueMapSansDefault(Uniform::offsetsMapValue 
 }
 }  // namespace
 
-Descriptor::Set::Base::Base(const DESCRIPTOR_SET&& type, const std::string&& macroName,
+Descriptor::Set::Base::Base(Handler& handler, const DESCRIPTOR_SET&& type, const std::string&& macroName,
                             const Descriptor::bindingMap&& bindingMap)
-    : TYPE(type),             //
-      MACRO_NAME(macroName),  //
-      BINDING_MAP(bindingMap),
+    : Handlee(handler),
+      TYPE(type),
+      MACRO_NAME(macroName),
+      bindingMap_(bindingMap),
+      setCount_(0),
       resources_(1),
       defaultResourceOffset_(0) {
     // Create the default resource
     assert(resources_.size() == 1);
-    for (const auto& keyValue : BINDING_MAP) getDefaultResource().offsets.insert(std::get<0>(keyValue.second), {});
-    getDefaultResource().passTypes = Uniform::RENDER_PASS_ALL_SET;
+    for (const auto& [key, bindingInfo] : getBindingMap()) getDefaultResource().offsets.insert(bindingInfo.descType, {});
+
+    getDefaultResource().passTypes = Uniform::PASS_ALL_SET;
 }
 
 const Descriptor::OffsetsMap Descriptor::Set::Base::getDescriptorOffsets(const uint32_t& offset) const {
@@ -41,32 +49,52 @@ const Descriptor::OffsetsMap Descriptor::Set::Base::getDescriptorOffsets(const u
     return descriptorOffsets;
 }
 
-void Descriptor::Set::Base::updateOffsets(const Uniform::offsetsMap offsetsMap,
-                                          const Descriptor::bindingMapKeyValue& bindingMapKeyValue,
+void Descriptor::Set::Base::update(const uint32_t imageCount) {
+    for (auto& [key, bindingInfo] : bindingMap_) {
+        if (std::visit(Descriptor::IsImage{}, bindingInfo.descType)) {
+            // This is really convoluted, but I don't care atm. Only bindings with texture ids
+            // specified that have a per framebuffer suffix can have more than one.
+            const auto& pTexture = handler().textureHandler().getTexture(bindingInfo.textureId, 0);
+            if (pTexture != nullptr) {
+                // This is so bad it hurts.
+                assert(pTexture->PER_FRAMEBUFFER);
+                bindingInfo.uniqueDataSets = imageCount;
+            }
+        } else if (std::visit(Descriptor::HassPerFramebufferData{}, bindingInfo.descType)) {
+            bindingInfo.uniqueDataSets = imageCount;
+        }
+        // Update the number of sets needed based on the highest number of unique
+        // descriptors required.
+        setCount_ = (std::max)(setCount_, static_cast<uint8_t>(bindingInfo.uniqueDataSets));
+    }
+    assert(setCount_ > 0);
+}
+
+void Descriptor::Set::Base::updateOffsets(const Uniform::offsetsMap offsetsMap, const DESCRIPTOR& descType,
                                           const PIPELINE& pipelineType) {
     // Check for a pipeline specific offset
-    auto searchOffsetsMap = offsetsMap.find({std::get<0>(bindingMapKeyValue.second), pipelineType});
+    auto searchOffsetsMap = offsetsMap.find({descType, pipelineType});
     if (searchOffsetsMap != offsetsMap.end()) {
         uniformOffsets_[searchOffsetsMap->first] = searchOffsetsMap->second;
     }
 
     bool foundPassAll = false;
     // Check for render pass specific offsets.
-    searchOffsetsMap = offsetsMap.find({std::get<0>(bindingMapKeyValue.second), PIPELINE::ALL_ENUM});
+    searchOffsetsMap = offsetsMap.find({descType, PIPELINE::ALL_ENUM});
     assert(searchOffsetsMap != offsetsMap.end());
     for (const auto& [offsets, passTypes] : searchOffsetsMap->second) {
-        if (passTypes.find(RENDER_PASS::ALL_ENUM) != passTypes.end()) {
+        if (passTypes.find(PASS::ALL_ENUM) != passTypes.end()) {
             // Make sure the default is the proper set. The default is added immediately, so
             // no need to re-add it to the layout resource.
-            assert(passTypes == Uniform::RENDER_PASS_ALL_SET);
+            assert(passTypes == Uniform::PASS_ALL_SET);
 
             // A unique element for the UNIFORM descriptor type should already exist.
-            assert(getDefaultResource().offsets.map().count(std::get<0>(bindingMapKeyValue.second)) == 1);
+            assert(getDefaultResource().offsets.map().count(descType) == 1);
 
-            auto it = getDefaultResource().offsets.map().find(std::get<0>(bindingMapKeyValue.second));
+            auto it = getDefaultResource().offsets.map().find(descType);
             if (it->second.empty()) {
                 // Add the default offsets from the offset manager.
-                getDefaultResource().offsets.insert(std::get<0>(bindingMapKeyValue.second), offsets);
+                getDefaultResource().offsets.insert(descType, offsets);
             } else {
                 // Make sure there are not bad duplicates in the offsets manager.
                 assert(it->second == offsets);
@@ -89,8 +117,8 @@ void Descriptor::Set::Base::updateOffsets(const Uniform::offsetsMap offsetsMap,
 }
 
 bool Descriptor::Set::Base::hasTextureMaterial() const {
-    for (const auto& keyValue : BINDING_MAP) {
-        if (std::visit(IsCombinedSamplerMaterial{}, std::get<0>(keyValue.second))) return true;
+    for (const auto& [key, bindingInfo] : getBindingMap()) {
+        if (std::visit(IsCombinedSamplerMaterial{}, bindingInfo.descType)) return true;
     }
     return false;
 }
@@ -104,14 +132,14 @@ void Descriptor::Set::Base::findResourceForPipeline(std::vector<Resource>::itera
 
 void Descriptor::Set::Base::findResourceForDefaultPipeline(std::vector<Resource>::iterator& it, const PIPELINE& type) {
     while (it != resources_.end()) {
-        if (it->pipelineTypes.count(type) > 0 && it->passTypes == Uniform::RENDER_PASS_ALL_SET) return;
+        if (it->pipelineTypes.count(type) > 0 && it->passTypes == Uniform::PASS_ALL_SET) return;
         ++it;
     }
 }
 void Descriptor::Set::Base::findResourceSimilar(std::vector<Resource>::iterator& it, const PIPELINE& piplineType,
-                                                const std::set<RENDER_PASS>& passTypes, const DESCRIPTOR& descType,
+                                                const std::set<PASS>& passTypes, const DESCRIPTOR& descType,
                                                 const Uniform::offsets& offsets) {
-    std::set<RENDER_PASS> tempSet;
+    std::set<PASS> tempSet;
     for (; it != resources_.end(); ++it) {
         tempSet.clear();
         if (it->offsets.map().size() != 1) continue;
@@ -126,33 +154,36 @@ void Descriptor::Set::Base::findResourceSimilar(std::vector<Resource>::iterator&
     }
 }
 
-Descriptor::Set::Default::Uniform::Uniform()
+Descriptor::Set::Default::Uniform::Uniform(Handler& handler)
     : Set::Base{
+          handler,
           DESCRIPTOR_SET::UNIFORM_DEFAULT,
           "_DS_UNI_DEF",
           {
-              {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, ""}},
-              {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_DEFAULT, ""}},
-              {{2, 0}, {UNIFORM::FOG_DEFAULT, ""}},
-              {{3, 0}, {UNIFORM::LIGHT_POSITIONAL_DEFAULT, ""}},
-              {{4, 0}, {UNIFORM::LIGHT_SPOT_DEFAULT, ""}},
+              {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
+              {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_DEFAULT}},
+              {{2, 0}, {UNIFORM::FOG_DEFAULT}},
+              {{3, 0}, {UNIFORM::LIGHT_POSITIONAL_DEFAULT}},
+              {{4, 0}, {UNIFORM::LIGHT_SPOT_DEFAULT}},
           },
       } {}
 
-Descriptor::Set::Default::Sampler::Sampler()
+Descriptor::Set::Default::Sampler::Sampler(Handler& handler)
     : Set::Base{
+          handler,
           DESCRIPTOR_SET::SAMPLER_DEFAULT,
           "_DS_SMP_DEF",
           {
-              {{0, 0}, {COMBINED_SAMPLER::MATERIAL, ""}},
-              //{{1, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED, ""}},
-              //{{2, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED, ""}},
-              //{{3, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED, ""}},
+              {{0, 0}, {COMBINED_SAMPLER::MATERIAL}},
+              //{{1, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED}},
+              //{{2, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED}},
+              //{{3, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED}},
           },
       } {}
 
-Descriptor::Set::Default::CubeSampler::CubeSampler()
+Descriptor::Set::Default::CubeSampler::CubeSampler(Handler& handler)
     : Set::Base{
+          handler,
           DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT,
           "_DS_CBE_DEF",
           {
@@ -160,13 +191,14 @@ Descriptor::Set::Default::CubeSampler::CubeSampler()
           },
       } {}
 
-Descriptor::Set::Default::ProjectorSampler::ProjectorSampler()
+Descriptor::Set::Default::ProjectorSampler::ProjectorSampler(Handler& handler)
     : Set::Base{
+          handler,
           DESCRIPTOR_SET::PROJECTOR_DEFAULT,
           "_DS_PRJ_DEF",
           {
               //{{0, 0}, {DESCRIPTOR::SAMPLER_PIPELINE_COMBINED, Texture::STATUE_CREATE_INFO.name}},
               {{0, 0}, {COMBINED_SAMPLER::PIPELINE, RenderPass::PROJECT_2D_TEXTURE_CREATE_INFO.name}},
-              {{1, 0}, {UNIFORM::PROJECTOR_DEFAULT, ""}},
+              {{1, 0}, {UNIFORM::PROJECTOR_DEFAULT}},
           },
       } {}

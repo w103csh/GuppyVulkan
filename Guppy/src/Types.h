@@ -12,7 +12,7 @@
 #include "Enum.h"
 
 enum class PIPELINE : uint32_t;
-enum class RENDER_PASS : uint32_t;
+enum class PASS : uint32_t;
 
 using FlagBits = uint32_t;
 // Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)
@@ -82,9 +82,44 @@ struct hash_pair_enum_size_t {
     }
 };
 
-using DESCRIPTOR = std::variant<UNIFORM, UNIFORM_DYNAMIC, COMBINED_SAMPLER>;
+template <uint8_t size>
+struct SubmitResource {
+    uint32_t waitSemaphoreCount = 0;
+    std::array<VkSemaphore, size> waitSemaphores = {};
+    std::array<VkPipelineStageFlags, size> waitDstStageMasks = {};
+    uint32_t commandBufferCount = 0;
+    std::array<VkCommandBuffer, size> commandBuffers = {};
+    uint32_t signalSemaphoreCount = 0;
+    std::array<VkSemaphore, size> signalSemaphores = {};
+    // Set below for stages the signal semaphores should wait on.
+    std::array<VkPipelineStageFlags, size> signalSrcStageMasks = {};
+    QUEUE queueType;
+    void resetCount() {
+        waitSemaphoreCount = 0;
+        commandBufferCount = 0;
+        signalSemaphoreCount = 0;
+    }
+};
+
+struct BarrierResource {
+    std::vector<VkMemoryBarrier> glblBarriers;
+    std::vector<VkBufferMemoryBarrier> buffBarriers;
+    std::vector<VkImageMemoryBarrier> imgBarriers;
+    inline void reset() {
+        glblBarriers.clear();
+        buffBarriers.clear();
+        imgBarriers.clear();
+    }
+};
+
+using DESCRIPTOR = std::variant<UNIFORM, UNIFORM_DYNAMIC, COMBINED_SAMPLER, STORAGE_IMAGE, STORAGE_BUFFER>;
 
 // Why is this a multiset?
-using pipelinePassSet = std::multiset<std::pair<PIPELINE, RENDER_PASS>>;
+using pipelinePassSet = std::multiset<std::pair<PIPELINE, PASS>>;
+
+struct ImageInfo {
+    VkDescriptorImageInfo descInfo = {};
+    VkImage image = VK_NULL_HANDLE;
+};
 
 #endif  //! TYPE_H

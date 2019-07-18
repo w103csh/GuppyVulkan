@@ -10,13 +10,12 @@
 #include "Helpers.h"
 #include "ShellMac.h"
 
-namespace  {
+namespace {
 
 static std::function<void(std::string)> watchCallback;
 
-void streamCallback(ConstFSEventStreamRef streamRef, void* clientCallBackInfo, size_t numEvents,
-                                   void* eventPaths, const FSEventStreamEventFlags* eventFlags,
-                                   const FSEventStreamEventId* eventIds) {
+void streamCallback(ConstFSEventStreamRef streamRef, void* clientCallBackInfo, size_t numEvents, void* eventPaths,
+                    const FSEventStreamEventFlags* eventFlags, const FSEventStreamEventId* eventIds) {
     char** pPaths = (char**)eventPaths;
     // printf("Callback called\n");
     for (int i = 0; i < numEvents; i++) {
@@ -26,22 +25,20 @@ void streamCallback(ConstFSEventStreamRef streamRef, void* clientCallBackInfo, s
         watchCallback(filename);
     }
 }
-    
+
 }  // namespace
 
 ShellMac::ShellMac(Game& game) : Shell(game), watchDirStreamRef(NULL) {}
 
-ShellMac::~ShellMac() {
-    cleanup_vk();
-}
+ShellMac::~ShellMac() { cleanup_vk(); }
 
 void ShellMac::setPlatformSpecificExtensions() {
-    // instance_extensions_.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
+    // instanceExtensions_.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
 }
 
 void ShellMac::createWindow() { assert(false); }
 
-PFN_vkGetInstanceProcAddr ShellMac::load_vk() {
+PFN_vkGetInstanceProcAddr ShellMac::loadVk() {
     assert(false);
     return nullptr;
 }
@@ -52,9 +49,7 @@ VkBool32 ShellMac::canPresent(VkPhysicalDevice phy, uint32_t queueFamily) {
     return supported;
 }
 
-void ShellMac::quit() const {
-    assert(false);
-}
+void ShellMac::quit() const { assert(false); }
 
 void ShellMac::destroy_context() {
     Shell::destroy_context();
@@ -65,9 +60,7 @@ void ShellMac::destroy_context() {
     }
 }
 
-void ShellMac::asyncAlert(uint64_t milliseconds){
-    std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds));
-};
+void ShellMac::asyncAlert(uint64_t milliseconds) { std::this_thread::sleep_for(std::chrono::milliseconds(milliseconds)); };
 
 void ShellMac::run() { assert(false); }
 
@@ -80,9 +73,9 @@ void ShellMac::watchDirectory(const std::string& directory, std::function<void(s
          CFString objects containing paths to watch.
          */
         CFStringRef fullPathStrRef = CFStringCreateWithCString(NULL, fullPath.c_str(), kCFStringEncodingUTF8);
-        CFArrayRef pathsToWatch = CFArrayCreate(NULL, (const void **)&fullPathStrRef, 1, NULL);
+        CFArrayRef pathsToWatch = CFArrayCreate(NULL, (const void**)&fullPathStrRef, 1, NULL);
         FSEventStreamContext* context = NULL;  // could put stream-specific data here.
-        CFAbsoluteTime latency = 0.0; /* Latency in seconds */
+        CFAbsoluteTime latency = 0.0;          /* Latency in seconds */
 
         /* Create the stream, passing in a callback */
         watchDirStreamRef = FSEventStreamCreate(NULL,                              //
@@ -92,7 +85,7 @@ void ShellMac::watchDirectory(const std::string& directory, std::function<void(s
                                                 kFSEventStreamEventIdSinceNow,     /* Or a previous event ID */
                                                 latency,                           //
                                                 kFSEventStreamCreateFlagFileEvents /* Flags explained in reference */
-                                                );
+        );
         assert(watchDirStreamRef);
 
         // TODO: Create a thread dedicated to this?

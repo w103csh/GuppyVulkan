@@ -6,8 +6,6 @@
 #include "ConstantsAll.h"
 #include "RenderPass.h"
 
-struct SubmitResource;
-
 namespace RenderPass {
 
 class Handler;
@@ -17,7 +15,7 @@ class ImGui : public Base {
     ImGui(Handler& handler, const uint32_t&& offset);
 
     void postCreate() override;
-    void record(const uint32_t& frameIndex) override;
+    void record(const uint8_t frameIndex) override;
 
    private:
     void createAttachmentsAndSubpasses() override;

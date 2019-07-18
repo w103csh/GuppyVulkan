@@ -10,6 +10,7 @@
 #include "ScreenSpace.h"
 #include "Shell.h"
 // HANDLERS
+#include "ComputeHandler.h"
 #include "DescriptorHandler.h"
 #include "TextureHandler.h"
 #include "RenderPassHandler.h"
@@ -17,6 +18,7 @@
 #include "ShaderHandler.h"
 
 namespace {
+
 void setBase(const VkPipeline& pipeline, VkGraphicsPipelineCreateInfo& info, bool& hasBase) {
     if (!hasBase && pipeline != VK_NULL_HANDLE) {
         // Setup for derivatives...
@@ -26,22 +28,34 @@ void setBase(const VkPipeline& pipeline, VkGraphicsPipelineCreateInfo& info, boo
         hasBase = true;
     }
 }
+
+void setBase(const VkPipeline& pipeline, VkComputePipelineCreateInfo& info, bool& hasBase) {
+    if (!hasBase && pipeline != VK_NULL_HANDLE) {
+        // Setup for derivatives...
+        info.flags = VK_PIPELINE_CREATE_DERIVATIVE_BIT;
+        info.basePipelineHandle = pipeline;
+        info.basePipelineIndex = -1;
+        hasBase = true;
+    }
+}
+
 }  // namespace
 
 Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_HANDLE), maxPushConstantsSize_(UINT32_MAX) {
     for (const auto& type : ALL) {
         // clang-format off
         switch (type) {
-            case PIPELINE::TRI_LIST_COLOR:          pPipelines_.emplace_back(std::make_unique<Default::TriListColor>(std::ref(*this))); break;
-            case PIPELINE::LINE:                    pPipelines_.emplace_back(std::make_unique<Default::Line>(std::ref(*this))); break;
-            case PIPELINE::TRI_LIST_TEX:            pPipelines_.emplace_back(std::make_unique<Default::TriListTexture>(std::ref(*this))); break;
-            case PIPELINE::CUBE:                    pPipelines_.emplace_back(std::make_unique<Default::Cube>(std::ref(*this))); break;
-            case PIPELINE::PBR_COLOR:               pPipelines_.emplace_back(std::make_unique<PBR::Color>(std::ref(*this))); break;
-            case PIPELINE::PBR_TEX:                 pPipelines_.emplace_back(std::make_unique<PBR::Texture>(std::ref(*this))); break;
-            case PIPELINE::BP_TEX_CULL_NONE:        pPipelines_.emplace_back(std::make_unique<BP::TextureCullNone>(std::ref(*this))); break;
-            case PIPELINE::PARALLAX_SIMPLE:         pPipelines_.emplace_back(std::make_unique<Parallax::Simple>(std::ref(*this))); break;
-            case PIPELINE::PARALLAX_STEEP:          pPipelines_.emplace_back(std::make_unique<Parallax::Steep>(std::ref(*this))); break;
-            case PIPELINE::SCREEN_SPACE_DEFAULT:    pPipelines_.emplace_back(std::make_unique<ScreenSpace::Default>(std::ref(*this))); break;
+            case PIPELINE::TRI_LIST_COLOR:                  pPipelines_.emplace_back(std::make_unique<Default::TriListColor>(std::ref(*this))); break;
+            case PIPELINE::LINE:                            pPipelines_.emplace_back(std::make_unique<Default::Line>(std::ref(*this))); break;
+            case PIPELINE::TRI_LIST_TEX:                    pPipelines_.emplace_back(std::make_unique<Default::TriListTexture>(std::ref(*this))); break;
+            case PIPELINE::CUBE:                            pPipelines_.emplace_back(std::make_unique<Default::Cube>(std::ref(*this))); break;
+            case PIPELINE::PBR_COLOR:                       pPipelines_.emplace_back(std::make_unique<PBR::Color>(std::ref(*this))); break;
+            case PIPELINE::PBR_TEX:                         pPipelines_.emplace_back(std::make_unique<PBR::Texture>(std::ref(*this))); break;
+            case PIPELINE::BP_TEX_CULL_NONE:                pPipelines_.emplace_back(std::make_unique<BP::TextureCullNone>(std::ref(*this))); break;
+            case PIPELINE::PARALLAX_SIMPLE:                 pPipelines_.emplace_back(std::make_unique<Parallax::Simple>(std::ref(*this))); break;
+            case PIPELINE::PARALLAX_STEEP:                  pPipelines_.emplace_back(std::make_unique<Parallax::Steep>(std::ref(*this))); break;
+            case PIPELINE::SCREEN_SPACE_DEFAULT:            pPipelines_.emplace_back(std::make_unique<ScreenSpace::Default>(std::ref(*this))); break;
+            case PIPELINE::SCREEN_SPACE_COMPUTE_DEFAULT:    pPipelines_.emplace_back(std::make_unique<ScreenSpace::ComputeDefault>(std::ref(*this))); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on
@@ -68,7 +82,7 @@ Uniform::offsetsMap Pipeline::Handler::makeUniformOffsetsMap() {
         for (const auto& [descType, offsets] : pPipeline->getDescriptorOffsets().map()) {
             Uniform::offsetsMapKey key = {descType, pPipeline->TYPE};
             assert(map.count(key) == 0);
-            map[key] = {{offsets, Uniform::RENDER_PASS_ALL_SET}};
+            map[key] = {{offsets, Uniform::PASS_ALL_SET}};
         }
     }
     return map;
@@ -79,7 +93,7 @@ void Pipeline::Handler::init() {
 
     // PUSH CONSTANT
     maxPushConstantsSize_ =
-        shell().context().physical_dev_props[shell().context().physical_dev_index].properties.limits.maxPushConstantsSize;
+        shell().context().physicalDevProps[shell().context().physicalDevIndex].properties.limits.maxPushConstantsSize;
     assert(maxPushConstantsSize_ != UINT32_MAX);
 
     // CACHE
@@ -98,13 +112,13 @@ std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
     for (auto& type : pushConstantTypes) {
         VkPushConstantRange range = {};
 
+        // clang-format off
         switch (type) {
-            case PUSH_CONSTANT::DEFAULT:
-                range.size = sizeof(Pipeline::Default::PushConstant);
-                break;
-            default:
-                assert(false && "Unknown push constant");
+            case PUSH_CONSTANT::DEFAULT: range.size = sizeof(Pipeline::Default::PushConstant); break;
+            case PUSH_CONSTANT::POST_PROCESS: range.size = sizeof(::ScreenSpace::PushConstant); break;
+            default: assert(false && "Unknown push constant"); exit(EXIT_FAILURE);
         }
+        // clang-format on
 
         // shader stages
         range.stageFlags |= shaderHandler().getStageFlags(getPipeline(pipelineType)->SHADER_TYPES);
@@ -151,7 +165,18 @@ void Pipeline::Handler::createPipeline(const std::string&& name, VkGraphicsPipel
     vk::assert_success(vkCreateGraphicsPipelines(shell().context().dev, cache_, 1, &createInfo, nullptr, &pipeline));
 
     if (settings().enable_debug_markers) {
-        std::string markerName = name + " pipline";
+        std::string markerName = name + " graphics pipline";
+        ext::DebugMarkerSetObjectName(shell().context().dev, (uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
+                                      markerName.c_str());
+    }
+}
+
+void Pipeline::Handler::createPipeline(const std::string&& name, VkComputePipelineCreateInfo& createInfo,
+                                       VkPipeline& pipeline) {
+    vk::assert_success(vkCreateComputePipelines(shell().context().dev, cache_, 1, &createInfo, nullptr, &pipeline));
+
+    if (settings().enable_debug_markers) {
+        std::string markerName = name + " compute pipline";
         ext::DebugMarkerSetObjectName(shell().context().dev, (uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                                       markerName.c_str());
     }
@@ -164,15 +189,31 @@ bool Pipeline::Handler::checkVertexPipelineMap(VERTEX key, PIPELINE value) const
     return false;
 }
 
+void Pipeline::Handler::initPipelines() {
+    pipelinePassSet set;
+    computeHandler().addPipelinePassPairs(set);
+    passHandler().addPipelinePassPairs(set);
+
+    createPipelines(set);
+
+    computeHandler().updateBindData(set);
+    passHandler().updateBindData(set);
+}
+
 void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
-    VkGraphicsPipelineCreateInfo createInfo;
-    CreateInfoVkResources createInfoRes;
+    VkGraphicsPipelineCreateInfo graphicsCreateInfo;
+    VkComputePipelineCreateInfo computeCreateInfo;
+    CreateInfoResources createInfoRes;
 
     auto it = set.begin();
     while (it != set.end()) {
-        createInfo = {};
-        createInfo.basePipelineHandle = VK_NULL_HANDLE;
-        createInfo.basePipelineIndex = 0;
+        // Clear out memory
+        graphicsCreateInfo = {};
+        graphicsCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+        graphicsCreateInfo.basePipelineIndex = 0;
+        computeCreateInfo = {};
+        computeCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
+        computeCreateInfo.basePipelineIndex = 0;
         createInfoRes = {};
 
         auto pipelineType = it->first;
@@ -188,36 +229,62 @@ void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
             }
 
             const auto& pPipelineBindData = pipelineBindDataMap_.at(key);
-            // Setup for derivatives...
-            setBase(pPipelineBindData->pipeline, createInfo, hasBase);
 
-            // Save the old pipeline for clean up if necessary
-            if (pPipelineBindData->pipeline != VK_NULL_HANDLE) oldPipelines_.push_back({-1, pPipelineBindData->pipeline});
-
-            const auto& pPass = passHandler().getPass(it->second);
-            createInfo.renderPass = pPass->pass;
-            createInfo.subpass = pPass->getSubpassId(pipelineType);
-            createInfo.layout = pPipelineBindData->layout;
-
-            // shader info
+            // SHADER
             createInfoRes.stagesInfo.clear();
             for (const auto& shaderType : pPipeline->SHADER_TYPES) {
-                shaderHandler().getStagesInfo(shaderType, pPipeline->TYPE, pPass->TYPE, createInfoRes.stagesInfo);
+                shaderHandler().getStagesInfo(shaderType, pPipeline->TYPE, it->second, createInfoRes.stagesInfo);
             }
 
-            pPipeline->setInfo(createInfoRes, createInfo);
+            // TODO: This can be simplified.
+            switch (pPipelineBindData->bindPoint) {
+                // GRAPHICS
+                case VK_PIPELINE_BIND_POINT_GRAPHICS: {
+                    const auto& pPass = passHandler().getPass(it->second);
 
-            // Give the render pass a chance to override default settings
-            pPass->overridePipelineCreateInfo(pipelineType, createInfoRes);
+                    setBase(pPipelineBindData->pipeline, graphicsCreateInfo, hasBase);
 
-            // Create the pipeline
-            createPipeline(pPipeline->NAME + " " + std::to_string(static_cast<uint32_t>(it->second)), createInfo,
-                           pPipelineBindData->pipeline);
+                    graphicsCreateInfo.renderPass = pPass->pass;
+                    graphicsCreateInfo.subpass = pPass->getSubpassId(pipelineType);
+                    graphicsCreateInfo.layout = pPipelineBindData->layout;
+                    pPipeline->setInfo(createInfoRes, &graphicsCreateInfo, nullptr);
 
-            // Setup for derivatives...
-            setBase(pPipelineBindData->pipeline, createInfo, hasBase);
+                    // Give the render pass a chance to override default settings
+                    pPass->overridePipelineCreateInfo(pipelineType, createInfoRes);
 
-            std::advance(it, 1);
+                    // Save the old pipeline for clean up if necessary
+                    if (pPipelineBindData->pipeline != VK_NULL_HANDLE)
+                        oldPipelines_.push_back({-1, pPipelineBindData->pipeline});
+
+                    createPipeline(pPipeline->NAME + " " + std::to_string(static_cast<uint32_t>(it->second)),
+                                   graphicsCreateInfo, pPipelineBindData->pipeline);
+
+                    setBase(pPipelineBindData->pipeline, graphicsCreateInfo, hasBase);
+
+                } break;
+                // COMPUTE
+                case VK_PIPELINE_BIND_POINT_COMPUTE: {
+                    setBase(pPipelineBindData->pipeline, computeCreateInfo, hasBase);
+
+                    computeCreateInfo.layout = pPipelineBindData->layout;
+                    pPipeline->setInfo(createInfoRes, nullptr, &computeCreateInfo);
+
+                    // Save the old pipeline for clean up if necessary
+                    if (pPipelineBindData->pipeline != VK_NULL_HANDLE)
+                        oldPipelines_.push_back({-1, pPipelineBindData->pipeline});
+
+                    createPipeline(pPipeline->NAME + " " + std::to_string(static_cast<uint32_t>(it->second)),
+                                   computeCreateInfo, pPipelineBindData->pipeline);
+
+                    setBase(pPipelineBindData->pipeline, computeCreateInfo, hasBase);
+
+                } break;
+                default: {
+                    assert(false);  // I think the only other types is ray tracing
+                } break;
+            }
+
+            ++it;
         }
     }
 }

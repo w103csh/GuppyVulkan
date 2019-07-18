@@ -15,9 +15,9 @@ Light::PBR::Positional::Base::Base(const Buffer::Info&& info, DATA* pData, Creat
       Light::Base<DATA>(pData, pCreateInfo),                 //
       position(getWorldSpacePosition()) {}
 
-void Light::PBR::Positional::Base::update(glm::vec3&& position) {
-    pData_->position = position;
-    DIRTY = true;
+void Light::PBR::Positional::Base::update(glm::vec3&& position, const uint32_t frameIndex) {
+    data_.position = position;
+    setData(frameIndex);
 }
 
 // **********************
@@ -25,9 +25,9 @@ void Light::PBR::Positional::Base::update(glm::vec3&& position) {
 // **********************
 
 Material::PBR::Base::Base(const Buffer::Info&& info, PBR::DATA* pData, PBR::CreateInfo* pCreateInfo)
-    : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-      Buffer::DataItem<PBR::DATA>(pData),                    //
-      Material::Base(MATERIAL::PBR, pCreateInfo)             //
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),
+      Material::Base(MATERIAL::PBR, pCreateInfo),
+      Buffer::DataItem<PBR::DATA>(pData)  //
 {
     pData_->color = pCreateInfo->color;
     pData_->flags = pCreateInfo->flags;
@@ -63,7 +63,7 @@ void Material::PBR::Base::setTextureData() {
     if (status_ == STATUS::PENDING_TEXTURE && pTexture_->status == STATUS::READY)  //
         status_ = STATUS::READY;
 
-    DIRTY = true;
+    dirty = true;
 }
 
 void Material::PBR::Base::setTinyobjData(const tinyobj::material_t& m) {
@@ -80,14 +80,15 @@ void Material::PBR::Base::setRoughness(float r) {
 //      Descriptor Set
 // **********************
 
-Descriptor::Set::PBR::Uniform::Uniform()
+Descriptor::Set::PBR::Uniform::Uniform(Handler& handler)
     : Set::Base{
+          handler,
           DESCRIPTOR_SET::UNIFORM_PBR,
           "_DS_UNI_PBR",
           {
-              {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, ""}},
-              {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_PBR, ""}},
-              {{2, 0}, {UNIFORM::LIGHT_POSITIONAL_PBR, ""}},
+              {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
+              {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_PBR}},
+              {{2, 0}, {UNIFORM::LIGHT_POSITIONAL_PBR}},
           },
       } {}
 
@@ -143,7 +144,7 @@ const Pipeline::CreateInfo COLOR_CREATE_INFO = {
     {DESCRIPTOR_SET::UNIFORM_PBR},
 };
 
-Pipeline::PBR::Color::Color(Pipeline::Handler& handler) : Base(handler, &COLOR_CREATE_INFO) {}
+Pipeline::PBR::Color::Color(Pipeline::Handler& handler) : Graphics(handler, &COLOR_CREATE_INFO) {}
 
 const Pipeline::CreateInfo TEX_CREATE_INFO = {
     PIPELINE::PBR_TEX,
@@ -155,4 +156,4 @@ const Pipeline::CreateInfo TEX_CREATE_INFO = {
     },
 };
 
-Pipeline::PBR::Texture::Texture(Pipeline::Handler& handler) : Base(handler, &TEX_CREATE_INFO) {}
+Pipeline::PBR::Texture::Texture(Pipeline::Handler& handler) : Graphics(handler, &TEX_CREATE_INFO) {}

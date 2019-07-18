@@ -18,7 +18,7 @@ class Handler : public Game::Handler {
     virtual void reset() override {}
     virtual void destroy() override {}
     virtual void update() {}
-    virtual void draw(const VkCommandBuffer& cmd, const uint8_t& frameIndex) {}
+    virtual void draw(const VkCommandBuffer& cmd, const uint8_t frameIndex) {}
 };
 
 }  // namespace UI

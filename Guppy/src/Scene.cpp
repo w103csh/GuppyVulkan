@@ -28,9 +28,9 @@ Scene::Base::Base(Scene::Handler& handler, size_t offset, bool makeFaceSelection
 
 Scene::Base::~Base() = default;
 
-void Scene::Base::record(const RENDER_PASS& passType, const PIPELINE& pipelineType,
+void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
                          const std::shared_ptr<Pipeline::BindData>& pipelineBindData, const VkCommandBuffer& priCmd,
-                         const VkCommandBuffer& secCmd, const uint8_t& frameIndex) {
+                         const VkCommandBuffer& secCmd, const uint8_t frameIndex) {
     switch (pipelineType) {
         case PIPELINE::PBR_COLOR:
         case PIPELINE::CUBE:

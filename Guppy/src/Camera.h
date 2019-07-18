@@ -31,34 +31,34 @@ struct DATA {
     glm::mat4 projection = glm::mat4(1.0f);
     // World space to view space
     glm::mat4 viewProjection = glm::mat4(1.0f);
-    glm::vec3 worldPosition;
+    alignas(16) glm::vec3 worldPosition;
     // rem 4
 };
 
-class Base : public Obj3d, public Uniform::Base, public Buffer::DataItem<DATA> {
+class Base : public Obj3d, public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
    public:
     Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo);
 
     inline glm::vec3 getCameraSpaceDirection(const glm::vec3 &d = FORWARD_VECTOR) const {
         // TODO: deal with model_...
-        glm::vec3 direction = pData_->view * glm::vec4(d, 0.0f);
+        glm::vec3 direction = data_.view * glm::vec4(d, 0.0f);
         return glm::normalize(direction);
     }
 
     inline glm::vec3 getCameraSpacePosition(const glm::vec3 &p = {}) const {
         // TODO: deal with model_...
-        return pData_->view * glm::vec4(p, 1.0f);
+        return data_.view * glm::vec4(p, 1.0f);
     }
 
     inline glm::vec3 getWorldSpaceDirection(const glm::vec3 &d = FORWARD_VECTOR, uint32_t index = 0) const override {
         // TODO: deal with model_...
-        glm::vec3 direction = glm::inverse(pData_->view) * glm::vec4(d, 0.0f);
+        glm::vec3 direction = glm::inverse(data_.view) * glm::vec4(d, 0.0f);
         return glm::normalize(direction);
     }
 
     inline glm::vec3 getWorldSpacePosition(const glm::vec3 &p = {}, uint32_t index = 0) const override {
         // TODO: deal with model_...
-        return glm::inverse(pData_->view) * glm::vec4(p, 1.0f);
+        return glm::inverse(data_.view) * glm::vec4(p, 1.0f);
     }
 
     Ray getRay(glm::vec2 &&position, const VkExtent2D &extent) {
@@ -69,23 +69,17 @@ class Base : public Obj3d, public Uniform::Base, public Buffer::DataItem<DATA> {
     inline const glm::mat4 getClip() { return clip_; }
 
     void setAspect(float aspect);
-    void update(const glm::vec3 &pos_dir = {}, const glm::vec3 &look_dir = {});
+    void update(const glm::vec3 &pos_dir, const glm::vec3 &look_dir, const uint32_t frameIndex);
 
    private:
-    inline glm::mat4 getMVP() const { return pData_->projection * getMV(); }
-    inline glm::mat4 getMV() const { return pData_->view * model_; }
+    inline glm::mat4 getMVP() const { return data_.projection * getMV(); }
+    inline glm::mat4 getMV() const { return data_.view * model_; }
     bool updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir);
+    void update(const uint32_t frameIndex = UINT32_MAX);
 
     // This should be the only way to set the projection data. Also,
     // this is not actually the projection matrix!!!
-    inline void setProjectionData() { pData_->projection = clip_ * proj_; }
-
-    inline void setData() override {
-        pData_->view = getMV();
-        pData_->viewProjection = getMVP();
-        pData_->worldPosition = getWorldSpacePosition();
-        DIRTY = true;
-    }
+    inline void setProjectionData() { data_.projection = clip_ * proj_; }
 
     inline const glm::mat4 &model(uint32_t index = 0) const override { return model_; }
     glm::mat4 model_;

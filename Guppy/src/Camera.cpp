@@ -8,9 +8,7 @@
 
 Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData, const Perspective::CreateInfo *pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Obj3d(),
-      Uniform::Base(),
-      Buffer::DataItem<DATA>(pData),
+      Buffer::PerFramebufferDataItem<DATA>(pData),
       model_{1.0f},
       aspect_(pCreateInfo->aspect),
       far_(pCreateInfo->f),
@@ -18,7 +16,7 @@ Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData,
       near_(pCreateInfo->n),
       eye_(pCreateInfo->eye),
       center_(pCreateInfo->center) {
-    pData_->view = glm::lookAt(pCreateInfo->eye, pCreateInfo->center, UP_VECTOR);
+    data_.view = glm::lookAt(pCreateInfo->eye, pCreateInfo->center, UP_VECTOR);
     proj_ = glm::perspective(pCreateInfo->fov, pCreateInfo->aspect, near_, far_);
     // Vulkan clip space has inverted Y and half Z.
     clip_ = glm::mat4{1.0f, 0.0f,  0.0f, 0.0f,   //
@@ -26,7 +24,7 @@ Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData,
                       0.0f, 0.0f,  0.5f, 0.0f,   //
                       0.0f, 0.0f,  0.5f, 1.0f};  //
     setProjectionData();
-    setData();
+    update();
 }
 
 Ray Camera::Default::Perspective::Base::getRay(glm::vec2 &&position, const VkExtent2D &extent, float distance) {
@@ -44,7 +42,7 @@ Ray Camera::Default::Perspective::Base::getRay(glm::vec2 &&position, const VkExt
     // It looks like this returns a point in world space.
     auto d = glm::unProject(  //
         win,                  // win
-        pData_->view,         // model (TODO: add model_ to this?)
+        data_.view,           // model (TODO: add model_ to this?)
         proj_,                // projection
         viewport              // viewport
     );
@@ -65,11 +63,20 @@ void Camera::Default::Perspective::Base::setAspect(float aspect) {
     aspect_ = aspect;
     proj_ = glm::perspective(fov_, aspect_, near_, far_);
     setProjectionData();
-    setData();
+    update();
 }
 
-void Camera::Default::Perspective::Base::update(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
-    if (updateView(pos_dir, look_dir)) setData();
+void Camera::Default::Perspective::Base::update(const glm::vec3 &pos_dir, const glm::vec3 &look_dir,
+                                                const uint32_t frameIndex) {
+    bool wasUpdated = updateView(pos_dir, look_dir);
+    update(frameIndex);
+}
+
+void Camera::Default::Perspective::Base::update(const uint32_t frameIndex) {
+    data_.view = getMV();
+    data_.viewProjection = getMVP();
+    data_.worldPosition = getWorldSpacePosition();
+    setData(frameIndex);
 }
 
 bool Camera::Default::Perspective::Base::updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
@@ -79,9 +86,9 @@ bool Camera::Default::Perspective::Base::updateView(const glm::vec3 &pos_dir, co
     if (!update_pos && !update_look) return false;
 
     // Get othonormal basis for camera view ...
-    glm::vec3 w = glm::row(pData_->view, 2);
-    glm::vec3 u = glm::row(pData_->view, 0);  // TODO: handle looking straight up
-    glm::vec3 v = glm::row(pData_->view, 1);
+    glm::vec3 w = glm::row(data_.view, 2);
+    glm::vec3 u = glm::row(data_.view, 0);  // TODO: handle looking straight up
+    glm::vec3 v = glm::row(data_.view, 1);
 
     // MOVEMENT
     if (update_pos) {
@@ -99,7 +106,7 @@ bool Camera::Default::Perspective::Base::updateView(const glm::vec3 &pos_dir, co
         center_ += look;
     }
 
-    pData_->view = glm::lookAt(eye_, center_, UP_VECTOR);
+    data_.view = glm::lookAt(eye_, center_, UP_VECTOR);
 
     return true;
 }

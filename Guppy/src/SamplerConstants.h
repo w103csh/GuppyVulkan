@@ -55,6 +55,8 @@ struct CreateInfo {
     SAMPLER type = SAMPLER::DEFAULT;
     VkExtent2D extent = BAD_EXTENT_2D;
     bool makeMipmaps = true;
+    bool usesSwapchain = false;
+    VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT;
     CHANNELS channels = CHANNELS::_4;
     VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;

@@ -6,6 +6,7 @@
 #include <string_view>
 #include <vector>
 
+#include "Types.h"
 #include "SamplerConstants.h"
 
 namespace Texture {
@@ -14,6 +15,10 @@ struct CreateInfo {
     std::string name;
     std::vector<Sampler::CreateInfo> samplerCreateInfos;
     bool hasData = true;
+    bool perFramebuffer = false;
+    // For now this is just a flag for COMBINED_SAMPLER v. STORAGE_IMAGE. At some
+    // point this might need to be an overridable setting similar to uniform offsets.
+    DESCRIPTOR descriptorType = COMBINED_SAMPLER::DONT_CARE;
 };
 
 // CREATE INFOS

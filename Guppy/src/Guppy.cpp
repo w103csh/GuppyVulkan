@@ -8,6 +8,7 @@
 #include "Shell.h"
 // HANDLERS
 #include "CommandHandler.h"
+#include "ComputeHandler.h"
 #include "DescriptorHandler.h"
 #include "InputHandler.h"
 #include "LoadingHandler.h"
@@ -30,6 +31,7 @@
 Guppy::Guppy(const std::vector<std::string>& args)
     : Game("Guppy", args, Game::Handlers{
         std::make_unique<Command::Handler>(this),
+        std::make_unique<Compute::Handler>(this),
         std::make_unique<Descriptor::Handler>(this),
         std::make_unique<Loading::Handler>(this),
         std::make_unique<Material::Handler>(this),
@@ -63,6 +65,9 @@ Guppy::Guppy(const std::vector<std::string>& args)
             use_push_constants_ = true;
     }
 
+    // VALIDATION
+    helpers::validatePassTypeStructures();
+
     // init_workers();
 }
 
@@ -90,9 +95,11 @@ void Guppy::attachShell(Shell& sh) {
     handlers_.pTexture->init();
     handlers_.pUniform->init();
     handlers_.pDescriptor->init();
+    handlers_.pCompute->init();
     handlers_.pPipeline->init();
     handlers_.pShader->init();
     handlers_.pPass->init();
+    handlers_.pPipeline->initPipelines();
     handlers_.pUI->init();
     handlers_.pMesh->init();
     handlers_.pModel->init();
@@ -111,13 +118,32 @@ void Guppy::attachShell(Shell& sh) {
 
 void Guppy::attachSwapchain() {
     const auto& ctx = shell().context();
-    // RENDER PASS
+
+    handlers_.pUniform->attachSwapchain();
+    handlers_.pTexture->attachSwapchain();
+    handlers_.pCompute->attachSwapchain();
     handlers_.pPass->attachSwapchain();
-    // EXTENT
+
+    // ASPECT
     float aspect = 1.0f;
     if (ctx.extent.width && ctx.extent.height)
         aspect = static_cast<float>(ctx.extent.width) / static_cast<float>(ctx.extent.height);
     handlers_.pUniform->getMainCamera().setAspect(aspect);
+
+    // Trying to get rid of RenderDoc warnings...
+    // VkFenceCreateInfo fenceInfo = {};
+    // fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+    // VkFence fence;
+    // vk::assert_success(vkCreateFence(shell().context().dev, &fenceInfo, nullptr, &fence));
+    // VkSubmitInfo submitInfo = {};
+    // submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    // submitInfo.commandBufferCount = 1;
+    // submitInfo.pCommandBuffers = &handlers_.pCommand->graphicsCmd();
+    // handlers_.pCommand->endCmd(handlers_.pCommand->graphicsCmd());
+    // vk::assert_success(vkQueueSubmit(handlers_.pCommand->graphicsQueue(), 1, &submitInfo, fence));
+    // vk::assert_success(vkWaitForFences(ctx.dev, 1, &fence, VK_TRUE, UINT64_MAX));
+    // vkDestroyFence(ctx.dev, fence, nullptr);
+    // vkResetCommandBuffer(handlers_.pCommand->graphicsCmd(), 0);
 }
 
 /*  This function is for updating things regardless of framerate. It is based on settings.ticks_per_second,
@@ -137,10 +163,9 @@ void Guppy::onTick() {
 
     // TODO: move to SceneHandler::update or something!
     handlers_.pModel->update(pScene);
-
     handlers_.pPipeline->update();
-
     handlers_.pMesh->update();
+    handlers_.pCompute->update();
 
     // for (auto &worker : workers_) worker->update_simulation();
 }
@@ -153,11 +178,12 @@ void Guppy::onFrame(float framePred) {
     // DRAW
     handlers_.pPass->recordPasses();
     // POST-DRAW
+    // TODO: make a postDraw virtual thing.
     handlers_.pShader->cleanup();
     handlers_.pPipeline->cleanup(handlers_.pPass->getFrameIndex());
     handlers_.pScene->cleanup();
     // **********************
-    handlers_.pPass->update();
+    handlers_.pPass->updateFrameIndex();
 }
 
 void Guppy::onKey(GAME_KEY key) {
@@ -259,6 +285,8 @@ void Guppy::onMouse(const MouseInput& input) {
 }
 
 void Guppy::detachSwapchain() {
+    handlers_.pTexture->detachSwapchain();
+    handlers_.pCompute->detachSwapchain();
     handlers_.pPass->detachSwapchain();
     handlers_.pUI->reset();
     handlers_.pCommand->resetCmdBuffers();
@@ -278,6 +306,7 @@ void Guppy::detachShell() {
     handlers_.pTexture->destroy();
     handlers_.pMaterial->destroy();
     handlers_.pMesh->destroy();
+    handlers_.pCompute->destroy();
     handlers_.pScene->destroy();
     handlers_.pUI->destroy();
     handlers_.pPass->destroy();

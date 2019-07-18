@@ -20,13 +20,13 @@ class ShellMac : public Shell {
 
     // SHADER RECOMPILING
     void asyncAlert(uint64_t milliseconds) override;  // TODO: Why is the necessay??
-    void checkDirectories() override {}; // TODO: Why is the necessay??
+    void checkDirectories() override{};               // TODO: Why is the necessay??
     void watchDirectory(const std::string &directory, std::function<void(std::string)> callback) override;
 
    protected:
     virtual void setPlatformSpecificExtensions() override;
-    PFN_vkGetInstanceProcAddr load_vk() override;
-    void destroy_context() override;
+    PFN_vkGetInstanceProcAddr loadVk() override;
+    void destroyContext() override;
 
    private:
     VkBool32 canPresent(VkPhysicalDevice phy, uint32_t queue_family) override;

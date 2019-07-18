@@ -27,9 +27,6 @@ class Manager : public ManagerType<TDerived> {
               std::forward<const DESCRIPTOR>(descriptorType),
               std::forward<const VkDeviceSize>(maxSize),
               false,
-              VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-              static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
           } {}
 
     void updateTexture(const VkDevice &dev, const std::shared_ptr<Texture::Base> &pTexture) {
@@ -55,7 +52,7 @@ class Handler : public Game::Handler {
     }
 
     inline void update(const std::shared_ptr<Material::Base> &pMaterial) {
-        if (pMaterial->DIRTY) {
+        if (pMaterial->dirty) {
             switch (pMaterial->TYPE) {
                 case MATERIAL::DEFAULT:
                     defMgr_.updateData(shell().context().dev, pMaterial->BUFFER_INFO);

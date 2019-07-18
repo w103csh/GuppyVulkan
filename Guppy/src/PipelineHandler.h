@@ -16,7 +16,7 @@
 namespace Pipeline {
 
 class Handler : public Game::Handler {
-    friend class Base;
+    friend class Graphics;
 
    public:
     Handler(Game *pGame);
@@ -35,8 +35,10 @@ class Handler : public Game::Handler {
                                                            const std::vector<PUSH_CONSTANT> &pushConstantTypes) const;
 
     // PIPELINES
+    void initPipelines();
     void createPipelines(const pipelinePassSet &set);
     void createPipeline(const std::string &&name, VkGraphicsPipelineCreateInfo &createInfo, VkPipeline &pipeline);
+    void createPipeline(const std::string &&name, VkComputePipelineCreateInfo &createInfo, VkPipeline &pipeline);
     constexpr const auto &getPipelineBindDataMap() const { return pipelineBindDataMap_; }
     bool checkVertexPipelineMap(VERTEX key, PIPELINE value) const;
 

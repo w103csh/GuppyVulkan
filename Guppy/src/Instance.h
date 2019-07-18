@@ -48,7 +48,7 @@ class Base : public Buffer::DataItem<Default::DATA>, public Instance::Base {
 
     inline void transform(const glm::mat4 t, uint32_t index = 0) override {
         Obj3d::transform(std::forward<const glm::mat4>(t), std::forward<uint32_t>(index));
-        DIRTY = true;
+        dirty = true;
     }
 
    private:

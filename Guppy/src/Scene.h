@@ -29,9 +29,9 @@ class Base : public Handlee<Scene::Handler> {
 
     inline size_t getOffset() { return offset_; }
 
-    void record(const RENDER_PASS& passType, const PIPELINE& pipelineType,
+    void record(const PASS& passType, const PIPELINE& pipelineType,
                 const std::shared_ptr<Pipeline::BindData>& pipelineBindData, const VkCommandBuffer& priCmd,
-                const VkCommandBuffer& secCmd, const uint8_t& frameIndex);
+                const VkCommandBuffer& secCmd, const uint8_t frameIndex);
 
     // SELECTION
     inline const std::unique_ptr<Face>& getFaceSelection() { return pSelectionManager_->getFace(); }

@@ -55,7 +55,7 @@ void Scene::Handler::init() {
         defInstInfo = {};
         defInstInfo.data.push_back({helpers::affine(glm::vec3{500.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
         defMatInfo = {};
-        defMatInfo.pTexture = textureHandler().getTextureByName(Texture::HARDWOOD_CREATE_INFO.name);
+        defMatInfo.pTexture = textureHandler().getTexture(Texture::HARDWOOD_ID);
         defMatInfo.repeat = 800.0f;
         defMatInfo.specularCoeff *= 0.5f;
         defMatInfo.shininess = Material::SHININESS::EGGSHELL;
@@ -90,8 +90,7 @@ void Scene::Handler::init() {
         //    {helpers::affine(glm::vec3{2.0f}, glm::vec3{4.5f, -5.0f, 13.5f}, -M_PI_2_FLT, CARDINAL_Z)});
         defMatInfo = {};
         defMatInfo.shininess = Material::SHININESS::EGGSHELL;
-        // defMatInfo.pTexture = textureHandler().getTextureByName(RenderPass::TEXTURE_2D_CREATE_INFO.name);
-        defMatInfo.pTexture = textureHandler().getTextureByName(RenderPass::PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO.name);
+        defMatInfo.pTexture = textureHandler().getTexture(RenderPass::PROJECT_2D_ARRAY_TEXTURE_ID);
         defMatInfo.color = {0.5f, 0.5f, 0.5f};
         meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
     }
@@ -106,7 +105,7 @@ void Scene::Handler::init() {
         if (!suppress || false) {
             meshInfo = {};
             meshInfo.pipelineType = PIPELINE::SCREEN_SPACE_DEFAULT;
-            // meshInfo.passTypes = {RENDER_PASS::SCREEN_SPACE_SAMPLER};
+            // meshInfo.passTypes = {PASS::SCREEN_SPACE_SAMPLER};
             meshInfo.selectable = false;
             meshInfo.geometryCreateInfo.transform = helpers::affine(glm::vec3{2.0f});
             meshInfo.geometryCreateInfo.invert = true;
@@ -121,7 +120,7 @@ void Scene::Handler::init() {
             // PASS 1
             meshInfo = {};
             meshInfo.pipelineType = PIPELINE::SCREEN_SPACE_DEFAULT;
-            // meshInfo.passTypes = {RENDER_PASS::SCREEN_SPACE_SAMPLER};
+            // meshInfo.passTypes = {PASS::SCREEN_SPACE_SAMPLER};
             meshInfo.selectable = false;
             meshInfo.geometryCreateInfo.transform = helpers::affine(glm::vec3{2.0f});
             meshInfo.geometryCreateInfo.invert = true;
@@ -132,7 +131,7 @@ void Scene::Handler::init() {
             // PASS 2
             meshInfo = {};
             meshInfo.pipelineType = PIPELINE::SCREEN_SPACE_DEFAULT;
-            // meshInfo.passTypes = {RENDER_PASS::SCREEN_SPACE};
+            // meshInfo.passTypes = {PASS::SCREEN_SPACE};
             meshInfo.selectable = false;
             meshInfo.geometryCreateInfo.transform = helpers::affine(glm::vec3{2.0f});
             meshInfo.geometryCreateInfo.invert = true;
@@ -166,7 +165,7 @@ void Scene::Handler::init() {
         defInstInfo.data.push_back(
             {helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
         defMatInfo = {};
-        defMatInfo.pTexture = textureHandler().getTextureByName(Texture::MYBRICK_CREATE_INFO.name);
+        defMatInfo.pTexture = textureHandler().getTexture(Texture::MYBRICK_ID);
         defMatInfo.shininess = Material::SHININESS::EGGSHELL;
         auto& boxTexture1 = meshHandler().makeTextureMesh<Box::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
         boxTexture1->putOnTop(groundPlane_bbmm);
@@ -186,7 +185,7 @@ void Scene::Handler::init() {
         pbrMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::METAL;
         pbrMatInfo.color = {1.0f, 1.0f, 0.0f};
         pbrMatInfo.roughness = 0.86f;  // 0.43f;
-        pbrMatInfo.pTexture = textureHandler().getTextureByName(Texture::VULKAN_CREATE_INFO.name);
+        pbrMatInfo.pTexture = textureHandler().getTexture(Texture::VULKAN_ID);
         auto& boxTexture2 = meshHandler().makeTextureMesh<Box::Texture>(&meshInfo, &pbrMatInfo, &defInstInfo);
         boxTexture2->putOnTop(groundPlane_bbmm);
         meshHandler().updateMesh(boxTexture2);
@@ -244,7 +243,7 @@ void Scene::Handler::init() {
             defMatInfo.reflectionFactor = 0.1f;
         }
         meshInfo.pipelineType = PIPELINE::CUBE;
-        defMatInfo.pTexture = textureHandler().getTextureByName(Texture::SKYBOX_CREATE_INFO.name);
+        defMatInfo.pTexture = textureHandler().getTexture(Texture::SKYBOX_ID);
         meshHandler().makeColorMesh<Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
         ////
         // defInstInfo = {};
@@ -260,7 +259,7 @@ void Scene::Handler::init() {
         ////
         // meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
         // defMatInfo = {};
-        // defMatInfo.pTexture = textureHandler().getTextureByName(Texture::STATUE_CREATE_INFO.name);
+        // defMatInfo.pTexture = textureHandler().getTextureByName(Texture::STATUE_ID);
         // defInstInfo = {};
         // defInstInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{2.0f, 0.0f, 0.0f})});
         // meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
@@ -297,7 +296,7 @@ void Scene::Handler::init() {
             pbrMatInfo.color = {0.8f, 0.3f, 0.0f};
             defMatInfo.flags |= Material::FLAG::REFLECT;
             defMatInfo.reflectionFactor = 0.85f;
-            defMatInfo.pTexture = textureHandler().getTextureByName(Texture::SKYBOX_CREATE_INFO.name);
+            defMatInfo.pTexture = textureHandler().getTexture(Texture::SKYBOX_ID);
             modelHandler().makeColorModel(&modelInfo, &defMatInfo, &defInstInfo);
         }
     }
@@ -401,7 +400,7 @@ void Scene::Handler::init() {
         }
         // MATERIAL
         defMatInfo = {};
-        defMatInfo.pTexture = textureHandler().getTextureByName(Texture::MEDIEVAL_HOUSE_CREATE_INFO.name);
+        defMatInfo.pTexture = textureHandler().getTexture(Texture::MEDIEVAL_HOUSE_ID);
         modelHandler().makeTextureModel(&modelInfo, &defMatInfo, &defInstInfo);
     }
     // MEDIEVAL HOUSE (PBR_TEX)
@@ -424,7 +423,7 @@ void Scene::Handler::init() {
         defInstInfo.data.push_back({helpers::affine(glm::vec3{0.0175f}, {-6.5f, 0.0f, -6.5f}, M_PI_4_FLT, CARDINAL_Y)});
         // MATERIAL
         pbrMatInfo = {};
-        pbrMatInfo.pTexture = textureHandler().getTextureByName(Texture::MEDIEVAL_HOUSE_CREATE_INFO.name);
+        pbrMatInfo.pTexture = textureHandler().getTexture(Texture::MEDIEVAL_HOUSE_ID);
         modelHandler().makeTextureModel(&modelInfo, &pbrMatInfo, &defInstInfo);
     }
 

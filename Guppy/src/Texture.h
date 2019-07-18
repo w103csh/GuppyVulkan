@@ -7,30 +7,31 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
-#include "Descriptor.h"
 #include "Sampler.h"
-// HANDLERS
-#include "LoadingHandler.h"
+
+// clang-format off
+namespace Loading { struct Resources; }
+// clang-format on
 
 namespace Texture {
 
-class Base : public Descriptor::Interface {
+class Base {
    public:
     Base(const uint32_t &&offset, const CreateInfo *pCreateInfo);
     virtual ~Base() = default;
 
     void destroy(const VkDevice &dev);
 
-    // DESCRIPTOR
-    void setWriteInfo(VkWriteDescriptorSet &write, uint32_t index = 0) const override;
-
+    const DESCRIPTOR DESCRIPTOR_TYPE;  // TODO: this should probably be detemined by the pipeline/set
     const bool HAS_DATA;
     const std::string NAME;
     const uint32_t OFFSET;
+    const bool PER_FRAMEBUFFER;
 
     STATUS status;
     FlagBits flags;  // TODO: Still needed?
-    float aspect;    // TODO: Set per sampler passing a dynamic list to shaders?
+    bool usesSwapchain;
+    float aspect;  // TODO: Set per sampler passing a dynamic list to shaders?
     std::unique_ptr<Loading::Resources> pLdgRes;
 
     std::vector<Sampler::Base> samplers;

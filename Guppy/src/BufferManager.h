@@ -28,14 +28,14 @@ class Data {
 
     inline void set(VkDeviceSize index, const std::vector<T> &data) {
         auto offset = index * ALIGNMENT;
-        assert(offset + (ALIGNMENT * data.size()) < TOTAL_SIZE);
+        assert(offset + (ALIGNMENT * data.size()) <= TOTAL_SIZE);
         for (uint64_t i = 0; i < data.size(); i++)  //
             std::memcpy((pData_ + (offset + (i * ALIGNMENT))), &data[i], sizeof(T));
     }
 
     inline T &get(VkDeviceSize index) {
         auto offset = index * ALIGNMENT;
-        assert(offset + ALIGNMENT < TOTAL_SIZE);
+        assert(offset + ALIGNMENT <= TOTAL_SIZE);
         return (T &)(*(pData_ + offset));
     }
 
@@ -99,7 +99,7 @@ class Base {
     template <typename TCreateInfo>
     void insert(const VkDevice &dev, TCreateInfo *pCreateInfo) {
         assert(pItems.size() < MAX_SIZE);
-        auto info = fill(dev, std::vector<typename TDerived::DATA>(1));
+        auto info = fill(dev, std::vector<typename TDerived::DATA>(pCreateInfo->dataCount));
         pItems.emplace_back(new TDerived(std::move(info), get(info), pCreateInfo));
         if (pCreateInfo == nullptr || pCreateInfo->update) updateData(dev, pItems.back()->BUFFER_INFO);
     }
@@ -112,17 +112,14 @@ class Base {
         if (update) updateData(dev, pItems.back()->BUFFER_INFO);
     }
 
-    void updateData(const VkDevice &dev, const Buffer::Info &info) {
-        if (pItems[info.itemOffset]->DIRTY) {
-            updateMappedMemory(dev, info);
-            pItems[info.itemOffset]->DIRTY = false;
+    void updateData(const VkDevice &dev, const Buffer::Info &info, const int index = -1) {
+        if (pItems[info.itemOffset]->dirty) {
+            updateMappedMemory(dev, info, index);
+            pItems[info.itemOffset]->dirty = false;
         }
     }
 
-    template <typename T>
-    T &getTypedItem(TSmartPointer<TBase> &pItem) {
-        return std::ref(*(T *)(pItem.get()));
-    }
+    TDerived &getTypedItem(const uint32_t &index) { return std::ref(*(TDerived *)(pItems.at(index).get())); }
 
     void destroy(const VkDevice &dev) {
         reset(dev);
@@ -142,7 +139,7 @@ class Base {
         isValid = !data.empty();
         assert(isValid && "\"data\" cannot be empty.");
         isValid &= ((resource.currentOffset + data.size()) * alignment_) <= resource.data.TOTAL_SIZE;
-        assert(isValid && "Either up the max size or figure out how to grow the \"resources_\".");
+        assert(isValid && "Either increase the max size, or figure out how to grow the \"resources_\".");
         // TODO: other validation? also, does above make any sense?
 
         Buffer::Info info = {};
@@ -172,17 +169,24 @@ class Base {
 
    private:
     // TODO: change the caller so that all the memory can be updated at once.
-    void updateMappedMemory(const VkDevice &dev, const Buffer::Info &info) {
+    void updateMappedMemory(const VkDevice &dev, const Buffer::Info &info, const int index) {
         auto &resource = resources_[info.resourcesOffset];
-        auto pData = static_cast<uint8_t *>(resource.pMappedData) + info.memoryOffset;
+
+        // If the index was set offset into both memory pointers.
+        auto memoryOffset = info.memoryOffset + ((index == -1) ? 0 : (index * resource.data.ALIGNMENT));
+        auto dataOffset = info.dataOffset + ((index == -1) ? 0 : index);
+
+        auto pData = static_cast<uint8_t *>(resource.pMappedData) + memoryOffset;
+
         if (KEEP_MAPPED) {
-            VkDeviceSize range = info.count * info.bufferInfo.range;
-            memcpy(pData, &resource.data.get(info.dataOffset), range);
+            // If index is not set copy the entire range for the item.
+            VkDeviceSize range = (index == -1) ? (info.count * resource.data.ALIGNMENT) : resource.data.ALIGNMENT;
+            memcpy(pData, &resource.data.get(dataOffset), range);
         } else {
             // TODO: only map the region being copied???
             vk::assert_success(
                 vkMapMemory(dev, resource.memory, 0, resource.memoryRequirements.size, 0, &resource.pMappedData));
-            memcpy(pData, &resource.data.get(info.dataOffset), resource.data.ALIGNMENT);
+            memcpy(pData, &resource.data.get(dataOffset), resource.data.ALIGNMENT);
             vkUnmapMemory(dev, resource.memory);
         }
     }
@@ -224,7 +228,7 @@ class Base {
         VkMemoryAllocateInfo allocInfo = {};
         allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         allocInfo.allocationSize = resource.memoryRequirements.size;
-        auto pass = helpers::getMemoryType(ctx.mem_props, resource.memoryRequirements.memoryTypeBits, PROPERTIES,
+        auto pass = helpers::getMemoryType(ctx.memProps, resource.memoryRequirements.memoryTypeBits, PROPERTIES,
                                            &allocInfo.memoryTypeIndex);
         assert(pass && "No mappable, coherent memory");
 
@@ -239,7 +243,7 @@ class Base {
         vk::assert_success(
             vkMapMemory(ctx.dev, resource.memory, 0, resource.memoryRequirements.size, 0, &resource.pMappedData));
         /*  Copying all the memory here is probably a redunant init step. The way its written now,
-            each item will do a memcpy if DIRTY after creation. Maybe just make that a necessary step,
+            each item will do a memcpy if dirty after creation. Maybe just make that a necessary step,
             and leave the rest of the buffer garbage.
         */
         memcpy(resource.pMappedData, resource.data.data(), static_cast<size_t>(resource.memoryRequirements.size));

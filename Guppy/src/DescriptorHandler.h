@@ -2,6 +2,7 @@
 #define DESCRIPTOR_HANDLER_H
 
 #include <map>
+#include <memory>
 #include <set>
 #include <string>
 #include <vulkan/vulkan.h>
@@ -11,20 +12,16 @@
 #include "DescriptorSet.h"
 
 // clang-format off
-namespace Mesh      { class Base; }
-namespace Pipeline  { class Base; }
+namespace Material  { class Base; }
 namespace Texture   { class Base; }
 namespace Shader    { class Base; }
 // clang-format on
 
 namespace Descriptor {
 
-// **********************
-//      Handler
-// **********************
+// HANDLER
 
 class Handler : public Game::Handler {
-    friend class Pipeline::Base;  // TODO: remove this!!!!!!!!!!!!!!!!!!!!!!!!!!!
    public:
     Handler(Game* pGame);
 
@@ -32,11 +29,23 @@ class Handler : public Game::Handler {
 
     // POOL
     inline const VkDescriptorPool& getPool() { return pool_; }
+
     // SET
-    const Descriptor::Set::Base& getDescriptorSet(const DESCRIPTOR_SET& type) { return std::ref(*getSet(type).get()); }
+    const Descriptor::Set::Base& getDescriptorSet(const DESCRIPTOR_SET& type) const {
+        for (auto& pSet : pDescriptorSets_) {
+            if (pSet->TYPE == type) return std::ref(*pSet.get());
+        }
+        assert(false);
+        throw std::runtime_error("Unrecognized set type");
+    }
+    Descriptor::Set::resourceHelpers getResourceHelpers(const std::set<PASS> passTypes, const PIPELINE& pipelineType,
+                                                        const std::vector<DESCRIPTOR_SET>& descSetTypes) const;
+
     // DESCRIPTOR
-    void getBindData(Mesh::Base& pMesh);
-    void updateBindData(const std::shared_ptr<Texture::Base>& pTexture);
+    void getBindData(const PIPELINE& pipelineType, Descriptor::Set::bindDataMap& bindDataMap,
+                     const std::shared_ptr<Material::Base>& pMaterial = nullptr,
+                     const std::shared_ptr<Texture::Base>& pTexture = nullptr);
+    void updateBindData(const std::vector<std::string> textureIds);
 
    private:
     void reset() override;
@@ -55,28 +64,28 @@ class Handler : public Game::Handler {
         for (auto& pSet : pDescriptorSets_) {
             if (pSet->TYPE == type) return pSet;
         }
+        assert(false);
         throw std::runtime_error("Unrecognized set type");
     }
 
     void prepareDescriptorSet(std::unique_ptr<Descriptor::Set::Base>& pSet);
 
-    Descriptor::Set::resourceHelpers getResourceHelpers(const std::set<RENDER_PASS> passTypes, const PIPELINE& pipelineType,
-                                                        const std::vector<DESCRIPTOR_SET>& descSetTypes);
-
     void allocateDescriptorSets(const Descriptor::Set::Resource& resource, std::vector<VkDescriptorSet>& descriptorSets);
+
     void updateDescriptorSets(const Descriptor::bindingMap& bindingMap, const Descriptor::OffsetsMap& offsets,
-                              std::vector<VkDescriptorSet>& descriptorSets, const Mesh::Base* pMesh = nullptr) const;
+                              Set::resourceInfoMapSetsPair& pair, const std::shared_ptr<Material::Base>& pMaterial = nullptr,
+                              const std::shared_ptr<Texture::Base>& pTexture = nullptr) const;
 
-    VkWriteDescriptorSet getWrite(const Descriptor::bindingMapKeyValue& keyValue) const;
+    VkWriteDescriptorSet getWrite(const Descriptor::bindingMapKeyValue& keyValue, const VkDescriptorSet& set) const;
     void getDynamicOffsets(const std::unique_ptr<Descriptor::Set::Base>& pSet, std::vector<uint32_t>& dynamicOffsets,
-                           Mesh::Base& mesh);
-
-    std::vector<std::unique_ptr<Descriptor::Set::Base>> pDescriptorSets_;
+                           const std::shared_ptr<Material::Base>& pMaterial);
 
     // BINDING
     VkDescriptorSetLayoutBinding getDecriptorSetLayoutBinding(const Descriptor::bindingMapKeyValue& keyValue,
                                                               const VkShaderStageFlags& stageFlags,
                                                               const Uniform::offsets& offsets) const;
+
+    std::vector<std::unique_ptr<Descriptor::Set::Base>> pDescriptorSets_;
 };
 
 }  // namespace Descriptor

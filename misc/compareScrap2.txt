@@ -1,7 +1,27 @@
+// MANAGER
 
-    // DEFAULT RENDER PASS
-    initInfo = {};
-    initInfo.clearColor = true;
-    initInfo.clearDepth = true;
-    initInfo.format = ctx.surfaceFormat.format;
-    initInfo.depthFormat = ctx.depthFormat;
+template <class TBase>
+using ItemPointer = std::unique_ptr<TBase>;
+
+template <class TDerived>
+using ManagerType = Descriptor::Manager<Uniform::Base, TDerived, ItemPointer>;
+
+// TODO: inner class of Handler?
+template <class TDerived>
+class Manager : public ManagerType<TDerived> {
+   public:
+    Manager(const std::string&& name, const DESCRIPTOR&& descriptorType, const index&& maxSize,
+            const std::string&& macroName)
+        : ManagerType<TDerived>{
+              std::forward<const std::string>(name),
+              std::forward<const DESCRIPTOR>(descriptorType),
+              std::forward<const index>(maxSize),
+              true,
+              VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+              static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
+                                                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
+              std::forward<const std::string>(macroName),
+              VK_SHARING_MODE_EXCLUSIVE,
+              0,
+          } {}
+};

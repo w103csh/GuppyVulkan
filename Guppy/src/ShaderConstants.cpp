@@ -163,6 +163,7 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     // SCREEN SPACE
     {SHADER::SCREEN_SPACE_VERT, Shader::ScreenSpace::VERT_CREATE_INFO},
     {SHADER::SCREEN_SPACE_FRAG, Shader::ScreenSpace::FRAG_CREATE_INFO},
+    {SHADER::SCREEN_SPACE_COMP, Shader::ScreenSpace::COMP_CREATE_INFO},
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {

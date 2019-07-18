@@ -1,15 +1,16 @@
 
 #include "Helpers.h"
 
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
-
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <regex>
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
 #include <unordered_map>
 
+#include "ConstantsAll.h"
+#include "ComputeHandler.h"  // Remove this if a ComputeConstants.h is made.
 #include "Face.h"
 #include "Mesh.h"
 
@@ -20,7 +21,7 @@ const std::string MACRO_REGEX_TEMPLATE = "(#define)\\s+(" + MACRO_REPLACE_PREFIX
 
 namespace helpers {
 
-std::vector<macroInfo> getMacroReplaceInfo(const std::string &macroIdentifierPrefix, const std::string &text) {
+std::vector<macroInfo> getMacroReplaceInfo(const std::string_view &macroIdentifierPrefix, const std::string &text) {
     // { macro identifier, line, value }
     std::vector<macroInfo> replaceStrs;
 
@@ -312,6 +313,9 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
             barrier.dstAccessMask =
                 VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;  // | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
             break;
+        case VK_IMAGE_LAYOUT_GENERAL:
+            barrier.dstAccessMask = 0;
+            break;
         default:
             layoutHandled = false;
             break;
@@ -359,6 +363,17 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
     //}
 }
 
+void validatePassTypeStructures() {
+    auto it1 = std::find_first_of(RenderPass::ALL.begin(), RenderPass::ALL.end(), Compute::ALL.begin(), Compute::ALL.end());
+    assert(it1 == RenderPass::ALL.end());
+    auto it2 =
+        std::find_first_of(RenderPass::ALL.begin(), RenderPass::ALL.end(), Compute::ACTIVE.begin(), Compute::ACTIVE.end());
+    assert(it2 == RenderPass::ALL.end());
+    auto it3 =
+        std::find_first_of(Compute::ALL.begin(), Compute::ALL.end(), RenderPass::ACTIVE.begin(), RenderPass::ACTIVE.end());
+    assert(it3 == Compute::ALL.end());
+}
+
 void cramers3(glm::vec3 c1, glm::vec3 c2, glm::vec3 c3, glm::vec3 c4) {
     /*  Setup example (comes from barycentric intersection):
 
@@ -390,6 +405,119 @@ void decomposeScale(const glm::mat4 &m, glm::vec3 &scale) {
     glm::vec3 skew{};
     glm::vec4 perspective{};
     glm::decompose(m, scale, orientation, translation, skew, perspective);
+}
+
+void attachementImageBarrierWriteToSamplerRead(const VkImage &image, BarrierResource &resource,
+                                               const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
+    resource.imgBarriers.push_back({});
+    resource.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    resource.imgBarriers.back().pNext = nullptr;
+    resource.imgBarriers.back().srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    resource.imgBarriers.back().newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    resource.imgBarriers.back().srcQueueFamilyIndex = srcQueueFamilyIndex;
+    resource.imgBarriers.back().dstQueueFamilyIndex = srcQueueFamilyIndex;
+    resource.imgBarriers.back().image = image;
+    resource.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+}
+
+void attachementImageBarrierWriteToStorageWrite(const VkImage &image, BarrierResource &resource,
+                                                const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
+    // Can't remember what this was for.
+    resource.imgBarriers.push_back({});
+    resource.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    resource.imgBarriers.back().pNext = nullptr;
+    resource.imgBarriers.back().srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    resource.imgBarriers.back().newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    resource.imgBarriers.back().srcQueueFamilyIndex = srcQueueFamilyIndex;
+    resource.imgBarriers.back().dstQueueFamilyIndex = dstQueueFamilyIndex;
+    resource.imgBarriers.back().image = image;
+    resource.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+}
+
+void attachementImageBarrierWriteToWrite(const VkImage &image, BarrierResource &resource, const uint32_t srcQueueFamilyIndex,
+                                         const uint32_t dstQueueFamilyIndex) {
+    // Ex: Barrier between scene/post-processing write to framebuffer, and UI write to the same framebuffer.
+    // I believe this exact thing is handled in a subpass depency in RenderPass::ImGui.
+    resource.imgBarriers.push_back({});
+    resource.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    resource.imgBarriers.back().pNext = nullptr;
+    resource.imgBarriers.back().srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    resource.imgBarriers.back().newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    resource.imgBarriers.back().srcQueueFamilyIndex = srcQueueFamilyIndex;
+    resource.imgBarriers.back().dstQueueFamilyIndex = dstQueueFamilyIndex;
+    resource.imgBarriers.back().image = image;
+    resource.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+}
+
+void storageImageBarrierWriteToRead(const VkImage &image, BarrierResource &resource, const uint32_t srcQueueFamilyIndex,
+                                    const uint32_t dstQueueFamilyIndex) {
+    resource.imgBarriers.push_back({});
+    resource.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    resource.imgBarriers.back().pNext = nullptr;
+    resource.imgBarriers.back().srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    resource.imgBarriers.back().newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    resource.imgBarriers.back().srcQueueFamilyIndex = srcQueueFamilyIndex;
+    resource.imgBarriers.back().dstQueueFamilyIndex = dstQueueFamilyIndex;
+    resource.imgBarriers.back().image = image;
+    resource.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+}
+
+void bufferBarrierWriteToRead(const VkDescriptorBufferInfo &bufferInfo, BarrierResource &resource,
+                              const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
+    resource.buffBarriers.push_back({});
+    resource.buffBarriers.back().sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
+    resource.buffBarriers.back().pNext = nullptr;
+    resource.buffBarriers.back().srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    resource.buffBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    resource.buffBarriers.back().srcQueueFamilyIndex = srcQueueFamilyIndex;
+    resource.buffBarriers.back().dstQueueFamilyIndex = dstQueueFamilyIndex;
+    resource.buffBarriers.back().buffer = bufferInfo.buffer;
+    resource.buffBarriers.back().offset = bufferInfo.offset;
+    resource.buffBarriers.back().size = bufferInfo.range;
+}
+
+void globalDebugBarrierWriteToRead(BarrierResource &resource) {
+    resource.glblBarriers.push_back({});
+    resource.glblBarriers.back().sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    resource.glblBarriers.back().pNext = nullptr;
+    // All src
+    resource.glblBarriers.back().srcAccessMask =
+        VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+        VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT |
+        VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+        VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT;
+    // All dst
+    resource.glblBarriers.back().dstAccessMask =
+        VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
+        VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT |
+        VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+        VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT;
+}
+
+void recordBarriers(const BarrierResource &resource, const VkCommandBuffer &cmd, const VkPipelineStageFlags srcStageMask,
+                    const VkPipelineStageFlags dstStageMask, const VkDependencyFlags dependencyFlags) {
+    vkCmdPipelineBarrier(                                     //
+        cmd,                                                  //
+        srcStageMask,                                         //
+        dstStageMask,                                         //
+        dependencyFlags,                                      //
+        static_cast<uint32_t>(resource.glblBarriers.size()),  //
+        resource.glblBarriers.data(),                         //
+        static_cast<uint32_t>(resource.buffBarriers.size()),  //
+        resource.buffBarriers.data(),                         //
+        static_cast<uint32_t>(resource.imgBarriers.size()),   //
+        resource.imgBarriers.data()                           //
+    );
 }
 
 }  // namespace helpers

@@ -10,7 +10,6 @@
 
 namespace Instance {
 
-// TODO: inner class of Handler?
 template <class TDerived>
 class Manager : public Buffer::Manager::Base<Instance::Base, TDerived, std::shared_ptr> {
    public:

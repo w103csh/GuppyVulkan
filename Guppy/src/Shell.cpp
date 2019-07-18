@@ -1,17 +1,5 @@
 /*
- * Copyright (C) 2016 Google, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This came from LunarG Hologram sample, but has been radically altered at this point.
  */
 
 #include <cassert>
@@ -29,20 +17,20 @@
 #include "InputHandler.h"
 
 Shell::Shell(Game &game)
-    : game_(game),
-      settings_(game.settings()),
-      ctx_(),
-      game_tick_(1.0f / settings_.ticks_per_second),
-      game_time_(game_tick_) {
+    : game_(game),                                   //
+      settings_(game.settings()),                    //
+      ctx_(),                                        //
+      gameTick_(1.0f / settings_.ticks_per_second),  //
+      gameTime_(gameTick_) {
     // require generic WSI extensions
-    instance_extensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-    device_extensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+    instanceExtensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+    deviceExtensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
     // require "standard" validation layers
     if (settings_.validate) {
-        instance_layers_.push_back("VK_LAYER_LUNARG_standard_validation");
-        instance_extensions_.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-        instance_extensions_.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        instanceLayers_.push_back("VK_LAYER_LUNARG_standard_validation");
+        instanceExtensions_.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+        instanceExtensions_.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
     InputHandler::init(this);
@@ -53,24 +41,24 @@ void Shell::log(LogPriority priority, const char *msg) const {
     st << msg << "\n";
 }
 
-void Shell::init_vk() {
-    init_instance();
+void Shell::initVk() {
+    initInstance();
 
-    init_debug_report();
-    init_validation_messenger();
+    initDebugReport();
+    initValidationMessenger();
 
-    init_physical_dev();
+    initPhysicalDev();
 }
 
-void Shell::cleanup_vk() {
-    if (settings_.validate) ext::DestroyDebugReportCallbackEXT(ctx_.instance, ctx_.debug_report, nullptr);
-    if (settings_.validate) ext::DestroyDebugUtilsMessengerEXT(ctx_.instance, ctx_.debug_utils_messenger, nullptr);
+void Shell::cleanupVk() {
+    if (settings_.validate) ext::DestroyDebugReportCallbackEXT(ctx_.instance, ctx_.debugReport, nullptr);
+    if (settings_.validate) ext::DestroyDebugUtilsMessengerEXT(ctx_.instance, ctx_.debugUtilsMessenger, nullptr);
 
-    destroy_instance();
+    destroyInstance();
 }
 
-bool Shell::debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT obj_type, uint64_t object,
-                                  size_t location, int32_t msg_code, const char *layer_prefix, const char *msg) {
+bool Shell::debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t object,
+                                size_t location, int32_t msgCode, const char *layerPrefix, const char *msg) {
     LogPriority prio = LOG_WARN;
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
         prio = LOG_ERR;
@@ -82,16 +70,16 @@ bool Shell::debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObje
         prio = LOG_DEBUG;
 
     std::stringstream ss;
-    ss << layer_prefix << ": " << msg;
+    ss << layerPrefix << ": " << msg;
 
     log(prio, ss.str().c_str());
 
     return false;
 }
 
-void Shell::assert_all_instance_layers() const {
+void Shell::assertAllInstanceLayers() const {
     // Check if all instance layers required are present
-    for (const auto &layer_name : instance_layers_) {
+    for (const auto &layer_name : instanceLayers_) {
         auto it = std::find_if(layerProps_.begin(), layerProps_.end(), [&layer_name](auto layer_prop) {
             return std::strcmp(layer_prop.properties.layerName, layer_name) == 0;
         });
@@ -103,9 +91,9 @@ void Shell::assert_all_instance_layers() const {
     }
 }
 
-void Shell::assert_all_instance_extensions() const {
+void Shell::assertAllInstanceExtensions() const {
     // Check if all instance extensions required are present
-    for (const auto &extensionName : instance_extensions_) {
+    for (const auto &extensionName : instanceExtensions_) {
         auto it = std::find_if(instExtProps_.begin(), instExtProps_.end(),
                                [&extensionName](auto ext) { return std::strcmp(extensionName, ext.extensionName) == 0; });
         if (it == instExtProps_.end()) {
@@ -116,13 +104,13 @@ void Shell::assert_all_instance_extensions() const {
     }
 }
 
-bool Shell::has_all_device_layers(VkPhysicalDevice phy) const {
+bool Shell::hasAllDeviceLayers(VkPhysicalDevice phy) const {
     // Something here?
 
     return true;
 }
 
-bool Shell::has_all_device_extensions(VkPhysicalDevice phy) const {
+bool Shell::hasAllDeviceExtensions(VkPhysicalDevice phy) const {
     //// enumerate device extensions
     // std::vector<VkExtensionProperties> exts;
     // vk::enumerate(phy, nullptr, exts);
@@ -138,15 +126,15 @@ bool Shell::has_all_device_extensions(VkPhysicalDevice phy) const {
     return true;
 }
 
-void Shell::init_instance() {
+void Shell::initInstance() {
     // enumerate instance layer & extension properties
-    enumerate_instance_properties();
+    enumerateInstanceProperties();
 
-    assert_all_instance_layers();
-    assert_all_instance_extensions();
+    assertAllInstanceLayers();
+    assertAllInstanceExtensions();
 
     uint32_t version = VK_VERSION_1_0;
-    determine_api_version(version);
+    determineApiVersion(version);
 
     VkApplicationInfo app_info = {};
     app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
@@ -162,16 +150,16 @@ void Shell::init_instance() {
     inst_info.pNext = nullptr;
     inst_info.flags = 0;
     inst_info.pApplicationInfo = &app_info;
-    inst_info.enabledLayerCount = static_cast<uint32_t>(instance_layers_.size());
-    inst_info.ppEnabledLayerNames = instance_layers_.data();
-    inst_info.enabledExtensionCount = static_cast<uint32_t>(instance_extensions_.size());
-    inst_info.ppEnabledExtensionNames = instance_extensions_.data();
+    inst_info.enabledLayerCount = static_cast<uint32_t>(instanceLayers_.size());
+    inst_info.ppEnabledLayerNames = instanceLayers_.data();
+    inst_info.enabledExtensionCount = static_cast<uint32_t>(instanceExtensions_.size());
+    inst_info.ppEnabledExtensionNames = instanceExtensions_.data();
 
     VkResult res = vkCreateInstance(&inst_info, nullptr, &ctx_.instance);
     assert(res == VK_SUCCESS);
 }
 
-void Shell::init_debug_report() {
+void Shell::initDebugReport() {
     if (!settings_.validate) return;
 
     VkDebugReportCallbackCreateInfoEXT debug_report_info = {};
@@ -183,13 +171,13 @@ void Shell::init_debug_report() {
         debug_report_info.flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT;
     }
 
-    debug_report_info.pfnCallback = debug_report_callback;
+    debug_report_info.pfnCallback = debugReportCallback;
     debug_report_info.pUserData = reinterpret_cast<void *>(this);
 
-    vk::assert_success(ext::CreateDebugReportCallbackEXT(ctx_.instance, &debug_report_info, nullptr, &ctx_.debug_report));
+    vk::assert_success(ext::CreateDebugReportCallbackEXT(ctx_.instance, &debug_report_info, nullptr, &ctx_.debugReport));
 }
 
-void Shell::init_validation_messenger() {
+void Shell::initValidationMessenger() {
     if (!settings_.validate) return;
 
     VkDebugUtilsMessengerCreateInfoEXT debugInfo = {};
@@ -202,47 +190,47 @@ void Shell::init_validation_messenger() {
     debugInfo.pfnUserCallback = debug_callback;
     debugInfo.pUserData = nullptr;  // Optional
 
-    vk::assert_success(ext::CreateDebugUtilsMessengerEXT(ctx_.instance, &debugInfo, nullptr, &ctx_.debug_utils_messenger));
+    vk::assert_success(ext::CreateDebugUtilsMessengerEXT(ctx_.instance, &debugInfo, nullptr, &ctx_.debugUtilsMessenger));
 }
 
-void Shell::init_physical_dev() {
-    enumerate_physical_devs();
+void Shell::initPhysicalDev() {
+    enumeratePhysicalDevs();
 
-    ctx_.physical_dev = VK_NULL_HANDLE;
-    pick_physical_dev();
+    ctx_.physicalDev = VK_NULL_HANDLE;
+    pickPhysicalDev();
 
-    if (ctx_.physical_dev == VK_NULL_HANDLE) throw std::runtime_error("failed to find any capable Vulkan physical device");
+    if (ctx_.physicalDev == VK_NULL_HANDLE) throw std::runtime_error("failed to find any capable Vulkan physical device");
 }
 
-void Shell::create_context() {
-    create_dev();
+void Shell::createContext() {
+    createDev();
 
     if (settings_.enable_debug_markers) {
-        ext::CreateDebugMarkerEXTs(ctx_.dev, ctx_.physical_dev);
+        ext::CreateDebugMarkerEXTs(ctx_.dev, ctx_.physicalDev);
     }
 
-    init_dev_queues();
+    initDevQueues();
 
     // TODO: should this do this?
     // initialize ctx_.{surface,format} before attach_shell
-    create_swapchain();
+    createSwapchain();
 
     // need image count
-    create_back_buffers();
+    createBackBuffers();
 
     game_.attachShell(*this);
 }
 
-void Shell::destroy_context() {
+void Shell::destroyContext() {
     if (ctx_.dev == VK_NULL_HANDLE) return;
 
     vkDeviceWaitIdle(ctx_.dev);
 
-    destroy_swapchain();
+    destroySwapchain();
 
     game_.detachShell();
 
-    destroy_back_buffers();
+    destroyBackBuffers();
 
     // ctx_.game_queue = VK_NULL_HANDLE;
     // ctx_.present_queue = VK_NULL_HANDLE;
@@ -252,12 +240,13 @@ void Shell::destroy_context() {
     ctx_.dev = VK_NULL_HANDLE;
 }
 
-void Shell::create_dev() {
+void Shell::createDev() {
     // queue create info
     std::set<uint32_t> unique_queue_families = {
-        ctx_.graphics_index,
-        ctx_.present_index,
-        ctx_.transfer_index,
+        ctx_.graphicsIndex,
+        ctx_.presentIndex,
+        ctx_.transferIndex,
+        ctx_.computeIndex,
     };
     float queue_priorities[1] = {0.0f};  // only one queue per family atm
     std::vector<VkDeviceQueueCreateInfo> queue_infos;
@@ -273,28 +262,29 @@ void Shell::create_dev() {
 
     // features
     VkPhysicalDeviceFeatures deviceFeatures = {};
-    deviceFeatures.samplerAnisotropy = ctx_.sampler_anisotropy_enabled_ ? VK_TRUE : VK_FALSE;
-    deviceFeatures.sampleRateShading = ctx_.sample_rate_shading_enabled_ ? VK_TRUE : VK_FALSE;
+    deviceFeatures.samplerAnisotropy = ctx_.samplerAnisotropyEnabled_ ? VK_TRUE : VK_FALSE;
+    deviceFeatures.sampleRateShading = ctx_.sampleRateShadingEnabled_ ? VK_TRUE : VK_FALSE;
+    deviceFeatures.fragmentStoresAndAtomics = ctx_.computeShadingEnabled_ ? VK_TRUE : VK_FALSE;
 
     VkDeviceCreateInfo dev_info = {};
     dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     dev_info.queueCreateInfoCount = static_cast<uint32_t>(queue_infos.size());
     dev_info.pQueueCreateInfos = queue_infos.data();
     if (settings_.enable_debug_markers) {
-        device_extensions_.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-        dev_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions_.size());
-        dev_info.ppEnabledExtensionNames = device_extensions_.data();
-        device_extensions_.pop_back();  // TODO: add this to assert check instead of removing
+        deviceExtensions_.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+        dev_info.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions_.size());
+        dev_info.ppEnabledExtensionNames = deviceExtensions_.data();
+        deviceExtensions_.pop_back();  // TODO: add this to assert check instead of removing
     } else {
-        dev_info.enabledExtensionCount = static_cast<uint32_t>(device_extensions_.size());
-        dev_info.ppEnabledExtensionNames = device_extensions_.data();
+        dev_info.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions_.size());
+        dev_info.ppEnabledExtensionNames = deviceExtensions_.data();
     }
     dev_info.pEnabledFeatures = &deviceFeatures;
 
-    vk::assert_success(vkCreateDevice(ctx_.physical_dev, &dev_info, nullptr, &ctx_.dev));
+    vk::assert_success(vkCreateDevice(ctx_.physicalDev, &dev_info, nullptr, &ctx_.dev));
 }
 
-void Shell::create_back_buffers() {
+void Shell::createBackBuffers() {
     VkSemaphoreCreateInfo sem_info = {};
     sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
@@ -317,7 +307,7 @@ void Shell::create_back_buffers() {
     }
 }
 
-void Shell::destroy_back_buffers() {
+void Shell::destroyBackBuffers() {
     while (!ctx_.backBuffers.empty()) {
         const auto &buf = ctx_.backBuffers.front();
 
@@ -330,22 +320,21 @@ void Shell::destroy_back_buffers() {
 }
 
 // TODO: this doesn't create the swapchain
-void Shell::create_swapchain() {
+void Shell::createSwapchain() {
     ctx_.surface = createSurface(ctx_.instance);
 
     VkBool32 supported;
-    vk::assert_success(
-        vkGetPhysicalDeviceSurfaceSupportKHR(ctx_.physical_dev, ctx_.present_queue_family, ctx_.surface, &supported));
+    vk::assert_success(vkGetPhysicalDeviceSurfaceSupportKHR(ctx_.physicalDev, ctx_.presentIndex, ctx_.surface, &supported));
     assert(supported);
     // this should be guaranteed by the platform-specific can_present call
-    supported = canPresent(ctx_.physical_dev, ctx_.present_index);
+    supported = canPresent(ctx_.physicalDev, ctx_.presentIndex);
     assert(supported);
 
-    enumerate_surface_properties();
-    determine_swapchain_surface_format();
-    determine_swapchain_present_mode();
-    determine_swapchain_image_count();
-    determine_depth_format();
+    enumerateSurfaceProperties();
+    determineSwapchainSurfaceFormat();
+    determineSwapchainPresentMode();
+    determineSwapchainImageCount();
+    determineDepthFormat();
 
     // suface dependent flags
     /*  TODO: Clean up what happens if the GPU doesn't handle linear blitting.
@@ -356,8 +345,8 @@ void Shell::create_swapchain() {
         with a library like stb_image_resize. Each mip level can then be loaded into the image in the same way that
         you loaded the original image.
     */
-    ctx_.linear_blitting_supported_ =
-        helpers::findSupportedFormat(ctx_.physical_dev, {ctx_.surfaceFormat.format}, VK_IMAGE_TILING_OPTIMAL,
+    ctx_.linearBlittingSupported_ =
+        helpers::findSupportedFormat(ctx_.physicalDev, {ctx_.surfaceFormat.format}, VK_IMAGE_TILING_OPTIMAL,
                                      VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != VK_FORMAT_UNDEFINED;
 
     // defer to resizeSwapchain()
@@ -366,7 +355,7 @@ void Shell::create_swapchain() {
     // ctx_.extent.height = UINT32_MAX;
 }
 
-void Shell::destroy_swapchain() {
+void Shell::destroySwapchain() {
     if (ctx_.swapchain != VK_NULL_HANDLE) {
         game_.detachSwapchain();
 
@@ -378,8 +367,8 @@ void Shell::destroy_swapchain() {
     ctx_.surface = VK_NULL_HANDLE;
 }
 
-void Shell::resizeSwapchain(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities) {
-    if (determine_swapchain_extent(width_hint, height_hint, refresh_capabilities)) return;
+void Shell::resizeSwapchain(uint32_t widthHint, uint32_t heightHint, bool refreshCapabilities) {
+    if (determineSwapchainExtent(widthHint, heightHint, refreshCapabilities)) return;
 
     auto &caps = ctx_.surfaceProps.capabilities;
 
@@ -427,12 +416,12 @@ void Shell::resizeSwapchain(uint32_t width_hint, uint32_t height_hint, bool refr
     swapchain_info.queueFamilyIndexCount = 0;
     swapchain_info.pQueueFamilyIndices = nullptr;
 
-    if (ctx_.graphics_index != ctx_.present_index) {
+    if (ctx_.graphicsIndex != ctx_.presentIndex) {
         // If the graphics and present queues are from different queue families,
         // we either have to explicitly transfer ownership of images between the
         // queues, or we have to create the swapchain with imageSharingMode
         // as VK_SHARING_MODE_CONCURRENT
-        uint32_t queue_families[2] = {ctx_.graphics_index, ctx_.present_index};
+        uint32_t queue_families[2] = {ctx_.graphicsIndex, ctx_.presentIndex};
         swapchain_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
         swapchain_info.queueFamilyIndexCount = 2;
         swapchain_info.pQueueFamilyIndices = queue_families;
@@ -456,18 +445,15 @@ void Shell::resizeSwapchain(uint32_t width_hint, uint32_t height_hint, bool refr
 void Shell::addGameTime(float time) {
     int max_ticks = 1;
 
-    if (!settings_.no_tick) game_time_ += time;
+    if (!settings_.no_tick) gameTime_ += time;
 
-    while (game_time_ >= game_tick_ && max_ticks--) {
+    while (gameTime_ >= gameTick_ && max_ticks--) {
         game_.onTick();
-        game_time_ -= game_tick_;
+        gameTime_ -= gameTick_;
     }
 }
 
 void Shell::acquireBackBuffer() {
-    // acquire just once when not presenting
-    if (settings_.no_present && ctx_.acquiredBackBuffer.acquireSemaphore != VK_NULL_HANDLE) return;
-
     auto &buf = ctx_.backBuffers.front();
 
     // wait until acquire and render semaphores are waited/unsignaled
@@ -496,12 +482,7 @@ void Shell::acquireBackBuffer() {
 void Shell::presentBackBuffer() {
     const auto &buf = ctx_.acquiredBackBuffer;
 
-    if (!settings_.no_render) game_.onFrame(game_time_ / game_tick_);
-
-    if (settings_.no_present) {
-        fake_present();
-        return;
-    }
+    if (!settings_.no_render) game_.onFrame(gameTime_ / gameTick_);
 
     VkPresentInfoKHR present_info = {};
     present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -511,7 +492,7 @@ void Shell::presentBackBuffer() {
     present_info.pSwapchains = &ctx_.swapchain;
     present_info.pImageIndices = &buf.imageIndex;
 
-    VkResult res = vkQueuePresentKHR(ctx_.queues[ctx_.present_queue_family], &present_info);
+    VkResult res = vkQueuePresentKHR(ctx_.queues[ctx_.presentIndex], &present_info);
     if (res == VK_ERROR_OUT_OF_DATE_KHR) {
         // Swapchain is out of date (e.g. the window was resized) and
         // must be recreated:
@@ -520,42 +501,20 @@ void Shell::presentBackBuffer() {
         assert(!res);
     }
 
-    vk::assert_success(vkQueueSubmit(ctx_.queues[ctx_.present_queue_family], 0, nullptr, buf.presentFence));
+    vk::assert_success(vkQueueSubmit(ctx_.queues[ctx_.presentIndex], 0, nullptr, buf.presentFence));
     ctx_.backBuffers.push(buf);
-}
-
-// TODO: need this???
-void Shell::fake_present() {
-    // const auto &buf = ctx_.acquired_back_buffer;
-
-    // assert(settings_.no_present);
-
-    //// wait render semaphore and signal acquire semaphore
-    // if (!settings_.no_render) {
-    //    VkPipelineStageFlags stage = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
-    //    VkSubmitInfo submit_info = {};
-    //    submit_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    //    submit_info.waitSemaphoreCount = 1;
-    //    submit_info.pWaitSemaphores = &buf.render_semaphore;
-    //    submit_info.pWaitDstStageMask = &stage;
-    //    submit_info.signalSemaphoreCount = 1;
-    //    submit_info.pSignalSemaphores = &buf.acquire_semaphore;
-    //    vk::assert_success(vk::QueueSubmit(ctx_.game_queue, 1, &submit_info, VK_NULL_HANDLE));
-    //}
-
-    //// push the buffer back just once for Shell::cleanup_vk
-    // if (buf.acquire_semaphore != ctx_.back_buffers.back().acquire_semaphore) ctx_.back_buffers.push(buf);
 }
 
 // ********
 // NEW FUNCTIONS FROM MY OTHER INIT CODE
 // ********
 
-void Shell::init_dev_queues() {
+void Shell::initDevQueues() {
     std::set<uint32_t> unique_queue_families = {
-        ctx_.graphics_index,
-        ctx_.present_index,
-        ctx_.transfer_index,
+        ctx_.graphicsIndex,
+        ctx_.presentIndex,
+        ctx_.transferIndex,
+        ctx_.computeIndex,
     };
     for (auto queue_family_index : unique_queue_families) {
         VkQueue queue = VK_NULL_HANDLE;
@@ -565,9 +524,9 @@ void Shell::init_dev_queues() {
     }
 }
 
-void Shell::destroy_instance() { vkDestroyInstance(ctx_.instance, nullptr); }
+void Shell::destroyInstance() { vkDestroyInstance(ctx_.instance, nullptr); }
 
-void Shell::enumerate_instance_properties() {
+void Shell::enumerateInstanceProperties() {
 #ifdef __ANDROID__
     // This place is the first place for samples to use Vulkan APIs.
     // Here, we are going to open Vulkan.so on the device and retrieve function pointers using
@@ -602,18 +561,18 @@ void Shell::enumerate_instance_properties() {
      */
     for (auto &prop : props) {
         layerProps_.push_back({prop});
-        enumerate_instance_layer_extension_properties(layerProps_.back());
+        enumerateInstanceLayerExtensionProperties(layerProps_.back());
     }
 
     // Get instance extension properties
-    enumerate_instance_extension_properties();
+    enumerateInstanceExtensionProperties();
 }
 
-void Shell::enumerate_instance_layer_extension_properties(LayerProperties &layer_props) {
+void Shell::enumerateInstanceLayerExtensionProperties(LayerProperties &layerProps) {
     VkExtensionProperties *instance_extensions;
     uint32_t instance_extension_count;
     VkResult res;
-    char *layer_name = layer_props.properties.layerName;
+    char *layer_name = layerProps.properties.layerName;
 
     do {
         // This could be cleaner obviously
@@ -621,16 +580,16 @@ void Shell::enumerate_instance_layer_extension_properties(LayerProperties &layer
         if (res) return;
         if (instance_extension_count == 0) return;
 
-        layer_props.extensionProps.resize(instance_extension_count);
-        instance_extensions = layer_props.extensionProps.data();
+        layerProps.extensionProps.resize(instance_extension_count);
+        instance_extensions = layerProps.extensionProps.data();
         res = vkEnumerateInstanceExtensionProperties(layer_name, &instance_extension_count, instance_extensions);
     } while (res == VK_INCOMPLETE);
 }
 
-void Shell::enumerate_device_layer_extension_properties(PhysicalDeviceProperties &props, LayerProperties &layer_props) {
+void Shell::enumerateDeviceLayerExtensionProperties(PhysicalDeviceProperties &props, LayerProperties &layerProps) {
     uint32_t extensionCount;
     std::vector<VkExtensionProperties> extensions;
-    char *layer_name = layer_props.properties.layerName;
+    char *layer_name = layerProps.properties.layerName;
 
     vk::assert_success(vkEnumerateDeviceExtensionProperties(props.device, layer_name, &extensionCount, nullptr));
 
@@ -639,63 +598,63 @@ void Shell::enumerate_device_layer_extension_properties(PhysicalDeviceProperties
 
     if (!extensions.empty())
         for (auto &ext : extensions)
-            props.layer_extension_map.insert(std::pair<const char *, VkExtensionProperties>(layer_name, ext));
+            props.layerExtensionMap.insert(std::pair<const char *, VkExtensionProperties>(layer_name, ext));
 }
 
-void Shell::enumerate_instance_extension_properties() {
+void Shell::enumerateInstanceExtensionProperties() {
     uint32_t ext_count;
     vk::assert_success(vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, nullptr));
     instExtProps_.resize(ext_count);
     vk::assert_success(vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, instExtProps_.data()));
 }
 
-void Shell::enumerate_surface_properties() {
+void Shell::enumerateSurfaceProperties() {
     // capabilities
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx_.physical_dev, ctx_.surface, &ctx_.surfaceProps.capabilities);
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx_.physicalDev, ctx_.surface, &ctx_.surfaceProps.capabilities);
 
     // surface formats
     uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(ctx_.physical_dev, ctx_.surface, &formatCount, NULL);
+    vkGetPhysicalDeviceSurfaceFormatsKHR(ctx_.physicalDev, ctx_.surface, &formatCount, NULL);
     if (formatCount != 0) {
-        ctx_.surfaceProps.surf_formats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(ctx_.physical_dev, ctx_.surface, &formatCount,
-                                             ctx_.surfaceProps.surf_formats.data());
+        ctx_.surfaceProps.surfFormats.resize(formatCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(ctx_.physicalDev, ctx_.surface, &formatCount,
+                                             ctx_.surfaceProps.surfFormats.data());
     }
 
     // present modes
     uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(ctx_.physical_dev, ctx_.surface, &presentModeCount, NULL);
+    vkGetPhysicalDeviceSurfacePresentModesKHR(ctx_.physicalDev, ctx_.surface, &presentModeCount, NULL);
     if (presentModeCount != 0) {
         ctx_.surfaceProps.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(ctx_.physical_dev, ctx_.surface, &presentModeCount,
+        vkGetPhysicalDeviceSurfacePresentModesKHR(ctx_.physicalDev, ctx_.surface, &presentModeCount,
                                                   ctx_.surfaceProps.presentModes.data());
     }
 }
 
-void Shell::enumerate_physical_devs(uint32_t physical_dev_count) {
+void Shell::enumeratePhysicalDevs(uint32_t physicalDevCount) {
     std::vector<VkPhysicalDevice> devs;
-    uint32_t const req_count = physical_dev_count;
+    uint32_t const req_count = physicalDevCount;
 
-    VkResult res = vkEnumeratePhysicalDevices(ctx_.instance, &physical_dev_count, NULL);
-    assert(res == VK_SUCCESS && physical_dev_count >= req_count);
-    devs.resize(physical_dev_count);
+    VkResult res = vkEnumeratePhysicalDevices(ctx_.instance, &physicalDevCount, NULL);
+    assert(res == VK_SUCCESS && physicalDevCount >= req_count);
+    devs.resize(physicalDevCount);
 
-    vk::assert_success(vkEnumeratePhysicalDevices(ctx_.instance, &physical_dev_count, devs.data()));
+    vk::assert_success(vkEnumeratePhysicalDevices(ctx_.instance, &physicalDevCount, devs.data()));
 
     for (auto &dev : devs) {
         PhysicalDeviceProperties props;
         props.device = std::move(dev);
 
         // queue family properties
-        vkGetPhysicalDeviceQueueFamilyProperties(props.device, &props.queue_family_count, NULL);
-        assert(props.queue_family_count >= 1);
+        vkGetPhysicalDeviceQueueFamilyProperties(props.device, &props.queueFamilyCount, NULL);
+        assert(props.queueFamilyCount >= 1);
 
-        props.queue_props.resize(props.queue_family_count);
-        vkGetPhysicalDeviceQueueFamilyProperties(props.device, &props.queue_family_count, props.queue_props.data());
-        assert(props.queue_family_count >= 1);
+        props.queueProps.resize(props.queueFamilyCount);
+        vkGetPhysicalDeviceQueueFamilyProperties(props.device, &props.queueFamilyCount, props.queueProps.data());
+        assert(props.queueFamilyCount >= 1);
 
         // memory properties
-        vkGetPhysicalDeviceMemoryProperties(props.device, &props.memory_properties);
+        vkGetPhysicalDeviceMemoryProperties(props.device, &props.memoryProperties);
 
         // properties
         vkGetPhysicalDeviceProperties(props.device, &props.properties);
@@ -708,79 +667,78 @@ void Shell::enumerate_physical_devs(uint32_t physical_dev_count) {
 
         // layer extensions
         for (auto &layer_prop : layerProps_) {
-            enumerate_device_layer_extension_properties(props, layer_prop);
+            enumerateDeviceLayerExtensionProperties(props, layer_prop);
         }
 
         // features
         vkGetPhysicalDeviceFeatures(props.device, &props.features);
 
-        ctx_.physical_dev_props.push_back(props);
+        ctx_.physicalDevProps.push_back(props);
     }
 
     devs.erase(devs.begin(), devs.end());
 }
 
-void Shell::pick_physical_dev() {
+void Shell::pickPhysicalDev() {
     // Iterate over each enumerated physical device
-    for (size_t i = 0; i < ctx_.physical_dev_props.size(); i++) {
-        auto &props = ctx_.physical_dev_props[i];
-        ctx_.physical_dev_index = ctx_.graphics_index = ctx_.present_index = ctx_.transfer_index = UINT32_MAX;
+    for (size_t i = 0; i < ctx_.physicalDevProps.size(); i++) {
+        auto &props = ctx_.physicalDevProps[i];
+        ctx_.physicalDevIndex = ctx_.graphicsIndex = ctx_.presentIndex = ctx_.transferIndex = ctx_.computeIndex = UINT32_MAX;
 
-        if (is_dev_suitable(props, ctx_.graphics_index, ctx_.present_index, ctx_.transfer_index)) {
+        if (isDevSuitable(props, ctx_.graphicsIndex, ctx_.presentIndex, ctx_.transferIndex, ctx_.computeIndex)) {
             // We found a suitable physical device so set relevant data.
-            ctx_.physical_dev_index = i;
-            ctx_.physical_dev = props.device;
+            ctx_.physicalDevIndex = i;
+            ctx_.physicalDev = props.device;
 
             // convenience variables ...
-            ctx_.mem_props = ctx_.physical_dev_props[ctx_.physical_dev_index].memory_properties;
+            ctx_.memProps = ctx_.physicalDevProps[ctx_.physicalDevIndex].memoryProperties;
 
             break;
         }
     }
 }
 
-bool Shell::is_dev_suitable(const PhysicalDeviceProperties &props, uint32_t &graphics_queue_index,
-                            uint32_t &present_queue_index, uint32_t &transfer_queue_index) {
-    if (!determine_queue_families_support(props, graphics_queue_index, present_queue_index, transfer_queue_index))
-        return false;
-    if (!determine_device_extension_support(props)) return false;
+bool Shell::isDevSuitable(const PhysicalDeviceProperties &props, uint32_t &graphicsIndex, uint32_t &presentIndex,
+                          uint32_t &transferIndex, uint32_t &computeIndex) {
+    if (!determineQueueFamiliesSupport(props, graphicsIndex, presentIndex, transferIndex, computeIndex)) return false;
+    if (!determineDeviceExtensionSupport(props)) return false;
     // optional (warn but dont throw)
-    determine_device_feature_support(props);
+    determineDeviceFeatureSupport(props);
     // depends on above...
-    determine_sample_count(props);
+    determineSampleCount(props);
     return true;
 }
 
-bool Shell::determine_queue_families_support(const PhysicalDeviceProperties &props, uint32_t &graphics_queue_family_index,
-                                             uint32_t &present_queue_family_index, uint32_t &transfer_queue_family_index) {
+bool Shell::determineQueueFamiliesSupport(const PhysicalDeviceProperties &props, uint32_t &graphicsIndex,
+                                          uint32_t &presentIndex, uint32_t &transferIndex, uint32_t &computeIndex) {
     // Determine graphics and present queues ...
 
     // Iterate over each queue to learn whether it supports presenting:
-    std::vector<VkBool32> pSupportsPresent(props.queue_family_count);
+    std::vector<VkBool32> pSupportsPresent(props.queueFamilyCount);
     // TODO: I don't feel like re-arranging the whole start up atm.
     auto surface = createSurface(ctx_.instance);
-    for (uint32_t i = 0; i < props.queue_family_count; i++) {
+    for (uint32_t i = 0; i < props.queueFamilyCount; i++) {
         vk::assert_success(vkGetPhysicalDeviceSurfaceSupportKHR(props.device, i, surface, pSupportsPresent.data()));
 
         // Search for a graphics and a present queue in the array of queue
         // families, try to find one that supports both
-        if (props.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-            if (graphics_queue_family_index == UINT32_MAX) graphics_queue_family_index = i;
+        if (props.queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+            if (graphicsIndex == UINT32_MAX) graphicsIndex = i;
 
             if (pSupportsPresent[i] == VK_TRUE) {
-                graphics_queue_family_index = i;
-                present_queue_family_index = i;
+                graphicsIndex = i;
+                presentIndex = i;
                 break;
             }
         }
     }
-    if (present_queue_family_index == UINT32_MAX) {
+    if (presentIndex == UINT32_MAX) {
         // If didn't find a queue that supports both graphics and present, then
         // find a separate present queue.
         // TODO: is this the best thing to do?
-        for (uint32_t i = 0; i < props.queue_family_count; ++i) {
+        for (uint32_t i = 0; i < props.queueFamilyCount; ++i) {
             if (pSupportsPresent[i] == VK_TRUE) {
-                present_queue_family_index = i;
+                presentIndex = i;
                 break;
             }
         }
@@ -789,30 +747,42 @@ bool Shell::determine_queue_families_support(const PhysicalDeviceProperties &pro
 
     // Determine transfer queue ...
 
-    for (uint32_t i = 0; i < props.queue_family_count; ++i) {
-        if ((props.queue_props[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0 &&
-            props.queue_props[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
-            transfer_queue_family_index = i;
+    for (uint32_t i = 0; i < props.queueFamilyCount; ++i) {
+        if ((props.queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0 &&
+            props.queueProps[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
+            transferIndex = i;
             break;
-        } else if (props.queue_props[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
-            transfer_queue_family_index = i;
+        } else if (props.queueProps[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
+            transferIndex = i;
+        }
+    }
+
+    // Determine compute queue ... (This logic ain't great. It can put compute with transfer)
+
+    for (uint32_t i = 0; i < props.queueFamilyCount; ++i) {
+        if ((props.queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0 &&
+            props.queueProps[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
+            computeIndex = i;
+            break;
+        } else if (props.queueProps[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
+            computeIndex = i;
         }
     }
 
     // Do any other selection of device logic here...
 
     // Just pick the fist one that supports both
-    return (graphics_queue_family_index != UINT32_MAX && present_queue_family_index != UINT32_MAX &&
-            transfer_queue_family_index != UINT32_MAX);
+    return (graphicsIndex != UINT32_MAX && presentIndex != UINT32_MAX && transferIndex != UINT32_MAX &&
+            computeIndex != UINT32_MAX);
 }
 
-bool Shell::determine_device_extension_support(const PhysicalDeviceProperties &props) {
-    if (device_extensions_.empty()) return true;
+bool Shell::determineDeviceExtensionSupport(const PhysicalDeviceProperties &props) {
+    if (deviceExtensions_.empty()) return true;
     // TODO: This won't work right if either list is not unique, but I don't feel like changing it atm.
     size_t count = 0;
-    size_t req_ext_count = device_extensions_.size();
+    size_t req_ext_count = deviceExtensions_.size();
     for (const auto &extension : props.extensions) {
-        for (const auto &req_ext_name : device_extensions_) {
+        for (const auto &req_ext_name : deviceExtensions_) {
             if (std::strcmp(req_ext_name, extension.extensionName) == 0) count++;
             if (count == req_ext_count) return true;
         }
@@ -820,21 +790,25 @@ bool Shell::determine_device_extension_support(const PhysicalDeviceProperties &p
     return false;
 }
 
-void Shell::determine_device_feature_support(const PhysicalDeviceProperties &props) {
+void Shell::determineDeviceFeatureSupport(const PhysicalDeviceProperties &props) {
     // sampler anisotropy
-    ctx_.sampler_anisotropy_enabled_ = props.features.samplerAnisotropy && settings_.try_sampler_anisotropy;
-    if (settings_.try_sampler_anisotropy && !ctx_.sampler_anisotropy_enabled_)
+    ctx_.samplerAnisotropyEnabled_ = props.features.samplerAnisotropy && settings_.try_sampler_anisotropy;
+    if (settings_.try_sampler_anisotropy && !ctx_.samplerAnisotropyEnabled_)
         log(Shell::LOG_WARN, "cannot enable sampler anisotropy");
     // sample rate shading
-    ctx_.sample_rate_shading_enabled_ = props.features.sampleRateShading && settings_.try_sample_rate_shading;
-    if (settings_.try_sample_rate_shading && !ctx_.sample_rate_shading_enabled_)
+    ctx_.sampleRateShadingEnabled_ = props.features.sampleRateShading && settings_.try_sample_rate_shading;
+    if (settings_.try_sample_rate_shading && !ctx_.sampleRateShadingEnabled_)
         log(Shell::LOG_WARN, "cannot enable sample rate shading");
+    // compute shading (TODO: this should be more robust)
+    ctx_.computeShadingEnabled_ = props.features.fragmentStoresAndAtomics && settings_.try_compute_shading;
+    if (settings_.try_compute_shading && !ctx_.computeShadingEnabled_)  //
+        log(Shell::LOG_WARN, "cannot enable compute shading");
 }
 
-void Shell::determine_sample_count(const PhysicalDeviceProperties &props) {
+void Shell::determineSampleCount(const PhysicalDeviceProperties &props) {
     /* DEPENDS on determine_device_feature_support */
     ctx_.samples = VK_SAMPLE_COUNT_1_BIT;
-    if (ctx_.sample_rate_shading_enabled_) {
+    if (ctx_.sampleRateShadingEnabled_) {
         VkSampleCountFlags counts = std::min(props.properties.limits.framebufferColorSampleCounts,
                                              props.properties.limits.framebufferDepthSampleCounts);
         // return the highest possible one for now
@@ -853,10 +827,10 @@ void Shell::determine_sample_count(const PhysicalDeviceProperties &props) {
     }
 }
 
-bool Shell::determine_swapchain_extent(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities) {
+bool Shell::determineSwapchainExtent(uint32_t widthHint, uint32_t heightHint, bool refreshCapabilities) {
     // 0, 0 for hints indicates calling from acquire_back_buffer... TODO: more robust solution???
-    if (refresh_capabilities)
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx_.physical_dev, ctx_.surface, &ctx_.surfaceProps.capabilities);
+    if (refreshCapabilities)
+        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx_.physicalDev, ctx_.surface, &ctx_.surfaceProps.capabilities);
 
     auto &caps = ctx_.surfaceProps.capabilities;
 
@@ -864,8 +838,8 @@ bool Shell::determine_swapchain_extent(uint32_t width_hint, uint32_t height_hint
 
     // use the hints
     if (extent.width == (uint32_t)-1) {
-        extent.width = width_hint;
-        extent.height = height_hint;
+        extent.width = widthHint;
+        extent.height = heightHint;
     }
     // clamp width; to protect us from broken hints?
     if (extent.width < caps.minImageExtent.width)
@@ -886,7 +860,7 @@ bool Shell::determine_swapchain_extent(uint32_t width_hint, uint32_t height_hint
     }
 }
 
-void Shell::determine_depth_format() {
+void Shell::determineDepthFormat() {
     /* allow custom depth formats */
 #ifdef __ANDROID__
     // Depth format needs to be VK_FORMAT_D24_UNORM_S8_UINT on Android.
@@ -894,18 +868,18 @@ void Shell::determine_depth_format() {
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
     if (ctx_.depth_format == VK_FORMAT_UNDEFINED) ctx_.depth_format = VK_FORMAT_D32_SFLOAT;
 #else
-    if (ctx_.depthFormat == VK_FORMAT_UNDEFINED) ctx_.depthFormat = helpers::findDepthFormat(ctx_.physical_dev);
+    if (ctx_.depthFormat == VK_FORMAT_UNDEFINED) ctx_.depthFormat = helpers::findDepthFormat(ctx_.physicalDev);
         // TODO: turn off depth if undefined still...
 #endif
 }
 
-void Shell::determine_swapchain_surface_format() {
+void Shell::determineSwapchainSurfaceFormat() {
     // no preferred type
-    if (ctx_.surfaceProps.surf_formats.size() == 1 && ctx_.surfaceProps.surf_formats[0].format == VK_FORMAT_UNDEFINED) {
+    if (ctx_.surfaceProps.surfFormats.size() == 1 && ctx_.surfaceProps.surfFormats[0].format == VK_FORMAT_UNDEFINED) {
         ctx_.surfaceFormat = {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
         return;
     } else {
-        for (const auto &surfFormat : ctx_.surfaceProps.surf_formats) {
+        for (const auto &surfFormat : ctx_.surfaceProps.surfFormats) {
             if (surfFormat.format == VK_FORMAT_B8G8R8A8_UNORM &&
                 surfFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
                 ctx_.surfaceFormat = surfFormat;
@@ -914,10 +888,10 @@ void Shell::determine_swapchain_surface_format() {
         }
     }
     log(Shell::LOG_INFO, "choosing first available swap surface format!");
-    ctx_.surfaceFormat = ctx_.surfaceProps.surf_formats[0];
+    ctx_.surfaceFormat = ctx_.surfaceProps.surfFormats[0];
 }
 
-void Shell::determine_swapchain_present_mode() {
+void Shell::determineSwapchainPresentMode() {
     // guaranteed to be present (vert sync)
     VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
     for (const auto &mode : ctx_.surfaceProps.presentModes) {
@@ -930,7 +904,7 @@ void Shell::determine_swapchain_present_mode() {
     ctx_.mode = presentMode;
 }
 
-void Shell::determine_swapchain_image_count() {
+void Shell::determineSwapchainImageCount() {
     auto &caps = ctx_.surfaceProps.capabilities;
     // Determine the number of VkImage's to use in the swap chain.
     // We need to acquire only 1 presentable image at at time.
@@ -944,7 +918,7 @@ void Shell::determine_swapchain_image_count() {
         ctx_.imageCount = caps.maxImageCount;
 }
 
-void Shell::determine_api_version(uint32_t &version) {
+void Shell::determineApiVersion(uint32_t &version) {
     version = VK_API_VERSION_1_0;
     // Android build not at 1.1 yet
 #ifndef ANDROID

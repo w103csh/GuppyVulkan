@@ -5,24 +5,26 @@
 #include "PipelineHandler.h"
 #include "Vertex.h"
 
-Descriptor::Set::Parallax::Uniform::Uniform()
+Descriptor::Set::Parallax::Uniform::Uniform(Handler& handler)
     : Set::Base{
+          handler,
           DESCRIPTOR_SET::UNIFORM_PARALLAX,
           "_DS_UNI_PLX",
           {
-              {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, ""}},
-              {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_DEFAULT, ""}},
-              {{3, 0}, {UNIFORM::LIGHT_POSITIONAL_DEFAULT, ""}},
+              {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
+              {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_DEFAULT}},
+              {{3, 0}, {UNIFORM::LIGHT_POSITIONAL_DEFAULT}},
           },
       } {}
 
-Descriptor::Set::Parallax::Sampler::Sampler()
+Descriptor::Set::Parallax::Sampler::Sampler(Handler& handler)
     : Set::Base{
+          handler,
           DESCRIPTOR_SET::SAMPLER_PARALLAX,
           "_DS_SMP_PLX",
           {
-              {{0, 0}, {COMBINED_SAMPLER::MATERIAL, ""}},
-              {{1, 0}, {COMBINED_SAMPLER::MATERIAL, ""}},
+              {{0, 0}, {COMBINED_SAMPLER::MATERIAL, "0"}},
+              {{1, 0}, {COMBINED_SAMPLER::MATERIAL, "1"}},
           },
       } {}
 

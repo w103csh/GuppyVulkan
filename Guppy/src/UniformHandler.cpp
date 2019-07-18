@@ -12,7 +12,10 @@
 
 namespace {
 
-const std::string UNIFORM_MACRO_ID_PREFIX = "_U_";
+const std::set<std::string_view> MACRO_ID_PREFIXES = {
+    "_U_",
+    "_S_",
+};
 
 //// TODO: what should this be???
 // struct _UniformTag {
@@ -26,7 +29,7 @@ Uniform::Handler::Handler(Game* pGame)
       managers_{
           // CAMERA
           Uniform::Manager<Camera::Default::Perspective::Base>  //
-          {"Default Perspective Camera", UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, 5, "_U_CAM_DEF_PERS"},
+          {"Default Perspective Camera", UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, 6, "_U_CAM_DEF_PERS"},
           // LIGHT
           Uniform::Manager<Light::Default::Positional::Base>  //
           {"Default Positional Light", UNIFORM::LIGHT_POSITIONAL_DEFAULT, 20, "_U_LGT_DEF_POS"},
@@ -36,15 +39,42 @@ Uniform::Handler::Handler(Game* pGame)
           {"Default Spot Light", UNIFORM::LIGHT_SPOT_DEFAULT, 20, "_U_LGT_DEF_SPT"},
           // MISCELLANEOUS
           Uniform::Manager<Uniform::Default::Fog::Base>  //
-          {"Default Fog", UNIFORM::FOG_DEFAULT, 5, "_U_UNI_DEF_FOG"},
+          {"Default Fog", UNIFORM::FOG_DEFAULT, 5, "_U_DEF_FOG"},
           Uniform::Manager<Uniform::Default::Projector::Base>  //
-          {"Default Projector", UNIFORM::PROJECTOR_DEFAULT, 5, "_U_UNI_DEF_PRJ"},
+          {"Default Projector", UNIFORM::PROJECTOR_DEFAULT, 5, "_U_DEF_PRJ"},
           Uniform::Manager<Uniform::ScreenSpace::Default>  //
-          {"Screen Space Default", UNIFORM::SCREEN_SPACE_DEFAULT, 5, "_U_UNI_SCR_DEF"},
+          {"Screen Space Default", UNIFORM::SCREEN_SPACE_DEFAULT, 5, "_U_SCR_DEF"},
+          // STORAGE
+          Uniform::Manager<Storage::ScreenSpace::PostProcess>  //
+          {"Storage Default", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
           //
       },
       hasVisualHelpers(false),
       mainCameraOffset_(0) {}
+
+std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const DESCRIPTOR& type) {
+    // clang-format off
+    if (std::visit(Descriptor::IsUniform{}, type)) {
+        switch (std::visit(Descriptor::GetUniform{}, type)) {
+            case UNIFORM::CAMERA_PERSPECTIVE_DEFAULT:   return camDefPersMgr().pItems;
+            case UNIFORM::LIGHT_POSITIONAL_DEFAULT:     return lgtDefPosMgr().pItems;
+            case UNIFORM::LIGHT_POSITIONAL_PBR:         return lgtPbrPosMgr().pItems;
+            case UNIFORM::LIGHT_SPOT_DEFAULT:           return lgtDefSptMgr().pItems;
+            case UNIFORM::FOG_DEFAULT:                  return uniDefFogMgr().pItems;
+            case UNIFORM::PROJECTOR_DEFAULT:            return uniDefPrjMgr().pItems;
+            case UNIFORM::SCREEN_SPACE_DEFAULT:         return uniScrDefMgr().pItems;
+            default:                                    assert(false); exit(EXIT_FAILURE);
+        }
+    } else if (std::visit(Descriptor::IsStorageBuffer{}, type)) {
+        switch (std::visit(Descriptor::GetStorageBuffer{}, type)) {
+            case STORAGE_BUFFER::POST_PROCESS:          return strPstPrcMgr().pItems;
+            default:                                    assert(false); exit(EXIT_FAILURE);
+        }
+    } else {
+        assert(false); exit(EXIT_FAILURE);
+    }
+    // clang-format on
+}
 
 void Uniform::Handler::init() {
     reset();
@@ -58,13 +88,18 @@ void Uniform::Handler::init() {
     passOffsets = pipelineHandler().makeUniformOffsetsMap();
     offsetsManager_.addOffsets(passOffsets, OffsetsManager::ADD_TYPE::Pipeline);
 
-    camDefPersMgr().init(shell().context(), settings());
-    lgtDefPosMgr().init(shell().context(), settings());
-    lgtPbrPosMgr().init(shell().context(), settings());
-    lgtDefSptMgr().init(shell().context(), settings());
-    uniDefFogMgr().init(shell().context(), settings());
-    uniDefPrjMgr().init(shell().context(), settings());
-    uniScrDefMgr().init(shell().context(), settings());
+    // clang-format off
+    uint8_t count = 0;
+    camDefPersMgr().init(shell().context(), settings());    ++count;
+    lgtDefPosMgr().init(shell().context(), settings());     ++count;
+    lgtPbrPosMgr().init(shell().context(), settings());     ++count;
+    lgtDefSptMgr().init(shell().context(), settings());     ++count;
+    uniDefFogMgr().init(shell().context(), settings());     ++count;
+    uniDefPrjMgr().init(shell().context(), settings());     ++count;
+    uniScrDefMgr().init(shell().context(), settings());     ++count;
+    strPstPrcMgr().init(shell().context(), settings());     ++count;
+    assert(count == managers_.size());
+    // clang-format on
 
     createCameras();
     createLights();
@@ -73,21 +108,27 @@ void Uniform::Handler::init() {
 
 void Uniform::Handler::reset() {
     const auto& dev = shell().context().dev;
-    // CAMERAS
-    camDefPersMgr().destroy(dev);
-    // LIGHTS
-    lgtDefPosMgr().destroy(dev);
-    lgtPbrPosMgr().destroy(dev);
-    lgtDefSptMgr().destroy(dev);
-    // MISCELLANEOUS
-    uniDefFogMgr().destroy(dev);
-    uniDefPrjMgr().destroy(dev);
-    uniScrDefMgr().destroy(dev);
+    // clang-format off
+    uint8_t count = 0;
+    camDefPersMgr().destroy(dev);   ++count;
+    lgtDefPosMgr().destroy(dev);    ++count;
+    lgtPbrPosMgr().destroy(dev);    ++count;
+    lgtDefSptMgr().destroy(dev);    ++count;
+    uniDefFogMgr().destroy(dev);    ++count;
+    uniDefPrjMgr().destroy(dev);    ++count;
+    uniScrDefMgr().destroy(dev);    ++count;
+    strPstPrcMgr().destroy(dev);    ++count;
+    assert(count == managers_.size());
+    // clang-format on
 }
 
 void Uniform::Handler::createCameras() {
     const auto& dev = shell().context().dev;
+
     Camera::Default::Perspective::CreateInfo createInfo = {};
+
+    assert(shell().context().imageCount == 3);  // Potential imageCount problem
+    createInfo.dataCount = shell().context().imageCount;
 
     // MAIN
     createInfo.aspect = static_cast<float>(settings().initial_width) / static_cast<float>(settings().initial_height);
@@ -104,7 +145,11 @@ void Uniform::Handler::createCameras() {
 
 void Uniform::Handler::createLights() {
     const auto& dev = shell().context().dev;
+
     Light::CreateInfo createInfo = {};
+
+    assert(shell().context().imageCount == 3);  // Potential imageCount problem
+    createInfo.dataCount = shell().context().imageCount;
 
     // POSITIONAL
     // (TODO: these being seperately created is really dumb!!! If this is
@@ -125,6 +170,7 @@ void Uniform::Handler::createLights() {
 
     // SPOT
     Light::Default::Spot::CreateInfo spotCreateInfo = {};
+    spotCreateInfo.dataCount = shell().context().imageCount;
     spotCreateInfo.exponent = glm::radians(25.0f);
     spotCreateInfo.exponent = 25.0f;
     spotCreateInfo.model = helpers::viewToWorld({0.0f, 4.5f, 1.0f}, {0.0f, 0.0f, -1.5f}, UP_VECTOR);
@@ -162,26 +208,31 @@ void Uniform::Handler::createMiscellaneous() {
 
     // SCREEN SPACE
     {
-        uniScrDefMgr().insert(dev);  //
+        uniScrDefMgr().insert(dev);
+
+        assert(shell().context().imageCount == 3);  // Potential imageCount problem
+
+        Buffer::CreateInfo info = {shell().context().imageCount, false};
+        strPstPrcMgr().insert(dev, &info);
     }
 }
 
 void Uniform::Handler::createVisualHelpers() {
     // DEFAULT POSITIONAL
-    for (auto& pItem : lgtDefPosMgr().pItems) {
-        auto& lgt = lgtDefPosMgr().getTypedItem<Light::Default::Positional::Base>(pItem);
+    for (uint32_t i = 0; i < lgtDefPosMgr().pItems.size(); i++) {
+        auto& lgt = lgtDefPosMgr().getTypedItem(i);
         meshHandler().makeModelSpaceVisualHelper(lgt);
         hasVisualHelpers = true;
     }
     // PBR POSITIONAL
-    for (auto& pItem : lgtPbrPosMgr().pItems) {
-        auto& lgt = lgtPbrPosMgr().getTypedItem<Light::PBR::Positional::Base>(pItem);
+    for (uint32_t i = 0; i < lgtPbrPosMgr().pItems.size(); i++) {
+        auto& lgt = lgtPbrPosMgr().getTypedItem(i);
         meshHandler().makeModelSpaceVisualHelper(lgt);
         hasVisualHelpers = true;
     }
     // DEFAULT SPOT
-    for (auto& pItem : lgtDefSptMgr().pItems) {
-        auto& lgt = lgtDefSptMgr().getTypedItem<Light::Default::Spot::Base>(pItem);
+    for (uint32_t i = 0; i < lgtDefSptMgr().pItems.size(); i++) {
+        auto& lgt = lgtDefSptMgr().getTypedItem(i);
         meshHandler().makeModelSpaceVisualHelper(lgt);
         hasVisualHelpers = true;
     }
@@ -201,46 +252,65 @@ void Uniform::Handler::createVisualHelpers() {
     //}
 }
 
+void Uniform::Handler::attachSwapchain() {
+    // POST-PROCESS
+    // TODO: Test stuff remove me !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+    auto& computeData = strPstPrcMgr().getTypedItem(0);
+    computeData.setImageSize(shell().context().extent.height * shell().context().extent.width);
+    update(computeData);
+
+    // Any items that rely on the number of framebuffers, should be validated here. This needs to
+    // be thought through.
+}
+
 void Uniform::Handler::update() {
+    const auto frameIndex = passHandler().getFrameIndex();
+
     // MAIN CAMERA
     auto& camera = getMainCamera();
-    camera.update(InputHandler::getPosDir(), InputHandler::getLookDir());
-    update(camera);
+    camera.update(InputHandler::getPosDir(), InputHandler::getLookDir(), frameIndex);
+    update(camera, static_cast<int>(frameIndex));
 
     // DEFAULT POSITIONAL
-    for (auto& pItem : lgtDefPosMgr().pItems) {
-        auto& lgt = lgtDefPosMgr().getTypedItem<Light::Default::Positional::Base>(pItem);
-        lgt.update(camera.getCameraSpacePosition(lgt.getPosition()));
-        update(lgt);
+    for (uint32_t i = 0; i < lgtDefPosMgr().pItems.size(); i++) {
+        auto& lgt = lgtDefPosMgr().getTypedItem(i);
+        lgt.update(camera.getCameraSpacePosition(lgt.getPosition()), frameIndex);
+        update(lgt, static_cast<int>(frameIndex));
     }
     // lgtDefPosMgr().update(shell().context().dev);
     // PBR POSITIONAL
-    for (auto& pItem : lgtPbrPosMgr().pItems) {
-        auto& lgt = lgtPbrPosMgr().getTypedItem<Light::PBR::Positional::Base>(pItem);
-        lgt.update(camera.getCameraSpacePosition(lgt.getPosition()));
-        update(lgt);
+    for (uint32_t i = 0; i < lgtPbrPosMgr().pItems.size(); i++) {
+        auto& lgt = lgtPbrPosMgr().getTypedItem(i);
+        lgt.update(camera.getCameraSpacePosition(lgt.getPosition()), frameIndex);
+        update(lgt, static_cast<int>(frameIndex));
     }
     // lgtDefPosMgr().update(shell().context().dev);
+
     // DEFAULT SPOT
-    for (auto& pItem : lgtDefSptMgr().pItems) {
-        auto& lgt = lgtDefSptMgr().getTypedItem<Light::Default::Spot::Base>(pItem);
-        lgt.update(camera.getCameraSpaceDirection(lgt.getDirection()), camera.getCameraSpacePosition(lgt.getPosition()));
-        update(lgt);
+    for (uint32_t i = 0; i < lgtDefSptMgr().pItems.size(); i++) {
+        auto& lgt = lgtDefSptMgr().getTypedItem(i);
+        lgt.update(camera.getCameraSpaceDirection(lgt.getDirection()), camera.getCameraSpacePosition(lgt.getPosition()),
+                   frameIndex);
+        update(lgt, static_cast<int>(frameIndex));
     }
-    // lgtDefPosMgr().update(shell().context().dev);
+
+    // POST-PROCESS
+    auto& computeData = strPstPrcMgr().getTypedItem(0);
+    computeData.reset(frameIndex);
+    update(computeData, static_cast<int>(frameIndex));
 }
 
 uint32_t Uniform::Handler::getDescriptorCount(const DESCRIPTOR& descType, const Uniform::offsets& offsets) {
     return getDescriptorCount(getItems(descType), offsets);
 }
 
-uint32_t Uniform::Handler::getDescriptorCount(const std::vector<ItemPointer<Uniform::Base>>& pItems,
+uint32_t Uniform::Handler::getDescriptorCount(const std::vector<ItemPointer<Descriptor::Base>>& pItems,
                                               const Uniform::offsets& offsets) const {
     auto resolvedOffsets = getBindingOffsets(pItems, offsets);
     return static_cast<uint32_t>(resolvedOffsets.size());
 }
 
-std::set<uint32_t> Uniform::Handler::getBindingOffsets(const std::vector<ItemPointer<Uniform::Base>>& pItems,
+std::set<uint32_t> Uniform::Handler::getBindingOffsets(const std::vector<ItemPointer<Descriptor::Base>>& pItems,
                                                        const Uniform::offsets& offsets) const {
     assert(offsets.size());
     const auto& lowest = *offsets.begin();
@@ -254,82 +324,71 @@ std::set<uint32_t> Uniform::Handler::getBindingOffsets(const std::vector<ItemPoi
     return offsets;
 }
 
-bool Uniform::Handler::validatePipelineLayout(const Descriptor::bindingMap& map) {
-    std::map<DESCRIPTOR, index> validationMap;
-    // Find the highest offset value for each descriptor type.
-    for (const auto& keyValue : map) {
-        // This is only validating that there are a sufficient number of uniforms
-        // for the layout. The unifrom offset info is in the value of the binding map.
-        const Descriptor::bindingMapValue& value = keyValue.second;
-        index offset = std::get<1>(value).empty() ? 0 : *std::get<1>(value).rbegin();
-
-        auto it = validationMap.find(std::get<0>(value));
-        if (it != validationMap.end()) {
-            it->second = (std::max)(it->second, offset);
-        } else {
-            validationMap[std::get<0>(value)] = offset;
-        }
-    }
-    // Ensure the highest offset value is within the data vectors
-    for (const auto& keyValue : validationMap) {
-        if (!validateUniformOffsets(keyValue)) return false;
-    }
-    return true;
-}
-
 bool Uniform::Handler::validateUniformOffsets(const std::pair<DESCRIPTOR, index>& pair) {
-    if (std::visit(Descriptor::IsUniform{}, pair.first)) {
+    if (std::visit(Descriptor::HasOffsets{}, pair.first)) {
         return pair.second < getItems(pair.first).size();
     }
     return true;
 }
 
-std::vector<VkDescriptorBufferInfo> Uniform::Handler::getWriteInfos(const DESCRIPTOR& descType,
-                                                                    const Uniform::offsets& offsets) {
-    std::vector<VkDescriptorBufferInfo> infos;
+void Uniform::Handler::getWriteInfos(const DESCRIPTOR& descType, const Uniform::offsets& offsets,
+                                     Descriptor::Set::ResourceInfo& setResInfo) {
     auto& pItems = getItems(descType);
+    // All of the offset needed in a list.
     auto resolvedOffsets = getBindingOffsets(pItems, offsets);
-    assert(*std::prev(resolvedOffsets.end()) < pItems.size());  // Not enough uniforms for highest offset
-    for (const auto& offset : resolvedOffsets) infos.push_back(pItems[offset]->BUFFER_INFO.bufferInfo);
-    return infos;
+    // Check for enough uniforms for highest offset
+    assert(*std::prev(resolvedOffsets.end()) < pItems.size());
+
+    setResInfo.descCount = static_cast<uint32_t>(resolvedOffsets.size());
+    setResInfo.bufferInfos.resize(resolvedOffsets.size() * setResInfo.uniqueDataSets);
+
+    // Set the buffer infos
+    uint32_t i = 0;
+    for (const auto& offset : resolvedOffsets) {
+        if (resolvedOffsets.size() > 1)  //
+            auto x = 1;
+        pItems[offset]->setDescriptorInfo(setResInfo, i++);
+    }
 }
 
 void Uniform::Handler::shaderTextReplace(const Descriptor::Set::textReplaceTuples& replaceTuples, std::string& text) const {
-    auto replaceInfo = helpers::getMacroReplaceInfo(UNIFORM_MACRO_ID_PREFIX, text);
-    for (auto& info : replaceInfo) {
-        bool isValid = false;
-        // Find the manager in charge of the descriptor type.
-        for (auto& manager : managers_) {
-            if (std::get<0>(info) == std::visit(GetMacroName{}, manager)) {
-                // Find the item count for the offsets.
-                const auto& pItems = std::visit(GetItems{}, manager);
-                const auto& descType = std::visit(GetType{}, manager);
-                int itemCount = -1;
-                for (const auto& tuple : replaceTuples) {
-                    auto search = std::get<2>(tuple).map().find(descType);
-                    if (search != std::get<2>(tuple).map().end()) {
-                        itemCount = static_cast<int>(getDescriptorCount(pItems, search->second));
+    for (const auto& macroIdPrefix : MACRO_ID_PREFIXES) {
+        auto replaceInfo = helpers::getMacroReplaceInfo(macroIdPrefix, text);
+        for (auto& info : replaceInfo) {
+            bool isValid = false;
+            // Find the manager in charge of the descriptor type.
+            for (auto& manager : managers_) {
+                if (std::get<0>(info) == std::visit(GetMacroName{}, manager)) {
+                    // Find the item count for the offsets.
+                    const auto& pItems = std::visit(GetItems{}, manager);
+                    const auto& descType = std::visit(GetType{}, manager);
+                    int itemCount = -1;
+                    for (const auto& tuple : replaceTuples) {
+                        auto search = std::get<2>(tuple).map().find(descType);
+                        if (search != std::get<2>(tuple).map().end()) {
+                            itemCount = static_cast<int>(getDescriptorCount(pItems, search->second));
+                        }
                     }
-                }
-                assert(itemCount != -1);
-                // TODO: not sure about below anymore. It was written a long time ago at this point.
-                auto reqCount = std::get<3>(info);
-                if (reqCount > 0) {
-                    // If the value for the macro in the shader text is greater than zero
-                    // then just make sure there are enough uniforms to meet the requirement.
-                    assert(reqCount <= itemCount && "Not enough uniforms");
-                    isValid = true;
-                } else if (reqCount == 0) {
-                    // If the value for the macro in the shader text is zero
-                    // then use all uniforms available.
-                    if (itemCount > 0) {
-                        helpers::macroReplace(info, static_cast<int>(itemCount), text);
+                    assert(itemCount != -1);
+                    // TODO: not sure about below anymore. It was written a long time ago at this point.
+                    auto reqCount = std::get<3>(info);
+                    if (reqCount > 0) {
+                        // If the value for the macro in the shader text is greater than zero
+                        // then just make sure there are enough uniforms to meet the requirement.
+                        assert(reqCount <= itemCount && "Not enough uniforms");
+                        isValid = true;
+                    } else if (reqCount == 0) {
+                        // If the value for the macro in the shader text is zero
+                        // then use all uniforms available.
+                        if (itemCount > 0) {
+                            helpers::macroReplace(info, static_cast<int>(itemCount), text);
+                        }
+                        isValid = true;
                     }
-                    isValid = true;
+                    assert(isValid && "Macro value is expected to be positive for now");
                 }
-                assert(isValid && "Macro value is expected to be positive for now");
             }
+            assert(isValid && "Could not find a uniform manager for the identifier");
         }
-        assert(isValid && "Could not find a uniform manager for the identifier");
     }
 }

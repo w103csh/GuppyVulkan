@@ -1,17 +1,5 @@
 /*
- * Copyright (C) 2016 Google, Inc.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * This came from LunarG Hologram sample, but has been radically altered at this point.
  */
 
 #ifndef SHELL_H
@@ -52,44 +40,42 @@ class Shell {
 
     struct SurfaceProperties {
         VkSurfaceCapabilitiesKHR capabilities;
-        std::vector<VkSurfaceFormatKHR> surf_formats;
+        std::vector<VkSurfaceFormatKHR> surfFormats;
         std::vector<VkPresentModeKHR> presentModes;
     };  // *
 
     struct PhysicalDeviceProperties {
         VkPhysicalDevice device;
-        uint32_t queue_family_count;
-        std::vector<VkQueueFamilyProperties> queue_props;
-        VkPhysicalDeviceMemoryProperties memory_properties;
+        uint32_t queueFamilyCount;
+        std::vector<VkQueueFamilyProperties> queueProps;
+        VkPhysicalDeviceMemoryProperties memoryProperties;
         VkPhysicalDeviceProperties properties;
         std::vector<VkExtensionProperties> extensions;
-        std::multimap<const char *, VkExtensionProperties, less_str> layer_extension_map = {};
+        std::multimap<const char *, VkExtensionProperties, less_str> layerExtensionMap = {};
         VkPhysicalDeviceFeatures features;
     };  // *
 
     struct Context {
         VkInstance instance = VK_NULL_HANDLE;
-        VkDebugReportCallbackEXT debug_report = VK_NULL_HANDLE;
-        VkDebugUtilsMessengerEXT debug_utils_messenger = VK_NULL_HANDLE;
+        VkDebugReportCallbackEXT debugReport = VK_NULL_HANDLE;
+        VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
 
-        bool sampler_anisotropy_enabled_ = false;   // *
-        bool sample_rate_shading_enabled_ = false;  // *
-        bool linear_blitting_supported_ = false;    // *
+        bool samplerAnisotropyEnabled_ = false;  // *
+        bool sampleRateShadingEnabled_ = false;  // *
+        bool linearBlittingSupported_ = false;   // *
+        bool computeShadingEnabled_ = false;     // *
 
-        VkPhysicalDevice physical_dev = VK_NULL_HANDLE;
-        std::vector<PhysicalDeviceProperties> physical_dev_props;  // *
-        uint32_t physical_dev_index = 0;                           // *
-        VkPhysicalDeviceMemoryProperties mem_props = {};           // *
-        std::map<uint32_t, VkQueue> queues;                               // *
-        uint32_t graphics_index = 0;                               // *
-        uint32_t present_index = 0;                                // *
-        uint32_t transfer_index = 0;                               // *
-        uint32_t game_queue_family = 0;
-        uint32_t present_queue_family = 0;
+        VkPhysicalDevice physicalDev = VK_NULL_HANDLE;
+        std::vector<PhysicalDeviceProperties> physicalDevProps;  // *
+        uint32_t physicalDevIndex = 0;                           // *
+        VkPhysicalDeviceMemoryProperties memProps = {};          // *
+        std::map<uint32_t, VkQueue> queues;                      // *
+        uint32_t graphicsIndex = 0;                              // *
+        uint32_t presentIndex = 0;                               // *
+        uint32_t transferIndex = 0;                              // *
+        uint32_t computeIndex = 0;                               // *
 
         VkDevice dev = VK_NULL_HANDLE;
-        // VkQueue game_queue;
-        // VkQueue present_queue;
 
         // SURFACE (TODO: figure out what is what)
         SurfaceProperties surfaceProps = {};
@@ -110,7 +96,7 @@ class Shell {
         VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     };
 
-    inline const Context &context() const { return ctx_; }
+    constexpr const Context &context() const { return ctx_; }
 
     // LOGGING
     enum LogPriority {
@@ -134,18 +120,18 @@ class Shell {
     inline void onMouse(const MouseInput &input) { game_.onMouse(input); }  // TODO: think this through
 
     // SWAPCHAIN
-    void resizeSwapchain(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities = true);
+    void resizeSwapchain(uint32_t widthHint, uint32_t heightHint, bool refreshCapabilities = true);
 
    protected:
     Shell(Game &game);
 
     virtual uint32_t getDesiredVersion() { return VK_MAKE_VERSION(1, 1, 0); }
     virtual void setPlatformSpecificExtensions() = 0;
-    void init_vk();
-    void cleanup_vk();
+    void initVk();
+    void cleanupVk();
 
-    void create_context();
-    virtual void destroy_context();
+    void createContext();
+    virtual void destroyContext();
 
     void addGameTime(float time);
 
@@ -156,94 +142,90 @@ class Shell {
     Game &game_;
     const Game::Settings &settings_;
 
-    std::vector<const char *> instance_layers_;
-    std::vector<const char *> instance_extensions_;
+    std::vector<const char *> instanceLayers_;
+    std::vector<const char *> instanceExtensions_;
 
-    std::vector<const char *> device_extensions_;
+    std::vector<const char *> deviceExtensions_;
 
     std::vector<LayerProperties> layerProps_;          // *
     std::vector<VkExtensionProperties> instExtProps_;  // *
 
    private:
-    bool debug_report_callback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT obj_type, uint64_t object,
-                               size_t location, int32_t msg_code, const char *layer_prefix, const char *msg);
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report_callback(VkDebugReportFlagsEXT flags,
-                                                                VkDebugReportObjectTypeEXT obj_type, uint64_t object,
-                                                                size_t location, int32_t msg_code, const char *layer_prefix,
-                                                                const char *msg, void *user_data) {
-        Shell *shell = reinterpret_cast<Shell *>(user_data);
-        return shell->debug_report_callback(flags, obj_type, object, location, msg_code, layer_prefix, msg);
+    bool debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t object,
+                             size_t location, int32_t msgCode, const char *layerPrefix, const char *msg);
+    static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
+                                                              VkDebugReportObjectTypeEXT objType, uint64_t object,
+                                                              size_t location, int32_t msgCode, const char *layerPrefix,
+                                                              const char *msg, void *userData) {
+        Shell *shell = reinterpret_cast<Shell *>(userData);
+        return shell->debugReportCallback(flags, objType, object, location, msgCode, layerPrefix, msg);
     }
 
-    void assert_all_instance_layers() const;
-    void assert_all_instance_extensions() const;
+    void assertAllInstanceLayers() const;
+    void assertAllInstanceExtensions() const;
 
-    bool has_all_device_layers(VkPhysicalDevice phy) const;
-    bool has_all_device_extensions(VkPhysicalDevice phy) const;
+    bool hasAllDeviceLayers(VkPhysicalDevice phy) const;
+    bool hasAllDeviceExtensions(VkPhysicalDevice phy) const;
 
-    // called by init_instance
-    void enumerate_instance_properties();           // *
-    void determine_api_version(uint32_t &version);  // *
+    // called by initInstance
+    void enumerateInstanceProperties();           // *
+    void determineApiVersion(uint32_t &version);  // *
 
-    // called by init_vk
-    void enumerate_instance_layer_extension_properties(LayerProperties &layer_props);  // *
-    void init_validation_messenger();                                                  // *
-    virtual PFN_vkGetInstanceProcAddr load_vk() = 0;
-    virtual VkBool32 canPresent(VkPhysicalDevice phy, uint32_t queue_family) = 0;
-    void init_instance();
-    void init_debug_report();
-    void init_physical_dev();
+    // called by initVk
+    void enumerateInstanceLayerExtensionProperties(LayerProperties &layerProps);  // *
+    void initValidationMessenger();                                               // *
+    virtual PFN_vkGetInstanceProcAddr loadVk() = 0;
+    virtual VkBool32 canPresent(VkPhysicalDevice phy, uint32_t queueFamily) = 0;
+    void initInstance();
+    void initDebugReport();
+    void initPhysicalDev();
 
-    // called by enumerate_instance_layer_extension_properties
-    void enumerate_instance_extension_properties();                                                                   // *
-    void enumerate_device_layer_extension_properties(PhysicalDeviceProperties &props, LayerProperties &layer_props);  // *
+    // called by enumerateInstanceLayerExtensionProperties
+    void enumerateInstanceExtensionProperties();                                                                 // *
+    void enumerateDeviceLayerExtensionProperties(PhysicalDeviceProperties &props, LayerProperties &layerProps);  // *
 
-    // called by init_physical_dev
-    void enumerate_physical_devs(uint32_t physical_dev_count = 1);  // *
-    void pick_physical_dev();                                       // *
+    // called by initPhysicalDev
+    void enumeratePhysicalDevs(uint32_t physicalDevCount = 1);  // *
+    void pickPhysicalDev();                                     // *
 
-    // called by pick_device
-    bool is_dev_suitable(const PhysicalDeviceProperties &props, uint32_t &graphics_queue_index,
-                         uint32_t &present_queue_index,
-                         uint32_t &transfer_queue_index);  // *
+    // called by pickDevice
+    bool isDevSuitable(const PhysicalDeviceProperties &props, uint32_t &graphicsIndex, uint32_t &presentIndex,
+                       uint32_t &transferIndex, uint32_t &computeIndex);  // *
 
-    // called by is_dev_suitable
-    bool determine_queue_families_support(const PhysicalDeviceProperties &props, uint32_t &graphics_queue_family_index,
-                                          uint32_t &present_queue_family_index,
-                                          uint32_t &transfer_queue_family_index);    // *
-    bool determine_device_extension_support(const PhysicalDeviceProperties &props);  // *
-    void determine_device_feature_support(const PhysicalDeviceProperties &props);    // *
-    void determine_sample_count(const PhysicalDeviceProperties &props);              // *
+    // called by isDevSuitable
+    bool determineQueueFamiliesSupport(const PhysicalDeviceProperties &props, uint32_t &graphicsIndex,
+                                       uint32_t &presentIndex, uint32_t &transferIndex, uint32_t &computeIndex);  // *
+    bool determineDeviceExtensionSupport(const PhysicalDeviceProperties &props);                                  // *
+    void determineDeviceFeatureSupport(const PhysicalDeviceProperties &props);                                    // *
+    void determineSampleCount(const PhysicalDeviceProperties &props);                                             // *
 
-    // called by create_context
-    void init_dev_queues();  // *
-    void create_dev();
-    void create_back_buffers();
-    void destroy_back_buffers();
+    // called by createContext
+    void initDevQueues();  // *
+    void createDev();
+    void createBackBuffers();
+    void destroyBackBuffers();
     virtual void createWindow() = 0;
     virtual VkSurfaceKHR createSurface(VkInstance instance) = 0;
-    void create_swapchain();
-    void destroy_swapchain();
+    void createSwapchain();
+    void destroySwapchain();
 
-    // called by create_swapchain
-    void enumerate_surface_properties();        // *
-    void determine_depth_format();              // *
-    void determine_swapchain_surface_format();  // *
-    void determine_swapchain_present_mode();    // *
-    void determine_swapchain_image_count();     // *
+    // called by createSwapchain
+    void enumerateSurfaceProperties();       // *
+    void determineDepthFormat();             // *
+    void determineSwapchainSurfaceFormat();  // *
+    void determineSwapchainPresentMode();    // *
+    void determineSwapchainImageCount();     // *
 
     // called by resizeSwapchain
-    bool determine_swapchain_extent(uint32_t width_hint, uint32_t height_hint, bool refresh_capabilities);  // *
+    bool determineSwapchainExtent(uint32_t widthHint, uint32_t heightHint, bool refreshCapabilities);  // *
 
-    // called by cleanup_vk
-    void destroy_instance();  // *
-
-    void fake_present();
+    // called by cleanupVk
+    void destroyInstance();  // *
 
     Context ctx_;
 
-    const float game_tick_;
-    float game_time_;
+    const float gameTick_;
+    float gameTime_;
 };
 
 #endif  // SHELL_H
