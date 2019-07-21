@@ -5,6 +5,7 @@
 #include "Shell.h"
 // HANDLERS
 #include "CommandHandler.h"
+#include "ComputeHandler.h"  // This is part of the postDraw hardcoding
 #include "DescriptorHandler.h"
 #include "MaterialHandler.h"
 #include "RenderPassHandler.h"
@@ -180,9 +181,8 @@ void RenderPass::Base::record(const uint8_t frameIndex) {
     vkResetCommandBuffer(priCmd, 0);
 
     // BEGIN BUFFERS
-    VkCommandBufferBeginInfo bufferInfo;
+    VkCommandBufferBeginInfo bufferInfo = {};
     // PRIMARY
-    bufferInfo = {};
     bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
@@ -219,10 +219,9 @@ void RenderPass::Base::record(const uint8_t frameIndex) {
     }
 
     endPass(frameIndex);
-
     postDraw(priCmd, frameIndex);
 
-    vk::assert_success(vkEndCommandBuffer(priCmd));
+    // vk::assert_success(vkEndCommandBuffer(priCmd));
 }
 
 void RenderPass::Base::postDraw(const VkCommandBuffer& cmd, const uint8_t frameIndex) {
@@ -289,8 +288,8 @@ void RenderPass::Base::createBeginInfo() {
         inheritInfo_.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
         inheritInfo_.renderPass = pass;
         inheritInfo_.subpass = getSubpassId(PIPELINE::TRI_LIST_TEX);
-        // Validation layer: Cannot set inherited occlusionQueryEnable in vkBeginCommandBuffer() when device does not support
-        // inheritedQueries.
+        // Validation layer: Cannot set inherited occlusionQueryEnable in vkBeginCommandBuffer() when device does not
+        // support inheritedQueries.
         inheritInfo_.occlusionQueryEnable = VK_FALSE;  // TODO: not sure
         inheritInfo_.queryFlags = 0;                   // TODO: not sure
         inheritInfo_.pipelineStatistics = 0;           // TODO: not sure
@@ -634,7 +633,6 @@ void RenderPass::Base::destroyTargetResources() {
 
     // SEMAPHORE
     for (auto& semaphore : data.semaphores) vkDestroySemaphore(dev, semaphore, nullptr);
-
     data.semaphores.clear();
 }
 

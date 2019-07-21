@@ -7,8 +7,21 @@
 #include <vector>
 
 #include "ConstantsAll.h"
+#include "DescriptorSet.h"
 #include "Game.h"
 #include "RenderPass.h"
+
+namespace Descriptor {
+class Handler;
+namespace Set {
+namespace RenderPass {
+class SwapchainImage : public Descriptor::Set::Base {
+   public:
+    SwapchainImage(Handler& handler);
+};
+}  // namespace RenderPass
+}  // namespace Set
+}  // namespace Descriptor
 
 namespace RenderPass {
 
@@ -66,6 +79,10 @@ class Handler : public Game::Handler {
     void reset() override;
 
     uint8_t frameIndex_;
+
+    // COMMANDS
+    void createCmds();
+    std::vector<std::vector<VkCommandBuffer>> cmdList_;
 
     // FENCES
     void createFences(VkFenceCreateFlags flags = VK_FENCE_CREATE_SIGNALED_BIT);

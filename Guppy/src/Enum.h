@@ -149,8 +149,8 @@ enum class STORAGE_BUFFER {
 };
 
 enum class STORAGE_IMAGE {
-    //
     PIPELINE,
+    SWAPCHAIN,
     //
     DONT_CARE,
 };

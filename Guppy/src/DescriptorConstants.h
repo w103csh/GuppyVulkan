@@ -30,6 +30,8 @@ enum class DESCRIPTOR_SET {
     SAMPLER_SCREEN_SPACE_DEFAULT,
     STORAGE_SCREEN_SPACE_COMPUTE_POST_PROCESS,
     STORAGE_IMAGE_SCREEN_SPACE_COMPUTE_DEFAULT,
+    // MISCELLANEOUS
+    SWAPCHAIN_IMAGE
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 
@@ -174,6 +176,10 @@ struct IsStorageImage {
 struct GetStorageImage {
     template <typename T> const STORAGE_IMAGE operator()(const T&) const { return STORAGE_IMAGE::DONT_CARE; }
     const STORAGE_IMAGE operator()(const STORAGE_IMAGE& type) const { return type; }
+};
+struct IsSwapchainStorageImage {
+    template <typename T> bool operator()(const T&) const { return false; }
+    bool operator()(const STORAGE_IMAGE& type) const { return type == STORAGE_IMAGE::SWAPCHAIN; }
 };
 // UNIFORM
 struct IsUniform {

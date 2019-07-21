@@ -187,7 +187,7 @@ Descriptor::Set::Default::CubeSampler::CubeSampler(Handler& handler)
           DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT,
           "_DS_CBE_DEF",
           {
-              {{0, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::SKYBOX_CREATE_INFO.name}},
+              {{0, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::SKYBOX_ID}},
           },
       } {}
 
@@ -197,8 +197,8 @@ Descriptor::Set::Default::ProjectorSampler::ProjectorSampler(Handler& handler)
           DESCRIPTOR_SET::PROJECTOR_DEFAULT,
           "_DS_PRJ_DEF",
           {
-              //{{0, 0}, {DESCRIPTOR::SAMPLER_PIPELINE_COMBINED, Texture::STATUE_CREATE_INFO.name}},
-              {{0, 0}, {COMBINED_SAMPLER::PIPELINE, RenderPass::PROJECT_2D_TEXTURE_CREATE_INFO.name}},
+              //{{0, 0}, {DESCRIPTOR::SAMPLER_PIPELINE_COMBINED, Texture::STATUE_ID}},
+              {{0, 0}, {COMBINED_SAMPLER::PIPELINE, RenderPass::PROJECT_2D_TEXTURE_ID}},
               {{1, 0}, {UNIFORM::PROJECTOR_DEFAULT}},
           },
       } {}

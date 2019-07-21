@@ -106,7 +106,7 @@ void Pipeline::Base::validatePipelineDescriptorSets() {
             bool hasPipelineSampler = std::visit(Descriptor::IsPipelineImage{}, bindingInfo.descType);
             // Validate tuple
             if (hasPipelineSampler || bindingInfo.textureId.size()) {
-                if (!hasPipelineSampler) {
+                if (!hasPipelineSampler && !std::visit(Descriptor::IsSwapchainStorageImage{}, bindingInfo.descType)) {
                     // Makes sure its a number. Will be used as texture sampler offset.
                     assert(helpers::isNumber(bindingInfo.textureId));
                 } else {

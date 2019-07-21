@@ -114,8 +114,8 @@ std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
 
         // clang-format off
         switch (type) {
-            case PUSH_CONSTANT::DEFAULT: range.size = sizeof(Pipeline::Default::PushConstant); break;
-            case PUSH_CONSTANT::POST_PROCESS: range.size = sizeof(::ScreenSpace::PushConstant); break;
+            case PUSH_CONSTANT::DEFAULT:        range.size = sizeof(Pipeline::Default::PushConstant); break;
+            case PUSH_CONSTANT::POST_PROCESS:   range.size = sizeof(::Compute::PostProcess::PushConstant); break;
             default: assert(false && "Unknown push constant"); exit(EXIT_FAILURE);
         }
         // clang-format on

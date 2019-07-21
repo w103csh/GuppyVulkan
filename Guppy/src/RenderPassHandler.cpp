@@ -11,8 +11,20 @@
 // HANDLERS
 #include "CommandHandler.h"
 #include "ComputeHandler.h"
+#include "DescriptorHandler.h"
 #include "LoadingHandler.h"
 #include "PipelineHandler.h"
+#include "TextureHandler.h"
+
+Descriptor::Set::RenderPass::SwapchainImage::SwapchainImage(Descriptor::Handler& handler)
+    : Set::Base{
+          handler,
+          DESCRIPTOR_SET::SWAPCHAIN_IMAGE,
+          "_DS_SWAPCHAIN_IMAGE",
+          {
+              {{0, 0}, {STORAGE_IMAGE::SWAPCHAIN, ::RenderPass::SWAPCHAIN_TARGET_ID}},
+          },
+      } {}
 
 RenderPass::Handler::Handler(Game* pGame) : Game::Handler(pGame), frameIndex_(0), swpchnRes_{}, submitResources_{} {
     for (const auto& type : RenderPass::ACTIVE) {  // TODO: Should this be ALL?
@@ -61,6 +73,7 @@ void RenderPass::Handler::init() {
     targetClearFlags_.clear();
 
     // SYNC
+    createCmds();
     createFences();
     // TODO: should this just be an array too???? Ugh
     submitInfos_.assign(RESOURCE_SIZE, {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr});
@@ -121,6 +134,15 @@ void RenderPass::Handler::updateBindData(const pipelinePassSet& set) {
     }
 }
 
+void RenderPass::Handler::createCmds() {
+    cmdList_.resize(10);
+    for (auto& cmds : cmdList_) {
+        cmds.resize(1);
+        commandHandler().createCmdBuffers(commandHandler().graphicsCmdPool(), cmds.data(), VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                          cmds.size());
+    }
+}
+
 void RenderPass::Handler::createFences(VkFenceCreateFlags flags) {
     frameFences_.resize(shell().context().imageCount);
     VkFenceCreateInfo fenceInfo = {};
@@ -154,13 +176,28 @@ void RenderPass::Handler::createSwapchainResources() {
 
     // Get the image resources from the swapchain...
     swpchnRes_.images.resize(imageCount);
-    swpchnRes_.views.resize(imageCount);
     vk::assert_success(vkGetSwapchainImagesKHR(ctx.dev, ctx.swapchain, &imageCount, swpchnRes_.images.data()));
 
+    bool wasTexDestroyed = false;
+    swpchnRes_.views.resize(imageCount);
     for (uint32_t i = 0; i < ctx.imageCount; i++) {
         helpers::createImageView(ctx.dev, swpchnRes_.images[i], 1, ctx.surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT,
                                  VK_IMAGE_VIEW_TYPE_2D, 1, swpchnRes_.views[i]);
+
+        // TEXTURE
+        auto pTexture = textureHandler().getTexture(SWAPCHAIN_TARGET_ID, i);
+        assert(pTexture && pTexture->status != STATUS::READY);
+        // Check if the swapchain was destroy before being recreated.
+        wasTexDestroyed = pTexture->status == STATUS::DESTROYED;
+        // Update swapchain texture descriptor info.
+        auto& sampler = pTexture->samplers[0];
+        sampler.image = swpchnRes_.images[i];
+        sampler.view = swpchnRes_.views[i];
+        Texture::Handler::createDescInfo(pTexture->DESCRIPTOR_TYPE, sampler);
+
+        pTexture->status = STATUS::READY;
     }
+    if (wasTexDestroyed) descriptorHandler().updateBindData({(std::string(SWAPCHAIN_TARGET_ID))});
 
     assert(shell().context().imageCount == swpchnRes_.images.size());
     assert(swpchnRes_.images.size() == swpchnRes_.views.size());
@@ -183,29 +220,46 @@ void RenderPass::Handler::recordPasses() {
     const auto& ctx = shell().context();
     auto frameIndex = getFrameIndex();
 
-    uint8_t submitIndex = 0;
-    for (uint8_t passIndex = submitIndex; passIndex < pPasses_.size(); passIndex++, submitIndex++) {
-        SubmitResource* pResource = &submitResources_[submitIndex];
+    // auto& cmd = cmdList_[frameIndex][0];
+    // vkResetCommandBuffer(cmd, 0);
+    // VkCommandBufferBeginInfo bufferInfo = {};
+    // bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    //// bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    // bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+    // vk::assert_success(vkBeginCommandBuffer(cmd, &bufferInfo));
+
+    uint8_t passIndex = 0;
+    for (; passIndex < pPasses_.size(); passIndex++) {
+        SubmitResource* pResource = &submitResources_[passIndex];
         pResource->resetCount();
 
-        if (submitIndex == 0) {
+        if (passIndex == 0) {
             // wait for back buffer...
             pResource->waitSemaphores[pResource->waitSemaphoreCount] = ctx.acquiredBackBuffer.acquireSemaphore;
             // back buffer flags...
             pResource->waitDstStageMasks[pResource->waitSemaphoreCount] = ctx.waitDstStageMask;
             pResource->waitSemaphoreCount++;
-        }
-
-        // Check if a compute pass is needed.
-        if (computeHandler().recordPasses(pPasses_[passIndex]->TYPE, *pResource)) {
-            assert(submitIndex != 0);
-            pResource = &submitResources_[++submitIndex];
-            pResource->resetCount();
+        } else if (submitResources_[passIndex - 1].signalSemaphoreCount) {
+            // Take the signals from the previous pass
+            std::memcpy(                                                                    //
+                &pResource->waitSemaphores[pResource->waitSemaphoreCount],                  //
+                submitResources_[passIndex - 1].signalSemaphores.data(),                    //
+                sizeof(VkSemaphore) * submitResources_[passIndex - 1].signalSemaphoreCount  //
+            );
+            std::memcpy(                                                                             //
+                &pResource->waitDstStageMasks[pResource->waitSemaphoreCount],                        //
+                submitResources_[passIndex - 1].signalSrcStageMasks.data(),                          //
+                sizeof(VkPipelineStageFlags) * submitResources_[passIndex - 1].signalSemaphoreCount  //
+            );
+            pResource->waitSemaphoreCount += submitResources_[passIndex - 1].signalSemaphoreCount;
         }
 
         // Record the pass and update the resources
         pPasses_[passIndex]->record(frameIndex);
-        pPasses_[passIndex]->updateSubmitResource(submitResources_[submitIndex], frameIndex);
+        pPasses_[passIndex]->updateSubmitResource(submitResources_[passIndex], frameIndex);
+
+        // Check if a compute pass is needed.
+        // computeHandler().recordPasses(pPasses_[passIndex]->TYPE, *pResource);
 
         // Always add the render semaphore to the last pass
         if ((static_cast<size_t>(passIndex) + 1) == pPasses_.size()) {
@@ -215,7 +269,7 @@ void RenderPass::Handler::recordPasses() {
         }
     }
 
-    submit(submitIndex);
+    submit(passIndex);
 }
 
 void RenderPass::Handler::submit(const uint8_t submitCount) {
@@ -227,6 +281,8 @@ void RenderPass::Handler::submit(const uint8_t submitCount) {
         pInfo->waitSemaphoreCount = pResource->waitSemaphoreCount;
         pInfo->pWaitSemaphores = pResource->waitSemaphores.data();
         pInfo->pWaitDstStageMask = pResource->waitDstStageMasks.data();
+        for (uint32_t j = 0; j < pResource->commandBufferCount; j++)  //
+            vk::assert_success(vkEndCommandBuffer(pResource->commandBuffers[j]));
         pInfo->commandBufferCount = pResource->commandBufferCount;
         pInfo->pCommandBuffers = pResource->commandBuffers.data();
         pInfo->signalSemaphoreCount = pResource->signalSemaphoreCount;
@@ -252,18 +308,30 @@ bool RenderPass::Handler::shouldClearTarget(const std::string& targetId) {
 }
 
 void RenderPass::Handler::destroySwapchainResources() {
-    for (auto& view : swpchnRes_.views) vkDestroyImageView(shell().context().dev, view, nullptr);
+    for (uint32_t i = 0; i < swpchnRes_.views.size(); i++) {
+        vkDestroyImageView(shell().context().dev, swpchnRes_.views[i], nullptr);
+        // Update swapchain texture status.
+        auto pTexture = textureHandler().getTexture(SWAPCHAIN_TARGET_ID, i);
+        assert(pTexture);
+        pTexture->status = STATUS::DESTROYED;
+    }
     swpchnRes_.views.clear();
     // Images are destroyed by vkDestroySwapchainKHR
     swpchnRes_.images.clear();
 }
 
 void RenderPass::Handler::destroy() {
-    // PASSES
+    // PASS
     for (auto& pPass : pPasses_) {
         if (!pPass->usesSwapchain()) pPass->destroyTargetResources();
         pPass->destroy();
     }
+    // COMMAND
+    for (auto& cmds : cmdList_) {
+        helpers::destroyCommandBuffers(shell().context().dev, commandHandler().graphicsCmdPool(), cmds);
+        cmds.clear();
+    }
+    cmdList_.clear();
     // FENCE
     for (auto& fence : frameFences_) vkDestroyFence(shell().context().dev, fence, nullptr);
     frameFences_.clear();
