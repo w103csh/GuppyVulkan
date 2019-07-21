@@ -101,53 +101,6 @@ void Scene::Handler::init() {
         }
     }
 
-    // SCREEN SPACE
-    if (!suppress || true) {
-        /* The scren space operations rely on the order of declaration here. There should probably be some
-         *   way to explicitly order the screen space passes.
-         */
-
-        // EDGE DETECTION
-        if (!suppress || false) {
-            meshInfo = {};
-            meshInfo.pipelineType = PIPELINE::SCREEN_SPACE_DEFAULT;
-            // meshInfo.passTypes = {PASS::SCREEN_SPACE_SAMPLER};
-            meshInfo.selectable = false;
-            meshInfo.geometryCreateInfo.transform = helpers::affine(glm::vec3{2.0f});
-            meshInfo.geometryCreateInfo.invert = true;
-            defInstInfo = {};
-            defMatInfo = {};
-            defMatInfo.flags |= Material::FLAG::SCREEN_SPACE_EDGE;
-            meshHandler().makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
-        }
-
-        // BLUR
-        if (!suppress && false) {
-            // PASS 1
-            meshInfo = {};
-            meshInfo.pipelineType = PIPELINE::SCREEN_SPACE_DEFAULT;
-            // meshInfo.passTypes = {PASS::SCREEN_SPACE_SAMPLER};
-            meshInfo.selectable = false;
-            meshInfo.geometryCreateInfo.transform = helpers::affine(glm::vec3{2.0f});
-            meshInfo.geometryCreateInfo.invert = true;
-            defInstInfo = {};
-            defMatInfo = {};
-            defMatInfo.flags |= Material::FLAG::SCREEN_SPACE_BLUR_PASS1;
-            meshHandler().makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
-            // PASS 2
-            meshInfo = {};
-            meshInfo.pipelineType = PIPELINE::SCREEN_SPACE_DEFAULT;
-            // meshInfo.passTypes = {PASS::SCREEN_SPACE};
-            meshInfo.selectable = false;
-            meshInfo.geometryCreateInfo.transform = helpers::affine(glm::vec3{2.0f});
-            meshInfo.geometryCreateInfo.invert = true;
-            defInstInfo = {};
-            defMatInfo = {};
-            defMatInfo.flags |= Material::FLAG::SCREEN_SPACE_BLUR_PASS2;
-            meshHandler().makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
-        }
-    }
-
     // SKYBOX
     if (!suppress || false) {
         meshInfo = {};

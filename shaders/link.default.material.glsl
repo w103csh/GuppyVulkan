@@ -12,9 +12,6 @@ const uint MODE_TOON_SHADE          = 0x00000040u;
 const uint SKYBOX                   = 0x00000200u;
 const uint REFLECT                  = 0x00000400u;
 const uint REFRACT                  = 0x00000800u;
-const uint SCREEN_SPACE_EDGE        = 0x00010000u;
-const uint SCREEN_SPACE_BLUR_PASS1  = 0x00020000u;
-const uint SCREEN_SPACE_BLUR_PASS2  = 0x00040000u;
 
 // TEXTURE
 //  TYPE MASK
@@ -59,8 +56,5 @@ bool isModeToonShade()              { return (material.flags & MODE_TOON_SHADE) 
 bool isSkybox()                     { return (material.flags & SKYBOX) > 0; }
 bool isReflect()                    { return (material.flags & REFLECT) > 0; }
 bool isRefract()                    { return (material.flags & REFRACT) > 0; }
-bool isScreenSpaceEdge()            { return (material.flags & SCREEN_SPACE_EDGE) > 0; }
-bool isScreenSpaceBlurPass1()       { return (material.flags & SCREEN_SPACE_BLUR_PASS1) > 0; }
-bool isScreenSpaceBlurPass2()       { return (material.flags & SCREEN_SPACE_BLUR_PASS2) > 0; }
 // TEXTURE
 bool isTextureHeight()              { return (material.texFlags & TEX_HEIGHT) > 0; }

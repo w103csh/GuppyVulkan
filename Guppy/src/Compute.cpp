@@ -214,9 +214,9 @@ void PostProcess::Default::record(const uint8_t frameIndex, RenderPass::SubmitRe
 
     // PUSH CONSTANT
     Compute::PostProcess::PushConstant pushConstant = {
-        Compute::PostProcess::PASS_FLAG::EDGE,
-        // Compute::PostProcess::PASS_FLAG::BLUR_1,
-        // Compute::PostProcess::PASS_FLAG::HDR_1,
+        ScreenSpace::PASS_FLAG::EDGE,
+        // ScreenSpace::PASS_FLAG::BLUR_1,
+        // ScreenSpace::PASS_FLAG::HDR_1,
     };
     vkCmdPushConstants(cmd, pipelineBindData->layout, pipelineBindData->pushConstantStages, 0,
                        static_cast<uint32_t>(sizeof(PushConstant)), &pushConstant);
@@ -279,8 +279,8 @@ void PostProcess::Default::record(const uint8_t frameIndex, RenderPass::SubmitRe
     //    // PUSH CONSTANT
     //    pushConstant = {
     //        // 0,
-    //        Compute::PostProcess::PASS_FLAG::BLUR_2,
-    //        // Compute::PostProcess::PASS_FLAG::HDR_2,
+    //        ScreenSpace::PASS_FLAG::BLUR_2,
+    //        // ScreenSpace::PASS_FLAG::HDR_2,
     //    };
     //    vkCmdPushConstants(cmd, pipelineBindData->layout, pipelineBindData->pushConstantStages, 0,
     //                       static_cast<uint32_t>(sizeof(Compute::PostProcess::PushConstant)), &pushConstant);

@@ -6,6 +6,7 @@
 #ifdef USE_DEBUG_UI
 #include "RenderPassImGui.h"
 #endif
+#include "RenderPassScreenSpace.h"
 #include "ScreenSpace.h"
 #include "Shell.h"
 // HANDLERS
@@ -30,11 +31,11 @@ RenderPass::Handler::Handler(Game* pGame) : Game::Handler(pGame), frameIndex_(0)
     for (const auto& type : RenderPass::ACTIVE) {  // TODO: Should this be ALL?
         // clang-format off
         switch (type) {
-            case PASS::DEFAULT:              pPasses_.emplace_back(std::make_unique<RenderPass::Base>(std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::DEFAULT_CREATE_INFO)); break;
-            case PASS::SAMPLER_PROJECT:      pPasses_.emplace_back(std::make_unique<RenderPass::Base>(std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::PROJECT_CREATE_INFO)); break;
-            case PASS::SAMPLER_DEFAULT:      pPasses_.emplace_back(std::make_unique<RenderPass::Base>(std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::SAMPLER_DEFAULT_CREATE_INFO)); break;
-            case PASS::SCREEN_SPACE:         pPasses_.emplace_back(std::make_unique<RenderPass::Base>(std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::ScreenSpace::CREATE_INFO)); break;
-            case PASS::SAMPLER_SCREEN_SPACE: pPasses_.emplace_back(std::make_unique<RenderPass::Base>(std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::ScreenSpace::SAMPLER_CREATE_INFO)); break;
+            case PASS::DEFAULT:              pPasses_.emplace_back(std::make_unique<RenderPass::Base>(             std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::DEFAULT_CREATE_INFO)); break;
+            case PASS::SAMPLER_PROJECT:      pPasses_.emplace_back(std::make_unique<RenderPass::Base>(             std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::PROJECT_CREATE_INFO)); break;
+            case PASS::SAMPLER_DEFAULT:      pPasses_.emplace_back(std::make_unique<RenderPass::Base>(             std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::SAMPLER_DEFAULT_CREATE_INFO)); break;
+            case PASS::SCREEN_SPACE:         pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::Base>(std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::ScreenSpace::CREATE_INFO)); break;
+            case PASS::SAMPLER_SCREEN_SPACE: pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::Base>(std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::ScreenSpace::SAMPLER_CREATE_INFO)); break;
             case PASS::IMGUI:
 #ifdef USE_DEBUG_UI
                                             pPasses_.emplace_back(std::make_unique<RenderPass::ImGui>(std::ref(*this), static_cast<uint32_t>(pPasses_.size())));

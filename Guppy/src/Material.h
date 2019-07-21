@@ -36,10 +36,6 @@ using FLAG = enum : FlagBits {
     //
     METAL =                     0x00001000,
     //
-    SCREEN_SPACE_EDGE =         0x00010000,
-    SCREEN_SPACE_BLUR_PASS1 =   0x00020000,
-    SCREEN_SPACE_BLUR_PASS2 =   0x00040000,
-    //
     BITS_MAX_ENUM =             0x7FFFFFFF
 };
 // clang-format on

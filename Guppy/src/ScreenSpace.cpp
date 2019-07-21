@@ -181,6 +181,8 @@ const Pipeline::CreateInfo DEFAULT_CREATE_INFO = {
         DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT,
         DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT,
     },
+    {},
+    {PUSH_CONSTANT::POST_PROCESS},
 };
 Default::Default(Pipeline::Handler& handler) : Graphics(handler, &DEFAULT_CREATE_INFO) {}
 
@@ -201,29 +203,3 @@ ComputeDefault::ComputeDefault(Pipeline::Handler& handler) : Compute(handler, &C
 
 }  // namespace ScreenSpace
 }  // namespace Pipeline
-
-namespace RenderPass {
-namespace ScreenSpace {
-
-const CreateInfo CREATE_INFO = {
-    PASS::SCREEN_SPACE,
-    "Screen Space Swapchain Render Pass",
-    {
-        PIPELINE::SCREEN_SPACE_DEFAULT,
-    },
-    FLAG::SWAPCHAIN,
-};
-
-const CreateInfo SAMPLER_CREATE_INFO = {
-    // THIS WAS BROKE LAST TIME I TRIED IT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    PASS::SAMPLER_SCREEN_SPACE,
-    "Screen Space Sampler Render Pass",
-    {
-        PIPELINE::SCREEN_SPACE_DEFAULT,
-    },
-    FLAG::SWAPCHAIN,
-    {std::string(Texture::ScreenSpace::DEFAULT_2D_TEXTURE_ID)},
-};
-
-}  // namespace ScreenSpace
-}  // namespace RenderPass
