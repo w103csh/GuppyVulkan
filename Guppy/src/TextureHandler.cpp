@@ -39,7 +39,7 @@ void Texture::Handler::init() {
         &RenderPass::PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO,
         &RenderPass::SWAPCHAIN_TARGET_TEXTURE_CREATE_INFO,
         &Texture::ScreenSpace::DEFAULT_2D_TEXTURE_CREATE_INFO,
-        &Texture::ScreenSpace::COMPUTE_2D_TEXTURE_CREATE_INFO,
+        //&Texture::ScreenSpace::COMPUTE_2D_TEXTURE_CREATE_INFO,
     };
 
     // I think this does not get set properly, so I am not sure where the texture generation

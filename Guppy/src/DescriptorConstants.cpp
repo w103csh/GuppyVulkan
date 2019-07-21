@@ -38,6 +38,8 @@ void OffsetsMap::insert(const DESCRIPTOR& key, const Uniform::offsets& value) {
 namespace Set {
 
 const std::set<DESCRIPTOR_SET> ALL = {
+    // MISCELLANEOUS
+    // DESCRIPTOR_SET::SWAPCHAIN_IMAGE,
     // DEFAULT
     DESCRIPTOR_SET::UNIFORM_DEFAULT,
     DESCRIPTOR_SET::SAMPLER_DEFAULT,
@@ -53,8 +55,6 @@ const std::set<DESCRIPTOR_SET> ALL = {
     DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT,
     DESCRIPTOR_SET::STORAGE_SCREEN_SPACE_COMPUTE_POST_PROCESS,
     DESCRIPTOR_SET::STORAGE_IMAGE_SCREEN_SPACE_COMPUTE_DEFAULT,
-    // MISCELLANEOUS
-    DESCRIPTOR_SET::SWAPCHAIN_IMAGE,
 };
 
 void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& write) const {
