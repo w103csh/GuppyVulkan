@@ -28,11 +28,11 @@ void getTypeFromMap(const T& map, const PIPELINE& pipelineTypeIn, std::set<PASS>
 // clang-format off
 
 const std::set<PASS> Compute::ALL = {
-    PASS::COMPUTE_POST_PROCESS,
+    //PASS::COMPUTE_POST_PROCESS,
 };
 
 const std::vector<PASS> Compute::ACTIVE = {
-    PASS::COMPUTE_POST_PROCESS,
+    //PASS::COMPUTE_POST_PROCESS,
 };
 
 // clang-format on

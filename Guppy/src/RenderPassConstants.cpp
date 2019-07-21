@@ -24,7 +24,7 @@ const std::set<PASS> ALL = {
 };
 
 const std::vector<PASS> ACTIVE = {
-    PASS::SAMPLER_PROJECT,
+    //PASS::SAMPLER_PROJECT,
     //PASS::DEFAULT,
     PASS::SAMPLER_DEFAULT,
     //PASS::SAMPLER_SCREEN_SPACE,

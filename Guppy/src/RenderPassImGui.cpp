@@ -82,7 +82,7 @@ void RenderPass::ImGui::record(const uint8_t frameIndex) {
 
 void RenderPass::ImGui::createAttachmentsAndSubpasses() {
     bool clearTarget = handler().shouldClearTarget(getTargetId());
-    bool compute = true;
+    bool compute = false;
     if (compute) clearTarget = false;
     /*
         THESE SETTINGS ARE COPIED DIRECTLY FROM THE IMGUI VULKAN SAMPLE.
