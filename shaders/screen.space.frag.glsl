@@ -8,10 +8,16 @@
 #define _DS_STR_SCR_CMP_PSTPRC 0
 #define _DS_STRIMG_SCR_CMP_DEF 0
 
-// DECLARATIONS
-bool isScreenSpaceBlurPass1();
-bool isScreenSpaceBlurPass2();
-bool isScreenSpaceEdge();
+const uint PASS_HDR_1       = 0x00000001u;
+const uint PASS_HDR_2       = 0x00000002u;
+const uint PASS_EDGE        = 0x00010000u;
+const uint PASS_BLUR_1      = 0x00020000u;
+const uint PASS_BLUR_2      = 0x00040000u;
+
+// PUSH CONSTANTS
+layout(push_constant) uniform PushBlock {
+    uint flags;
+} pushConstantsBlock;
 
 layout(set=_DS_UNI_SCR_DEF, binding=0) uniform ScreenSpaceDefault {
     vec4 weights0_3;                // gaussian normalized weights[0-3]
@@ -84,17 +90,26 @@ vec4 edge() {
 }
 
 void main() {
-    if (isScreenSpaceBlurPass1()) {
-        outColor = blurPass1();
-        // outColor = vec4(1.0, 0.0, 1.0, 1.0);
-    } else if (isScreenSpaceBlurPass2()) {
-        outColor = blurPass2();
-        // outColor = vec4(1.0, 1.0, 0.0, 1.0);
-    } else if (isScreenSpaceEdge()) {
+    // COLOR
+    if ((pushConstantsBlock.flags & PASS_EDGE) > 0) {
         outColor = edge();
-        // outColor = texelFetch(sampRender, ivec2(gl_FragCoord.xy), 0);
     } else {
-        // test
-        outColor = vec4(1.0, 0.0, 0.0, 1.0);
+        outColor = texelFetch(sampRender, ivec2(gl_FragCoord.xy), 0);
     }
+
+    // BLUR
+    if ((pushConstantsBlock.flags & PASS_BLUR_1) > 0) {
+        outColor = blurPass1();
+    } else if ((pushConstantsBlock.flags & PASS_BLUR_2) > 0) {
+        outColor = blurPass2();
+    }
+
+    // // HDR
+    // if ((pushConstantsBlock.flags & PASS_HDR_1) > 0) {
+    //     accumulateLuminace(color);
+    //     // return;
+    // } else if ((pushConstantsBlock.flags & PASS_HDR_2) > 0) {
+    //     computeLogAverageLuminance();
+    //     return;
+    // }
 }

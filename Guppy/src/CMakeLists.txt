@@ -45,8 +45,6 @@ set(SOURCE
     Scene.h
     SceneHandler.cpp
     SceneHandler.h
-    ScreenSpace.cpp
-    ScreenSpace.h
     SelectionManager.cpp
     SelectionManager.h
     Singleton.h
@@ -123,6 +121,11 @@ set(SOURCE
     RenderPassConstants.h
     RenderPassHandler.cpp
     RenderPassHandler.h
+    # Screen Space
+    ScreenSpace.cpp
+    ScreenSpace.h
+    RenderPassScreenSpace.cpp
+    RenderPassScreenSpace.h
     # Shader
     Shader.cpp
     Shader.h

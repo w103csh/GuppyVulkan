@@ -95,13 +95,13 @@ void Guppy::attachShell(Shell& sh) {
     handlers_.pTexture->init();
     handlers_.pUniform->init();
     handlers_.pDescriptor->init();
+    handlers_.pMesh->init();
     handlers_.pCompute->init();
     handlers_.pPipeline->init();
     handlers_.pShader->init();
     handlers_.pPass->init();
     handlers_.pPipeline->initPipelines();
     handlers_.pUI->init();
-    handlers_.pMesh->init();
     handlers_.pModel->init();
     handlers_.pScene->init();
 

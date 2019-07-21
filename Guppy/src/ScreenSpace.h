@@ -7,9 +7,21 @@
 #include "Uniform.h"
 
 namespace ScreenSpace {
+
+// clang-format off
+using PASS_FLAG = enum : FlagBits {
+    HDR_1 =         0x00000001,
+    HDR_2 =         0x00000002,
+    EDGE =          0x00010000,
+    BLUR_1 =        0x00020000,
+    BLUR_2 =        0x00040000,
+};
+// clang-format on
+
 struct PushConstant {
     FlagBits flags;
 };
+
 }  // namespace ScreenSpace
 
 namespace Uniform {
@@ -100,17 +112,5 @@ class ComputeDefault : public Compute {
 
 }  // namespace ScreenSpace
 }  // namespace Pipeline
-
-namespace RenderPass {
-
-struct CreateInfo;
-
-namespace ScreenSpace {
-
-extern const CreateInfo CREATE_INFO;
-extern const CreateInfo SAMPLER_CREATE_INFO;  // TODO: Add sampler offset overrides.
-
-}  // namespace ScreenSpace
-}  // namespace RenderPass
 
 #endif  // !SCREEN_SPACE_H

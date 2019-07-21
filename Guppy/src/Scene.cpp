@@ -34,7 +34,6 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
     switch (pipelineType) {
         case PIPELINE::PBR_COLOR:
         case PIPELINE::CUBE:
-        case PIPELINE::SCREEN_SPACE_DEFAULT:
         case PIPELINE::TRI_LIST_COLOR: {
             for (auto& pMesh : handler().meshHandler().getColorMeshes())
                 if (pMesh->shouldDraw(passType, pipelineType))  //
