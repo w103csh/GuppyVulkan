@@ -36,6 +36,7 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT:              pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::DefaultSampler>(std::ref(*this))); break;
             case DESCRIPTOR_SET::STORAGE_SCREEN_SPACE_COMPUTE_POST_PROCESS: pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::StorageComputePostProcess>(std::ref(*this))); break;
             case DESCRIPTOR_SET::STORAGE_IMAGE_SCREEN_SPACE_COMPUTE_DEFAULT:pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::StorageImageComputeDefault>(std::ref(*this))); break;
+            case DESCRIPTOR_SET::SWAPCHAIN_IMAGE:                           pDescriptorSets_.push_back(std::make_unique<Set::RenderPass::SwapchainImage>(std::ref(*this))); break;
             default: assert(false);  // add new pipelines here
                 // clang-format on
         }
@@ -683,8 +684,9 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
             itInfoMap->second.imageInfos.push_back(pTexture->samplers[offset].imgInfo);
             itInfoMap->second.descCount = 1;
 
-        } else if (std::visit(IsPipelineImage{}, bindingInfo.descType)) {
-            // PIPELINE IMAGE/SAMPLER
+        } else if (std::visit(IsPipelineImage{}, bindingInfo.descType) ||
+                   std::visit(IsSwapchainStorageImage{}, bindingInfo.descType)) {
+            // PIPELINE IMAGE/SAMPLER, SWAPCHAIN
 
             auto pPipelineTexture = textureHandler().getTexture(bindingInfo.textureId);
             if (pPipelineTexture != nullptr) {
@@ -740,7 +742,9 @@ void Descriptor::Handler::updateBindData(const std::vector<std::string> textureI
                     // handler there can be a straight equivalence check here.
                     if (textureId == bindingInfo.textureId) {
                         // Not trying to make this work for anything else atm.
-                        assert(std::visit(IsPipelineImage{}, bindingInfo.descType));
+                        bool isValidType = std::visit(IsPipelineImage{}, bindingInfo.descType);
+                        isValidType |= std::visit(IsSwapchainStorageImage{}, bindingInfo.descType);
+                        assert(isValidType);
                         assert(pSet->descriptorSetsMap_.size() == 1);
                         for (auto& [resourceOffset, descriptorSets] : pSet->descriptorSetsMap_.at(0)) {
                             updateDescriptorSets(pSet->getBindingMap(), pSet->getDescriptorOffsets(resourceOffset),

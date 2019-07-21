@@ -58,6 +58,8 @@ void UI::ImGuiHandler::appMainMenuBar() {
             menuShowWindows();
             ImGui::EndMenu();
         }
+        ImGui::Text("\t\t\t\t\tApplication average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
+                    ImGui::GetIO().Framerate);
         ImGui::EndMainMenuBar();
     }
 }
@@ -111,9 +113,9 @@ void UI::ImGuiHandler::showSelectionInfoWindow(bool* p_open) {
         return;
     }
 
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
-                ImGui::GetIO().Framerate);
-    ImGui::Separator();
+    // ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate,
+    //            ImGui::GetIO().Framerate);
+    // ImGui::Separator();
 
     ImGui::Text("FACES:");
     ImGui::Separator();

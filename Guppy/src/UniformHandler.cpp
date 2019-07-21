@@ -45,7 +45,7 @@ Uniform::Handler::Handler(Game* pGame)
           Uniform::Manager<Uniform::ScreenSpace::Default>  //
           {"Screen Space Default", UNIFORM::SCREEN_SPACE_DEFAULT, 5, "_U_SCR_DEF"},
           // STORAGE
-          Uniform::Manager<Storage::ScreenSpace::PostProcess>  //
+          Uniform::Manager<Storage::PostProcess::Base>  //
           {"Storage Default", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
           //
       },

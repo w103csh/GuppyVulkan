@@ -31,7 +31,9 @@ class Handler : public Game::Handler {
 
     // TODO: should these be public? Moved these for render to sampler.
     void createSampler(const VkDevice& dev, Sampler::Base& texSampler);
-    void createDescInfo(const DESCRIPTOR& descType, Sampler::Base& texSampler);
+
+    // TODO: most of these functions should be static
+    static void createDescInfo(const DESCRIPTOR& descType, Sampler::Base& texSampler);
 
     // SWAPCHAIN
     void attachSwapchain();

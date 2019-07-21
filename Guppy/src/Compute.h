@@ -95,6 +95,9 @@ class Base : public Handlee<Handler> {
     // DESCRIPTOR SET
     Descriptor::Set::bindDataMap bindDataMap_;
 
+    // SYNC
+    std::vector<VkSemaphore> semaphores_;
+
    private:
     FlagBits status_;
 
@@ -105,26 +108,37 @@ class Base : public Handlee<Handler> {
     VkFence fence_;
 };
 
-// POST-PROCESS
+namespace PostProcess {
 
-extern const CreateInfo POST_PROCESS_CREATE_INFO;
+// clang-format off
+using PASS_FLAG = enum : FlagBits {
+    HDR_1 =         0x00000001,
+    HDR_2 =         0x00000002,
+    EDGE =          0x00010000,
+    BLUR_1 =        0x00020000,
+    BLUR_2 =        0x00040000,
+};
+// clang-format on
 
-class PostProcess : public Base {
+struct PushConstant {
+    FlagBits flags;
+};
+
+extern const CreateInfo DEFAULT_CREATE_INFO;
+
+class Default : public Base {
    public:
-    // clang-format off
-    using FLAG = enum : FlagBits {
-        PASS_1 =        0x00000001,
-        PASS_2 =        0x00000002,
-    };
-    // clang-format on
-
-    PostProcess(Handler& handler, const CreateInfo* pCreateInfo);
+    Default(Handler& handler);
 
    protected:
     void record(const uint8_t frameIndex, RenderPass::SubmitResource& submitResource) override;
+    void preDispatch(const VkCommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPplnBindData,
+                     const Descriptor::Set::BindData& descSetBindData, const uint8_t frameIndex) override;
     void postDispatch(const VkCommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPplnBindData,
                       const Descriptor::Set::BindData& descSetBindData, const uint8_t frameIndex) override;
 };
+
+}  // namespace PostProcess
 
 }  // namespace Compute
 

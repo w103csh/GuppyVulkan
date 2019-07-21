@@ -223,25 +223,6 @@ static FlagBits incrementByteFlag(FlagBits flags, T1 firstBit, T2 allBits) {
     return flags;
 }
 
-//// This is super simple... add to it if necessary
-// template <typename TKey, typename TValue>
-// struct simple_container_key_map {
-//    void set(TKey key, TValue value) {
-//        for (auto &keyValue_ : container_)
-//            if (std::equal(key.begin(), key.end(), keyValue_.first.begin())) return;
-//        container_.push_back({key, value});
-//    }
-//
-//    std::pair<TKey, TValue> get(const TKey &key) {
-//        for (auto &keyValue_ : container_)
-//            if (std::equal(key.begin(), key.end(), keyValue_.first.begin())) return keyValue;
-//        return {};
-//    }
-//
-//   private:
-//    std::vector<std::pair<TKey, TValue>> container_;
-//};
-
 static void destroyImageResource(const VkDevice &dev, ImageResource &res) {
     if (res.view != VK_NULL_HANDLE) vkDestroyImageView(dev, res.view, nullptr);
     res.view = VK_NULL_HANDLE;
@@ -261,9 +242,13 @@ void attachementImageBarrierWriteToSamplerRead(const VkImage &image, BarrierReso
                                                const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                                                const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
 
-void attachementImageBarrierWriteToStorageWrite(const VkImage &image, BarrierResource &resource,
-                                                const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
-                                                const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
+void attachementImageBarrierWriteToStorageRead(const VkImage &image, BarrierResource &resource,
+                                               const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                                               const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
+
+void attachementImageBarrierStorageWriteToColorRead(const VkImage &image, BarrierResource &resource,
+                                                    const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
+                                                    const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
 
 void attachementImageBarrierWriteToWrite(const VkImage &image, BarrierResource &resource,
                                          const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,

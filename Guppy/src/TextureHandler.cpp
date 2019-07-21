@@ -37,6 +37,7 @@ void Texture::Handler::init() {
         &RenderPass::DEFAULT_2D_TEXTURE_CREATE_INFO,
         &RenderPass::PROJECT_2D_TEXTURE_CREATE_INFO,
         &RenderPass::PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO,
+        &RenderPass::SWAPCHAIN_TARGET_TEXTURE_CREATE_INFO,
         &Texture::ScreenSpace::DEFAULT_2D_TEXTURE_CREATE_INFO,
         &Texture::ScreenSpace::COMPUTE_2D_TEXTURE_CREATE_INFO,
     };
@@ -79,9 +80,6 @@ std::shared_ptr<Texture::Base>& Texture::Handler::make(const Texture::CreateInfo
     // Using the name as an ID for now, so make sure its unique.
     for (const auto& pTexture : pTextures_) {
         assert(pTexture->NAME.compare(pCreateInfo->name) != 0);
-        // Using the string ids in the render handler currently, so also check against
-        // the swapchain target id.
-        assert(pCreateInfo->name.compare(RenderPass::SWAPCHAIN_TARGET_ID) != 0);
     }
 
     pTextures_.emplace_back(std::make_shared<Texture::Base>(static_cast<uint32_t>(pTextures_.size()), pCreateInfo));
@@ -96,6 +94,7 @@ std::shared_ptr<Texture::Base>& Texture::Handler::make(const Texture::CreateInfo
                 std::async(std::launch::async, &Texture::Handler::asyncLoad, this, pTextures_.back(), *pCreateInfo));
         }
     } else {
+        // Prepare samplers.
         load(pTextures_.back(), pCreateInfo);
         // Check if the texture is ready to be created on the device.
         bool isReady = true;
@@ -401,6 +400,9 @@ void Texture::Handler::attachSwapchain() {
     // Update swapchain dependent textures
     std::vector<std::string> updateList;
     for (auto& pTexture : pTextures_) {
+        // The swapchain texture should not use this code. Its final setup is done in the pass handler.
+        if (std::visit(Descriptor::IsSwapchainStorageImage{}, pTexture->DESCRIPTOR_TYPE)) continue;
+
         if (pTexture->usesSwapchain && pTexture->status != STATUS::READY) {
             for (auto& sampler : pTexture->samplers) {
                 if (sampler.usesSwapchain) {
@@ -426,6 +428,9 @@ void Texture::Handler::attachSwapchain() {
     // Transition storage images. I can't think of a better time to do this. Its
     // not great, but oh well.
     for (const auto& pTexture : pTextures_) {
+        // The swapchain texture should not use this code. Its final setup is done in the pass handler.
+        if (std::visit(Descriptor::IsSwapchainStorageImage{}, pTexture->DESCRIPTOR_TYPE)) continue;
+
         if (std::visit(Descriptor::IsStorageImage{}, pTexture->DESCRIPTOR_TYPE) && pTexture->PER_FRAMEBUFFER) {
             for (const auto& sampler : pTexture->samplers) {
                 // TODO: Make an actual barrier. Not sure if it will ever be necessary
@@ -449,6 +454,7 @@ void Texture::Handler::attachSwapchain() {
 
 void Texture::Handler::detachSwapchain() {
     for (auto& pTexture : pTextures_) {
+        if (std::visit(Descriptor::IsSwapchainStorageImage{}, pTexture->DESCRIPTOR_TYPE)) continue;
         if (pTexture->usesSwapchain) {
             for (auto& sampler : pTexture->samplers) {
                 if (sampler.usesSwapchain) {

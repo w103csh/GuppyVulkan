@@ -6,6 +6,7 @@
 
 #include "ConstantsAll.h"
 #include "RenderPass.h"
+#include "Sampler.h"
 
 #define PASS_CONSTANTS
 
@@ -24,10 +25,10 @@ const std::set<PASS> ALL = {
 
 const std::vector<PASS> ACTIVE = {
     PASS::SAMPLER_PROJECT,
-    PASS::DEFAULT,
-    //PASS::SAMPLER_DEFAULT,
+    //PASS::DEFAULT,
+    PASS::SAMPLER_DEFAULT,
     //PASS::SAMPLER_SCREEN_SPACE,
-    //PASS::SCREEN_SPACE,
+    PASS::SCREEN_SPACE,
 // UI pass needs to always be last since it
 // is optional
 #ifdef USE_DEBUG_UI
@@ -74,6 +75,18 @@ const Sampler::CreateInfo PROJECT_2D_ARRAY_SAMPLER_CREATE_INFO = {
     false,
     (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
 };
+const Sampler::CreateInfo SWAPCHAIN_TARGET_SAMPLER_CREATE_INFO = {
+    "Swapchain Target Sampler",
+    {{::Sampler::USAGE::COLOR}},
+    VK_IMAGE_VIEW_TYPE_2D,
+    0,
+    SAMPLER::DEFAULT,
+    BAD_EXTENT_2D,
+    false,
+    true,
+    // I don't feel like figuring out what this should be atm, so I am just
+    // going to leave defaults and not create the sampler.
+};
 
 // TEXTURE
 const Texture::CreateInfo DEFAULT_2D_TEXTURE_CREATE_INFO = {
@@ -91,6 +104,13 @@ const Texture::CreateInfo PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO = {
     std::string(PROJECT_2D_ARRAY_TEXTURE_ID),
     {PROJECT_2D_ARRAY_SAMPLER_CREATE_INFO},
     false,
+};
+const Texture::CreateInfo SWAPCHAIN_TARGET_TEXTURE_CREATE_INFO = {
+    std::string(SWAPCHAIN_TARGET_ID),        //
+    {SWAPCHAIN_TARGET_SAMPLER_CREATE_INFO},  //
+    false,
+    true,
+    STORAGE_IMAGE::SWAPCHAIN,
 };
 
 // DEFAULT

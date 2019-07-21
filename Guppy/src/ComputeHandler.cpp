@@ -42,7 +42,7 @@ Compute::Handler::Handler(Game* pGame) : Game::Handler(pGame) {
     for (const auto& type : Compute::ACTIVE) {  // TODO: Should this be ALL?
         // clang-format off
         switch (type) {
-            case PASS::COMPUTE_POST_PROCESS: pCompute = std::unique_ptr<Compute::Base>(new Compute::PostProcess(std::ref(*this), &POST_PROCESS_CREATE_INFO)); break;
+            case PASS::COMPUTE_POST_PROCESS: pCompute = std::unique_ptr<Compute::Base>(new Compute::PostProcess::Default(std::ref(*this))); break;
             default: assert(false && "Unhandled pass type"); exit(EXIT_FAILURE);
         }
         // clang-format on

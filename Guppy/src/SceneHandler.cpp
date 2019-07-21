@@ -1,6 +1,8 @@
 
 #include "SceneHandler.h"
 
+#include <algorithm>
+
 #include "Axes.h"
 #include "Box.h"
 #include "Model.h"
@@ -79,20 +81,24 @@ void Scene::Handler::init() {
 
     // PROJECT PLANE
     if (!suppress || false) {
-        meshInfo = {};
-        meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
-        meshInfo.selectable = false;
-        defInstInfo = {};
-        defInstInfo.data.push_back({helpers::affine(glm::vec3{2.0f}, glm::vec3{0.5f, 3.0f, 0.5f})});
-        // defInstInfo.data.push_back(
-        //    {helpers::affine(glm::vec3{5.0f}, glm::vec3{10.5f, 10.0f, 10.5f}, -M_PI_2_FLT, CARDINAL_Y)});
-        // defInstInfo.data.push_back(
-        //    {helpers::affine(glm::vec3{2.0f}, glm::vec3{4.5f, -5.0f, 13.5f}, -M_PI_2_FLT, CARDINAL_Z)});
-        defMatInfo = {};
-        defMatInfo.shininess = Material::SHININESS::EGGSHELL;
-        defMatInfo.pTexture = textureHandler().getTexture(RenderPass::PROJECT_2D_ARRAY_TEXTURE_ID);
-        defMatInfo.color = {0.5f, 0.5f, 0.5f};
-        meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
+        // TODO: these types of checks are not great. The active passes should be able to change at runtime.
+        if (std::find(RenderPass::ACTIVE.begin(), RenderPass::ACTIVE.end(), PASS::SAMPLER_PROJECT) !=
+            RenderPass::ACTIVE.end()) {
+            meshInfo = {};
+            meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+            meshInfo.selectable = false;
+            defInstInfo = {};
+            defInstInfo.data.push_back({helpers::affine(glm::vec3{2.0f}, glm::vec3{0.5f, 3.0f, 0.5f})});
+            // defInstInfo.data.push_back(
+            //    {helpers::affine(glm::vec3{5.0f}, glm::vec3{10.5f, 10.0f, 10.5f}, -M_PI_2_FLT, CARDINAL_Y)});
+            // defInstInfo.data.push_back(
+            //    {helpers::affine(glm::vec3{2.0f}, glm::vec3{4.5f, -5.0f, 13.5f}, -M_PI_2_FLT, CARDINAL_Z)});
+            defMatInfo = {};
+            defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+            defMatInfo.pTexture = textureHandler().getTexture(RenderPass::PROJECT_2D_ARRAY_TEXTURE_ID);
+            defMatInfo.color = {0.5f, 0.5f, 0.5f};
+            meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
+        }
     }
 
     // SCREEN SPACE

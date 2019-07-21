@@ -25,6 +25,7 @@ class Handler : public Game::Handler {
 
     // NOTE: this is not in order!!!
     void getActivePassTypes(std::set<PASS>& types, const PIPELINE& pipelineTypeIn = PIPELINE::ALL_ENUM);
+    bool isActiveAndReady(const PASS& type) { return pComputeMap_.count(type) > 0; }
 
     void attachSwapchain();
     void detachSwapchain();

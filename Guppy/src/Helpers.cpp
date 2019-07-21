@@ -422,16 +422,30 @@ void attachementImageBarrierWriteToSamplerRead(const VkImage &image, BarrierReso
     resource.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
 }
 
-void attachementImageBarrierWriteToStorageWrite(const VkImage &image, BarrierResource &resource,
-                                                const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
-    // Can't remember what this was for.
+void attachementImageBarrierWriteToStorageRead(const VkImage &image, BarrierResource &resource,
+                                               const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
     resource.imgBarriers.push_back({});
     resource.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     resource.imgBarriers.back().pNext = nullptr;
     resource.imgBarriers.back().srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     resource.imgBarriers.back().newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    resource.imgBarriers.back().srcQueueFamilyIndex = srcQueueFamilyIndex;
+    resource.imgBarriers.back().dstQueueFamilyIndex = dstQueueFamilyIndex;
+    resource.imgBarriers.back().image = image;
+    resource.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+}
+
+void attachementImageBarrierStorageWriteToColorRead(const VkImage &image, BarrierResource &resource,
+                                                    const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
+    resource.imgBarriers.push_back({});
+    resource.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    resource.imgBarriers.back().pNext = nullptr;
+    resource.imgBarriers.back().srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_GENERAL;
+    resource.imgBarriers.back().newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     resource.imgBarriers.back().srcQueueFamilyIndex = srcQueueFamilyIndex;
     resource.imgBarriers.back().dstQueueFamilyIndex = dstQueueFamilyIndex;
     resource.imgBarriers.back().image = image;

@@ -77,11 +77,13 @@ void RenderPass::ImGui::record(const uint8_t frameIndex) {
     beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
     handler().uiHandler().draw(data.priCmds[frameIndex], frameIndex);
     endPass(frameIndex);
-    vk::assert_success(vkEndCommandBuffer(data.priCmds[frameIndex]));
+    // vk::assert_success(vkEndCommandBuffer(data.priCmds[frameIndex]));
 }
 
 void RenderPass::ImGui::createAttachmentsAndSubpasses() {
     bool clearTarget = handler().shouldClearTarget(getTargetId());
+    bool compute = true;
+    if (compute) clearTarget = false;
     /*
         THESE SETTINGS ARE COPIED DIRECTLY FROM THE IMGUI VULKAN SAMPLE.
         IF IMGUI IS UPDATED THIS SHOULD BE REPLACED WITH THE NEW SETTINGS, OR
@@ -99,7 +101,10 @@ void RenderPass::ImGui::createAttachmentsAndSubpasses() {
     attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachment.initialLayout = clearTarget ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    if (compute)
+        attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    else
+        attachment.initialLayout = clearTarget ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     attachment.finalLayout = finalLayout_;
 
     resources_.attachments.push_back(attachment);

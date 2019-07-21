@@ -32,7 +32,6 @@ const VkClearDepthStencilValue DEFAULT_CLEAR_DEPTH_STENCIL_VALUE = {1.0f, 0};
 namespace RenderPass {
 
 constexpr uint8_t RESOURCE_SIZE = 20;
-constexpr std::string_view SWAPCHAIN_TARGET_ID = "Swapchain";
 
 using SubmitResource = ::SubmitResource<RESOURCE_SIZE>;
 using SubmitResources = std::array<SubmitResource, RESOURCE_SIZE>;
@@ -105,6 +104,8 @@ constexpr std::string_view PROJECT_2D_TEXTURE_ID = "Render Pass Project 2D Textu
 extern const Texture::CreateInfo PROJECT_2D_TEXTURE_CREATE_INFO;
 constexpr std::string_view PROJECT_2D_ARRAY_TEXTURE_ID = "Render Pass Project 2D Array Texture";
 extern const Texture::CreateInfo PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO;
+constexpr std::string_view SWAPCHAIN_TARGET_ID = "Swapchain Target Texture";
+extern const Texture::CreateInfo SWAPCHAIN_TARGET_TEXTURE_CREATE_INFO;
 
 // RENDER PASS
 extern const CreateInfo DEFAULT_CREATE_INFO;

@@ -118,7 +118,7 @@ class Handler : public Game::Handler {
     inline Uniform::Manager<Uniform::Default::Fog::Base>& uniDefFogMgr() { return std::get<Uniform::Manager<Uniform::Default::Fog::Base>>(managers_[4]);};
     inline Uniform::Manager<Uniform::Default::Projector::Base>& uniDefPrjMgr() { return std::get<Uniform::Manager<Uniform::Default::Projector::Base>>(managers_[5]);};
     inline Uniform::Manager<Uniform::ScreenSpace::Default>& uniScrDefMgr() { return std::get<Uniform::Manager<Uniform::ScreenSpace::Default>>(managers_[6]);};
-    inline Uniform::Manager<Storage::ScreenSpace::PostProcess>& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::ScreenSpace::PostProcess>>(managers_[7]);};
+    inline Uniform::Manager<Storage::PostProcess::Base>& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[7]);};
 
     template <class T> inline Uniform::Manager<T>& getManager() { assert(false); }
     template <> inline Uniform::Manager<Camera::Default::Perspective::Base>& getManager() { return camDefPersMgr(); }
@@ -128,7 +128,7 @@ class Handler : public Game::Handler {
     template <> inline Uniform::Manager<Uniform::Default::Fog::Base>& getManager() { return uniDefFogMgr(); }
     template <> inline Uniform::Manager<Uniform::Default::Projector::Base>& getManager() { return uniDefPrjMgr(); }
     template <> inline Uniform::Manager<Uniform::ScreenSpace::Default>& getManager() { return uniScrDefMgr(); }
-    template <> inline Uniform::Manager<Storage::ScreenSpace::PostProcess>& getManager() { return strPstPrcMgr(); }
+    template <> inline Uniform::Manager<Storage::PostProcess::Base>& getManager() { return strPstPrcMgr(); }
     // clang-format on
 
     void createCameras();
@@ -144,7 +144,7 @@ class Handler : public Game::Handler {
         Uniform::Manager<Uniform::Default::Fog::Base>,         //
         Uniform::Manager<Uniform::Default::Projector::Base>,   //
         Uniform::Manager<Uniform::ScreenSpace::Default>,       //
-        Uniform::Manager<Storage::ScreenSpace::PostProcess>    //
+        Uniform::Manager<Storage::PostProcess::Base>           //
         >;
     std::array<Manager, 8> managers_;
 

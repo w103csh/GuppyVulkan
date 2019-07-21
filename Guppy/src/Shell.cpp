@@ -402,7 +402,8 @@ void Shell::resizeSwapchain(uint32_t widthHint, uint32_t heightHint, bool refres
     swapchain_info.imageColorSpace = ctx_.surfaceFormat.colorSpace;
     swapchain_info.imageExtent = ctx_.extent;
     swapchain_info.imageArrayLayers = 1;
-    swapchain_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    // TODO: Should these flags be pass setup dependent???
+    swapchain_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;  // | VK_IMAGE_USAGE_STORAGE_BIT;
     swapchain_info.preTransform = caps.currentTransform;
     swapchain_info.compositeAlpha = compositeAlpha;
     swapchain_info.presentMode = ctx_.mode;
