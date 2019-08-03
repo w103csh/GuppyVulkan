@@ -92,14 +92,14 @@ void RenderPass::ImGui::createAttachmentsAndSubpasses() {
     bool isClear = handler().isClearTargetPass(getTargetId(), TYPE);
 
     VkAttachmentDescription attachment = {};
-    attachment.format = format_;
+    attachment.format = getFormat();
     attachment.samples = VK_SAMPLE_COUNT_1_BIT;
     attachment.loadOp = isClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
     attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachment.initialLayout = isClear ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    attachment.finalLayout = finalLayout_;
+    attachment.initialLayout = isClear ? VK_IMAGE_LAYOUT_UNDEFINED : getInitialLayout();
+    attachment.finalLayout = getFinalLayout();
 
     resources_.attachments.push_back(attachment);
 

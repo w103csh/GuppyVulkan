@@ -190,6 +190,10 @@ const CreateInfo BRIGHT_CREATE_INFO = {
     },
     FLAG::SWAPCHAIN,
     {std::string(Texture::ScreenSpace::BLUR_A_2D_TEXTURE_ID)},
+    {},
+    {},
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 };
 Bright::Bright(RenderPass::Handler& handler, const index&& offset)
     : RenderPass::ScreenSpace::Base{handler, std::forward<const index>(offset), &BRIGHT_CREATE_INFO} {}
@@ -203,6 +207,10 @@ const CreateInfo BLUR_A_CREATE_INFO = {
     },
     FLAG::SWAPCHAIN,
     {std::string(Texture::ScreenSpace::BLUR_B_2D_TEXTURE_ID)},
+    {},
+    {},
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 };
 BlurA::BlurA(RenderPass::Handler& handler, const index&& offset)
     : RenderPass::ScreenSpace::Base{handler, std::forward<const index>(offset), &BLUR_A_CREATE_INFO} {}
@@ -216,6 +224,10 @@ const CreateInfo BLUR_B_CREATE_INFO = {
     },
     FLAG::SWAPCHAIN,
     {std::string(Texture::ScreenSpace::BLUR_A_2D_TEXTURE_ID)},
+    {},
+    {},
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 };
 BlurB::BlurB(RenderPass::Handler& handler, const index&& offset)
     : RenderPass::ScreenSpace::Base{handler, std::forward<const index>(offset), &BLUR_B_CREATE_INFO} {}

@@ -62,6 +62,7 @@ class Base : public Handlee<RenderPass::Handler> {
     constexpr const auto &getFormat() const { return format_; }
     constexpr const auto &getDepthFormat() const { return depthFormat_; }
     constexpr const auto &getFinalLayout() const { return finalLayout_; }
+    constexpr const auto &getInitialLayout() const { return initialLayout_; }
     constexpr const auto &getSamples() const { return pipelineData_.samples; }
     constexpr bool usesSwapchain() const { return FLAGS & FLAG::SWAPCHAIN; }
     constexpr bool usesDepth() const { return FLAGS & FLAG::DEPTH; }
@@ -146,14 +147,6 @@ class Base : public Handlee<RenderPass::Handler> {
     VkCommandBufferBeginInfo secCmdBeginInfo_;
     bool secCmdFlag_;
 
-    // SETTINGS
-    VkFormat format_;
-    VkFormat depthFormat_;
-    VkImageLayout finalLayout_;
-    uint32_t commandCount_;
-    uint32_t semaphoreCount_;
-    VkExtent2D extent_;
-
     // ATTACHMENT
     std::vector<ImageResource> images_;
     ImageResource depth_;
@@ -174,6 +167,15 @@ class Base : public Handlee<RenderPass::Handler> {
      *  governs the hanlder's clear flag map.
      */
     bool isInitialized_;
+
+    // SETTINGS
+    VkFormat format_;
+    VkFormat depthFormat_;
+    VkImageLayout initialLayout_;
+    VkImageLayout finalLayout_;
+    uint32_t commandCount_;
+    uint32_t semaphoreCount_;
+    VkExtent2D extent_;
 
     void createSemaphores();
     void createAttachmentDebugMarkers();

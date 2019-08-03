@@ -27,10 +27,6 @@ const std::vector<PASS> DEFAULT = {
     //PASS::DEFAULT,
     PASS::SAMPLER_DEFAULT,
     //PASS::SAMPLER_SCREEN_SPACE,
-    //PASS::SCREEN_SPACE_HDR_LOG,
-    //PASS::SAMPLER_SCREEN_BRIGHT,
-    //PASS::SAMPLER_SCREEN_SPACE_BLUR_A,
-    //PASS::SAMPLER_SCREEN_SPACE_BLUR_B,
     PASS::SCREEN_SPACE,
 // UI pass needs to always be last since it
 // is optional

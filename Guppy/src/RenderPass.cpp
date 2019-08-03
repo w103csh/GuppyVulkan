@@ -32,17 +32,18 @@ RenderPass::Base::Base(RenderPass::Handler& handler, const uint32_t&& offset, co
       inheritInfo_{},
       secCmdBeginInfo_{},
       secCmdFlag_(false),
-      // SETTINGS
-      format_(VK_FORMAT_UNDEFINED),
-      depthFormat_(VK_FORMAT_UNDEFINED),
-      finalLayout_(VK_IMAGE_LAYOUT_UNDEFINED),
-      commandCount_(0),
-      semaphoreCount_(0),
-      extent_(BAD_EXTENT_2D),
       depth_{},
       descPipelineOffsets_(pCreateInfo->descPipelineOffsets),
       textureIds_(pCreateInfo->textureIds),
-      isInitialized_(false) {
+      isInitialized_(false),
+      // SETTINGS
+      format_(VK_FORMAT_UNDEFINED),
+      depthFormat_(VK_FORMAT_UNDEFINED),
+      finalLayout_(pCreateInfo->finalLayout),
+      initialLayout_(pCreateInfo->initialLayout),
+      commandCount_(0),
+      semaphoreCount_(0),
+      extent_(BAD_EXTENT_2D) {
     // This is sloppy, but I don't really feel like changing a bunch of things.
     if (textureIds_.empty()) textureIds_.emplace_back(std::string(SWAPCHAIN_TARGET_ID));
     assert(textureIds_.size());
@@ -104,11 +105,11 @@ void RenderPass::Base::init() {
         format_ = ctx.surfaceFormat.format;
     }
 
-    finalLayout_ = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     depthFormat_ = usesDepth() ? ctx.depthFormat : VK_FORMAT_UNDEFINED;
     pipelineData_.samples = usesMultiSample() ? ctx.samples : VK_SAMPLE_COUNT_1_BIT;
 
     // Validate frame settings.
+    assert(initialLayout_ != VK_IMAGE_LAYOUT_UNDEFINED);  // I think this is the case.
     assert(finalLayout_ != VK_IMAGE_LAYOUT_UNDEFINED);
     if (pipelineData_.usesDepth)
         assert(depthFormat_ != VK_FORMAT_UNDEFINED);
@@ -210,7 +211,6 @@ void RenderPass::Base::record(const uint8_t frameIndex) {
     bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
-
 
     beginPass(priCmd, frameIndex, VK_SUBPASS_CONTENTS_INLINE);
     // pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
@@ -361,21 +361,9 @@ void RenderPass::Base::createAttachmentsAndSubpasses() {
     resources_.attachments.back().storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     resources_.attachments.back().stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     resources_.attachments.back().stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    resources_.attachments.back().initialLayout =
-        isClear ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    resources_.attachments.back().initialLayout = isClear ? VK_IMAGE_LAYOUT_UNDEFINED : initialLayout_;
     resources_.attachments.back().finalLayout = finalLayout_;
     resources_.attachments.back().flags = 0;
-
-    if (TYPE == PASS::SCREEN_SPACE_BRIGHT) {
-        resources_.attachments.back().finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    }
-    if (TYPE == PASS::SCREEN_SPACE_BLUR_A) {
-        resources_.attachments.back().finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    }
-    if (TYPE == PASS::SCREEN_SPACE_BLUR_B) {
-        resources_.attachments.back().initialLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        resources_.attachments.back().finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    }
 
     // REFERENCE
     if (usesMultiSample()) {

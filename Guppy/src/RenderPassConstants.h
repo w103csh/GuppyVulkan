@@ -99,6 +99,8 @@ struct CreateInfo {
     std::vector<std::string> textureIds;
     std::vector<PASS> prePassTypes;
     std::vector<PASS> postPassTypes;
+    VkImageLayout initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     descriptorPipelineOffsetsMap descPipelineOffsets;
 };
 
