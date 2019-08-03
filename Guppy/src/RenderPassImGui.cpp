@@ -67,23 +67,18 @@ void RenderPass::ImGui::record(const uint8_t frameIndex) {
     vkResetCommandBuffer(priCmd, 0);
 
     // BEGIN BUFFERS
-    VkCommandBufferBeginInfo bufferInfo;
-    // PRIMARY
-    bufferInfo = {};
+    VkCommandBufferBeginInfo bufferInfo = {};
     bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
     vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
 
-    beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT);
+    beginPass(priCmd, frameIndex);
     handler().uiHandler().draw(data.priCmds[frameIndex], frameIndex);
-    endPass(frameIndex);
+    endPass(priCmd);
     // vk::assert_success(vkEndCommandBuffer(data.priCmds[frameIndex]));
 }
 
 void RenderPass::ImGui::createAttachmentsAndSubpasses() {
-    bool clearTarget = handler().shouldClearTarget(getTargetId());
-    bool compute = false;
-    if (compute) clearTarget = false;
     /*
         THESE SETTINGS ARE COPIED DIRECTLY FROM THE IMGUI VULKAN SAMPLE.
         IF IMGUI IS UPDATED THIS SHOULD BE REPLACED WITH THE NEW SETTINGS, OR
@@ -94,17 +89,16 @@ void RenderPass::ImGui::createAttachmentsAndSubpasses() {
         so unfortunately their code cannot be used as is.
     */
 
+    bool isClear = handler().isClearTargetPass(getTargetId(), TYPE);
+
     VkAttachmentDescription attachment = {};
     attachment.format = format_;
     attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    attachment.loadOp = clearTarget ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    attachment.loadOp = isClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
     attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
     attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    if (compute)
-        attachment.initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    else
-        attachment.initialLayout = clearTarget ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    attachment.initialLayout = isClear ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     attachment.finalLayout = finalLayout_;
 
     resources_.attachments.push_back(attachment);

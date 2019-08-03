@@ -14,14 +14,8 @@
 namespace Descriptor {
 namespace Set {
 namespace Parallax {
-class Uniform : public Set::Base {
-   public:
-    Uniform(Handler &handler);
-};
-class Sampler : public Set::Base {
-   public:
-    Sampler(Handler &handler);
-};
+extern const CreateInfo UNIFORM_CREATE_INFO;
+extern const CreateInfo SAMPLER_CREATE_INFO;
 }  // namespace Parallax
 }  // namespace Set
 }  // namespace Descriptor

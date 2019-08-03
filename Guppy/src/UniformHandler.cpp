@@ -32,9 +32,9 @@ Uniform::Handler::Handler(Game* pGame)
           {"Default Perspective Camera", UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, 6, "_U_CAM_DEF_PERS"},
           // LIGHT
           Uniform::Manager<Light::Default::Positional::Base>  //
-          {"Default Positional Light", UNIFORM::LIGHT_POSITIONAL_DEFAULT, 20, "_U_LGT_DEF_POS"},
+          {"Default Positional Light", UNIFORM::LIGHT_POSITIONAL_DEFAULT, 40, "_U_LGT_DEF_POS"},
           Uniform::Manager<Light::PBR::Positional::Base>  //
-          {"PBR Positional Light", UNIFORM::LIGHT_POSITIONAL_PBR, 20, "_U_LGT_PBR_POS"},
+          {"PBR Positional Light", UNIFORM::LIGHT_POSITIONAL_PBR, 40, "_U_LGT_PBR_POS"},
           Uniform::Manager<Light::Default::Spot::Base>  //
           {"Default Spot Light", UNIFORM::LIGHT_SPOT_DEFAULT, 20, "_U_LGT_DEF_SPT"},
           // MISCELLANEOUS
@@ -167,6 +167,17 @@ void Uniform::Handler::createLights() {
     createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-100.0f, 10.0f, 100.0f));
     lgtDefPosMgr().insert(dev, &createInfo);
     lgtPbrPosMgr().insert(dev, &createInfo);
+
+    // Bloom test
+    // createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-7.0f, 4.0f, 2.5f));
+    // lgtDefPosMgr().insert(dev, &createInfo);
+    // lgtPbrPosMgr().insert(dev, &createInfo);
+    // createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(0.0f, 4.0f, 2.5f));
+    // lgtDefPosMgr().insert(dev, &createInfo);
+    // lgtPbrPosMgr().insert(dev, &createInfo);
+    // createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(7.0f, 4.0f, 2.5f));
+    // lgtDefPosMgr().insert(dev, &createInfo);
+    // lgtPbrPosMgr().insert(dev, &createInfo);
 
     // SPOT
     Light::Default::Spot::CreateInfo spotCreateInfo = {};

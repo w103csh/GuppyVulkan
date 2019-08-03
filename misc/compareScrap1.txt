@@ -1,27 +1,33 @@
-// MANAGER
-
-template <class TBase>
-using ItemPointer = std::unique_ptr<TBase>;
-
-template <class TDerived>
-using ManagerType = Descriptor::Manager<Storage::Base, TDerived, ItemPointer>;
-
-// TODO: inner class of Handler?
-template <class TDerived>
-class Manager : public ManagerType<TDerived> {
-   public:
-    Manager(const std::string&& name, const DESCRIPTOR&& descriptorType, const uint8_t&& maxSize,
-            const std::string&& macroName)
-        : ManagerType<TDerived>{
-              std::forward<const std::string>(name),
-              std::forward<const DESCRIPTOR>(descriptorType),
-              std::forward<const uint8_t>(maxSize),
-              true,
-              VK_BUFFER_USAGE_STORAGE_BUFFER_BIT,
-              static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
-              std::forward<const std::string>(macroName),
-              VK_SHARING_MODE_EXCLUSIVE,
-              0,
-          } {}
-};
+vec4 blurPass2() {
+#if _DS_SMP_SCR_BLUR_B > 0
+    float dx = 1.0 / textureSize(sampBlurB, 0).x;
+    vec3 sum = texture(sampBlurB, fragTexCoord).rbg * data.weights0_3[0];
+    {
+        sum += texture(sampBlurB, fragTexCoord + vec2(1.0, 0.0) * dx).rgb * data.weights0_3[1];
+        sum += texture(sampBlurB, fragTexCoord - vec2(1.0, 0.0) * dx).rgb * data.weights0_3[1];
+        sum += texture(sampBlurB, fragTexCoord + vec2(2.0, 0.0) * dx).rgb * data.weights0_3[2];
+        sum += texture(sampBlurB, fragTexCoord - vec2(2.0, 0.0) * dx).rgb * data.weights0_3[2];
+        sum += texture(sampBlurB, fragTexCoord + vec2(3.0, 0.0) * dx).rgb * data.weights0_3[3];
+        sum += texture(sampBlurB, fragTexCoord - vec2(3.0, 0.0) * dx).rgb * data.weights0_3[3];
+    }
+    {
+        sum += texture(sampBlurB, fragTexCoord + vec2(4.0, 0.0) * dx).rgb * data.weights4_7[0];
+        sum += texture(sampBlurB, fragTexCoord - vec2(4.0, 0.0) * dx).rgb * data.weights4_7[0];
+        sum += texture(sampBlurB, fragTexCoord + vec2(5.0, 0.0) * dx).rgb * data.weights4_7[1];
+        sum += texture(sampBlurB, fragTexCoord - vec2(5.0, 0.0) * dx).rgb * data.weights4_7[1];
+        sum += texture(sampBlurB, fragTexCoord + vec2(6.0, 0.0) * dx).rgb * data.weights4_7[2];
+        sum += texture(sampBlurB, fragTexCoord - vec2(6.0, 0.0) * dx).rgb * data.weights4_7[2];
+        sum += texture(sampBlurB, fragTexCoord + vec2(7.0, 0.0) * dx).rgb * data.weights4_7[3];
+        sum += texture(sampBlurB, fragTexCoord - vec2(7.0, 0.0) * dx).rgb * data.weights4_7[3];
+    }
+    {
+        sum += texture(sampBlurB, fragTexCoord + vec2(8.0, 0.0) * dx).rgb * data.weights8_9[0];
+        sum += texture(sampBlurB, fragTexCoord - vec2(8.0, 0.0) * dx).rgb * data.weights8_9[0];
+        sum += texture(sampBlurB, fragTexCoord + vec2(9.0, 0.0) * dx).rgb * data.weights8_9[1];
+        sum += texture(sampBlurB, fragTexCoord - vec2(9.0, 0.0) * dx).rgb * data.weights8_9[1];
+    }
+    return vec4(sum, 1.0);
+#else
+    return vec4(0.0);
+#endif
+}

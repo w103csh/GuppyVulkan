@@ -14,8 +14,6 @@ Game *create_game(const std::vector<std::string> &args) { return new Guppy(args)
 
 Game *create_game(int argc, char **argv) {
     std::vector<std::string> args(argv, argv + argc);
-    // TODO: remove this
-    args.push_back("-vv");
     return create_game(args);
 }
 

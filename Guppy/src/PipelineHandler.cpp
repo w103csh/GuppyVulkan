@@ -55,7 +55,11 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
             case PIPELINE::PARALLAX_SIMPLE:                 pPipelines_.emplace_back(std::make_unique<Parallax::Simple>(std::ref(*this))); break;
             case PIPELINE::PARALLAX_STEEP:                  pPipelines_.emplace_back(std::make_unique<Parallax::Steep>(std::ref(*this))); break;
             case PIPELINE::SCREEN_SPACE_DEFAULT:            pPipelines_.emplace_back(std::make_unique<ScreenSpace::Default>(std::ref(*this))); break;
+            case PIPELINE::SCREEN_SPACE_HDR_LOG:            pPipelines_.emplace_back(std::make_unique<ScreenSpace::HdrLog>(std::ref(*this))); break;
             case PIPELINE::SCREEN_SPACE_COMPUTE_DEFAULT:    pPipelines_.emplace_back(std::make_unique<ScreenSpace::ComputeDefault>(std::ref(*this))); break;
+            case PIPELINE::SCREEN_SPACE_BRIGHT:             pPipelines_.emplace_back(std::make_unique<ScreenSpace::Bright>(std::ref(*this))); break;
+            case PIPELINE::SCREEN_SPACE_BLUR_A:             pPipelines_.emplace_back(std::make_unique<ScreenSpace::BlurA>(std::ref(*this))); break;
+            case PIPELINE::SCREEN_SPACE_BLUR_B:             pPipelines_.emplace_back(std::make_unique<ScreenSpace::BlurB>(std::ref(*this))); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on
@@ -183,9 +187,11 @@ void Pipeline::Handler::createPipeline(const std::string&& name, VkComputePipeli
 }
 
 bool Pipeline::Handler::checkVertexPipelineMap(VERTEX key, PIPELINE value) const {
-    for (const auto& type : Pipeline::VERTEX_MAP.at(key)) {
+    for (const auto& type : Pipeline::VERTEX_MAP.at(key))
         if (type == value) return true;
-    }
+    if (key == VERTEX::TEXTURE)
+        for (const auto& type : Pipeline::VERTEX_MAP.at(VERTEX::SCREEN_QUAD))
+            if (type == value) return true;
     return false;
 }
 

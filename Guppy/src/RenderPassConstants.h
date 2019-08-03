@@ -31,16 +31,19 @@ const VkClearDepthStencilValue DEFAULT_CLEAR_DEPTH_STENCIL_VALUE = {1.0f, 0};
 
 namespace RenderPass {
 
+using index = uint32_t;
+
 constexpr uint8_t RESOURCE_SIZE = 20;
+constexpr index BAD_OFFSET = UINT32_MAX;
 
 using SubmitResource = ::SubmitResource<RESOURCE_SIZE>;
 using SubmitResources = std::array<SubmitResource, RESOURCE_SIZE>;
 
-using offset = uint32_t;
 using descriptorPipelineOffsetsMap = std::map<Uniform::offsetsMapKey, Uniform::offsets>;
 
+using orderedPassTypeOffsetPairs = insertion_ordered_unique_list<std::pair<PASS, RenderPass::index>>;
+
 extern const std::set<PASS> ALL;
-extern const std::vector<PASS> ACTIVE;
 
 // clang-format off
 using FLAG = enum : FlagBits {
@@ -94,6 +97,8 @@ struct CreateInfo {
     std::unordered_set<PIPELINE> pipelineTypes;
     FlagBits flags = (FLAG::SWAPCHAIN | FLAG::DEPTH | FLAG::MULTISAMPLE);
     std::vector<std::string> textureIds;
+    std::vector<PASS> prePassTypes;
+    std::vector<PASS> postPassTypes;
     descriptorPipelineOffsetsMap descPipelineOffsets;
 };
 
@@ -113,5 +118,13 @@ extern const CreateInfo SAMPLER_DEFAULT_CREATE_INFO;
 extern const CreateInfo PROJECT_CREATE_INFO;
 
 }  // namespace RenderPass
+
+namespace Descriptor {
+namespace Set {
+namespace RenderPass {
+extern const CreateInfo SWAPCHAIN_IMAGE_CREATE_INFO;
+}  // namespace RenderPass
+}  // namespace Set
+}  // namespace Descriptor
 
 #endif  //! RENDER_PASS_CONSTANTS_H

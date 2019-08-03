@@ -40,6 +40,11 @@ void Texture::Handler::init() {
         &RenderPass::SWAPCHAIN_TARGET_TEXTURE_CREATE_INFO,
         &Texture::ScreenSpace::DEFAULT_2D_TEXTURE_CREATE_INFO,
         //&Texture::ScreenSpace::COMPUTE_2D_TEXTURE_CREATE_INFO,
+        &Texture::ScreenSpace::HDR_LOG_2D_TEXTURE_CREATE_INFO,
+        &Texture::ScreenSpace::HDR_LOG_BLIT_A_2D_TEXTURE_CREATE_INFO,
+        &Texture::ScreenSpace::HDR_LOG_BLIT_B_2D_TEXTURE_CREATE_INFO,
+        &Texture::ScreenSpace::BLUR_A_2D_TEXTURE_CREATE_INFO,
+        &Texture::ScreenSpace::BLUR_B_2D_TEXTURE_CREATE_INFO,
     };
 
     // I think this does not get set properly, so I am not sure where the texture generation
@@ -99,7 +104,7 @@ std::shared_ptr<Texture::Base>& Texture::Handler::make(const Texture::CreateInfo
         // Check if the texture is ready to be created on the device.
         bool isReady = true;
         for (auto& sampler : pTextures_.back()->samplers) {
-            if (sampler.usesSwapchain) {
+            if (sampler.swpchnInfo.usesSwapchain()) {
                 isReady = false;
                 break;
             }
@@ -136,9 +141,20 @@ bool Texture::Handler::update(std::shared_ptr<Texture::Base> pTexture) {
     // Update swapchain dependent textures
     if (pTexture != nullptr) {
         assert(pTexture->status != STATUS::READY);
-        // Currently this way of creation is only going to be used for dataless textures
-        // that rely on the parameters of the swapchain.
         assert(pTexture->usesSwapchain);
+        for (auto& sampler : pTexture->samplers) {
+            if (sampler.swpchnInfo.usesExtent) {
+                const auto& extent = shell().context().extent;
+                sampler.extent.width =
+                    static_cast<uint32_t>(static_cast<float>(extent.width) * sampler.swpchnInfo.extentFactor);
+                sampler.extent.height =
+                    static_cast<uint32_t>(static_cast<float>(extent.height) * sampler.swpchnInfo.extentFactor);
+                if (sampler.mipmapInfo.usesExtent) sampler.mipmapInfo.mipLevels = Sampler::GetMipLevels(sampler.extent);
+            }
+            if (sampler.swpchnInfo.usesFormat) {
+                sampler.format = shell().context().surfaceFormat.format;
+            }
+        }
         bool wasDestroyed = pTexture->status == STATUS::DESTROYED;
         createTexture(pTexture, false);
         return wasDestroyed;
@@ -186,7 +202,7 @@ void Texture::Handler::load(std::shared_ptr<Texture::Base>& pTexture, const Crea
 
         // Set texture-wide info
         pTexture->flags |= sampler.flags;
-        pTexture->usesSwapchain |= sampler.usesSwapchain;
+        pTexture->usesSwapchain |= sampler.swpchnInfo.usesSwapchain();
 
         if (sampler.aspect != BAD_ASPECT) {
             if (pTexture->aspect == BAD_ASPECT) {
@@ -220,7 +236,7 @@ void Texture::Handler::createTextureSampler(const std::shared_ptr<Texture::Base>
     assert(sampler.arrayLayers > 0);
 
     createImage(sampler, pTexture->pLdgRes);
-    if (sampler.mipLevels > 1) {
+    if (sampler.mipmapInfo.generateMipmaps && sampler.mipmapInfo.mipLevels > 1) {
         generateMipmaps(sampler, pTexture->pLdgRes);
     } else if (pTexture->pLdgRes != nullptr) {
         /* As of now there are memory barries (transitions) in "createImages", "generateMipmaps",
@@ -231,7 +247,7 @@ void Texture::Handler::createTextureSampler(const std::shared_ptr<Texture::Base>
         helpers::transitionImageLayout(pTexture->pLdgRes->graphicsCmd, sampler.image, sampler.format,
                                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                                        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                                       sampler.mipLevels, sampler.arrayLayers);
+                                       sampler.mipmapInfo.mipLevels, sampler.arrayLayers);
     }
     createImageView(shell().context().dev, sampler);
     createSampler(shell().context().dev, sampler);
@@ -278,7 +294,7 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
 
         helpers::transitionImageLayout(pLdgRes->transferCmd, sampler.image, sampler.format, VK_IMAGE_LAYOUT_UNDEFINED,
                                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                       VK_PIPELINE_STAGE_TRANSFER_BIT, sampler.mipLevels, sampler.arrayLayers);
+                                       VK_PIPELINE_STAGE_TRANSFER_BIT, sampler.mipmapInfo.mipLevels, sampler.arrayLayers);
 
         helpers::copyBufferToImage(pLdgRes->graphicsCmd, sampler.extent.width, sampler.extent.height, sampler.arrayLayers,
                                    stgRes.buffer, sampler.image);
@@ -315,7 +331,7 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
     int32_t mipWidth = sampler.extent.width;
     int32_t mipHeight = sampler.extent.height;
 
-    for (uint32_t i = 1; i < sampler.mipLevels; i++) {
+    for (uint32_t i = 1; i < sampler.mipmapInfo.mipLevels; i++) {
         // CREATE MIP LEVEL
 
         barrier.subresourceRange.baseMipLevel = i - 1;
@@ -364,7 +380,7 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
     // This is not handled in the loop so one more!!!! The last level is never never
     // blitted from.
 
-    barrier.subresourceRange.baseMipLevel = sampler.mipLevels - 1;
+    barrier.subresourceRange.baseMipLevel = sampler.mipmapInfo.mipLevels - 1;
     barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -375,7 +391,7 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
 }
 
 void Texture::Handler::createImageView(const VkDevice& dev, Sampler::Base& sampler) {
-    helpers::createImageView(dev, sampler.image, sampler.mipLevels, sampler.format, VK_IMAGE_ASPECT_COLOR_BIT,
+    helpers::createImageView(dev, sampler.image, sampler.mipmapInfo.mipLevels, sampler.format, VK_IMAGE_ASPECT_COLOR_BIT,
                              sampler.imageViewType, sampler.arrayLayers, sampler.view);
 }
 
@@ -402,20 +418,17 @@ void Texture::Handler::attachSwapchain() {
     for (auto& pTexture : pTextures_) {
         // The swapchain texture should not use this code. Its final setup is done in the pass handler.
         if (std::visit(Descriptor::IsSwapchainStorageImage{}, pTexture->DESCRIPTOR_TYPE)) continue;
-
         if (pTexture->usesSwapchain && pTexture->status != STATUS::READY) {
-            for (auto& sampler : pTexture->samplers) {
-                if (sampler.usesSwapchain) {
-                    sampler.extent = ctx.extent;
-                    sampler.format = ctx.surfaceFormat.format;
-                    if (update(pTexture)) {
-                        std::smatch sm;
-                        if (std::regex_match(pTexture->NAME, sm, perFramebufferSuffix_)) {
-                            assert(sm.size() == 3);
-                            if (std::stoi(sm[2]) == 0) updateList.push_back(sm[1]);
-                        } else {
-                            updateList.push_back(pTexture->NAME);
-                        }
+            // Only dealing single sampler textures atm.
+            assert(pTexture->samplers.size() == 1);
+            if (pTexture->samplers[0].swpchnInfo.usesSwapchain()) {
+                if (update(pTexture)) {
+                    std::smatch sm;
+                    if (std::regex_match(pTexture->NAME, sm, perFramebufferSuffix_)) {
+                        assert(sm.size() == 3);
+                        if (std::stoi(sm[2]) == 0) updateList.push_back(sm[1]);
+                    } else {
+                        updateList.push_back(pTexture->NAME);
                     }
                 }
             }
@@ -457,7 +470,7 @@ void Texture::Handler::detachSwapchain() {
         if (std::visit(Descriptor::IsSwapchainStorageImage{}, pTexture->DESCRIPTOR_TYPE)) continue;
         if (pTexture->usesSwapchain) {
             for (auto& sampler : pTexture->samplers) {
-                if (sampler.usesSwapchain) {
+                if (sampler.swpchnInfo.usesSwapchain()) {
                     pTexture->destroy(shell().context().dev);
                 }
             }

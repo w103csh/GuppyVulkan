@@ -25,18 +25,21 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
     for (const auto& type : Descriptor::Set::ALL) {
         switch (type) {
                 // clang-format off
-            case DESCRIPTOR_SET::UNIFORM_DEFAULT:                           pDescriptorSets_.push_back(std::make_unique<Set::Default::Uniform>(std::ref(*this))); break;
-            case DESCRIPTOR_SET::SAMPLER_DEFAULT:                           pDescriptorSets_.push_back(std::make_unique<Set::Default::Sampler>(std::ref(*this))); break;
-            case DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT:                      pDescriptorSets_.push_back(std::make_unique<Set::Default::CubeSampler>(std::ref(*this))); break;
-            case DESCRIPTOR_SET::PROJECTOR_DEFAULT:                         pDescriptorSets_.push_back(std::make_unique<Set::Default::ProjectorSampler>(std::ref(*this))); break;
-            case DESCRIPTOR_SET::UNIFORM_PBR:                               pDescriptorSets_.push_back(std::make_unique<Set::PBR::Uniform>(std::ref(*this))); break;
-            case DESCRIPTOR_SET::UNIFORM_PARALLAX:                          pDescriptorSets_.push_back(std::make_unique<Set::Parallax::Uniform>(std::ref(*this))); break;
-            case DESCRIPTOR_SET::SAMPLER_PARALLAX:                          pDescriptorSets_.push_back(std::make_unique<Set::Parallax::Sampler>(std::ref(*this))); break;
-            case DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT:              pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::DefaultUniform>(std::ref(*this))); break;
-            case DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT:              pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::DefaultSampler>(std::ref(*this))); break;
-            case DESCRIPTOR_SET::STORAGE_SCREEN_SPACE_COMPUTE_POST_PROCESS: pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::StorageComputePostProcess>(std::ref(*this))); break;
-            case DESCRIPTOR_SET::STORAGE_IMAGE_SCREEN_SPACE_COMPUTE_DEFAULT:pDescriptorSets_.push_back(std::make_unique<Set::ScreenSpace::StorageImageComputeDefault>(std::ref(*this))); break;
-            case DESCRIPTOR_SET::SWAPCHAIN_IMAGE:                           pDescriptorSets_.push_back(std::make_unique<Set::RenderPass::SwapchainImage>(std::ref(*this))); break;
+            case DESCRIPTOR_SET::UNIFORM_DEFAULT:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::UNIFORM_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SAMPLER_DEFAULT:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT:                      pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::CUBE_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::PROJECTOR_DEFAULT:                         pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::PROJECTOR_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::UNIFORM_PBR:                               pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::PBR::UNIFORM_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::UNIFORM_PARALLAX:                          pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Parallax::UNIFORM_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SAMPLER_PARALLAX:                          pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Parallax::SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT:              pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::ScreenSpace::DEFAULT_UNIFORM_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT:              pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::ScreenSpace::DEFAULT_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_HDR_LOG_BLIT:         pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::ScreenSpace::HDR_BLIT_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::STORAGE_SCREEN_SPACE_COMPUTE_POST_PROCESS: pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::ScreenSpace::STORAGE_COMPUTE_POST_PROCESS_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::STORAGE_IMAGE_SCREEN_SPACE_COMPUTE_DEFAULT:pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::ScreenSpace::STORAGE_IMAGE_COMPUTE_DEFAULT_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_BLUR_A:               pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::ScreenSpace::BLUR_A_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_BLUR_B:               pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::ScreenSpace::BLUR_B_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SWAPCHAIN_IMAGE:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::RenderPass::SWAPCHAIN_IMAGE_CREATE_INFO)); break;
             default: assert(false);  // add new pipelines here
                 // clang-format on
         }
@@ -734,6 +737,10 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
 void Descriptor::Handler::updateBindData(const std::vector<std::string> textureIds) {
     // Find the descriptor set(s)
     for (const auto& pSet : pDescriptorSets_) {
+        // At the moment I think that this is fine. I am not sure though. The reason this can be empty is because
+        // the descriptor set is created and then not used in an active pass type that is swapchain dependent.
+        if (pSet->descriptorSetsMap_.empty()) continue;
+
         for (const auto& [key, bindingInfo] : pSet->getBindingMap()) {
             if (bindingInfo.textureId.size()) {
                 for (const auto& textureId : textureIds) {

@@ -48,8 +48,7 @@ class Base : public Handlee<Descriptor::Handler> {
                              const std::set<PASS>& passTypes, const DESCRIPTOR& descType, const Uniform::offsets& offsets);
 
    protected:
-    Base(Handler& handler, const DESCRIPTOR_SET&& type, const std::string&& macroName,
-         const Descriptor::bindingMap&& bindingMap);
+    Base(Handler& handler, const CreateInfo* pCreateInfo);
 
    private:
     inline auto& getDefaultResource() { return resources_[defaultResourceOffset_]; }
@@ -63,26 +62,6 @@ class Base : public Handlee<Descriptor::Handler> {
     // Texture offsets (0 if no texture) to resource offset map
     std::map<uint32_t, std::map<uint32_t, resourceInfoMapSetsPair>> descriptorSetsMap_;
 };
-
-//  DEFAULT
-namespace Default {
-class Uniform : public Set::Base {
-   public:
-    Uniform(Handler& handler);
-};
-class Sampler : public Set::Base {
-   public:
-    Sampler(Handler& handler);
-};
-class CubeSampler : public Set::Base {
-   public:
-    CubeSampler(Handler& handler);
-};
-class ProjectorSampler : public Set::Base {
-   public:
-    ProjectorSampler(Handler& handler);
-};
-}  // namespace Default
 
 }  // namespace Set
 }  // namespace Descriptor

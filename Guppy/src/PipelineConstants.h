@@ -34,6 +34,10 @@ enum class PIPELINE : uint32_t {
     PARALLAX_STEEP,
     // SCREEN SPACE
     SCREEN_SPACE_DEFAULT,
+    SCREEN_SPACE_HDR_LOG,
+    SCREEN_SPACE_BRIGHT,
+    SCREEN_SPACE_BLUR_A,
+    SCREEN_SPACE_BLUR_B,
     SCREEN_SPACE_COMPUTE_DEFAULT,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,

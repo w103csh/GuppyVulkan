@@ -7,17 +7,21 @@
 namespace Pipeline {
 
 const std::vector<PIPELINE> ALL = {
-    PIPELINE::TRI_LIST_COLOR,        //
-    PIPELINE::LINE,                  //
-    PIPELINE::TRI_LIST_TEX,          //
-    PIPELINE::CUBE,                  //
-    PIPELINE::PBR_COLOR,             //
-    PIPELINE::PBR_TEX,               //
-    PIPELINE::BP_TEX_CULL_NONE,      //
-    PIPELINE::PARALLAX_SIMPLE,       //
-    PIPELINE::PARALLAX_STEEP,        //
-    PIPELINE::SCREEN_SPACE_DEFAULT,  //
-    // PIPELINE::SCREEN_SPACE_COMPUTE_DEFAULT,  //
+    PIPELINE::TRI_LIST_COLOR,
+    PIPELINE::LINE,
+    PIPELINE::TRI_LIST_TEX,
+    PIPELINE::CUBE,
+    PIPELINE::PBR_COLOR,
+    PIPELINE::PBR_TEX,
+    PIPELINE::BP_TEX_CULL_NONE,
+    PIPELINE::PARALLAX_SIMPLE,
+    PIPELINE::PARALLAX_STEEP,
+    PIPELINE::SCREEN_SPACE_DEFAULT,
+    // PIPELINE::SCREEN_SPACE_COMPUTE_DEFAULT,
+    PIPELINE::SCREEN_SPACE_HDR_LOG,
+    PIPELINE::SCREEN_SPACE_BRIGHT,
+    PIPELINE::SCREEN_SPACE_BLUR_A,
+    PIPELINE::SCREEN_SPACE_BLUR_B,
 };
 
 const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
@@ -28,7 +32,6 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
             PIPELINE::LINE,
             PIPELINE::PBR_COLOR,
             PIPELINE::CUBE,
-            PIPELINE::SCREEN_SPACE_DEFAULT,
         },
     },
     {
@@ -39,6 +42,17 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
             PIPELINE::BP_TEX_CULL_NONE,
             PIPELINE::PARALLAX_SIMPLE,
             PIPELINE::PARALLAX_STEEP,
+        },
+    },
+    {
+        VERTEX::SCREEN_QUAD,
+        {
+            // PIPELINE::ALL_ENUM,
+            PIPELINE::SCREEN_SPACE_DEFAULT,
+            PIPELINE::SCREEN_SPACE_HDR_LOG,
+            PIPELINE::SCREEN_SPACE_BRIGHT,
+            PIPELINE::SCREEN_SPACE_BLUR_A,
+            PIPELINE::SCREEN_SPACE_BLUR_B,
         },
     },
     {

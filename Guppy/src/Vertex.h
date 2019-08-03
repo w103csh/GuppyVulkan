@@ -26,6 +26,7 @@ struct Color {
 struct Texture {
     static void getBindingDescriptions(std::vector<VkVertexInputBindingDescription> &descs);
     static void getAttributeDescriptions(std::vector<VkVertexInputAttributeDescription> &descs);
+    static void getScreenQuadAttributeDescriptions(std::vector<VkVertexInputAttributeDescription> &descs);
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec2 texCoord;

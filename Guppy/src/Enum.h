@@ -68,9 +68,11 @@ typedef enum STATUS {
     PENDING_TEXTURE =       0x00000008,
     PENDING_PIPELINE =      0x00000010,
     PENDING_SWAPCHAIN =     0x00000020,
+    PENDING_MESH =          0x00000040,
     REDRAW =                0x00000100,
     UPDATE_BUFFERS =        0x00001000,
     DESTROYED =             0x00010000,
+    UNKNOWN =               0x00020000,
     PENDING =               0x7FFFFFFF,
 } STATUS;
 // clang-format on
@@ -80,6 +82,8 @@ enum class VERTEX {
     //
     COLOR = 0,
     TEXTURE,
+    // This is TEXTURE with different attribute descriptions.
+    SCREEN_QUAD,
 };
 
 enum class PUSH_CONSTANT {
@@ -123,11 +127,16 @@ enum class PASS : uint32_t {  // TODO: make this a bitmask
     // SWAPCHAIN
     DEFAULT = 0,
     IMGUI,
-    SCREEN_SPACE,
     // SAMPLER
     SAMPLER_DEFAULT,
     SAMPLER_PROJECT,
     SAMPLER_SCREEN_SPACE,
+    // SCREEN_SPACE
+    SCREEN_SPACE,
+    SCREEN_SPACE_HDR_LOG,
+    SCREEN_SPACE_BRIGHT,
+    SCREEN_SPACE_BLUR_A,
+    SCREEN_SPACE_BLUR_B,
     // COMPUTE
     COMPUTE_POST_PROCESS,
     // Used to indicate "all" in uniform offsets

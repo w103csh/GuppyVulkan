@@ -28,6 +28,9 @@ enum class DESCRIPTOR_SET {
     // SCREEN SPACE
     UNIFORM_SCREEN_SPACE_DEFAULT,
     SAMPLER_SCREEN_SPACE_DEFAULT,
+    SAMPLER_SCREEN_SPACE_HDR_LOG_BLIT,
+    SAMPLER_SCREEN_SPACE_BLUR_A,
+    SAMPLER_SCREEN_SPACE_BLUR_B,
     STORAGE_SCREEN_SPACE_COMPUTE_POST_PROCESS,
     STORAGE_IMAGE_SCREEN_SPACE_COMPUTE_DEFAULT,
     // MISCELLANEOUS
@@ -206,6 +209,12 @@ namespace Set {
 constexpr std::string_view MACRO_ID_PREFIX = "_DS_";
 extern const std::set<DESCRIPTOR_SET> ALL;
 
+struct CreateInfo {
+    DESCRIPTOR_SET type;
+    std::string macroName;
+    Descriptor::bindingMap bindingMap;
+};
+
 struct ResourceInfo {
     // TODO: Should always be the same as the BindingInfo descCount. Maybe make it a pointer?
     uint32_t uniqueDataSets = 0;
@@ -252,6 +261,13 @@ using resourceHelpers = std::vector<helpers>;
 // Shader text replace info
 using textReplaceTuple = std::tuple<std::string, uint8_t, OffsetsMap, std::set<PASS>>;
 using textReplaceTuples = std::vector<textReplaceTuple>;
+
+namespace Default {
+extern const CreateInfo UNIFORM_CREATE_INFO;
+extern const CreateInfo SAMPLER_CREATE_INFO;
+extern const CreateInfo CUBE_SAMPLER_CREATE_INFO;
+extern const CreateInfo PROJECTOR_SAMPLER_CREATE_INFO;
+}  // namespace Default
 
 }  // namespace Set
 

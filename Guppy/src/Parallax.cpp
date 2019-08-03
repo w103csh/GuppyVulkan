@@ -5,28 +5,29 @@
 #include "PipelineHandler.h"
 #include "Vertex.h"
 
-Descriptor::Set::Parallax::Uniform::Uniform(Handler& handler)
-    : Set::Base{
-          handler,
-          DESCRIPTOR_SET::UNIFORM_PARALLAX,
-          "_DS_UNI_PLX",
-          {
-              {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
-              {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_DEFAULT}},
-              {{3, 0}, {UNIFORM::LIGHT_POSITIONAL_DEFAULT}},
-          },
-      } {}
-
-Descriptor::Set::Parallax::Sampler::Sampler(Handler& handler)
-    : Set::Base{
-          handler,
-          DESCRIPTOR_SET::SAMPLER_PARALLAX,
-          "_DS_SMP_PLX",
-          {
-              {{0, 0}, {COMBINED_SAMPLER::MATERIAL, "0"}},
-              {{1, 0}, {COMBINED_SAMPLER::MATERIAL, "1"}},
-          },
-      } {}
+namespace Descriptor {
+namespace Set {
+namespace Parallax {
+const CreateInfo UNIFORM_CREATE_INFO = {
+    DESCRIPTOR_SET::UNIFORM_PARALLAX,
+    "_DS_UNI_PLX",
+    {
+        {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
+        {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_DEFAULT}},
+        {{3, 0}, {UNIFORM::LIGHT_POSITIONAL_DEFAULT}},
+    },
+};
+const CreateInfo SAMPLER_CREATE_INFO = {
+    DESCRIPTOR_SET::SAMPLER_PARALLAX,
+    "_DS_SMP_PLX",
+    {
+        {{0, 0}, {COMBINED_SAMPLER::MATERIAL, "0"}},
+        {{1, 0}, {COMBINED_SAMPLER::MATERIAL, "1"}},
+    },
+};
+}  // namespace Parallax
+}  // namespace Set
+}  // namespace Descriptor
 
 namespace Shader {
 namespace Parallax {

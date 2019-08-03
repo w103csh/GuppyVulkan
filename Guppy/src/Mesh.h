@@ -110,14 +110,16 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
 
     // DRAWING
     bool shouldDraw(const PASS& passTypeComp, const PIPELINE& pipelineType) const;
-    void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pipelineBindData, const VkCommandBuffer& cmd,
+    void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData, const VkCommandBuffer& cmd,
               const uint8_t frameIndex) const;
+    void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+              const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd, const uint8_t frameIndex) const;
 
     virtual void destroy();
 
    protected:
     Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags, const std::string&& name,
-         CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+         const CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
          std::shared_ptr<Material::Base>& pMaterial);
     Base() = delete;
     /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTRs OF THIS CLASS.
@@ -147,7 +149,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
 
     // DSECRIPTOR
     const Descriptor::Set::BindData& getDescriptorSetBindData(const PASS& passType) const;
-    Descriptor::Set::bindDataMap bindDataMap_;
+    Descriptor::Set::bindDataMap descSetBindDataMap_;
 
     BufferResource vertexRes_;
     std::vector<VB_INDEX_TYPE> indices_;
@@ -198,10 +200,10 @@ class Color : public Base {
     const glm::vec3& getVertexPositionAtOffset(size_t offset) const override { return vertices_[offset].position; }
 
    protected:
-    Color(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
+    Color(Mesh::Handler& handler, const std::string&& name, const CreateInfo* pCreateInfo,
           std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
           const MESH&& type = MESH::COLOR);
-    Color(Mesh::Handler& handler, const FLAG&& flags, const std::string&& name, CreateInfo* pCreateInfo,
+    Color(Mesh::Handler& handler, const FLAG&& flags, const std::string&& name, const CreateInfo* pCreateInfo,
           std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
           const MESH&& type = MESH::COLOR);
 
@@ -219,7 +221,7 @@ class Line : public Color {
     ~Line();
 
    protected:
-    Line(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
+    Line(Mesh::Handler& handler, const std::string&& name, const CreateInfo* pCreateInfo,
          std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
 };
 
@@ -257,7 +259,7 @@ class Texture : public Base {
     const glm::vec3& getVertexPositionAtOffset(size_t offset) const override { return vertices_[offset].position; }
 
    protected:
-    Texture(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
+    Texture(Mesh::Handler& handler, const std::string&& name, const CreateInfo* pCreateInfo,
             std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
 
     std::vector<Vertex::Texture> vertices_;

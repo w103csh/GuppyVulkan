@@ -76,3 +76,19 @@ void Vertex::Texture::getAttributeDescriptions(std::vector<VkVertexInputAttribut
     descs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
     descs.back().offset = offsetof(Vertex::Texture, bitangent);
 }
+
+void Vertex::Texture::getScreenQuadAttributeDescriptions(std::vector<VkVertexInputAttributeDescription>& descs) {
+    // position
+    descs.push_back({});
+    descs.back().binding = BINDING;
+    descs.back().location = 0;
+    descs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
+    descs.back().offset = offsetof(Vertex::Texture, position);
+
+    // texture coordinate
+    descs.push_back({});
+    descs.back().binding = BINDING;
+    descs.back().location = 1;
+    descs.back().format = VK_FORMAT_R32G32_SFLOAT;  // vec2
+    descs.back().offset = offsetof(Vertex::Texture, texCoord);
+}
