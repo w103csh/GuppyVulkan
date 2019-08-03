@@ -109,6 +109,7 @@ void setTextureDefaults() {
     } else {
 	    n = fragNormal;
     }
+    n = normalize(n);
 
     // outColor = vec4(fragNormal, 1.0);
     // outColor = vec4(n, 1.0);

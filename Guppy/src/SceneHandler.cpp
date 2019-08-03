@@ -12,6 +12,7 @@
 #include "InputHandler.h"
 #include "MeshHandler.h"
 #include "ModelHandler.h"
+#include "RenderPassHandler.h"  /////////////////////////// Remove me after pass dependent things are not longer in the scene.
 #include "TextureHandler.h"
 
 Scene::Handler::Handler(Game* pGame) : Game::Handler(pGame), activeSceneIndex_() {}
@@ -79,11 +80,23 @@ void Scene::Handler::init() {
         groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
     }
 
-    // PROJECT PLANE
+    // PLAIN OLD NON-TRANSFORMED PLANE (TEXTURE)
+    if (!suppress && false) {
+        meshInfo = {};
+        meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+        meshInfo.selectable = true;
+        defInstInfo = {};
+        defMatInfo = {};
+        defMatInfo.pTexture = textureHandler().getTexture(Texture::VULKAN_ID);
+        meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
+    }
+
+    // PROJECT PLANE (I AM PASS DEPENDENT AND SHOULDN'T BE HERE!!!! REMOVE INCLUDE IF YOU CAN.)
     if (!suppress || false) {
+        std::set<PASS> activePassTypes;
+        passHandler().getActivePassTypes(activePassTypes);
         // TODO: these types of checks are not great. The active passes should be able to change at runtime.
-        if (std::find(RenderPass::ACTIVE.begin(), RenderPass::ACTIVE.end(), PASS::SAMPLER_PROJECT) !=
-            RenderPass::ACTIVE.end()) {
+        if (std::find(activePassTypes.begin(), activePassTypes.end(), PASS::SAMPLER_PROJECT) != activePassTypes.end()) {
             meshInfo = {};
             meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
             meshInfo.selectable = false;
@@ -248,6 +261,10 @@ void Scene::Handler::init() {
             defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
             defMatInfo.ambientCoeff = {0.8f, 0.3f, 0.0f};
             defMatInfo.color = {0.8f, 0.3f, 0.0f};
+            // defMatInfo.ambientCoeff = glm::vec3{0.2f};
+            // defMatInfo.specularCoeff = glm::vec3{1.0f};
+            // defMatInfo.color = {0.9f, 0.3f, 0.2f};
+            // defMatInfo.shininess = 25.0f;
             modelHandler().makeColorModel(&modelInfo, &defMatInfo, &defInstInfo);
         } else {
             modelInfo.pipelineType = PIPELINE::CUBE;

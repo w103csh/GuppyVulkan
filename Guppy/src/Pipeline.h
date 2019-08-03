@@ -24,6 +24,7 @@ class Handler;
 
 void GetDefaultColorInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
 void GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
+void GetDefaultScreenQuadInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
 
 struct Layouts {
     VkPipelineLayout pipelineLayout;
@@ -120,6 +121,7 @@ class Graphics : public Base {
     virtual void getViewportStateInfoResources(CreateInfoResources &createInfoRes);
 };
 
+// DEFAULT
 namespace Default {
 
 // TRIANGLE LIST COLOR

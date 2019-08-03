@@ -16,21 +16,14 @@ namespace RenderPass {
 
 const std::set<PASS> ALL = {
     PASS::DEFAULT,
-    PASS::IMGUI,
-    PASS::SCREEN_SPACE,
     PASS::SAMPLER_DEFAULT,
     PASS::SAMPLER_PROJECT,
     PASS::SAMPLER_SCREEN_SPACE, 
-};
-
-const std::vector<PASS> ACTIVE = {
-    //PASS::SAMPLER_PROJECT,
-    //PASS::DEFAULT,
-    PASS::SAMPLER_DEFAULT,
-    //PASS::SAMPLER_SCREEN_SPACE,
     PASS::SCREEN_SPACE,
-// UI pass needs to always be last since it
-// is optional
+    PASS::SCREEN_SPACE_HDR_LOG,
+    PASS::SCREEN_SPACE_BRIGHT, 
+    PASS::SCREEN_SPACE_BLUR_A, 
+    PASS::SCREEN_SPACE_BLUR_B, 
 #ifdef USE_DEBUG_UI
     PASS::IMGUI,
 #endif
@@ -40,52 +33,50 @@ const std::vector<PASS> ACTIVE = {
 
 // SAMPLER
 const Sampler::CreateInfo DEFAULT_2D_SAMPLER_CREATE_INFO = {
-    "Render Pass Default 2D Color Sampler",  //
-    {{::Sampler::USAGE::COLOR}},             //
-    VK_IMAGE_VIEW_TYPE_2D,                   //
+    "Render Pass Default 2D Color Sampler",
+    {{::Sampler::USAGE::COLOR}},
+    VK_IMAGE_VIEW_TYPE_2D,
+    BAD_EXTENT_2D,
+    {false, true},
     0,
     SAMPLER::CLAMP_TO_BORDER,
-    BAD_EXTENT_2D,
-    false,
-    true,
     (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
-    Sampler::CHANNELS::_4,
-    VK_FORMAT_R8G8B8A8_UNORM,  // This is probably not enough for HDR
+    {false, false, 1},
+    VK_FORMAT_R32G32B32A32_SFLOAT,  // VK_FORMAT_R8G8B8A8_UNORM,
 };
 
 const Sampler::CreateInfo PROJECT_2D_SAMPLER_CREATE_INFO = {
     "Render Pass Project 2D Color Sampler",  //
     {{::Sampler::USAGE::COLOR}},             //
     VK_IMAGE_VIEW_TYPE_2D,                   //
+    {640, 480},
+    {},
     0,
     SAMPLER::CLAMP_TO_BORDER,
-    {640, 480},
-    false,
-    false,
     (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
+    {false, false, 1},
 };
 const Sampler::CreateInfo PROJECT_2D_ARRAY_SAMPLER_CREATE_INFO = {
     "Render Pass Project 2D Array Color Sampler",  //
     {{::Sampler::USAGE::COLOR}},                   //
     VK_IMAGE_VIEW_TYPE_2D_ARRAY,                   //
+    {1024, 768},
+    {},
     0,
     SAMPLER::CLAMP_TO_BORDER,
-    {1024, 768},
-    false,
-    false,
     (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
+    {false, false, 1},
 };
 const Sampler::CreateInfo SWAPCHAIN_TARGET_SAMPLER_CREATE_INFO = {
-    "Swapchain Target Sampler",
-    {{::Sampler::USAGE::COLOR}},
-    VK_IMAGE_VIEW_TYPE_2D,
-    0,
-    SAMPLER::DEFAULT,
+    "Swapchain Target Sampler",   //
+    {{::Sampler::USAGE::COLOR}},  //
+    VK_IMAGE_VIEW_TYPE_2D,        //
     BAD_EXTENT_2D,
-    false,
-    true,
-    // I don't feel like figuring out what this should be atm, so I am just
-    // going to leave defaults and not create the sampler.
+    {true, true},
+    0,
+    SAMPLER::CLAMP_TO_BORDER,
+    VK_IMAGE_USAGE_SAMPLED_BIT,
+    {false, false, 1},
 };
 
 // TEXTURE
@@ -93,7 +84,8 @@ const Texture::CreateInfo DEFAULT_2D_TEXTURE_CREATE_INFO = {
     std::string(DEFAULT_2D_TEXTURE_ID),
     {DEFAULT_2D_SAMPLER_CREATE_INFO},
     false,
-    false,  // TODO: Not sure if this actually helps. Need to test subpass dependencies.
+    false,  // TODO: Not sure if this actually helps. Need to test subpass dependencies. I also think this might be affected
+            // by depth/resolve not being per framebuffer.
 };
 const Texture::CreateInfo PROJECT_2D_TEXTURE_CREATE_INFO = {
     std::string(PROJECT_2D_TEXTURE_ID),
@@ -170,6 +162,10 @@ const CreateInfo PROJECT_CREATE_INFO = {
     },
     FLAG::DEPTH,
     {std::string(PROJECT_2D_ARRAY_TEXTURE_ID)},
+    {},
+    {},
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     {
         {{UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, PIPELINE::ALL_ENUM}, {1}},
         //{{UNIFORM::LIGHT_SPOT_DEFAULT, PIPELINE::ALL_ENUM}, {1}},
@@ -177,3 +173,17 @@ const CreateInfo PROJECT_CREATE_INFO = {
 };
 
 }  // namespace RenderPass
+
+namespace Descriptor {
+namespace Set {
+namespace RenderPass {
+const CreateInfo SWAPCHAIN_IMAGE_CREATE_INFO = {
+    DESCRIPTOR_SET::SWAPCHAIN_IMAGE,
+    "_DS_SWAPCHAIN_IMAGE",
+    {
+        {{0, 0}, {STORAGE_IMAGE::SWAPCHAIN, ::RenderPass::SWAPCHAIN_TARGET_ID}},
+    },
+};
+}  // namespace RenderPass
+}  // namespace Set
+}  // namespace Descriptor

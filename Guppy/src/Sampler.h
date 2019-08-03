@@ -15,7 +15,7 @@ namespace Sampler {
 
 class Base {
    public:  // TODO: use access modifiers
-    Base(const CreateInfo *pCreateInfo);
+    Base(const CreateInfo *pCreateInfo, bool hasData);
 
     void determineImageTypes();
 
@@ -42,13 +42,14 @@ class Base {
     const SAMPLER TYPE;
 
     FlagBits flags;  // TODO: remove this instead of passing a dynamic list to shaders?
-    bool usesSwapchain;
+    SwapchainInfo swpchnInfo;
+    MipmapInfo mipmapInfo;
     VkFormat format;
     VkSampleCountFlagBits samples;
     VkImageUsageFlags usage;
     VkExtent2D extent;
     float aspect;
-    uint32_t mipLevels, arrayLayers;
+    uint32_t arrayLayers;
     VkImageType imageType;
     VkImage image;
     VkDeviceMemory memory;

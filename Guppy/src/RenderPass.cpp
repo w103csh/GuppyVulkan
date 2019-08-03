@@ -20,6 +20,7 @@ RenderPass::Base::Base(RenderPass::Handler& handler, const uint32_t&& offset, co
       TYPE(pCreateInfo->type),
       pass(VK_NULL_HANDLE),
       data{},
+      status_(STATUS::UNKNOWN),
       pipelineData_{
           usesDepth(),
           VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM,
@@ -31,19 +32,26 @@ RenderPass::Base::Base(RenderPass::Handler& handler, const uint32_t&& offset, co
       inheritInfo_{},
       secCmdBeginInfo_{},
       secCmdFlag_(false),
+      depth_{},
+      descPipelineOffsets_(pCreateInfo->descPipelineOffsets),
+      textureIds_(pCreateInfo->textureIds),
+      isInitialized_(false),
       // SETTINGS
       format_(VK_FORMAT_UNDEFINED),
       depthFormat_(VK_FORMAT_UNDEFINED),
-      finalLayout_(VK_IMAGE_LAYOUT_UNDEFINED),
+      finalLayout_(pCreateInfo->finalLayout),
+      initialLayout_(pCreateInfo->initialLayout),
       commandCount_(0),
       semaphoreCount_(0),
-      extent_(BAD_EXTENT_2D),
-      depth_{},
-      descPipelineOffsets_(pCreateInfo->descPipelineOffsets),
-      textureIds_(pCreateInfo->textureIds) {
+      extent_(BAD_EXTENT_2D) {
     // This is sloppy, but I don't really feel like changing a bunch of things.
     if (textureIds_.empty()) textureIds_.emplace_back(std::string(SWAPCHAIN_TARGET_ID));
     assert(textureIds_.size());
+
+    // Create dependency list. Includes itself in order.
+    for (const auto& passType : pCreateInfo->prePassTypes) dependentTypeOffsetPairs_.push_back({passType, BAD_OFFSET});
+    dependentTypeOffsetPairs_.push_back({TYPE, BAD_OFFSET});
+    for (const auto& passType : pCreateInfo->postPassTypes) dependentTypeOffsetPairs_.push_back({passType, BAD_OFFSET});
 
     for (const auto& pipelineType : pCreateInfo->pipelineTypes) {
         // If changed from set then a lot of work needs to be done, so I am
@@ -53,7 +61,9 @@ RenderPass::Base::Base(RenderPass::Handler& handler, const uint32_t&& offset, co
     }
 }
 
-void RenderPass::Base::init(bool isFinal) {
+void RenderPass::Base::init() {
+    assert(!isInitialized_);
+
     auto& ctx = handler().shell().context();
 
     // Find a texture target if necessary
@@ -72,8 +82,13 @@ void RenderPass::Base::init(bool isFinal) {
     }
 
     if (hasTargetSampler()) {
-        if (!usesSwapchain()) {
-            assert(pTextures_.size());
+        assert(pTextures_.size());
+        if (usesSwapchain()) {
+            if (pTextures_[0]->samplers[0].format == VK_FORMAT_UNDEFINED)
+                format_ = ctx.surfaceFormat.format;
+            else
+                format_ = pTextures_[0]->samplers[0].format;
+        } else {
             // Force only one sampler, for now, and just assume its the target.
             for (auto i = 0; i < pTextures_.size(); i++) {
                 assert(pTextures_[i]->samplers.size() == 1);
@@ -85,22 +100,16 @@ void RenderPass::Base::init(bool isFinal) {
                     assert(format_ = pTextures_[i]->samplers[0].format);
                 }
             }
-        } else {
-            format_ = ctx.surfaceFormat.format;
         }
-        //////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // finalLayout_ = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        finalLayout_ = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     } else {
         format_ = ctx.surfaceFormat.format;
-        // Check if this is the last swapchain dependent pass.
-        finalLayout_ = isFinal ? VK_IMAGE_LAYOUT_PRESENT_SRC_KHR : VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     }
 
     depthFormat_ = usesDepth() ? ctx.depthFormat : VK_FORMAT_UNDEFINED;
     pipelineData_.samples = usesMultiSample() ? ctx.samples : VK_SAMPLE_COUNT_1_BIT;
 
     // Validate frame settings.
+    assert(initialLayout_ != VK_IMAGE_LAYOUT_UNDEFINED);  // I think this is the case.
     assert(finalLayout_ != VK_IMAGE_LAYOUT_UNDEFINED);
     if (pipelineData_.usesDepth)
         assert(depthFormat_ != VK_FORMAT_UNDEFINED);
@@ -109,13 +118,29 @@ void RenderPass::Base::init(bool isFinal) {
 
     // SYNC
     commandCount_ = ctx.imageCount;
-    if (finalLayout_ ^ VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
-        semaphoreCount_ = ctx.imageCount;
-        data.signalSrcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    }
+
+    // CLEAR
+    if (handler().clearTargetMap_.count(getTargetId()) == 0)  //
+        handler().clearTargetMap_[getTargetId()] = TYPE;
+    // FINAL
+    handler().finalTargetMap_[getTargetId()] = TYPE;
+
+    isInitialized_ = true;
 }
 
 void RenderPass::Base::create() {
+    assert(isInitialized_);
+
+    // Update some settings based on the clear map.
+    if (hasTargetSwapchain() && handler().isFinalTargetPass(getTargetId(), TYPE)) {
+        finalLayout_ = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+    }
+    // Not sure if this makes sense anymore
+    if (finalLayout_ != VK_IMAGE_LAYOUT_PRESENT_SRC_KHR) {
+        semaphoreCount_ = handler().shell().context().imageCount;
+        data.signalSrcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    }
+
     createAttachmentsAndSubpasses();
     createDependencies();
 
@@ -187,19 +212,7 @@ void RenderPass::Base::record(const uint8_t frameIndex) {
     bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
     vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
 
-    // PRE-PASS BARRIERS
-    // for (const auto& barrierType : PRE_PASS_BARRIER_TYPES) {
-    //    switch (barrierType) {
-    //        case RENDER_PASS_BARRIER::FRAMEBUFFER_WRITE_TO_WRITE: {
-    //            barrierResource_.reset();
-    //            helpers::attachementImageBarrierWriteToWrite(handler().getCurrentFramebufferImage(), barrierResource_);
-    //            helpers::recordBarriers(barrierResource_, priCmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-    //                                    VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-    //        } break;
-    //    }
-    //}
-
-    beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT, VK_SUBPASS_CONTENTS_INLINE);
+    beginPass(priCmd, frameIndex, VK_SUBPASS_CONTENTS_INLINE);
     // pPass->beginPass(frameIndex, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
     // VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
 
@@ -218,7 +231,7 @@ void RenderPass::Base::record(const uint8_t frameIndex) {
         }
     }
 
-    endPass(frameIndex);
+    endPass(priCmd);
     postDraw(priCmd, frameIndex);
 
     // vk::assert_success(vkEndCommandBuffer(priCmd));
@@ -234,30 +247,23 @@ void RenderPass::Base::postDraw(const VkCommandBuffer& cmd, const uint8_t frameI
     }
 }
 
-void RenderPass::Base::beginPass(const uint8_t frameIndex, VkCommandBufferUsageFlags&& primaryCommandUsage,
-                                 VkSubpassContents&& subpassContents) {
-    //// FRAME UPDATE
-    // beginInfo_.framebuffer = data.framebuffers[frameIndex];
-    auto& priCmd = data.priCmds[frameIndex];
-
-    //// RESET BUFFERS
-    // vkResetCommandBuffer(priCmd, 0);
-
-    //// BEGIN BUFFERS
-    // VkCommandBufferBeginInfo bufferInfo;
-    //// PRIMARY
-    // bufferInfo = {};
-    // bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    // bufferInfo.flags = primaryCommandUsage;
-    // vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
-
+void RenderPass::Base::beginPass(const VkCommandBuffer& cmd, const uint8_t frameIndex,
+                                 VkSubpassContents&& subpassContents) const {
+    // TODO: remove the data member.
+    const_cast<VkRenderPassBeginInfo*>(&beginInfo_)->framebuffer = data.framebuffers[frameIndex];
     //// Start a new debug marker region
     // ext::DebugMarkerBegin(primaryCmd, "Render x scene", glm::vec4(0.2f, 0.3f, 0.4f, 1.0f));
-    vkCmdBeginRenderPass(priCmd, &beginInfo_, subpassContents);
+    vkCmdBeginRenderPass(cmd, &beginInfo_, subpassContents);
+    // Frame commands
+    vkCmdSetScissor(cmd, 0, 1, &scissor_);
+    vkCmdSetViewport(cmd, 0, 1, &viewport_);
+}
 
-    // FRAME COMMANDS
-    vkCmdSetScissor(priCmd, 0, 1, &scissor_);
-    vkCmdSetViewport(priCmd, 0, 1, &viewport_);
+void RenderPass::Base::endPass(const VkCommandBuffer& cmd) const {
+    vkCmdEndRenderPass(cmd);
+    //// End current debug marker region
+    // ext::DebugMarkerEnd(cmd);
+    // vk::assert_success(vkEndCommandBuffer(cmd));
 }
 
 void RenderPass::Base::createPass() {
@@ -331,6 +337,7 @@ void RenderPass::Base::createAttachmentsAndSubpasses() {
         resources_.attachments.back().samples = getSamples();
         resources_.attachments.back().loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         resources_.attachments.back().storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+        // TODO: Are these stencil ops right?
         resources_.attachments.back().stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
         resources_.attachments.back().stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
         resources_.attachments.back().initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -344,18 +351,18 @@ void RenderPass::Base::createAttachmentsAndSubpasses() {
         });
     }
 
-    bool clearTarget = handler().shouldClearTarget(getTargetId());
+    bool isClear = handler().isClearTargetPass(getTargetId(), TYPE);
 
     // COLOR ATTACHMENT
     resources_.attachments.push_back({});
     resources_.attachments.back().format = getFormat();
     resources_.attachments.back().samples = usesMultiSample() ? VK_SAMPLE_COUNT_1_BIT : getSamples();
-    resources_.attachments.back().loadOp = clearTarget ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
+    resources_.attachments.back().loadOp = isClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
     resources_.attachments.back().storeOp = VK_ATTACHMENT_STORE_OP_STORE;
     resources_.attachments.back().stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
     resources_.attachments.back().stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    resources_.attachments.back().initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    resources_.attachments.back().finalLayout = getFinalLayout();
+    resources_.attachments.back().initialLayout = isClear ? VK_IMAGE_LAYOUT_UNDEFINED : initialLayout_;
+    resources_.attachments.back().finalLayout = finalLayout_;
     resources_.attachments.back().flags = 0;
 
     // REFERENCE
@@ -384,7 +391,7 @@ void RenderPass::Base::createAttachmentsAndSubpasses() {
 }
 
 void RenderPass::Base::createDependencies() {
-    VkSubpassDependency dependency = {};
+    VkSubpassDependency dependency;
     for (uint32_t i = 0; i < pipelineTypeBindDataMap_.size() - 1; i++) {
         dependency = {};
         dependency.srcSubpass = i;
@@ -563,13 +570,13 @@ void RenderPass::Base::createFramebuffers() {
         // DEPTH
         if (pipelineData_.usesDepth) {
             assert(depth_.view != VK_NULL_HANDLE);
-            attachmentViews.push_back(depth_.view);
+            attachmentViews.push_back(depth_.view);  // TODO: should there be one per swapchain image????????????????
         }
         // MULTI-SAMPLE
         if (usesMultiSample()) {
             assert(images_.size() == 1);
             assert(images_[0].view != VK_NULL_HANDLE);
-            attachmentViews.push_back(images_[0].view);
+            attachmentViews.push_back(images_[0].view);  // TODO: should there be one per swapchain image????????????????
         }
         // TARGET
         if (hasTargetSwapchain()) {
@@ -662,6 +669,11 @@ void RenderPass::Base::endSecondary(const uint8_t frameIndex, const VkCommandBuf
 }
 
 void RenderPass::Base::updateSubmitResource(SubmitResource& resource, const uint8_t frameIndex) const {
+    if (TYPE == PASS::SCREEN_SPACE_HDR_LOG) {
+        resource.signalSemaphores[resource.signalSemaphoreCount] = data.semaphores[frameIndex];
+        resource.signalSrcStageMasks[resource.signalSemaphoreCount] = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+        resource.signalSemaphoreCount++;
+    }
     // if (data.signalSrcStageMask != VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM) {
     //    std::memcpy(                                                    //
     //        &resource.signalSemaphores[resource.signalSemaphoreCount],  //
@@ -687,6 +699,19 @@ uint32_t RenderPass::Base::getSubpassId(const PIPELINE& type) const {
         id++;
     }
     return id;  // TODO: is returning 0 for no types okay? Try using std::optional maybe?
+}
+
+void RenderPass::Base::setSubpassOffsets(const std::vector<std::unique_ptr<Base>>& pPasses) {
+    for (auto& [passType, offset] : dependentTypeOffsetPairs_) {
+        bool found = false;
+        for (const auto& pPass : pPasses) {
+            if (pPass->TYPE == passType) {
+                offset = pPass->OFFSET;
+                found = true;
+            }
+        }
+        assert(found);
+    }
 }
 
 void RenderPass::Base::setBindData(const PIPELINE& pipelineType, const std::shared_ptr<Pipeline::BindData>& pBindData) {

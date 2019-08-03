@@ -7,28 +7,15 @@
 #include <vector>
 
 #include "ConstantsAll.h"
-#include "DescriptorSet.h"
 #include "Game.h"
+#include "Mesh.h"
 #include "RenderPass.h"
 
-namespace Descriptor {
-class Handler;
-namespace Set {
 namespace RenderPass {
-class SwapchainImage : public Descriptor::Set::Base {
-   public:
-    SwapchainImage(Handler& handler);
-};
-}  // namespace RenderPass
-}  // namespace Set
-}  // namespace Descriptor
-
-namespace RenderPass {
-
-using index = uint32_t;
-constexpr index BAD_OFFSET = UINT32_MAX;
 
 class Handler : public Game::Handler {
+    friend RenderPass::Base;
+
    public:
     Handler(Game* pGame);
 
@@ -46,15 +33,12 @@ class Handler : public Game::Handler {
     void update();
     void updateFrameIndex();
 
-    inline const auto& getPass(const offset& offset) {
-        assert(offset >= 0 && offset < pPasses_.size());
-        return pPasses_[offset];
-    }
+    inline const auto& getPass(const index& offset) { return pPasses_.at(offset); }
     inline const auto& getPass(const PASS& type) {
         for (const auto& pPass : pPasses_)
             if (pPass->TYPE == type) return pPass;
         assert(false);
-        throw std::runtime_error("Couldn't find pass");
+        exit(EXIT_FAILURE);
     }
     inline uint8_t getFrameIndex() const { return frameIndex_; }
 
@@ -66,14 +50,16 @@ class Handler : public Game::Handler {
     inline const auto* getSwapchainViews() const { return swpchnRes_.views.data(); }
 
     // TARGET
-    bool shouldClearTarget(const std::string& targetId);
-    std::set<std::string> targetClearFlags_;
+    bool isClearTargetPass(const std::string& targetId, const PASS type);
+    bool isFinalTargetPass(const std::string& targetId, const PASS type);
 
     // PIPELINE
     void addPipelinePassPairs(pipelinePassSet& set);
     void updateBindData(const pipelinePassSet& set);
 
     inline const auto& getFrameFence(const uint8_t frameIndex) const { return frameFences_[frameIndex]; }
+
+    const std::unique_ptr<Mesh::Texture>& getScreenQuad();
 
    private:
     void reset() override;
@@ -89,11 +75,17 @@ class Handler : public Game::Handler {
     std::vector<VkFence> fences_;
     std::vector<VkFence> frameFences_;
 
-   private:
+    // This should be a unique list of active passes in order of first use.
+    orderedPassTypeOffsetPairs getActivePassTypeOffsetPairs();
+
     // SWAPCHAIN
     void createSwapchainResources();
     void destroySwapchainResources();
     SwapchainResources swpchnRes_;
+
+    // CLEAR
+    std::map<std::string, PASS> clearTargetMap_;
+    std::map<std::string, PASS> finalTargetMap_;
 
     // BARRIER
     BarrierResource barrierResource_;
@@ -104,6 +96,10 @@ class Handler : public Game::Handler {
     std::vector<VkSubmitInfo> submitInfos_;
 
     std::vector<std::unique_ptr<RenderPass::Base>> pPasses_;
+    std::set<std::pair<PASS, index>> activeTypeOffsetPairs_;
+    std::vector<index> mainLoopOffsets_;
+
+    Mesh::INDEX screenQuadOffset_;
 };
 
 }  // namespace RenderPass

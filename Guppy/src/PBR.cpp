@@ -80,17 +80,21 @@ void Material::PBR::Base::setRoughness(float r) {
 //      Descriptor Set
 // **********************
 
-Descriptor::Set::PBR::Uniform::Uniform(Handler& handler)
-    : Set::Base{
-          handler,
-          DESCRIPTOR_SET::UNIFORM_PBR,
-          "_DS_UNI_PBR",
-          {
-              {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
-              {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_PBR}},
-              {{2, 0}, {UNIFORM::LIGHT_POSITIONAL_PBR}},
-          },
-      } {}
+namespace Descriptor {
+namespace Set {
+namespace PBR {
+const CreateInfo UNIFORM_CREATE_INFO = {
+    DESCRIPTOR_SET::UNIFORM_PBR,
+    "_DS_UNI_PBR",
+    {
+        {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
+        {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_PBR}},
+        {{2, 0}, {UNIFORM::LIGHT_POSITIONAL_PBR}},
+    },
+};
+}  // namespace PBR
+}  // namespace Set
+}  // namespace Descriptor
 
 // **********************
 //      Shader

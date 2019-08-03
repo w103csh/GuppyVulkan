@@ -122,4 +122,19 @@ struct ImageInfo {
     VkImage image = VK_NULL_HANDLE;
 };
 
+template <typename T>
+struct insertion_ordered_unique_list {
+   public:
+    void insert(T newElement) {
+        for (const auto &element : list_)
+            if (element == newElement) return;
+        list_.emplace_back(std::move(newElement));
+    }
+    constexpr void clear() { list_.clear(); }
+    constexpr const auto &getList() const { return list_; }
+
+   private:
+    std::vector<T> list_;
+};
+
 #endif  //! TYPE_H

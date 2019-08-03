@@ -37,8 +37,8 @@ Game::Settings::Settings()
       ticks_per_second(30),
       vsync(true),
       animate(true),
-      validate(false),
-      validate_verbose(false),
+      validate(true),
+      validate_verbose(true),
       no_tick(false),
       no_render(false),
       try_sampler_anisotropy(true),  // TODO: Not sure what this does

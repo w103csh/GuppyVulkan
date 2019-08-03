@@ -23,7 +23,7 @@ vec3    Ka, // ambient coefficient
 float opacity;
 
 void setColorDefaults() {
-    n = fragNormal;
+    n = normalize(fragNormal);
     
     if (isPerVertexColor()) {
         Ka = fragColor.xyz;
