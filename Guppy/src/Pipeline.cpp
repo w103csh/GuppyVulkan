@@ -56,6 +56,16 @@ void Pipeline::GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources& 
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 }
 
+void Pipeline::GetDefaultScreenQuadInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    GetDefaultTextureInputAssemblyInfoResources(createInfoRes);
+    // attributes
+    createInfoRes.attrDescs.clear();
+    Vertex::Texture::getScreenQuadAttributeDescriptions(createInfoRes.attrDescs);
+    createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
+        static_cast<uint32_t>(createInfoRes.attrDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
+}
+
 // BASE
 
 Pipeline::Base::Base(Handler& handler, const VkPipelineBindPoint&& bindPoint, const CreateInfo* pCreateInfo)
@@ -371,6 +381,11 @@ void Pipeline::Graphics::getInputAssemblyInfoResources(CreateInfoResources& crea
     range = VERTEX_MAP.equal_range(VERTEX::TEXTURE);
     if (range.first != range.second && range.first->second.count(TYPE)) {
         GetDefaultTextureInputAssemblyInfoResources(createInfoRes);
+        return;
+    }
+    range = VERTEX_MAP.equal_range(VERTEX::SCREEN_QUAD);
+    if (range.first != range.second && range.first->second.count(TYPE)) {
+        GetDefaultScreenQuadInputAssemblyInfoResources(createInfoRes);
         return;
     }
     assert(false);

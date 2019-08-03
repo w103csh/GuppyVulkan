@@ -366,12 +366,6 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
 void validatePassTypeStructures() {
     auto it1 = std::find_first_of(RenderPass::ALL.begin(), RenderPass::ALL.end(), Compute::ALL.begin(), Compute::ALL.end());
     assert(it1 == RenderPass::ALL.end());
-    auto it2 =
-        std::find_first_of(RenderPass::ALL.begin(), RenderPass::ALL.end(), Compute::ACTIVE.begin(), Compute::ACTIVE.end());
-    assert(it2 == RenderPass::ALL.end());
-    auto it3 =
-        std::find_first_of(Compute::ALL.begin(), Compute::ALL.end(), RenderPass::ACTIVE.begin(), RenderPass::ACTIVE.end());
-    assert(it3 == Compute::ALL.end());
 }
 
 void cramers3(glm::vec3 c1, glm::vec3 c2, glm::vec3 c3, glm::vec3 c4) {

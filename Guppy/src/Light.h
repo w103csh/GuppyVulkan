@@ -58,7 +58,7 @@ namespace Positional {
 struct DATA {
     glm::vec3 position{};            // 12 (camera space)
     FlagBits flags{FLAG::SHOW};      // 4
-    alignas(16) glm::vec3 La{0.1f};  // 12 (Ambient light intensity)
+    alignas(16) glm::vec3 La{0.2f};  // 12 (Ambient light intensity)
     // 4 rem
     alignas(16) glm::vec3 L{0.6f};  // 12 Diffuse and specular light intensity
     // 4 rem

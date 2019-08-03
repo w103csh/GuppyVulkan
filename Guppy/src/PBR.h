@@ -96,10 +96,7 @@ class Base : public Material::Base, public Buffer::DataItem<DATA> {
 namespace Descriptor {
 namespace Set {
 namespace PBR {
-class Uniform : public Set::Base {
-   public:
-    Uniform(Handler &handler);
-};
+extern const CreateInfo UNIFORM_CREATE_INFO;
 }  // namespace PBR
 }  // namespace Set
 }  // namespace Descriptor

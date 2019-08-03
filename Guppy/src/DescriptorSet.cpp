@@ -22,12 +22,11 @@ Uniform::offsetsMapValue getOffsetsValueMapSansDefault(Uniform::offsetsMapValue 
 }
 }  // namespace
 
-Descriptor::Set::Base::Base(Handler& handler, const DESCRIPTOR_SET&& type, const std::string&& macroName,
-                            const Descriptor::bindingMap&& bindingMap)
+Descriptor::Set::Base::Base(Handler& handler, const CreateInfo* pCreateInfo)
     : Handlee(handler),
-      TYPE(type),
-      MACRO_NAME(macroName),
-      bindingMap_(bindingMap),
+      TYPE(pCreateInfo->type),
+      MACRO_NAME(pCreateInfo->macroName),
+      bindingMap_(pCreateInfo->bindingMap),
       setCount_(0),
       resources_(1),
       defaultResourceOffset_(0) {
@@ -153,52 +152,3 @@ void Descriptor::Set::Base::findResourceSimilar(std::vector<Resource>::iterator&
         if (search->second != offsets) continue;
     }
 }
-
-Descriptor::Set::Default::Uniform::Uniform(Handler& handler)
-    : Set::Base{
-          handler,
-          DESCRIPTOR_SET::UNIFORM_DEFAULT,
-          "_DS_UNI_DEF",
-          {
-              {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
-              {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_DEFAULT}},
-              {{2, 0}, {UNIFORM::FOG_DEFAULT}},
-              {{3, 0}, {UNIFORM::LIGHT_POSITIONAL_DEFAULT}},
-              {{4, 0}, {UNIFORM::LIGHT_SPOT_DEFAULT}},
-          },
-      } {}
-
-Descriptor::Set::Default::Sampler::Sampler(Handler& handler)
-    : Set::Base{
-          handler,
-          DESCRIPTOR_SET::SAMPLER_DEFAULT,
-          "_DS_SMP_DEF",
-          {
-              {{0, 0}, {COMBINED_SAMPLER::MATERIAL}},
-              //{{1, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED}},
-              //{{2, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED}},
-              //{{3, 0}, {DESCRIPTOR::SAMPLER_MATERIAL_COMBINED}},
-          },
-      } {}
-
-Descriptor::Set::Default::CubeSampler::CubeSampler(Handler& handler)
-    : Set::Base{
-          handler,
-          DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT,
-          "_DS_CBE_DEF",
-          {
-              {{0, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::SKYBOX_ID}},
-          },
-      } {}
-
-Descriptor::Set::Default::ProjectorSampler::ProjectorSampler(Handler& handler)
-    : Set::Base{
-          handler,
-          DESCRIPTOR_SET::PROJECTOR_DEFAULT,
-          "_DS_PRJ_DEF",
-          {
-              //{{0, 0}, {DESCRIPTOR::SAMPLER_PIPELINE_COMBINED, Texture::STATUE_ID}},
-              {{0, 0}, {COMBINED_SAMPLER::PIPELINE, RenderPass::PROJECT_2D_TEXTURE_ID}},
-              {{1, 0}, {UNIFORM::PROJECTOR_DEFAULT}},
-          },
-      } {}

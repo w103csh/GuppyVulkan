@@ -25,15 +25,16 @@ class Base : public Handlee<RenderPass::Handler> {
     friend class Pipeline::Graphics;
 
    public:
-    Base(RenderPass::Handler &handler, const uint32_t &&offset, const RenderPass::CreateInfo *pCreateInfo);
+    Base(RenderPass::Handler &handler, const index &&offset, const RenderPass::CreateInfo *pCreateInfo);
     virtual ~Base() = default;
 
     const FlagBits FLAGS;
     const std::string NAME;
-    const offset OFFSET;
+    const index OFFSET;
     const PASS TYPE;
 
-    virtual void init(bool isFinal = false);
+    virtual void init();
+    constexpr const bool isIntialized() const { return isInitialized_; }
 
     // LIFECYCLE
     void create();
@@ -43,19 +44,13 @@ class Base : public Handlee<RenderPass::Handler> {
     void overridePipelineCreateInfo(const PIPELINE &type, Pipeline::CreateInfoResources &createInfoRes);
     virtual void record(const uint8_t frameIndex);
     virtual void postDraw(const VkCommandBuffer &cmd, const uint8_t frameIndex);
+    virtual void update() {}
+    constexpr const auto getStatus() const { return status_; }
 
     // PRIMARY
-    virtual void beginPass(const uint8_t frameIndex,
-                           VkCommandBufferUsageFlags &&primaryCommandUsage = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT,
-                           VkSubpassContents &&subpassContents = VK_SUBPASS_CONTENTS_INLINE);
-
-    virtual inline void endPass(const uint8_t &frameIndex) {
-        auto &primaryCmd = data.priCmds[frameIndex];
-        vkCmdEndRenderPass(primaryCmd);
-        //// End current debug marker region
-        // ext::DebugMarkerEnd(priCmd);
-        // vk::assert_success(vkEndCommandBuffer(primaryCmd));
-    }
+    virtual void beginPass(const VkCommandBuffer &cmd, const uint8_t frameIndex,
+                           VkSubpassContents &&subpassContents = VK_SUBPASS_CONTENTS_INLINE) const;
+    virtual void endPass(const VkCommandBuffer &cmd) const;
 
     // SECONDARY
     virtual void beginSecondary(const uint8_t frameIndex);
@@ -67,6 +62,7 @@ class Base : public Handlee<RenderPass::Handler> {
     constexpr const auto &getFormat() const { return format_; }
     constexpr const auto &getDepthFormat() const { return depthFormat_; }
     constexpr const auto &getFinalLayout() const { return finalLayout_; }
+    constexpr const auto &getInitialLayout() const { return initialLayout_; }
     constexpr const auto &getSamples() const { return pipelineData_.samples; }
     constexpr bool usesSwapchain() const { return FLAGS & FLAG::SWAPCHAIN; }
     constexpr bool usesDepth() const { return FLAGS & FLAG::DEPTH; }
@@ -77,6 +73,9 @@ class Base : public Handlee<RenderPass::Handler> {
 
     // SUBPASS
     uint32_t getSubpassId(const PIPELINE &type) const;
+    void setSubpassOffsets(const std::vector<std::unique_ptr<Base>> &pPasses);
+
+    constexpr const auto &getDependentTypeOffsetPairs() const { return dependentTypeOffsetPairs_; }
 
     // PIPELINE
     constexpr const auto &getPipelineBindDataMap() const { return pipelineTypeBindDataMap_; }
@@ -95,6 +94,9 @@ class Base : public Handlee<RenderPass::Handler> {
     }
     void setBindData(const PIPELINE &pipelineType, const std::shared_ptr<Pipeline::BindData> &pBindData);
 
+    // DESCRIPTOR SET
+    constexpr const auto &getDescSetBindDataMap() const { return descSetBindDataMap_; }
+
     // UNIFORM
     inline constexpr const auto &getDescriptorPipelineOffsets() { return descPipelineOffsets_; }
 
@@ -108,9 +110,14 @@ class Base : public Handlee<RenderPass::Handler> {
     Data data;
 
    protected:
+    FlagBits status_;
+
     // PIPELINE
     PipelineData pipelineData_;
     std::unordered_map<PIPELINE, std::shared_ptr<Pipeline::BindData>> pipelineTypeBindDataMap_;  // Is this still necessary?
+
+    // DESCRIPTOR SET
+    Descriptor::Set::bindDataMap descSetBindDataMap_;
 
     // RENDER PASS
     virtual void createPass();
@@ -125,6 +132,7 @@ class Base : public Handlee<RenderPass::Handler> {
     virtual void createAttachmentsAndSubpasses();
     virtual void createDependencies();
     Resources resources_;
+    std::vector<std::pair<PASS, index>> dependentTypeOffsetPairs_;
 
     // FRAME DATA
     virtual void createCommandBuffers();
@@ -138,14 +146,6 @@ class Base : public Handlee<RenderPass::Handler> {
     VkCommandBufferInheritanceInfo inheritInfo_;
     VkCommandBufferBeginInfo secCmdBeginInfo_;
     bool secCmdFlag_;
-
-    // SETTINGS
-    VkFormat format_;
-    VkFormat depthFormat_;
-    VkImageLayout finalLayout_;
-    uint32_t commandCount_;
-    uint32_t semaphoreCount_;
-    VkExtent2D extent_;
 
     // ATTACHMENT
     std::vector<ImageResource> images_;
@@ -162,6 +162,21 @@ class Base : public Handlee<RenderPass::Handler> {
     BarrierResource barrierResource_;
 
    private:
+    /* It is important that this remains private and is set in Base::init. That way
+     *  Base::create can validate that Base::init was called because Base::init
+     *  governs the hanlder's clear flag map.
+     */
+    bool isInitialized_;
+
+    // SETTINGS
+    VkFormat format_;
+    VkFormat depthFormat_;
+    VkImageLayout initialLayout_;
+    VkImageLayout finalLayout_;
+    uint32_t commandCount_;
+    uint32_t semaphoreCount_;
+    VkExtent2D extent_;
+
     void createSemaphores();
     void createAttachmentDebugMarkers();
 };

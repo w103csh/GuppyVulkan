@@ -24,9 +24,9 @@ class Axes : public Mesh::Line {
     friend class Mesh::Handler;
 
    protected:
-    Axes(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+    Axes(Mesh::Handler& handler, const AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
          std::shared_ptr<Material::Base>& pMaterial);
-    Axes(Mesh::Handler& handler, const std::string&& name, AxesCreateInfo* pCreateInfo,
+    Axes(Mesh::Handler& handler, const std::string&& name, const AxesCreateInfo* pCreateInfo,
          std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
 };
 

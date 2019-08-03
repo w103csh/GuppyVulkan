@@ -23,6 +23,7 @@ namespace Sampler {
 // clang-format off
 using USAGE = enum {
     COLOR =         0x00000001,  // DIFFUSE
+    HDR_LOG =       0x00000002,
     NORMAL =        0x00000010,
     SPECULAR =      0x00000100,
     ALPHA =         0x00001000,
@@ -41,24 +42,43 @@ using CHANNELS = enum {
 // { path, number of channels, combine offset }
 using combineInfo = std::tuple<std::string, CHANNELS, uint8_t>;
 
+uint32_t GetMipLevels(const VkExtent2D& extent);
+
 struct LayerInfo {
     USAGE type;
     std::string path;
     std::vector<combineInfo> combineInfos;
 };
 
+// If usesFormat or usesExtent is true it will cause the texture
+// to be destoryed and remade with the swapchain.
+struct SwapchainInfo {
+    constexpr bool usesSwapchain() const { return usesExtent || usesFormat; }
+    bool usesFormat = false;
+    bool usesExtent = false;
+    float extentFactor = 1.0f;
+};
+
+struct MipmapInfo {
+    bool generateMipmaps = true;
+    bool usesExtent = true;
+    uint32_t mipLevels = 1;
+};
+
 struct CreateInfo {
     std::string name = "";
     std::vector<LayerInfo> layerInfos;
     VkImageViewType imageViewType = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
+    // Leave as bad only if the texture needs to pick up its extent
+    // from a loaded image file, or the swapchain images.
+    VkExtent2D extent = BAD_EXTENT_2D;
+    SwapchainInfo swpchnInfo = {};
     VkImageCreateFlags imageFlags = 0;
     SAMPLER type = SAMPLER::DEFAULT;
-    VkExtent2D extent = BAD_EXTENT_2D;
-    bool makeMipmaps = true;
-    bool usesSwapchain = false;
     VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-    CHANNELS channels = CHANNELS::_4;
+    MipmapInfo mipmapInfo = {};
     VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
+    CHANNELS channels = CHANNELS::_4;
     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 };
 

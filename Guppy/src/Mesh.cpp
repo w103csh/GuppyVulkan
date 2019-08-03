@@ -16,7 +16,7 @@
 // BASE
 
 Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags,
-                 const std::string&& name, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+                 const std::string&& name, const CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
                  std::shared_ptr<Material::Base>& pMaterial)
     : Handlee(handler),
       ObjDrawInst3d(pInstanceData),
@@ -39,9 +39,21 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
       offset_(BAD_OFFSET)
 //
 {
-    assert(PASS_TYPES.size());
-    assert(PIPELINE_TYPE != PIPELINE::ALL_ENUM);
-    assert(Mesh::Base::handler().pipelineHandler().checkVertexPipelineMap(VERTEX_TYPE, PIPELINE_TYPE));
+    if (PIPELINE_TYPE == PIPELINE::ALL_ENUM && PASS_TYPES.empty()) {
+        /* The only mesh that should do this currently is actually a VERTEX::SCREEN_QUAD and there
+         *  should only be one of them, but I don't feel like doing all the work to enforce everything.
+         *  This type should also have no descriptor bind data or a material if I ever get around to
+         *  cleaning it up.
+         *
+         * Note: The PASS_TYPES being empty is extra validation that is meaningless and misleading, but
+         *  I want the asserts in the else to keep working.
+         */
+        assert(VERTEX_TYPE == VERTEX::TEXTURE);
+    } else {
+        assert(PASS_TYPES.size());
+        assert(PIPELINE_TYPE != PIPELINE::ALL_ENUM);
+        assert(Mesh::Base::handler().pipelineHandler().checkVertexPipelineMap(VERTEX_TYPE, PIPELINE_TYPE));
+    }
     assert(pInstanceData_ != nullptr);
     assert(pMaterial_ != nullptr);
 }
@@ -56,7 +68,11 @@ void Mesh::Base::prepare() {
         loadBuffers();
         // Submit vertex loading commands...
         handler().loadingHandler().loadSubmit(std::move(pLdgRes_));
-        status_ = STATUS::PENDING_MATERIAL | STATUS::PENDING_PIPELINE;
+        // Screen quad mesh only needs vertex/index buffers
+        if (PIPELINE_TYPE == PIPELINE::ALL_ENUM && PASS_TYPES.empty())
+            status_ = STATUS::READY;
+        else
+            status_ = STATUS::PENDING_MATERIAL | STATUS::PENDING_PIPELINE;
     }
 
     if (status_ & STATUS::PENDING_MATERIAL) {
@@ -79,17 +95,20 @@ void Mesh::Base::prepare() {
         can allocate and update all at once.
     */
     if (status_ == STATUS::READY) {
-        handler().descriptorHandler().getBindData(PIPELINE_TYPE, bindDataMap_, pMaterial_, pMaterial_->getTexture());
+        // Screen quad mesh will not keep track of descriptor data.
+        if (PIPELINE_TYPE == PIPELINE::ALL_ENUM && PASS_TYPES.empty()) return;
+
+        handler().descriptorHandler().getBindData(PIPELINE_TYPE, descSetBindDataMap_, pMaterial_, pMaterial_->getTexture());
     } else {
         handler().ldgOffsets_.insert({TYPE, getOffset()});
     }
 }
 
 const Descriptor::Set::BindData& Mesh::Base::getDescriptorSetBindData(const PASS& passType) const {
-    for (const auto& [passTypes, bindData] : bindDataMap_) {
+    for (const auto& [passTypes, bindData] : descSetBindDataMap_) {
         if (passTypes.find(passType) != passTypes.end()) return bindData;
     }
-    return bindDataMap_.at(Uniform::PASS_ALL_SET);
+    return descSetBindDataMap_.at(Uniform::PASS_ALL_SET);
 }
 
 // thread sync
@@ -372,17 +391,21 @@ bool Mesh::Base::shouldDraw(const PASS& passTypeComp, const PIPELINE& pipelineTy
     return false;
 }
 
-void Mesh::Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pipelineBindData,
+void Mesh::Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                       const VkCommandBuffer& cmd, const uint8_t frameIndex) const {
-    vkCmdBindPipeline(cmd, pipelineBindData->bindPoint, pipelineBindData->pipeline);
+    draw(passType, pPipelineBindData, getDescriptorSetBindData(passType), cmd, frameIndex);
+}
 
-    const auto& descSetBindData = getDescriptorSetBindData(passType);
+void Mesh::Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+                      const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                      const uint8_t frameIndex) const {
+    auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
+
+    vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
     // bindPushConstants(cmd);
 
-    auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
-
-    vkCmdBindDescriptorSets(cmd, pipelineBindData->bindPoint, pipelineBindData->layout, descSetBindData.firstSet,
+    vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
                             static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
                             descSetBindData.descriptorSets[setIndex].data(),
                             static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
@@ -442,7 +465,7 @@ void Mesh::Base::destroy() {
 
 // COLOR
 
-Mesh::Color::Color(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
+Mesh::Color::Color(Mesh::Handler& handler, const std::string&& name, const CreateInfo* pCreateInfo,
                    std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
                    const MESH&& type)
     : Base{handler,                                //
@@ -454,7 +477,7 @@ Mesh::Color::Color(Mesh::Handler& handler, const std::string&& name, CreateInfo*
            pInstanceData,                          //
            pMaterial} {}
 
-Mesh::Color::Color(Mesh::Handler& handler, const FLAG&& flags, const std::string&& name, CreateInfo* pCreateInfo,
+Mesh::Color::Color(Mesh::Handler& handler, const FLAG&& flags, const std::string&& name, const CreateInfo* pCreateInfo,
                    std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
                    const MESH&& type)
     : Base{handler,                                //
@@ -470,7 +493,7 @@ Mesh::Color::~Color() = default;
 
 // LINE
 
-Mesh::Line::Line(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
+Mesh::Line::Line(Mesh::Handler& handler, const std::string&& name, const CreateInfo* pCreateInfo,
                  std::shared_ptr<Instance::Base>& pInstanceData,
                  std::shared_ptr<Material::Base>& pMaterial)
     : Color{handler,                                //
@@ -485,7 +508,7 @@ Mesh::Line::~Line() = default;
 
 // TEXTURE
 
-Mesh::Texture::Texture(Mesh::Handler& handler, const std::string&& name, CreateInfo* pCreateInfo,
+Mesh::Texture::Texture(Mesh::Handler& handler, const std::string&& name, const CreateInfo* pCreateInfo,
                        std::shared_ptr<Instance::Base>& pInstanceData,
                        std::shared_ptr<Material::Base>& pMaterial)
     : Base{handler,                                //
@@ -496,7 +519,11 @@ Mesh::Texture::Texture(Mesh::Handler& handler, const std::string&& name, CreateI
            pCreateInfo,                            //
            pInstanceData,                          //
            pMaterial} {
-    assert(pMaterial_->hasTexture());
+    // This is for the, hopefully, singular mesh that is a VERTEX::SCREEN_QUAD.
+    if (PIPELINE_TYPE == PIPELINE::ALL_ENUM && PASS_TYPES.empty())
+        assert(!pMaterial_->hasTexture());
+    else
+        assert(pMaterial_->hasTexture());
 }
 
 Mesh::Texture::~Texture() = default;

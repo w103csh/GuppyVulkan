@@ -83,20 +83,20 @@ void validateDimensions(const Shell& shell, Sampler::Base& sampler, const std::s
 
 }  // namespace
 
-Sampler::Base::Base(const CreateInfo* pCreateInfo)
+Sampler::Base::Base(const CreateInfo* pCreateInfo, bool hasData)
     : IMAGE_FLAGS(pCreateInfo->imageFlags),
       NAME(pCreateInfo->name),
       NUM_CHANNELS(pCreateInfo->channels),
       TILING(pCreateInfo->tiling),
       TYPE(pCreateInfo->type),
       flags(0),
-      usesSwapchain(pCreateInfo->usesSwapchain),
+      swpchnInfo(pCreateInfo->swpchnInfo),
+      mipmapInfo(pCreateInfo->mipmapInfo),
       format(pCreateInfo->format),
       samples(VK_SAMPLE_COUNT_1_BIT),
       usage(pCreateInfo->usage),
       extent(pCreateInfo->extent),
       aspect(BAD_ASPECT),
-      mipLevels(1),
       arrayLayers(pCreateInfo->layerInfos.size()),
       image(VK_NULL_HANDLE),
       memory(VK_NULL_HANDLE),
@@ -104,7 +104,15 @@ Sampler::Base::Base(const CreateInfo* pCreateInfo)
       view(VK_NULL_HANDLE),
       sampler(VK_NULL_HANDLE),
       imgInfo{}  //
-{}
+{
+    if (swpchnInfo.usesSwapchain()) {
+        if (swpchnInfo.usesExtent) assert(helpers::compExtent2D(extent, BAD_EXTENT_2D));
+        if (swpchnInfo.usesFormat) format = VK_FORMAT_UNDEFINED;
+    } else {
+        assert(format != VK_FORMAT_UNDEFINED);
+        if (!helpers::compExtent2D(extent, BAD_EXTENT_2D)) assert(!hasData);
+    }
+}
 
 void Sampler::Base::determineImageTypes() {
     /* There is a table of valid type usage here:
@@ -188,7 +196,7 @@ VkImageCreateInfo Sampler::Base::getImageCreateInfo() {
      */
     imageInfo.usage = usage;
     imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imageInfo.mipLevels = mipLevels;
+    imageInfo.mipLevels = mipmapInfo.mipLevels;
     imageInfo.extent.depth = 1;  // !
     imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
@@ -205,7 +213,7 @@ void Sampler::Base::destroy(const VkDevice& dev) {
 // FUNCTIONS
 
 Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, const bool hasData) {
-    Sampler::Base sampler(pCreateInfo);
+    Sampler::Base sampler(pCreateInfo, hasData);
 
     for (const auto& layerInfo : pCreateInfo->layerInfos) {
         sampler.flags |= layerInfo.type * GetChannelMask(pCreateInfo->channels);
@@ -216,8 +224,7 @@ Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, c
 
     if (!hasData) {
         // Texture has no data to load.
-        if (!sampler.usesSwapchain) {
-            assert(!helpers::compExtent2D(sampler.extent, BAD_EXTENT_2D));
+        if (!sampler.swpchnInfo.usesSwapchain()) {
             // aspect
             sampler.aspect = static_cast<float>(sampler.extent.width) / static_cast<float>(sampler.extent.height);
         }
@@ -248,11 +255,8 @@ Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, c
                 // aspect
                 sampler.aspect = static_cast<float>(sampler.extent.width) / static_cast<float>(sampler.extent.height);
                 // mip levels
-                if (pCreateInfo->makeMipmaps)
-                    sampler.mipLevels =
-                        static_cast<uint32_t>(std::floor(std::log2(std::max(sampler.extent.width, sampler.extent.height)))) +
-                        1;
-                assert(sampler.mipLevels > 0);
+                if (sampler.mipmapInfo.usesExtent) sampler.mipmapInfo.mipLevels = GetMipLevels(sampler.extent);
+                assert(sampler.mipmapInfo.mipLevels > 0);
 
                 isFirstLayer = false;
             } else {
@@ -309,7 +313,7 @@ VkSamplerCreateInfo Sampler::GetVkSamplerCreateInfo(const Sampler::Base& sampler
     info.compareEnable = VK_FALSE;
     info.compareOp = VK_COMPARE_OP_ALWAYS;
     info.minLod = 0;  // static_cast<float>(m_mipLevels / 2); // Optional
-    info.maxLod = static_cast<float>(sampler.mipLevels);
+    info.maxLod = static_cast<float>(sampler.mipmapInfo.mipLevels);
     info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     info.unnormalizedCoordinates = VK_FALSE;  // test this out for fun
 
@@ -320,10 +324,10 @@ VkSamplerCreateInfo Sampler::GetVkSamplerCreateInfo(const Sampler::Base& sampler
             info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
             info.anisotropyEnable = VK_FALSE;  // VK_TRUE;
             // info.maxAnisotropy = 16;
-            if (sampler.mipLevels > 0) {
+            if (sampler.mipmapInfo.mipLevels > 0) {
                 info.mipLodBias = 0;  // Optional
                 info.minLod = 0;      // static_cast<float>(m_mipLevels / 2); // Optional
-                info.maxLod = static_cast<float>(sampler.mipLevels);
+                info.maxLod = static_cast<float>(sampler.mipmapInfo.mipLevels);
             }
             break;
         case SAMPLER::CLAMP_TO_BORDER:

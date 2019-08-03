@@ -44,6 +44,8 @@ const CreateInfo STATUE_CREATE_INFO = {
     "Statue Color Sampler",                      //
     {{Sampler::USAGE::COLOR, STATUE_TEX_PATH}},  //
     VK_IMAGE_VIEW_TYPE_2D,                       //
+    BAD_EXTENT_2D,
+    {},
     0,
     SAMPLER::CLAMP_TO_BORDER,
 };
@@ -87,6 +89,7 @@ const CreateInfo WOOD_CREATE_INFO = {
 const CreateInfo MYBRICK_COLOR_CREATE_INFO = {
     "Mybrick Color Sampler",
     {{Sampler::USAGE::COLOR, MYBRICK_DIFF_TEX_PATH}},
+    VK_IMAGE_VIEW_TYPE_MAX_ENUM,
 };
 const CreateInfo MYBRICK_NORMAL_CREATE_INFO = {
     "Mybrick Normal Sampler",
@@ -97,6 +100,7 @@ const CreateInfo MYBRICK_NORMAL_CREATE_INFO = {
              {MYBRICK_HGHT_TEX_PATH, Sampler::CHANNELS::_1, 3},
          }},
     },
+    VK_IMAGE_VIEW_TYPE_MAX_ENUM,
 };
 
 /* It appears the cube map layers are in this order:
@@ -139,10 +143,12 @@ const CreateInfo PISA_HDR_CREATE_INFO = {
         {Sampler::USAGE::COLOR, PISA_HDR_NEG_Z_TEX_PATH},
     },
     VK_IMAGE_VIEW_TYPE_CUBE,
+    BAD_EXTENT_2D,
+    {},
     VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
     SAMPLER::CUBE,
-    BAD_EXTENT_2D,
-    false,
+    VK_IMAGE_USAGE_SAMPLED_BIT,
+    {false, false, 1},
 };
 
 // SKYBOX
@@ -157,10 +163,16 @@ const CreateInfo SKYBOX_CREATE_INFO = {
         {Sampler::USAGE::COLOR, SKYBOX_NEG_Z_TEX_PATH},
     },
     VK_IMAGE_VIEW_TYPE_CUBE,
+    BAD_EXTENT_2D,
+    {},
     VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
     SAMPLER::CUBE,
-    BAD_EXTENT_2D,
-    false,
+    VK_IMAGE_USAGE_SAMPLED_BIT,
+    {false, false, 1},
 };
+
+uint32_t GetMipLevels(const VkExtent2D& extent) {
+    return static_cast<uint32_t>(std::floor(std::log2(std::max(extent.width, extent.height)))) + 1;
+}
 
 }  // namespace Sampler
