@@ -168,7 +168,7 @@ void Uniform::Handler::createLights() {
     lgtDefPosMgr().insert(dev, &createInfo);
     lgtPbrPosMgr().insert(dev, &createInfo);
 
-    // Bloom test
+    //// Bloom test
     // createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-7.0f, 4.0f, 2.5f));
     // lgtDefPosMgr().insert(dev, &createInfo);
     // lgtPbrPosMgr().insert(dev, &createInfo);

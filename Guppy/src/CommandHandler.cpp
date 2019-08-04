@@ -18,7 +18,7 @@ void Command::Handler::init() {
         createCmdPool(queueFamilyIndex, pools_.at(queueFamilyIndex));
         // BUFFERS
         cmds_[queueFamilyIndex] = VK_NULL_HANDLE;
-        createCmdBuffers(pools_.at(queueFamilyIndex), &cmds_.at(queueFamilyIndex));
+        createCmdBuffers(pools_.at(queueFamilyIndex), &cmds_.at(queueFamilyIndex), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
         // TODO: Begin recording the default command buffers???
         beginCmd(cmds_[queueFamilyIndex]);
     };
@@ -49,15 +49,14 @@ void Command::Handler::createCmdPool(const uint32_t queueFamilyIndex, VkCommandP
     vk::assert_success(vkCreateCommandPool(shell().context().dev, &cmd_pool_info, nullptr, &cmdPool));
 }
 
-void Command::Handler::createCmdBuffers(const VkCommandPool& cmdPool, VkCommandBuffer* pCommandBuffers,
+void Command::Handler::createCmdBuffers(const VkCommandPool& pool, VkCommandBuffer* pCommandBuffers,
                                         VkCommandBufferLevel level, uint32_t count) {
     VkCommandBufferAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
     alloc_info.pNext = nullptr;
-    alloc_info.commandPool = cmdPool;
+    alloc_info.commandPool = pool;
     alloc_info.level = level;
     alloc_info.commandBufferCount = count;
-
     vk::assert_success(vkAllocateCommandBuffers(shell().context().dev, &alloc_info, pCommandBuffers));
 }
 

@@ -130,7 +130,6 @@ enum class PASS : uint32_t {  // TODO: make this a bitmask
     // SAMPLER
     SAMPLER_DEFAULT,
     SAMPLER_PROJECT,
-    SAMPLER_SCREEN_SPACE,
     // SCREEN_SPACE
     SCREEN_SPACE,
     SCREEN_SPACE_HDR_LOG,
