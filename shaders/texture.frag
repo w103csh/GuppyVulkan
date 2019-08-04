@@ -6,6 +6,7 @@
 vec3 blinnPhongShade();
 vec3 setTextureDefaults();
 vec3 texCoordShade();
+vec4 gammaCorrect(const in vec3 color, const in float opacity);
 
 // IN
 layout(location = 0) in vec3 fragPosition;  // (camera space)
@@ -29,9 +30,9 @@ void main() {
     setTextureDefaults();
 
     if (TEX_COORD_SHADE) {
-        outColor = vec4(texCoordShade(), 1.0);
+        outColor = gammaCorrect(texCoordShade(), 1.0);
     } else {
         // return;
-        outColor = vec4(blinnPhongShade(), opacity);
+        outColor = gammaCorrect(blinnPhongShade(), opacity);
     }
 }

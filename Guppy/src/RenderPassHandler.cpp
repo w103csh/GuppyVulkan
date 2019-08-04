@@ -24,10 +24,10 @@ namespace {
 // clang-format off
 const std::vector<PASS> DEFAULT = {
     PASS::SAMPLER_PROJECT,
-    //PASS::DEFAULT,
-    PASS::SAMPLER_DEFAULT,
+    PASS::DEFAULT,
+    //PASS::SAMPLER_DEFAULT,
     //PASS::SAMPLER_SCREEN_SPACE,
-    PASS::SCREEN_SPACE,
+    //PASS::SCREEN_SPACE,
 // UI pass needs to always be last since it
 // is optional
 #ifdef USE_DEBUG_UI
@@ -154,10 +154,10 @@ void RenderPass::Handler::getActivePassTypes(std::set<PASS>& types, const PIPELI
     for (const auto& [passType, offset] : activeTypeOffsetPairs_) {
         if (passType == PASS::IMGUI) continue;
         if (pipelineTypeIn == PIPELINE::ALL_ENUM) {
+            types.insert(pPasses_[offset]->TYPE);
+        } else {
             for (const auto& pipelineType : pPasses_[offset]->getPipelineTypes())
                 if (pipelineType == pipelineTypeIn) types.insert(pPasses_[offset]->TYPE);
-        } else {
-            types.insert(pPasses_[offset]->TYPE);
         }
     }
 }

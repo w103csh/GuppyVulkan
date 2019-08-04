@@ -217,3 +217,11 @@ vec3 blinnPhongShade() {
 
     return color;
 }
+
+const float GAMMA = 2.2;
+vec4 gammaCorrect(const in vec3 color, const in float opacity) {
+    if (false)
+        return vec4(pow(color, vec3(1.0/GAMMA)), opacity);
+    else
+        return vec4(color, opacity);
+}

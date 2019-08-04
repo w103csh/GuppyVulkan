@@ -37,6 +37,7 @@ const CreateInfo LINE_FRAG_CREATE_INFO = {
     "Default Line Fragment Shader",  //
     "line.frag",                     //
     VK_SHADER_STAGE_FRAGMENT_BIT,    //
+    {SHADER_LINK::UTILITY_FRAG},
 };
 
 const CreateInfo TEX_VERT_CREATE_INFO = {
@@ -61,19 +62,22 @@ const CreateInfo TEX_FRAG_CREATE_INFO = {
 };
 
 const CreateInfo CUBE_VERT_CREATE_INFO = {
-    SHADER::CUBE_VERT,                //
-    "Cube Vertex Shader",             //
-    "cube.vert",                      //
-    VK_SHADER_STAGE_VERTEX_BIT,       //
-    {SHADER_LINK::DEFAULT_MATERIAL},  //
+    SHADER::CUBE_VERT,           //
+    "Cube Vertex Shader",        //
+    "cube.vert",                 //
+    VK_SHADER_STAGE_VERTEX_BIT,  //
+    {SHADER_LINK::DEFAULT_MATERIAL},
 };
 
 const CreateInfo CUBE_FRAG_CREATE_INFO = {
-    SHADER::CUBE_FRAG,                //
-    "Cube Fragment Shader",           //
-    "cube.frag",                      //
-    VK_SHADER_STAGE_FRAGMENT_BIT,     //
-    {SHADER_LINK::DEFAULT_MATERIAL},  //
+    SHADER::CUBE_FRAG,             //
+    "Cube Fragment Shader",        //
+    "cube.frag",                   //
+    VK_SHADER_STAGE_FRAGMENT_BIT,  //
+    {
+        SHADER_LINK::DEFAULT_MATERIAL,
+        SHADER_LINK::UTILITY_FRAG,
+    },
 };
 
 namespace Link {
@@ -205,6 +209,10 @@ const std::map<SHADER, std::set<SHADER_LINK>> LINK_MAP = {
          SHADER_LINK::BLINN_PHONG,
          SHADER_LINK::DEFAULT_MATERIAL,
      }},
+    {SHADER::LINE_FRAG,
+     {
+         SHADER_LINK::UTILITY_FRAG,
+     }},
     {SHADER::TEX_FRAG,
      {
          SHADER_LINK::TEX_FRAG,
@@ -215,6 +223,7 @@ const std::map<SHADER, std::set<SHADER_LINK>> LINK_MAP = {
     {SHADER::CUBE_FRAG,
      {
          SHADER_LINK::DEFAULT_MATERIAL,
+         SHADER_LINK::UTILITY_FRAG,
      }},
     {SHADER::PBR_COLOR_FRAG,
      {
@@ -227,6 +236,14 @@ const std::map<SHADER, std::set<SHADER_LINK>> LINK_MAP = {
          SHADER_LINK::TEX_FRAG,
          SHADER_LINK::PBR_FRAG,
          SHADER_LINK::PBR_MATERIAL,
+     }},
+    {SHADER::PARALLAX_SIMPLE_FRAG,
+     {
+         SHADER_LINK::DEFAULT_MATERIAL,
+     }},
+    {SHADER::PARALLAX_STEEP_FRAG,
+     {
+         SHADER_LINK::DEFAULT_MATERIAL,
      }},
 };
 

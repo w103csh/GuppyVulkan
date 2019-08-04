@@ -11,6 +11,7 @@ float getMaterialReflectionFactor();
 bool isSkybox();
 bool isReflect();
 bool isRefract();
+vec4 gammaCorrect(const in vec3 color, const in float opacity);
 
 layout(set=_DS_CBE_DEF, binding=0) uniform samplerCube sampCube;
 // IN
@@ -23,15 +24,15 @@ layout(location=0) out vec4 outColor;
 vec3    Kd;
 
 void main() {
-    vec4 sampCubeColor = texture(sampCube, fragWorldPositionReflecionDir);
+    vec3 sampCubeColor = texture(sampCube, fragWorldPositionReflecionDir).rgb;
     if (isSkybox()) {
-        outColor = sampCubeColor;
+        outColor = gammaCorrect(sampCubeColor, getMaterialOpacity());
     } else  {
         vec3 baseColor;
         if (isReflect())
             baseColor = getMaterialColor();
         if (isRefract())
-            baseColor = texture(sampCube,  fragRefractDir).rgb;
+            baseColor = texture(sampCube, fragRefractDir).rgb;
 
         /** Things to try if I ever come back to this:
         *       - Fresnel
@@ -40,11 +41,10 @@ void main() {
         *       - ...
         */
 
-        outColor = vec4(
-            mix(baseColor, sampCubeColor.rgb, getMaterialReflectionFactor()),
+        outColor = gammaCorrect(
+            mix(baseColor, sampCubeColor, getMaterialReflectionFactor()),
             getMaterialOpacity()
         );
 
     }
-    // outColor = pow(outColor, vec4(1.0/2.2));
 }
