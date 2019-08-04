@@ -130,6 +130,13 @@ void Base::record(const uint8_t frameIndex) {
             }
         }
 
+        barrierResource_.reset();
+        barrierResource_.glblBarriers.push_back({VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr});
+        barrierResource_.glblBarriers.back().srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        barrierResource_.glblBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        helpers::recordBarriers(barrierResource_, priCmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+                                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+
         // BLUR B
         {
             const auto& pPass = handler().getPass(dependentTypeOffsetPairs_[passIndex++].second);
@@ -266,6 +273,7 @@ HdrLog::HdrLog(RenderPass::Handler& handler, const index&& offset)
 void transferAllToTransDst(const VkCommandBuffer& cmd, const Sampler::Base& sampler, BarrierResource& res,
                            VkImageLayout oldLayout) {
     res.reset();
+
     res.imgBarriers.push_back({});
     res.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
     res.imgBarriers.back().pNext = nullptr;
@@ -278,6 +286,7 @@ void transferAllToTransDst(const VkCommandBuffer& cmd, const Sampler::Base& samp
     res.imgBarriers.back().image = sampler.image;
     res.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, sampler.mipmapInfo.mipLevels, 0,
                                                sampler.arrayLayers};
+
     helpers::recordBarriers(res, cmd, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 }
 

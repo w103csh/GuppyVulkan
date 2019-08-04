@@ -5,6 +5,7 @@
 // DECLARATIONS
 void setColorDefaults();
 vec3 pbrShade();
+vec4 gammaCorrect(const in vec3 color, const in float opacity);
 
 // IN
 layout(location = 0) in vec3 fragPosition;
@@ -28,5 +29,5 @@ vec3 transform(vec3 v) { return v; }
 
 void main() {
     setColorDefaults();
-    outColor = vec4(pbrShade(), opacity);
+    outColor = gammaCorrect(pbrShade(), opacity);
 }

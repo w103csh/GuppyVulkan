@@ -403,9 +403,7 @@ void decomposeScale(const glm::mat4 &m, glm::vec3 &scale) {
 
 void attachementImageBarrierWriteToSamplerRead(const VkImage &image, BarrierResource &resource,
                                                const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
-    resource.imgBarriers.push_back({});
-    resource.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    resource.imgBarriers.back().pNext = nullptr;
+    resource.imgBarriers.push_back({VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr});
     resource.imgBarriers.back().srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -418,9 +416,7 @@ void attachementImageBarrierWriteToSamplerRead(const VkImage &image, BarrierReso
 
 void attachementImageBarrierWriteToStorageRead(const VkImage &image, BarrierResource &resource,
                                                const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
-    resource.imgBarriers.push_back({});
-    resource.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    resource.imgBarriers.back().pNext = nullptr;
+    resource.imgBarriers.push_back({VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr});
     resource.imgBarriers.back().srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -433,9 +429,7 @@ void attachementImageBarrierWriteToStorageRead(const VkImage &image, BarrierReso
 
 void attachementImageBarrierStorageWriteToColorRead(const VkImage &image, BarrierResource &resource,
                                                     const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
-    resource.imgBarriers.push_back({});
-    resource.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    resource.imgBarriers.back().pNext = nullptr;
+    resource.imgBarriers.push_back({VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr});
     resource.imgBarriers.back().srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
     resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -450,9 +444,7 @@ void attachementImageBarrierWriteToWrite(const VkImage &image, BarrierResource &
                                          const uint32_t dstQueueFamilyIndex) {
     // Ex: Barrier between scene/post-processing write to framebuffer, and UI write to the same framebuffer.
     // I believe this exact thing is handled in a subpass depency in RenderPass::ImGui.
-    resource.imgBarriers.push_back({});
-    resource.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    resource.imgBarriers.back().pNext = nullptr;
+    resource.imgBarriers.push_back({VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr});
     resource.imgBarriers.back().srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
     resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
     resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -465,9 +457,7 @@ void attachementImageBarrierWriteToWrite(const VkImage &image, BarrierResource &
 
 void storageImageBarrierWriteToRead(const VkImage &image, BarrierResource &resource, const uint32_t srcQueueFamilyIndex,
                                     const uint32_t dstQueueFamilyIndex) {
-    resource.imgBarriers.push_back({});
-    resource.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    resource.imgBarriers.back().pNext = nullptr;
+    resource.imgBarriers.push_back({VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr});
     resource.imgBarriers.back().srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
     resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_GENERAL;
@@ -480,9 +470,7 @@ void storageImageBarrierWriteToRead(const VkImage &image, BarrierResource &resou
 
 void bufferBarrierWriteToRead(const VkDescriptorBufferInfo &bufferInfo, BarrierResource &resource,
                               const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
-    resource.buffBarriers.push_back({});
-    resource.buffBarriers.back().sType = VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER;
-    resource.buffBarriers.back().pNext = nullptr;
+    resource.buffBarriers.push_back({VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr});
     resource.buffBarriers.back().srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
     resource.buffBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
     resource.buffBarriers.back().srcQueueFamilyIndex = srcQueueFamilyIndex;
@@ -493,9 +481,7 @@ void bufferBarrierWriteToRead(const VkDescriptorBufferInfo &bufferInfo, BarrierR
 }
 
 void globalDebugBarrierWriteToRead(BarrierResource &resource) {
-    resource.glblBarriers.push_back({});
-    resource.glblBarriers.back().sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-    resource.glblBarriers.back().pNext = nullptr;
+    resource.glblBarriers.push_back({VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr});
     // All src
     resource.glblBarriers.back().srcAccessMask =
         VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |

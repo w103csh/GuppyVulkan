@@ -5,6 +5,7 @@
 // DECLARATIONS
 vec3 blinnPhongShade();
 void setColorDefaults();
+vec4 gammaCorrect(const in vec3 color, const in float opacity);
 
 // IN
 layout(location = 0) in vec3 fragPosition;
@@ -25,5 +26,5 @@ vec3 transform(vec3 v) { return v; }
 
 void main() {
     setColorDefaults();
-    outColor = vec4(blinnPhongShade(), opacity);
+    outColor = gammaCorrect(blinnPhongShade(), opacity);
 }
