@@ -46,7 +46,6 @@ RenderPass::Handler::Handler(Game* pGame)
             case PASS::DEFAULT:                 pPasses_.emplace_back(std::make_unique<RenderPass::Base>(               std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::DEFAULT_CREATE_INFO)); break;
             case PASS::SAMPLER_PROJECT:         pPasses_.emplace_back(std::make_unique<RenderPass::Base>(               std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::PROJECT_CREATE_INFO)); break;
             case PASS::SAMPLER_DEFAULT:         pPasses_.emplace_back(std::make_unique<RenderPass::Base>(               std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::SAMPLER_DEFAULT_CREATE_INFO)); break;
-            case PASS::SAMPLER_SCREEN_SPACE:    pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::Base>(  std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::ScreenSpace::SAMPLER_CREATE_INFO)); break;
             case PASS::SCREEN_SPACE:            pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::Base>(  std::ref(*this), static_cast<uint32_t>(pPasses_.size()), &RenderPass::ScreenSpace::CREATE_INFO)); break;
             case PASS::SCREEN_SPACE_HDR_LOG:    pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::HdrLog>(std::ref(*this), static_cast<uint32_t>(pPasses_.size()))); break;
             case PASS::SCREEN_SPACE_BRIGHT:     pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::Bright>(std::ref(*this), static_cast<uint32_t>(pPasses_.size()))); break;
@@ -188,8 +187,7 @@ void RenderPass::Handler::createCmds() {
     cmdList_.resize(10);
     for (auto& cmds : cmdList_) {
         cmds.resize(1);
-        commandHandler().createCmdBuffers(commandHandler().graphicsCmdPool(), cmds.data(), VK_COMMAND_BUFFER_LEVEL_PRIMARY,
-                                          cmds.size());
+        commandHandler().createCmdBuffers(QUEUE::GRAPHICS, cmds.data(), VK_COMMAND_BUFFER_LEVEL_PRIMARY, cmds.size());
     }
 }
 
@@ -275,8 +273,6 @@ void RenderPass::Handler::acquireBackBuffer() {
     // wait for the last submission since we reuse frame data.
     vk::assert_success(vkWaitForFences(ctx.dev, static_cast<uint32_t>(fences_.size()), fences_.data(), VK_TRUE, UINT64_MAX));
     vk::assert_success(vkResetFences(ctx.dev, 1, &frameFences_[frameIndex_]));
-
-    //((ScreenSpace::HdrLog*)pPasses_[2].get())->read(frameIndex_);
 }
 
 void RenderPass::Handler::recordPasses() {
@@ -322,16 +318,6 @@ void RenderPass::Handler::recordPasses() {
         pPasses_[offset]->record(frameIndex);
         pPasses_[offset]->updateSubmitResource(*pResource, frameIndex);
 
-        // if (pPasses_[offset]->TYPE == PASS::SAMPLER_DEFAULT) {
-        //    submitResources_[passIndex].signalSemaphores[submitResources_[passIndex].signalSemaphoreCount] =
-        //        pPasses_[offset]->data.semaphores[frameIndex];
-        //    submitResources_[passIndex].signalSemaphoreCount++;
-        //}
-        // if (pPasses_[offset]->TYPE == PASS::SCREEN_SPACE) {
-        //    // This wont work anymore (offset)
-        //    ((ScreenSpace::HdrLog*)pPasses_[2].get())->getSemaphore(frameIndex, submitResources_[passIndex]);
-        //}
-
         // Check if a compute pass is needed.
         // computeHandler().recordPasses(pPasses_[offset]->TYPE, *pResource);
 
@@ -342,11 +328,6 @@ void RenderPass::Handler::recordPasses() {
             pResource->signalSemaphoreCount++;
         }
     }
-
-    // // This wont work anymore (offset)
-    // if (((ScreenSpace::HdrLog*)pPasses_[2].get())->submitDownSample(frameIndex, submitResources_[passIndex])) {
-    //    passIndex++;
-    //}
 
     submit(resIndex);
 }

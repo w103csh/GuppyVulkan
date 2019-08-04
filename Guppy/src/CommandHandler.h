@@ -16,8 +16,10 @@ class Handler : public Game::Handler {
     void init() override;
 
     void createCmdPool(const uint32_t queueFamilyIndex, VkCommandPool &cmdPool);
-    void createCmdBuffers(const VkCommandPool &cmdPool, VkCommandBuffer *pCommandBuffers,
-                          VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY, uint32_t count = 1);
+    inline void createCmdBuffers(const QUEUE type, VkCommandBuffer *pCommandBuffers,
+                                 VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY, uint32_t count = 1) {
+        createCmdBuffers(getCmdPool(type), pCommandBuffers, level, count);
+    }
     void resetCmdBuffers();
 
     // clang-format off
@@ -54,6 +56,9 @@ class Handler : public Game::Handler {
 
    private:
     void reset() override;
+
+    void createCmdBuffers(const VkCommandPool &pool, VkCommandBuffer *pCommandBuffers, VkCommandBufferLevel level,
+                          uint32_t count);
 
     std::map<uint32_t, VkCommandPool> pools_;
     std::map<uint32_t, VkCommandBuffer> cmds_;

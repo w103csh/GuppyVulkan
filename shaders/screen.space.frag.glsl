@@ -5,6 +5,7 @@
 #define _DS_UNI_SCR_DEF 0
 #define _DS_SMP_SCR_DEF -1
 #define _DS_SMP_SCR_HDR_LOG_BLIT -1
+#define _DS_SMP_SCR_BLUR_A -1
 
 const uint PASS_HDR_1               = 0x00000001u;
 const uint PASS_HDR_2               = 0x00000002u;
@@ -30,11 +31,14 @@ layout(set=_DS_UNI_SCR_DEF, binding=0) uniform ScreenSpaceDefault {
     // 4 rem
 } data;
 
-#if _DS_SMP_SCR_DEF > 0
+#if _DS_SMP_SCR_DEF >= 0
 layout(set=_DS_SMP_SCR_DEF, binding=0) uniform sampler2D sampRender;
 #endif
-#if _DS_SMP_SCR_HDR_LOG_BLIT > 0
+#if _DS_SMP_SCR_HDR_LOG_BLIT >= 0
 layout(set=_DS_SMP_SCR_HDR_LOG_BLIT, binding=0) uniform sampler2D hdrBlit;
+#endif
+#if _DS_SMP_SCR_BLUR_A >= 0
+layout(set=_DS_SMP_SCR_BLUR_A, binding=0) uniform sampler2D sampBlurA;
 #endif
 
 
@@ -78,7 +82,7 @@ vec4 blurPass2() {
     return vec4(0.0);
 }
 
-#if _DS_SMP_SCR_DEF > 0
+#if _DS_SMP_SCR_DEF >= 0
 vec4 bright() {
     vec4 color = texture(sampRender, fragTexCoord);
     if( luminance(color.rgb) > data.luminanceThreshold ) {
@@ -89,7 +93,7 @@ vec4 bright() {
 }
 #endif
 
-#if _DS_SMP_SCR_DEF > 0
+#if _DS_SMP_SCR_DEF >= 0
 vec4 edge() {
     ivec2 pix = ivec2(gl_FragCoord.xy);
 
@@ -114,25 +118,23 @@ vec4 edge() {
 }
 #endif
 
-#if _DS_SMP_SCR_HDR_LOG_BLIT > 0
+#if _DS_SMP_SCR_HDR_LOG_BLIT >= 0
 const mat3 rgb2xyz = mat3( 
   0.4124564, 0.2126729, 0.0193339,
   0.3575761, 0.7151522, 0.1191920,
   0.1804375, 0.0721750, 0.9503041 );
-
 const mat3 xyz2rgb = mat3(
   3.2404542, -0.9692660, 0.0556434,
   -1.5371385, 1.8760108, -0.2040259,
   -0.4985314, 0.0415560, 1.0572252 );
-
 const float Exposure = 0.35;
 const float White = 0.928;
-vec4 getHdrLog() {
-    // /////////////// Tone mapping ///////////////
-    // // Retrieve high-res color from texture
-    vec4 color = texelFetch(sampRender, ivec2(gl_FragCoord.xy), 0);
+vec4 getToneMapColor() {
     float AveLum = exp(texelFetch(hdrBlit, ivec2(0, 0), 9).r);
-    // vec4 color = texture( HdrTex, TexCoord );
+
+    /////////////// Tone mapping ///////////////
+    // Retrieve high-res color from texture
+    vec4 color = texture(sampRender, fragTexCoord);
     
     // Convert to XYZ
     vec3 xyzCol = rgb2xyz * vec3(color);
@@ -146,15 +148,12 @@ vec4 getHdrLog() {
     L = (L * ( 1 + L / (White * White) )) / ( 1 + L );
 
     // Using the new luminance, convert back to XYZ
-    // if ( xyzCol.y > 0.0 ) {
-        xyzCol.x = (L * xyYCol.x) / (xyYCol.y);
-        xyzCol.y = L;
-        xyzCol.z = (L * (1 - xyYCol.x - xyYCol.y))/xyYCol.y;
-        // Convert back to RGB
-        return vec4( xyz2rgb * xyzCol, 1.0);
-    // } else {
-    //     outColor = vec4(1.0, 0.0, 0.0, 1.0);
-    // }
+    xyzCol.x = (L * xyYCol.x) / (xyYCol.y);
+    xyzCol.y = L;
+    xyzCol.z = (L * (1 - xyYCol.x - xyYCol.y))/xyYCol.y;
+
+    // Convert back to RGB
+    return vec4( xyz2rgb * xyzCol, 1.0);
 }
 #endif
 
@@ -184,17 +183,21 @@ void main() {
     }
 
     // COLOR
-#if _DS_SMP_SCR_DEF > 0
+#if _DS_SMP_SCR_DEF >= 0
     if ((pushConstantsBlock.flags & PASS_EDGE) > 0) {
         outColor = edge();
     } else {
+#if _DS_SMP_SCR_HDR_LOG_BLIT >= 0
+        outColor = getToneMapColor();
+#else
         outColor = texelFetch(sampRender, ivec2(gl_FragCoord.xy), 0);
+#endif
     }
 #endif
 
     // Add bloom to HDR
     if ((pushConstantsBlock.flags & PASS_BLOOM) > 0) {
-#if _DS_SMP_SCR_BLUR_A > 0
+#if _DS_SMP_SCR_BLUR_A >= 0
         outColor += texture(sampBlurA, fragTexCoord);
 #endif
     }

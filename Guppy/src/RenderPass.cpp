@@ -435,13 +435,13 @@ void RenderPass::Base::createDependencies() {
 void RenderPass::Base::createCommandBuffers() {
     // PRIMARY
     data.priCmds.resize(commandCount_);
-    handler().commandHandler().createCmdBuffers(handler().commandHandler().graphicsCmdPool(), data.priCmds.data(),
-                                                VK_COMMAND_BUFFER_LEVEL_PRIMARY, commandCount_);
+    handler().commandHandler().createCmdBuffers(QUEUE::GRAPHICS, data.priCmds.data(), VK_COMMAND_BUFFER_LEVEL_PRIMARY,
+                                                commandCount_);
     if (usesSecondaryCommands() || true) {  // TODO: these things are never used
         // SECONDARY
         data.secCmds.resize(commandCount_);
-        handler().commandHandler().createCmdBuffers(handler().commandHandler().graphicsCmdPool(), data.secCmds.data(),
-                                                    VK_COMMAND_BUFFER_LEVEL_SECONDARY, commandCount_);
+        handler().commandHandler().createCmdBuffers(QUEUE::GRAPHICS, data.secCmds.data(), VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+                                                    commandCount_);
     }
 }
 

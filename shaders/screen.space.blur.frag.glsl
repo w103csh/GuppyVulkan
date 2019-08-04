@@ -25,10 +25,10 @@ layout(set=_DS_UNI_SCR_DEF, binding=0) uniform ScreenSpaceDefault {
     // 4 rem
 } data;
 
-#if _DS_SMP_SCR_BLUR_A > 0
+#if _DS_SMP_SCR_BLUR_A >= 0
 layout(set=_DS_SMP_SCR_BLUR_A, binding=0) uniform sampler2D sampBlurA;
 #endif
-#if _DS_SMP_SCR_BLUR_B > 0
+#if _DS_SMP_SCR_BLUR_B >= 0
 layout(set=_DS_SMP_SCR_BLUR_B, binding=0) uniform sampler2D sampBlurB;
 #endif
 
@@ -37,7 +37,7 @@ layout(location=0) in vec2 fragTexCoord;
 // OUT
 layout(location=0) out vec4 outColor;
 
-#if _DS_SMP_SCR_BLUR_A > 0
+#if _DS_SMP_SCR_BLUR_A >= 0
 vec4 blurPass1() {
     float dy = 1.0 / textureSize(sampBlurA, 0).y;
     vec3 sum = texture(sampBlurA, fragTexCoord).rgb * data.weights0_3[0];
@@ -69,7 +69,7 @@ vec4 blurPass1() {
 }
 #endif
 
-#if _DS_SMP_SCR_BLUR_B > 0
+#if _DS_SMP_SCR_BLUR_B >= 0
 vec4 blurPass2() {
     float dx = 1.0 / textureSize(sampBlurB, 0).x;
     vec3 sum = texture(sampBlurB, fragTexCoord).rbg * data.weights0_3[0];
@@ -103,11 +103,11 @@ vec4 blurPass2() {
 
 void main() {
     if ((pushConstantsBlock.flags & PASS_BLOOM_BLUR_A) > 0) {
-#if _DS_SMP_SCR_BLUR_A > 0
+#if _DS_SMP_SCR_BLUR_A >= 0
         outColor = blurPass1();
 #endif
     } else if ((pushConstantsBlock.flags & PASS_BLOOM_BLUR_B) > 0) {
-#if _DS_SMP_SCR_BLUR_B > 0
+#if _DS_SMP_SCR_BLUR_B >= 0
         outColor = blurPass2();
 #endif
         // outColor = vec4(1.0, 0.0, 0.0, 1.0);

@@ -116,8 +116,7 @@ void Compute::Base::createSyncResources() {
     const auto& ctx = handler().shell().context();
     // COMMAND
     if (cmds_.empty()) cmds_.resize(ctx.imageCount);
-    handler().commandHandler().createCmdBuffers(handler().commandHandler().getCmdPool(QUEUE_TYPE), cmds_.data(),
-                                                VK_COMMAND_BUFFER_LEVEL_PRIMARY, cmds_.size());
+    handler().commandHandler().createCmdBuffers(QUEUE_TYPE, cmds_.data(), VK_COMMAND_BUFFER_LEVEL_PRIMARY, cmds_.size());
     // SEMAPHORE
     VkSemaphoreCreateInfo createInfo = {};
     createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
