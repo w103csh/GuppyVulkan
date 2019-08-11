@@ -12,13 +12,6 @@
 
 namespace Scene {
 
-// TODO: is this still necessary???
-struct InvalidSceneResources {
-    VkDescriptorPool pool = VK_NULL_HANDLE;
-    std::vector<std::vector<VkDescriptorSet>> texSets = {};
-    std::shared_ptr<DescriptorBufferResources> pDynUBORes = nullptr;
-};
-
 class Handler : public Game::Handler {
     friend class Base;
     class SelectionManager;
@@ -33,8 +26,7 @@ class Handler : public Game::Handler {
         cleanup();
     }
 
-    SCENE_INDEX_TYPE makeScene(bool setActive = false, bool makeFaceSelection = false);
-
+    std::unique_ptr<Scene::Base>& makeScene(bool setActive = false, bool makeFaceSelection = false);
     inline std::unique_ptr<Scene::Base>& getActiveScene() {
         assert(activeSceneIndex_ < pScenes_.size());
         return pScenes_[activeSceneIndex_];
@@ -49,11 +41,8 @@ class Handler : public Game::Handler {
    private:
     void reset() override;
 
-    SCENE_INDEX_TYPE activeSceneIndex_;
+    index activeSceneIndex_;
     std::vector<std::unique_ptr<Scene::Base>> pScenes_;
-
-    // global storage for clean up
-    std::vector<InvalidSceneResources> invalidRes_;
 };
 
 }  // namespace Scene

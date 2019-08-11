@@ -17,7 +17,7 @@ namespace Selection {
 class FaceInfo {
    public:
     std::unique_ptr<Face> pFace;
-    Mesh::INDEX offset = Mesh::BAD_OFFSET;
+    Mesh::index offset = Mesh::BAD_OFFSET;
 };
 
 class Manager : public Handlee<Scene::Handler> {

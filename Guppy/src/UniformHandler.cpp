@@ -286,6 +286,7 @@ void Uniform::Handler::update() {
     for (uint32_t i = 0; i < lgtDefPosMgr().pItems.size(); i++) {
         auto& lgt = lgtDefPosMgr().getTypedItem(i);
         lgt.update(camera.getCameraSpacePosition(lgt.getPosition()), frameIndex);
+        // lgt.update(glm::vec3(lgt.getPosition()), frameIndex);
         update(lgt, static_cast<int>(frameIndex));
     }
     // lgtDefPosMgr().update(shell().context().dev);

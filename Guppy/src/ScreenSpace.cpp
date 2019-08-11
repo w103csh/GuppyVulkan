@@ -49,8 +49,8 @@ namespace ScreenSpace {
 
 const CreateInfo DEFAULT_2D_ARRAY_CREATE_INFO = {
     "Screen Space 2D Color Sampler",  //
-    {{::Sampler::USAGE::COLOR}},      //
-    VK_IMAGE_VIEW_TYPE_2D,            //
+    {{{::Sampler::USAGE::COLOR}}},
+    VK_IMAGE_VIEW_TYPE_2D,  //
     BAD_EXTENT_2D,
     {true, true},
     0,
@@ -61,7 +61,7 @@ const CreateInfo DEFAULT_2D_ARRAY_CREATE_INFO = {
 
 const CreateInfo COMPUTE_2D_ARRAY_CREATE_INFO = {
     "Screen Space Compute 2D Color Sampler",
-    {{::Sampler::USAGE::COLOR}},
+    {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D,
     BAD_EXTENT_2D,
     {true, true},
@@ -74,7 +74,7 @@ const CreateInfo COMPUTE_2D_ARRAY_CREATE_INFO = {
 // LOG
 const Sampler::CreateInfo HDR_LOG_SAMPLER_CREATE_INFO = {
     "Screen Space HDR Log 2D Sampler",
-    {{::Sampler::USAGE::COLOR}},
+    {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D,
     BAD_EXTENT_2D,
     {false, true},
@@ -89,7 +89,7 @@ const Sampler::CreateInfo HDR_LOG_SAMPLER_CREATE_INFO = {
 // BLIT
 const Sampler::CreateInfo HDR_LOG_BLIT_A_SAMPLER_CREATE_INFO = {
     "Screen Space HDR Log Blit A 2D Sampler",  //
-    {{::Sampler::USAGE::COLOR}},
+    {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D,
     BAD_EXTENT_2D,
     {false, true, 0.5f},
@@ -101,7 +101,7 @@ const Sampler::CreateInfo HDR_LOG_BLIT_A_SAMPLER_CREATE_INFO = {
 };
 const Sampler::CreateInfo HDR_LOG_BLIT_B_SAMPLER_CREATE_INFO = {
     "Screen Space HDR Log Blit B 2D Sampler",  //
-    {{::Sampler::USAGE::COLOR}},
+    {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D,
     BAD_EXTENT_2D,
     {false, true, 0.5f},
@@ -115,7 +115,7 @@ const Sampler::CreateInfo HDR_LOG_BLIT_B_SAMPLER_CREATE_INFO = {
 // BLUR
 const Sampler::CreateInfo BLUR_2D_SAMPLER_CREATE_INFO = {
     "Screen Space Blur 2D Array Color Sampler",
-    {{::Sampler::USAGE::COLOR}},
+    {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D,
     BAD_EXTENT_2D,
     {false, true},

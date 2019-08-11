@@ -25,8 +25,8 @@ namespace Scene         { class Handler; }
 
 namespace Mesh {
 
-typedef uint32_t INDEX;
-constexpr Mesh::INDEX BAD_OFFSET = UINT32_MAX;
+using index = uint32_t;
+constexpr Mesh::index BAD_OFFSET = UINT32_MAX;
 
 class Handler;
 
@@ -62,7 +62,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     const MESH TYPE;
     const VERTEX VERTEX_TYPE;
 
-    inline Mesh::INDEX getOffset() const { return offset_; }
+    inline Mesh::index getOffset() const { return offset_; }
     inline FlagBits getStatus() const { return status_; }
 
     // MATERIAL
@@ -163,7 +163,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
 
     void bindPushConstants(VkCommandBuffer cmd) const;  // TODO: I hate this...
 
-    Mesh::INDEX offset_;
+    Mesh::index offset_;
 };
 
 // **********************

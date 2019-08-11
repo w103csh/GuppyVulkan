@@ -58,6 +58,13 @@ const std::set<DESCRIPTOR_SET> ALL = {
     DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_BLUR_B,
     DESCRIPTOR_SET::STORAGE_SCREEN_SPACE_COMPUTE_POST_PROCESS,
     DESCRIPTOR_SET::STORAGE_IMAGE_SCREEN_SPACE_COMPUTE_DEFAULT,
+    // DEFERRED
+    DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT,
+    DESCRIPTOR_SET::UNIFORM_DEFERRED_COMBINE,
+    DESCRIPTOR_SET::SAMPLER_DEFERRED_POS_NORM,
+    DESCRIPTOR_SET::SAMPLER_DEFERRED_POS,
+    DESCRIPTOR_SET::SAMPLER_DEFERRED_NORM,
+    DESCRIPTOR_SET::SAMPLER_DEFERRED_COLOR,
 };
 
 void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& write) const {
@@ -70,7 +77,7 @@ void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& writ
         assert(descCount == 1);  // I haven't thought about this yet.
 
         write.descriptorCount = descCount;
-        write.pImageInfo = &imageInfos.at(offset).descInfo;
+        write.pImageInfo = &imageInfos.at(offset).descInfoMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL);
 
     } else if (bufferInfos.size()) {
         // BUFFER

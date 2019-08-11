@@ -14,6 +14,20 @@ void Mesh::Handler::init() {
     instDefMgr_.init(shell().context(), settings());
 }
 
+bool Mesh::Handler::checkOffset(const MESH type, const Mesh::index offset) {
+    switch (type) {
+        case MESH::COLOR:
+            return offset < colorMeshes_.size();
+        case MESH::LINE:
+            return offset < lineMeshes_.size();
+        case MESH::TEXTURE:
+            return offset < texMeshes_.size();
+        default:
+            assert(false);
+            exit(EXIT_FAILURE);
+    }
+}
+
 void Mesh::Handler::reset() {
     // MESHES
     for (auto& pMesh : colorMeshes_) pMesh->destroy();

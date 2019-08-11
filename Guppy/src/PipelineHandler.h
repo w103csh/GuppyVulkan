@@ -1,6 +1,7 @@
 #ifndef PIPELINE_HANDLER_H
 #define PIPELINE_HANDLER_H
 
+#include <map>
 #include <set>
 #include <string>
 #include <vector>
@@ -47,12 +48,9 @@ class Handler : public Game::Handler {
     void makeShaderInfoMap(Shader::infoMap &map);
 
     inline const std::unique_ptr<Pipeline::Base> &getPipeline(const PIPELINE &pipelineType) const {
-        // Make sure the pipeline that is being accessed is available.
-        assert(static_cast<uint32_t>(pipelineType) >= 0);
-        assert(static_cast<uint32_t>(pipelineType) < pPipelines_.size());
-        return pPipelines_[static_cast<uint32_t>(pipelineType)];
+        return pPipelines_.at(pipelineType);
     }
-    constexpr const std::vector<std::unique_ptr<Pipeline::Base>> &getPipelines() const { return pPipelines_; }
+    constexpr const std::map<PIPELINE, std::unique_ptr<Pipeline::Base>> &getPipelines() const { return pPipelines_; }
 
     // SHADER
     void getShaderStages(const std::set<PIPELINE> &pipelineTypes, VkShaderStageFlags &stages);
@@ -73,7 +71,7 @@ class Handler : public Game::Handler {
 
     // PIPELINES
     void createPipelineCache(VkPipelineCache &cache);
-    std::vector<std::unique_ptr<Pipeline::Base>> pPipelines_;
+    std::map<PIPELINE, std::unique_ptr<Pipeline::Base>> pPipelines_;
     pipelineBindDataMap pipelineBindDataMap_;
 
     // CLEAN UP

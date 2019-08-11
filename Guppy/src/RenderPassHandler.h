@@ -99,7 +99,7 @@ class Handler : public Game::Handler {
     std::set<std::pair<PASS, index>> activeTypeOffsetPairs_;
     std::vector<index> mainLoopOffsets_;
 
-    Mesh::INDEX screenQuadOffset_;
+    Mesh::index screenQuadOffset_;
 };
 
 }  // namespace RenderPass

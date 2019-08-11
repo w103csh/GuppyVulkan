@@ -20,43 +20,38 @@ class Base {
     void determineImageTypes();
 
     inline VkDeviceSize layerSize() const {
-        return static_cast<VkDeviceSize>(extent.width) *   //
-               static_cast<VkDeviceSize>(extent.height) *  //
+        return static_cast<VkDeviceSize>(imgCreateInfo.extent.width) *   //
+               static_cast<VkDeviceSize>(imgCreateInfo.extent.height) *  //
                static_cast<VkDeviceSize>(NUM_CHANNELS);
     }
-    inline VkDeviceSize size() const { return layerSize() * static_cast<VkDeviceSize>(arrayLayers); }
+    inline VkDeviceSize size() const { return layerSize() * static_cast<VkDeviceSize>(imgCreateInfo.arrayLayers); }
 
     void copyData(void *&pData, size_t &offset) const;
     inline void cleanup() { pPixels.clear(); }
-
-    VkImageCreateInfo getImageCreateInfo();
 
     void destroy(const VkDevice &dev);
 
     // TODO: Get rid of all these creation info members
 
-    const VkImageCreateFlags IMAGE_FLAGS;
     const std::string NAME;
     const FlagBits NUM_CHANNELS;
-    const VkImageTiling TILING;
     const SAMPLER TYPE;
 
     FlagBits flags;  // TODO: remove this instead of passing a dynamic list to shaders?
+
+    VkImageCreateInfo imgCreateInfo;
     SwapchainInfo swpchnInfo;
     MipmapInfo mipmapInfo;
-    VkFormat format;
-    VkSampleCountFlagBits samples;
-    VkImageUsageFlags usage;
-    VkExtent2D extent;
+
     float aspect;
-    uint32_t arrayLayers;
-    VkImageType imageType;
+    VkImageViewType imageViewType;
+
     VkImage image;
     VkDeviceMemory memory;
-    VkImageViewType imageViewType;
-    VkImageView view;
-    VkSampler sampler;
+
     std::vector<stbi_uc *> pPixels;
+
+    layerResourceMap layerResourceMap;
     ImageInfo imgInfo;
 };
 

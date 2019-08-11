@@ -66,17 +66,19 @@ void RenderPass::Base::init() {
 
     auto& ctx = handler().shell().context();
 
-    // Find a texture target if necessary
+    // Find the texture targets if not the swapchain.
     if (getTargetId() != RenderPass::SWAPCHAIN_TARGET_ID) {
-        auto pTexture = handler().textureHandler().getTexture(getTargetId());
-        if (pTexture != nullptr) {
-            pTextures_.push_back(pTexture);
-        } else {
-            uint8_t frameIndex = 0;
-            do {
-                pTexture = handler().textureHandler().getTexture(getTargetId(), frameIndex++);
-                if (pTexture != nullptr) pTextures_.push_back(pTexture);
-            } while (pTexture != nullptr);
+        for (const auto& textureId : textureIds_) {
+            auto pTexture = handler().textureHandler().getTexture(textureId);
+            if (pTexture != nullptr) {
+                pTextures_.push_back(pTexture);
+            } else {
+                uint8_t frameIndex = 0;
+                do {
+                    pTexture = handler().textureHandler().getTexture(textureId, frameIndex++);
+                    if (pTexture != nullptr) pTextures_.push_back(pTexture);
+                } while (pTexture != nullptr);
+            }
         }
         assert(pTextures_.size());
     }
@@ -84,20 +86,21 @@ void RenderPass::Base::init() {
     if (hasTargetSampler()) {
         assert(pTextures_.size());
         if (usesSwapchain()) {
-            if (pTextures_[0]->samplers[0].format == VK_FORMAT_UNDEFINED)
+            if (pTextures_[0]->samplers[0].imgCreateInfo.format == VK_FORMAT_UNDEFINED)
                 format_ = ctx.surfaceFormat.format;
             else
-                format_ = pTextures_[0]->samplers[0].format;
+                format_ = pTextures_[0]->samplers[0].imgCreateInfo.format;
         } else {
             // Force only one sampler, for now, and just assume its the target.
             for (auto i = 0; i < pTextures_.size(); i++) {
                 assert(pTextures_[i]->samplers.size() == 1);
                 if (i == 0) {
-                    extent_ = pTextures_[i]->samplers[0].extent;
-                    format_ = pTextures_[i]->samplers[0].format;
+                    extent_.width = pTextures_[i]->samplers[0].imgCreateInfo.extent.width;
+                    extent_.height = pTextures_[i]->samplers[0].imgCreateInfo.extent.height;
+                    format_ = pTextures_[i]->samplers[0].imgCreateInfo.format;
                 } else {
-                    assert(helpers::compExtent2D(extent_, pTextures_[i]->samplers[0].extent));
-                    assert(format_ = pTextures_[i]->samplers[0].format);
+                    assert(helpers::compExtent2D(extent_, pTextures_[i]->samplers[0].imgCreateInfo.extent));
+                    assert(format_ = pTextures_[i]->samplers[0].imgCreateInfo.format);
                 }
             }
         }
@@ -232,19 +235,8 @@ void RenderPass::Base::record(const uint8_t frameIndex) {
     }
 
     endPass(priCmd);
-    postDraw(priCmd, frameIndex);
 
     // vk::assert_success(vkEndCommandBuffer(priCmd));
-}
-
-void RenderPass::Base::postDraw(const VkCommandBuffer& cmd, const uint8_t frameIndex) {
-    if (hasTargetSampler()) {
-        barrierResource_.reset();
-        auto texIndex = (std::min)(static_cast<uint8_t>(pTextures_.size() - 1), frameIndex);
-        helpers::attachementImageBarrierWriteToSamplerRead(pTextures_[texIndex]->samplers[0].image, barrierResource_);
-        helpers::recordBarriers(barrierResource_, cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT | VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
-    }
 }
 
 void RenderPass::Base::beginPass(const VkCommandBuffer& cmd, const uint8_t frameIndex,
@@ -313,7 +305,7 @@ void RenderPass::Base::createAttachmentsAndSubpasses() {
     // DEPTH ATTACHMENT
     if (pipelineData_.usesDepth) {
         resources_.attachments.push_back({});
-        resources_.attachments.back().format = getDepthFormat();
+        resources_.attachments.back().format = depthFormat_;
         resources_.attachments.back().samples = getSamples();
         resources_.attachments.back().loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         resources_.attachments.back().storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
@@ -333,7 +325,7 @@ void RenderPass::Base::createAttachmentsAndSubpasses() {
     // COLOR ATTACHMENT (MULTI-SAMPLE)
     if (usesMultiSample()) {
         resources_.attachments.push_back({});
-        resources_.attachments.back().format = getFormat();
+        resources_.attachments.back().format = format_;
         resources_.attachments.back().samples = getSamples();
         resources_.attachments.back().loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
         resources_.attachments.back().storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -355,7 +347,7 @@ void RenderPass::Base::createAttachmentsAndSubpasses() {
 
     // COLOR ATTACHMENT
     resources_.attachments.push_back({});
-    resources_.attachments.back().format = getFormat();
+    resources_.attachments.back().format = format_;
     resources_.attachments.back().samples = usesMultiSample() ? VK_SAMPLE_COUNT_1_BIT : getSamples();
     resources_.attachments.back().loadOp = isClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
     resources_.attachments.back().storeOp = VK_ATTACHMENT_STORE_OP_STORE;
@@ -391,6 +383,7 @@ void RenderPass::Base::createAttachmentsAndSubpasses() {
 }
 
 void RenderPass::Base::createDependencies() {
+    // 7.1. Render Pass Creation has examples of what this should be.
     VkSubpassDependency dependency;
     for (uint32_t i = 0; i < pipelineTypeBindDataMap_.size() - 1; i++) {
         dependency = {};
@@ -459,7 +452,7 @@ void RenderPass::Base::createImageResources() {
                 assert(!usesMultiSample());
             }
             assert(pTexture->status == STATUS::READY);
-            assert((sampler.usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) > 0);
+            assert((sampler.imgCreateInfo.usage & VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT) > 0);
         }
     } else {
         assert(pTextures_.empty());
@@ -476,8 +469,8 @@ void RenderPass::Base::createImageResources() {
                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, images_.back().image,
                              images_.back().memory);
 
-        helpers::createImageView(ctx.dev, images_.back().image, 1, format_, VK_IMAGE_ASPECT_COLOR_BIT, VK_IMAGE_VIEW_TYPE_2D,
-                                 1, images_.back().view);
+        VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+        helpers::createImageView(ctx.dev, images_.back().image, format_, VK_IMAGE_VIEW_TYPE_2D, range, images_.back().view);
     } else {
         assert(resources_.resolveAttachments.size() == 0 && "Make sure multi-sampling attachment reference was not added");
     }
@@ -509,7 +502,8 @@ void RenderPass::Base::createDepthResource() {
             aspectFlags |= VK_IMAGE_ASPECT_STENCIL_BIT;
         }
 
-        helpers::createImageView(ctx.dev, depth_.image, 1, depthFormat_, aspectFlags, VK_IMAGE_VIEW_TYPE_2D, 1, depth_.view);
+        VkImageSubresourceRange range = {aspectFlags, 0, 1, 0, 1};
+        helpers::createImageView(ctx.dev, depth_.image, depthFormat_, VK_IMAGE_VIEW_TYPE_2D, range, depth_.view);
     }
 }
 
@@ -538,7 +532,7 @@ void RenderPass::Base::updateClearValues() {
         clearValues_.push_back({});
         clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
     }
-    // SWAPCHAIN ATTACHMENT
+    // TARGET ATTACHMENT
     clearValues_.push_back({});
     clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
 }
@@ -585,8 +579,10 @@ void RenderPass::Base::createFramebuffers() {
         } else {
             // SAMPLER
             auto texIndex = (std::min)(static_cast<uint8_t>(pTextures_.size() - 1), frameIndex);
-            assert(pTextures_[texIndex]->samplers.size() == 1 && pTextures_[texIndex]->samplers[0].view != VK_NULL_HANDLE);
-            attachmentViews.push_back(pTextures_[texIndex]->samplers[0].view);
+            const auto& imageView =
+                pTextures_[texIndex]->samplers[0].layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL).view;
+            assert(imageView != VK_NULL_HANDLE);
+            attachmentViews.push_back(imageView);
         }
 
         createInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());

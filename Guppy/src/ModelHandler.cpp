@@ -8,6 +8,8 @@
 
 Model::Handler::Handler(Game *pGame) : Game::Handler(pGame) {}
 
+bool Model::Handler::checkOffset(const Model::index offset) { return offset < pModels_.size(); }
+
 void Model::Handler::update(std::unique_ptr<Scene::Base> &pScene) {
     checkFutures(pScene, ldgColorFutures_);
     checkFutures(pScene, ldgTexFutures_);
@@ -43,7 +45,7 @@ void Model::Handler::makeTexture(const tinyobj::material_t &tinyobj_mat, const s
 
             // DIFFUSE
             if (!tinyobj_mat.diffuse_texname.empty()) {
-                texCreateInfo.samplerCreateInfos.back().layerInfos.push_back(Sampler::GetDef4Comb3And1LayerInfo(
+                texCreateInfo.samplerCreateInfos.back().layersInfo.infos.push_back(Sampler::GetDef4Comb3And1LayerInfo(
                     Sampler::USAGE::COLOR,        //
                     modelDirectory,               //
                     tinyobj_mat.diffuse_texname,  //
@@ -52,7 +54,7 @@ void Model::Handler::makeTexture(const tinyobj::material_t &tinyobj_mat, const s
             }
             // NORMAL
             if (!tinyobj_mat.bump_texname.empty()) {
-                texCreateInfo.samplerCreateInfos.back().layerInfos.push_back(Sampler::GetDef4Comb3And1LayerInfo(
+                texCreateInfo.samplerCreateInfos.back().layersInfo.infos.push_back(Sampler::GetDef4Comb3And1LayerInfo(
                     Sampler::USAGE::NORMAL,   //
                     modelDirectory,           //
                     tinyobj_mat.bump_texname  //
@@ -61,7 +63,7 @@ void Model::Handler::makeTexture(const tinyobj::material_t &tinyobj_mat, const s
             }
             // SPECULAR
             if (!tinyobj_mat.specular_texname.empty()) {
-                texCreateInfo.samplerCreateInfos.back().layerInfos.push_back(Sampler::GetDef4Comb3And1LayerInfo(
+                texCreateInfo.samplerCreateInfos.back().layersInfo.infos.push_back(Sampler::GetDef4Comb3And1LayerInfo(
                     Sampler::USAGE::SPECULAR,     //
                     modelDirectory,               //
                     tinyobj_mat.specular_texname  //

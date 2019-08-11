@@ -18,7 +18,7 @@ Model::Base::Base(Model::Handler &handler, Model::CreateInfo *pCreateInfo, std::
 
 Model::Base::~Base() = default;
 
-void Model::Base::postLoad(Model::CBACK callback) {
+void Model::Base::postLoad(Model::cback callback) {
     allMeshAction([this](Mesh::Base *pMesh) { updateAggregateBoundingBox(pMesh); });
     // Invoke callback for say... model transformations. This is a pain in the ass
     // and slow.
@@ -50,19 +50,17 @@ void Model::Base::allMeshAction(std::function<void(Mesh::Base *)> action) {
     }
 }
 
-Model::INDEX Model::Base::getMeshOffset(MESH type, uint8_t offset) {
+const std::vector<Model::index> &Model::Base::getMeshOffsets(MESH type) {
     switch (type) {
         case MESH::COLOR:
-            assert(offset < colorOffsets_.size());
-            return colorOffsets_[offset];
+            return colorOffsets_;
         case MESH::LINE:
-            assert(offset < lineOffsets_.size());
-            return lineOffsets_[offset];
+            return lineOffsets_;
         case MESH::TEXTURE:
-            assert(offset < texOffsets_.size());
-            return texOffsets_[offset];
+            return texOffsets_;
         default:
-            throw std::runtime_error("Unhandled mesh type.");
+            assert(false);
+            exit(EXIT_FAILURE);
     }
 }
 

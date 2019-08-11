@@ -24,17 +24,17 @@ namespace Model {
 class Base;
 class Handler;
 
-typedef uint32_t INDEX;
+using index = uint32_t;
 constexpr auto INDEX_MAX = UINT32_MAX;
-typedef std::function<void(Model::Base *)> CBACK;
+using cback = std::function<void(Model::Base *)>;
 
 struct CreateInfo : public Mesh::CreateInfo {
     bool async = false;
     bool smoothNormals = false;
     bool visualHelper = false;
     float visualHelperLineSize = 0.1f;
-    Model::CBACK callback = nullptr;
-    Model::INDEX handlerOffset = Model::INDEX_MAX;  // TODO: this should only be set by the handler...
+    Model::cback callback = nullptr;
+    Model::index handlerOffset = Model::INDEX_MAX;  // TODO: this should only be set by the handler...
     std::string modelPath = "";
 };
 
@@ -47,12 +47,11 @@ class Base : public NonCopyable, public Handlee<Model::Handler>, public ObjInst3
 
     const PIPELINE PIPELINE_TYPE;
 
-    inline Model::INDEX getOffset() const { return offset_; }
+    inline Model::index getOffset() const { return offset_; }
 
-    void postLoad(Model::CBACK callback);
+    void postLoad(Model::cback callback);
 
-    // TODO: use a conditional template argument
-    Model::INDEX getMeshOffset(MESH type, uint8_t offset);
+    const std::vector<Model::index> &getMeshOffsets(MESH type);
 
     inline Model::CreateInfo getMeshCreateInfo() {
         Model::CreateInfo createInfo = {};
@@ -67,7 +66,7 @@ class Base : public NonCopyable, public Handlee<Model::Handler>, public ObjInst3
    private:
     void updateAggregateBoundingBox(Mesh::Base *pMesh);
 
-    Model::INDEX offset_;
+    Model::index offset_;
     std::string modelPath_;
     bool smoothNormals_;
     bool visualHelper_;
@@ -77,9 +76,9 @@ class Base : public NonCopyable, public Handlee<Model::Handler>, public ObjInst3
     void addOffset(std::unique_ptr<Mesh::Line> &pMesh);
     void addOffset(std::unique_ptr<Mesh::Texture> &pMesh);
 
-    std::vector<Model::INDEX> colorOffsets_;
-    std::vector<Model::INDEX> lineOffsets_;
-    std::vector<Model::INDEX> texOffsets_;
+    std::vector<Model::index> colorOffsets_;
+    std::vector<Model::index> lineOffsets_;
+    std::vector<Model::index> texOffsets_;
 };
 
 }  // namespace Model

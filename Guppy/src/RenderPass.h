@@ -43,7 +43,6 @@ class Base : public Handlee<RenderPass::Handler> {
     void createTarget();
     void overridePipelineCreateInfo(const PIPELINE &type, Pipeline::CreateInfoResources &createInfoRes);
     virtual void record(const uint8_t frameIndex);
-    virtual void postDraw(const VkCommandBuffer &cmd, const uint8_t frameIndex);
     virtual void update() {}
     constexpr const auto getStatus() const { return status_; }
 
@@ -155,11 +154,13 @@ class Base : public Handlee<RenderPass::Handler> {
     descriptorPipelineOffsetsMap descPipelineOffsets_;
 
     // SAMPLER
-    std::vector<std::string> textureIds_;  // oh well, and it should be const
+    std::vector<std::string> textureIds_;  // TODO: const? Swapchain has an id now.
     std::vector<std::shared_ptr<Texture::Base>> pTextures_;
 
     // BARRIER
     BarrierResource barrierResource_;
+
+    VkExtent2D extent_;
 
    private:
     /* It is important that this remains private and is set in Base::init. That way
@@ -175,7 +176,6 @@ class Base : public Handlee<RenderPass::Handler> {
     VkImageLayout finalLayout_;
     uint32_t commandCount_;
     uint32_t semaphoreCount_;
-    VkExtent2D extent_;
 
     void createSemaphores();
     void createAttachmentDebugMarkers();

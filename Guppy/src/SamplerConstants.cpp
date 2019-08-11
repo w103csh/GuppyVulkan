@@ -13,6 +13,8 @@ const std::string STATUE_TEX_PATH = IMG_PATH + "texture.jpg";
 const std::string VULKAN_TEX_PATH = IMG_PATH + "vulkan.png";
 // HARDWOOD
 const std::string HARDWOOD_FLOOR_TEX_PATH = IMG_PATH + "hardwood_floor.jpg";
+// NEON BLUE TUX GUPPY
+const std::string NEON_BLUE_TUX_GUPPY_TEX_PATH = IMG_PATH + "neon_blue_tux_guppy.jpg";
 // WOOD
 const std::string WOOD_PATH = IMG_PATH + "Wood_007/";
 const std::string WOOD_007_DIFF_TEX_PATH = WOOD_PATH + "Wood_007_COLOR.jpg";
@@ -41,9 +43,9 @@ namespace Sampler {
 
 // STATUE
 const CreateInfo STATUE_CREATE_INFO = {
-    "Statue Color Sampler",                      //
-    {{Sampler::USAGE::COLOR, STATUE_TEX_PATH}},  //
-    VK_IMAGE_VIEW_TYPE_2D,                       //
+    "Statue Color Sampler",                        //
+    {{{Sampler::USAGE::COLOR, STATUE_TEX_PATH}}},  //
+    VK_IMAGE_VIEW_TYPE_2D,                         //
     BAD_EXTENT_2D,
     {},
     0,
@@ -53,53 +55,62 @@ const CreateInfo STATUE_CREATE_INFO = {
 // VULKAN LOGO
 const CreateInfo VULKAN_CREATE_INFO = {
     "Vulkan Color Sampler",
-    {{Sampler::USAGE::COLOR, VULKAN_TEX_PATH}},
+    {{{Sampler::USAGE::COLOR, VULKAN_TEX_PATH}}},
     VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 };
 
 // HARDWOOD
 const CreateInfo HARDWOOD_CREATE_INFO = {
     "Hardwood Color Sampler",
-    {{Sampler::USAGE::COLOR, HARDWOOD_FLOOR_TEX_PATH}},
+    {{{Sampler::USAGE::COLOR, HARDWOOD_FLOOR_TEX_PATH}}},
+    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+};
+
+// NEON BLUE TUX GUPPY
+const CreateInfo NEON_BLUE_TUX_GUPPY_CREATE_INFO = {
+    "Neon Blue Tux Guppy Color Sampler",
+    {{{Sampler::USAGE::COLOR, NEON_BLUE_TUX_GUPPY_TEX_PATH}}},
     VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 };
 
 // MEDIEVAL HOUSE
 const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO = {
     "Medieval Color/Normal/Specular Sampler",
-    {
+    {{
         {Sampler::USAGE::COLOR, MED_H_DIFF_TEX_PATH},
         {Sampler::USAGE::NORMAL, MED_H_NORM_TEX_PATH},
         {Sampler::USAGE::SPECULAR, MED_H_SPEC_TEX_PATH},
-    },
+    }},
     VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 };
 
 // WOOD
 const CreateInfo WOOD_CREATE_INFO = {
     "Wood Color/Normal Sampler",
-    {
+    {{
         {Sampler::USAGE::COLOR, WOOD_007_DIFF_TEX_PATH},
         {Sampler::USAGE::NORMAL, WOOD_007_NORM_TEX_PATH},
-    },
+    }},
     VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 };
 
 // MYBRICK
 const CreateInfo MYBRICK_COLOR_CREATE_INFO = {
     "Mybrick Color Sampler",
-    {{Sampler::USAGE::COLOR, MYBRICK_DIFF_TEX_PATH}},
+    {{{Sampler::USAGE::COLOR, MYBRICK_DIFF_TEX_PATH}}},
     VK_IMAGE_VIEW_TYPE_MAX_ENUM,
 };
 const CreateInfo MYBRICK_NORMAL_CREATE_INFO = {
     "Mybrick Normal Sampler",
-    {
-        {Sampler::USAGE::NORMAL,
-         MYBRICK_NORM_TEX_PATH,
-         {
-             {MYBRICK_HGHT_TEX_PATH, Sampler::CHANNELS::_1, 3},
-         }},
-    },
+    {{
+        {
+            Sampler::USAGE::NORMAL,
+            MYBRICK_NORM_TEX_PATH,
+            false,
+            false,
+            {{MYBRICK_HGHT_TEX_PATH, Sampler::CHANNELS::_1, 3}},
+        },
+    }},
     VK_IMAGE_VIEW_TYPE_MAX_ENUM,
 };
 
@@ -134,14 +145,14 @@ const std::string SKYBOX_NEG_Z_TEX_PATH = SKYBOX_PATH + "back.jpg";
 // PISA HDR
 const CreateInfo PISA_HDR_CREATE_INFO = {
     "Pisa HDR Cube Sampler",
-    {
+    {{
         {Sampler::USAGE::COLOR, PISA_HDR_POS_X_TEX_PATH},
         {Sampler::USAGE::COLOR, PISA_HDR_NEG_X_TEX_PATH},
         {Sampler::USAGE::COLOR, PISA_HDR_POS_Y_TEX_PATH},
         {Sampler::USAGE::COLOR, PISA_HDR_NEG_Y_TEX_PATH},
         {Sampler::USAGE::COLOR, PISA_HDR_POS_Z_TEX_PATH},
         {Sampler::USAGE::COLOR, PISA_HDR_NEG_Z_TEX_PATH},
-    },
+    }},
     VK_IMAGE_VIEW_TYPE_CUBE,
     BAD_EXTENT_2D,
     {},
@@ -154,14 +165,14 @@ const CreateInfo PISA_HDR_CREATE_INFO = {
 // SKYBOX
 const CreateInfo SKYBOX_CREATE_INFO = {
     "Skybox Cube Sampler",
-    {
+    {{
         {Sampler::USAGE::COLOR, SKYBOX_POS_X_TEX_PATH},
         {Sampler::USAGE::COLOR, SKYBOX_NEG_X_TEX_PATH},
         {Sampler::USAGE::COLOR, SKYBOX_POS_Y_TEX_PATH},
         {Sampler::USAGE::COLOR, SKYBOX_NEG_Y_TEX_PATH},
         {Sampler::USAGE::COLOR, SKYBOX_POS_Z_TEX_PATH},
         {Sampler::USAGE::COLOR, SKYBOX_NEG_Z_TEX_PATH},
-    },
+    }},
     VK_IMAGE_VIEW_TYPE_CUBE,
     BAD_EXTENT_2D,
     {},
@@ -171,7 +182,7 @@ const CreateInfo SKYBOX_CREATE_INFO = {
     {false, false, 1},
 };
 
-uint32_t GetMipLevels(const VkExtent2D& extent) {
+uint32_t GetMipLevels(const VkExtent3D& extent) {
     return static_cast<uint32_t>(std::floor(std::log2(std::max(extent.width, extent.height)))) + 1;
 }
 

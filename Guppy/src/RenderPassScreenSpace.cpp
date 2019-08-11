@@ -36,6 +36,9 @@ const CreateInfo CREATE_INFO = {
 Base::Base(RenderPass::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo)
     : RenderPass::Base{handler, std::forward<const index>(offset), pCreateInfo} {
     status_ = STATUS::PENDING_MESH | STATUS::PENDING_PIPELINE;
+    // Validate the pipelines used are in the right spot in the vertex map.
+    // for (const auto& [pipelineType, value] : pipelineTypeBindDataMap_)
+    //    assert(Pipeline::VERTEX_MAP.at(VERTEX::SCREEN_QUAD).count(pipelineType) != 0);
 }
 
 // TODO: should something like this be on the base class????
@@ -284,8 +287,8 @@ void transferAllToTransDst(const VkCommandBuffer& cmd, const Sampler::Base& samp
     res.imgBarriers.back().srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     res.imgBarriers.back().dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     res.imgBarriers.back().image = sampler.image;
-    res.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, sampler.mipmapInfo.mipLevels, 0,
-                                               sampler.arrayLayers};
+    res.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, sampler.imgCreateInfo.mipLevels, 0,
+                                               sampler.imgCreateInfo.arrayLayers};
 
     helpers::recordBarriers(res, cmd, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
 }
@@ -334,8 +337,8 @@ void HdrLog::downSample(const VkCommandBuffer& priCmd, const uint8_t frameIndex)
                           (passFlags_[frameIndex] ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
     passFlags_[frameIndex] = false;
 
-    int32_t mipWidth = hdrLogSampler.extent.width;
-    int32_t mipHeight = hdrLogSampler.extent.height;
+    int32_t mipWidth = hdrLogSampler.imgCreateInfo.extent.width;
+    int32_t mipHeight = hdrLogSampler.imgCreateInfo.extent.height;
 
     VkImageBlit blit = {};
     // source
@@ -344,7 +347,7 @@ void HdrLog::downSample(const VkCommandBuffer& priCmd, const uint8_t frameIndex)
     blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     blit.srcSubresource.mipLevel = 0;
     blit.srcSubresource.baseArrayLayer = 0;
-    blit.srcSubresource.layerCount = blitSamplerA.arrayLayers;
+    blit.srcSubresource.layerCount = blitSamplerA.imgCreateInfo.arrayLayers;
 
     mipWidth /= 2;
     mipHeight /= 2;
@@ -355,7 +358,7 @@ void HdrLog::downSample(const VkCommandBuffer& priCmd, const uint8_t frameIndex)
     blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     blit.dstSubresource.mipLevel = 0;
     blit.dstSubresource.baseArrayLayer = 0;
-    blit.dstSubresource.layerCount = blitSamplerA.arrayLayers;
+    blit.dstSubresource.layerCount = blitSamplerA.imgCreateInfo.arrayLayers;
 
     vkCmdBlitImage(cmd, hdrLogSampler.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, blitSamplerA.image,
                    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
@@ -367,10 +370,10 @@ void HdrLog::downSample(const VkCommandBuffer& priCmd, const uint8_t frameIndex)
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = blitSamplerA.arrayLayers;
+    barrier.subresourceRange.layerCount = blitSamplerA.imgCreateInfo.arrayLayers;
     barrier.subresourceRange.levelCount = 1;
 
-    for (uint32_t i = 1; i < blitSamplerA.mipmapInfo.mipLevels; i++) {
+    for (uint32_t i = 1; i < blitSamplerA.imgCreateInfo.mipLevels; i++) {
         barrier.subresourceRange.baseMipLevel = i - 1;
         barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
@@ -387,7 +390,7 @@ void HdrLog::downSample(const VkCommandBuffer& priCmd, const uint8_t frameIndex)
         blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         blit.srcSubresource.mipLevel = i - 1;
         blit.srcSubresource.baseArrayLayer = 0;
-        blit.srcSubresource.layerCount = blitSamplerA.arrayLayers;
+        blit.srcSubresource.layerCount = blitSamplerA.imgCreateInfo.arrayLayers;
 
         mipWidth /= 2;
         mipHeight /= 2;
@@ -398,7 +401,7 @@ void HdrLog::downSample(const VkCommandBuffer& priCmd, const uint8_t frameIndex)
         blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         blit.dstSubresource.mipLevel = i;
         blit.dstSubresource.baseArrayLayer = 0;
-        blit.dstSubresource.layerCount = blitSamplerA.arrayLayers;
+        blit.dstSubresource.layerCount = blitSamplerA.imgCreateInfo.arrayLayers;
 
         vkCmdBlitImage(cmd, blitSamplerA.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, blitSamplerA.image,
                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
@@ -416,7 +419,7 @@ void HdrLog::downSample(const VkCommandBuffer& priCmd, const uint8_t frameIndex)
     }
 
     // Single pixel mip needs to be shader read only optimal.
-    barrier.subresourceRange.baseMipLevel = blitSamplerA.mipmapInfo.mipLevels - 1;
+    barrier.subresourceRange.baseMipLevel = blitSamplerA.imgCreateInfo.mipLevels - 1;
     barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;

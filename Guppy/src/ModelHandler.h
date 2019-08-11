@@ -24,9 +24,11 @@ class Handler : public Game::Handler {
     void init() override{};
     inline void destroy() override { reset(); }
 
+    bool checkOffset(const Model::index offset);
+
     template <typename TMaterialCreateInfo, typename TInstanceCreateInfo>
-    void makeColorModel(Model::CreateInfo* pCreateInfo, TMaterialCreateInfo* pMaterialCreateInfo,
-                        TInstanceCreateInfo* pInstanceCreateInfo) {
+    auto& makeColorModel(Model::CreateInfo* pCreateInfo, TMaterialCreateInfo* pMaterialCreateInfo,
+                         TInstanceCreateInfo* pInstanceCreateInfo) {
         pCreateInfo->handlerOffset = pModels_.size();  // TODO: really?
 
         // INSTANCE
@@ -44,11 +46,13 @@ class Handler : public Game::Handler {
             handleMeshes(pModels_.back(), loadColor(std::ref(*pModels_.back()), *pMaterialCreateInfo, pInstanceData),
                          pCreateInfo->callback);
         }
+
+        return pModels_.back();
     }
 
     template <typename TMaterialCreateInfo, typename TInstanceCreateInfo>
-    void makeTextureModel(Model::CreateInfo* pCreateInfo, TMaterialCreateInfo* pMaterialCreateInfo,
-                          TInstanceCreateInfo* pInstanceCreateInfo) {
+    auto& makeTextureModel(Model::CreateInfo* pCreateInfo, TMaterialCreateInfo* pMaterialCreateInfo,
+                           TInstanceCreateInfo* pInstanceCreateInfo) {
         pCreateInfo->handlerOffset = pModels_.size();  // TODO: really?
 
         // INSTANCE
@@ -66,9 +70,11 @@ class Handler : public Game::Handler {
             handleMeshes(pModels_.back(), loadTexture(std::ref(*pModels_.back()), *pMaterialCreateInfo, pInstanceData),
                          pCreateInfo->callback);
         }
+
+        return pModels_.back();
     }
 
-    std::unique_ptr<Model::Base>& getModel(Model::INDEX offset) {
+    std::unique_ptr<Model::Base>& getModel(Model::index offset) {
         assert(offset < pModels_.size());
         return pModels_[offset];
     }
@@ -169,7 +175,7 @@ class Handler : public Game::Handler {
 
     // thread sync
     template <typename TMesh>
-    void handleMeshes(std::unique_ptr<Model::Base>& pModel, std::vector<TMesh*>&& pMeshes, Model::CBACK& callback) {
+    void handleMeshes(std::unique_ptr<Model::Base>& pModel, std::vector<TMesh*>&& pMeshes, Model::cback& callback) {
         for (auto pMesh : pMeshes) {
             assert(pMesh->getStatus() == STATUS::PENDING_BUFFERS);
             pMesh->prepare();
@@ -186,7 +192,7 @@ class Handler : public Game::Handler {
 
     // Mesh futures
     template <typename T>
-    void checkFutures(std::unique_ptr<Scene::Base>& pScene, std::unordered_map<Model::INDEX, T>& futuresMap) {
+    void checkFutures(std::unique_ptr<Scene::Base>& pScene, std::unordered_map<Model::index, T>& futuresMap) {
         // Check futures
         if (!futuresMap.empty()) {
             for (auto it = futuresMap.begin(); it != futuresMap.end();) {
@@ -218,8 +224,8 @@ class Handler : public Game::Handler {
     }
 
     std::vector<std::unique_ptr<Model::Base>> pModels_;
-    std::unordered_map<Model::INDEX, std::pair<std::future<std::vector<Mesh::Color*>>, Model::CBACK>> ldgColorFutures_;
-    std::unordered_map<Model::INDEX, std::pair<std::future<std::vector<Mesh::Texture*>>, Model::CBACK>> ldgTexFutures_;
+    std::unordered_map<Model::index, std::pair<std::future<std::vector<Mesh::Color*>>, Model::cback>> ldgColorFutures_;
+    std::unordered_map<Model::index, std::pair<std::future<std::vector<Mesh::Texture*>>, Model::cback>> ldgTexFutures_;
 };
 
 }  // namespace Model
