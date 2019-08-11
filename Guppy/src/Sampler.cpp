@@ -12,11 +12,11 @@ namespace {
 
 void validateInfo(const Sampler::CreateInfo* pCreateInfo) {
     assert(pCreateInfo);
-    assert(!pCreateInfo->layerInfos.empty());
+    assert(!pCreateInfo->layersInfo.infos.empty());
     assert(pCreateInfo->channels < UINT8_MAX);
     uint8_t maxChannels = static_cast<uint8_t>(pCreateInfo->channels);
     uint8_t offset = 0;
-    for (const auto& layerInfo : pCreateInfo->layerInfos) {
+    for (const auto& layerInfo : pCreateInfo->layersInfo.infos) {
         for (const auto& combineInfo : layerInfo.combineInfos) {
             assert(std::get<1>(combineInfo) < UINT8_MAX);
             offset = static_cast<uint8_t>(std::get<1>(combineInfo)) + std::get<2>(combineInfo);
@@ -62,17 +62,16 @@ void checkFailure(const Shell& shell, const std::string path, const stbi_uc* pPi
 void validateChannels(const Shell& shell, Sampler::Base& sampler, const std::string path, int c) {
     if (c < static_cast<int>(sampler.NUM_CHANNELS)) {
         std::stringstream ss;
-        ss << std::endl
-           << "Image at path \"" << path << "\" loaded for " << sampler.NUM_CHANNELS << " channels but only has " << c
-           << " channels." << std::endl;
+        ss << "Image at path \"" << path << "\" loaded for " << sampler.NUM_CHANNELS << " channels but only has " << c
+           << " channels.";
         shell.log(Shell::LOG_WARN, ss.str().c_str());
     }
 }
 
 void validateDimensions(const Shell& shell, Sampler::Base& sampler, const std::string path, int w, int h) {
     std::stringstream ss;
-    if (w != sampler.extent.width) ss << "invalid " << path << " (width)! " << std::endl;
-    if (w != sampler.extent.height) ss << "invalid " << path << " (height)! " << std::endl;
+    if (w != sampler.imgCreateInfo.extent.width) ss << "invalid " << path << " (width)! " << std::endl;
+    if (w != sampler.imgCreateInfo.extent.height) ss << "invalid " << path << " (height)! " << std::endl;
     auto errMsg = ss.str();
     if (!errMsg.empty()) {
         shell.log(Shell::LOG_ERR, errMsg.c_str());
@@ -84,33 +83,56 @@ void validateDimensions(const Shell& shell, Sampler::Base& sampler, const std::s
 }  // namespace
 
 Sampler::Base::Base(const CreateInfo* pCreateInfo, bool hasData)
-    : IMAGE_FLAGS(pCreateInfo->imageFlags),
-      NAME(pCreateInfo->name),
+    : NAME(pCreateInfo->name),
       NUM_CHANNELS(pCreateInfo->channels),
-      TILING(pCreateInfo->tiling),
       TYPE(pCreateInfo->type),
       flags(0),
+      imgCreateInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr},
       swpchnInfo(pCreateInfo->swpchnInfo),
-      mipmapInfo(pCreateInfo->mipmapInfo),
-      format(pCreateInfo->format),
-      samples(VK_SAMPLE_COUNT_1_BIT),
-      usage(pCreateInfo->usage),
-      extent(pCreateInfo->extent),
+      mipmapInfo(pCreateInfo->mipmapCreateInfo.info),
       aspect(BAD_ASPECT),
-      arrayLayers(pCreateInfo->layerInfos.size()),
       image(VK_NULL_HANDLE),
       memory(VK_NULL_HANDLE),
       imageViewType(pCreateInfo->imageViewType),
-      view(VK_NULL_HANDLE),
-      sampler(VK_NULL_HANDLE),
       imgInfo{}  //
 {
+    // Image create info
+    imgCreateInfo.flags = pCreateInfo->imageFlags;
+    imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+    imgCreateInfo.format = pCreateInfo->format;
+    imgCreateInfo.extent = {pCreateInfo->extent.width, pCreateInfo->extent.height, 1};
+    imgCreateInfo.mipLevels = pCreateInfo->mipmapCreateInfo.mipLevels;
+    imgCreateInfo.arrayLayers = pCreateInfo->layersInfo.infos.size();
+    imgCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imgCreateInfo.tiling = pCreateInfo->tiling;
+    imgCreateInfo.usage = pCreateInfo->usage;
+    imgCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imgCreateInfo.queueFamilyIndexCount = 0;
+    imgCreateInfo.pQueueFamilyIndices = nullptr;
+    imgCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    // Swapchain info settings
     if (swpchnInfo.usesSwapchain()) {
-        if (swpchnInfo.usesExtent) assert(helpers::compExtent2D(extent, BAD_EXTENT_2D));
-        if (swpchnInfo.usesFormat) format = VK_FORMAT_UNDEFINED;
+        if (swpchnInfo.usesExtent) assert(helpers::compExtent2D(imgCreateInfo.extent, BAD_EXTENT_2D));
+        if (swpchnInfo.usesFormat) imgCreateInfo.format = VK_FORMAT_UNDEFINED;
     } else {
-        assert(format != VK_FORMAT_UNDEFINED);
-        if (!helpers::compExtent2D(extent, BAD_EXTENT_2D)) assert(!hasData);
+        assert(imgCreateInfo.format != VK_FORMAT_UNDEFINED);
+        if (!helpers::compExtent2D(imgCreateInfo.extent, BAD_EXTENT_2D)) assert(!hasData);
+    }
+
+    // Setup layer info structures
+    if (pCreateInfo->layersInfo.makeSampler) assert(pCreateInfo->layersInfo.makeImageView);
+    if (pCreateInfo->layersInfo.makeImageView) {
+        auto insertPair = layerResourceMap.insert({IMAGE_ARRAY_LAYERS_ALL, {pCreateInfo->layersInfo.makeSampler}});
+        assert(insertPair.second);
+    }
+    for (uint32_t layer = 0; layer < pCreateInfo->layersInfo.infos.size(); layer++) {
+        const auto& layerInfo = pCreateInfo->layersInfo.infos[layer];
+        if (layerInfo.makeSampler) assert(layerInfo.makeImageView);
+        if (layerInfo.makeImageView) {
+            auto insertPair = layerResourceMap.insert({layer, {layerInfo.makeSampler}});
+            assert(insertPair.second);
+        }
     }
 }
 
@@ -121,6 +143,10 @@ void Sampler::Base::determineImageTypes() {
      *	I did not test any of the 1D types. The conditions here were done hastily,
      *	and are not well tested. I only did a few.
      */
+
+    const auto& arrayLayers = imgCreateInfo.arrayLayers;
+    const auto& extent = imgCreateInfo.extent;
+    auto& imageType = imgCreateInfo.imageType;
 
     if (imageViewType == VK_IMAGE_VIEW_TYPE_MAX_ENUM) {
         // If imageViewType is not set then determine one.
@@ -179,33 +205,11 @@ void Sampler::Base::copyData(void*& pData, size_t& offset) const {
     }
 }
 
-VkImageCreateInfo Sampler::Base::getImageCreateInfo() {
-    VkImageCreateInfo imageInfo = {};
-    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.flags = IMAGE_FLAGS;
-    imageInfo.imageType = imageType;
-    imageInfo.format = format;
-    imageInfo.extent.width = extent.width;
-    imageInfo.extent.height = extent.height;
-    imageInfo.arrayLayers = arrayLayers;
-    imageInfo.samples = samples;
-    imageInfo.tiling = TILING;
-    /* VK_IMAGE_USAGE_SAMPLED_BIT specifies that the image can be used to create a
-     *	VkImageView suitable for occupying a VkDescriptorSet slot either of
-     *	type VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE or VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER
-     */
-    imageInfo.usage = usage;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imageInfo.mipLevels = mipmapInfo.mipLevels;
-    imageInfo.extent.depth = 1;  // !
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-
-    return imageInfo;
-}
-
 void Sampler::Base::destroy(const VkDevice& dev) {
-    vkDestroySampler(dev, sampler, nullptr);
-    vkDestroyImageView(dev, view, nullptr);
+    for (auto& [layer, layerResource] : layerResourceMap) {
+        if (layerResource.sampler != VK_NULL_HANDLE) vkDestroySampler(dev, layerResource.sampler, nullptr);
+        vkDestroyImageView(dev, layerResource.view, nullptr);
+    }
     vkDestroyImage(dev, image, nullptr);
     vkFreeMemory(dev, memory, nullptr);
 }
@@ -215,7 +219,7 @@ void Sampler::Base::destroy(const VkDevice& dev) {
 Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, const bool hasData) {
     Sampler::Base sampler(pCreateInfo, hasData);
 
-    for (const auto& layerInfo : pCreateInfo->layerInfos) {
+    for (const auto& layerInfo : pCreateInfo->layersInfo.infos) {
         sampler.flags |= layerInfo.type * GetChannelMask(pCreateInfo->channels);
     }
 
@@ -226,14 +230,15 @@ Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, c
         // Texture has no data to load.
         if (!sampler.swpchnInfo.usesSwapchain()) {
             // aspect
-            sampler.aspect = static_cast<float>(sampler.extent.width) / static_cast<float>(sampler.extent.height);
+            sampler.aspect = static_cast<float>(sampler.imgCreateInfo.extent.width) /
+                             static_cast<float>(sampler.imgCreateInfo.extent.height);
         }
     } else {
         // Texture has data to load so load it and validate.
         bool isFirstLayer = true;
         int w, h, c, req_comp = getReqComp(pCreateInfo->channels);
 
-        for (auto& layerInfo : pCreateInfo->layerInfos) {
+        for (auto& layerInfo : pCreateInfo->layersInfo.infos) {
             // LOAD FROM FILE
             std::string path = layerInfo.path;
             std::replace(path.begin(), path.end(), '\\', '/');  // Convert windows path delimiters.
@@ -247,16 +252,18 @@ Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, c
 
             if (isFirstLayer) {
                 // width
-                sampler.extent.width = static_cast<uint32_t>(w);
-                assert(sampler.extent.width > 0);
+                sampler.imgCreateInfo.extent.width = static_cast<uint32_t>(w);
+                assert(sampler.imgCreateInfo.extent.width > 0);
                 // height
-                sampler.extent.height = static_cast<uint32_t>(h);
-                assert(sampler.extent.height > 0);
+                sampler.imgCreateInfo.extent.height = static_cast<uint32_t>(h);
+                assert(sampler.imgCreateInfo.extent.height > 0);
                 // aspect
-                sampler.aspect = static_cast<float>(sampler.extent.width) / static_cast<float>(sampler.extent.height);
+                sampler.aspect = static_cast<float>(sampler.imgCreateInfo.extent.width) /
+                                 static_cast<float>(sampler.imgCreateInfo.extent.height);
                 // mip levels
-                if (sampler.mipmapInfo.usesExtent) sampler.mipmapInfo.mipLevels = GetMipLevels(sampler.extent);
-                assert(sampler.mipmapInfo.mipLevels > 0);
+                if (sampler.mipmapInfo.usesExtent)
+                    sampler.imgCreateInfo.mipLevels = GetMipLevels(sampler.imgCreateInfo.extent);
+                assert(sampler.imgCreateInfo.mipLevels > 0);
 
                 isFirstLayer = false;
             } else {
@@ -280,8 +287,8 @@ Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, c
                 validateDimensions(shell, sampler, layerInfo.path, w, h);
 
                 // Mix combined data in.
-                VkDeviceSize size =
-                    static_cast<VkDeviceSize>(sampler.extent.width) * static_cast<VkDeviceSize>(sampler.extent.height);
+                VkDeviceSize size = static_cast<VkDeviceSize>(sampler.imgCreateInfo.extent.width) *
+                                    static_cast<VkDeviceSize>(sampler.imgCreateInfo.extent.height);
                 for (VkDeviceSize i = 0; i < size; i++) {
                     // combineInfo { path, number of channels, combine offset }
                     auto offset = (i * sampler.NUM_CHANNELS) + std::get<2>(combineInfo);
@@ -291,7 +298,7 @@ Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, c
             }
         }
 
-        assert(sampler.arrayLayers == sampler.pPixels.size());
+        assert(sampler.imgCreateInfo.arrayLayers == sampler.pPixels.size());
     }
 
     sampler.determineImageTypes();
@@ -313,7 +320,7 @@ VkSamplerCreateInfo Sampler::GetVkSamplerCreateInfo(const Sampler::Base& sampler
     info.compareEnable = VK_FALSE;
     info.compareOp = VK_COMPARE_OP_ALWAYS;
     info.minLod = 0;  // static_cast<float>(m_mipLevels / 2); // Optional
-    info.maxLod = static_cast<float>(sampler.mipmapInfo.mipLevels);
+    info.maxLod = static_cast<float>(sampler.imgCreateInfo.mipLevels);
     info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
     info.unnormalizedCoordinates = VK_FALSE;  // test this out for fun
 
@@ -324,10 +331,10 @@ VkSamplerCreateInfo Sampler::GetVkSamplerCreateInfo(const Sampler::Base& sampler
             info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
             info.anisotropyEnable = VK_FALSE;  // VK_TRUE;
             // info.maxAnisotropy = 16;
-            if (sampler.mipmapInfo.mipLevels > 0) {
+            if (sampler.imgCreateInfo.mipLevels > 0) {
                 info.mipLodBias = 0;  // Optional
                 info.minLod = 0;      // static_cast<float>(m_mipLevels / 2); // Optional
-                info.maxLod = static_cast<float>(sampler.mipmapInfo.mipLevels);
+                info.maxLod = static_cast<float>(sampler.imgCreateInfo.mipLevels);
             }
             break;
         case SAMPLER::CLAMP_TO_BORDER:

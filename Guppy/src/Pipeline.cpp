@@ -328,6 +328,7 @@ void Pipeline::Graphics::setInfo(CreateInfoResources& createInfoRes, VkGraphicsP
     */
 
     // TODO: where should this go????
+    createInfoRes.blendAttachmentStates.clear();
     createInfoRes.bindDescs.clear();
     createInfoRes.attrDescs.clear();
 
@@ -432,8 +433,8 @@ void Pipeline::Graphics::getMultisampleStateInfoResources(CreateInfoResources& c
 }
 
 void Pipeline::Graphics::getBlendInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.blendAttach = {};
-    createInfoRes.blendAttach.colorWriteMask =
+    createInfoRes.blendAttachmentStates.push_back({});
+    createInfoRes.blendAttachmentStates.back().colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
     // blend_attachment.blendEnable = VK_FALSE;
     // blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;              // Optional
@@ -443,21 +444,21 @@ void Pipeline::Graphics::getBlendInfoResources(CreateInfoResources& createInfoRe
     // blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
     // blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
     // common setup
-    createInfoRes.blendAttach.blendEnable = VK_TRUE;
-    createInfoRes.blendAttach.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    createInfoRes.blendAttach.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    createInfoRes.blendAttach.colorBlendOp = VK_BLEND_OP_ADD;
-    createInfoRes.blendAttach.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-    createInfoRes.blendAttach.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    createInfoRes.blendAttach.alphaBlendOp = VK_BLEND_OP_ADD;
+    createInfoRes.blendAttachmentStates.back().blendEnable = VK_TRUE;
+    createInfoRes.blendAttachmentStates.back().srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+    createInfoRes.blendAttachmentStates.back().dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+    createInfoRes.blendAttachmentStates.back().colorBlendOp = VK_BLEND_OP_ADD;
+    createInfoRes.blendAttachmentStates.back().srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+    createInfoRes.blendAttachmentStates.back().dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+    createInfoRes.blendAttachmentStates.back().alphaBlendOp = VK_BLEND_OP_ADD;
     // createInfoRes.blendAttach.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     // createInfoRes.blendAttach.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
     // createInfoRes.blendAttach.alphaBlendOp = VK_BLEND_OP_ADD;
 
     createInfoRes.colorBlendStateInfo = {};
     createInfoRes.colorBlendStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
-    createInfoRes.colorBlendStateInfo.attachmentCount = 1;
-    createInfoRes.colorBlendStateInfo.pAttachments = &createInfoRes.blendAttach;
+    createInfoRes.colorBlendStateInfo.attachmentCount = static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size());
+    createInfoRes.colorBlendStateInfo.pAttachments = createInfoRes.blendAttachmentStates.data();
     createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
     createInfoRes.colorBlendStateInfo.logicOp = VK_LOGIC_OP_COPY;  // What does this do?
     createInfoRes.colorBlendStateInfo.blendConstants[0] = 0.0f;

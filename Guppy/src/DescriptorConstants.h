@@ -34,7 +34,14 @@ enum class DESCRIPTOR_SET {
     STORAGE_SCREEN_SPACE_COMPUTE_POST_PROCESS,
     STORAGE_IMAGE_SCREEN_SPACE_COMPUTE_DEFAULT,
     // MISCELLANEOUS
-    SWAPCHAIN_IMAGE
+    SWAPCHAIN_IMAGE,
+    // DEFERRED
+    UNIFORM_DEFERRED_MRT,
+    UNIFORM_DEFERRED_COMBINE,
+    SAMPLER_DEFERRED_POS_NORM,
+    SAMPLER_DEFERRED_POS,
+    SAMPLER_DEFERRED_NORM,
+    SAMPLER_DEFERRED_COLOR,
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 
@@ -91,6 +98,7 @@ struct GetVkDescriptorType {
     VkDescriptorType operator()(const COMBINED_SAMPLER& ) const { return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; }
     VkDescriptorType operator()(const STORAGE_IMAGE&    ) const { return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; }
     VkDescriptorType operator()(const STORAGE_BUFFER&   ) const { return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; }
+    VkDescriptorType operator()(const INPUT_ATTACHMENT& ) const { return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT; }
 };
 struct GetVkMemoryProperty {
     template <typename T> VkMemoryPropertyFlagBits operator()(const T& type) const {
@@ -112,6 +120,7 @@ struct IsPipelineImage {
     template <typename T> bool operator()(const T&) const { return false; }
     bool operator()(const COMBINED_SAMPLER& type) const { return type == COMBINED_SAMPLER::PIPELINE; }
     bool operator()(const STORAGE_IMAGE& type) const { return type == STORAGE_IMAGE::PIPELINE; }
+    bool operator()(const INPUT_ATTACHMENT&) const { return true; }
 };
 struct HassPerFramebufferData {
     template <typename T> bool operator()(const T&) const { return false; }
@@ -144,6 +153,7 @@ struct GetTextureImageLayout {
     template <typename T> VkImageLayout operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
     VkImageLayout operator()(const COMBINED_SAMPLER&) const { return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; }
     VkImageLayout operator()(const STORAGE_IMAGE&) const { return VK_IMAGE_LAYOUT_GENERAL; }
+    VkImageLayout operator()(const INPUT_ATTACHMENT&) const { return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; }
 };
 // COMBINED SAMPLER
 struct IsCombinedSampler {

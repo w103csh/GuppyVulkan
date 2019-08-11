@@ -35,6 +35,7 @@ layout(set=_DS_SMP_DEF, binding=0) uniform sampler2DArray sampCh4;
 layout(location = 0) in vec3 fragPosition;  // (texture space)
 layout(location = 1) in vec3 fragNormal;    // (texture space)
 layout(location = 2) in vec2 fragTexCoord;  // (texture space)
+// layout(location = 2) centroid in vec2 fragTexCoord;  // (texture space)
 // OUT
 layout(location = 0) out vec4 outColor;
 

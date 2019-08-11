@@ -63,6 +63,11 @@ set(SOURCE
     Compute.h
     ComputeHandler.cpp
     ComputeHandler.h
+    # Deferred
+    Deferred.cpp
+    Deferred.h
+    RenderPassDeferred.cpp
+    RenderPassDeferred.h
     # Descriptor
     Descriptor.cpp
     Descriptor.h

@@ -17,7 +17,6 @@ enum class PASS : uint32_t;
 using FlagBits = uint32_t;
 // Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)
 using VB_INDEX_TYPE = uint32_t;
-using SCENE_INDEX_TYPE = uint8_t;
 
 // TODO: make a data structure so this can be const in the handlers.
 template <typename TEnum, typename TType>
@@ -112,13 +111,13 @@ struct BarrierResource {
     }
 };
 
-using DESCRIPTOR = std::variant<UNIFORM, UNIFORM_DYNAMIC, COMBINED_SAMPLER, STORAGE_IMAGE, STORAGE_BUFFER>;
+using DESCRIPTOR = std::variant<UNIFORM, UNIFORM_DYNAMIC, COMBINED_SAMPLER, STORAGE_IMAGE, STORAGE_BUFFER, INPUT_ATTACHMENT>;
 
 // Why is this a multiset?
 using pipelinePassSet = std::multiset<std::pair<PIPELINE, PASS>>;
 
 struct ImageInfo {
-    VkDescriptorImageInfo descInfo = {};
+    std::map<uint32_t, VkDescriptorImageInfo> descInfoMap;
     VkImage image = VK_NULL_HANDLE;
 };
 

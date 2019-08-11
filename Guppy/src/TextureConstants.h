@@ -32,6 +32,9 @@ extern const CreateInfo VULKAN_CREATE_INFO;
 constexpr std::string_view HARDWOOD_ID = "Hardwood Texture";
 extern const CreateInfo HARDWOOD_CREATE_INFO;
 
+constexpr std::string_view NEON_BLUE_TUX_GUPPY_ID = "Neon Blue Tux Guppy Texture";
+extern const CreateInfo NEON_BLUE_TUX_GUPPY_CREATE_INFO;
+
 constexpr std::string_view MEDIEVAL_HOUSE_ID = "Medieval House Texture";
 extern const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO;
 

@@ -61,6 +61,8 @@ class Handler : public Game::Handler {
 
     void init() override;
 
+    bool checkOffset(const MESH type, const Mesh::index offset);
+
     // template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo>
     // std::pair<MESH, Mesh::INDEX> makeMesh(TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo) {
     //    if (std::is_base_of<Mesh::Color, TMeshType>::value) {

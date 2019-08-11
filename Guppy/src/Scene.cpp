@@ -8,6 +8,7 @@
 #include "Shell.h"
 // HANDLERS
 #include "MeshHandler.h"
+#include "ModelHandler.h"
 #include "PipelineHandler.h"
 #include "SceneHandler.h"
 #include "SelectionManager.h"
@@ -21,12 +22,43 @@ struct UBOTag {
 
 }  // namespace
 
-Scene::Base::Base(Scene::Handler& handler, size_t offset, bool makeFaceSelection)
+Scene::Base::Base(Scene::Handler& handler, const index offset, bool makeFaceSelection)
     : Handlee(handler),
-      offset_(offset),
+      OFFSET(offset),
       pSelectionManager_(std::make_unique<Selection::Manager>(handler, makeFaceSelection)) {}
 
 Scene::Base::~Base() = default;
+
+void Scene::Base::addMeshIndex(const MESH type, const Mesh::index offset) {
+    if (!handler().meshHandler().checkOffset(type, offset)) {
+        assert(false);
+        exit(EXIT_FAILURE);
+    }
+    switch (type) {
+        case MESH::COLOR: {
+            colorOffsets_.insert(offset);
+        } break;
+        case MESH::LINE: {
+            lineOffsets_.insert(offset);
+        } break;
+        case MESH::TEXTURE: {
+            texOffsets_.insert(offset);
+        } break;
+        default: {
+            assert(false);
+            exit(EXIT_FAILURE);
+        }
+    }
+}
+
+void Scene::Base::addModelIndex(const Model::index offset) {
+    if (!handler().modelHandler().checkOffset(offset)) {
+        assert(false);
+        exit(EXIT_FAILURE);
+    }
+    assert(modelOffsets_.count(offset) == 0);
+    modelOffsets_.insert(offset);
+}
 
 void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
                          const std::shared_ptr<Pipeline::BindData>& pipelineBindData, const VkCommandBuffer& priCmd,
@@ -35,23 +67,51 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
         case PIPELINE::PBR_COLOR:
         case PIPELINE::CUBE:
         case PIPELINE::TRI_LIST_COLOR: {
-            for (auto& pMesh : handler().meshHandler().getColorMeshes())
+            for (const auto& offset : colorOffsets_) {
+                auto& pMesh = handler().meshHandler().getColorMesh(offset);
                 if (pMesh->shouldDraw(passType, pipelineType))  //
                     pMesh->draw(passType, pipelineBindData, priCmd, frameIndex);
+            }
+            for (const auto& modelOffset : modelOffsets_) {
+                for (const auto& offset : handler().modelHandler().getModel(modelOffset)->getMeshOffsets(MESH::COLOR)) {
+                    auto& pMesh = handler().meshHandler().getColorMesh(offset);
+                    if (pMesh->shouldDraw(passType, pipelineType))  //
+                        pMesh->draw(passType, pipelineBindData, priCmd, frameIndex);
+                }
+            }
         } break;
+        case PIPELINE::DEFERRED_MRT:
         case PIPELINE::PARALLAX_SIMPLE:
         case PIPELINE::PARALLAX_STEEP:
         case PIPELINE::PBR_TEX:
         case PIPELINE::BP_TEX_CULL_NONE:
         case PIPELINE::TRI_LIST_TEX: {
-            for (auto& pMesh : handler().meshHandler().getTextureMeshes())
+            for (const auto& offset : texOffsets_) {
+                auto& pMesh = handler().meshHandler().getTextureMesh(offset);
                 if (pMesh->shouldDraw(passType, pipelineType))  //
                     pMesh->draw(passType, pipelineBindData, priCmd, frameIndex);
+            }
+            for (const auto& modelOffset : modelOffsets_) {
+                for (const auto& offset : handler().modelHandler().getModel(modelOffset)->getMeshOffsets(MESH::TEXTURE)) {
+                    auto& pMesh = handler().meshHandler().getTextureMesh(offset);
+                    if (pMesh->shouldDraw(passType, pipelineType))  //
+                        pMesh->draw(passType, pipelineBindData, priCmd, frameIndex);
+                }
+            }
         } break;
         case PIPELINE::LINE: {
-            for (auto& pMesh : handler().meshHandler().getLineMeshes())
+            for (const auto& offset : lineOffsets_) {
+                auto& pMesh = handler().meshHandler().getLineMesh(offset);
                 if (pMesh->shouldDraw(passType, pipelineType))  //
                     pMesh->draw(passType, pipelineBindData, priCmd, frameIndex);
+            }
+            for (const auto& modelOffset : modelOffsets_) {
+                for (const auto& offset : handler().modelHandler().getModel(modelOffset)->getMeshOffsets(MESH::LINE)) {
+                    auto& pMesh = handler().meshHandler().getLineMesh(offset);
+                    if (pMesh->shouldDraw(passType, pipelineType))  //
+                        pMesh->draw(passType, pipelineBindData, priCmd, frameIndex);
+                }
+            }
         } break;
         default:;
     }

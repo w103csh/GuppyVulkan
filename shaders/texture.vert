@@ -29,6 +29,7 @@ layout(location=5) in mat4 inModel;
 layout(location=0) out vec3 fragPosition; // (camera space)
 layout(location=1) out vec3 fragNormal;   // (texture space)
 layout(location=2) out vec2 fragTexCoord; // (texture space)
+// layout(location=2) centroid out vec2 fragTexCoord; // (texture space)
 layout(location=3) out mat3 TBN;
 
 void main() {

@@ -32,7 +32,10 @@ set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};${VULKAN_HEADERS_INSTALL_DIR};${VULKA
 set(EXT_LIB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/libs")
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-find_package(PythonInterp 3 REQUIRED)
+if(APPLE)
+    message(STATUS "Using find_package to locate Python3")
+    find_package(PythonInterp 3 REQUIRED)
+endif()
 message(STATUS "Using find_package to locate Vulkan")
 find_package(Vulkan)
 message(STATUS "Vulkan FOUND = ${Vulkan_FOUND}")

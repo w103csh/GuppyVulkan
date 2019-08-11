@@ -174,21 +174,20 @@ VkDeviceSize createBuffer(const VkDevice &dev, const VkDeviceSize &size, const V
 
 void copyBuffer(const VkCommandBuffer &cmd, const VkBuffer &srcBuff, const VkBuffer &dstBuff, const VkDeviceSize &size);
 
-void createImage(const VkDevice &dev, const VkImageCreateInfo &imageInfo, const VkPhysicalDeviceMemoryProperties &memProps,
-                 const VkFlags &reqMask, VkImage &image, VkDeviceMemory &memory);
+void createImageMemory(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps,
+                       const VkMemoryPropertyFlags &memPropFlags, VkImage &image, VkDeviceMemory &memory);
 
 void createImage(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps,
                  const std::vector<uint32_t> &queueFamilyIndices, const VkSampleCountFlagBits &numSamples,
-                 const VkFormat &format, const VkImageTiling &tiling, const VkImageUsageFlags &usage, const VkFlags &reqMask,
-                 uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t arrayLayers, VkImage &image,
-                 VkDeviceMemory &memory);
+                 const VkFormat &format, const VkImageTiling &tiling, const VkImageUsageFlags &usage,
+                 const VkMemoryPropertyFlags &reqMask, uint32_t width, uint32_t height, uint32_t mipLevels,
+                 uint32_t arrayLayers, VkImage &image, VkDeviceMemory &memory);
 
 void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount,
                        const VkBuffer &src_buf, const VkImage &dst_img);
 
-void createImageView(const VkDevice &device, const VkImage &image, const uint32_t &mipLevels, const VkFormat &format,
-                     const VkImageAspectFlags &aspectFlags, const VkImageViewType &viewType, uint32_t layerCount,
-                     VkImageView &view);
+void createImageView(const VkDevice &device, const VkImage &image, const VkFormat &format, const VkImageViewType &viewType,
+                     const VkImageSubresourceRange &subresourceRange, VkImageView &view);
 
 void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, const VkFormat &format,
                            const VkImageLayout &oldLayout, const VkImageLayout &newLayout, VkPipelineStageFlags srcStages,
@@ -232,7 +231,10 @@ static void destroyImageResource(const VkDevice &dev, ImageResource &res) {
     res.memory = VK_NULL_HANDLE;
 }
 
-constexpr bool compExtent2D(const VkExtent2D &a, const VkExtent2D &b) { return a.height == b.height && a.width == b.width; }
+template <typename T1, typename T2>
+constexpr bool compExtent2D(const T1 &a, const T2 &b) {
+    return a.height == b.height && a.width == b.width;
+}
 
 static bool isNumber(const std::string_view &sv) {
     return std::find_if(sv.begin(), sv.end(), [](const auto &c) { return !std::isdigit(c); }) == sv.end();

@@ -30,10 +30,11 @@ class Handler : public Game::Handler {
     inline uint32_t getCount() { return static_cast<uint32_t>(pTextures_.size()); }
 
     // TODO: should these be public? Moved these for render to sampler.
-    void createSampler(const VkDevice& dev, Sampler::Base& texSampler);
+    void createSampler(const VkDevice& dev, const Sampler::Base& sampler, Sampler::LayerResource& layerResource);
 
     // TODO: most of these functions should be static
-    static void createDescInfo(const DESCRIPTOR& descType, Sampler::Base& texSampler);
+    static void createDescInfo(std::shared_ptr<Texture::Base>& pTexture, const uint32_t layerKey,
+                               const Sampler::LayerResource& layerResource, Sampler::Base& sampler);
 
     // SWAPCHAIN
     void attachSwapchain();
@@ -48,10 +49,11 @@ class Handler : public Game::Handler {
     void load(std::shared_ptr<Texture::Base>& pTexture, const CreateInfo* pCreateInfo);
 
     void createTexture(std::shared_ptr<Texture::Base> pTexture, bool stageResources = true);
-    void createTextureSampler(const std::shared_ptr<Texture::Base> pTexture, Sampler::Base& texSampler);
+    void makeTexture(std::shared_ptr<Texture::Base>& pTexture, Sampler::Base& texSampler);
     void createImage(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes);
     void generateMipmaps(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes);
-    void createImageView(const VkDevice& dev, Sampler::Base& texSampler);
+    void createImageView(const VkDevice& dev, const Sampler::Base& sampler, const uint32_t baseArrayLayer,
+                         const uint32_t layerCount, Sampler::LayerResource& layerResource);
 
     std::vector<std::shared_ptr<Texture::Base>> pTextures_;
     std::vector<std::future<std::shared_ptr<Texture::Base>>> texFutures_;

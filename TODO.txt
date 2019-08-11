@@ -1,4 +1,6 @@
 
+ - Use VK_KHR_dedicated_allocation/VK_KHR_get_memory_requirements2 when allocating memory.
+
  - Meshes that are created that do no have an active pass/pipeline still look for descriptor
     data. This causes the program to crash because meshes always look for the data after the
     vertex buffers are loaded. The solution should be to have a queue of meshes that

@@ -7,6 +7,7 @@
 #include <variant>
 
 #include "ConstantsAll.h"
+#include "Deferred.h"
 #include "ScreenSpace.h"
 #include "Shell.h"
 // HANDLERS
@@ -29,6 +30,7 @@ void Texture::Handler::init() {
         &Texture::STATUE_CREATE_INFO,
         &Texture::VULKAN_CREATE_INFO,
         &Texture::HARDWOOD_CREATE_INFO,
+        &Texture::NEON_BLUE_TUX_GUPPY_CREATE_INFO,
         &Texture::MEDIEVAL_HOUSE_CREATE_INFO,
         &Texture::WOOD_CREATE_INFO,
         &Texture::MYBRICK_CREATE_INFO,
@@ -45,6 +47,10 @@ void Texture::Handler::init() {
         &Texture::ScreenSpace::HDR_LOG_BLIT_B_2D_TEXTURE_CREATE_INFO,
         &Texture::ScreenSpace::BLUR_A_2D_TEXTURE_CREATE_INFO,
         &Texture::ScreenSpace::BLUR_B_2D_TEXTURE_CREATE_INFO,
+        //&Texture::Deferred::POS_NORM_2D_ARRAY_CREATE_INFO,
+        &Texture::Deferred::POS_2D_CREATE_INFO,
+        &Texture::Deferred::NORM_2D_CREATE_INFO,
+        &Texture::Deferred::COLOR_2D_CREATE_INFO,
     };
 
     // I think this does not get set properly, so I am not sure where the texture generation
@@ -145,14 +151,15 @@ bool Texture::Handler::update(std::shared_ptr<Texture::Base> pTexture) {
         for (auto& sampler : pTexture->samplers) {
             if (sampler.swpchnInfo.usesExtent) {
                 const auto& extent = shell().context().extent;
-                sampler.extent.width =
+                sampler.imgCreateInfo.extent.width =
                     static_cast<uint32_t>(static_cast<float>(extent.width) * sampler.swpchnInfo.extentFactor);
-                sampler.extent.height =
+                sampler.imgCreateInfo.extent.height =
                     static_cast<uint32_t>(static_cast<float>(extent.height) * sampler.swpchnInfo.extentFactor);
-                if (sampler.mipmapInfo.usesExtent) sampler.mipmapInfo.mipLevels = Sampler::GetMipLevels(sampler.extent);
+                if (sampler.mipmapInfo.usesExtent)
+                    sampler.imgCreateInfo.mipLevels = Sampler::GetMipLevels(sampler.imgCreateInfo.extent);
             }
             if (sampler.swpchnInfo.usesFormat) {
-                sampler.format = shell().context().surfaceFormat.format;
+                sampler.imgCreateInfo.format = shell().context().surfaceFormat.format;
             }
         }
         bool wasDestroyed = pTexture->status == STATUS::DESTROYED;
@@ -223,7 +230,7 @@ void Texture::Handler::createTexture(std::shared_ptr<Texture::Base> pTexture, bo
     // Dataless textures don't need to be staged
     if (stageResources) pTexture->pLdgRes = loadingHandler().createLoadingResources();
     // Create the texture on the device
-    for (auto& sampler : pTexture->samplers) createTextureSampler(pTexture, sampler);
+    for (auto& sampler : pTexture->samplers) makeTexture(pTexture, sampler);
 
     if (stageResources) loadingHandler().loadSubmit(std::move(pTexture->pLdgRes));
     pTexture->status = STATUS::READY;
@@ -232,11 +239,12 @@ void Texture::Handler::createTexture(std::shared_ptr<Texture::Base> pTexture, bo
     materialHandler().updateTexture(pTexture);
 }
 
-void Texture::Handler::createTextureSampler(const std::shared_ptr<Texture::Base> pTexture, Sampler::Base& sampler) {
-    assert(sampler.arrayLayers > 0);
+void Texture::Handler::makeTexture(std::shared_ptr<Texture::Base>& pTexture, Sampler::Base& sampler) {
+    assert(sampler.imgCreateInfo.arrayLayers > 0);
 
     createImage(sampler, pTexture->pLdgRes);
-    if (sampler.mipmapInfo.generateMipmaps && sampler.mipmapInfo.mipLevels > 1) {
+
+    if (sampler.mipmapInfo.generateMipmaps && sampler.imgCreateInfo.mipLevels > 1) {
         generateMipmaps(sampler, pTexture->pLdgRes);
     } else if (pTexture->pLdgRes != nullptr) {
         /* As of now there are memory barries (transitions) in "createImages", "generateMipmaps",
@@ -244,25 +252,31 @@ void Texture::Handler::createTextureSampler(const std::shared_ptr<Texture::Base>
          *	to vkCmdPipelineBarrier. A single call might not be possible because you
          *	can/should use different queues based on staging and things.
          */
-        helpers::transitionImageLayout(pTexture->pLdgRes->graphicsCmd, sampler.image, sampler.format,
+        helpers::transitionImageLayout(pTexture->pLdgRes->graphicsCmd, sampler.image, sampler.imgCreateInfo.format,
                                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
                                        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                                       sampler.mipmapInfo.mipLevels, sampler.arrayLayers);
+                                       sampler.imgCreateInfo.mipLevels, sampler.imgCreateInfo.arrayLayers);
     }
-    createImageView(shell().context().dev, sampler);
-    createSampler(shell().context().dev, sampler);
-    createDescInfo(pTexture->DESCRIPTOR_TYPE, sampler);
+
+    for (auto& [layer, layerResource] : sampler.layerResourceMap) {
+        uint32_t layerCount = (layer == Sampler::IMAGE_ARRAY_LAYERS_ALL) ? sampler.imgCreateInfo.arrayLayers : 1;
+        uint32_t baseArrayLayer = (layer == Sampler::IMAGE_ARRAY_LAYERS_ALL) ? 0 : layer;
+        // Image view
+        createImageView(shell().context().dev, sampler, baseArrayLayer, layerCount, layerResource);
+        // Sampler (optional)
+        if (layerResource.hasSampler) createSampler(shell().context().dev, sampler, layerResource);
+
+        createDescInfo(pTexture, layer, layerResource, sampler);
+    }
 
     sampler.cleanup();
 }
 
 void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes) {
-    VkImageCreateInfo imageInfo = sampler.getImageCreateInfo();
-
     // Loading data only settings for image
     if (pLdgRes != nullptr) {
-        assert(sampler.arrayLayers == sampler.pPixels.size());
-        imageInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        assert(sampler.imgCreateInfo.arrayLayers == sampler.pPixels.size());
+        sampler.imgCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
     } else {
         assert(sampler.pPixels.empty());
     }
@@ -270,11 +284,36 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
     // Using CmdBufHandler::getUniqueQueueFamilies(true, false, true) here might not be wise... To work
     // right it relies on the the two command buffers being created with the same data.
     auto queueFamilyIndices = commandHandler().getUniqueQueueFamilies(true, false, true);
-    imageInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
-    imageInfo.pQueueFamilyIndices = queueFamilyIndices.data();
+    sampler.imgCreateInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
+    sampler.imgCreateInfo.pQueueFamilyIndices = queueFamilyIndices.data();
 
-    helpers::createImage(shell().context().dev, imageInfo, shell().context().memProps, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-                         sampler.image, sampler.memory);
+    // Create image
+    vk::assert_success(vkCreateImage(shell().context().dev, &sampler.imgCreateInfo, nullptr, &sampler.image));
+
+    VkMemoryPropertyFlags memFlags;
+    if (sampler.NAME.find("Deferred 2D Array Position/Normal Sampler") != std::string::npos ||
+        sampler.NAME.find("Deferred 2D Color Sampler") != std::string::npos) {
+        // Test to see if the device has any memory with the lazily allocated bit.
+        memFlags = VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
+        VkMemoryRequirements memReqs;
+        vkGetImageMemoryRequirements(shell().context().dev, sampler.image, &memReqs);
+        uint32_t heapIndex;
+        if (helpers::getMemoryType(shell().context().memProps, memReqs.memoryTypeBits, memFlags, &heapIndex)) {
+            assert(false);  // Never tested the lazy allocation bit. Check to see if all is well!!!
+        } else {
+            // Section 10.2 of the spec has a list of heap types and the one we want when doing deferred for attachments
+            // is VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT. The check above is for
+            // testing when I use a gpu that has one of these heaps.
+            memFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+            // TODO: the getMemoryType function stinks. If I use VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+            // VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT its picks the worst kind of memory.
+        }
+    } else {
+        memFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    }
+
+    // Allocate memory
+    helpers::createImageMemory(shell().context().dev, shell().context().memProps, memFlags, sampler.image, sampler.memory);
 
     // If loading data create a staging buffer, and copy/transition the data to the image.
     if (pLdgRes != nullptr) {
@@ -292,12 +331,14 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
 
         vkUnmapMemory(shell().context().dev, stgRes.memory);
 
-        helpers::transitionImageLayout(pLdgRes->transferCmd, sampler.image, sampler.format, VK_IMAGE_LAYOUT_UNDEFINED,
-                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                                       VK_PIPELINE_STAGE_TRANSFER_BIT, sampler.mipmapInfo.mipLevels, sampler.arrayLayers);
+        helpers::transitionImageLayout(pLdgRes->transferCmd, sampler.image, sampler.imgCreateInfo.format,
+                                       VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                       VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                       sampler.imgCreateInfo.mipLevels, sampler.imgCreateInfo.arrayLayers);
 
-        helpers::copyBufferToImage(pLdgRes->graphicsCmd, sampler.extent.width, sampler.extent.height, sampler.arrayLayers,
-                                   stgRes.buffer, sampler.image);
+        helpers::copyBufferToImage(pLdgRes->graphicsCmd, sampler.imgCreateInfo.extent.width,
+                                   sampler.imgCreateInfo.extent.height, sampler.imgCreateInfo.arrayLayers, stgRes.buffer,
+                                   sampler.image);
 
         pLdgRes->stgResources.push_back(stgRes);
     }
@@ -325,13 +366,13 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
     barrier.subresourceRange.baseArrayLayer = 0;
-    barrier.subresourceRange.layerCount = sampler.arrayLayers;
+    barrier.subresourceRange.layerCount = sampler.imgCreateInfo.arrayLayers;
     barrier.subresourceRange.levelCount = 1;
 
-    int32_t mipWidth = sampler.extent.width;
-    int32_t mipHeight = sampler.extent.height;
+    int32_t mipWidth = sampler.imgCreateInfo.extent.width;
+    int32_t mipHeight = sampler.imgCreateInfo.extent.height;
 
-    for (uint32_t i = 1; i < sampler.mipmapInfo.mipLevels; i++) {
+    for (uint32_t i = 1; i < sampler.imgCreateInfo.mipLevels; i++) {
         // CREATE MIP LEVEL
 
         barrier.subresourceRange.baseMipLevel = i - 1;
@@ -350,14 +391,14 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
         blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         blit.srcSubresource.mipLevel = i - 1;
         blit.srcSubresource.baseArrayLayer = 0;
-        blit.srcSubresource.layerCount = sampler.arrayLayers;
+        blit.srcSubresource.layerCount = sampler.imgCreateInfo.arrayLayers;
         // destination
         blit.dstOffsets[0] = {0, 0, 0};
         blit.dstOffsets[1] = {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
         blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         blit.dstSubresource.mipLevel = i;
         blit.dstSubresource.baseArrayLayer = 0;
-        blit.dstSubresource.layerCount = sampler.arrayLayers;
+        blit.dstSubresource.layerCount = sampler.imgCreateInfo.arrayLayers;
 
         vkCmdBlitImage(pLdgRes->graphicsCmd, sampler.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, sampler.image,
                        VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
@@ -380,7 +421,7 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
     // This is not handled in the loop so one more!!!! The last level is never never
     // blitted from.
 
-    barrier.subresourceRange.baseMipLevel = sampler.mipmapInfo.mipLevels - 1;
+    barrier.subresourceRange.baseMipLevel = sampler.imgCreateInfo.mipLevels - 1;
     barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
     barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
     barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -390,23 +431,37 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
                          nullptr, 0, nullptr, 1, &barrier);
 }
 
-void Texture::Handler::createImageView(const VkDevice& dev, Sampler::Base& sampler) {
-    helpers::createImageView(dev, sampler.image, sampler.mipmapInfo.mipLevels, sampler.format, VK_IMAGE_ASPECT_COLOR_BIT,
-                             sampler.imageViewType, sampler.arrayLayers, sampler.view);
+void Texture::Handler::createImageView(const VkDevice& dev, const Sampler::Base& sampler, const uint32_t baseArrayLayer,
+                                       const uint32_t layerCount, Sampler::LayerResource& layerResource) {
+    VkImageSubresourceRange range = {
+        VK_IMAGE_ASPECT_COLOR_BIT, 0, sampler.imgCreateInfo.mipLevels, baseArrayLayer, layerCount,
+    };
+    helpers::createImageView(dev, sampler.image, sampler.imgCreateInfo.format, sampler.imageViewType, range,
+                             layerResource.view);
 }
 
-void Texture::Handler::createSampler(const VkDevice& dev, Sampler::Base& sampler) {
+void Texture::Handler::createSampler(const VkDevice& dev, const Sampler::Base& sampler,
+                                     Sampler::LayerResource& layerResource) {
     VkSamplerCreateInfo samplerInfo = Sampler::GetVkSamplerCreateInfo(sampler);
-    vk::assert_success(vkCreateSampler(dev, &samplerInfo, nullptr, &sampler.sampler));
+    vk::assert_success(vkCreateSampler(dev, &samplerInfo, nullptr, &layerResource.sampler));
     // Name some objects for debugging
-    ext::DebugMarkerSetObjectName(dev, (uint64_t)sampler.sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT,
+    ext::DebugMarkerSetObjectName(dev, (uint64_t)layerResource.sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT,
                                   (sampler.NAME + " sampler").c_str());
 }
 
-void Texture::Handler::createDescInfo(const DESCRIPTOR& descType, Sampler::Base& sampler) {
-    sampler.imgInfo.descInfo.imageLayout = std::visit(Descriptor::GetTextureImageLayout{}, descType);
-    sampler.imgInfo.descInfo.imageView = sampler.view;
-    sampler.imgInfo.descInfo.sampler = sampler.sampler;
+void Texture::Handler::createDescInfo(std::shared_ptr<Texture::Base>& pTexture, const uint32_t layerKey,
+                                      const Sampler::LayerResource& layerResource, Sampler::Base& sampler) {
+    if (pTexture->status == STATUS::DESTROYED)
+        assert(sampler.imgInfo.descInfoMap.count(layerKey) == 1);
+    else
+        assert(sampler.imgInfo.descInfoMap.count(layerKey) == 0);
+
+    sampler.imgInfo.descInfoMap[layerKey] = {
+        layerResource.sampler,
+        layerResource.view,
+        std::visit(Descriptor::GetTextureImageLayout{}, pTexture->DESCRIPTOR_TYPE),
+    };
+
     sampler.imgInfo.image = sampler.image;
 }
 
@@ -447,7 +502,7 @@ void Texture::Handler::attachSwapchain() {
         if (std::visit(Descriptor::IsStorageImage{}, pTexture->DESCRIPTOR_TYPE) && pTexture->PER_FRAMEBUFFER) {
             for (const auto& sampler : pTexture->samplers) {
                 // TODO: Make an actual barrier. Not sure if it will ever be necessary
-                helpers::transitionImageLayout(commandHandler().transferCmd(), sampler.image, sampler.format,
+                helpers::transitionImageLayout(commandHandler().transferCmd(), sampler.image, sampler.imgCreateInfo.format,
                                                VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
                                                VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 1, 1);
             }

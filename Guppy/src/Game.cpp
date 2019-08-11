@@ -38,7 +38,7 @@ Game::Settings::Settings()
       vsync(true),
       animate(true),
       validate(true),
-      validate_verbose(true),
+      validate_verbose(false),
       no_tick(false),
       no_render(false),
       try_sampler_anisotropy(true),  // TODO: Not sure what this does

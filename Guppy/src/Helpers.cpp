@@ -156,32 +156,30 @@ void copyBuffer(const VkCommandBuffer &cmd, const VkBuffer &srcBuff, const VkBuf
     vkCmdCopyBuffer(cmd, srcBuff, dstBuff, 1, &copyRegion);
 }
 
-void createImage(const VkDevice &dev, const VkImageCreateInfo &imageInfo, const VkPhysicalDeviceMemoryProperties &memProps,
-                 const VkFlags &reqMask, VkImage &image, VkDeviceMemory &memory) {
-    /* Create image */
-    vk::assert_success(vkCreateImage(dev, &imageInfo, nullptr, &image));
-
-    VkMemoryRequirements mem_reqs;
-    vkGetImageMemoryRequirements(dev, image, &mem_reqs);
+void createImageMemory(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps,
+                       const VkMemoryPropertyFlags &memPropFlags, VkImage &image, VkDeviceMemory &memory) {
+    VkMemoryRequirements memReqs;
+    vkGetImageMemoryRequirements(dev, image, &memReqs);
 
     VkMemoryAllocateInfo allocInfo = {};
     allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocInfo.allocationSize = mem_reqs.size;
-    /* Use the memory properties to determine the type of memory required */
-    auto pass = getMemoryType(memProps, mem_reqs.memoryTypeBits, reqMask, &allocInfo.memoryTypeIndex);
+    allocInfo.allocationSize = memReqs.size;
+
+    // Use the memory properties to determine the type of memory required
+    auto pass = getMemoryType(memProps, memReqs.memoryTypeBits, memPropFlags, &allocInfo.memoryTypeIndex);
     assert(pass);
 
-    /* Allocate memory */
+    // Allocate memory
     vk::assert_success(vkAllocateMemory(dev, &allocInfo, nullptr, &memory));
-
+    // Bind memory
     vk::assert_success(vkBindImageMemory(dev, image, memory, 0));
 }
 
 void createImage(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps,
                  const std::vector<uint32_t> &queueFamilyIndices, const VkSampleCountFlagBits &numSamples,
-                 const VkFormat &format, const VkImageTiling &tiling, const VkImageUsageFlags &usage, const VkFlags &reqMask,
-                 uint32_t width, uint32_t height, uint32_t mipLevels, uint32_t arrayLayers, VkImage &image,
-                 VkDeviceMemory &memory) {
+                 const VkFormat &format, const VkImageTiling &tiling, const VkImageUsageFlags &usage,
+                 const VkMemoryPropertyFlags &reqMask, uint32_t width, uint32_t height, uint32_t mipLevels,
+                 uint32_t arrayLayers, VkImage &image, VkDeviceMemory &memory) {
     VkImageCreateInfo imageInfo = {};
     imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageInfo.imageType = VK_IMAGE_TYPE_2D;  // param?
@@ -199,7 +197,8 @@ void createImage(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &me
     imageInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
     imageInfo.pQueueFamilyIndices = queueFamilyIndices.data();
 
-    createImage(dev, imageInfo, memProps, reqMask, image, memory);
+    vk::assert_success(vkCreateImage(dev, &imageInfo, nullptr, &image));
+    helpers::createImageMemory(dev, memProps, reqMask, image, memory);
 }
 
 void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount,
@@ -222,9 +221,8 @@ void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t heig
                            1, &region);
 }
 
-void createImageView(const VkDevice &device, const VkImage &image, const uint32_t &mipLevels, const VkFormat &format,
-                     const VkImageAspectFlags &aspectFlags, const VkImageViewType &viewType, uint32_t layerCount,
-                     VkImageView &view) {
+void createImageView(const VkDevice &device, const VkImage &image, const VkFormat &format, const VkImageViewType &viewType,
+                     const VkImageSubresourceRange &subresourceRange, VkImageView &view) {
     VkImageViewCreateInfo viewInfo = {};
     viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
     viewInfo.image = image;
@@ -239,16 +237,11 @@ void createImageView(const VkDevice &device, const VkImage &image, const uint32_
     viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
     viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
 
-    viewInfo.subresourceRange.aspectMask = aspectFlags;
-    viewInfo.subresourceRange.baseMipLevel = 0;
-    viewInfo.subresourceRange.levelCount = mipLevels;
-
     /*  If you were working on a stereographic 3D application, then you would create a swap
         chain with multiple layers. You could then create multiple image views for each image
         representing the views for the left and right eyes by accessing different layers.
     */
-    viewInfo.subresourceRange.baseArrayLayer = 0;
-    viewInfo.subresourceRange.layerCount = layerCount;
+    viewInfo.subresourceRange = subresourceRange;
 
     vk::assert_success(vkCreateImageView(device, &viewInfo, nullptr, &view));
 }

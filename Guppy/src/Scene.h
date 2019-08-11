@@ -2,21 +2,17 @@
 #ifndef SCENE_H
 #define SCENE_H
 
-#include <array>
-#include <future>
-#include <vector>
+#include <set>
 #include <vulkan/vulkan.h>
 
 #include "Handlee.h"
-#include "Helpers.h"
 #include "Mesh.h"
+#include "Model.h"
 #include "SelectionManager.h"
 
-// clang-format off
-namespace RenderPass    { class Base; }
-// clang-format on
-
 namespace Scene {
+
+using index = uint8_t;
 
 class Handler;
 
@@ -24,10 +20,13 @@ class Base : public Handlee<Scene::Handler> {
     friend class Handler;
 
    public:
-    Base(Scene::Handler& handler, size_t offset, bool makeFaceSelection);
+    Base(Scene::Handler& handler, const index offset, bool makeFaceSelection);
     virtual ~Base();
 
-    inline size_t getOffset() { return offset_; }
+    const index OFFSET;
+
+    void addMeshIndex(const MESH type, const Mesh::index offset);
+    void addModelIndex(const Model::index offset);
 
     void record(const PASS& passType, const PIPELINE& pipelineType,
                 const std::shared_ptr<Pipeline::BindData>& pipelineBindData, const VkCommandBuffer& priCmd,
@@ -40,7 +39,10 @@ class Base : public Handlee<Scene::Handler> {
     void destroy();
 
    private:
-    size_t offset_;
+    std::set<Mesh::index> colorOffsets_;
+    std::set<Mesh::index> lineOffsets_;
+    std::set<Mesh::index> texOffsets_;
+    std::set<Model::index> modelOffsets_;
 
     // Selection
     std::unique_ptr<Selection::Manager> pSelectionManager_;

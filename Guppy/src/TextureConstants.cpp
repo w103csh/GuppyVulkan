@@ -23,6 +23,12 @@ const CreateInfo HARDWOOD_CREATE_INFO = {
     {Sampler::HARDWOOD_CREATE_INFO},
 };
 
+// NEON BLUE TUX GUPPY
+const CreateInfo NEON_BLUE_TUX_GUPPY_CREATE_INFO = {
+    std::string(NEON_BLUE_TUX_GUPPY_ID),
+    {Sampler::NEON_BLUE_TUX_GUPPY_CREATE_INFO},
+};
+
 // MEDIEVAL HOUSE
 const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO = {
     std::string(MEDIEVAL_HOUSE_ID),

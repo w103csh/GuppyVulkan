@@ -24,6 +24,7 @@ namespace Sampler {
 using USAGE = enum {
     COLOR =         0x00000001,  // DIFFUSE
     HDR_LOG =       0x00000002,
+    POSITION =      0x00000004,
     NORMAL =        0x00000010,
     SPECULAR =      0x00000100,
     ALPHA =         0x00001000,
@@ -42,12 +43,20 @@ using CHANNELS = enum {
 // { path, number of channels, combine offset }
 using combineInfo = std::tuple<std::string, CHANNELS, uint8_t>;
 
-uint32_t GetMipLevels(const VkExtent2D& extent);
+uint32_t GetMipLevels(const VkExtent3D& extent);
 
 struct LayerInfo {
     USAGE type;
     std::string path;
+    bool makeImageView = false;  // Flag for this layer
+    bool makeSampler = false;    // Flag for this layer
     std::vector<combineInfo> combineInfos;
+};
+
+struct LayersInfo {
+    std::vector<LayerInfo> infos;
+    bool makeImageView = true;  // Flag for all layers
+    bool makeSampler = true;    // Flag for all layers
 };
 
 // If usesFormat or usesExtent is true it will cause the texture
@@ -62,12 +71,16 @@ struct SwapchainInfo {
 struct MipmapInfo {
     bool generateMipmaps = true;
     bool usesExtent = true;
+};
+
+struct MipmapCreateInfo {
+    MipmapInfo info;
     uint32_t mipLevels = 1;
 };
 
 struct CreateInfo {
     std::string name = "";
-    std::vector<LayerInfo> layerInfos;
+    LayersInfo layersInfo = {};
     VkImageViewType imageViewType = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
     // Leave as bad only if the texture needs to pick up its extent
     // from a loaded image file, or the swapchain images.
@@ -76,17 +89,26 @@ struct CreateInfo {
     VkImageCreateFlags imageFlags = 0;
     SAMPLER type = SAMPLER::DEFAULT;
     VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT;
-    MipmapInfo mipmapInfo = {};
+    MipmapCreateInfo mipmapCreateInfo = {};
     VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
     CHANNELS channels = CHANNELS::_4;
     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 };
+
+constexpr uint32_t IMAGE_ARRAY_LAYERS_ALL = UINT32_MAX;
+struct LayerResource {
+    bool hasSampler = false;
+    VkImageView view = VK_NULL_HANDLE;
+    VkSampler sampler = VK_NULL_HANDLE;
+};
+using layerResourceMap = std::map<uint32_t, LayerResource>;
 
 // CREATE INFOS
 
 extern const CreateInfo STATUE_CREATE_INFO;
 extern const CreateInfo VULKAN_CREATE_INFO;
 extern const CreateInfo HARDWOOD_CREATE_INFO;
+extern const CreateInfo NEON_BLUE_TUX_GUPPY_CREATE_INFO;
 extern const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO;
 extern const CreateInfo WOOD_CREATE_INFO;
 extern const CreateInfo MYBRICK_COLOR_CREATE_INFO;

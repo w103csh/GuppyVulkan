@@ -2,6 +2,7 @@
 #include "PipelineHandler.h"
 
 #include "ConstantsAll.h"
+#include "Deferred.h"
 #include "Material.h"
 #include "Mesh.h"
 #include "Parallax.h"
@@ -43,37 +44,42 @@ void setBase(const VkPipeline& pipeline, VkComputePipelineCreateInfo& info, bool
 
 Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_HANDLE), maxPushConstantsSize_(UINT32_MAX) {
     for (const auto& type : ALL) {
+        assert(pPipelines_.count(type) == 0);
+        std::pair<std::map<PIPELINE, std::unique_ptr<Pipeline::Base>>::iterator, bool> insertPair;
         // clang-format off
         switch (type) {
-            case PIPELINE::TRI_LIST_COLOR:                  pPipelines_.emplace_back(std::make_unique<Default::TriListColor>(std::ref(*this))); break;
-            case PIPELINE::LINE:                            pPipelines_.emplace_back(std::make_unique<Default::Line>(std::ref(*this))); break;
-            case PIPELINE::TRI_LIST_TEX:                    pPipelines_.emplace_back(std::make_unique<Default::TriListTexture>(std::ref(*this))); break;
-            case PIPELINE::CUBE:                            pPipelines_.emplace_back(std::make_unique<Default::Cube>(std::ref(*this))); break;
-            case PIPELINE::PBR_COLOR:                       pPipelines_.emplace_back(std::make_unique<PBR::Color>(std::ref(*this))); break;
-            case PIPELINE::PBR_TEX:                         pPipelines_.emplace_back(std::make_unique<PBR::Texture>(std::ref(*this))); break;
-            case PIPELINE::BP_TEX_CULL_NONE:                pPipelines_.emplace_back(std::make_unique<BP::TextureCullNone>(std::ref(*this))); break;
-            case PIPELINE::PARALLAX_SIMPLE:                 pPipelines_.emplace_back(std::make_unique<Parallax::Simple>(std::ref(*this))); break;
-            case PIPELINE::PARALLAX_STEEP:                  pPipelines_.emplace_back(std::make_unique<Parallax::Steep>(std::ref(*this))); break;
-            case PIPELINE::SCREEN_SPACE_DEFAULT:            pPipelines_.emplace_back(std::make_unique<ScreenSpace::Default>(std::ref(*this))); break;
-            case PIPELINE::SCREEN_SPACE_HDR_LOG:            pPipelines_.emplace_back(std::make_unique<ScreenSpace::HdrLog>(std::ref(*this))); break;
-            case PIPELINE::SCREEN_SPACE_COMPUTE_DEFAULT:    pPipelines_.emplace_back(std::make_unique<ScreenSpace::ComputeDefault>(std::ref(*this))); break;
-            case PIPELINE::SCREEN_SPACE_BRIGHT:             pPipelines_.emplace_back(std::make_unique<ScreenSpace::Bright>(std::ref(*this))); break;
-            case PIPELINE::SCREEN_SPACE_BLUR_A:             pPipelines_.emplace_back(std::make_unique<ScreenSpace::BlurA>(std::ref(*this))); break;
-            case PIPELINE::SCREEN_SPACE_BLUR_B:             pPipelines_.emplace_back(std::make_unique<ScreenSpace::BlurB>(std::ref(*this))); break;
+            case PIPELINE::TRI_LIST_COLOR:                  insertPair = pPipelines_.insert({type, std::make_unique<Default::TriListColor>(std::ref(*this))}); break;
+            case PIPELINE::LINE:                            insertPair = pPipelines_.insert({type, std::make_unique<Default::Line>(std::ref(*this))}); break;
+            case PIPELINE::TRI_LIST_TEX:                    insertPair = pPipelines_.insert({type, std::make_unique<Default::TriListTexture>(std::ref(*this))}); break;
+            case PIPELINE::CUBE:                            insertPair = pPipelines_.insert({type, std::make_unique<Default::Cube>(std::ref(*this))}); break;
+            case PIPELINE::PBR_COLOR:                       insertPair = pPipelines_.insert({type, std::make_unique<PBR::Color>(std::ref(*this))}); break;
+            case PIPELINE::PBR_TEX:                         insertPair = pPipelines_.insert({type, std::make_unique<PBR::Texture>(std::ref(*this))}); break;
+            case PIPELINE::BP_TEX_CULL_NONE:                insertPair = pPipelines_.insert({type, std::make_unique<BP::TextureCullNone>(std::ref(*this))}); break;
+            case PIPELINE::PARALLAX_SIMPLE:                 insertPair = pPipelines_.insert({type, std::make_unique<Parallax::Simple>(std::ref(*this))}); break;
+            case PIPELINE::PARALLAX_STEEP:                  insertPair = pPipelines_.insert({type, std::make_unique<Parallax::Steep>(std::ref(*this))}); break;
+            case PIPELINE::SCREEN_SPACE_DEFAULT:            insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::Default>(std::ref(*this))}); break;
+            case PIPELINE::SCREEN_SPACE_HDR_LOG:            insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::HdrLog>(std::ref(*this))}); break;
+            case PIPELINE::SCREEN_SPACE_COMPUTE_DEFAULT:    insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::ComputeDefault>(std::ref(*this))}); break;
+            case PIPELINE::SCREEN_SPACE_BRIGHT:             insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::Bright>(std::ref(*this))}); break;
+            case PIPELINE::SCREEN_SPACE_BLUR_A:             insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::BlurA>(std::ref(*this))}); break;
+            case PIPELINE::SCREEN_SPACE_BLUR_B:             insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::BlurB>(std::ref(*this))}); break;
+            case PIPELINE::DEFERRED_MRT:                    insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRT>(std::ref(*this))}); break;
+            case PIPELINE::DEFERRED_COMBINE:                insertPair = pPipelines_.insert({type, std::make_unique<Deferred::Combine>(std::ref(*this))}); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on
-        assert(pPipelines_.back()->TYPE == type);
+        assert(insertPair.second);
+        assert(insertPair.first->second != nullptr);
+        assert(insertPair.first->first == type && insertPair.first->second->TYPE == type);
     }
     // Validate the list of instantiated pipelines.
     assert(pPipelines_.size() == ALL.size());
-    for (const auto& pPipeline : pPipelines_) assert(pPipeline != nullptr);
 }
 
 void Pipeline::Handler::reset() {
     // PIPELINE
     pipelineBindDataMap_.clear();
-    for (auto& pPipeline : pPipelines_) pPipeline->destroy();
+    for (auto& [type, pPipeline] : pPipelines_) pPipeline->destroy();
     // CACHE
     if (cache_ != VK_NULL_HANDLE) vkDestroyPipelineCache(shell().context().dev, cache_, nullptr);
 
@@ -82,7 +88,7 @@ void Pipeline::Handler::reset() {
 
 Uniform::offsetsMap Pipeline::Handler::makeUniformOffsetsMap() {
     Uniform::offsetsMap map;
-    for (const auto& pPipeline : pPipelines_) {
+    for (const auto& [type, pPipeline] : pPipelines_) {
         for (const auto& [descType, offsets] : pPipeline->getDescriptorOffsets().map()) {
             Uniform::offsetsMapKey key = {descType, pPipeline->TYPE};
             assert(map.count(key) == 0);
@@ -104,7 +110,7 @@ void Pipeline::Handler::init() {
     createPipelineCache(cache_);
 
     // PIPELINES
-    for (auto& pPipeline : pPipelines_) pPipeline->init();
+    for (auto& [type, pPipeline] : pPipelines_) pPipeline->init();
 }
 
 std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
@@ -296,7 +302,7 @@ void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
 }
 
 void Pipeline::Handler::makeShaderInfoMap(Shader::infoMap& map) {
-    for (const auto& pPipeline : pPipelines_) {
+    for (const auto& [type, pPipeline] : pPipelines_) {
         const auto& shaderReplaceMap = pPipeline->getShaderTextReplaceInfoMap();
         for (const auto& shaderReplaceKeyValue : shaderReplaceMap) {
             for (const auto& shaderType : pPipeline->SHADER_TYPES) {
@@ -314,7 +320,7 @@ void Pipeline::Handler::makeShaderInfoMap(Shader::infoMap& map) {
 }
 
 void Pipeline::Handler::getShaderStages(const std::set<PIPELINE>& pipelineTypes, VkShaderStageFlags& stages) {
-    for (const auto& pPipeline : pPipelines_) {
+    for (const auto& [type, pPipeline] : pPipelines_) {
         if (pipelineTypes.find(pPipeline->TYPE) == pipelineTypes.end()) continue;
         for (const auto& shaderType : pPipeline->SHADER_TYPES) {
             stages |= Shader::ALL.at(shaderType).stage;
@@ -323,7 +329,7 @@ void Pipeline::Handler::getShaderStages(const std::set<PIPELINE>& pipelineTypes,
 }
 
 void Pipeline::Handler::needsUpdate(const std::vector<SHADER> types) {
-    for (const auto& pPipeline : pPipelines_) {
+    for (const auto& [key, pPipeline] : pPipelines_) {
         for (const auto& shaderType : pPipeline->SHADER_TYPES) {
             for (const auto& type : types) {
                 if (type == shaderType) needsUpdateSet_.insert(pPipeline->TYPE);

@@ -17,7 +17,6 @@ enum class PASS : uint32_t;
 enum class SHADER;
 enum class VERTEX;
 
-// These are index values, so the order here must match order in ALL...
 enum class PIPELINE : uint32_t {
     // DEFAULT
     TRI_LIST_COLOR = 0,
@@ -39,6 +38,9 @@ enum class PIPELINE : uint32_t {
     SCREEN_SPACE_BLUR_A,
     SCREEN_SPACE_BLUR_B,
     SCREEN_SPACE_COMPUTE_DEFAULT,
+    // DEFERRED
+    DEFERRED_MRT,
+    DEFERRED_COMBINE,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP
@@ -77,7 +79,7 @@ struct CreateInfo {
 
 struct CreateInfoResources {
     // BLENDING
-    VkPipelineColorBlendAttachmentState blendAttach = {};
+    std::vector<VkPipelineColorBlendAttachmentState> blendAttachmentStates = {};
     VkPipelineColorBlendStateCreateInfo colorBlendStateInfo = {};
     // DYNAMIC
     VkDynamicState dynamicStates[VK_DYNAMIC_STATE_RANGE_SIZE];

@@ -138,6 +138,8 @@ enum class PASS : uint32_t {  // TODO: make this a bitmask
     SCREEN_SPACE_BLUR_B,
     // COMPUTE
     COMPUTE_POST_PROCESS,
+    // DEFERRED
+    DEFERRED,
     // Used to indicate "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
 };
@@ -186,11 +188,24 @@ enum class UNIFORM_DYNAMIC {
     DONT_CARE,
 };
 
+enum class INPUT_ATTACHMENT {
+    POSITION,
+    NORMAL,
+    COLOR,
+    //
+    DONT_CARE,
+};
+
 enum class QUEUE {
     GRAPHICS,
     PRESENT,
     TRANSFER,
     COMPUTE,
+};
+
+enum class SCENE {
+    DEFAULT,
+    DEFERRED,
 };
 
 #endif  // !ENUM_H

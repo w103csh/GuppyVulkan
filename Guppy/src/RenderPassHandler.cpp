@@ -4,6 +4,7 @@
 #include <algorithm>
 
 #include "Plane.h"
+#include "RenderPassDeferred.h"
 #ifdef USE_DEBUG_UI
 #include "RenderPassImGui.h"
 #endif
@@ -23,11 +24,11 @@ namespace {
 
 // clang-format off
 const std::vector<PASS> DEFAULT = {
-    PASS::SAMPLER_PROJECT,
-    PASS::DEFAULT,
+    //PASS::SAMPLER_PROJECT,
+    //PASS::DEFAULT,
     //PASS::SAMPLER_DEFAULT,
-    //PASS::SAMPLER_SCREEN_SPACE,
     //PASS::SCREEN_SPACE,
+    PASS::DEFERRED,
 // UI pass needs to always be last since it
 // is optional
 #ifdef USE_DEBUG_UI
@@ -51,6 +52,7 @@ RenderPass::Handler::Handler(Game* pGame)
             case PASS::SCREEN_SPACE_BRIGHT:     pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::Bright>(std::ref(*this), static_cast<uint32_t>(pPasses_.size()))); break;
             case PASS::SCREEN_SPACE_BLUR_A:     pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::BlurA>( std::ref(*this), static_cast<uint32_t>(pPasses_.size()))); break;
             case PASS::SCREEN_SPACE_BLUR_B:     pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::BlurB>( std::ref(*this), static_cast<uint32_t>(pPasses_.size()))); break;
+            case PASS::DEFERRED:                pPasses_.emplace_back(std::make_unique<RenderPass::Deferred::Deferred>( std::ref(*this), static_cast<uint32_t>(pPasses_.size()))); break;
             case PASS::IMGUI:
 #ifdef USE_DEBUG_UI
                                                 pPasses_.emplace_back(std::make_unique<RenderPass::ImGui>(              std::ref(*this), static_cast<uint32_t>(pPasses_.size())));
@@ -240,8 +242,9 @@ void RenderPass::Handler::createSwapchainResources() {
     bool wasTexDestroyed = false;
     swpchnRes_.views.resize(imageCount);
     for (uint32_t i = 0; i < ctx.imageCount; i++) {
-        helpers::createImageView(ctx.dev, swpchnRes_.images[i], 1, ctx.surfaceFormat.format, VK_IMAGE_ASPECT_COLOR_BIT,
-                                 VK_IMAGE_VIEW_TYPE_2D, 1, swpchnRes_.views[i]);
+        VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+        helpers::createImageView(ctx.dev, swpchnRes_.images[i], ctx.surfaceFormat.format, VK_IMAGE_VIEW_TYPE_2D, range,
+                                 swpchnRes_.views[i]);
 
         // TEXTURE
         auto pTexture = textureHandler().getTexture(SWAPCHAIN_TARGET_ID, i);
@@ -251,8 +254,9 @@ void RenderPass::Handler::createSwapchainResources() {
         // Update swapchain texture descriptor info.
         auto& sampler = pTexture->samplers[0];
         sampler.image = swpchnRes_.images[i];
-        sampler.view = swpchnRes_.views[i];
-        Texture::Handler::createDescInfo(pTexture->DESCRIPTOR_TYPE, sampler);
+        auto& layerResource = sampler.layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL);
+        layerResource.view = swpchnRes_.views[i];
+        Texture::Handler::createDescInfo(pTexture, Sampler::IMAGE_ARRAY_LAYERS_ALL, layerResource, sampler);
 
         pTexture->status = STATUS::READY;
     }

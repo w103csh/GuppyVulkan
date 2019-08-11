@@ -20,9 +20,10 @@ const std::set<PASS> ALL = {
     PASS::SAMPLER_PROJECT,
     PASS::SCREEN_SPACE,
     PASS::SCREEN_SPACE_HDR_LOG,
-    PASS::SCREEN_SPACE_BRIGHT, 
-    PASS::SCREEN_SPACE_BLUR_A, 
-    PASS::SCREEN_SPACE_BLUR_B, 
+    PASS::SCREEN_SPACE_BRIGHT,
+    PASS::SCREEN_SPACE_BLUR_A,
+    PASS::SCREEN_SPACE_BLUR_B,
+    PASS::DEFERRED,
 #ifdef USE_DEBUG_UI
     PASS::IMGUI,
 #endif
@@ -33,7 +34,7 @@ const std::set<PASS> ALL = {
 // SAMPLER
 const Sampler::CreateInfo DEFAULT_2D_SAMPLER_CREATE_INFO = {
     "Render Pass Default 2D Color Sampler",
-    {{::Sampler::USAGE::COLOR}},
+    {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D,
     BAD_EXTENT_2D,
     {false, true},
@@ -45,9 +46,9 @@ const Sampler::CreateInfo DEFAULT_2D_SAMPLER_CREATE_INFO = {
 };
 
 const Sampler::CreateInfo PROJECT_2D_SAMPLER_CREATE_INFO = {
-    "Render Pass Project 2D Color Sampler",  //
-    {{::Sampler::USAGE::COLOR}},             //
-    VK_IMAGE_VIEW_TYPE_2D,                   //
+    "Render Pass Project 2D Color Sampler",
+    {{{::Sampler::USAGE::COLOR}}},
+    VK_IMAGE_VIEW_TYPE_2D,
     {640, 480},
     {},
     0,
@@ -56,9 +57,9 @@ const Sampler::CreateInfo PROJECT_2D_SAMPLER_CREATE_INFO = {
     {false, false, 1},
 };
 const Sampler::CreateInfo PROJECT_2D_ARRAY_SAMPLER_CREATE_INFO = {
-    "Render Pass Project 2D Array Color Sampler",  //
-    {{::Sampler::USAGE::COLOR}},                   //
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,                   //
+    "Render Pass Project 2D Array Color Sampler",
+    {{{::Sampler::USAGE::COLOR}}},
+    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
     {1024, 768},
     {},
     0,
@@ -67,9 +68,9 @@ const Sampler::CreateInfo PROJECT_2D_ARRAY_SAMPLER_CREATE_INFO = {
     {false, false, 1},
 };
 const Sampler::CreateInfo SWAPCHAIN_TARGET_SAMPLER_CREATE_INFO = {
-    "Swapchain Target Sampler",   //
-    {{::Sampler::USAGE::COLOR}},  //
-    VK_IMAGE_VIEW_TYPE_2D,        //
+    "Swapchain Target Sampler",     //
+    {{{::Sampler::USAGE::COLOR}}},  //
+    VK_IMAGE_VIEW_TYPE_2D,          //
     BAD_EXTENT_2D,
     {true, true},
     0,
@@ -150,6 +151,10 @@ const CreateInfo SAMPLER_DEFAULT_CREATE_INFO = {
     },
     (FLAG::SWAPCHAIN | FLAG::DEPTH | FLAG::MULTISAMPLE),
     {std::string(DEFAULT_2D_TEXTURE_ID)},
+    {},
+    {},
+    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 };
 
 // PROJECT

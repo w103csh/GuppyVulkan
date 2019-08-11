@@ -105,14 +105,14 @@ struct CreateInfo {
 };
 
 // TEXTURE
+constexpr std::string_view SWAPCHAIN_TARGET_ID = "Swapchain Target Texture";
+extern const Texture::CreateInfo SWAPCHAIN_TARGET_TEXTURE_CREATE_INFO;
 constexpr std::string_view DEFAULT_2D_TEXTURE_ID = "Render Pass Default 2D Texture";
 extern const Texture::CreateInfo DEFAULT_2D_TEXTURE_CREATE_INFO;
 constexpr std::string_view PROJECT_2D_TEXTURE_ID = "Render Pass Project 2D Texture";
 extern const Texture::CreateInfo PROJECT_2D_TEXTURE_CREATE_INFO;
 constexpr std::string_view PROJECT_2D_ARRAY_TEXTURE_ID = "Render Pass Project 2D Array Texture";
 extern const Texture::CreateInfo PROJECT_2D_ARRAY_TEXTURE_CREATE_INFO;
-constexpr std::string_view SWAPCHAIN_TARGET_ID = "Swapchain Target Texture";
-extern const Texture::CreateInfo SWAPCHAIN_TARGET_TEXTURE_CREATE_INFO;
 
 // RENDER PASS
 extern const CreateInfo DEFAULT_CREATE_INFO;

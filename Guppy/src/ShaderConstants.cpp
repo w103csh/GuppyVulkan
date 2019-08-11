@@ -1,6 +1,7 @@
 
 #include "ShaderConstants.h"
 
+#include "Deferred.h"
 #include "PBR.h"
 #include "Parallax.h"
 #include "ScreenSpace.h"
@@ -171,6 +172,11 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     {SHADER::SCREEN_SPACE_BRIGHT_FRAG, Shader::ScreenSpace::FRAG_BRIGHT_CREATE_INFO},
     {SHADER::SCREEN_SPACE_BLUR_FRAG, Shader::ScreenSpace::FRAG_BLUR_CREATE_INFO},
     {SHADER::SCREEN_SPACE_COMP, Shader::ScreenSpace::COMP_CREATE_INFO},
+    // DEFERRED
+    {SHADER::DEFERRED_VERT, Shader::Deferred::VERT_CREATE_INFO},
+    {SHADER::DEFERRED_FRAG, Shader::Deferred::FRAG_CREATE_INFO},
+    {SHADER::DEFERRED_MRT_VERT, Shader::Deferred::MRT_VERT_CREATE_INFO},
+    {SHADER::DEFERRED_MRT_FRAG, Shader::Deferred::MRT_FRAG_CREATE_INFO},
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {
