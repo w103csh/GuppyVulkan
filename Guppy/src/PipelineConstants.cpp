@@ -23,7 +23,9 @@ const std::vector<PIPELINE> ALL = {
     PIPELINE::SCREEN_SPACE_BLUR_B,
     // PIPELINE::SCREEN_SPACE_COMPUTE_DEFAULT,
     PIPELINE::DEFERRED_MRT,
+    PIPELINE::DEFERRED_MRT_COLOR,
     PIPELINE::DEFERRED_COMBINE,
+    PIPELINE::DEFERRED_SSAO,
 };
 
 const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
@@ -34,6 +36,7 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
             PIPELINE::LINE,
             PIPELINE::PBR_COLOR,
             PIPELINE::CUBE,
+            PIPELINE::DEFERRED_MRT_COLOR,
         },
     },
     {
@@ -56,6 +59,7 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
             PIPELINE::SCREEN_SPACE_BLUR_A,
             PIPELINE::SCREEN_SPACE_BLUR_B,
             PIPELINE::DEFERRED_COMBINE,
+            PIPELINE::DEFERRED_SSAO,
         },
     },
     {

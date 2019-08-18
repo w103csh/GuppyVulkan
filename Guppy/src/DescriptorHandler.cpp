@@ -42,11 +42,16 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_BLUR_B:               pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::ScreenSpace::BLUR_B_SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SWAPCHAIN_IMAGE:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::RenderPass::SWAPCHAIN_IMAGE_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT:                      pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::MRT_UNIFORM_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::UNIFORM_DEFERRED_SSAO:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SSAO_UNIFORM_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_DEFERRED_COMBINE:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::COMBINE_UNIFORM_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_DEFERRED_POS_NORM:                 pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::POS_NORM_SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_DEFERRED_POS:                      pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::POS_SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_DEFERRED_NORM:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::NORM_SAMPLER_CREATE_INFO)); break;
-            case DESCRIPTOR_SET::SAMPLER_DEFERRED_COLOR:                    pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::COLOR_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SAMPLER_DEFERRED_DIFFUSE:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::DIFFUSE_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SAMPLER_DEFERRED_AMBIENT:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::AMBIENT_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SAMPLER_DEFERRED_SPECULAR:                 pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SPECULAR_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SSAO_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO_RANDOM:              pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SSAO_RANDOM_SAMPLER_CREATE_INFO)); break;
             default: assert(false);  // add new pipelines here
                 // clang-format on
         }

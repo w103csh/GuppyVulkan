@@ -6,7 +6,7 @@
 
 Texture::Base::Base(const uint32_t&& offset, const CreateInfo* pCreateInfo)
     : DESCRIPTOR_TYPE(pCreateInfo->descriptorType),
-      HAS_DATA(pCreateInfo->hasData),
+      HAS_DATA(pCreateInfo->needsData),
       NAME(pCreateInfo->name.data(), pCreateInfo->name.size()),
       OFFSET(offset),
       PER_FRAMEBUFFER(pCreateInfo->perFramebuffer),

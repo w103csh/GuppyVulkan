@@ -175,8 +175,12 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     // DEFERRED
     {SHADER::DEFERRED_VERT, Shader::Deferred::VERT_CREATE_INFO},
     {SHADER::DEFERRED_FRAG, Shader::Deferred::FRAG_CREATE_INFO},
-    {SHADER::DEFERRED_MRT_VERT, Shader::Deferred::MRT_VERT_CREATE_INFO},
+    {SHADER::DEFERRED_MRT_WS_VERT, Shader::Deferred::MRT_WS_VERT_CREATE_INFO},
+    {SHADER::DEFERRED_MRT_CS_VERT, Shader::Deferred::MRT_CS_VERT_CREATE_INFO},
     {SHADER::DEFERRED_MRT_FRAG, Shader::Deferred::MRT_FRAG_CREATE_INFO},
+    {SHADER::DEFERRED_MRT_COLOR_CS_VERT, Shader::Deferred::MRT_COLOR_CS_VERT_CREATE_INFO},
+    {SHADER::DEFERRED_MRT_COLOR_FRAG, Shader::Deferred::MRT_COLOR_FRAG_CREATE_INFO},
+    {SHADER::DEFERRED_SSAO_FRAG, Shader::Deferred::SSAO_FRAG_CREATE_INFO},
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {
@@ -249,6 +253,16 @@ const std::map<SHADER, std::set<SHADER_LINK>> LINK_MAP = {
      }},
     {SHADER::PARALLAX_STEEP_FRAG,
      {
+         SHADER_LINK::DEFAULT_MATERIAL,
+     }},
+    {SHADER::DEFERRED_MRT_FRAG,
+     {
+         SHADER_LINK::TEX_FRAG,
+         SHADER_LINK::DEFAULT_MATERIAL,
+     }},
+    {SHADER::DEFERRED_MRT_COLOR_FRAG,
+     {
+         SHADER_LINK::COLOR_FRAG,
          SHADER_LINK::DEFAULT_MATERIAL,
      }},
 };

@@ -16,6 +16,7 @@
 #include "LoadingHandler.h"
 #include "MaterialHandler.h"
 #include "ShaderHandler.h"
+#include "UniformHandler.h"  // Random
 
 Texture::Handler::Handler(Game* pGame)
     : Game::Handler(pGame),  //
@@ -23,6 +24,8 @@ Texture::Handler::Handler(Game* pGame)
 
 void Texture::Handler::init() {
     reset();
+
+    auto ssaoRandTexCreateInfo = Deferred::MakeSSAORandRotationTex(uniformHandler().rand);
 
     // Transition storage images. I can't think of a better time to do this. Its
     // not great but oh well.
@@ -50,7 +53,11 @@ void Texture::Handler::init() {
         //&Texture::Deferred::POS_NORM_2D_ARRAY_CREATE_INFO,
         &Texture::Deferred::POS_2D_CREATE_INFO,
         &Texture::Deferred::NORM_2D_CREATE_INFO,
-        &Texture::Deferred::COLOR_2D_CREATE_INFO,
+        &Texture::Deferred::DIFFUSE_2D_CREATE_INFO,
+        &Texture::Deferred::AMBIENT_2D_CREATE_INFO,
+        &Texture::Deferred::SPECULAR_2D_CREATE_INFO,
+        &Texture::Deferred::SSAO_2D_CREATE_INFO,
+        &ssaoRandTexCreateInfo,
     };
 
     // I think this does not get set properly, so I am not sure where the texture generation
@@ -95,7 +102,7 @@ std::shared_ptr<Texture::Base>& Texture::Handler::make(const Texture::CreateInfo
 
     pTextures_.emplace_back(std::make_shared<Texture::Base>(static_cast<uint32_t>(pTextures_.size()), pCreateInfo));
 
-    if (pCreateInfo->hasData) {
+    if (pCreateInfo->needsData) {
         bool nonAsyncTest = false;
         if (nonAsyncTest) {
             load(pTextures_.back(), pCreateInfo);
@@ -117,7 +124,13 @@ std::shared_ptr<Texture::Base>& Texture::Handler::make(const Texture::CreateInfo
         }
 
         if (isReady) {
-            createTexture(pTextures_.back(), false);
+            // Some of these textures can have pixel data, and as a result need to be
+            // staged, and copied.
+            bool stageResources = false;
+            for (const auto& sampler : pTextures_.back()->samplers)
+                if (sampler.pPixels.size()) stageResources = true;
+            // Finish the texture creation.
+            createTexture(pTextures_.back(), stageResources);
         } else {
             pTextures_.back()->status = STATUS::PENDING_SWAPCHAIN;
         }
@@ -200,12 +213,12 @@ std::shared_ptr<Texture::Base> Texture::Handler::asyncLoad(std::shared_ptr<Textu
 
 void Texture::Handler::load(std::shared_ptr<Texture::Base>& pTexture, const CreateInfo* pCreateInfo) {
     for (auto& samplerCreateInfo : pCreateInfo->samplerCreateInfos) {
-        pTexture->samplers.emplace_back(Sampler::make(shell(), &samplerCreateInfo, pCreateInfo->hasData));
+        pTexture->samplers.emplace_back(Sampler::make(shell(), &samplerCreateInfo, pCreateInfo->needsData));
 
         assert(!pTexture->samplers.empty());
         auto& sampler = pTexture->samplers.back();
 
-        if (pCreateInfo->hasData) assert(sampler.aspect != BAD_ASPECT);
+        if (pCreateInfo->needsData) assert(sampler.aspect != BAD_ASPECT);
 
         // Set texture-wide info
         pTexture->flags |= sampler.flags;

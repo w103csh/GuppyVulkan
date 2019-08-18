@@ -28,7 +28,7 @@ layout(location=4) out vec2 outTexCoord;
 
 void main() {
     vec4 pos = inModel * vec4(inPosition, 1.0);
-    // Camera space position
+    
     gl_Position = camera.viewProjection * pos;
     outPosition = pos.xyz;
     // Normal matrix

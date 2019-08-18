@@ -13,8 +13,8 @@ namespace {
 void validateInfo(const Sampler::CreateInfo* pCreateInfo) {
     assert(pCreateInfo);
     assert(!pCreateInfo->layersInfo.infos.empty());
-    assert(pCreateInfo->channels < UINT8_MAX);
-    uint8_t maxChannels = static_cast<uint8_t>(pCreateInfo->channels);
+    assert(pCreateInfo->numberOfChannels < UINT8_MAX);
+    uint8_t maxChannels = static_cast<uint8_t>(pCreateInfo->numberOfChannels);
     uint8_t offset = 0;
     for (const auto& layerInfo : pCreateInfo->layersInfo.infos) {
         for (const auto& combineInfo : layerInfo.combineInfos) {
@@ -82,9 +82,10 @@ void validateDimensions(const Shell& shell, Sampler::Base& sampler, const std::s
 
 }  // namespace
 
-Sampler::Base::Base(const CreateInfo* pCreateInfo, bool hasData)
+Sampler::Base::Base(const CreateInfo* pCreateInfo, bool needsData)
     : NAME(pCreateInfo->name),
-      NUM_CHANNELS(pCreateInfo->channels),
+      BYTES_PER_CHANNEL(pCreateInfo->bytesPerChannel),
+      NUM_CHANNELS(pCreateInfo->numberOfChannels),
       TYPE(pCreateInfo->type),
       flags(0),
       imgCreateInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr},
@@ -117,7 +118,7 @@ Sampler::Base::Base(const CreateInfo* pCreateInfo, bool hasData)
         if (swpchnInfo.usesFormat) imgCreateInfo.format = VK_FORMAT_UNDEFINED;
     } else {
         assert(imgCreateInfo.format != VK_FORMAT_UNDEFINED);
-        if (!helpers::compExtent2D(imgCreateInfo.extent, BAD_EXTENT_2D)) assert(!hasData);
+        if (!helpers::compExtent2D(imgCreateInfo.extent, BAD_EXTENT_2D)) assert(!needsData);
     }
 
     // Setup layer info structures
@@ -216,17 +217,17 @@ void Sampler::Base::destroy(const VkDevice& dev) {
 
 // FUNCTIONS
 
-Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, const bool hasData) {
-    Sampler::Base sampler(pCreateInfo, hasData);
+Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, const bool needsData) {
+    Sampler::Base sampler(pCreateInfo, needsData);
 
     for (const auto& layerInfo : pCreateInfo->layersInfo.infos) {
-        sampler.flags |= layerInfo.type * GetChannelMask(pCreateInfo->channels);
+        sampler.flags |= layerInfo.type * GetChannelMask(pCreateInfo->numberOfChannels);
     }
 
     // VALIDATE INFO
     validateInfo(pCreateInfo);
 
-    if (!hasData) {
+    if (!needsData && !pCreateInfo->layersInfo.hasData()) {
         // Texture has no data to load.
         if (!sampler.swpchnInfo.usesSwapchain()) {
             // aspect
@@ -236,16 +237,24 @@ Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, c
     } else {
         // Texture has data to load so load it and validate.
         bool isFirstLayer = true;
-        int w, h, c, req_comp = getReqComp(pCreateInfo->channels);
+        int w, h, c, req_comp = getReqComp(pCreateInfo->numberOfChannels);
 
         for (auto& layerInfo : pCreateInfo->layersInfo.infos) {
-            // LOAD FROM FILE
-            std::string path = layerInfo.path;
-            std::replace(path.begin(), path.end(), '\\', '/');  // Convert windows path delimiters.
+            if (layerInfo.pPixel == nullptr) {
+                // LOAD FROM FILE
+                std::string path = layerInfo.path;
+                std::replace(path.begin(), path.end(), '\\', '/');  // Convert windows path delimiters.
 
-            // Load data...
-            sampler.pPixels.push_back(stbi_load(path.c_str(), &w, &h, &c, req_comp));
-            // checkFailure(shell, layerInfo.path, p);
+                // Load data...
+                sampler.pPixels.push_back(stbi_load(path.c_str(), &w, &h, &c, req_comp));
+                // checkFailure(shell, layerInfo.path, p);
+            } else {
+                w = pCreateInfo->extent.width;
+                h = pCreateInfo->extent.height;
+                c = pCreateInfo->numberOfChannels;
+                // Pixel data is already known.
+                sampler.pPixels.push_back(layerInfo.pPixel);
+            }
             assert(sampler.pPixels.back() != nullptr);  // TODO: get this to work inside checkFailure.
 
             validateChannels(shell, sampler, layerInfo.path, c);

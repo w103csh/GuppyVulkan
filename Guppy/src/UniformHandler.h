@@ -14,12 +14,14 @@
 
 #include "Camera.h"
 #include "ConstantsAll.h"
+#include "Deferred.h"
 #include "Descriptor.h"
 #include "DescriptorManager.h"
 #include "Game.h"
 #include "Helpers.h"
 #include "Light.h"
 #include "PBR.h"
+#include "Random.h"
 #include "ScreenSpace.h"
 #include "Storage.h"
 #include "Uniform.h"
@@ -102,6 +104,9 @@ class Handler : public Game::Handler {
     // DESCRIPTOR
     inline const auto& getOffsetsMgr() const { return offsetsManager_; }
 
+    // RANDOM
+    Random rand;  // TODO: where should this go?
+
    private:
     void reset() override;
 
@@ -118,7 +123,8 @@ class Handler : public Game::Handler {
     inline Uniform::Manager<Uniform::Default::Fog::Base>& uniDefFogMgr() { return std::get<Uniform::Manager<Uniform::Default::Fog::Base>>(managers_[4]);};
     inline Uniform::Manager<Uniform::Default::Projector::Base>& uniDefPrjMgr() { return std::get<Uniform::Manager<Uniform::Default::Projector::Base>>(managers_[5]);};
     inline Uniform::Manager<Uniform::ScreenSpace::Default>& uniScrDefMgr() { return std::get<Uniform::Manager<Uniform::ScreenSpace::Default>>(managers_[6]);};
-    inline Uniform::Manager<Storage::PostProcess::Base>& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[7]);};
+    inline Uniform::Manager<Uniform::Deferred::SSAO>& uniDfrSSAOMgr() { return std::get<Uniform::Manager<Uniform::Deferred::SSAO>>(managers_[7]);};
+    inline Uniform::Manager<Storage::PostProcess::Base>& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[8]);};
 
     template <class T> inline Uniform::Manager<T>& getManager() { assert(false); }
     template <> inline Uniform::Manager<Camera::Default::Perspective::Base>& getManager() { return camDefPersMgr(); }
@@ -128,6 +134,7 @@ class Handler : public Game::Handler {
     template <> inline Uniform::Manager<Uniform::Default::Fog::Base>& getManager() { return uniDefFogMgr(); }
     template <> inline Uniform::Manager<Uniform::Default::Projector::Base>& getManager() { return uniDefPrjMgr(); }
     template <> inline Uniform::Manager<Uniform::ScreenSpace::Default>& getManager() { return uniScrDefMgr(); }
+    template <> inline Uniform::Manager<Uniform::Deferred::SSAO>& getManager() { return uniDfrSSAOMgr(); }
     template <> inline Uniform::Manager<Storage::PostProcess::Base>& getManager() { return strPstPrcMgr(); }
     // clang-format on
 
@@ -144,9 +151,10 @@ class Handler : public Game::Handler {
         Uniform::Manager<Uniform::Default::Fog::Base>,         //
         Uniform::Manager<Uniform::Default::Projector::Base>,   //
         Uniform::Manager<Uniform::ScreenSpace::Default>,       //
+        Uniform::Manager<Uniform::Deferred::SSAO>,             //
         Uniform::Manager<Storage::PostProcess::Base>           //
         >;
-    std::array<Manager, 8> managers_;
+    std::array<Manager, 9> managers_;
 
     // DESCRIPTOR
     OffsetsManager offsetsManager_;

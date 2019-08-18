@@ -9,7 +9,6 @@
 #include "Helpers.h"
 
 class Shell;
-typedef unsigned char stbi_uc;  // <stbi_image.h>
 
 namespace Sampler {
 
@@ -22,6 +21,7 @@ class Base {
     inline VkDeviceSize layerSize() const {
         return static_cast<VkDeviceSize>(imgCreateInfo.extent.width) *   //
                static_cast<VkDeviceSize>(imgCreateInfo.extent.height) *  //
+               static_cast<VkDeviceSize>(BYTES_PER_CHANNEL) *             //
                static_cast<VkDeviceSize>(NUM_CHANNELS);
     }
     inline VkDeviceSize size() const { return layerSize() * static_cast<VkDeviceSize>(imgCreateInfo.arrayLayers); }
@@ -34,6 +34,7 @@ class Base {
     // TODO: Get rid of all these creation info members
 
     const std::string NAME;
+    const uint8_t BYTES_PER_CHANNEL;
     const FlagBits NUM_CHANNELS;
     const SAMPLER TYPE;
 

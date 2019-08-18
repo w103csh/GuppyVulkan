@@ -23,6 +23,8 @@ class Deferred : public RenderPass::Base {
     void createDependencies() override;
     void updateClearValues() override;
     void createFramebuffers() override;
+
+    Descriptor::Set::bindDataMap descSetBindDataMap2_;  // Bummer huh?
 };
 
 }  // namespace Deferred
