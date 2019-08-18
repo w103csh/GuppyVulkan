@@ -176,6 +176,7 @@ enum class UNIFORM {
     FOG_DEFAULT,
     PROJECTOR_DEFAULT,
     SCREEN_SPACE_DEFAULT,
+    DEFERRED_SSAO,
     //
     DONT_CARE,
 };
@@ -192,6 +193,7 @@ enum class INPUT_ATTACHMENT {
     POSITION,
     NORMAL,
     COLOR,
+    SSAO,
     //
     DONT_CARE,
 };

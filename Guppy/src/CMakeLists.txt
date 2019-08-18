@@ -41,6 +41,7 @@ set(SOURCE
     Parallax.h
     PBR.cpp
     PBR.h
+    Random.h
     Scene.cpp
     Scene.h
     SceneHandler.cpp

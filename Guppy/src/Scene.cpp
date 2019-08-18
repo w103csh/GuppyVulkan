@@ -64,6 +64,7 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
                          const std::shared_ptr<Pipeline::BindData>& pipelineBindData, const VkCommandBuffer& priCmd,
                          const VkCommandBuffer& secCmd, const uint8_t frameIndex) {
     switch (pipelineType) {
+        case PIPELINE::DEFERRED_MRT_COLOR:
         case PIPELINE::PBR_COLOR:
         case PIPELINE::CUBE:
         case PIPELINE::TRI_LIST_COLOR: {

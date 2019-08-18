@@ -10,6 +10,8 @@
 
 #include "Constants.h"
 
+using stbi_uc = unsigned char;  // <stbi_image.h>
+
 enum class SAMPLER {
     //
     DEFAULT = 0,
@@ -25,6 +27,7 @@ using USAGE = enum {
     COLOR =         0x00000001,  // DIFFUSE
     HDR_LOG =       0x00000002,
     POSITION =      0x00000004,
+    AMBIENT =       0x00000008,
     NORMAL =        0x00000010,
     SPECULAR =      0x00000100,
     ALPHA =         0x00001000,
@@ -51,9 +54,15 @@ struct LayerInfo {
     bool makeImageView = false;  // Flag for this layer
     bool makeSampler = false;    // Flag for this layer
     std::vector<combineInfo> combineInfos;
+    stbi_uc* pPixel = nullptr;
 };
 
 struct LayersInfo {
+    bool hasData() const {
+        for (const auto& info : infos)
+            if (info.pPixel != nullptr) return true;
+        return false;
+    }
     std::vector<LayerInfo> infos;
     bool makeImageView = true;  // Flag for all layers
     bool makeSampler = true;    // Flag for all layers
@@ -91,7 +100,8 @@ struct CreateInfo {
     VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT;
     MipmapCreateInfo mipmapCreateInfo = {};
     VkFormat format = VK_FORMAT_R8G8B8A8_UNORM;
-    CHANNELS channels = CHANNELS::_4;
+    CHANNELS numberOfChannels = CHANNELS::_4;
+    uint8_t bytesPerChannel = 1;
     VkImageTiling tiling = VK_IMAGE_TILING_OPTIMAL;
 };
 

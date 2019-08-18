@@ -40,6 +40,8 @@ enum class PIPELINE : uint32_t {
     SCREEN_SPACE_COMPUTE_DEFAULT,
     // DEFERRED
     DEFERRED_MRT,
+    DEFERRED_MRT_COLOR,
+    DEFERRED_SSAO,
     DEFERRED_COMBINE,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,

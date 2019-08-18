@@ -44,6 +44,8 @@ Uniform::Handler::Handler(Game* pGame)
           {"Default Projector", UNIFORM::PROJECTOR_DEFAULT, 5, "_U_DEF_PRJ"},
           Uniform::Manager<Uniform::ScreenSpace::Default>  //
           {"Screen Space Default", UNIFORM::SCREEN_SPACE_DEFAULT, 5, "_U_SCR_DEF"},
+          Uniform::Manager<Uniform::Deferred::SSAO>  //
+          {"Deferred SSAO", UNIFORM::DEFERRED_SSAO, 5, "_U_DFR_SSAO"},
           // STORAGE
           Uniform::Manager<Storage::PostProcess::Base>  //
           {"Storage Default", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
@@ -63,6 +65,7 @@ std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const
             case UNIFORM::FOG_DEFAULT:                  return uniDefFogMgr().pItems;
             case UNIFORM::PROJECTOR_DEFAULT:            return uniDefPrjMgr().pItems;
             case UNIFORM::SCREEN_SPACE_DEFAULT:         return uniScrDefMgr().pItems;
+            case UNIFORM::DEFERRED_SSAO:                return uniDfrSSAOMgr().pItems;
             default:                                    assert(false); exit(EXIT_FAILURE);
         }
     } else if (std::visit(Descriptor::IsStorageBuffer{}, type)) {
@@ -97,6 +100,7 @@ void Uniform::Handler::init() {
     uniDefFogMgr().init(shell().context(), settings());     ++count;
     uniDefPrjMgr().init(shell().context(), settings());     ++count;
     uniScrDefMgr().init(shell().context(), settings());     ++count;
+    uniDfrSSAOMgr().init(shell().context(), settings());    ++count;
     strPstPrcMgr().init(shell().context(), settings());     ++count;
     assert(count == managers_.size());
     // clang-format on
@@ -117,6 +121,7 @@ void Uniform::Handler::reset() {
     uniDefFogMgr().destroy(dev);    ++count;
     uniDefPrjMgr().destroy(dev);    ++count;
     uniScrDefMgr().destroy(dev);    ++count;
+    uniDfrSSAOMgr().destroy(dev);   ++count;
     strPstPrcMgr().destroy(dev);    ++count;
     assert(count == managers_.size());
     // clang-format on
@@ -225,6 +230,14 @@ void Uniform::Handler::createMiscellaneous() {
 
         Buffer::CreateInfo info = {shell().context().imageCount, false};
         strPstPrcMgr().insert(dev, &info);
+    }
+
+    // DEFERRED
+    {
+        uniDfrSSAOMgr().insert(dev);
+        auto& ssaoKernel = uniDfrSSAOMgr().getTypedItem(0);
+        ssaoKernel.init(rand);
+        update(ssaoKernel);
     }
 }
 

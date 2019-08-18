@@ -2,15 +2,11 @@
 #version 450
 
 // DECLARATIONS
-vec3 setTextureDefaults();
+vec3 setColorDefaults();
 float getMaterialShininess();
 
 // IN
 layout(location = 0) in vec3 fragPosition;
-layout(location = 1) in vec3 fragNormal;
-// layout(location = 2) in vec2 fragTexCoord;
-layout(location=3) in vec3 outTangent;     // (camera space)
-layout(location=4) in vec3 outBinormal;    // (camera space)
 
 // OUT
 layout (location = 0) out vec4 outPosition;
@@ -27,11 +23,11 @@ vec3    Ka,     // ambient coefficient
 float opacity, height;
 
 void main() {
-    setTextureDefaults();
+    setColorDefaults();
 
 	outPosition = vec4(fragPosition, 1.0);
     // outNormal = vec4(n, 0.0);
-    outNormal = vec4(normalize(fragNormal), getMaterialShininess());
+    outNormal = vec4(n, getMaterialShininess());
 	outDiffuse = vec4(Kd, opacity);
 	outAmbient = vec4(Ka, 0.0);
 	outSpecular = vec4(Ks, 0.0);

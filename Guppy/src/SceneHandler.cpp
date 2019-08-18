@@ -31,9 +31,26 @@ void Scene::Handler::init() {
         Instance::Default::CreateInfo defInstInfo;
         Material::Default::CreateInfo defMatInfo;
         Model::CreateInfo modelInfo;
+        BoundingBoxMinMax groundPlane_bbmm;
+
+        // GROUND PLANE (COLOR)
+        if (!suppress || false) {
+            meshInfo = {};
+            meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
+            meshInfo.selectable = false;
+            defInstInfo = {};
+            defInstInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
+            defMatInfo = {};
+            defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+            defMatInfo.color = {0.5f, 0.5f, 0.5f};
+            auto& pGroundPlane = meshHandler().makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+            auto offset = pGroundPlane->getOffset();
+            pScene->addMeshIndex(MESH::COLOR, offset);
+            groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
+        }
 
         // GROUND PLANE (TEXTURE)
-        if (!suppress || false) {
+        if (!suppress && false) {
             meshInfo = {};
             meshInfo.pipelineType = PIPELINE::DEFERRED_MRT;
             meshInfo.selectable = false;
@@ -47,10 +64,11 @@ void Scene::Handler::init() {
             auto& pGroundPlane = meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
             auto offset = pGroundPlane->getOffset();
             pScene->addMeshIndex(MESH::TEXTURE, offset);
+            groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
         }
 
         // PLAIN OLD NON-TRANSFORMED PLANE (TEXTURE)
-        if (!suppress || false) {
+        if (!suppress && false) {
             meshInfo = {};
             meshInfo.pipelineType = PIPELINE::DEFERRED_MRT;
             meshInfo.selectable = true;
@@ -63,9 +81,32 @@ void Scene::Handler::init() {
             pScene->addMeshIndex(MESH::TEXTURE, offset);
         }
 
+        // DRAGON
+        if (!suppress || false) {
+            // MODEL
+            modelInfo = {};
+            modelInfo.async = false;
+            modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
+            modelInfo.modelPath = DRAGON_MODEL_PATH;
+            modelInfo.smoothNormals = true;
+            defInstInfo = {};
+            defInstInfo.data.push_back({helpers::affine(glm::vec3{0.07f}, {}, -M_PI_2_FLT, CARDINAL_X)});
+            modelInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
+            defMatInfo = {};
+            defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
+            // defMatInfo.ambientCoeff = {0.8f, 0.3f, 0.0f};
+            // defMatInfo.color = {0.8f, 0.3f, 0.0f};
+            // defMatInfo.ambientCoeff = glm::vec3{0.2f};
+            // defMatInfo.specularCoeff = glm::vec3{1.0f};
+            // defMatInfo.color = {0.9f, 0.3f, 0.2f};
+            // defMatInfo.shininess = 25.0f;
+            auto offset = modelHandler().makeColorModel(&modelInfo, &defMatInfo, &defInstInfo)->getOffset();
+            pScene->addModelIndex(offset);
+        }
+
         uint32_t count = 5;
         // MEDIEVAL HOUSE (TRI_COLOR_TEX)
-        if (!suppress || false) {
+        if (!suppress && false) {
             modelInfo = {};
             modelInfo.pipelineType = PIPELINE::DEFERRED_MRT;
             modelInfo.async = false;
@@ -362,6 +403,29 @@ void Scene::Handler::init() {
                 auto offset = modelHandler().makeColorModel(&modelInfo, &defMatInfo, &defInstInfo)->getOffset();
                 pScene->addModelIndex(offset);
             }
+        }
+
+        // DRAGON
+        if (!suppress || false) {
+            // MODEL
+            modelInfo = {};
+            modelInfo.async = false;
+            modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
+            modelInfo.modelPath = DRAGON_MODEL_PATH;
+            modelInfo.smoothNormals = false;
+            defInstInfo = {};
+            // defInstInfo.data.push_back({helpers::affine(glm::vec3{0.07f})});
+            modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+            defMatInfo = {};
+            defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
+            // defMatInfo.ambientCoeff = {0.8f, 0.3f, 0.0f};
+            // defMatInfo.color = {0.8f, 0.3f, 0.0f};
+            // defMatInfo.ambientCoeff = glm::vec3{0.2f};
+            // defMatInfo.specularCoeff = glm::vec3{1.0f};
+            // defMatInfo.color = {0.9f, 0.3f, 0.2f};
+            // defMatInfo.shininess = 25.0f;
+            auto offset = modelHandler().makeColorModel(&modelInfo, &defMatInfo, &defInstInfo)->getOffset();
+            pScene->addModelIndex(offset);
         }
 
         count = 100;
