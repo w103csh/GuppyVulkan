@@ -88,8 +88,9 @@ void Base::record(const uint8_t frameIndex) {
                 // vkCmdPushConstants(priCmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
                 //                   sizeof(::ScreenSpace::PushConstant), &pc);
 
-                handler().getScreenQuad()->draw(TYPE, pPass->getPipelineBindDataMap().begin()->second,
-                                                pPass->getDescSetBindDataMap().begin()->second, priCmd, frameIndex);
+                auto it = pPass->getPipelineBindDataMap().begin();
+                handler().getScreenQuad()->draw(TYPE, it->second, pPass->getDescSetBindDataMap(it->first).begin()->second,
+                                                priCmd, frameIndex);
                 pPass->endPass(priCmd);
 
                 assert(pPass->TYPE == PASS::SCREEN_SPACE_HDR_LOG);
@@ -104,13 +105,13 @@ void Base::record(const uint8_t frameIndex) {
             if (pPass->getStatus() == STATUS::READY) {
                 pPass->beginPass(priCmd, frameIndex);
 
-                ::ScreenSpace::PushConstant pc = {::ScreenSpace::BLOOM_BRIGHT};
-                const auto& pPipelineBindData = pPass->getPipelineBindDataMap().begin()->second;
-                vkCmdPushConstants(priCmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
-                                   sizeof(::ScreenSpace::PushConstant), &pc);
+                ::ScreenSpace::PushConstant pushConstant = {::ScreenSpace::BLOOM_BRIGHT};
+                auto it = pPass->getPipelineBindDataMap().begin();
+                vkCmdPushConstants(priCmd, it->second->layout, it->second->pushConstantStages, 0,
+                                   static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
 
-                handler().getScreenQuad()->draw(TYPE, pPass->getPipelineBindDataMap().begin()->second,
-                                                pPass->getDescSetBindDataMap().begin()->second, priCmd, frameIndex);
+                handler().getScreenQuad()->draw(TYPE, it->second, pPass->getDescSetBindDataMap(it->first).begin()->second,
+                                                priCmd, frameIndex);
                 pPass->endPass(priCmd);
             }
         }
@@ -122,12 +123,12 @@ void Base::record(const uint8_t frameIndex) {
             if (pPass->getStatus() == STATUS::READY) {
                 pPass->beginPass(priCmd, frameIndex);
 
-                ::ScreenSpace::PushConstant pc = {::ScreenSpace::BLOOM_BLUR_A};
-                const auto& pPipelineBindData = pPass->getPipelineBindDataMap().begin()->second;
-                vkCmdPushConstants(priCmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
-                                   sizeof(::ScreenSpace::PushConstant), &pc);
+                ::ScreenSpace::PushConstant pushConstant = {::ScreenSpace::BLOOM_BLUR_A};
+                auto it = pPass->getPipelineBindDataMap().begin();
+                vkCmdPushConstants(priCmd, it->second->layout, it->second->pushConstantStages, 0,
+                                   static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
 
-                handler().getScreenQuad()->draw(TYPE, pPipelineBindData, pPass->getDescSetBindDataMap().begin()->second,
+                handler().getScreenQuad()->draw(TYPE, it->second, pPass->getDescSetBindDataMap(it->first).begin()->second,
                                                 priCmd, frameIndex);
                 pPass->endPass(priCmd);
             }
@@ -147,12 +148,12 @@ void Base::record(const uint8_t frameIndex) {
             if (pPass->getStatus() == STATUS::READY) {
                 pPass->beginPass(priCmd, frameIndex);
 
-                ::ScreenSpace::PushConstant pc = {::ScreenSpace::BLOOM_BLUR_B};
-                const auto& pPipelineBindData = pPass->getPipelineBindDataMap().begin()->second;
-                vkCmdPushConstants(priCmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
-                                   sizeof(::ScreenSpace::PushConstant), &pc);
+                ::ScreenSpace::PushConstant pushConstant = {::ScreenSpace::BLOOM_BLUR_B};
+                auto it = pPass->getPipelineBindDataMap().begin();
+                vkCmdPushConstants(priCmd, it->second->layout, it->second->pushConstantStages, 0,
+                                   static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
 
-                handler().getScreenQuad()->draw(TYPE, pPipelineBindData, pPass->getDescSetBindDataMap().begin()->second,
+                handler().getScreenQuad()->draw(TYPE, it->second, pPass->getDescSetBindDataMap(it->first).begin()->second,
                                                 priCmd, frameIndex);
                 pPass->endPass(priCmd);
             }
@@ -162,12 +163,12 @@ void Base::record(const uint8_t frameIndex) {
         {
             beginPass(priCmd, frameIndex);
 
-            auto& pPipelineBindData = pipelineTypeBindDataMap_.begin()->second;
+            auto it = pipelineTypeBindDataMap_.begin();
             ::ScreenSpace::PushConstant pushConstant = {::ScreenSpace::PASS_FLAG::BLOOM};
-            vkCmdPushConstants(priCmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+            vkCmdPushConstants(priCmd, it->second->layout, it->second->pushConstantStages, 0,
                                static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
 
-            handler().getScreenQuad()->draw(TYPE, pPipelineBindData, descSetBindDataMap_.begin()->second, priCmd,
+            handler().getScreenQuad()->draw(TYPE, it->second, getDescSetBindDataMap(it->first).begin()->second, priCmd,
                                             frameIndex);
 
             endPass(priCmd);
@@ -181,25 +182,7 @@ void Base::update() {
     // Check the mesh status.
     if (handler().getScreenQuad()->getStatus() == STATUS::READY) {
         status_ ^= STATUS::PENDING_MESH;
-
-        assert(pipelineTypeBindDataMap_.size() == 1);  // Not dealing with anything else atm.
-        // Get pipeline bind data, and check the status
-        auto it = pipelineTypeBindDataMap_.begin();
-        auto& pPipeline = handler().pipelineHandler().getPipeline(it->first);
-
-        // If the pipeline is not ready try to update once.
-        if (pPipeline->getStatus() != STATUS::READY) pPipeline->updateStatus();
-
-        if (pPipeline->getStatus() == STATUS::READY) {
-            // Get or make descriptor bind data.
-            if (descSetBindDataMap_.empty())
-                handler().descriptorHandler().getBindData(it->first, descSetBindDataMap_, nullptr, nullptr);
-
-            assert(descSetBindDataMap_.size() == 1);  // Not dealing with anything else atm.
-
-            status_ ^= STATUS::PENDING_PIPELINE;
-            assert(status_ == STATUS::READY);
-        }
+        RenderPass::Base::update();
     }
 }
 

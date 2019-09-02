@@ -43,7 +43,7 @@ class Base : public Handlee<RenderPass::Handler> {
     void createTarget();
     void overridePipelineCreateInfo(const PIPELINE &type, Pipeline::CreateInfoResources &createInfoRes);
     virtual void record(const uint8_t frameIndex);
-    virtual void update() {}
+    virtual void update();
     constexpr const auto getStatus() const { return status_; }
 
     // PRIMARY
@@ -94,7 +94,9 @@ class Base : public Handlee<RenderPass::Handler> {
     void setBindData(const PIPELINE &pipelineType, const std::shared_ptr<Pipeline::BindData> &pBindData);
 
     // DESCRIPTOR SET
-    constexpr const auto &getDescSetBindDataMap() const { return descSetBindDataMap_; }
+    inline const auto &getDescSetBindDataMap(const PIPELINE pipelineType) const {
+        return pipelineDescSetBindDataMap_.at(pipelineType);
+    }
 
     // UNIFORM
     inline constexpr const auto &getDescriptorPipelineOffsets() { return descPipelineOffsets_; }
@@ -116,7 +118,7 @@ class Base : public Handlee<RenderPass::Handler> {
     std::unordered_map<PIPELINE, std::shared_ptr<Pipeline::BindData>> pipelineTypeBindDataMap_;  // Is this still necessary?
 
     // DESCRIPTOR SET
-    Descriptor::Set::bindDataMap descSetBindDataMap_;
+    std::map<PIPELINE, Descriptor::Set::bindDataMap> pipelineDescSetBindDataMap_;
 
     // RENDER PASS
     virtual void createPass();
@@ -128,7 +130,8 @@ class Base : public Handlee<RenderPass::Handler> {
     VkRenderPassBeginInfo beginInfo_;
 
     // SUBPASS
-    virtual void createAttachmentsAndSubpasses();
+    virtual void createAttachments();
+    virtual void createSubpassDescriptions();
     virtual void createDependencies();
     Resources resources_;
     std::vector<std::pair<PASS, index>> dependentTypeOffsetPairs_;

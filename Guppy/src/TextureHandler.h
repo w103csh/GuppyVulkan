@@ -51,6 +51,7 @@ class Handler : public Game::Handler {
     void createTexture(std::shared_ptr<Texture::Base> pTexture, bool stageResources = true);
     void makeTexture(std::shared_ptr<Texture::Base>& pTexture, Sampler::Base& texSampler);
     void createImage(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes);
+    void createDepthImage(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes);
     void generateMipmaps(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes);
     void createImageView(const VkDevice& dev, const Sampler::Base& sampler, const uint32_t baseArrayLayer,
                          const uint32_t layerCount, Sampler::LayerResource& layerResource);

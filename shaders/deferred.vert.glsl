@@ -8,9 +8,10 @@ layout(location=1) in vec2 inTexCoord;
 layout(location=0) out vec2 outTexCoord;
 
 void main() {
-    outTexCoord = inTexCoord;
     gl_Position.x =  inPosition.x;
     gl_Position.y = -inPosition.y; // Vulkan y is inverted
     gl_Position.z =  inPosition.z;
     gl_Position.w =  1.0;
+
+    outTexCoord = inTexCoord;
 }

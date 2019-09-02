@@ -73,8 +73,8 @@ void Camera::Default::Perspective::Base::update(const glm::vec3 &pos_dir, const 
 }
 
 void Camera::Default::Perspective::Base::update(const uint32_t frameIndex) {
-    data_.view = getMV();
-    data_.viewProjection = getMVP();
+    data_.view = data_.view * model_;
+    data_.viewProjection = data_.projection * data_.view;
     data_.worldPosition = getWorldSpacePosition();
     setData(frameIndex);
 }

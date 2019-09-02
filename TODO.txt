@@ -80,8 +80,6 @@
         for this problem are all the errors/warnings in RenderDOC when you load just load
         the "Orange" model.
 
- - The depth buffer doesn't work without a ground plane under certain circumstances!!! WTF
-
  - "doubleSided" param doesn't work anymore for box/plane.
 
  - There is now a way to create multiple shader programs with different define macros

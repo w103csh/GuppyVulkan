@@ -47,6 +47,9 @@ enum class DESCRIPTOR_SET {
     SAMPLER_DEFERRED_SPECULAR,
     SAMPLER_DEFERRED_SSAO,
     SAMPLER_DEFERRED_SSAO_RANDOM,
+    // SHADOW
+    UNIFORM_SHADOW,
+    SAMPLER_SHADOW,
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 
@@ -89,6 +92,15 @@ struct OffsetsMap {
 
 // VISITORS
 // clang-format off
+struct GetDescriptorTypeString {
+    template <typename T> std::string operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
+    std::string operator()(const UNIFORM& type)          const { return std::string("UNIFORM "          + std::to_string(static_cast<int>(type))); }
+    std::string operator()(const UNIFORM_DYNAMIC& type)  const { return std::string("UNIFORM_DYNAMIC "  + std::to_string(static_cast<int>(type))); }
+    std::string operator()(const COMBINED_SAMPLER& type) const { return std::string("COMBINED_SAMPLER " + std::to_string(static_cast<int>(type))); }
+    std::string operator()(const STORAGE_IMAGE& type)    const { return std::string("STORAGE_IMAGE "    + std::to_string(static_cast<int>(type))); }
+    std::string operator()(const STORAGE_BUFFER& type)   const { return std::string("STORAGE_BUFFER "   + std::to_string(static_cast<int>(type))); }
+    std::string operator()(const INPUT_ATTACHMENT& type) const { return std::string("INPUT_ATTACHMENT " + std::to_string(static_cast<int>(type))); }
+};
 struct GetVkBufferUsage {
     template <typename T> VkBufferUsageFlagBits operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
     VkBufferUsageFlagBits operator()(const UNIFORM&          ) const { return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; }
@@ -142,6 +154,7 @@ struct HassPerFramebufferData {
             case UNIFORM::CAMERA_PERSPECTIVE_DEFAULT:
             case UNIFORM::LIGHT_POSITIONAL_DEFAULT:
             case UNIFORM::LIGHT_POSITIONAL_PBR:
+            case UNIFORM::LIGHT_POSITIONAL_SHADOW:
             case UNIFORM::LIGHT_SPOT_DEFAULT:
                 return true;
             default:
@@ -156,7 +169,12 @@ struct HassPerFramebufferData {
 //};
 struct GetTextureImageLayout {
     template <typename T> VkImageLayout operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
-    VkImageLayout operator()(const COMBINED_SAMPLER&) const { return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; }
+    VkImageLayout operator()(const COMBINED_SAMPLER& type) const {
+        switch (type) {
+            case COMBINED_SAMPLER::PIPELINE_DEPTH: return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
+            default: return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+        }
+    }
     VkImageLayout operator()(const STORAGE_IMAGE&) const { return VK_IMAGE_LAYOUT_GENERAL; }
     VkImageLayout operator()(const INPUT_ATTACHMENT&) const { return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; }
 };
@@ -175,7 +193,7 @@ struct IsCombinedSamplerMaterial {
 };
 struct IsCombinedSamplerPipeline {
     template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const COMBINED_SAMPLER& type) const { return type == COMBINED_SAMPLER::PIPELINE; }
+    bool operator()(const COMBINED_SAMPLER& type) const { return type == COMBINED_SAMPLER::PIPELINE || type == COMBINED_SAMPLER::PIPELINE_DEPTH; }
 };
 // STORAGE BUFFER
 struct IsStorageBuffer {

@@ -29,7 +29,7 @@ Uniform::Handler::Handler(Game* pGame)
       managers_{
           // CAMERA
           Uniform::Manager<Camera::Default::Perspective::Base>  //
-          {"Default Perspective Camera", UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, 6, "_U_CAM_DEF_PERS"},
+          {"Default Perspective Camera", UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, 9, "_U_CAM_DEF_PERS"},
           // LIGHT
           Uniform::Manager<Light::Default::Positional::Base>  //
           {"Default Positional Light", UNIFORM::LIGHT_POSITIONAL_DEFAULT, 40, "_U_LGT_DEF_POS"},
@@ -37,6 +37,8 @@ Uniform::Handler::Handler(Game* pGame)
           {"PBR Positional Light", UNIFORM::LIGHT_POSITIONAL_PBR, 40, "_U_LGT_PBR_POS"},
           Uniform::Manager<Light::Default::Spot::Base>  //
           {"Default Spot Light", UNIFORM::LIGHT_SPOT_DEFAULT, 20, "_U_LGT_DEF_SPT"},
+          Uniform::Manager<Light::Shadow::Positional>  //
+          {"Shadow Positional Light", UNIFORM::LIGHT_POSITIONAL_SHADOW, 20, "_U_LGT_SHDW_POS"},
           // MISCELLANEOUS
           Uniform::Manager<Uniform::Default::Fog::Base>  //
           {"Default Fog", UNIFORM::FOG_DEFAULT, 5, "_U_DEF_FOG"},
@@ -62,6 +64,7 @@ std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const
             case UNIFORM::LIGHT_POSITIONAL_DEFAULT:     return lgtDefPosMgr().pItems;
             case UNIFORM::LIGHT_POSITIONAL_PBR:         return lgtPbrPosMgr().pItems;
             case UNIFORM::LIGHT_SPOT_DEFAULT:           return lgtDefSptMgr().pItems;
+            case UNIFORM::LIGHT_POSITIONAL_SHADOW:      return lgtShdwPosMgr().pItems;
             case UNIFORM::FOG_DEFAULT:                  return uniDefFogMgr().pItems;
             case UNIFORM::PROJECTOR_DEFAULT:            return uniDefPrjMgr().pItems;
             case UNIFORM::SCREEN_SPACE_DEFAULT:         return uniScrDefMgr().pItems;
@@ -97,6 +100,7 @@ void Uniform::Handler::init() {
     lgtDefPosMgr().init(shell().context(), settings());     ++count;
     lgtPbrPosMgr().init(shell().context(), settings());     ++count;
     lgtDefSptMgr().init(shell().context(), settings());     ++count;
+    lgtShdwPosMgr().init(shell().context(), settings());    ++count;
     uniDefFogMgr().init(shell().context(), settings());     ++count;
     uniDefPrjMgr().init(shell().context(), settings());     ++count;
     uniScrDefMgr().init(shell().context(), settings());     ++count;
@@ -118,6 +122,7 @@ void Uniform::Handler::reset() {
     lgtDefPosMgr().destroy(dev);    ++count;
     lgtPbrPosMgr().destroy(dev);    ++count;
     lgtDefSptMgr().destroy(dev);    ++count;
+    lgtShdwPosMgr().destroy(dev);   ++count;
     uniDefFogMgr().destroy(dev);    ++count;
     uniDefPrjMgr().destroy(dev);    ++count;
     uniScrDefMgr().destroy(dev);    ++count;
@@ -135,15 +140,32 @@ void Uniform::Handler::createCameras() {
     assert(shell().context().imageCount == 3);  // Potential imageCount problem
     createInfo.dataCount = shell().context().imageCount;
 
-    // MAIN
-    createInfo.aspect = static_cast<float>(settings().initial_width) / static_cast<float>(settings().initial_height);
-    camDefPersMgr().insert(dev, &createInfo);
-    mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
+    // 0 (MAIN)
+    {
+        createInfo.aspect = static_cast<float>(settings().initial_width) / static_cast<float>(settings().initial_height);
+        camDefPersMgr().insert(dev, &createInfo);
+        mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
+    }
 
-    // 1
-    createInfo.eye = {2.0f, -2.0f, 4.0f};
-    camDefPersMgr().insert(dev, &createInfo);
-    // mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
+    // 1 (PROJECTOR)
+    {
+        createInfo.eye = {2.0f, -2.0f, 4.0f};
+        camDefPersMgr().insert(dev, &createInfo);
+        // mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
+    }
+
+    // 2 (SHADOW)
+    {
+        assert(camDefPersMgr().pItems.size() == 2);  // sister assert for lights
+
+        createInfo.eye = {2.0f, 5.5f, 0.0f};
+        createInfo.center = {0.0f, 0.0f, 0.0f};
+        createInfo.n = 1.0f;
+        createInfo.f = 20.0f;
+        // createInfo.fov = 180.0f;
+        camDefPersMgr().insert(dev, &createInfo);
+        // mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
+    }
 
     assert(mainCameraOffset_ < camDefPersMgr().pItems.size());
 }
@@ -151,27 +173,28 @@ void Uniform::Handler::createCameras() {
 void Uniform::Handler::createLights() {
     const auto& dev = shell().context().dev;
 
-    Light::CreateInfo createInfo = {};
+    Light::CreateInfo lightCreateInfo = {};
 
     assert(shell().context().imageCount == 3);  // Potential imageCount problem
-    createInfo.dataCount = shell().context().imageCount;
+    lightCreateInfo.dataCount = shell().context().imageCount;
 
     // POSITIONAL
     // (TODO: these being seperately created is really dumb!!! If this is
     // necessary there should be one set of positional lights, and multiple data buffers
     // for the one set...)
-    createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(20.5f, 10.5f, -23.5f));
-    lgtDefPosMgr().insert(dev, &createInfo);
-    lgtPbrPosMgr().insert(dev, &createInfo);
-    createInfo.model = helpers::affine(glm::vec3(1.0f), {-2.5f, 4.5f, -1.5f});
-    lgtDefPosMgr().insert(dev, &createInfo);
-    lgtPbrPosMgr().insert(dev, &createInfo);
-    createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-20.0f, 5.0f, -6.0f));
-    lgtDefPosMgr().insert(dev, &createInfo);
-    lgtPbrPosMgr().insert(dev, &createInfo);
-    createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-100.0f, 10.0f, 100.0f));
-    lgtDefPosMgr().insert(dev, &createInfo);
-    lgtPbrPosMgr().insert(dev, &createInfo);
+    // lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(20.5f, 10.5f, -23.5f));
+    lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), camDefPersMgr().getTypedItem(2).getWorldSpacePosition());
+    lgtDefPosMgr().insert(dev, &lightCreateInfo);
+    lgtPbrPosMgr().insert(dev, &lightCreateInfo);
+    lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), {-2.5f, 4.5f, -1.5f});
+    lgtDefPosMgr().insert(dev, &lightCreateInfo);
+    lgtPbrPosMgr().insert(dev, &lightCreateInfo);
+    lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-20.0f, 5.0f, -6.0f));
+    lgtDefPosMgr().insert(dev, &lightCreateInfo);
+    lgtPbrPosMgr().insert(dev, &lightCreateInfo);
+    lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-100.0f, 10.0f, 100.0f));
+    lgtDefPosMgr().insert(dev, &lightCreateInfo);
+    lgtPbrPosMgr().insert(dev, &lightCreateInfo);
 
     //// Bloom test
     // createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-7.0f, 4.0f, 2.5f));
@@ -191,6 +214,21 @@ void Uniform::Handler::createLights() {
     spotCreateInfo.exponent = 25.0f;
     spotCreateInfo.model = helpers::viewToWorld({0.0f, 4.5f, 1.0f}, {0.0f, 0.0f, -1.5f}, UP_VECTOR);
     lgtDefSptMgr().insert(dev, &spotCreateInfo);
+
+    // SHADOW
+    {
+        uint32_t shadowCamIndex = 2;
+        assert(shadowCamIndex == 2);  // sister assert for camera
+
+        auto& camera = camDefPersMgr().getTypedItem(shadowCamIndex);
+
+        Light::Shadow::CreateInfo lightShadowCreateInfo = {};
+        lightShadowCreateInfo.dataCount = shell().context().imageCount;
+        lightShadowCreateInfo.proj = helpers::getBias() * camera.getMVP();
+        lightShadowCreateInfo.mainCameraSpaceToWorldSpace = getMainCamera().getCameraSpaceToWorldSpaceTransform();
+
+        lgtShdwPosMgr().insert(dev, &lightShadowCreateInfo);
+    }
 }
 
 void Uniform::Handler::createMiscellaneous() {
@@ -213,12 +251,7 @@ void Uniform::Handler::createMiscellaneous() {
         // Don't forget to use the vulkan clip transform.
         auto proj = getMainCamera().getClip() * glm::perspective(glm::radians(30.0f), 1.0f, 0.2f, 1000.0f);
 
-        // Normalized screen space transform (texture coord space) s,t,r : [0, 1]
-        auto bias = glm::translate(glm::mat4{1.0f}, glm::vec3{0.5f});
-        bias = glm::scale(bias, glm::vec3{0.5f});
-
-        auto projector = bias * proj * view;
-
+        auto projector = helpers::getBias() * proj * view;
         uniDefPrjMgr().insert(dev, true, {{projector}});
     }
 
@@ -323,6 +356,11 @@ void Uniform::Handler::update() {
     auto& computeData = strPstPrcMgr().getTypedItem(0);
     computeData.reset(frameIndex);
     update(computeData, static_cast<int>(frameIndex));
+
+    // SHADOW POSITIONAL
+    auto& lgtShdwPos = lgtShdwPosMgr().getTypedItem(0);
+    lgtShdwPos.update(camera.getCameraSpaceToWorldSpaceTransform(), frameIndex);
+    update(lgtShdwPos, static_cast<int>(frameIndex));
 }
 
 uint32_t Uniform::Handler::getDescriptorCount(const DESCRIPTOR& descType, const Uniform::offsets& offsets) {
@@ -359,7 +397,7 @@ bool Uniform::Handler::validateUniformOffsets(const std::pair<DESCRIPTOR, index>
 void Uniform::Handler::getWriteInfos(const DESCRIPTOR& descType, const Uniform::offsets& offsets,
                                      Descriptor::Set::ResourceInfo& setResInfo) {
     auto& pItems = getItems(descType);
-    // All of the offset needed in a list.
+    // All of the needed offsets in a list.
     auto resolvedOffsets = getBindingOffsets(pItems, offsets);
     // Check for enough uniforms for highest offset
     assert(*std::prev(resolvedOffsets.end()) < pItems.size());
@@ -370,8 +408,13 @@ void Uniform::Handler::getWriteInfos(const DESCRIPTOR& descType, const Uniform::
     // Set the buffer infos
     uint32_t i = 0;
     for (const auto& offset : resolvedOffsets) {
-        if (resolvedOffsets.size() > 1)  //
-            auto x = 1;
+        if (pItems[offset]->BUFFER_INFO.count != setResInfo.uniqueDataSets) {
+            std::stringstream sMsg;
+            sMsg << "Uniform with descriptor type (" << std::visit(Descriptor::GetDescriptorTypeString{}, descType);
+            sMsg << ") has BUFFER_INFO count of (" << pItems[offset]->BUFFER_INFO.count;
+            sMsg << ") and a uniqueDataSets count of (" << setResInfo.uniqueDataSets << ").";
+            shell().log(Shell::LOG_WARN, sMsg.str().c_str());
+        }
         pItems[offset]->setDescriptorInfo(setResInfo, i++);
     }
 }

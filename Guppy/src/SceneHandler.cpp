@@ -40,10 +40,12 @@ void Scene::Handler::init() {
             meshInfo.selectable = false;
             defInstInfo = {};
             defInstInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
+            // defInstInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, glm::vec3{0, -1000, 0})});
             defMatInfo = {};
             defMatInfo.shininess = Material::SHININESS::EGGSHELL;
-            defMatInfo.color = {0.5f, 0.5f, 0.5f};
+            defMatInfo.color = {0.0f, 1.5f, 0.0f};
             auto& pGroundPlane = meshHandler().makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+            // auto& pGroundPlane = meshHandler().makeColorMesh<Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
             auto offset = pGroundPlane->getOffset();
             pScene->addMeshIndex(MESH::COLOR, offset);
             groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
@@ -81,8 +83,27 @@ void Scene::Handler::init() {
             pScene->addMeshIndex(MESH::TEXTURE, offset);
         }
 
-        // DRAGON
+        // BOX
         if (!suppress || false) {
+            meshInfo = {};
+            meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
+            defInstInfo = {};
+            // defInstInfo.data.push_back(
+            //    {helpers::affine(glm::vec3{1.0f}, glm::vec3{2.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
+            defInstInfo.data.push_back(
+                {helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
+            defMatInfo = {};
+            defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
+            defMatInfo.color = {0.0f, 0.0f, 1.0f};
+            auto& boxColor = meshHandler().makeColorMesh<Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+            auto offset = boxColor->getOffset();
+            pScene->addMeshIndex(MESH::COLOR, offset);
+            boxColor->putOnTop(groundPlane_bbmm);
+            meshHandler().updateMesh(boxColor);
+        }
+
+        // DRAGON
+        if (!suppress && false) {
             // MODEL
             modelInfo = {};
             modelInfo.async = false;
@@ -406,7 +427,7 @@ void Scene::Handler::init() {
         }
 
         // DRAGON
-        if (!suppress || false) {
+        if (!suppress && false) {
             // MODEL
             modelInfo = {};
             modelInfo.async = false;

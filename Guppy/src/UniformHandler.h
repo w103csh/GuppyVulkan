@@ -23,6 +23,7 @@
 #include "PBR.h"
 #include "Random.h"
 #include "ScreenSpace.h"
+#include "Shadow.h"
 #include "Storage.h"
 #include "Uniform.h"
 #include "UniformOffsetsManager.h"
@@ -120,17 +121,19 @@ class Handler : public Game::Handler {
     inline Uniform::Manager<Light::Default::Positional::Base>& lgtDefPosMgr() { return std::get<Uniform::Manager<Light::Default::Positional::Base>>(managers_[1]);};
     inline Uniform::Manager<Light::PBR::Positional::Base>& lgtPbrPosMgr() { return std::get<Uniform::Manager<Light::PBR::Positional::Base>>(managers_[2]);};
     inline Uniform::Manager<Light::Default::Spot::Base>& lgtDefSptMgr() { return std::get<Uniform::Manager<Light::Default::Spot::Base>>(managers_[3]);};
-    inline Uniform::Manager<Uniform::Default::Fog::Base>& uniDefFogMgr() { return std::get<Uniform::Manager<Uniform::Default::Fog::Base>>(managers_[4]);};
-    inline Uniform::Manager<Uniform::Default::Projector::Base>& uniDefPrjMgr() { return std::get<Uniform::Manager<Uniform::Default::Projector::Base>>(managers_[5]);};
-    inline Uniform::Manager<Uniform::ScreenSpace::Default>& uniScrDefMgr() { return std::get<Uniform::Manager<Uniform::ScreenSpace::Default>>(managers_[6]);};
-    inline Uniform::Manager<Uniform::Deferred::SSAO>& uniDfrSSAOMgr() { return std::get<Uniform::Manager<Uniform::Deferred::SSAO>>(managers_[7]);};
-    inline Uniform::Manager<Storage::PostProcess::Base>& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[8]);};
+    inline Uniform::Manager<Light::Shadow::Positional>& lgtShdwPosMgr() { return std::get<Uniform::Manager<Light::Shadow::Positional>>(managers_[4]);};
+    inline Uniform::Manager<Uniform::Default::Fog::Base>& uniDefFogMgr() { return std::get<Uniform::Manager<Uniform::Default::Fog::Base>>(managers_[5]);};
+    inline Uniform::Manager<Uniform::Default::Projector::Base>& uniDefPrjMgr() { return std::get<Uniform::Manager<Uniform::Default::Projector::Base>>(managers_[6]);};
+    inline Uniform::Manager<Uniform::ScreenSpace::Default>& uniScrDefMgr() { return std::get<Uniform::Manager<Uniform::ScreenSpace::Default>>(managers_[7]);};
+    inline Uniform::Manager<Uniform::Deferred::SSAO>& uniDfrSSAOMgr() { return std::get<Uniform::Manager<Uniform::Deferred::SSAO>>(managers_[8]);};
+    inline Uniform::Manager<Storage::PostProcess::Base>& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[9]);};
 
     template <class T> inline Uniform::Manager<T>& getManager() { assert(false); }
     template <> inline Uniform::Manager<Camera::Default::Perspective::Base>& getManager() { return camDefPersMgr(); }
     template <> inline Uniform::Manager<Light::Default::Positional::Base>& getManager() { return lgtDefPosMgr(); }
     template <> inline Uniform::Manager<Light::PBR::Positional::Base>& getManager() { return lgtPbrPosMgr(); }
     template <> inline Uniform::Manager<Light::Default::Spot::Base>& getManager() { return lgtDefSptMgr(); }
+    template <> inline Uniform::Manager<Light::Shadow::Positional>& getManager() { return lgtShdwPosMgr(); }
     template <> inline Uniform::Manager<Uniform::Default::Fog::Base>& getManager() { return uniDefFogMgr(); }
     template <> inline Uniform::Manager<Uniform::Default::Projector::Base>& getManager() { return uniDefPrjMgr(); }
     template <> inline Uniform::Manager<Uniform::ScreenSpace::Default>& getManager() { return uniScrDefMgr(); }
@@ -148,13 +151,14 @@ class Handler : public Game::Handler {
         Uniform::Manager<Light::Default::Positional::Base>,    //
         Uniform::Manager<Light::PBR::Positional::Base>,        //
         Uniform::Manager<Light::Default::Spot::Base>,          //
+        Uniform::Manager<Light::Shadow::Positional>,           //
         Uniform::Manager<Uniform::Default::Fog::Base>,         //
         Uniform::Manager<Uniform::Default::Projector::Base>,   //
         Uniform::Manager<Uniform::ScreenSpace::Default>,       //
         Uniform::Manager<Uniform::Deferred::SSAO>,             //
         Uniform::Manager<Storage::PostProcess::Base>           //
         >;
-    std::array<Manager, 9> managers_;
+    std::array<Manager, 10> managers_;
 
     // DESCRIPTOR
     OffsetsManager offsetsManager_;

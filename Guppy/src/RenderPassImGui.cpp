@@ -16,7 +16,7 @@
 
 namespace {
 const RenderPass::CreateInfo CREATE_INFO = {PASS::IMGUI, "ImGui", {}, RenderPass::FLAG::SWAPCHAIN};
-}
+}  // namespace
 
 RenderPass::ImGui::ImGui(RenderPass::Handler& handler, const uint32_t&& offset)
     : RenderPass::Base{handler, std::forward<const uint32_t>(offset), &CREATE_INFO} {}
@@ -78,7 +78,7 @@ void RenderPass::ImGui::record(const uint8_t frameIndex) {
     // vk::assert_success(vkEndCommandBuffer(data.priCmds[frameIndex]));
 }
 
-void RenderPass::ImGui::createAttachmentsAndSubpasses() {
+void RenderPass::ImGui::createAttachments() {
     /*
         THESE SETTINGS ARE COPIED DIRECTLY FROM THE IMGUI VULKAN SAMPLE.
         IF IMGUI IS UPDATED THIS SHOULD BE REPLACED WITH THE NEW SETTINGS, OR
@@ -106,12 +106,14 @@ void RenderPass::ImGui::createAttachmentsAndSubpasses() {
     resources_.colorAttachments.resize(1);
     resources_.colorAttachments.back().attachment = 0;
     resources_.colorAttachments.back().layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+}
 
+void RenderPass::ImGui::createSubpassDescriptions() {
     VkSubpassDescription subpass = {};
-    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = static_cast<uint32_t>(resources_.colorAttachments.size());
-    subpass.pColorAttachments = &resources_.colorAttachments.back();
-
+    subpass.pColorAttachments = resources_.colorAttachments.data();
+    subpass.pResolveAttachments = resources_.resolveAttachments.data();
+    subpass.pDepthStencilAttachment = pipelineData_.usesDepth ? &resources_.depthStencilAttachment : nullptr;
     resources_.subpasses.push_back(subpass);
 }
 

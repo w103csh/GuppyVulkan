@@ -10,21 +10,22 @@ struct CreateInfo;
 class Handler;
 namespace Deferred {
 
-// MRT
-class Deferred : public RenderPass::Base {
+class Base : public RenderPass::Base {
    public:
-    Deferred(Handler& handler, const index&& offset);
+    Base(Handler& handler, const index&& offset);
 
+    void init() override;
     void record(const uint8_t frameIndex) override;
     void update() override;
 
    private:
-    void createAttachmentsAndSubpasses() override;
+    void createAttachments() override;
+    void createSubpassDescriptions() override;
     void createDependencies() override;
     void updateClearValues() override;
     void createFramebuffers() override;
 
-    Descriptor::Set::bindDataMap descSetBindDataMap2_;  // Bummer huh?
+    bool doSSAO_;
 };
 
 }  // namespace Deferred

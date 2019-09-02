@@ -356,6 +356,15 @@ VkSamplerCreateInfo Sampler::GetVkSamplerCreateInfo(const Sampler::Base& sampler
             info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
             info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
             info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            break;
+        case SAMPLER::CLAMP_TO_BORDER_DEPTH:
+            info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            info.compareEnable = VK_TRUE;
+            info.compareOp = VK_COMPARE_OP_LESS;
+            info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+            break;
         case SAMPLER::DEFAULT:
             break;
         default:

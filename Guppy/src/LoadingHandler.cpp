@@ -39,7 +39,7 @@ std::unique_ptr<Loading::Resources> Loading::Handler::createLoadingResources() c
 }
 
 void Loading::Handler::loadSubmit(std::unique_ptr<Loading::Resources> pLdgRes) {
-    auto queueFamilyIndices = commandHandler().getUniqueQueueFamilies(true, false, true);
+    auto queueFamilyIndices = commandHandler().getUniqueQueueFamilies(true, false, true, false);
     pLdgRes->shouldWait = queueFamilyIndices.size() > 1;
 
     // End buffer recording

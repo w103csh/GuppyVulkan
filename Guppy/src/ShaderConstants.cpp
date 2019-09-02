@@ -5,6 +5,7 @@
 #include "PBR.h"
 #include "Parallax.h"
 #include "ScreenSpace.h"
+#include "Shadow.h"
 
 //#define MULTILINE(...) #__VA_ARGS__
 
@@ -149,6 +150,8 @@ const CreateInfo DEFAULT_MATERIAL_CREATE_INFO = {
 //    //
 //);
 
+const std::multimap<SHADER, Shader::CreateInfo> info = {{SHADER::SHADOW_COLOR_VERT, {}}};
+
 const std::map<SHADER, Shader::CreateInfo> ALL = {
     // DEFAULT
     {SHADER::COLOR_VERT, Shader::COLOR_VERT_CREATE_INFO},
@@ -181,6 +184,10 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     {SHADER::DEFERRED_MRT_COLOR_CS_VERT, Shader::Deferred::MRT_COLOR_CS_VERT_CREATE_INFO},
     {SHADER::DEFERRED_MRT_COLOR_FRAG, Shader::Deferred::MRT_COLOR_FRAG_CREATE_INFO},
     {SHADER::DEFERRED_SSAO_FRAG, Shader::Deferred::SSAO_FRAG_CREATE_INFO},
+    // SHADOW
+    {SHADER::SHADOW_COLOR_VERT, Shader::Shadow::COLOR_VERT_CREATE_INFO},
+    {SHADER::SHADOW_TEX_VERT, Shader::Shadow::TEX_VERT_CREATE_INFO},
+    {SHADER::SHADOW_FRAG, Shader::Shadow::FRAG_CREATE_INFO},
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {
