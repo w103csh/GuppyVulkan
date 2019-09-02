@@ -73,11 +73,22 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
         auto& secCmd = data.secCmds[frameIndex];
         auto& pScene = handler().sceneHandler().getActiveScene();
 
+        // LINE
+        // auto it = pipelineTypeBindDataMap_.find(PIPELINE::SHADOW_LINE);
+
+        auto itSurrogate =
+            std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), PIPELINE::DEFERRED_MRT_LINE);
+        assert(itSurrogate != surrogatePipelineTypes.end());
+        // pScene->record(surrogatePassType, *itSurrogate, it->second, priCmd, secCmd, frameIndex,
+        //               &getDescSetBindDataMap(it->first).begin()->second);
+        surrogatePipelineTypes.erase(itSurrogate);
+
+        // vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+
         // COLOR
         auto it = pipelineTypeBindDataMap_.find(PIPELINE::SHADOW_COLOR);
 
-        auto itSurrogate =
-            std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), PIPELINE::DEFERRED_MRT_COLOR);
+        itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), PIPELINE::DEFERRED_MRT_COLOR);
         assert(itSurrogate != surrogatePipelineTypes.end());
         pScene->record(surrogatePassType, *itSurrogate, it->second, priCmd, secCmd, frameIndex,
                        &getDescSetBindDataMap(it->first).begin()->second);
@@ -88,7 +99,7 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
         // TEXTURE
         it = pipelineTypeBindDataMap_.find(PIPELINE::SHADOW_COLOR);
 
-        itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), PIPELINE::DEFERRED_MRT);
+        itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), PIPELINE::DEFERRED_MRT_TEX);
         assert(itSurrogate != surrogatePipelineTypes.end());
         pScene->record(surrogatePassType, *itSurrogate, it->second, priCmd, secCmd, frameIndex,
                        &getDescSetBindDataMap(it->first).begin()->second);

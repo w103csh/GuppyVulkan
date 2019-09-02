@@ -81,9 +81,9 @@ namespace Deferred {
 
 extern const CreateInfo VERT_CREATE_INFO;
 extern const CreateInfo FRAG_CREATE_INFO;
-extern const CreateInfo MRT_WS_VERT_CREATE_INFO;
-extern const CreateInfo MRT_CS_VERT_CREATE_INFO;
-extern const CreateInfo MRT_FRAG_CREATE_INFO;
+extern const CreateInfo MRT_TEX_WS_VERT_CREATE_INFO;
+extern const CreateInfo MRT_TEX_CS_VERT_CREATE_INFO;
+extern const CreateInfo MRT_TEX_FRAG_CREATE_INFO;
 extern const CreateInfo MRT_COLOR_CS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_COLOR_FRAG_CREATE_INFO;
 extern const CreateInfo SSAO_FRAG_CREATE_INFO;
@@ -96,18 +96,26 @@ struct CreateInfo;
 class Handler;
 namespace Deferred {
 
-// MRT
-class MRT : public Graphics {
+// MRT (TEXTURE)
+class MRTTexture : public Graphics {
    public:
-    MRT(Handler& handler);
+    MRTTexture(Handler& handler);
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
-// MRT
+// MRT (COLOR)
 class MRTColor : public Graphics {
    public:
     MRTColor(Handler& handler);
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
+};
+
+// MRT (LINE)
+class MRTLine : public Graphics {
+   public:
+    MRTLine(Handler& handler);
+    void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
+    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes);
 };
 
 // SSAO

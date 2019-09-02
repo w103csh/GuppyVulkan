@@ -90,7 +90,7 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
                 }
             }
         } break;
-        case PIPELINE::DEFERRED_MRT:
+        case PIPELINE::DEFERRED_MRT_TEX:
         case PIPELINE::PARALLAX_SIMPLE:
         case PIPELINE::PARALLAX_STEEP:
         case PIPELINE::PBR_TEX:
@@ -117,6 +117,7 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
                 }
             }
         } break;
+        case PIPELINE::DEFERRED_MRT_LINE:
         case PIPELINE::LINE: {
             for (const auto& offset : lineOffsets_) {
                 auto& pMesh = handler().meshHandler().getLineMesh(offset);
