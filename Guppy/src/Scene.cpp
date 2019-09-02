@@ -61,8 +61,9 @@ void Scene::Base::addModelIndex(const Model::index offset) {
 }
 
 void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
-                         const std::shared_ptr<Pipeline::BindData>& pipelineBindData, const VkCommandBuffer& priCmd,
-                         const VkCommandBuffer& secCmd, const uint8_t frameIndex) {
+                         const std::shared_ptr<Pipeline::BindData>& pPipelineBindData, const VkCommandBuffer& priCmd,
+                         const VkCommandBuffer& secCmd, const uint8_t frameIndex,
+                         const Descriptor::Set::BindData* pDescSetBindData) {
     switch (pipelineType) {
         case PIPELINE::DEFERRED_MRT_COLOR:
         case PIPELINE::PBR_COLOR:
@@ -70,14 +71,22 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
         case PIPELINE::TRI_LIST_COLOR: {
             for (const auto& offset : colorOffsets_) {
                 auto& pMesh = handler().meshHandler().getColorMesh(offset);
-                if (pMesh->shouldDraw(passType, pipelineType))  //
-                    pMesh->draw(passType, pipelineBindData, priCmd, frameIndex);
+                if (pMesh->shouldDraw(passType, pipelineType)) {
+                    if (pDescSetBindData == nullptr)
+                        pMesh->draw(passType, pPipelineBindData, priCmd, frameIndex);
+                    else
+                        pMesh->draw(passType, pPipelineBindData, *pDescSetBindData, priCmd, frameIndex);
+                }
             }
             for (const auto& modelOffset : modelOffsets_) {
                 for (const auto& offset : handler().modelHandler().getModel(modelOffset)->getMeshOffsets(MESH::COLOR)) {
                     auto& pMesh = handler().meshHandler().getColorMesh(offset);
-                    if (pMesh->shouldDraw(passType, pipelineType))  //
-                        pMesh->draw(passType, pipelineBindData, priCmd, frameIndex);
+                    if (pMesh->shouldDraw(passType, pipelineType)) {
+                        if (pDescSetBindData == nullptr)
+                            pMesh->draw(passType, pPipelineBindData, priCmd, frameIndex);
+                        else
+                            pMesh->draw(passType, pPipelineBindData, *pDescSetBindData, priCmd, frameIndex);
+                    }
                 }
             }
         } break;
@@ -89,28 +98,44 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
         case PIPELINE::TRI_LIST_TEX: {
             for (const auto& offset : texOffsets_) {
                 auto& pMesh = handler().meshHandler().getTextureMesh(offset);
-                if (pMesh->shouldDraw(passType, pipelineType))  //
-                    pMesh->draw(passType, pipelineBindData, priCmd, frameIndex);
+                if (pMesh->shouldDraw(passType, pipelineType)) {
+                    if (pDescSetBindData == nullptr)
+                        pMesh->draw(passType, pPipelineBindData, priCmd, frameIndex);
+                    else
+                        pMesh->draw(passType, pPipelineBindData, *pDescSetBindData, priCmd, frameIndex);
+                }
             }
             for (const auto& modelOffset : modelOffsets_) {
                 for (const auto& offset : handler().modelHandler().getModel(modelOffset)->getMeshOffsets(MESH::TEXTURE)) {
                     auto& pMesh = handler().meshHandler().getTextureMesh(offset);
-                    if (pMesh->shouldDraw(passType, pipelineType))  //
-                        pMesh->draw(passType, pipelineBindData, priCmd, frameIndex);
+                    if (pMesh->shouldDraw(passType, pipelineType)) {
+                        if (pDescSetBindData == nullptr)
+                            pMesh->draw(passType, pPipelineBindData, priCmd, frameIndex);
+                        else
+                            pMesh->draw(passType, pPipelineBindData, *pDescSetBindData, priCmd, frameIndex);
+                    }
                 }
             }
         } break;
         case PIPELINE::LINE: {
             for (const auto& offset : lineOffsets_) {
                 auto& pMesh = handler().meshHandler().getLineMesh(offset);
-                if (pMesh->shouldDraw(passType, pipelineType))  //
-                    pMesh->draw(passType, pipelineBindData, priCmd, frameIndex);
+                if (pMesh->shouldDraw(passType, pipelineType)) {
+                    if (pDescSetBindData == nullptr)
+                        pMesh->draw(passType, pPipelineBindData, priCmd, frameIndex);
+                    else
+                        pMesh->draw(passType, pPipelineBindData, *pDescSetBindData, priCmd, frameIndex);
+                }
             }
             for (const auto& modelOffset : modelOffsets_) {
                 for (const auto& offset : handler().modelHandler().getModel(modelOffset)->getMeshOffsets(MESH::LINE)) {
                     auto& pMesh = handler().meshHandler().getLineMesh(offset);
-                    if (pMesh->shouldDraw(passType, pipelineType))  //
-                        pMesh->draw(passType, pipelineBindData, priCmd, frameIndex);
+                    if (pMesh->shouldDraw(passType, pipelineType)) {
+                        if (pDescSetBindData == nullptr)
+                            pMesh->draw(passType, pPipelineBindData, priCmd, frameIndex);
+                        else
+                            pMesh->draw(passType, pPipelineBindData, *pDescSetBindData, priCmd, frameIndex);
+                    }
                 }
             }
         } break;

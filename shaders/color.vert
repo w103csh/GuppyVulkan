@@ -34,11 +34,9 @@ layout(location=2) out vec4 fragColor;
 void main() {
     // This obviously can be much more efficient. (Can it??)
     mat4 viewModel = camera.view * inModel;
-    vec3 cameraSpacePosition = (viewModel * vec4(inPosition, 1.0)).xyz;
-    vec3 cameraSpaceNormal = normalize(mat3(viewModel) * inNormal);
 
-    fragPosition = cameraSpacePosition;
-    fragNormal = cameraSpaceNormal;
+    fragPosition = (viewModel * vec4(inPosition, 1.0)).xyz;
+    fragNormal = normalize(mat3(viewModel) * inNormal);
     fragColor = inColor;
     
     vec4 pos = inModel * vec4(inPosition, 1.0);

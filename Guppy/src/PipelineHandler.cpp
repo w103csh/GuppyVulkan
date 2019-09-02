@@ -9,6 +9,7 @@
 #include "PBR.h"
 #include "Pipeline.h"
 #include "ScreenSpace.h"
+#include "Shadow.h"
 #include "Shell.h"
 // HANDLERS
 #include "ComputeHandler.h"
@@ -67,6 +68,8 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
             case PIPELINE::DEFERRED_MRT_COLOR:              insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTColor>(std::ref(*this))}); break;
             case PIPELINE::DEFERRED_COMBINE:                insertPair = pPipelines_.insert({type, std::make_unique<Deferred::Combine>(std::ref(*this))}); break;
             case PIPELINE::DEFERRED_SSAO:                   insertPair = pPipelines_.insert({type, std::make_unique<Deferred::SSAO>(std::ref(*this))}); break;
+            case PIPELINE::SHADOW_COLOR:                    insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Color>(std::ref(*this))}); break;
+            case PIPELINE::SHADOW_TEX:                      insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Texture>(std::ref(*this))}); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on
@@ -324,9 +327,7 @@ void Pipeline::Handler::makeShaderInfoMap(Shader::infoMap& map) {
 void Pipeline::Handler::getShaderStages(const std::set<PIPELINE>& pipelineTypes, VkShaderStageFlags& stages) {
     for (const auto& [type, pPipeline] : pPipelines_) {
         if (pipelineTypes.find(pPipeline->TYPE) == pipelineTypes.end()) continue;
-        for (const auto& shaderType : pPipeline->SHADER_TYPES) {
-            stages |= Shader::ALL.at(shaderType).stage;
-        }
+        stages |= shaderHandler().getStageFlags(pPipeline->SHADER_TYPES);
     }
 }
 

@@ -74,10 +74,7 @@ class Handler : public Game::Handler {
         return pModels_.back();
     }
 
-    std::unique_ptr<Model::Base>& getModel(Model::index offset) {
-        assert(offset < pModels_.size());
-        return pModels_[offset];
-    }
+    std::unique_ptr<Model::Base>& getModel(Model::index offset) { return pModels_.at(offset); }
 
     void update(std::unique_ptr<Scene::Base>& pScene);
 

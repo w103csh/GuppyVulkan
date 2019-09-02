@@ -140,6 +140,8 @@ enum class PASS : uint32_t {  // TODO: make this a bitmask
     COMPUTE_POST_PROCESS,
     // DEFERRED
     DEFERRED,
+    // SHADOW
+    SHADOW,
     // Used to indicate "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
 };
@@ -147,8 +149,9 @@ enum class PASS : uint32_t {  // TODO: make this a bitmask
 enum class COMBINED_SAMPLER {
     MATERIAL,
     PIPELINE,
+    PIPELINE_DEPTH,
     //
-    DONT_CARE
+    DONT_CARE,
 };
 
 enum class STORAGE_BUFFER {
@@ -172,6 +175,7 @@ enum class UNIFORM {
     LIGHT_POSITIONAL_DEFAULT,
     LIGHT_SPOT_DEFAULT,
     LIGHT_POSITIONAL_PBR,
+    LIGHT_POSITIONAL_SHADOW,
     // GENERAL
     FOG_DEFAULT,
     PROJECTOR_DEFAULT,

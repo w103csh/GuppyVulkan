@@ -46,6 +46,13 @@ void macroReplace(const macroInfo &info, int itemCount, std::string &text) {
     helpers::replaceFirstOccurrence(std::get<1>(info), replaceStr, text);
 }
 
+// Normalized screen space transform (texture coord space) s,t,r : [0, 1]
+glm::mat4 getBias() {
+    auto bias = glm::translate(glm::mat4{1.0f}, glm::vec3{0.5f, 0.5f, 0.0f});
+    bias = glm::scale(bias, glm::vec3{0.5f, 0.5f, 1.0f});
+    return bias;
+}
+
 bool hasStencilComponent(VkFormat format) {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT ||
            format == VK_FORMAT_D32_SFLOAT_S8_UINT;

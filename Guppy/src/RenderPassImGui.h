@@ -18,7 +18,8 @@ class ImGui : public Base {
     void record(const uint8_t frameIndex) override;
 
    private:
-    void createAttachmentsAndSubpasses() override;
+    void createAttachments() override;
+    void createSubpassDescriptions() override;
     void createDependencies() override;
     void updateClearValues() override;
 };

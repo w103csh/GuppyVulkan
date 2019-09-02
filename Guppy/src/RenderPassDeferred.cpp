@@ -3,6 +3,7 @@
 
 #include "ConstantsAll.h"
 #include "Deferred.h"
+#include "RenderPassShadow.h"
 // HANDLERS
 #include "PipelineHandler.h"
 #include "DescriptorHandler.h"
@@ -35,14 +36,30 @@ const CreateInfo Deferred_CREATE_INFO = {
         // std::string(Texture::Deferred::AMBIENT_2D_ID),
         // std::string(Texture::Deferred::SPECULAR_2D_ID),
     },
+    {PASS::SHADOW},
 };
 
-Deferred::Deferred(RenderPass::Handler& handler, const index&& offset)
-    : RenderPass::Base{handler, std::forward<const index>(offset), &Deferred_CREATE_INFO} {
+Base::Base(RenderPass::Handler& handler, const index&& offset)
+    : RenderPass::Base{handler, std::forward<const index>(offset), &Deferred_CREATE_INFO}, doSSAO_(false) {
     status_ = STATUS::PENDING_MESH | STATUS::PENDING_PIPELINE;
 }
 
-void Deferred::record(const uint8_t frameIndex) {
+// TODO: should something like this be on the base class????
+void Base::init() {
+    // Initialize the dependent pass types. Currently they all will come prior to the
+    // main loop pass.
+    for (const auto& [passType, offset] : dependentTypeOffsetPairs_) {
+        // Boy is this going to be confusing if it ever doesn't work right.
+        if (passType == TYPE) {
+            RenderPass::Base::init();
+        } else {
+            const auto& pPass = handler().getPass(offset);
+            if (!pPass->isIntialized()) const_cast<RenderPass::Base*>(pPass.get())->init();
+        }
+    }
+}
+
+void Base::record(const uint8_t frameIndex) {
     if (getStatus() != STATUS::READY) update();
     if (getStatus() == STATUS::READY) {
         beginInfo_.framebuffer = data.framebuffers[frameIndex];
@@ -54,6 +71,16 @@ void Deferred::record(const uint8_t frameIndex) {
         bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
+
+        // SHADOW
+        {
+            const auto& pPass = handler().getPass(dependentTypeOffsetPairs_[0].second);
+            assert(pPass->TYPE == PASS::SHADOW);
+            std::vector<PIPELINE> pipelineTypes;
+            pipelineTypes.reserve(pipelineTypeBindDataMap_.size());
+            for (const auto& [pipelineType, value] : pipelineTypeBindDataMap_) pipelineTypes.push_back(pipelineType);
+            ((Shadow::Default*)pPass.get())->record(frameIndex, TYPE, pipelineTypes, priCmd);
+        }
 
         beginPass(priCmd, frameIndex, VK_SUBPASS_CONTENTS_INLINE);
 
@@ -82,7 +109,9 @@ void Deferred::record(const uint8_t frameIndex) {
         }
 
         // SSAO
-        {
+        if (doSSAO_) {
+            assert(false);  // This used to use descSetBindDataMap2_. I think I made a map so this isn't necessary.
+
             //// TODO: this definitely only needs to be recorded once per swapchain creation!!!
             // auto itPipelineBindData = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_SSAO);
             // assert(itPipelineBindData != pipelineTypeBindDataMap_.end());
@@ -97,10 +126,10 @@ void Deferred::record(const uint8_t frameIndex) {
         // COMBINE
         {
             // TODO: this definitely only needs to be recorded once per swapchain creation!!!
-            auto itPipelineBindData = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_COMBINE);
-            assert(itPipelineBindData != pipelineTypeBindDataMap_.end());
+            auto it = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_COMBINE);
+            assert(it != pipelineTypeBindDataMap_.end());
 
-            handler().getScreenQuad()->draw(TYPE, itPipelineBindData->second, descSetBindDataMap_.begin()->second, priCmd,
+            handler().getScreenQuad()->draw(TYPE, it->second, getDescSetBindDataMap(it->first).begin()->second, priCmd,
                                             frameIndex);
         }
 
@@ -109,89 +138,17 @@ void Deferred::record(const uint8_t frameIndex) {
     // vk::assert_success(vkEndCommandBuffer(data.priCmds[frameIndex]));
 }
 
-void Deferred::update() {
+void Base::update() {
     // Check the mesh status.
     if (handler().getScreenQuad()->getStatus() == STATUS::READY) {
         status_ ^= STATUS::PENDING_MESH;
-
-        bool ssaoReady = true;  // false;
-        {
-            // auto it = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_SSAO);
-            // assert(it != pipelineTypeBindDataMap_.end());
-            // auto& pPipeline = handler().pipelineHandler().getPipeline(it->first);
-
-            //// If the pipeline is not ready try to update once.
-            // if (pPipeline->getStatus() != STATUS::READY) pPipeline->updateStatus();
-
-            // if (pPipeline->getStatus() == STATUS::READY) {
-            //    // Get or make descriptor bind data.
-            //    if (descSetBindDataMap2_.empty())
-            //        handler().descriptorHandler().getBindData(it->first, descSetBindDataMap2_, nullptr, nullptr);
-
-            //    assert(descSetBindDataMap2_.size() == 1);  // Not dealing with anything else atm.
-            //}
-
-            // ssaoReady = pPipeline->getStatus() == STATUS::READY;
-        }
-
-        bool combineReady = false;
-        {
-            auto it = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_COMBINE);
-            assert(it != pipelineTypeBindDataMap_.end());
-            auto& pPipeline = handler().pipelineHandler().getPipeline(it->first);
-
-            // If the pipeline is not ready try to update once.
-            if (pPipeline->getStatus() != STATUS::READY) pPipeline->updateStatus();
-
-            if (pPipeline->getStatus() == STATUS::READY) {
-                // Get or make descriptor bind data.
-                if (descSetBindDataMap_.empty())
-                    handler().descriptorHandler().getBindData(it->first, descSetBindDataMap_, nullptr, nullptr);
-
-                assert(descSetBindDataMap_.size() == 1);  // Not dealing with anything else atm.
-            }
-
-            combineReady = pPipeline->getStatus() == STATUS::READY;
-        }
-
-        if (ssaoReady && combineReady) {
-            status_ ^= STATUS::PENDING_PIPELINE;
-            assert(status_ == STATUS::READY);
-        }
+        RenderPass::Base::update();
     }
 }
 
-void Deferred::createAttachmentsAndSubpasses() {
-    if (pipelineData_.usesDepth) {
-        // REFERENCE
-        resources_.depthStencilAttachment = {static_cast<uint32_t>(resources_.attachments.size()),
-                                             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
-        // DEPTH
-        resources_.attachments.push_back({});
-        resources_.attachments.back().format = getDepthFormat();
-        resources_.attachments.back().samples = getSamples();
-        resources_.attachments.back().loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        resources_.attachments.back().storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        resources_.attachments.back().stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        resources_.attachments.back().stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        resources_.attachments.back().initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        resources_.attachments.back().finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        resources_.attachments.back().flags = 0;
-    }
-
-    resources_.colorAttachments.push_back(
-        {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
-    // SWAPCHAIN ATTACHMENT
-    resources_.attachments.push_back({});
-    resources_.attachments.back().format = VK_FORMAT_B8G8R8A8_UNORM;  // getFormat();
-    resources_.attachments.back().samples = VK_SAMPLE_COUNT_1_BIT;
-    resources_.attachments.back().loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    resources_.attachments.back().storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    resources_.attachments.back().stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    resources_.attachments.back().stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    resources_.attachments.back().initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    resources_.attachments.back().finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    resources_.attachments.back().flags = 0;
+void Base::createAttachments() {
+    // DEPTH/RESOLVE/SWAPCHAIN
+    ::RenderPass::Base::createAttachments();
 
     VkAttachmentDescription attachment = {
         0,                                        // flags VkAttachmentDescriptionFlags
@@ -247,8 +204,7 @@ void Deferred::createAttachmentsAndSubpasses() {
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
 
     // SSAO
-    bool doSSAO = false;
-    if (doSSAO) {
+    if (doSSAO_) {
         resources_.colorAttachments.push_back(
             {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
         resources_.attachments.push_back(attachment);
@@ -258,7 +214,9 @@ void Deferred::createAttachmentsAndSubpasses() {
     } else {
         assert(resources_.colorAttachments.size() == 6);
     }
+}
 
+void Base::createSubpassDescriptions() {
     VkSubpassDescription subpassDesc;
 
     // MRT
@@ -270,7 +228,7 @@ void Deferred::createAttachmentsAndSubpasses() {
     resources_.subpasses.assign(2, subpassDesc);  // TEXTURE/COLOR
 
     // SSAO
-    if (doSSAO) {
+    if (doSSAO_) {
         subpassDesc = {};
         subpassDesc.colorAttachmentCount = 1;
         subpassDesc.pColorAttachments = &resources_.colorAttachments[6];  // SSAO
@@ -288,7 +246,7 @@ void Deferred::createAttachmentsAndSubpasses() {
     resources_.subpasses.push_back(subpassDesc);
 }
 
-void Deferred::createDependencies() {
+void Base::createDependencies() {
     VkSubpassDependency dependency = {};
 
     // Garbage from before
@@ -303,8 +261,7 @@ void Deferred::createDependencies() {
     resources_.dependencies.push_back(dependency);
 
     // Below should make sense
-    bool doSSAO = false;
-    if (doSSAO) {
+    if (doSSAO_) {
         dependency = {};
         dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
         dependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
@@ -342,9 +299,9 @@ void Deferred::createDependencies() {
     }
 }
 
-void Deferred::updateClearValues() {
+void Base::updateClearValues() {
     // Depth/Swapchain
-    Base::updateClearValues();
+    RenderPass::Base::updateClearValues();
     // Position
     clearValues_.push_back({});
     clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
@@ -360,12 +317,14 @@ void Deferred::updateClearValues() {
     // Specular
     clearValues_.push_back({});
     clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
-    //// SSAO
-    // clearValues_.push_back({});
-    // clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
+    // SSAO
+    if (doSSAO_) {
+        clearValues_.push_back({});
+        clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
+    }
 }
 
-void Deferred::createFramebuffers() {
+void Base::createFramebuffers() {
     /* Views for framebuffer.
      *  - depth
      *  - position
@@ -424,10 +383,12 @@ void Deferred::createFramebuffers() {
         attachmentViews.push_back(pTexture->samplers[0].layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL).view);
         assert(attachmentViews.back() != VK_NULL_HANDLE);
 
-        //// SSAO
-        // pTexture = handler().textureHandler().getTexture(Texture::Deferred::SSAO_2D_ID);
-        // attachmentViews.push_back(pTexture->samplers[0].layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL).view);
-        // assert(attachmentViews.back() != VK_NULL_HANDLE);
+        // SSAO
+        if (doSSAO_) {
+            pTexture = handler().textureHandler().getTexture(Texture::Deferred::SSAO_2D_ID);
+            attachmentViews.push_back(pTexture->samplers[0].layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL).view);
+            assert(attachmentViews.back() != VK_NULL_HANDLE);
+        }
 
         createInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
         createInfo.pAttachments = attachmentViews.data();

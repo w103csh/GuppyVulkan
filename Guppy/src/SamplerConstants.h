@@ -18,6 +18,7 @@ enum class SAMPLER {
     CUBE,
     CLAMP_TO_BORDER,
     CLAMP_TO_EDGE,
+    CLAMP_TO_BORDER_DEPTH,
 };
 
 namespace Sampler {
@@ -29,10 +30,12 @@ using USAGE = enum {
     POSITION =      0x00000004,
     AMBIENT =       0x00000008,
     NORMAL =        0x00000010,
+    DEPTH =         0x00000020,
     SPECULAR =      0x00000100,
     ALPHA =         0x00001000,
     HEIGHT =        0x00010000,
 };
+
 // Note: the values here are used for byte offsets,
 // and other things that rely on them.
 using CHANNELS = enum {

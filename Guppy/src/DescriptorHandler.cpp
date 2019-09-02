@@ -14,6 +14,7 @@
 #include "Pipeline.h"
 #include "RenderPass.h"
 #include "ScreenSpace.h"
+#include "Shadow.h"
 // HANDLERS
 #include "ComputeHandler.h"
 #include "PipelineHandler.h"
@@ -52,6 +53,8 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::SAMPLER_DEFERRED_SPECULAR:                 pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SPECULAR_SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SSAO_SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO_RANDOM:              pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SSAO_RANDOM_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::UNIFORM_SHADOW:                            pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::UNIFORM_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SAMPLER_SHADOW:                            pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::SAMPLER_CREATE_INFO)); break;
             default: assert(false);  // add new pipelines here
                 // clang-format on
         }

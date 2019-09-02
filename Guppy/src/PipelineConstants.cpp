@@ -26,6 +26,8 @@ const std::vector<PIPELINE> ALL = {
     PIPELINE::DEFERRED_MRT_COLOR,
     PIPELINE::DEFERRED_COMBINE,
     PIPELINE::DEFERRED_SSAO,
+    PIPELINE::SHADOW_COLOR,
+    PIPELINE::SHADOW_TEX,
 };
 
 const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
@@ -37,6 +39,7 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
             PIPELINE::PBR_COLOR,
             PIPELINE::CUBE,
             PIPELINE::DEFERRED_MRT_COLOR,
+            PIPELINE::SHADOW_COLOR,
         },
     },
     {
@@ -48,6 +51,7 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
             PIPELINE::PARALLAX_SIMPLE,
             PIPELINE::PARALLAX_STEEP,
             PIPELINE::DEFERRED_MRT,
+            PIPELINE::SHADOW_TEX,
         },
     },
     {
@@ -70,6 +74,19 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
     },
 };
 
+// Types listed here will pass the test in the RenderPass::Base::update
+// and be allowed to collect descriptor set binding data without a mesh.
+const std::set<PIPELINE> MESHLESS = {
+    PIPELINE::SCREEN_SPACE_DEFAULT,  //
+    PIPELINE::SCREEN_SPACE_HDR_LOG,  //
+    PIPELINE::SCREEN_SPACE_BRIGHT,   //
+    PIPELINE::SCREEN_SPACE_BLUR_A,   //
+    PIPELINE::SCREEN_SPACE_BLUR_B,   //
+    PIPELINE::DEFERRED_COMBINE,      //
+    PIPELINE::SHADOW_COLOR,          //
+    PIPELINE::SHADOW_TEX,
+};
+
 // DEFAULT
 namespace Default {
 
@@ -80,7 +97,7 @@ const Pipeline::CreateInfo TRI_LIST_COLOR_CREATE_INFO = {
     {SHADER::COLOR_VERT, SHADER::COLOR_FRAG},
     {
         DESCRIPTOR_SET::UNIFORM_DEFAULT,
-        // DESCRIPTOR_SET::PROJECTOR_DEFAULT,
+        DESCRIPTOR_SET::PROJECTOR_DEFAULT,
     },
     // Descriptor::OffsetsMap::Type{
     //    {UNIFORM::FOG_DEFAULT, {1}},

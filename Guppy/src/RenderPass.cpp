@@ -5,9 +5,9 @@
 #include "Shell.h"
 // HANDLERS
 #include "CommandHandler.h"
-#include "ComputeHandler.h"  // This is part of the postDraw hardcoding
 #include "DescriptorHandler.h"
 #include "MaterialHandler.h"
+#include "PipelineHandler.h"
 #include "RenderPassHandler.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
@@ -144,7 +144,8 @@ void RenderPass::Base::create() {
         data.signalSrcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     }
 
-    createAttachmentsAndSubpasses();
+    createAttachments();
+    createSubpassDescriptions();
     createDependencies();
 
     createPass();
@@ -239,6 +240,39 @@ void RenderPass::Base::record(const uint8_t frameIndex) {
     // vk::assert_success(vkEndCommandBuffer(priCmd));
 }
 
+void RenderPass::Base::update() {
+    assert(status_ & STATUS::PENDING_PIPELINE);
+
+    bool isReady = true;
+    for (const auto& [pipelineType, value] : pipelineTypeBindDataMap_) {
+        if (Pipeline::MESHLESS.count(pipelineType) == 0) continue;
+
+        // Get pipeline bind data, and check the status
+        auto& pPipeline = handler().pipelineHandler().getPipeline(pipelineType);
+
+        // If the pipeline is not ready try to update once.
+        if (pPipeline->getStatus() != STATUS::READY) pPipeline->updateStatus();
+
+        if (pPipeline->getStatus() == STATUS::READY) {
+            if (pipelineDescSetBindDataMap_.count(pipelineType) == 0) {
+                auto it = pipelineDescSetBindDataMap_.insert({pipelineType, {}});
+                assert(it.second);
+
+                // Get or make descriptor bind data.
+                handler().descriptorHandler().getBindData(pipelineType, it.first->second, nullptr, nullptr);
+                assert(it.first->second.size());
+            }
+        }
+
+        isReady &= pPipeline->getStatus() == STATUS::READY;
+    }
+
+    if (isReady) {
+        status_ ^= STATUS::PENDING_PIPELINE;
+        assert(status_ == STATUS::READY);
+    }
+}
+
 void RenderPass::Base::beginPass(const VkCommandBuffer& cmd, const uint8_t frameIndex,
                                  VkSubpassContents&& subpassContents) const {
     // TODO: remove the data member.
@@ -301,7 +335,7 @@ void RenderPass::Base::createBeginInfo() {
     }
 }
 
-void RenderPass::Base::createAttachmentsAndSubpasses() {
+void RenderPass::Base::createAttachments() {
     // DEPTH ATTACHMENT
     if (pipelineData_.usesDepth) {
         resources_.attachments.push_back({});
@@ -370,9 +404,12 @@ void RenderPass::Base::createAttachmentsAndSubpasses() {
             VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
         });
     }
+}
 
+void RenderPass::Base::createSubpassDescriptions() {
     // TODO: below comes from pipeline ???
-    // SETUP DESCRIPTION
+
+    // SUBPASS DESCRIPTION
     VkSubpassDescription subpass = {};
     subpass.colorAttachmentCount = static_cast<uint32_t>(resources_.colorAttachments.size());
     subpass.pColorAttachments = resources_.colorAttachments.data();
@@ -396,6 +433,8 @@ void RenderPass::Base::createDependencies() {
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
         dependency.srcAccessMask =
             VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+        resources_.dependencies.push_back(dependency);
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
         resources_.dependencies.push_back(dependency);
     }
 
@@ -463,7 +502,8 @@ void RenderPass::Base::createImageResources() {
 
         images_.push_back({});
 
-        helpers::createImage(ctx.dev, ctx.memProps, handler().commandHandler().getUniqueQueueFamilies(true, false, true),
+        helpers::createImage(ctx.dev, ctx.memProps,
+                             handler().commandHandler().getUniqueQueueFamilies(true, false, true, false),
                              pipelineData_.samples, format_, VK_IMAGE_TILING_OPTIMAL,
                              VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT,
                              VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, images_.back().image,
@@ -492,10 +532,10 @@ void RenderPass::Base::createDepthResource() {
             throw std::runtime_error(("depth format unsupported"));
         }
 
-        helpers::createImage(ctx.dev, ctx.memProps, handler().commandHandler().getUniqueQueueFamilies(true, false, true),
-                             pipelineData_.samples, depthFormat_, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-                             VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, depth_.image,
-                             depth_.memory);
+        helpers::createImage(
+            ctx.dev, ctx.memProps, handler().commandHandler().getUniqueQueueFamilies(true, false, true, false),
+            pipelineData_.samples, depthFormat_, tiling, VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+            VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, extent_.width, extent_.height, 1, 1, depth_.image, depth_.memory);
 
         VkImageAspectFlags aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
         if (helpers::hasStencilComponent(depthFormat_)) {

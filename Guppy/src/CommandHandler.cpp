@@ -115,7 +115,8 @@ const VkCommandBuffer& Command::Handler::getCmd(const QUEUE type) {
     // clang-format on
 }
 
-std::vector<uint32_t> Command::Handler::getUniqueQueueFamilies(bool graphics, bool present, bool transfer) const {
+std::vector<uint32_t> Command::Handler::getUniqueQueueFamilies(bool graphics, bool present, bool transfer,
+                                                               bool compute) const {
     std::vector<uint32_t> fams;
     std::vector<uint32_t>::iterator it;
 
@@ -124,13 +125,13 @@ std::vector<uint32_t> Command::Handler::getUniqueQueueFamilies(bool graphics, bo
     if (graphics && it == fams.end()) fams.push_back(graphicsIndex());
     // present
     it = std::find(fams.begin(), fams.end(), presentIndex());
-    if (graphics && it == fams.end()) fams.push_back(presentIndex());
+    if (present && it == fams.end()) fams.push_back(presentIndex());
     // transfer
     it = std::find(fams.begin(), fams.end(), transferIndex());
-    if (graphics && it == fams.end()) fams.push_back(transferIndex());
+    if (transfer && it == fams.end()) fams.push_back(transferIndex());
     // compute
     it = std::find(fams.begin(), fams.end(), computeIndex());
-    if (graphics && it == fams.end()) fams.push_back(computeIndex());
+    if (compute && it == fams.end()) fams.push_back(computeIndex());
 
     return fams;
 }

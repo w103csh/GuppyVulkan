@@ -152,6 +152,9 @@ static glm::mat4 affine(glm::vec3 scale = glm::vec3(1.0f), glm::vec3 translate =
            glm::scale(model, scale);
 }
 
+// TODO: constant?
+glm::mat4 getBias();
+
 static std::string makeVec3String(std::string prefix, glm::vec3 v) {
     std::stringstream ss;
     ss << prefix << "(" << v.x << ", " << v.y << ", " << v.z << ")" << std::endl;

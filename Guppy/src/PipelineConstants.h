@@ -43,6 +43,9 @@ enum class PIPELINE : uint32_t {
     DEFERRED_MRT_COLOR,
     DEFERRED_SSAO,
     DEFERRED_COMBINE,
+    // SHADOW
+    SHADOW_COLOR,
+    SHADOW_TEX,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP
@@ -53,6 +56,7 @@ namespace Pipeline {
 
 extern const std::vector<PIPELINE> ALL;
 extern const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP;
+extern const std::set<PIPELINE> MESHLESS;
 
 struct BindData {
     const VkPipelineBindPoint bindPoint;

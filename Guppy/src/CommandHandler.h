@@ -49,7 +49,8 @@ class Handler : public Game::Handler {
     const VkCommandBuffer &getCmd(const QUEUE type);
     // clang-format on
 
-    std::vector<uint32_t> getUniqueQueueFamilies(bool graphics = true, bool present = true, bool transfer = true) const;
+    std::vector<uint32_t> getUniqueQueueFamilies(bool graphics = true, bool present = true, bool transfer = true,
+                                                 bool compute = true) const;
 
     void beginCmd(const VkCommandBuffer &cmd, const VkCommandBufferInheritanceInfo *inheritanceInfo = nullptr) const;
     void endCmd(const VkCommandBuffer &cmd) const;

@@ -139,6 +139,11 @@ set(SOURCE
     ShaderConstants.h
     ShaderHandler.cpp
     ShaderHandler.h
+    # Shadow
+    RenderPassShadow.cpp
+    RenderPassShadow.h
+    Shadow.cpp
+    Shadow.h
     # Shell
     Shell.cpp
     Shell.h

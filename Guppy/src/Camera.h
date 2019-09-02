@@ -50,7 +50,9 @@ class Base : public Obj3d, public Descriptor::Base, public Buffer::PerFramebuffe
         return data_.view * glm::vec4(p, 1.0f);
     }
 
-    inline glm::vec3 getWorldSpaceDirection(const glm::vec3 &d = FORWARD_VECTOR, uint32_t index = 0) const override {
+    // FORWARD_VECTOR is negated here (cameras look in the negative Z direction traditionally).
+    // Not sure if this will cause confusion in the future.
+    inline glm::vec3 getWorldSpaceDirection(const glm::vec3 &d = -FORWARD_VECTOR, uint32_t index = 0) const override {
         // TODO: deal with model_...
         glm::vec3 direction = glm::inverse(data_.view) * glm::vec4(d, 0.0f);
         return glm::normalize(direction);
@@ -61,19 +63,24 @@ class Base : public Obj3d, public Descriptor::Base, public Buffer::PerFramebuffe
         return glm::inverse(data_.view) * glm::vec4(p, 1.0f);
     }
 
+    inline glm::mat4 getCameraSpaceToWorldSpaceTransform() const {
+        // TODO: deal with model_...
+        return glm::inverse(data_.view);
+    }
+
     Ray getRay(glm::vec2 &&position, const VkExtent2D &extent) {
         return getRay(std::forward<glm::vec2>(position), extent, far_);
     }
     Ray getRay(glm::vec2 &&position, const VkExtent2D &extent, float distance);
 
-    inline const glm::mat4 getClip() { return clip_; }
+    constexpr const auto &getMVP() const { return data_.viewProjection; }
+    constexpr const auto &getMV() const { return data_.view; }
+    constexpr const auto &getClip() const { return clip_; }
 
     void setAspect(float aspect);
     void update(const glm::vec3 &pos_dir, const glm::vec3 &look_dir, const uint32_t frameIndex);
 
    private:
-    inline glm::mat4 getMVP() const { return data_.projection * getMV(); }
-    inline glm::mat4 getMV() const { return data_.view * model_; }
     bool updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir);
     void update(const uint32_t frameIndex = UINT32_MAX);
 

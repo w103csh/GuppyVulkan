@@ -9,6 +9,7 @@
 #include "ConstantsAll.h"
 #include "Deferred.h"
 #include "ScreenSpace.h"
+#include "Shadow.h"
 #include "Shell.h"
 // HANDLERS
 #include "CommandHandler.h"
@@ -58,6 +59,7 @@ void Texture::Handler::init() {
         &Texture::Deferred::SPECULAR_2D_CREATE_INFO,
         &Texture::Deferred::SSAO_2D_CREATE_INFO,
         &ssaoRandTexCreateInfo,
+        &Texture::Shadow::MAP_2D_ARRAY_CREATE_INFO,
     };
 
     // I think this does not get set properly, so I am not sure where the texture generation
@@ -255,7 +257,11 @@ void Texture::Handler::createTexture(std::shared_ptr<Texture::Base> pTexture, bo
 void Texture::Handler::makeTexture(std::shared_ptr<Texture::Base>& pTexture, Sampler::Base& sampler) {
     assert(sampler.imgCreateInfo.arrayLayers > 0);
 
-    createImage(sampler, pTexture->pLdgRes);
+    if (sampler.imgCreateInfo.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        createDepthImage(sampler, pTexture->pLdgRes);
+    } else {
+        createImage(sampler, pTexture->pLdgRes);
+    }
 
     if (sampler.mipmapInfo.generateMipmaps && sampler.imgCreateInfo.mipLevels > 1) {
         generateMipmaps(sampler, pTexture->pLdgRes);
@@ -296,7 +302,7 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
 
     // Using CmdBufHandler::getUniqueQueueFamilies(true, false, true) here might not be wise... To work
     // right it relies on the the two command buffers being created with the same data.
-    auto queueFamilyIndices = commandHandler().getUniqueQueueFamilies(true, false, true);
+    auto queueFamilyIndices = commandHandler().getUniqueQueueFamilies(true, false, true, false);
     sampler.imgCreateInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
     sampler.imgCreateInfo.pQueueFamilyIndices = queueFamilyIndices.data();
 
@@ -355,6 +361,36 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
 
         pLdgRes->stgResources.push_back(stgRes);
     }
+}
+
+void Texture::Handler::createDepthImage(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes) {
+    assert(pLdgRes == nullptr);
+    assert(sampler.pPixels.empty());
+
+    sampler.imgCreateInfo.format = shell().context().depthFormat;
+
+    auto queueFamilyIndices = commandHandler().getUniqueQueueFamilies(true, false, false, false);
+    sampler.imgCreateInfo.queueFamilyIndexCount = commandHandler().graphicsIndex();
+    sampler.imgCreateInfo.pQueueFamilyIndices = queueFamilyIndices.data();
+
+    VkFormatProperties props;
+    vkGetPhysicalDeviceFormatProperties(shell().context().physicalDev, sampler.imgCreateInfo.format, &props);
+    if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        sampler.imgCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
+    } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        sampler.imgCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    } else {
+        // TODO: Try other depth formats.
+        assert(false && "depth format unsupported");
+        exit(EXIT_FAILURE);
+    }
+
+    // Create image
+    vk::assert_success(vkCreateImage(shell().context().dev, &sampler.imgCreateInfo, nullptr, &sampler.image));
+
+    // Allocate memory
+    helpers::createImageMemory(shell().context().dev, shell().context().memProps, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+                               sampler.image, sampler.memory);
 }
 
 void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes) {
@@ -446,9 +482,14 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
 
 void Texture::Handler::createImageView(const VkDevice& dev, const Sampler::Base& sampler, const uint32_t baseArrayLayer,
                                        const uint32_t layerCount, Sampler::LayerResource& layerResource) {
-    VkImageSubresourceRange range = {
-        VK_IMAGE_ASPECT_COLOR_BIT, 0, sampler.imgCreateInfo.mipLevels, baseArrayLayer, layerCount,
-    };
+    VkImageAspectFlags aspectFlags;
+    if (sampler.imgCreateInfo.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
+        if (helpers::hasStencilComponent(sampler.imgCreateInfo.format)) aspectFlags |= VK_IMAGE_ASPECT_STENCIL_BIT;
+    } else {
+        aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+    }
+    VkImageSubresourceRange range = {aspectFlags, 0, sampler.imgCreateInfo.mipLevels, baseArrayLayer, layerCount};
     helpers::createImageView(dev, sampler.image, sampler.imgCreateInfo.format, sampler.imageViewType, range,
                              layerResource.view);
 }
