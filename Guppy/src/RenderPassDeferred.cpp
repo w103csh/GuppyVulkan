@@ -20,8 +20,9 @@ const CreateInfo Deferred_CREATE_INFO = {
     PASS::DEFERRED,
     "Deferred Render Pass",
     {
+        PIPELINE::DEFERRED_MRT_LINE,
         PIPELINE::DEFERRED_MRT_COLOR,
-        PIPELINE::DEFERRED_MRT,
+        PIPELINE::DEFERRED_MRT_TEX,
         // PIPELINE::DEFERRED_SSAO,
         PIPELINE::DEFERRED_COMBINE,
     },
@@ -84,7 +85,19 @@ void Base::record(const uint8_t frameIndex) {
 
         beginPass(priCmd, frameIndex, VK_SUBPASS_CONTENTS_INLINE);
 
-        // MRT COLOR
+        // MRT (LINE)
+        {
+            auto& secCmd = data.secCmds[frameIndex];
+            auto& pScene = handler().sceneHandler().getActiveScene();
+
+            auto it = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_MRT_LINE);
+            assert(it != pipelineTypeBindDataMap_.end());
+            pScene->record(TYPE, it->first, it->second, priCmd, secCmd, frameIndex);
+
+            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+        }
+
+        // MRT (COLOR)
         {
             auto& secCmd = data.secCmds[frameIndex];
             auto& pScene = handler().sceneHandler().getActiveScene();
@@ -96,12 +109,12 @@ void Base::record(const uint8_t frameIndex) {
             vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
         }
 
-        // MRT
+        // MRT (TEXTURE)
         {
             auto& secCmd = data.secCmds[frameIndex];
             auto& pScene = handler().sceneHandler().getActiveScene();
 
-            auto it = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_MRT);
+            auto it = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_MRT_TEX);
             assert(it != pipelineTypeBindDataMap_.end());
             pScene->record(TYPE, it->first, it->second, priCmd, secCmd, frameIndex);
 
@@ -225,7 +238,7 @@ void Base::createSubpassDescriptions() {
     subpassDesc.pColorAttachments = &resources_.colorAttachments[1];  // POSITION/NORMAL/DIFFUSE/AMBIENT/SPECULAR
     subpassDesc.pResolveAttachments = nullptr;
     subpassDesc.pDepthStencilAttachment = pipelineData_.usesDepth ? &resources_.depthStencilAttachment : nullptr;
-    resources_.subpasses.assign(2, subpassDesc);  // TEXTURE/COLOR
+    resources_.subpasses.assign(3, subpassDesc);  // TEXTURE/COLOR/LINE
 
     // SSAO
     if (doSSAO_) {

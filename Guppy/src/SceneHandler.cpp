@@ -27,11 +27,26 @@ void Scene::Handler::init() {
     auto& pScene = makeScene(true, (!suppress && false));
 
     if (true) {
+        AxesCreateInfo axesInfo;
         Mesh::CreateInfo meshInfo;
+        Model::CreateInfo modelInfo;
         Instance::Default::CreateInfo defInstInfo;
         Material::Default::CreateInfo defMatInfo;
-        Model::CreateInfo modelInfo;
         BoundingBoxMinMax groundPlane_bbmm;
+
+        // ORIGIN AXES
+        if (!suppress || false) {
+            axesInfo = {};
+            axesInfo.pipelineType = PIPELINE::DEFERRED_MRT_LINE;
+            axesInfo.lineSize = 500.f;
+            axesInfo.showNegative = true;
+            defInstInfo = {};
+            defMatInfo = {};
+            defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
+            defMatInfo.shininess = 23.123f;
+            auto offset = meshHandler().makeLineMesh<Axes>(&axesInfo, &defMatInfo, &defInstInfo)->getOffset();
+            pScene->addMeshIndex(MESH::LINE, offset);
+        }
 
         // GROUND PLANE (COLOR)
         if (!suppress || false) {
@@ -54,7 +69,7 @@ void Scene::Handler::init() {
         // GROUND PLANE (TEXTURE)
         if (!suppress && false) {
             meshInfo = {};
-            meshInfo.pipelineType = PIPELINE::DEFERRED_MRT;
+            meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_TEX;
             meshInfo.selectable = false;
             defInstInfo = {};
             defInstInfo.data.push_back({helpers::affine(glm::vec3{500.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
@@ -72,7 +87,7 @@ void Scene::Handler::init() {
         // PLAIN OLD NON-TRANSFORMED PLANE (TEXTURE)
         if (!suppress && false) {
             meshInfo = {};
-            meshInfo.pipelineType = PIPELINE::DEFERRED_MRT;
+            meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_TEX;
             meshInfo.selectable = true;
             meshInfo.geometryCreateInfo.doubleSided = true;
             defInstInfo = {};
@@ -129,7 +144,7 @@ void Scene::Handler::init() {
         // MEDIEVAL HOUSE (TRI_COLOR_TEX)
         if (!suppress && false) {
             modelInfo = {};
-            modelInfo.pipelineType = PIPELINE::DEFERRED_MRT;
+            modelInfo.pipelineType = PIPELINE::DEFERRED_MRT_TEX;
             modelInfo.async = false;
             modelInfo.modelPath = MED_H_MODEL_PATH;
             modelInfo.smoothNormals = false;

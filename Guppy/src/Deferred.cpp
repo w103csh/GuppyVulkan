@@ -342,23 +342,23 @@ const CreateInfo FRAG_CREATE_INFO = {
     VK_SHADER_STAGE_FRAGMENT_BIT,
 };
 
-const CreateInfo MRT_WS_VERT_CREATE_INFO = {
-    SHADER::DEFERRED_MRT_WS_VERT,
-    "Deferred Multiple Render Target World Space Vertex Shader",
+const CreateInfo MRT_TEX_WS_VERT_CREATE_INFO = {
+    SHADER::DEFERRED_MRT_TEX_WS_VERT,
+    "Deferred Multiple Render Target Texture World Space Vertex Shader",
     "deferred.mrt.ws.vert.glsl",
     VK_SHADER_STAGE_VERTEX_BIT,
 };
 
-const CreateInfo MRT_CS_VERT_CREATE_INFO = {
-    SHADER::DEFERRED_MRT_CS_VERT,
-    "Deferred Multiple Render Target Camera Space Vertex Shader",
+const CreateInfo MRT_TEX_CS_VERT_CREATE_INFO = {
+    SHADER::DEFERRED_MRT_TEX_CS_VERT,
+    "Deferred Multiple Render Target Texture Camera Space Vertex Shader",
     "deferred.mrt.cs.vert.glsl",
     VK_SHADER_STAGE_VERTEX_BIT,
 };
 
-const CreateInfo MRT_FRAG_CREATE_INFO = {
-    SHADER::DEFERRED_MRT_FRAG,
-    "Deferred Multiple Render Target Fragment Shader",
+const CreateInfo MRT_TEX_FRAG_CREATE_INFO = {
+    SHADER::DEFERRED_MRT_TEX_FRAG,
+    "Deferred Multiple Render Target Texture Fragment Shader",
     "deferred.mrt.frag.glsl",
     VK_SHADER_STAGE_FRAGMENT_BIT,
     {
@@ -398,14 +398,14 @@ const CreateInfo SSAO_FRAG_CREATE_INFO = {
 namespace Pipeline {
 namespace Deferred {
 
-// MRT
-const Pipeline::CreateInfo MRT_CREATE_INFO = {
-    PIPELINE::DEFERRED_MRT,
-    "Deferred Multiple Render Target Pipeline",
+// MRT (TEXTURE)
+const Pipeline::CreateInfo MRT_TEX_CREATE_INFO = {
+    PIPELINE::DEFERRED_MRT_TEX,
+    "Deferred Multiple Render Target Texture Pipeline",
     {
-        // SHADER::DEFERRED_MRT_WS_VERT,
-        SHADER::DEFERRED_MRT_CS_VERT,
-        SHADER::DEFERRED_MRT_FRAG,
+        // SHADER::DEFERRED_MRT_TEX_WS_VERT,
+        SHADER::DEFERRED_MRT_TEX_CS_VERT,
+        SHADER::DEFERRED_MRT_TEX_FRAG,
     },
     {
         // DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT,
@@ -413,9 +413,9 @@ const Pipeline::CreateInfo MRT_CREATE_INFO = {
         DESCRIPTOR_SET::SAMPLER_DEFAULT,
     },
 };
-MRT::MRT(Pipeline::Handler& handler) : Graphics(handler, &MRT_CREATE_INFO) {}
+MRTTexture::MRTTexture(Pipeline::Handler& handler) : Graphics(handler, &MRT_TEX_CREATE_INFO) {}
 
-void MRT::getBlendInfoResources(CreateInfoResources& createInfoRes) {
+void MRTTexture::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     VkPipelineColorBlendAttachmentState state = {VK_FALSE};
     state.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
@@ -429,7 +429,7 @@ void MRT::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
 }
 
-// MRT COLOR
+// MRT (COLOR)
 const Pipeline::CreateInfo MRT_COLOR_CREATE_INFO = {
     PIPELINE::DEFERRED_MRT_COLOR,
     "Deferred Multiple Render Target Color Pipeline",
@@ -453,6 +453,37 @@ void MRTColor::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.colorBlendStateInfo.attachmentCount = static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size());
     createInfoRes.colorBlendStateInfo.pAttachments = createInfoRes.blendAttachmentStates.data();
     createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
+}
+
+// MRT (LINE)
+const Pipeline::CreateInfo MRT_LINE_CREATE_INFO = {
+    PIPELINE::DEFERRED_MRT_LINE,
+    "Deferred Multiple Render Target Line Pipeline",
+    {SHADER::DEFERRED_MRT_COLOR_CS_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
+    {
+        DESCRIPTOR_SET::UNIFORM_DEFAULT,
+        // DESCRIPTOR_SET::SAMPLER_DEFAULT,
+    },
+};
+MRTLine::MRTLine(Pipeline::Handler& handler) : Graphics(handler, &MRT_LINE_CREATE_INFO) {}
+
+void MRTLine::getBlendInfoResources(CreateInfoResources& createInfoRes) {
+    VkPipelineColorBlendAttachmentState state = {VK_FALSE};
+    state.colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+    // Position/Normal/Diffuse/Ambient/Specular
+    createInfoRes.blendAttachmentStates.assign(5, state);
+
+    createInfoRes.colorBlendStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr};
+    createInfoRes.colorBlendStateInfo.attachmentCount = static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size());
+    createInfoRes.colorBlendStateInfo.pAttachments = createInfoRes.blendAttachmentStates.data();
+    createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
+}
+
+void MRTLine::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    GetDefaultColorInputAssemblyInfoResources(createInfoRes);
+    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 }
 
 // SSAO

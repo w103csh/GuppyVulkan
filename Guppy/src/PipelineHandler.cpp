@@ -64,8 +64,9 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
             case PIPELINE::SCREEN_SPACE_BRIGHT:             insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::Bright>(std::ref(*this))}); break;
             case PIPELINE::SCREEN_SPACE_BLUR_A:             insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::BlurA>(std::ref(*this))}); break;
             case PIPELINE::SCREEN_SPACE_BLUR_B:             insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::BlurB>(std::ref(*this))}); break;
-            case PIPELINE::DEFERRED_MRT:                    insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRT>(std::ref(*this))}); break;
+            case PIPELINE::DEFERRED_MRT_TEX:                insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTTexture>(std::ref(*this))}); break;
             case PIPELINE::DEFERRED_MRT_COLOR:              insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTColor>(std::ref(*this))}); break;
+            case PIPELINE::DEFERRED_MRT_LINE:               insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTLine>(std::ref(*this))}); break;
             case PIPELINE::DEFERRED_COMBINE:                insertPair = pPipelines_.insert({type, std::make_unique<Deferred::Combine>(std::ref(*this))}); break;
             case PIPELINE::DEFERRED_SSAO:                   insertPair = pPipelines_.insert({type, std::make_unique<Deferred::SSAO>(std::ref(*this))}); break;
             case PIPELINE::SHADOW_COLOR:                    insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Color>(std::ref(*this))}); break;
