@@ -399,20 +399,20 @@ void Pipeline::Graphics::getRasterizationStateInfoResources(CreateInfoResources&
     createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_FILL;
     createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
     createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    /*  If depthClampEnable is set to VK_TRUE, then fragments that are beyond the near and far
-        planes are clamped to them as opposed to discarding them. This is useful in some special
-        cases like shadow maps. Using this requires enabling a GPU feature.
-    */
+    /* If depthClampEnable is set to VK_TRUE, then fragments that are beyond the near and far
+     *  planes are clamped to them as opposed to discarding them. This is useful in some special
+     *  cases like shadow maps. Using this requires enabling a GPU feature.
+     */
     createInfoRes.rasterizationStateInfo.depthClampEnable = VK_FALSE;
     createInfoRes.rasterizationStateInfo.rasterizerDiscardEnable = VK_FALSE;
     createInfoRes.rasterizationStateInfo.depthBiasEnable = VK_FALSE;
-    createInfoRes.rasterizationStateInfo.depthBiasConstantFactor = 0;
-    createInfoRes.rasterizationStateInfo.depthBiasClamp = 0;
-    createInfoRes.rasterizationStateInfo.depthBiasSlopeFactor = 0;
-    /*  The lineWidth member is straightforward, it describes the thickness of lines in terms of
-        number of fragments. The maximum line width that is supported depends on the hardware and
-        any line thicker than 1.0f requires you to enable the wideLines GPU feature.
-    */
+    createInfoRes.rasterizationStateInfo.depthBiasConstantFactor = 0.0f;
+    createInfoRes.rasterizationStateInfo.depthBiasClamp = 0.0f;
+    createInfoRes.rasterizationStateInfo.depthBiasSlopeFactor = 0.0f;
+    /* The lineWidth member is straightforward, it describes the thickness of lines in terms of
+     *  number of fragments. The maximum line width that is supported depends on the hardware and
+     *  any line thicker than 1.0f requires you to enable the wideLines GPU feature.
+     */
     createInfoRes.rasterizationStateInfo.lineWidth = 1.0f;
 }
 

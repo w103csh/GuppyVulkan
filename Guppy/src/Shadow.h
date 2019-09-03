@@ -78,8 +78,12 @@ const CreateInfo FRAG_CREATE_INFO = {
 }  // namespace Shader
 
 namespace Pipeline {
+
 struct CreateInfo;
 class Handler;
+
+void GetShadowRasterizationStateInfoResources(Pipeline::CreateInfoResources& createInfoRes);
+
 namespace Shadow {
 
 class Color : public Pipeline::Graphics {

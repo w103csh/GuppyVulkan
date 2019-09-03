@@ -81,6 +81,31 @@ const CreateInfo SAMPLER_CREATE_INFO = {
 }  // namespace Descriptor
 
 namespace Pipeline {
+
+void GetShadowRasterizationStateInfoResources(Pipeline::CreateInfoResources& createInfoRes) {
+    createInfoRes.rasterizationStateInfo = {};
+    createInfoRes.rasterizationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    createInfoRes.rasterizationStateInfo.lineWidth = 1.0f;
+    createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_FILL;
+    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;  // This worked great !!!
+    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    /* If depthClampEnable is set to VK_TRUE, then fragments that are beyond the near and far
+     *  planes are clamped to them as opposed to discarding them. This is useful in some special
+     *  cases like shadow maps. Using this requires enabling a GPU feature.
+     */
+    createInfoRes.rasterizationStateInfo.depthClampEnable = VK_FALSE;
+    createInfoRes.rasterizationStateInfo.rasterizerDiscardEnable = VK_FALSE;
+    /* I've seen literally no results with changing the constant factor. I probably just dont understand
+     *  how it works. The slope factor on the other hand seemed to help tremendously. Ultimately the most
+     *  success came from setting the cullMode to VK_CULL_MODE_FRONT_BIT which eliminated almost all of
+     *  the "shadow acne".
+     */
+    createInfoRes.rasterizationStateInfo.depthBiasEnable = VK_TRUE;
+    createInfoRes.rasterizationStateInfo.depthBiasConstantFactor = 0.0f;
+    createInfoRes.rasterizationStateInfo.depthBiasClamp = 0.0f;
+    createInfoRes.rasterizationStateInfo.depthBiasSlopeFactor = 0.0f;
+}
+
 namespace Shadow {
 
 // COLOR
@@ -95,9 +120,7 @@ const Pipeline::CreateInfo COLOR_CREATE_INFO = {
 Color::Color(Pipeline::Handler& handler) : Graphics(handler, &COLOR_CREATE_INFO) {}
 
 void Color::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
-    Graphics::getRasterizationStateInfoResources(createInfoRes);
-    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
-    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
+    GetShadowRasterizationStateInfoResources(createInfoRes);
 }
 
 // TEXTURE
@@ -112,9 +135,7 @@ const Pipeline::CreateInfo TEX_CREATE_INFO = {
 Texture::Texture(Pipeline::Handler& handler) : Graphics(handler, &TEX_CREATE_INFO) {}
 
 void Texture::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
-    Graphics::getRasterizationStateInfoResources(createInfoRes);
-    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
-    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;
+    GetShadowRasterizationStateInfoResources(createInfoRes);
 }
 
 }  // namespace Shadow

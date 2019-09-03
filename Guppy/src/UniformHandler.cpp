@@ -161,7 +161,7 @@ void Uniform::Handler::createCameras() {
         createInfo.eye = {2.0f, 5.5f, 0.0f};
         createInfo.center = {0.0f, 0.0f, 0.0f};
         createInfo.n = 1.0f;
-        createInfo.f = 20.0f;
+        createInfo.f = 21.0f;
         // createInfo.fov = 180.0f;
         camDefPersMgr().insert(dev, &createInfo);
         // mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
