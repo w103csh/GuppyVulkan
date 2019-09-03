@@ -358,10 +358,11 @@ VkSamplerCreateInfo Sampler::GetVkSamplerCreateInfo(const Sampler::Base& sampler
             info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
             break;
         case SAMPLER::CLAMP_TO_BORDER_DEPTH:
-            //info.magFilter = VK_FILTER_LINEAR;
-            //info.minFilter = VK_FILTER_LINEAR;
             info.magFilter = VK_FILTER_NEAREST;
             info.minFilter = VK_FILTER_NEAREST;
+        case SAMPLER::CLAMP_TO_BORDER_DEPTH_PCF:
+            info.magFilter = VK_FILTER_LINEAR;
+            info.minFilter = VK_FILTER_LINEAR;
             info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
             info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
             info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;

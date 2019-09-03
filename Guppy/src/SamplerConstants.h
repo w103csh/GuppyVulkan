@@ -19,6 +19,7 @@ enum class SAMPLER {
     CLAMP_TO_BORDER,
     CLAMP_TO_EDGE,
     CLAMP_TO_BORDER_DEPTH,
+    CLAMP_TO_BORDER_DEPTH_PCF,
 };
 
 namespace Sampler {

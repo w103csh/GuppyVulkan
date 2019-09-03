@@ -232,14 +232,29 @@ vec3 blinnPhongPositionalShadow(
                 vec4 shadowTexCoord = getShadowTexCoord4(lgtShadowPos[0].proj, pos, 0);
 
                 if (shadowTexCoord.w >= 0) { // w is the depth reference for sampler2DArrayShadow
-                    shadow = texture(sampShadow, shadowTexCoord);
+
+                    // TODO: add a proper PCF flag. This should probably so through all the way to
+                    // VkSamplerCreateInfo (nearest vs. linear).
+
+                    if (false) {
+                        // Normal
+                        shadow = texture(sampShadow, shadowTexCoord);
+                    } else {
+                        // Percentage-closer fliltering (PCF) shadows 
+                        float sum = 0.0;
+                        sum += textureOffset(sampShadow, shadowTexCoord, ivec2(-1, -1));
+                        sum += textureOffset(sampShadow, shadowTexCoord, ivec2(-1,  1));
+                        sum += textureOffset(sampShadow, shadowTexCoord, ivec2( 1,  1));
+                        sum += textureOffset(sampShadow, shadowTexCoord, ivec2( 1, -1));
+                        // shadow = sum * 0.25; // I think it looks better with the actual sampler too.
+                        sum += texture(sampShadow, shadowTexCoord);
+                        shadow = sum * 0.2;
+                    }
+
                 }
             }
 
-            if (shadow != 0.0) {
-                color += lgtPos[i].L * (Kd + Ks);
-            }
-            return color;
+            color += lgtPos[i].L * (Kd + Ks) * shadow;
         }
     }
 
