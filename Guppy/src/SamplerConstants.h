@@ -20,6 +20,7 @@ enum class SAMPLER {
     CLAMP_TO_EDGE,
     CLAMP_TO_BORDER_DEPTH,
     CLAMP_TO_BORDER_DEPTH_PCF,
+    DEFAULT_NEAREST,
 };
 
 namespace Sampler {
@@ -33,6 +34,7 @@ using USAGE = enum {
     NORMAL =        0x00000010,
     DEPTH =         0x00000020,
     SPECULAR =      0x00000100,
+    DONT_CARE =     0x00000200,
     ALPHA =         0x00001000,
     HEIGHT =        0x00010000,
 };
@@ -97,7 +99,7 @@ struct CreateInfo {
     VkImageViewType imageViewType = VK_IMAGE_VIEW_TYPE_MAX_ENUM;
     // Leave as bad only if the texture needs to pick up its extent
     // from a loaded image file, or the swapchain images.
-    VkExtent2D extent = BAD_EXTENT_2D;
+    VkExtent3D extent = BAD_EXTENT_3D;
     SwapchainInfo swpchnInfo = {};
     VkImageCreateFlags imageFlags = 0;
     SAMPLER type = SAMPLER::DEFAULT;

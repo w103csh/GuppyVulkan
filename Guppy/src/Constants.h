@@ -24,6 +24,7 @@ constexpr bool PRIMARY_MONITOR = 0;
 constexpr uint32_t TEXTURE_LIMIT = 30;
 constexpr auto APP_SHORT_NAME = "Guppy";
 constexpr VkExtent2D BAD_EXTENT_2D = {UINT32_MAX, UINT32_MAX};
+constexpr VkExtent3D BAD_EXTENT_3D = {UINT32_MAX, UINT32_MAX, 1};
 constexpr float BAD_ASPECT = FLT_MAX;
 
 constexpr float T_MAX = 1.0f;

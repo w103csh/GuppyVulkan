@@ -37,7 +37,7 @@ const Sampler::CreateInfo DEFAULT_2D_SAMPLER_CREATE_INFO = {
     "Render Pass Default 2D Color Sampler",
     {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D,
-    BAD_EXTENT_2D,
+    BAD_EXTENT_3D,
     {false, true},
     0,
     SAMPLER::CLAMP_TO_BORDER,
@@ -50,7 +50,7 @@ const Sampler::CreateInfo PROJECT_2D_SAMPLER_CREATE_INFO = {
     "Render Pass Project 2D Color Sampler",
     {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D,
-    {640, 480},
+    {640, 480, 1},
     {},
     0,
     SAMPLER::CLAMP_TO_BORDER,
@@ -61,7 +61,7 @@ const Sampler::CreateInfo PROJECT_2D_ARRAY_SAMPLER_CREATE_INFO = {
     "Render Pass Project 2D Array Color Sampler",
     {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-    {1024, 768},
+    {1024, 768, 1},
     {},
     0,
     SAMPLER::CLAMP_TO_BORDER,
@@ -72,7 +72,7 @@ const Sampler::CreateInfo SWAPCHAIN_TARGET_SAMPLER_CREATE_INFO = {
     "Swapchain Target Sampler",     //
     {{{::Sampler::USAGE::COLOR}}},  //
     VK_IMAGE_VIEW_TYPE_2D,          //
-    BAD_EXTENT_2D,
+    BAD_EXTENT_3D,
     {true, true},
     0,
     SAMPLER::CLAMP_TO_BORDER,

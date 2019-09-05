@@ -99,7 +99,9 @@ void RenderPass::Base::init() {
                     extent_.height = pTextures_[i]->samplers[0].imgCreateInfo.extent.height;
                     format_ = pTextures_[i]->samplers[0].imgCreateInfo.format;
                 } else {
-                    assert(helpers::compExtent2D(extent_, pTextures_[i]->samplers[0].imgCreateInfo.extent));
+                    assert(pTextures_[i]->samplers[0].imgCreateInfo.extent.depth == 1);
+                    assert(extent_.width == pTextures_[i]->samplers[0].imgCreateInfo.extent.width);
+                    assert(extent_.height == pTextures_[i]->samplers[0].imgCreateInfo.extent.height);
                     assert(format_ = pTextures_[i]->samplers[0].imgCreateInfo.format);
                 }
             }

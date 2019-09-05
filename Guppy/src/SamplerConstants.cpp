@@ -46,7 +46,7 @@ const CreateInfo STATUE_CREATE_INFO = {
     "Statue Color Sampler",                        //
     {{{Sampler::USAGE::COLOR, STATUE_TEX_PATH}}},  //
     VK_IMAGE_VIEW_TYPE_2D,                         //
-    BAD_EXTENT_2D,
+    BAD_EXTENT_3D,
     {},
     0,
     SAMPLER::CLAMP_TO_BORDER,
@@ -154,7 +154,7 @@ const CreateInfo PISA_HDR_CREATE_INFO = {
         {Sampler::USAGE::COLOR, PISA_HDR_NEG_Z_TEX_PATH},
     }},
     VK_IMAGE_VIEW_TYPE_CUBE,
-    BAD_EXTENT_2D,
+    BAD_EXTENT_3D,
     {},
     VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
     SAMPLER::CUBE,
@@ -174,7 +174,7 @@ const CreateInfo SKYBOX_CREATE_INFO = {
         {Sampler::USAGE::COLOR, SKYBOX_NEG_Z_TEX_PATH},
     }},
     VK_IMAGE_VIEW_TYPE_CUBE,
-    BAD_EXTENT_2D,
+    BAD_EXTENT_3D,
     {},
     VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
     SAMPLER::CUBE,

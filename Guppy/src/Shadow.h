@@ -4,6 +4,7 @@
 #include "BufferItem.h"
 #include "ConstantsAll.h"
 #include "Pipeline.h"
+#include "Random.h"
 
 namespace Texture {
 struct CreateInfo;
@@ -12,8 +13,30 @@ namespace Shadow {
 const std::string_view MAP_2D_ARRAY_ID = "Shadow 2D Array Map Texture";
 extern const CreateInfo MAP_2D_ARRAY_CREATE_INFO;
 
+const std::string_view OFFSET_2D_ID = "Shadow Offset 2D Texture";
+CreateInfo MakeOffsetTex(Random& rand);
+
 }  // namespace Shadow
 }  // namespace Texture
+
+namespace Uniform {
+namespace Shadow {
+
+struct DATA {
+    // 0: width
+    // 1: height
+    // 2: depth
+    // 3: radius
+    glm::vec4 data{0.0f};
+};
+
+class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
+   public:
+    Base(const Buffer::Info&& info, DATA* pData);
+};
+
+}  // namespace Shadow
+}  // namespace Uniform
 
 namespace Light {
 namespace Shadow {
@@ -46,6 +69,7 @@ namespace Shadow {
 
 extern const CreateInfo UNIFORM_CREATE_INFO;
 extern const CreateInfo SAMPLER_CREATE_INFO;
+extern const CreateInfo SAMPLER_OFFSET_CREATE_INFO;
 
 }  // namespace Shadow
 }  // namespace Set

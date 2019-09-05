@@ -234,9 +234,12 @@ static void destroyImageResource(const VkDevice &dev, ImageResource &res) {
     res.memory = VK_NULL_HANDLE;
 }
 
-template <typename T1, typename T2>
-constexpr bool compExtent2D(const T1 &a, const T2 &b) {
-    return a.height == b.height && a.width == b.width;
+constexpr bool compExtent2D(const VkExtent2D &a, const VkExtent2D &b) {
+    return a.height == b.height && a.width == b.width;  //
+}
+
+constexpr bool compExtent3D(const VkExtent3D &a, const VkExtent3D &b) {
+    return a.height == b.height && a.width == b.width && a.depth == b.depth;
 }
 
 static bool isNumber(const std::string_view &sv) {

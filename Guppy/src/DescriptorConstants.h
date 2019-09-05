@@ -50,6 +50,7 @@ enum class DESCRIPTOR_SET {
     // SHADOW
     UNIFORM_SHADOW,
     SAMPLER_SHADOW,
+    SAMPLER_SHADOW_OFFSET,
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 
