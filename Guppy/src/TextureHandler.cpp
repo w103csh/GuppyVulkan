@@ -27,6 +27,7 @@ void Texture::Handler::init() {
     reset();
 
     auto ssaoRandTexCreateInfo = Deferred::MakeSSAORandRotationTex(uniformHandler().rand);
+    auto shadowOffsetTexCreateInfo = Shadow::MakeOffsetTex(uniformHandler().rand);
 
     // Transition storage images. I can't think of a better time to do this. Its
     // not great but oh well.
@@ -60,6 +61,7 @@ void Texture::Handler::init() {
         &Texture::Deferred::SSAO_2D_CREATE_INFO,
         &ssaoRandTexCreateInfo,
         &Texture::Shadow::MAP_2D_ARRAY_CREATE_INFO,
+        &shadowOffsetTexCreateInfo,
     };
 
     // I think this does not get set properly, so I am not sure where the texture generation

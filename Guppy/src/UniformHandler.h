@@ -126,7 +126,8 @@ class Handler : public Game::Handler {
     inline Uniform::Manager<Uniform::Default::Projector::Base>& uniDefPrjMgr() { return std::get<Uniform::Manager<Uniform::Default::Projector::Base>>(managers_[6]);};
     inline Uniform::Manager<Uniform::ScreenSpace::Default>& uniScrDefMgr() { return std::get<Uniform::Manager<Uniform::ScreenSpace::Default>>(managers_[7]);};
     inline Uniform::Manager<Uniform::Deferred::SSAO>& uniDfrSSAOMgr() { return std::get<Uniform::Manager<Uniform::Deferred::SSAO>>(managers_[8]);};
-    inline Uniform::Manager<Storage::PostProcess::Base>& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[9]);};
+    inline Uniform::Manager<Uniform::Shadow::Base>& uniShdwDataMgr() { return std::get<Uniform::Manager<Uniform::Shadow::Base>>(managers_[9]);};
+    inline Uniform::Manager<Storage::PostProcess::Base>& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[10]);};
 
     template <class T> inline Uniform::Manager<T>& getManager() { assert(false); }
     template <> inline Uniform::Manager<Camera::Default::Perspective::Base>& getManager() { return camDefPersMgr(); }
@@ -138,6 +139,7 @@ class Handler : public Game::Handler {
     template <> inline Uniform::Manager<Uniform::Default::Projector::Base>& getManager() { return uniDefPrjMgr(); }
     template <> inline Uniform::Manager<Uniform::ScreenSpace::Default>& getManager() { return uniScrDefMgr(); }
     template <> inline Uniform::Manager<Uniform::Deferred::SSAO>& getManager() { return uniDfrSSAOMgr(); }
+    template <> inline Uniform::Manager<Uniform::Shadow::Base>& getManager() { return uniShdwDataMgr(); }
     template <> inline Uniform::Manager<Storage::PostProcess::Base>& getManager() { return strPstPrcMgr(); }
     // clang-format on
 
@@ -156,9 +158,10 @@ class Handler : public Game::Handler {
         Uniform::Manager<Uniform::Default::Projector::Base>,   //
         Uniform::Manager<Uniform::ScreenSpace::Default>,       //
         Uniform::Manager<Uniform::Deferred::SSAO>,             //
+        Uniform::Manager<Uniform::Shadow::Base>,               //
         Uniform::Manager<Storage::PostProcess::Base>           //
         >;
-    std::array<Manager, 10> managers_;
+    std::array<Manager, 11> managers_;
 
     // DESCRIPTOR
     OffsetsManager offsetsManager_;

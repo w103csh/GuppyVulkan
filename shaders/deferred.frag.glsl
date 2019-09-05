@@ -4,6 +4,7 @@
 #define _DS_UNI_DFR_COMB 0
 // SAMPLERS
 #define _DS_SMP_SHDW 0
+#define _DS_SMP_SHDW_OFF 0
 // ATTACHMENTS
 #define _DS_SMP_DFR_POS 0
 #define _DS_SMP_DFR_NORM 0
@@ -15,10 +16,10 @@
 #define _U_LGT_DEF_POS 0
 #define _U_LGT_DEF_SPT 0
 #define _U_LGT_SHDW_POS 0
-
 const uint LIGHT_SHOW       = 0x00000001u;
 
 layout(set=_DS_SMP_SHDW, binding=0) uniform sampler2DArrayShadow sampShadow;
+layout(set=_DS_SMP_SHDW_OFF, binding=0) uniform sampler3D sampShadowOffset;
 
 layout(input_attachment_index=2, set=_DS_SMP_DFR_POS,   binding=0) uniform subpassInput posInput;
 layout(input_attachment_index=3, set=_DS_SMP_DFR_NORM,  binding=0) uniform subpassInput normInput;
@@ -139,6 +140,9 @@ vec3 blinnPhongSpot(
 layout(set=_DS_UNI_DFR_COMB, binding=3) uniform LightShadowPositional {
     mat4 proj;
 } lgtShadowPos[_U_LGT_SHDW_POS];
+layout(set=_DS_UNI_DFR_COMB, binding=4) uniform ShadowDefault {
+    vec4 data;
+} shadowData;
 
 const float eps = 0.1;
 bool epsilonEqual(float f1, float f2) {
@@ -206,37 +210,79 @@ vec3 blinnPhongPositionalShadow(
                 vec3 h = normalize(v + s);
                 Ks = spec * pow(max(dot(h, norm), 0.0), shininess);
             }
+            
+            /* Shadow texture coords (This was a real pain in the ass to figure out!):
+             *
+             *  sampler2DArrayShadow:
+             *      x: s
+             *      y: t
+             *      z: array layer
+             *      w: D(ref) for depth comparison
+             *
+             *  sampler2DShadow:
+             *      x: s
+             *      y: t
+             *      z: D(ref) for depth comparison
+             *
+             * Notice that the z value changes between the different sampler types this took
+             *  hours to figure out. Hopefully you remember this.
+             *
+             * Also, if sampler filtering is enabled then the result of a texture lookup is
+             *  non-binary. If, for example, half of the samples pass the depth test then 0.5
+             *  is returned.
+             */
+            vec4 shadowTexCoord = getShadowTexCoord4(lgtShadowPos[0].proj, pos, 0);
 
-            float shadow = 1.0;
-            {
-                /* Shadow texture coords (This was a real pain in the ass to figure out!):
-                 *
-                 *  sampler2DArrayShadow:
-                 *      x: s
-                 *      y: t
-                 *      z: array layer
-                 *      w: D(ref) for depth comparison
-                 *
-                 *  sampler2DShadow:
-                 *      x: s
-                 *      y: t
-                 *      z: D(ref) for depth comparison
-                 *
-                 * Notice that the z value changes between the different sampler types this took
-                 *  hours to figure out. Hopefully you remember this.
-                 *
-                 * Also, if sampler filtering is enabled then the result of a texture lookup is
-                 *  non-binary. If, for example, half of the samples pass the depth test then 0.5
-                 *  is returned.
-                 */
-                vec4 shadowTexCoord = getShadowTexCoord4(lgtShadowPos[0].proj, pos, 0);
+            if (false) { // This technique appears to rely on the original depth attachment to be sampled.
+
+                float radius = shadowData.data.w * 1.0;
+
+                ivec3 offsetCoord;
+                offsetCoord.xy = ivec2( mod( inTexCoord.xy, shadowData.data.xy ) );
+
+                float sum = 0.0, shadow = 1.0;
+                int samplesDiv2 = int(shadowData.data.z);
+                vec4 sc = shadowTexCoord;
+
+                // Don't test points behind the light source.
+                if ( sc.z >= 0 ) {
+                    for( int i = 0 ; i < 4; i++ ) {
+                        offsetCoord.z = i;
+                        vec4 offsets = texelFetch(sampShadowOffset, offsetCoord, 0) * radius;
+
+                        sc.xy = shadowTexCoord.xy + offsets.xy;
+                        sum += texture(sampShadow, sc);
+                        sc.xy = shadowTexCoord.xy + offsets.zw;
+                        sum += texture(sampShadow, sc);
+                    }
+                    shadow = sum / 8.0;
+                    
+                    if( shadow != 1.0 && shadow != 0.0 ) {
+                        for( int i = 4; i < samplesDiv2; i++ ) {
+                            offsetCoord.z = i;
+                            vec4 offsets = texelFetch(sampShadowOffset, offsetCoord, 0) * radius; // * w;
+
+                            sc.xy = shadowTexCoord.xy + offsets.xy;
+                            sum += texture(sampShadow, sc);
+                            sc.xy = shadowTexCoord.xy + offsets.zw;
+                            sum += texture(sampShadow, sc);
+                        }
+                        shadow = sum / float(samplesDiv2 * 2.0);
+                    }
+
+                }
+
+                color += lgtPos[i].L * (Kd + Ks) * shadow;
+
+            } else {
+                float shadow = 1.0;
 
                 if (shadowTexCoord.w >= 0) { // w is the depth reference for sampler2DArrayShadow
 
                     // TODO: add a proper PCF flag. This should probably so through all the way to
                     // VkSamplerCreateInfo (nearest vs. linear).
 
-                    if (false) {
+                    if (true) {
                         // Normal
                         shadow = texture(sampShadow, shadowTexCoord);
                     } else {
@@ -249,12 +295,19 @@ vec3 blinnPhongPositionalShadow(
                         // shadow = sum * 0.25; // I think it looks better with the actual sampler too.
                         sum += texture(sampShadow, shadowTexCoord);
                         shadow = sum * 0.2;
+
+                        ivec3 offsetCoord;
+                        offsetCoord.xy = ivec2(mod(gl_FragCoord.xy, ivec2(8, 8))); // !
+
+                        offsetCoord.z = 0;
+                        vec4 offsets = texelFetch(sampShadowOffset, offsetCoord, 0) * (7.0/215.0) * shadowTexCoord.w;
                     }
 
                 }
+
+                color += lgtPos[i].L * (Kd + Ks) * shadow;
             }
 
-            color += lgtPos[i].L * (Kd + Ks) * shadow;
         }
     }
 

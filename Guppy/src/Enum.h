@@ -181,6 +181,7 @@ enum class UNIFORM {
     PROJECTOR_DEFAULT,
     SCREEN_SPACE_DEFAULT,
     DEFERRED_SSAO,
+    SHADOW_DATA,
     //
     DONT_CARE,
 };

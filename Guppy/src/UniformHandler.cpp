@@ -48,6 +48,8 @@ Uniform::Handler::Handler(Game* pGame)
           {"Screen Space Default", UNIFORM::SCREEN_SPACE_DEFAULT, 5, "_U_SCR_DEF"},
           Uniform::Manager<Uniform::Deferred::SSAO>  //
           {"Deferred SSAO", UNIFORM::DEFERRED_SSAO, 5, "_U_DFR_SSAO"},
+          Uniform::Manager<Uniform::Shadow::Base>  //
+          {"Shadow Data", UNIFORM::DEFERRED_SSAO, 1, "_U_SHDW_DATA"},
           // STORAGE
           Uniform::Manager<Storage::PostProcess::Base>  //
           {"Storage Default", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
@@ -69,6 +71,7 @@ std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const
             case UNIFORM::PROJECTOR_DEFAULT:            return uniDefPrjMgr().pItems;
             case UNIFORM::SCREEN_SPACE_DEFAULT:         return uniScrDefMgr().pItems;
             case UNIFORM::DEFERRED_SSAO:                return uniDfrSSAOMgr().pItems;
+            case UNIFORM::SHADOW_DATA:                  return uniShdwDataMgr().pItems;
             default:                                    assert(false); exit(EXIT_FAILURE);
         }
     } else if (std::visit(Descriptor::IsStorageBuffer{}, type)) {
@@ -105,6 +108,7 @@ void Uniform::Handler::init() {
     uniDefPrjMgr().init(shell().context(), settings());     ++count;
     uniScrDefMgr().init(shell().context(), settings());     ++count;
     uniDfrSSAOMgr().init(shell().context(), settings());    ++count;
+    uniShdwDataMgr().init(shell().context(), settings());   ++count;
     strPstPrcMgr().init(shell().context(), settings());     ++count;
     assert(count == managers_.size());
     // clang-format on
@@ -127,6 +131,7 @@ void Uniform::Handler::reset() {
     uniDefPrjMgr().destroy(dev);    ++count;
     uniScrDefMgr().destroy(dev);    ++count;
     uniDfrSSAOMgr().destroy(dev);   ++count;
+    uniShdwDataMgr().destroy(dev);  ++count;
     strPstPrcMgr().destroy(dev);    ++count;
     assert(count == managers_.size());
     // clang-format on
@@ -158,7 +163,7 @@ void Uniform::Handler::createCameras() {
     {
         assert(camDefPersMgr().pItems.size() == 2);  // sister assert for lights
 
-        createInfo.eye = {2.0f, 5.5f, 0.0f};
+        createInfo.eye = {2.0f, 10.5f, 0.0f};
         createInfo.center = {0.0f, 0.0f, 0.0f};
         createInfo.n = 1.0f;
         createInfo.f = 21.0f;
@@ -271,6 +276,12 @@ void Uniform::Handler::createMiscellaneous() {
         auto& ssaoKernel = uniDfrSSAOMgr().getTypedItem(0);
         ssaoKernel.init(rand);
         update(ssaoKernel);
+    }
+
+    // SHADOW
+    {
+        // The values are const and set in the constructor.
+        uniShdwDataMgr().insert(dev, true);
     }
 }
 

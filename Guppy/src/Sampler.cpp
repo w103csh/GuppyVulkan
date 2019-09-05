@@ -101,7 +101,7 @@ Sampler::Base::Base(const CreateInfo* pCreateInfo, bool needsData)
     imgCreateInfo.flags = pCreateInfo->imageFlags;
     imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
     imgCreateInfo.format = pCreateInfo->format;
-    imgCreateInfo.extent = {pCreateInfo->extent.width, pCreateInfo->extent.height, 1};
+    imgCreateInfo.extent = pCreateInfo->extent;
     imgCreateInfo.mipLevels = pCreateInfo->mipmapCreateInfo.mipLevels;
     imgCreateInfo.arrayLayers = pCreateInfo->layersInfo.infos.size();
     imgCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -114,11 +114,11 @@ Sampler::Base::Base(const CreateInfo* pCreateInfo, bool needsData)
 
     // Swapchain info settings
     if (swpchnInfo.usesSwapchain()) {
-        if (swpchnInfo.usesExtent) assert(helpers::compExtent2D(imgCreateInfo.extent, BAD_EXTENT_2D));
+        if (swpchnInfo.usesExtent) assert(helpers::compExtent3D(imgCreateInfo.extent, BAD_EXTENT_3D));
         if (swpchnInfo.usesFormat) imgCreateInfo.format = VK_FORMAT_UNDEFINED;
     } else {
         assert(imgCreateInfo.format != VK_FORMAT_UNDEFINED);
-        if (!helpers::compExtent2D(imgCreateInfo.extent, BAD_EXTENT_2D)) assert(!needsData);
+        if (!helpers::compExtent3D(imgCreateInfo.extent, BAD_EXTENT_3D)) assert(!needsData);
     }
 
     // Setup layer info structures
@@ -147,6 +147,7 @@ void Sampler::Base::determineImageTypes() {
 
     const auto& arrayLayers = imgCreateInfo.arrayLayers;
     const auto& extent = imgCreateInfo.extent;
+    const auto& samples = imgCreateInfo.samples;
     auto& imageType = imgCreateInfo.imageType;
 
     if (imageViewType == VK_IMAGE_VIEW_TYPE_MAX_ENUM) {
@@ -171,24 +172,32 @@ void Sampler::Base::determineImageTypes() {
         // If imageViewType is set then validate it.
         switch (imageViewType) {
             case VK_IMAGE_VIEW_TYPE_1D:
-                assert(extent.width >= 1 && extent.height == 1 && arrayLayers >= 1);
+                assert(extent.width >= 1 && extent.height == 1 && extent.depth == 1 && arrayLayers >= 1);
                 imageType = VK_IMAGE_TYPE_1D;
                 break;
             case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
-                assert(extent.width >= 1 && extent.height == 1 && arrayLayers >= 1);
+                assert(extent.width >= 1 && extent.height == 1 && extent.depth == 1 && arrayLayers >= 1);
                 imageType = VK_IMAGE_TYPE_1D;
                 break;
             case VK_IMAGE_VIEW_TYPE_2D:
-                assert(extent.width >= 1 && extent.height >= 1 && arrayLayers >= 1);
+                // Note: There are versions of 2D that can have a depth >= 1, but there are other
+                // conditions and would result in VK_IMAGE_TYPE_3D.
+                assert(extent.width >= 1 && extent.height >= 1 && extent.depth == 1 && arrayLayers >= 1);
                 imageType = VK_IMAGE_TYPE_2D;
                 break;
             case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
-                assert(extent.width >= 1 && extent.height >= 1 && arrayLayers >= 1);
+                // Note: There are versions of 2D_ARRAY that can have a depth >= 1, but there are
+                // other condition and would result in VK_IMAGE_TYPE_3D.
+                assert(extent.width >= 1 && extent.height >= 1 && extent.depth == 1 && arrayLayers >= 1);
                 imageType = VK_IMAGE_TYPE_2D;
                 break;
             case VK_IMAGE_VIEW_TYPE_CUBE:
-                assert(extent.width >= 1 && extent.width == extent.height && arrayLayers >= 6);
+                assert(extent.width >= 1 && extent.width == extent.height && extent.depth == 1 && arrayLayers >= 6);
                 imageType = VK_IMAGE_TYPE_2D;
+                break;
+            case VK_IMAGE_VIEW_TYPE_3D:
+                assert(extent.width >= 1 && extent.height >= 1 && extent.depth >= 1 && arrayLayers == 1 && samples == 1);
+                imageType = VK_IMAGE_TYPE_3D;
                 break;
             default:
                 assert(false && "Unhandled image view type");
@@ -237,7 +246,7 @@ Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, c
     } else {
         // Texture has data to load so load it and validate.
         bool isFirstLayer = true;
-        int w, h, c, req_comp = getReqComp(pCreateInfo->numberOfChannels);
+        int w, h, d, c, req_comp = getReqComp(pCreateInfo->numberOfChannels);
 
         for (auto& layerInfo : pCreateInfo->layersInfo.infos) {
             if (layerInfo.pPixel == nullptr) {
@@ -248,9 +257,12 @@ Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, c
                 // Load data...
                 sampler.pPixels.push_back(stbi_load(path.c_str(), &w, &h, &c, req_comp));
                 // checkFailure(shell, layerInfo.path, p);
+
+                d = 1;  // Depth is always 1 if loading from file ???
             } else {
                 w = pCreateInfo->extent.width;
                 h = pCreateInfo->extent.height;
+                d = pCreateInfo->extent.depth;
                 c = pCreateInfo->numberOfChannels;
                 // Pixel data is already known.
                 sampler.pPixels.push_back(layerInfo.pPixel);
@@ -266,6 +278,9 @@ Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, c
                 // height
                 sampler.imgCreateInfo.extent.height = static_cast<uint32_t>(h);
                 assert(sampler.imgCreateInfo.extent.height > 0);
+                // depth
+                sampler.imgCreateInfo.extent.depth = static_cast<uint32_t>(d);
+                assert(sampler.imgCreateInfo.extent.depth > 0);
                 // aspect
                 sampler.aspect = static_cast<float>(sampler.imgCreateInfo.extent.width) /
                                  static_cast<float>(sampler.imgCreateInfo.extent.height);
@@ -334,6 +349,10 @@ VkSamplerCreateInfo Sampler::GetVkSamplerCreateInfo(const Sampler::Base& sampler
     info.unnormalizedCoordinates = VK_FALSE;  // test this out for fun
 
     switch (sampler.TYPE) {
+        case SAMPLER::DEFAULT_NEAREST:
+            info.magFilter = VK_FILTER_NEAREST;
+            info.minFilter = VK_FILTER_NEAREST;
+            break;
         case SAMPLER::CUBE:
             info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
             info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;

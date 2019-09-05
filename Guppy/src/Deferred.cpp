@@ -15,7 +15,7 @@ const CreateInfo POS_NORM_2D_ARRAY_CREATE_INFO = {
         true,
     },
     VK_IMAGE_VIEW_TYPE_2D_ARRAY,
-    BAD_EXTENT_2D,
+    BAD_EXTENT_3D,
     {false, true},
     0,
     SAMPLER::DEFAULT,
@@ -28,7 +28,7 @@ const CreateInfo POS_2D_CREATE_INFO = {
     "Deferred 2D Position Sampler",
     {{{::Sampler::USAGE::POSITION}}},
     VK_IMAGE_VIEW_TYPE_2D,
-    BAD_EXTENT_2D,
+    BAD_EXTENT_3D,
     {false, true},
     0,
     SAMPLER::DEFAULT,
@@ -42,7 +42,7 @@ const CreateInfo NORM_2D_CREATE_INFO = {
     "Deferred 2D Normal Sampler",
     {{{::Sampler::USAGE::POSITION}}},
     VK_IMAGE_VIEW_TYPE_2D,
-    BAD_EXTENT_2D,
+    BAD_EXTENT_3D,
     {false, true},
     0,
     SAMPLER::DEFAULT,
@@ -56,7 +56,7 @@ const CreateInfo DIFFUSE_2D_CREATE_INFO = {
     "Deferred 2D Diffuse Color Sampler",
     {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D,
-    BAD_EXTENT_2D,
+    BAD_EXTENT_3D,
     {false, true},
     0,
     SAMPLER::DEFAULT,
@@ -69,7 +69,7 @@ const CreateInfo AMBIENT_2D_CREATE_INFO = {
     "Deferred 2D Ambient Color Sampler",
     {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D,
-    BAD_EXTENT_2D,
+    BAD_EXTENT_3D,
     {false, true},
     0,
     SAMPLER::DEFAULT,
@@ -82,7 +82,7 @@ const CreateInfo SPECULAR_2D_CREATE_INFO = {
     "Deferred 2D Specular Color Sampler",
     {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D,
-    BAD_EXTENT_2D,
+    BAD_EXTENT_3D,
     {false, true},
     0,
     SAMPLER::DEFAULT,
@@ -95,7 +95,7 @@ const CreateInfo SSAO_2D_CREATE_INFO = {
     "Deferred 2D SSAO Sampler",
     {{{::Sampler::USAGE::COLOR}}},  // COLOR ???
     VK_IMAGE_VIEW_TYPE_2D,
-    BAD_EXTENT_2D,
+    BAD_EXTENT_3D,
     {false, true},
     0,
     SAMPLER::DEFAULT,
@@ -182,7 +182,7 @@ CreateInfo MakeSSAORandRotationTex(Random& rand) {
         "Deferred 2D SSAO Random Sampler",
         {{{::Sampler::USAGE::POSITION}}},
         VK_IMAGE_VIEW_TYPE_2D,
-        {size, size},
+        {size, size, 1},
         {},
         0,
         SAMPLER::DEFAULT,
@@ -245,6 +245,7 @@ const CreateInfo COMBINE_UNIFORM_CREATE_INFO = {
         {{1, 0}, {UNIFORM::LIGHT_POSITIONAL_DEFAULT}},
         {{2, 0}, {UNIFORM::LIGHT_SPOT_DEFAULT}},
         {{3, 0}, {UNIFORM::LIGHT_POSITIONAL_SHADOW}},
+        {{4, 0}, {UNIFORM::SHADOW_DATA}},
     },
 };
 
@@ -507,7 +508,8 @@ const Pipeline::CreateInfo COMBINE_CREATE_INFO = {
     {SHADER::DEFERRED_VERT, SHADER::DEFERRED_FRAG},
     {
         DESCRIPTOR_SET::UNIFORM_DEFERRED_COMBINE,  //
-        DESCRIPTOR_SET::SAMPLER_SHADOW,
+        DESCRIPTOR_SET::SAMPLER_SHADOW,            //
+        DESCRIPTOR_SET::SAMPLER_SHADOW_OFFSET,
         // DESCRIPTOR_SET::SAMPLER_DEFERRED_POS_NORM,
         DESCRIPTOR_SET::SAMPLER_DEFERRED_POS,      //
         DESCRIPTOR_SET::SAMPLER_DEFERRED_NORM,     //
