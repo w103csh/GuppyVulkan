@@ -9,6 +9,8 @@
 #include "Instance.h"
 #include "Mesh.h"
 
+namespace Mesh {
+class Handler;
 namespace Box {
 
 std::vector<Face> make(const Geometry::CreateInfo& geoInfo = {});
@@ -26,5 +28,6 @@ class Texture : public Mesh::Texture {
 };
 
 }  // namespace Box
+}  // namespace Mesh
 
 #endif  // !BOX_H

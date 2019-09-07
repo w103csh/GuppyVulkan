@@ -1,6 +1,11 @@
 
 #include "Plane.h"
 
+// HANDLERS
+#include "MeshHandler.h"
+
+using namespace Mesh;
+
 namespace {
 void addFaces(Mesh::Base* pMesh, const Geometry::CreateInfo& geoInfo) {
     // Mimic approach in loadObj in FileLoader. This way everything is

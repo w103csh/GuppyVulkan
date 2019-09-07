@@ -111,7 +111,14 @@ struct BarrierResource {
     }
 };
 
-using DESCRIPTOR = std::variant<UNIFORM, UNIFORM_DYNAMIC, COMBINED_SAMPLER, STORAGE_IMAGE, STORAGE_BUFFER, INPUT_ATTACHMENT>;
+using DESCRIPTOR = std::variant<  //
+    UNIFORM,                      //
+    UNIFORM_DYNAMIC,              //
+    COMBINED_SAMPLER,             //
+    STORAGE_IMAGE,                //
+    STORAGE_BUFFER,               //
+    INPUT_ATTACHMENT              //
+    >;
 
 // Why is this a multiset?
 using pipelinePassSet = std::multiset<std::pair<PIPELINE, PASS>>;

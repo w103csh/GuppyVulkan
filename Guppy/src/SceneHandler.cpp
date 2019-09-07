@@ -3,6 +3,7 @@
 
 #include <algorithm>
 
+#include "Arc.h"
 #include "Axes.h"
 #include "Box.h"
 #include "Model.h"
@@ -25,9 +26,9 @@ void Scene::Handler::init() {
     bool suppress = false;
 
     auto& pScene = makeScene(true, (!suppress && false));
-
     if (true) {
-        AxesCreateInfo axesInfo;
+        Mesh::ArcCreateInfo arcInfo;
+        Mesh::AxesCreateInfo axesInfo;
         Mesh::CreateInfo meshInfo;
         Model::CreateInfo modelInfo;
         Instance::Default::CreateInfo defInstInfo;
@@ -43,8 +44,7 @@ void Scene::Handler::init() {
             defInstInfo = {};
             defMatInfo = {};
             defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
-            defMatInfo.shininess = 23.123f;
-            auto offset = meshHandler().makeLineMesh<Axes>(&axesInfo, &defMatInfo, &defInstInfo)->getOffset();
+            auto offset = meshHandler().makeLineMesh<Mesh::Axes>(&axesInfo, &defMatInfo, &defInstInfo)->getOffset();
             pScene->addMeshIndex(MESH::LINE, offset);
         }
 
@@ -59,8 +59,8 @@ void Scene::Handler::init() {
             defMatInfo = {};
             defMatInfo.shininess = Material::SHININESS::EGGSHELL;
             defMatInfo.color = {0.0f, 1.5f, 0.0f};
-            auto& pGroundPlane = meshHandler().makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
-            // auto& pGroundPlane = meshHandler().makeColorMesh<Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+            auto& pGroundPlane = meshHandler().makeColorMesh<Mesh::Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+            // auto& pGroundPlane = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
             auto offset = pGroundPlane->getOffset();
             pScene->addMeshIndex(MESH::COLOR, offset);
             groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
@@ -78,7 +78,7 @@ void Scene::Handler::init() {
             defMatInfo.repeat = 800.0f;
             defMatInfo.specularCoeff *= 0.5f;
             defMatInfo.shininess = Material::SHININESS::EGGSHELL;
-            auto& pGroundPlane = meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
+            auto& pGroundPlane = meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
             auto offset = pGroundPlane->getOffset();
             pScene->addMeshIndex(MESH::TEXTURE, offset);
             groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
@@ -94,8 +94,33 @@ void Scene::Handler::init() {
             defInstInfo.data.push_back({helpers::affine(glm::vec3{5.0f})});
             defMatInfo = {};
             defMatInfo.pTexture = textureHandler().getTexture(Texture::NEON_BLUE_TUX_GUPPY_ID);
-            auto offset = meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo)->getOffset();
+            auto offset =
+                meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo)->getOffset();
             pScene->addMeshIndex(MESH::TEXTURE, offset);
+        }
+
+        // ARC
+        if (!suppress || false) {
+            // PIPELINE::DEFERRED_BEZIER_4 is the default
+            arcInfo = {};
+            defInstInfo = {};
+            defMatInfo = {};
+            defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
+
+            arcInfo.controlPoints.push_back({{2.0f, 1.0f, 0.0f}});                  // p0 (start)
+            arcInfo.controlPoints.push_back({{2.0f, 1.0f, 2.0f * (2.0f / 3.0f)}});  // p1
+            arcInfo.controlPoints.push_back({{2.0f * (2.0f / 3.0f), 1.0f, 2.0f}});  // p2
+            arcInfo.controlPoints.push_back({{0.0f, 1.0f, 2.0f}});                  // p3 (end)
+            auto offset = meshHandler().makeLineMesh<Mesh::Arc>(&arcInfo, &defMatInfo, &defInstInfo)->getOffset();
+            pScene->addMeshIndex(MESH::LINE, offset);
+
+            arcInfo.controlPoints.clear();
+            arcInfo.controlPoints.push_back({{2.0f, 1.0f, 0.0f}});                   // p0 (start)
+            arcInfo.controlPoints.push_back({{2.0f, 1.0f, -2.0f * (2.0f / 3.0f)}});  // p1
+            arcInfo.controlPoints.push_back({{4.0f, 1.0f, -2.0f * (2.0f / 3.0f)}});  // p1
+            arcInfo.controlPoints.push_back({{4.0f, 1.0f, 0.0f}});                   // p3 (end)
+            offset = meshHandler().makeLineMesh<Mesh::Arc>(&arcInfo, &defMatInfo, &defInstInfo)->getOffset();
+            pScene->addMeshIndex(MESH::LINE, offset);
         }
 
         // BOX
@@ -110,7 +135,7 @@ void Scene::Handler::init() {
             defMatInfo = {};
             defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
             defMatInfo.color = {0.0f, 0.0f, 1.0f};
-            auto& boxColor = meshHandler().makeColorMesh<Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+            auto& boxColor = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
             auto offset = boxColor->getOffset();
             pScene->addMeshIndex(MESH::COLOR, offset);
             boxColor->putOnTop(groundPlane_bbmm);
@@ -173,7 +198,7 @@ void Scene::Handler::init() {
         // Create info structs
         Mesh::CreateInfo meshInfo;
         Model::CreateInfo modelInfo;
-        AxesCreateInfo axesInfo;
+        Mesh::AxesCreateInfo axesInfo;
         Instance::Default::CreateInfo defInstInfo;
         Material::Default::CreateInfo defMatInfo;
         Material::PBR::CreateInfo pbrMatInfo;
@@ -189,7 +214,7 @@ void Scene::Handler::init() {
             defInstInfo = {};
             defMatInfo = {};
             defMatInfo.shininess = 23.123f;
-            auto offset = meshHandler().makeLineMesh<Axes>(&axesInfo, &defMatInfo, &defInstInfo)->getOffset();
+            auto offset = meshHandler().makeLineMesh<Mesh::Axes>(&axesInfo, &defMatInfo, &defInstInfo)->getOffset();
             pScene->addMeshIndex(MESH::LINE, offset);
         }
 
@@ -205,7 +230,7 @@ void Scene::Handler::init() {
             defMatInfo.repeat = 800.0f;
             defMatInfo.specularCoeff *= 0.5f;
             defMatInfo.shininess = Material::SHININESS::EGGSHELL;
-            auto& pGroundPlane = meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
+            auto& pGroundPlane = meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
             auto offset = pGroundPlane->getOffset();
             pScene->addMeshIndex(MESH::TEXTURE, offset);
             groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
@@ -221,7 +246,7 @@ void Scene::Handler::init() {
             defMatInfo = {};
             defMatInfo.shininess = Material::SHININESS::EGGSHELL;
             defMatInfo.color = {0.5f, 0.5f, 0.5f};
-            auto& pGroundPlane = meshHandler().makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+            auto& pGroundPlane = meshHandler().makeColorMesh<Mesh::Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
             auto offset = pGroundPlane->getOffset();
             pScene->addMeshIndex(MESH::COLOR, offset);
             groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
@@ -235,7 +260,8 @@ void Scene::Handler::init() {
             defInstInfo = {};
             defMatInfo = {};
             defMatInfo.pTexture = textureHandler().getTexture(Texture::VULKAN_ID);
-            auto offset = meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo)->getOffset();
+            auto offset =
+                meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo)->getOffset();
             pScene->addMeshIndex(MESH::TEXTURE, offset);
         }
 
@@ -259,7 +285,7 @@ void Scene::Handler::init() {
                 defMatInfo.pTexture = textureHandler().getTexture(RenderPass::PROJECT_2D_ARRAY_TEXTURE_ID);
                 defMatInfo.color = {0.5f, 0.5f, 0.5f};
                 auto offset =
-                    meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo)->getOffset();
+                    meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo)->getOffset();
                 pScene->addMeshIndex(MESH::TEXTURE, offset);
             }
         }
@@ -274,7 +300,7 @@ void Scene::Handler::init() {
             defInstInfo.data.push_back({helpers::affine(glm::vec3{10.0f})});
             defMatInfo = {};
             defMatInfo.flags |= Material::FLAG::SKYBOX;
-            auto& skybox = meshHandler().makeColorMesh<Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+            auto& skybox = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
             auto offset = skybox->getOffset();
             pScene->addMeshIndex(MESH::COLOR, offset);
         }
@@ -291,7 +317,7 @@ void Scene::Handler::init() {
             defMatInfo = {};
             defMatInfo.pTexture = textureHandler().getTexture(Texture::MYBRICK_ID);
             defMatInfo.shininess = Material::SHININESS::EGGSHELL;
-            auto& boxTexture1 = meshHandler().makeTextureMesh<Box::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
+            auto& boxTexture1 = meshHandler().makeTextureMesh<Mesh::Box::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
             auto offset = boxTexture1->getOffset();
             pScene->addMeshIndex(MESH::TEXTURE, offset);
             boxTexture1->putOnTop(groundPlane_bbmm);
@@ -312,7 +338,7 @@ void Scene::Handler::init() {
             pbrMatInfo.color = {1.0f, 1.0f, 0.0f};
             pbrMatInfo.roughness = 0.86f;  // 0.43f;
             pbrMatInfo.pTexture = textureHandler().getTexture(Texture::VULKAN_ID);
-            auto& boxTexture2 = meshHandler().makeTextureMesh<Box::Texture>(&meshInfo, &pbrMatInfo, &defInstInfo);
+            auto& boxTexture2 = meshHandler().makeTextureMesh<Mesh::Box::Texture>(&meshInfo, &pbrMatInfo, &defInstInfo);
             auto offset = boxTexture2->getOffset();
             pScene->addMeshIndex(MESH::TEXTURE, offset);
             boxTexture2->putOnTop(groundPlane_bbmm);
@@ -331,7 +357,7 @@ void Scene::Handler::init() {
             pbrMatInfo = {};
             pbrMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
             pbrMatInfo.color = {1.0f, 1.0f, 0.0f};
-            auto& boxPbrColor = meshHandler().makeColorMesh<Box::Color>(&meshInfo, &pbrMatInfo, &defInstInfo);
+            auto& boxPbrColor = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &pbrMatInfo, &defInstInfo);
             auto offset = boxPbrColor->getOffset();
             pScene->addMeshIndex(MESH::COLOR, offset);
             boxPbrColor->putOnTop(groundPlane_bbmm);
@@ -350,7 +376,7 @@ void Scene::Handler::init() {
                 {helpers::affine(glm::vec3{1.0f}, glm::vec3{-1.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
             defMatInfo = {};
             defMatInfo.color = {1.0f, 1.0f, 0.0f};
-            auto& boxDefColor1 = meshHandler().makeColorMesh<Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+            auto& boxDefColor1 = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
             auto offset = boxDefColor1->getOffset();
             pScene->addMeshIndex(MESH::COLOR, offset);
             boxDefColor1->putOnTop(groundPlane_bbmm);
@@ -376,26 +402,26 @@ void Scene::Handler::init() {
             }
             meshInfo.pipelineType = PIPELINE::CUBE;
             defMatInfo.pTexture = textureHandler().getTexture(Texture::SKYBOX_ID);
-            auto offset = meshHandler().makeColorMesh<Box::Color>(&meshInfo, &defMatInfo, &defInstInfo)->getOffset();
+            auto offset = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &defInstInfo)->getOffset();
             pScene->addMeshIndex(MESH::COLOR, offset);
             ////
             // defInstInfo = {};
             // defInstInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 1.0f, 0.0f}, M_PI_2_FLT,
-            // CARDINAL_Z)}); meshHandler().makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+            // CARDINAL_Z)}); meshHandler().makeColorMesh<Mesh::Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
             ////
             // meshInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
             // defMatInfo = {};
             // defMatInfo.color = {0x2E / 255.0f, 0x40 / 255.0f, 0x53 / 255.0f};
             // defInstInfo = {};
             // defInstInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{1.0f, 0.0f, 0.0f})});
-            // meshHandler().makeColorMesh<Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+            // meshHandler().makeColorMesh<Mesh::Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
             ////
             // meshInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
             // defMatInfo = {};
             // defMatInfo.pTexture = textureHandler().getTextureByName(Texture::STATUE_ID);
             // defInstInfo = {};
             // defInstInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{2.0f, 0.0f, 0.0f})});
-            // meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
+            // meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
         }
 
         // BURNT ORANGE TORUS

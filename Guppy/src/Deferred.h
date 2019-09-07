@@ -96,6 +96,8 @@ struct CreateInfo;
 class Handler;
 namespace Deferred {
 
+void GetDefaultBlendInfoResources(CreateInfoResources& createInfoRes);
+
 // MRT (TEXTURE)
 class MRTTexture : public Graphics {
    public:

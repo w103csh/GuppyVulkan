@@ -20,6 +20,7 @@ const CreateInfo Deferred_CREATE_INFO = {
     PASS::DEFERRED,
     "Deferred Render Pass",
     {
+        PIPELINE::DEFERRED_BEZIER_4,
         PIPELINE::DEFERRED_MRT_LINE,
         PIPELINE::DEFERRED_MRT_COLOR,
         PIPELINE::DEFERRED_MRT_TEX,
@@ -84,6 +85,18 @@ void Base::record(const uint8_t frameIndex) {
         }
 
         beginPass(priCmd, frameIndex, VK_SUBPASS_CONTENTS_INLINE);
+
+        // MRT (BEZIER 4)
+        {
+            auto& secCmd = data.secCmds[frameIndex];
+            auto& pScene = handler().sceneHandler().getActiveScene();
+
+            auto it = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_BEZIER_4);
+            assert(it != pipelineTypeBindDataMap_.end());
+            pScene->record(TYPE, it->first, it->second, priCmd, secCmd, frameIndex);
+
+            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+        }
 
         // MRT (LINE)
         {
@@ -238,7 +251,7 @@ void Base::createSubpassDescriptions() {
     subpassDesc.pColorAttachments = &resources_.colorAttachments[1];  // POSITION/NORMAL/DIFFUSE/AMBIENT/SPECULAR
     subpassDesc.pResolveAttachments = nullptr;
     subpassDesc.pDepthStencilAttachment = pipelineData_.usesDepth ? &resources_.depthStencilAttachment : nullptr;
-    resources_.subpasses.assign(3, subpassDesc);  // TEXTURE/COLOR/LINE
+    resources_.subpasses.assign(4, subpassDesc);  // TEXTURE/COLOR/LINE/BEZIER4
 
     // SSAO
     if (doSSAO_) {
@@ -257,6 +270,8 @@ void Base::createSubpassDescriptions() {
     subpassDesc.pResolveAttachments = nullptr;
     subpassDesc.pDepthStencilAttachment = nullptr;
     resources_.subpasses.push_back(subpassDesc);
+
+    assert(resources_.subpasses.size() == pipelineTypeBindDataMap_.size());
 }
 
 void Base::createDependencies() {
@@ -272,15 +287,22 @@ void Base::createDependencies() {
     dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
     dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
     resources_.dependencies.push_back(dependency);
+    dependency.dstSubpass = 1;
+    resources_.dependencies.push_back(dependency);
+    dependency.dstSubpass = 2;
+    resources_.dependencies.push_back(dependency);
+    dependency.dstSubpass = 3;
+    resources_.dependencies.push_back(dependency);
 
     // Below should make sense
+    dependency = {};
+    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    dependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+    dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependency.dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
+    dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
     if (doSSAO_) {
-        dependency = {};
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        dependency.dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
-        dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+        assert(false);
         // Color to SSAO.
         dependency.srcSubpass = 0;
         dependency.dstSubpass = 2;
@@ -293,21 +315,35 @@ void Base::createDependencies() {
         dependency.srcSubpass = 2;
         dependency.dstSubpass = 3;
         resources_.dependencies.push_back(dependency);
-
     } else {
-        dependency = {};
-        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-        dependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-        dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        dependency.dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
-        dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
-        // Color to combine.
-        dependency.srcSubpass = 0;
-        dependency.dstSubpass = 2;
-        resources_.dependencies.push_back(dependency);
-        // Texture to combine.
+        // Bezier 4 to Line
         dependency.srcSubpass = 1;
         dependency.dstSubpass = 2;
+        resources_.dependencies.push_back(dependency);
+        // Line to Color
+        dependency.srcSubpass = 2;
+        dependency.dstSubpass = 3;
+        resources_.dependencies.push_back(dependency);
+
+        // I think the reason why a dependency is not needed from the "color" pipelines to
+        // the "texture" ones is because they are not compatible, and the driver can detect
+        // it somehow. Not sure though.
+
+        // Bezier 4 to combine.
+        dependency.srcSubpass = 0;
+        dependency.dstSubpass = 4;
+        resources_.dependencies.push_back(dependency);
+        // Line to combine.
+        dependency.srcSubpass = 1;
+        dependency.dstSubpass = 4;
+        resources_.dependencies.push_back(dependency);
+        // Color to combine.
+        dependency.srcSubpass = 2;
+        dependency.dstSubpass = 4;
+        resources_.dependencies.push_back(dependency);
+        // Texture to combine.
+        dependency.srcSubpass = 3;
+        dependency.dstSubpass = 4;
         resources_.dependencies.push_back(dependency);
     }
 }

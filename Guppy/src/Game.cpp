@@ -44,6 +44,9 @@ Game::Settings::Settings()
       try_sampler_anisotropy(true),  // TODO: Not sure what this does
       try_sample_rate_shading(true),
       try_compute_shading(true),
+      try_tessellation_shading(true),
+      try_geometry_shading(false),
+      try_wireframe_shading(false),
       enable_sample_shading(true),
       enable_double_clicks(false),
       enable_debug_markers(false),

@@ -51,6 +51,8 @@ set(SOURCE
     Singleton.h
     Storage.cpp
     Storage.h
+    Tessellation.cpp
+    Tessellation.h
     Types.h
     UIHandler.cpp
     UIHandler.h
@@ -92,6 +94,8 @@ set(SOURCE
     ObjInst3d.cpp
     ObjInst3d.h
     # Mesh
+    Arc.cpp
+    Arc.h
     Axes.h
     Axes.cpp
     Box.cpp

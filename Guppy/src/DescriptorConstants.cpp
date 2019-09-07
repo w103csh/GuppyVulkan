@@ -74,6 +74,8 @@ const std::set<DESCRIPTOR_SET> ALL = {
     DESCRIPTOR_SET::UNIFORM_SHADOW,
     DESCRIPTOR_SET::SAMPLER_SHADOW,
     DESCRIPTOR_SET::SAMPLER_SHADOW_OFFSET,
+    // TESSELLATION
+    DESCRIPTOR_SET::UNIFORM_BEZIER,
 };
 
 void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& write) const {

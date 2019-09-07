@@ -60,10 +60,13 @@ class Shell {
         VkDebugReportCallbackEXT debugReport = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
 
-        bool samplerAnisotropyEnabled_ = false;  // *
-        bool sampleRateShadingEnabled_ = false;  // *
-        bool linearBlittingSupported_ = false;   // *
-        bool computeShadingEnabled_ = false;     // *
+        bool samplerAnisotropyEnabled_ = false;    // *
+        bool sampleRateShadingEnabled_ = false;    // *
+        bool linearBlittingSupported_ = false;     // *
+        bool computeShadingEnabled_ = false;       // *
+        bool tessellationShadingEnabled_ = false;  // *
+        bool geometryShadingEnabled_ = false;      // *
+        bool wireframeShadingEnabled_ = false;     // *
 
         VkPhysicalDevice physicalDev = VK_NULL_HANDLE;
         std::vector<PhysicalDeviceProperties> physicalDevProps;  // *

@@ -6,6 +6,7 @@
 #include "Parallax.h"
 #include "ScreenSpace.h"
 #include "Shadow.h"
+#include "Tessellation.h"
 
 //#define MULTILINE(...) #__VA_ARGS__
 
@@ -188,6 +189,10 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     {SHADER::SHADOW_COLOR_VERT, Shader::Shadow::COLOR_VERT_CREATE_INFO},
     {SHADER::SHADOW_TEX_VERT, Shader::Shadow::TEX_VERT_CREATE_INFO},
     {SHADER::SHADOW_FRAG, Shader::Shadow::FRAG_CREATE_INFO},
+    // TESSELLATION
+    {SHADER::TESS_COLOR_VERT, Shader::Tessellation::COLOR_VERT_CREATE_INFO},
+    {SHADER::BEZIER_4_TESC, Shader::Tessellation::BEZIER_4_TESC_CREATE_INFO},
+    {SHADER::BEZIER_4_TESE, Shader::Tessellation::BEZIER_4_TESE_CREATE_INFO},
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {

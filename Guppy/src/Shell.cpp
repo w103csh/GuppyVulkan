@@ -265,6 +265,9 @@ void Shell::createDev() {
     deviceFeatures.samplerAnisotropy = ctx_.samplerAnisotropyEnabled_ ? VK_TRUE : VK_FALSE;
     deviceFeatures.sampleRateShading = ctx_.sampleRateShadingEnabled_ ? VK_TRUE : VK_FALSE;
     deviceFeatures.fragmentStoresAndAtomics = ctx_.computeShadingEnabled_ ? VK_TRUE : VK_FALSE;
+    deviceFeatures.tessellationShader = ctx_.tessellationShadingEnabled_ ? VK_TRUE : VK_FALSE;
+    deviceFeatures.geometryShader = ctx_.geometryShadingEnabled_ ? VK_TRUE : VK_FALSE;
+    deviceFeatures.fillModeNonSolid = ctx_.wireframeShadingEnabled_ ? VK_TRUE : VK_FALSE;
 
     VkDeviceCreateInfo dev_info = {};
     dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -803,7 +806,19 @@ void Shell::determineDeviceFeatureSupport(const PhysicalDeviceProperties &props)
     // compute shading (TODO: this should be more robust)
     ctx_.computeShadingEnabled_ = props.features.fragmentStoresAndAtomics && settings_.try_compute_shading;
     if (settings_.try_compute_shading && !ctx_.computeShadingEnabled_)  //
-        log(Shell::LOG_WARN, "cannot enable compute shading");
+        log(Shell::LOG_WARN, "cannot enable compute shading (actually just can't enable fragment stores and atomics)");
+    // tessellation shading
+    ctx_.tessellationShadingEnabled_ = props.features.tessellationShader && settings_.try_tessellation_shading;
+    if (settings_.try_tessellation_shading && !ctx_.tessellationShadingEnabled_)  //
+        log(Shell::LOG_WARN, "cannot enable tessellation shading");
+    // geometry shading
+    ctx_.geometryShadingEnabled_ = props.features.geometryShader && settings_.try_geometry_shading;
+    if (settings_.try_geometry_shading && !ctx_.geometryShadingEnabled_)  //
+        log(Shell::LOG_WARN, "cannot enable geometry shading");
+    // wireframe shading
+    ctx_.wireframeShadingEnabled_ = props.features.fillModeNonSolid && settings_.try_wireframe_shading;
+    if (settings_.try_wireframe_shading && !ctx_.wireframeShadingEnabled_)  //
+        log(Shell::LOG_WARN, "cannot enable wire frame shading (actually just can't enable fill mode non-solid)");
 }
 
 void Shell::determineSampleCount(const PhysicalDeviceProperties &props) {

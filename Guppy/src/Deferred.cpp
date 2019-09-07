@@ -399,6 +399,20 @@ const CreateInfo SSAO_FRAG_CREATE_INFO = {
 namespace Pipeline {
 namespace Deferred {
 
+void GetDefaultBlendInfoResources(CreateInfoResources& createInfoRes) {
+    VkPipelineColorBlendAttachmentState state = {VK_FALSE};
+    state.colorWriteMask =
+        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+
+    // Position/Normal/Diffuse/Ambient/Specular
+    createInfoRes.blendAttachmentStates.assign(5, state);
+
+    createInfoRes.colorBlendStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr};
+    createInfoRes.colorBlendStateInfo.attachmentCount = static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size());
+    createInfoRes.colorBlendStateInfo.pAttachments = createInfoRes.blendAttachmentStates.data();
+    createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
+}
+
 // MRT (TEXTURE)
 const Pipeline::CreateInfo MRT_TEX_CREATE_INFO = {
     PIPELINE::DEFERRED_MRT_TEX,
@@ -417,17 +431,7 @@ const Pipeline::CreateInfo MRT_TEX_CREATE_INFO = {
 MRTTexture::MRTTexture(Pipeline::Handler& handler) : Graphics(handler, &MRT_TEX_CREATE_INFO) {}
 
 void MRTTexture::getBlendInfoResources(CreateInfoResources& createInfoRes) {
-    VkPipelineColorBlendAttachmentState state = {VK_FALSE};
-    state.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
-    // Position/Normal/Diffuse/Ambient/Specular
-    createInfoRes.blendAttachmentStates.assign(5, state);
-
-    createInfoRes.colorBlendStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr};
-    createInfoRes.colorBlendStateInfo.attachmentCount = static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size());
-    createInfoRes.colorBlendStateInfo.pAttachments = createInfoRes.blendAttachmentStates.data();
-    createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
+    GetDefaultBlendInfoResources(createInfoRes);  //
 }
 
 // MRT (COLOR)
@@ -443,17 +447,7 @@ const Pipeline::CreateInfo MRT_COLOR_CREATE_INFO = {
 MRTColor::MRTColor(Pipeline::Handler& handler) : Graphics(handler, &MRT_COLOR_CREATE_INFO) {}
 
 void MRTColor::getBlendInfoResources(CreateInfoResources& createInfoRes) {
-    VkPipelineColorBlendAttachmentState state = {VK_FALSE};
-    state.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
-    // Position/Normal/Diffuse/Ambient/Specular
-    createInfoRes.blendAttachmentStates.assign(5, state);
-
-    createInfoRes.colorBlendStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr};
-    createInfoRes.colorBlendStateInfo.attachmentCount = static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size());
-    createInfoRes.colorBlendStateInfo.pAttachments = createInfoRes.blendAttachmentStates.data();
-    createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
+    GetDefaultBlendInfoResources(createInfoRes);  //
 }
 
 // MRT (LINE)
@@ -469,17 +463,7 @@ const Pipeline::CreateInfo MRT_LINE_CREATE_INFO = {
 MRTLine::MRTLine(Pipeline::Handler& handler) : Graphics(handler, &MRT_LINE_CREATE_INFO) {}
 
 void MRTLine::getBlendInfoResources(CreateInfoResources& createInfoRes) {
-    VkPipelineColorBlendAttachmentState state = {VK_FALSE};
-    state.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-
-    // Position/Normal/Diffuse/Ambient/Specular
-    createInfoRes.blendAttachmentStates.assign(5, state);
-
-    createInfoRes.colorBlendStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr};
-    createInfoRes.colorBlendStateInfo.attachmentCount = static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size());
-    createInfoRes.colorBlendStateInfo.pAttachments = createInfoRes.blendAttachmentStates.data();
-    createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
+    GetDefaultBlendInfoResources(createInfoRes);  //
 }
 
 void MRTLine::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {

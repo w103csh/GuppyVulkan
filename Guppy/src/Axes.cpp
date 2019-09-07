@@ -3,6 +3,8 @@
 
 #include "ConstantsAll.h"
 
+using namespace Mesh;
+
 namespace {
 void make(std::vector<Vertex::Color>& vertices, float lineSize, bool showNegative) {
     float max_ = lineSize;
