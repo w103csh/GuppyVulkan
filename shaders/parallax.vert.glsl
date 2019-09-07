@@ -8,11 +8,11 @@
 // FLAGS
 const uint LIGHT_SHOW       = 0x00000001u;
 
-layout (location=0) in vec3 VertexPosition;
-layout (location=1) in vec3 VertexNormal;
-layout (location=2) in vec2 VertexTexCoord;
-layout (location=3) in vec3 VertexTangent;
-layout (location=4) in vec3 VertexBinormal;
+layout(location=0) in vec3 VertexPosition;
+layout(location=1) in vec3 VertexNormal;
+layout(location=2) in vec2 VertexTexCoord;
+layout(location=3) in vec3 VertexTangent;
+layout(location=4) in vec3 VertexBinormal;
 
 layout(set=_DS_UNI_PLX, binding=0) uniform CameraDefaultPerspective {
     mat4 view;

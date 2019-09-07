@@ -8,12 +8,12 @@ void setColorDefaults();
 vec4 gammaCorrect(const in vec3 color, const in float opacity);
 
 // IN
-layout(location = 0) in vec3 fragPosition;
-layout(location = 1) in vec3 fragNormal;
-layout(location = 2) in vec4 fragColor;
-// layout(location = 3) in flat int fragVertexIndex;
+layout(location=0) in vec3 fragPosition;
+layout(location=1) in vec3 fragNormal;
+layout(location=2) in vec4 fragColor;
+// layout(location=3) in flat int fragVertexIndex;
 // OUT
-layout(location = 0) out vec4 outColor;
+layout(location=0) out vec4 outColor;
 
 // GLOBAL
 vec3    Ka, // ambient coefficient
