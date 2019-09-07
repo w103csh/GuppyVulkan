@@ -7,10 +7,8 @@
 #include "Face.h"
 #include "Mesh.h"
 
-// clang-format off
-namespace Mesh      { class Handler; }
-// clang-format on
-
+namespace Mesh {
+class Handler;
 namespace Plane {
 
 constexpr auto DEFAULT_DIMENSION = 1.0f;
@@ -35,6 +33,7 @@ class Texture : public Mesh::Texture {
             std::shared_ptr<Material::Base>& pMaterial);
 };
 
-};  // namespace Plane
+}  // namespace Plane
+};  // namespace Mesh
 
 #endif  //! PLANE_H

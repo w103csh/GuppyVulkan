@@ -29,6 +29,7 @@ const std::vector<PIPELINE> ALL = {
     PIPELINE::DEFERRED_SSAO,
     PIPELINE::SHADOW_COLOR,
     PIPELINE::SHADOW_TEX,
+    PIPELINE::DEFERRED_BEZIER_4,
 };
 
 const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
@@ -42,6 +43,7 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
             PIPELINE::DEFERRED_MRT_COLOR,
             PIPELINE::DEFERRED_MRT_LINE,
             PIPELINE::SHADOW_COLOR,
+            PIPELINE::DEFERRED_BEZIER_4,
         },
     },
     {

@@ -64,6 +64,9 @@ class Game {
         bool try_sampler_anisotropy;  // TODO: Not sure what this does
         bool try_sample_rate_shading;
         bool try_compute_shading;
+        bool try_tessellation_shading;
+        bool try_geometry_shading;
+        bool try_wireframe_shading;
         bool enable_sample_shading;
         bool enable_double_clicks;
         bool enable_debug_markers;

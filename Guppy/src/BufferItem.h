@@ -52,7 +52,6 @@ class DataItem : public virtual Buffer::Item {
 
     DataItem(TDATA* pData) : pData_(pData) { assert(pData_); }
 
-    TDATA& getRef() { return std::ref(*pData_); }
     virtual void setData(const uint32_t index = 0) {}
 
    protected:

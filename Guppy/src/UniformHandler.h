@@ -25,6 +25,7 @@
 #include "ScreenSpace.h"
 #include "Shadow.h"
 #include "Storage.h"
+#include "Tessellation.h"
 #include "Uniform.h"
 #include "UniformOffsetsManager.h"
 
@@ -127,7 +128,10 @@ class Handler : public Game::Handler {
     inline Uniform::Manager<Uniform::ScreenSpace::Default>& uniScrDefMgr() { return std::get<Uniform::Manager<Uniform::ScreenSpace::Default>>(managers_[7]);};
     inline Uniform::Manager<Uniform::Deferred::SSAO>& uniDfrSSAOMgr() { return std::get<Uniform::Manager<Uniform::Deferred::SSAO>>(managers_[8]);};
     inline Uniform::Manager<Uniform::Shadow::Base>& uniShdwDataMgr() { return std::get<Uniform::Manager<Uniform::Shadow::Base>>(managers_[9]);};
-    inline Uniform::Manager<Storage::PostProcess::Base>& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[10]);};
+   public: // Why aren't these public? If the memory is host visible then they should be public right?
+    inline Uniform::Manager<Uniform::Tessellation::Bezier::Base>& uniTessBezMgr() { return std::get<Uniform::Manager<Uniform::Tessellation::Bezier::Base>>(managers_[10]);};
+   private:
+    inline Uniform::Manager<Storage::PostProcess::Base>& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[11]);};
 
     template <class T> inline Uniform::Manager<T>& getManager() { assert(false); }
     template <> inline Uniform::Manager<Camera::Default::Perspective::Base>& getManager() { return camDefPersMgr(); }
@@ -140,28 +144,31 @@ class Handler : public Game::Handler {
     template <> inline Uniform::Manager<Uniform::ScreenSpace::Default>& getManager() { return uniScrDefMgr(); }
     template <> inline Uniform::Manager<Uniform::Deferred::SSAO>& getManager() { return uniDfrSSAOMgr(); }
     template <> inline Uniform::Manager<Uniform::Shadow::Base>& getManager() { return uniShdwDataMgr(); }
+    template <> inline Uniform::Manager<Uniform::Tessellation::Bezier::Base>& getManager() { return uniTessBezMgr(); }
     template <> inline Uniform::Manager<Storage::PostProcess::Base>& getManager() { return strPstPrcMgr(); }
     // clang-format on
 
     void createCameras();
     void createLights();
     void createMiscellaneous();
+    void createTessellationData();
 
     // BUFFER MANAGERS
-    using Manager = std::variant<                              //
-        Uniform::Manager<Camera::Default::Perspective::Base>,  //
-        Uniform::Manager<Light::Default::Positional::Base>,    //
-        Uniform::Manager<Light::PBR::Positional::Base>,        //
-        Uniform::Manager<Light::Default::Spot::Base>,          //
-        Uniform::Manager<Light::Shadow::Positional>,           //
-        Uniform::Manager<Uniform::Default::Fog::Base>,         //
-        Uniform::Manager<Uniform::Default::Projector::Base>,   //
-        Uniform::Manager<Uniform::ScreenSpace::Default>,       //
-        Uniform::Manager<Uniform::Deferred::SSAO>,             //
-        Uniform::Manager<Uniform::Shadow::Base>,               //
-        Uniform::Manager<Storage::PostProcess::Base>           //
+    using Manager = std::variant<                               //
+        Uniform::Manager<Camera::Default::Perspective::Base>,   //
+        Uniform::Manager<Light::Default::Positional::Base>,     //
+        Uniform::Manager<Light::PBR::Positional::Base>,         //
+        Uniform::Manager<Light::Default::Spot::Base>,           //
+        Uniform::Manager<Light::Shadow::Positional>,            //
+        Uniform::Manager<Uniform::Default::Fog::Base>,          //
+        Uniform::Manager<Uniform::Default::Projector::Base>,    //
+        Uniform::Manager<Uniform::ScreenSpace::Default>,        //
+        Uniform::Manager<Uniform::Deferred::SSAO>,              //
+        Uniform::Manager<Uniform::Shadow::Base>,                //
+        Uniform::Manager<Uniform::Tessellation::Bezier::Base>,  //
+        Uniform::Manager<Storage::PostProcess::Base>            //
         >;
-    std::array<Manager, 11> managers_;
+    std::array<Manager, 12> managers_;
 
     // DESCRIPTOR
     OffsetsManager offsetsManager_;

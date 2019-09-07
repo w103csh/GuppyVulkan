@@ -11,6 +11,7 @@
 #include "ScreenSpace.h"
 #include "Shadow.h"
 #include "Shell.h"
+#include "Tessellation.h"
 // HANDLERS
 #include "ComputeHandler.h"
 #include "DescriptorHandler.h"
@@ -71,6 +72,7 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
             case PIPELINE::DEFERRED_SSAO:                   insertPair = pPipelines_.insert({type, std::make_unique<Deferred::SSAO>(std::ref(*this))}); break;
             case PIPELINE::SHADOW_COLOR:                    insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Color>(std::ref(*this))}); break;
             case PIPELINE::SHADOW_TEX:                      insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Texture>(std::ref(*this))}); break;
+            case PIPELINE::DEFERRED_BEZIER_4:               insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::DeferredBezier4>(std::ref(*this))}); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on

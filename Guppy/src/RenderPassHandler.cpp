@@ -128,7 +128,8 @@ void RenderPass::Handler::init() {
     defMatInfo.flags = 0;
 
     // Create the default screen quad.
-    screenQuadOffset_ = meshHandler().makeTextureMesh<Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo)->getOffset();
+    screenQuadOffset_ =
+        meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo)->getOffset();
     assert(screenQuadOffset_ != Mesh::BAD_OFFSET);
 }
 

@@ -50,6 +50,9 @@ Uniform::Handler::Handler(Game* pGame)
           {"Deferred SSAO", UNIFORM::DEFERRED_SSAO, 5, "_U_DFR_SSAO"},
           Uniform::Manager<Uniform::Shadow::Base>  //
           {"Shadow Data", UNIFORM::DEFERRED_SSAO, 1, "_U_SHDW_DATA"},
+          // TESSELLATION
+          Uniform::Manager<Uniform::Tessellation::Bezier::Base>  //
+          {"Bezier Tessellation Data", UNIFORM::BEZIER, 1, "_U_TESS_BEZ"},
           // STORAGE
           Uniform::Manager<Storage::PostProcess::Base>  //
           {"Storage Default", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
@@ -71,6 +74,7 @@ std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const
             case UNIFORM::PROJECTOR_DEFAULT:            return uniDefPrjMgr().pItems;
             case UNIFORM::SCREEN_SPACE_DEFAULT:         return uniScrDefMgr().pItems;
             case UNIFORM::DEFERRED_SSAO:                return uniDfrSSAOMgr().pItems;
+            case UNIFORM::BEZIER:                       return uniTessBezMgr().pItems;
             case UNIFORM::SHADOW_DATA:                  return uniShdwDataMgr().pItems;
             default:                                    assert(false); exit(EXIT_FAILURE);
         }
@@ -109,6 +113,7 @@ void Uniform::Handler::init() {
     uniScrDefMgr().init(shell().context(), settings());     ++count;
     uniDfrSSAOMgr().init(shell().context(), settings());    ++count;
     uniShdwDataMgr().init(shell().context(), settings());   ++count;
+    uniTessBezMgr().init(shell().context(), settings());    ++count;
     strPstPrcMgr().init(shell().context(), settings());     ++count;
     assert(count == managers_.size());
     // clang-format on
@@ -116,6 +121,7 @@ void Uniform::Handler::init() {
     createCameras();
     createLights();
     createMiscellaneous();
+    createTessellationData();
 }
 
 void Uniform::Handler::reset() {
@@ -132,6 +138,7 @@ void Uniform::Handler::reset() {
     uniScrDefMgr().destroy(dev);    ++count;
     uniDfrSSAOMgr().destroy(dev);   ++count;
     uniShdwDataMgr().destroy(dev);  ++count;
+    uniTessBezMgr().destroy(dev);   ++count;
     strPstPrcMgr().destroy(dev);    ++count;
     assert(count == managers_.size());
     // clang-format on
@@ -282,6 +289,15 @@ void Uniform::Handler::createMiscellaneous() {
     {
         // The values are const and set in the constructor.
         uniShdwDataMgr().insert(dev, true);
+    }
+}
+
+void Uniform::Handler::createTessellationData() {
+    const auto& dev = shell().context().dev;
+
+    // BEZIER
+    {
+        uniTessBezMgr().insert(dev, true, {{1, 4}});  //
     }
 }
 

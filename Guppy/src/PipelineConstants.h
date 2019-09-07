@@ -47,6 +47,8 @@ enum class PIPELINE : uint32_t {
     // SHADOW
     SHADOW_COLOR,
     SHADOW_TEX,
+    // TESSELLATION
+    DEFERRED_BEZIER_4,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP

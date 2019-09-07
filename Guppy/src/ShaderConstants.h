@@ -51,6 +51,10 @@ enum class SHADER {
     SHADOW_COLOR_VERT,
     SHADOW_TEX_VERT,
     SHADOW_FRAG,
+    // TESSELLATION
+    TESS_COLOR_VERT,
+    BEZIER_4_TESC,
+    BEZIER_4_TESE,
     // Add new to SHADER_ALL and SHADER_LINK_MAP.
 };
 

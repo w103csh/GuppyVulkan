@@ -3,6 +3,10 @@
 
 #include "Helpers.h"
 #include "Plane.h"
+// HANDLERS
+#include "MeshHandler.h"
+
+using namespace Mesh;
 
 namespace {
 void addPlane(const glm::mat4& t, const Geometry::CreateInfo& geoInfo, std::vector<Face>& faces) {

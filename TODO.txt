@@ -1,4 +1,10 @@
 
+ - Hookup face selection for the deferred pass(es).
+
+ - Now that I know how to do tessellation shading, move the face selection from a mesh to
+    a wireframe that is tessellated. This should probably be a setting since tessellation
+    and wireframe are not guarenteed to work on the gpu.
+
  - Use VK_KHR_dedicated_allocation/VK_KHR_get_memory_requirements2 when allocating memory.
 
  - Meshes that are created that do no have an active pass/pipeline still look for descriptor
@@ -6,7 +12,7 @@
     vertex buffers are loaded. The solution should be to have a queue of meshes that
     are loaded but will not be apart of the the render loop or have descriptor sets allocated.
 
- - Add DESTROYED status to everything that has a status and is destroyed. Then move the sampler
+ - Add DESTROYED status to everything that has a status and can be destroyed. Then move the sampler
     creation code out of the render pass, so that I don't get confused again for an hour. This
     should also let the descriptor set update code get closer to the same place as the texture
     update notification.

@@ -268,6 +268,16 @@ void Guppy::onKey(GAME_KEY key) {
             light.setFlags(helpers::incrementByteFlag(light.getFlags(), Light::FLAG::TEST_1, Light::TEST_ALL));
             handlers_.pUniform->update(light);
         } break;
+        case GAME_KEY::KEY_LEFT_BRACKET: {
+            auto& bezier = handlers_.pUniform->uniTessBezMgr().getTypedItem(0);
+            bezier.decSegs();
+            handlers_.pUniform->update(bezier);
+        } break;
+        case GAME_KEY::KEY_RIGHT_BRACKET: {
+            auto& bezier = handlers_.pUniform->uniTessBezMgr().getTypedItem(0);
+            bezier.incSegs();
+            handlers_.pUniform->update(bezier);
+        } break;
         default:
             break;
     }

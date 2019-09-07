@@ -118,6 +118,7 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
             }
         } break;
         case PIPELINE::DEFERRED_MRT_LINE:
+        case PIPELINE::DEFERRED_BEZIER_4:
         case PIPELINE::LINE: {
             for (const auto& offset : lineOffsets_) {
                 auto& pMesh = handler().meshHandler().getLineMesh(offset);

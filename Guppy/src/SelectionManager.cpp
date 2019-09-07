@@ -24,7 +24,7 @@ void Selection::Manager::makeFace() {
     Instance::Default::CreateInfo instInfo = {};
     Material::Default::CreateInfo matInfo = {};
     matInfo.flags = Material::FLAG::HIDE & Material::FLAG::PER_VERTEX_COLOR;
-    auto& pFaceMesh = handler().meshHandler().makeLineMesh<FaceMesh>(&meshInfo, &matInfo, &instInfo);
+    auto& pFaceMesh = handler().meshHandler().makeLineMesh<Mesh::Face>(&meshInfo, &matInfo, &instInfo);
 
     pFaceInfo_->offset = pFaceMesh->getOffset();
 }

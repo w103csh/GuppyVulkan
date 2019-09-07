@@ -181,7 +181,9 @@ LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         case WM_DESTROY: {
             quit();
         } break;
-        default: { return DefWindowProc(hwnd_, uMsg, wParam, lParam); } break;
+        default: {
+            return DefWindowProc(hwnd_, uMsg, wParam, lParam);
+        } break;
     }
 
     return 0;
@@ -239,6 +241,13 @@ GAME_KEY ShellWin32::getKey(WPARAM wParam, INPUT_ACTION type) {
         case 'Q':
         case 'q':
             key = GAME_KEY::KEY_Q;
+            break;
+        // BRACKET/BRACE KEYS
+        case '[':
+            key = GAME_KEY::KEY_LEFT_BRACKET;
+            break;
+        case ']':
+            key = GAME_KEY::KEY_RIGHT_BRACKET;
             break;
         // NUMBER KEYS
         case '1':

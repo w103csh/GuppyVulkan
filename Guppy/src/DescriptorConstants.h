@@ -51,6 +51,8 @@ enum class DESCRIPTOR_SET {
     UNIFORM_SHADOW,
     SAMPLER_SHADOW,
     SAMPLER_SHADOW_OFFSET,
+    // TESSELLATION
+    UNIFORM_BEZIER
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 

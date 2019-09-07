@@ -9,10 +9,8 @@
 #include "Helpers.h"
 #include "Instance.h"
 
-// clang-format off
-namespace Mesh { class Handler; }
-// clang-format on
-
+namespace Mesh {
+class Handler;
 namespace VisualHelper {
 
 class ModelSpace : public Axes {
@@ -99,5 +97,6 @@ class TangentSpace : public Mesh::Line {
 };
 
 }  // namespace VisualHelper
+}  // namespace Mesh
 
 #endif  // !VISUAL_HELPER_H

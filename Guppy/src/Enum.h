@@ -3,9 +3,9 @@
 #define ENUM_H
 
 enum class GAME_KEY {
-    // virtual keys
+    // VIRTUAL KEYS
     KEY_SHUTDOWN,
-    // physical keys
+    // PHYSICAL KEYS
     KEY_UNKNOWN,
     KEY_ESC,
     KEY_UP,
@@ -21,7 +21,10 @@ enum class GAME_KEY {
     KEY_D,
     KEY_E,
     KEY_Q,
-    // number keys
+    // BRACKET/BRACE KEYS
+    KEY_LEFT_BRACKET,
+    KEY_RIGHT_BRACKET,
+    // NUMBER KEYS
     KEY_1,
     KEY_2,
     KEY_3,
@@ -34,7 +37,7 @@ enum class GAME_KEY {
     KEY_0,
     KEY_MINUS,
     KEY_EQUAL,
-    // function keys
+    // FUNCTION KEYS
     KEY_F1,
     KEY_F2,
     KEY_F3,
@@ -47,7 +50,7 @@ enum class GAME_KEY {
     KEY_F10,
     KEY_F11,
     KEY_F12,
-    // modifiers
+    // MODIFIERS
     KEY_ALT,
     KEY_CTRL,
     KEY_SHFT,
@@ -182,6 +185,8 @@ enum class UNIFORM {
     SCREEN_SPACE_DEFAULT,
     DEFERRED_SSAO,
     SHADOW_DATA,
+    // TESSELLATION
+    BEZIER,
     //
     DONT_CARE,
 };

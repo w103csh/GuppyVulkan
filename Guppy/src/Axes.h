@@ -8,26 +8,28 @@
 #include "Instance.h"
 #include "Mesh.h"
 
-// clang-format off
-namespace Mesh { class Handler; }
-// clang-format on
+namespace Mesh {
+
+class Handler;
 
 const float AXES_MAX_SIZE = 2000.0f;
 
-struct AxesCreateInfo : public Mesh::CreateInfo {
-    AxesCreateInfo() : Mesh::CreateInfo{{}, false, false, PIPELINE::LINE, Uniform::PASS_ALL_SET, false} {};
+struct AxesCreateInfo : public CreateInfo {
+    AxesCreateInfo() : CreateInfo{{}, false, false, PIPELINE::LINE, Uniform::PASS_ALL_SET, false} {};
     float lineSize = 1.0f;
     bool showNegative = false;
 };
 
-class Axes : public Mesh::Line {
-    friend class Mesh::Handler;
+class Axes : public Line {
+    friend class Handler;
 
    protected:
-    Axes(Mesh::Handler& handler, const AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+    Axes(Handler& handler, const AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
          std::shared_ptr<Material::Base>& pMaterial);
-    Axes(Mesh::Handler& handler, const std::string&& name, const AxesCreateInfo* pCreateInfo,
+    Axes(Handler& handler, const std::string&& name, const AxesCreateInfo* pCreateInfo,
          std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
 };
+
+}  // namespace Mesh
 
 #endif  // !AXES_H
