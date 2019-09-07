@@ -9,12 +9,12 @@ vec3 texCoordShade();
 vec4 gammaCorrect(const in vec3 color, const in float opacity);
 
 // IN
-layout(location = 0) in vec3 fragPosition;  // (camera space)
-layout(location = 1) in vec3 fragNormal;    // (texture space)
-layout(location = 2) in vec2 fragTexCoord;  // (texture space)
-layout(location = 3) in mat3 TBN;
+layout(location=0) in vec3 fragPosition;  // (camera space)
+layout(location=1) in vec3 fragNormal;    // (texture space)
+layout(location=2) in vec2 fragTexCoord;  // (texture space)
+layout(location=3) in mat3 TBN;
 // OUT
-layout(location = 0) out vec4 outColor;
+layout(location=0) out vec4 outColor;
 
 // GLOBAL
 float opacity;

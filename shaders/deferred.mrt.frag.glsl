@@ -6,18 +6,18 @@ vec3 setTextureDefaults();
 float getMaterialShininess();
 
 // IN
-layout(location = 0) in vec3 fragPosition;
-layout(location = 1) in vec3 fragNormal;
-// layout(location = 2) in vec2 fragTexCoord;
+layout(location=0) in vec3 fragPosition;
+layout(location=1) in vec3 fragNormal;
+// layout(location=2) in vec2 fragTexCoord;
 layout(location=3) in vec3 outTangent;     // (camera space)
 layout(location=4) in vec3 outBinormal;    // (camera space)
 
 // OUT
-layout (location = 0) out vec4 outPosition;
-layout (location = 1) out vec4 outNormal;
-layout (location = 2) out vec4 outDiffuse;
-layout (location = 3) out vec4 outAmbient;
-layout (location = 4) out vec4 outSpecular;
+layout(location=0) out vec4 outPosition;
+layout(location=1) out vec4 outNormal;
+layout(location=2) out vec4 outDiffuse;
+layout(location=3) out vec4 outAmbient;
+layout(location=4) out vec4 outSpecular;
 
 // GLOBAL
 vec3    Ka,     // ambient coefficient

@@ -12,8 +12,8 @@ bool isPerMaterialColor();
 bool isPerVertexColor();
 
 // IN
-layout(location = 1) in vec3 fragNormal;
-layout(location = 2) in vec4 fragColor;
+layout(location=1) in vec3 fragNormal;
+layout(location=2) in vec4 fragColor;
 
 // GLOBAL
 vec3    Ka, // ambient coefficient

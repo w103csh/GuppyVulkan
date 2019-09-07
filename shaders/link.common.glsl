@@ -79,4 +79,4 @@
 // };
 
 
-// layout (binding = 0) UniformDefaultFog uni;
+// layout(binding=0) UniformDefaultFog uni;

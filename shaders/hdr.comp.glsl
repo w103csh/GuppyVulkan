@@ -35,7 +35,7 @@ layout(set=_DS_SMP_SCR_DEF, binding=0) uniform sampler2D sampRender;
 layout(set=_DS_SWAPCHAIN_IMAGE, binding=0, _FIXME_1_) uniform image2D imgTarget;
 
 // IN
-layout (local_size_x=1, local_size_y=1) in;
+layout(local_size_x=1, local_size_y=1) in;
 
 const vec3 LUMINANCE = vec3(0.2126, 0.7152, 0.0722);
 float luminance(vec3 color) {

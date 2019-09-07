@@ -31,10 +31,10 @@ layout(set=_DS_UNI_PBR, binding=2) uniform LightPBRPositional {
 #endif
 
 // IN
-layout(location = 0) in vec3 fragPosition;  // (camera space)
-layout(location = 1) in vec3 fragNormal;    // (texture space)
+layout(location=0) in vec3 fragPosition;  // (camera space)
+layout(location=1) in vec3 fragNormal;    // (texture space)
 // OUT
-layout(location = 0) out vec4 outColor;
+layout(location=0) out vec4 outColor;
 
 // GLOBAL
 vec3    Kd,     // color

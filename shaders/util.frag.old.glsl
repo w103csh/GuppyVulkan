@@ -26,9 +26,9 @@ struct PositionalLight {
 };
 
 // IN
-layout(location = 0) in vec3 fragPos;
+layout(location=0) in vec3 fragPos;
 // UNIFORM BUFFER
-layout(binding = 0) uniform DefaultUniformBuffer {
+layout(binding=0) uniform DefaultUniformBuffer {
 	Camera camera;
 	PositionalLight light;
 } ubo;
