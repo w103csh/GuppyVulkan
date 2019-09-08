@@ -14,46 +14,46 @@ class Handler;
 namespace VisualHelper {
 
 class ModelSpace : public Axes {
-    friend class Mesh::Handler;
+    friend class Handler;
 
    protected:
-    ModelSpace(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+    ModelSpace(Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
                std::shared_ptr<Material::Base>& pMaterial)
         : Axes(handler, "Model Space Visual Helper", pCreateInfo, pInstanceData, pMaterial) {}
 };
 
-class TangentSpace : public Mesh::Line {
-    friend class Mesh::Handler;
+class TangentSpace : public Line {
+    friend class Handler;
 
    protected:
     // COLOR
-    // TangentSpace(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
-    //             std::unique_ptr<Mesh::Color>& pMesh)
-    //    : Mesh::Line(handler, "Tangent Space Visual Helper", pCreateInfo, pMaterial) {
+    // TangentSpace(Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
+    //             std::unique_ptr<Color>& pMesh)
+    //    : Line(handler, "Tangent Space Visual Helper", pCreateInfo, pMaterial) {
     //    assert(false && "No way to do tangent space for this yet. Need tex coords currently.");
     //    isIndexed_ = false;
     //    make(pMesh.get(), pCreateInfo);
     //    status_ = STATUS::PENDING_BUFFERS;
     //};
-    TangentSpace(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-                 std::shared_ptr<Material::Base>& pMaterial, Mesh::Color* pMesh)
-        : Mesh::Line(handler, "Tangent Space Visual Helper", pCreateInfo, pInstanceData, pMaterial) {
+    TangentSpace(Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+                 std::shared_ptr<Material::Base>& pMaterial, Color* pMesh)
+        : Line(handler, "Tangent Space Visual Helper", pCreateInfo, pInstanceData, pMaterial) {
         assert(false && "No way to do tangent space for this yet. Need tex coords currently.");
         isIndexed_ = false;
         make(pMesh, pCreateInfo);
         status_ = STATUS::PENDING_BUFFERS;
     };
     // TEXTURE
-    // TangentSpace(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
-    //             std::unique_ptr<Mesh::Texture>& pMesh)
-    //    : Mesh::Line(handler, "Tangent Space Visual Helper", pCreateInfo, pMaterial) {
+    // TangentSpace(Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
+    //             std::unique_ptr<Texture>& pMesh)
+    //    : Line(handler, "Tangent Space Visual Helper", pCreateInfo, pMaterial) {
     //    isIndexed_ = false;
     //    make(pMesh.get(), pCreateInfo);
     //    status_ = STATUS::PENDING_BUFFERS;
     //};
-    TangentSpace(Mesh::Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-                 std::shared_ptr<Material::Base>& pMaterial, Mesh::Texture* pMesh)
-        : Mesh::Line(handler, "Tangent Space Visual Helper", pCreateInfo, pInstanceData, pMaterial) {
+    TangentSpace(Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+                 std::shared_ptr<Material::Base>& pMaterial, Texture* pMesh)
+        : Line(handler, "Tangent Space Visual Helper", pCreateInfo, pInstanceData, pMaterial) {
         isIndexed_ = false;
         make(pMesh, pCreateInfo);
         status_ = STATUS::PENDING_BUFFERS;

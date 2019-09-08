@@ -7,7 +7,7 @@
 using namespace Mesh;
 
 namespace {
-void addFaces(Mesh::Base* pMesh, const Geometry::CreateInfo& geoInfo) {
+void addFaces(Base* pMesh, const Geometry::CreateInfo& geoInfo) {
     // Mimic approach in loadObj in FileLoader. This way everything is
     // using the same ideas (for testing)...
     unique_vertices_map_smoothing vertexMap = {};
@@ -107,7 +107,7 @@ std::vector<Face> Plane::make(const Geometry::CreateInfo& geoInfo) {
     return faces;
 }
 
-Plane::Color::Color(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+Plane::Color::Color(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
                     std::shared_ptr<Material::Base>& pMaterial)
     : Mesh::Color(handler, "Color Plane", pCreateInfo, pInstanceData, pMaterial) {
     addFaces(this, pCreateInfo->geometryCreateInfo);
@@ -115,8 +115,8 @@ Plane::Color::Color(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::
     status_ = STATUS::PENDING_BUFFERS;
 }
 
-Plane::Texture::Texture(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo,
-                        std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
+Plane::Texture::Texture(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+                        std::shared_ptr<Material::Base>& pMaterial)
     : Mesh::Texture(handler, "Texture Plane", pCreateInfo, pInstanceData, pMaterial) {
     addFaces(this, pCreateInfo->geometryCreateInfo);
     updateBoundingBox(vertices_);

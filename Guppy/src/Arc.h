@@ -13,7 +13,7 @@ namespace Mesh {
 
 class Handler;
 
-struct ArcCreateInfo : public Mesh::CreateInfo {
+struct ArcCreateInfo : public CreateInfo {
     ArcCreateInfo() : CreateInfo{{}, false, false, PIPELINE::DEFERRED_BEZIER_4, Uniform::PASS_ALL_SET, false} {};
     std::vector<Vertex::Color> controlPoints;
 };

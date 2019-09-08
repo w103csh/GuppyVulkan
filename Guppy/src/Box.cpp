@@ -14,7 +14,7 @@ void addPlane(const glm::mat4& t, const Geometry::CreateInfo& geoInfo, std::vect
     for (auto& face : planeFaces) face.transform(t);
     faces.insert(faces.end(), planeFaces.begin(), planeFaces.end());
 }
-void addFaces(Mesh::Base* pMesh, const Geometry::CreateInfo& geoInfo) {
+void addFaces(Base* pMesh, const Geometry::CreateInfo& geoInfo) {
     // Mimic approach in loadObj in FileLoader. This way everything is
     // using the same ideas (for testing)...
     unique_vertices_map_non_smoothing vertexMap = {};
@@ -51,7 +51,7 @@ std::vector<Face> Box::make(const Geometry::CreateInfo& geoInfo) {
     return faces;
 }
 
-Box::Color::Color(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+Box::Color::Color(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
                   std::shared_ptr<Material::Base>& pMaterial)
     : Mesh::Color(handler, "Color Box", pCreateInfo, pInstanceData, pMaterial) {
     addFaces(this, pCreateInfo->geometryCreateInfo);
@@ -59,7 +59,7 @@ Box::Color::Color(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::sh
     status_ = STATUS::PENDING_BUFFERS;
 }
 
-Box::Texture::Texture(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+Box::Texture::Texture(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
                       std::shared_ptr<Material::Base>& pMaterial)
     : Mesh::Texture(handler, "Texture Box", pCreateInfo, pInstanceData, pMaterial) {
     addFaces(this, pCreateInfo->geometryCreateInfo);
