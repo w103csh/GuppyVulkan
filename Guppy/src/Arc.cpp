@@ -4,9 +4,11 @@
 // HANDLERS
 #include "MeshHandler.h"
 
-Mesh::Arc::Arc(Mesh::Handler& handler, const ArcCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-               std::shared_ptr<Material::Base>& pMaterial)
-    : Mesh::Line(handler, "Arc", pCreateInfo, pInstanceData, pMaterial) {
+using namespace Mesh;
+
+Arc::Arc(Handler& handler, const ArcCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+         std::shared_ptr<Material::Base>& pMaterial)
+    : Line(handler, "Arc", pCreateInfo, pInstanceData, pMaterial) {
     isIndexed_ = false;
 
     // Only doing bezier 4 control point that is tessellated on the gpu atm.

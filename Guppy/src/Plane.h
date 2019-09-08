@@ -18,18 +18,18 @@ constexpr auto INDEX_SIZE = 6;
 std::vector<Face> make(const Geometry::CreateInfo& geoInfo = {});
 
 class Color : public Mesh::Color {
-    friend class Mesh::Handler;
+    friend class Handler;
 
    protected:
-    Color(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+    Color(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
           std::shared_ptr<Material::Base>& pMaterial);
 };
 
 class Texture : public Mesh::Texture {
-    friend class Mesh::Handler;
+    friend class Handler;
 
    protected:
-    Texture(Mesh::Handler& handler, Mesh::CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+    Texture(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
             std::shared_ptr<Material::Base>& pMaterial);
 };
 

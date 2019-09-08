@@ -1,4 +1,6 @@
 
+ - Generate the screen quad in a vertex shader, and remove all the SCREEN_QUAD code. 
+
  - Hookup face selection for the deferred pass(es).
 
  - Now that I know how to do tessellation shading, move the face selection from a mesh to
