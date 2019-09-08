@@ -201,6 +201,9 @@ void RenderPass::Base::overridePipelineCreateInfo(const PIPELINE& type, Pipeline
     createInfoRes.depthStencilStateInfo.depthTestEnable = pipelineData_.usesDepth;
     createInfoRes.depthStencilStateInfo.depthWriteEnable = pipelineData_.usesDepth;
     createInfoRes.multisampleStateInfo.rasterizationSamples = pipelineData_.samples;
+    if (pipelineData_.samples == VK_SAMPLE_COUNT_1_BIT) {
+        createInfoRes.multisampleStateInfo.sampleShadingEnable = VK_FALSE;
+    }
 }
 
 void RenderPass::Base::record(const uint8_t frameIndex) {

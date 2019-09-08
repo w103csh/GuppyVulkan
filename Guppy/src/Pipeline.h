@@ -43,15 +43,15 @@ class Base : public Handlee<Pipeline::Handler> {
     const std::vector<DESCRIPTOR_SET> DESCRIPTOR_SET_TYPES;
     const std::string NAME;
     const std::vector<PUSH_CONSTANT> PUSH_CONSTANT_TYPES;
-    const std::set<SHADER> SHADER_TYPES;
     const PIPELINE TYPE;
 
     virtual void init();
     virtual void updateStatus();
 
-    inline const auto &getStatus() const { return status_; }
-    inline const auto &getShaderTextReplaceInfoMap() { return shaderTextReplaceInfoMap_; }
-    inline const auto &getDescriptorOffsets() { return descriptorOffsets_; }
+    constexpr const auto &getShaderTypes() const { return shaderTypes_; }
+    constexpr const auto &getStatus() const { return status_; }
+    constexpr const auto &getShaderTextReplaceInfoMap() { return shaderTextReplaceInfoMap_; }
+    constexpr const auto &getDescriptorOffsets() { return descriptorOffsets_; }
 
     // I can't think of anything better atm.
     virtual void setInfo(CreateInfoResources &createInfoRes, VkGraphicsPipelineCreateInfo *pGraphicsInfo,
@@ -61,6 +61,9 @@ class Base : public Handlee<Pipeline::Handler> {
     Base(Pipeline::Handler &handler, const VkPipelineBindPoint &&bindPoint, const Pipeline::CreateInfo *pCreateInfo);
 
     const std::shared_ptr<Pipeline::BindData> &getBindData(const PASS &passType);
+
+    // SHADER
+    void replaceShaderType(const SHADER type, const SHADER replaceWithType);
 
     // DESCRIPTOR SET
     bool checkTextureStatus(const std::string &id);
@@ -79,6 +82,10 @@ class Base : public Handlee<Pipeline::Handler> {
    private:
     std::shared_ptr<Pipeline::BindData> makeBindData(const VkPipelineLayout &layout);
 
+    bool isInitialized_;
+
+    // SHADER
+    std::set<SHADER> shaderTypes_;
     // DESCRIPTOR SET
     shaderTextReplaceInfoMap shaderTextReplaceInfoMap_;
     // PUSH CONSTANT
@@ -117,6 +124,7 @@ class Graphics : public Base {
     virtual void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
     virtual void getMultisampleStateInfoResources(CreateInfoResources &createInfoRes);
     virtual void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes);
+    virtual void getShaderStageInfoResources(CreateInfoResources &createInfoRes) {}
     virtual void getTesselationInfoResources(CreateInfoResources &createInfoRes);
     virtual void getViewportStateInfoResources(CreateInfoResources &createInfoRes);
 };

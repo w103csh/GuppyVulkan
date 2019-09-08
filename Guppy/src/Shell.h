@@ -60,6 +60,7 @@ class Shell {
         VkDebugReportCallbackEXT debugReport = VK_NULL_HANDLE;
         VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
 
+        // TODO: These should not be public...
         bool samplerAnisotropyEnabled_ = false;    // *
         bool sampleRateShadingEnabled_ = false;    // *
         bool linearBlittingSupported_ = false;     // *

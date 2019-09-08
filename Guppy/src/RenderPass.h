@@ -65,7 +65,7 @@ class Base : public Handlee<RenderPass::Handler> {
     constexpr const auto &getSamples() const { return pipelineData_.samples; }
     constexpr bool usesSwapchain() const { return FLAGS & FLAG::SWAPCHAIN; }
     constexpr bool usesDepth() const { return FLAGS & FLAG::DEPTH; }
-    constexpr bool usesMultiSample() const { return FLAGS & FLAG::MULTISAMPLE; }
+    constexpr bool usesMultiSample() const { return FLAGS & FLAG::MULTISAMPLE && getSamples() != VK_SAMPLE_COUNT_1_BIT; }
     constexpr bool usesSecondaryCommands() const { return FLAGS & FLAG::SECONDARY_COMMANDS; }
     inline bool hasTargetSampler() const { return pTextures_.size(); }
     inline bool hasTargetSwapchain() const { return getTargetId() == SWAPCHAIN_TARGET_ID; }

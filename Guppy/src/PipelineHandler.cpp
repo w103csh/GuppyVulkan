@@ -139,7 +139,7 @@ std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
         // clang-format on
 
         // shader stages
-        range.stageFlags |= shaderHandler().getStageFlags(getPipeline(pipelineType)->SHADER_TYPES);
+        range.stageFlags |= shaderHandler().getStageFlags(getPipeline(pipelineType)->getShaderTypes());
 
         bool merge = false;
         for (auto& r : ranges) {
@@ -251,9 +251,13 @@ void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
             const auto& pPipelineBindData = pipelineBindDataMap_.at(key);
 
             // SHADER
-            createInfoRes.stagesInfo.clear();
-            for (const auto& shaderType : pPipeline->SHADER_TYPES) {
-                shaderHandler().getStagesInfo(shaderType, pPipeline->TYPE, it->second, createInfoRes.stagesInfo);
+            {
+                createInfoRes.shaderStageInfos.clear();
+                createInfoRes.specializationMapEntries.clear();
+                createInfoRes.specializationInfo.clear();
+                for (const auto& shaderType : pPipeline->getShaderTypes()) {
+                    shaderHandler().getStagesInfo(shaderType, pPipeline->TYPE, it->second, createInfoRes.shaderStageInfos);
+                }
             }
 
             // TODO: This can be simplified.
@@ -313,7 +317,7 @@ void Pipeline::Handler::makeShaderInfoMap(Shader::infoMap& map) {
     for (const auto& [type, pPipeline] : pPipelines_) {
         const auto& shaderReplaceMap = pPipeline->getShaderTextReplaceInfoMap();
         for (const auto& shaderReplaceKeyValue : shaderReplaceMap) {
-            for (const auto& shaderType : pPipeline->SHADER_TYPES) {
+            for (const auto& shaderType : pPipeline->getShaderTypes()) {
                 map.insert({
                     {
                         shaderType,
@@ -330,13 +334,13 @@ void Pipeline::Handler::makeShaderInfoMap(Shader::infoMap& map) {
 void Pipeline::Handler::getShaderStages(const std::set<PIPELINE>& pipelineTypes, VkShaderStageFlags& stages) {
     for (const auto& [type, pPipeline] : pPipelines_) {
         if (pipelineTypes.find(pPipeline->TYPE) == pipelineTypes.end()) continue;
-        stages |= shaderHandler().getStageFlags(pPipeline->SHADER_TYPES);
+        stages |= shaderHandler().getStageFlags(pPipeline->getShaderTypes());
     }
 }
 
 void Pipeline::Handler::needsUpdate(const std::vector<SHADER> types) {
     for (const auto& [key, pPipeline] : pPipelines_) {
-        for (const auto& shaderType : pPipeline->SHADER_TYPES) {
+        for (const auto& shaderType : pPipeline->getShaderTypes()) {
             for (const auto& type : types) {
                 if (type == shaderType) needsUpdateSet_.insert(pPipeline->TYPE);
             }
