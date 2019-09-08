@@ -1,6 +1,9 @@
 
 #include "Deferred.h"
 
+// HANDLERS
+#include "PipelineHandler.h"
+
 namespace Sampler {
 namespace Deferred {
 
@@ -16,7 +19,7 @@ const CreateInfo POS_NORM_2D_ARRAY_CREATE_INFO = {
     },
     VK_IMAGE_VIEW_TYPE_2D_ARRAY,
     BAD_EXTENT_3D,
-    {false, true},
+    {false, true, 1.0f, ::Deferred::DO_MSAA},
     0,
     SAMPLER::DEFAULT,
     (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
@@ -29,7 +32,7 @@ const CreateInfo POS_2D_CREATE_INFO = {
     {{{::Sampler::USAGE::POSITION}}},
     VK_IMAGE_VIEW_TYPE_2D,
     BAD_EXTENT_3D,
-    {false, true},
+    {false, true, 1.0f, ::Deferred::DO_MSAA},
     0,
     SAMPLER::DEFAULT,
     //(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
@@ -43,7 +46,7 @@ const CreateInfo NORM_2D_CREATE_INFO = {
     {{{::Sampler::USAGE::POSITION}}},
     VK_IMAGE_VIEW_TYPE_2D,
     BAD_EXTENT_3D,
-    {false, true},
+    {false, true, 1.0f, ::Deferred::DO_MSAA},
     0,
     SAMPLER::DEFAULT,
     //(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
@@ -57,7 +60,7 @@ const CreateInfo DIFFUSE_2D_CREATE_INFO = {
     {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D,
     BAD_EXTENT_3D,
-    {false, true},
+    {false, true, 1.0f, ::Deferred::DO_MSAA},
     0,
     SAMPLER::DEFAULT,
     (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT),
@@ -70,7 +73,7 @@ const CreateInfo AMBIENT_2D_CREATE_INFO = {
     {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D,
     BAD_EXTENT_3D,
-    {false, true},
+    {false, true, 1.0f, ::Deferred::DO_MSAA},
     0,
     SAMPLER::DEFAULT,
     (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT),
@@ -83,7 +86,7 @@ const CreateInfo SPECULAR_2D_CREATE_INFO = {
     {{{::Sampler::USAGE::COLOR}}},
     VK_IMAGE_VIEW_TYPE_2D,
     BAD_EXTENT_3D,
-    {false, true},
+    {false, true, 1.0f, ::Deferred::DO_MSAA},
     0,
     SAMPLER::DEFAULT,
     (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT),
@@ -332,35 +335,42 @@ namespace Deferred {
 const CreateInfo VERT_CREATE_INFO = {
     SHADER::DEFERRED_VERT,
     "Deferred Vertex Shader",
-    "deferred.vert.glsl",
+    "vert.deferred.glsl",
     VK_SHADER_STAGE_VERTEX_BIT,
 };
 
 const CreateInfo FRAG_CREATE_INFO = {
     SHADER::DEFERRED_FRAG,
     "Deferred Fragment Shader",
-    "deferred.frag.glsl",
+    "frag.deferred.glsl",
+    VK_SHADER_STAGE_FRAGMENT_BIT,
+};
+
+const CreateInfo FRAG_MS_CREATE_INFO = {
+    SHADER::DEFERRED_FRAG,
+    "Deferred Multi-Sample Fragment Shader",
+    "frag.deferred.ms.glsl",
     VK_SHADER_STAGE_FRAGMENT_BIT,
 };
 
 const CreateInfo MRT_TEX_WS_VERT_CREATE_INFO = {
     SHADER::DEFERRED_MRT_TEX_WS_VERT,
     "Deferred Multiple Render Target Texture World Space Vertex Shader",
-    "deferred.mrt.ws.vert.glsl",
+    "vert.texture.deferred.mrt.ws.glsl",
     VK_SHADER_STAGE_VERTEX_BIT,
 };
 
 const CreateInfo MRT_TEX_CS_VERT_CREATE_INFO = {
     SHADER::DEFERRED_MRT_TEX_CS_VERT,
     "Deferred Multiple Render Target Texture Camera Space Vertex Shader",
-    "deferred.mrt.cs.vert.glsl",
+    "vert.texture.deferred.mrt.cs.glsl",
     VK_SHADER_STAGE_VERTEX_BIT,
 };
 
 const CreateInfo MRT_TEX_FRAG_CREATE_INFO = {
     SHADER::DEFERRED_MRT_TEX_FRAG,
     "Deferred Multiple Render Target Texture Fragment Shader",
-    "deferred.mrt.frag.glsl",
+    "frag.texture.deferred.mrt.glsl",
     VK_SHADER_STAGE_FRAGMENT_BIT,
     {
         SHADER_LINK::TEX_FRAG,
@@ -371,14 +381,14 @@ const CreateInfo MRT_TEX_FRAG_CREATE_INFO = {
 const CreateInfo MRT_COLOR_CS_VERT_CREATE_INFO = {
     SHADER::DEFERRED_MRT_COLOR_CS_VERT,
     "Deferred Multiple Render Target Color Camera Space Vertex Shader",
-    "deferred.mrt.color.cs.vert.glsl",
+    "vert.color.deferred.mrt.cs.glsl",
     VK_SHADER_STAGE_VERTEX_BIT,
 };
 
 const CreateInfo MRT_COLOR_FRAG_CREATE_INFO = {
     SHADER::DEFERRED_MRT_COLOR_FRAG,
     "Deferred Multiple Render Target Color Fragment Shader",
-    "deferred.mrt.color.frag.glsl",
+    "frag.color.deferred.mrt.glsl",
     VK_SHADER_STAGE_FRAGMENT_BIT,
     {
         SHADER_LINK::COLOR_FRAG,
@@ -389,7 +399,7 @@ const CreateInfo MRT_COLOR_FRAG_CREATE_INFO = {
 const CreateInfo SSAO_FRAG_CREATE_INFO = {
     SHADER::DEFERRED_MRT_COLOR_FRAG,
     "Deferred SSAO Fragment Shader",
-    "ssao.frag.glsl",
+    "frag.deferred.ssao.glsl",
     VK_SHADER_STAGE_FRAGMENT_BIT,
 };
 
@@ -489,7 +499,10 @@ SSAO::SSAO(Pipeline::Handler& handler) : Graphics(handler, &AO_CREATE_INFO) {}
 const Pipeline::CreateInfo COMBINE_CREATE_INFO = {
     PIPELINE::DEFERRED_COMBINE,
     "Deferred Combine Pipeline",
-    {SHADER::DEFERRED_VERT, SHADER::DEFERRED_FRAG},
+    {
+        SHADER::DEFERRED_VERT,
+        SHADER::DEFERRED_MS_FRAG,
+    },
     {
         DESCRIPTOR_SET::UNIFORM_DEFERRED_COMBINE,  //
         DESCRIPTOR_SET::SAMPLER_SHADOW,            //
@@ -503,7 +516,48 @@ const Pipeline::CreateInfo COMBINE_CREATE_INFO = {
         // DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO,
     },
 };
-Combine::Combine(Pipeline::Handler& handler) : Graphics(handler, &COMBINE_CREATE_INFO) {}
+Combine::Combine(Pipeline::Handler& handler) : Graphics(handler, &COMBINE_CREATE_INFO), doMSAA_(::Deferred::DO_MSAA) {}
+
+void Combine::init() {
+    if (!doMSAA_) {
+        replaceShaderType(SHADER::DEFERRED_MS_FRAG, SHADER::DEFERRED_FRAG);
+    } else {
+        assert(handler().shell().context().samples != VK_SAMPLE_COUNT_1_BIT);
+    }
+    Graphics::init();
+}
+
+void Combine::getShaderStageInfoResources(CreateInfoResources& createInfoRes) {
+    /* This was never used because I couldn't figure out a way to manually resolve the multi-sample
+     *  input attachments without doing it twice. This might be possible if you can manually do the
+     *  the "resolve attachment" step. There is another possibility I saw as well where you can enable
+     *  device feature for both nvidia, and amd for "mixed attachment samples" or something like that.
+     *
+     * Note: the initial reason for trying this was to address aliasing in the shadows by sampling the
+     *  depth attachment base on the angle of the surface. This is probably possible without doing the
+     *  multi-sample manually.
+     */
+    if (doMSAA_) {
+        createInfoRes.specializationMapEntries.push_back({{}});
+
+        // Use specialization constants to pass number of samples to the shader (used for MSAA resolve)
+        createInfoRes.specializationMapEntries.back().back().constantID = 0;
+        createInfoRes.specializationMapEntries.back().back().offset = 0;
+        createInfoRes.specializationMapEntries.back().back().size = sizeof(VkSampleCountFlagBits);
+
+        createInfoRes.specializationInfo.push_back({});
+        createInfoRes.specializationInfo.back().mapEntryCount =
+            static_cast<uint32_t>(createInfoRes.specializationMapEntries.back().size());
+        createInfoRes.specializationInfo.back().pMapEntries = createInfoRes.specializationMapEntries.back().data();
+        createInfoRes.specializationInfo.back().dataSize = sizeof(handler().shell().context().samples);
+        createInfoRes.specializationInfo.back().pData = &handler().shell().context().samples;
+
+        assert(createInfoRes.shaderStageInfos.size() == 2 &&
+               createInfoRes.shaderStageInfos[1].stage == VK_SHADER_STAGE_FRAGMENT_BIT);
+        // Add the specialization to the fragment shader info.
+        createInfoRes.shaderStageInfos[1].pSpecializationInfo = &createInfoRes.specializationInfo.back();
+    }
+}
 
 }  // namespace Deferred
 }  // namespace Pipeline

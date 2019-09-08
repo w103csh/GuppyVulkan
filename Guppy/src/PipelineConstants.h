@@ -105,7 +105,9 @@ struct CreateInfoResources {
     VkPipelineMultisampleStateCreateInfo multisampleStateInfo = {};
     VkPipelineDepthStencilStateCreateInfo depthStencilStateInfo = {};
     // SHADER
-    std::vector<VkPipelineShaderStageCreateInfo> stagesInfo;
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStageInfos;
+    std::vector<std::vector<VkSpecializationMapEntry>> specializationMapEntries;
+    std::vector<VkSpecializationInfo> specializationInfo;
 };
 
 namespace Default {

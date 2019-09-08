@@ -27,7 +27,7 @@ const CreateInfo Deferred_CREATE_INFO = {
         // PIPELINE::DEFERRED_SSAO,
         PIPELINE::DEFERRED_COMBINE,
     },
-    (FLAG::SWAPCHAIN | FLAG::DEPTH),
+    (FLAG::SWAPCHAIN | FLAG::DEPTH | (::Deferred::DO_MSAA ? FLAG::MULTISAMPLE : FLAG::NONE)),
     {
         std::string(RenderPass::SWAPCHAIN_TARGET_ID),
         // TODO: Make below work with above in the base class.
@@ -179,13 +179,12 @@ void Base::createAttachments() {
     VkAttachmentDescription attachment = {
         0,                                        // flags VkAttachmentDescriptionFlags
         VK_FORMAT_UNDEFINED,                      // format VkFormat
-        VK_SAMPLE_COUNT_1_BIT,                    // samples VkSampleCountFlagBits
+        getSamples(),                             // samples VkSampleCountFlagBits
         VK_ATTACHMENT_LOAD_OP_CLEAR,              // loadOp VkAttachmentLoadOp
         VK_ATTACHMENT_STORE_OP_STORE,             // storeOp VkAttachmentStoreOp
         VK_ATTACHMENT_LOAD_OP_DONT_CARE,          // stencilLoadOp VkAttachmentLoadOp
         VK_ATTACHMENT_STORE_OP_DONT_CARE,         // stencilStoreOp VkAttachmentStoreOp
         VK_IMAGE_LAYOUT_UNDEFINED,                // initialLayout VkImageLayout
-                                                  // getFinalLayout()                   // finalLayout VkImageLayout
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL  // finalLayout VkImageLayout
     };
 
@@ -200,6 +199,7 @@ void Base::createAttachments() {
     resources_.attachments.push_back(attachment);
     auto pTexture = handler().textureHandler().getTexture(Texture::Deferred::POS_2D_ID);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
+    assert(resources_.attachments.back().samples == getSamples());
 
     // NORMAL
     resources_.colorAttachments.push_back(
@@ -207,6 +207,7 @@ void Base::createAttachments() {
     resources_.attachments.push_back(attachment);
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::NORM_2D_ID);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
+    assert(resources_.attachments.back().samples == getSamples());
 
     // DIFFUSE
     resources_.colorAttachments.push_back(
@@ -214,6 +215,7 @@ void Base::createAttachments() {
     resources_.attachments.push_back(attachment);
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::DIFFUSE_2D_ID);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
+    assert(resources_.attachments.back().samples == getSamples());
 
     // AMBIENT
     resources_.colorAttachments.push_back(
@@ -221,6 +223,7 @@ void Base::createAttachments() {
     resources_.attachments.push_back(attachment);
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::AMBIENT_2D_ID);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
+    assert(resources_.attachments.back().samples == getSamples());
 
     // SPECULAR
     resources_.colorAttachments.push_back(
@@ -228,6 +231,7 @@ void Base::createAttachments() {
     resources_.attachments.push_back(attachment);
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::SPECULAR_2D_ID);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
+    assert(resources_.attachments.back().samples == getSamples());
 
     // SSAO
     if (doSSAO_) {
@@ -263,11 +267,13 @@ void Base::createSubpassDescriptions() {
         resources_.subpasses.push_back(subpassDesc);
     }
 
+    if (usesMultiSample()) assert(resources_.resolveAttachments.size() == 1);
+
     // COMBINE
     subpassDesc = {};
     subpassDesc.colorAttachmentCount = 1;
     subpassDesc.pColorAttachments = &resources_.colorAttachments[0];  // SWAPCHAIN
-    subpassDesc.pResolveAttachments = nullptr;
+    subpassDesc.pResolveAttachments = resources_.resolveAttachments.data();
     subpassDesc.pDepthStencilAttachment = nullptr;
     resources_.subpasses.push_back(subpassDesc);
 
@@ -397,10 +403,18 @@ void Base::createFramebuffers() {
 
     for (uint8_t frameIndex = 0; frameIndex < attachmentViewsList.size(); frameIndex++) {
         auto& attachmentViews = attachmentViewsList[frameIndex];
+
         // DEPTH
         if (pipelineData_.usesDepth) {
             assert(depth_.view != VK_NULL_HANDLE);
             attachmentViews.push_back(depth_.view);
+        }
+
+        // MULTI-SAMPLE
+        if (usesMultiSample()) {
+            assert(images_.size() == 1);
+            assert(images_[0].view != VK_NULL_HANDLE);
+            attachmentViews.push_back(images_[0].view);  // TODO: should there be one per swapchain image????????????????
         }
 
         // SWAPCHAIN

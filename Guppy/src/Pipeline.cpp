@@ -74,10 +74,11 @@ Pipeline::Base::Base(Handler& handler, const VkPipelineBindPoint&& bindPoint, co
       DESCRIPTOR_SET_TYPES(pCreateInfo->descriptorSets),
       NAME(pCreateInfo->name),
       PUSH_CONSTANT_TYPES(pCreateInfo->pushConstantTypes),
-      SHADER_TYPES(pCreateInfo->shaderTypes),
       TYPE(pCreateInfo->type),
       status_(STATUS::PENDING),
-      descriptorOffsets_(pCreateInfo->uniformOffsets) {
+      descriptorOffsets_(pCreateInfo->uniformOffsets),
+      isInitialized_(false),
+      shaderTypes_(pCreateInfo->shaderTypes) {
     assert(TYPE != PIPELINE::ALL_ENUM);
     for (const auto& type : PUSH_CONSTANT_TYPES) assert(type != PUSH_CONSTANT::DONT_CARE);
 }
@@ -85,6 +86,7 @@ Pipeline::Base::Base(Handler& handler, const VkPipelineBindPoint&& bindPoint, co
 void Pipeline::Base::init() {
     validatePipelineDescriptorSets();
     makePipelineLayouts();
+    isInitialized_ = true;
 }
 
 void Pipeline::Base::updateStatus() {
@@ -288,6 +290,14 @@ const std::shared_ptr<Pipeline::BindData>& Pipeline::Base::getBindData(const PAS
     return it.first->second;
 }
 
+void Pipeline::Base::replaceShaderType(const SHADER type, const SHADER replaceWithType) {
+    assert(!isInitialized_ && type != replaceWithType);
+    auto it = shaderTypes_.find(type);
+    assert(it != shaderTypes_.end());
+    shaderTypes_.erase(it);
+    shaderTypes_.insert(replaceWithType);
+}
+
 void Pipeline::Base::destroy() {
     const auto& dev = handler().shell().context().dev;
     for (const auto& [passTypes, bindData] : bindDataMap_) {
@@ -311,9 +321,9 @@ void Pipeline::Compute::setInfo(CreateInfoResources& createInfoRes, VkGraphicsPi
     pComputeInfo->flags = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;
     // SHADER
     // I believe these asserts should always be the case. Not sure though.
-    assert(createInfoRes.stagesInfo.size() == 1);
-    assert(createInfoRes.stagesInfo.front().stage == VK_SHADER_STAGE_COMPUTE_BIT);
-    pComputeInfo->stage = createInfoRes.stagesInfo.front();
+    assert(createInfoRes.shaderStageInfos.size() == 1);
+    assert(createInfoRes.shaderStageInfos.front().stage == VK_SHADER_STAGE_COMPUTE_BIT);
+    pComputeInfo->stage = createInfoRes.shaderStageInfos.front();
 }
 
 //  GRAPHICS
@@ -339,6 +349,7 @@ void Pipeline::Graphics::setInfo(CreateInfoResources& createInfoRes, VkGraphicsP
     getInputAssemblyInfoResources(createInfoRes);
     getMultisampleStateInfoResources(createInfoRes);
     getRasterizationStateInfoResources(createInfoRes);
+    getShaderStageInfoResources(createInfoRes);
     getTesselationInfoResources(createInfoRes);
     getViewportStateInfoResources(createInfoRes);
 
@@ -349,8 +360,8 @@ void Pipeline::Graphics::setInfo(CreateInfoResources& createInfoRes, VkGraphicsP
     pGraphicsInfo->pInputAssemblyState = &createInfoRes.inputAssemblyStateInfo;
     pGraphicsInfo->pVertexInputState = &createInfoRes.vertexInputStateInfo;
     // SHADER
-    pGraphicsInfo->stageCount = static_cast<uint32_t>(createInfoRes.stagesInfo.size());
-    pGraphicsInfo->pStages = createInfoRes.stagesInfo.data();
+    pGraphicsInfo->stageCount = static_cast<uint32_t>(createInfoRes.shaderStageInfos.size());
+    pGraphicsInfo->pStages = createInfoRes.shaderStageInfos.data();
     // FIXED FUNCTION
     pGraphicsInfo->pColorBlendState = &createInfoRes.colorBlendStateInfo;
     pGraphicsInfo->pDepthStencilState = &createInfoRes.depthStencilStateInfo;
@@ -417,17 +428,17 @@ void Pipeline::Graphics::getRasterizationStateInfoResources(CreateInfoResources&
 }
 
 void Pipeline::Graphics::getMultisampleStateInfoResources(CreateInfoResources& createInfoRes) {
+    auto& settings = handler().settings();
+    auto& ctx = handler().shell().context();
+
     createInfoRes.multisampleStateInfo = {};
     createInfoRes.multisampleStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    createInfoRes.multisampleStateInfo.rasterizationSamples = handler().shell().context().samples;
-    createInfoRes.multisampleStateInfo.sampleShadingEnable =
-        handler()
-            .settings()
-            .enable_sample_shading;  // enable sample shading in the pipeline (sampling for fragment interiors)
-    createInfoRes.multisampleStateInfo.minSampleShading =
-        handler().settings().enable_sample_shading ? MIN_SAMPLE_SHADING
-                                                   : 0.0f;     // min fraction for sample shading; closer to one is smooth
-    createInfoRes.multisampleStateInfo.pSampleMask = nullptr;  // Optional
+    createInfoRes.multisampleStateInfo.rasterizationSamples = ctx.samples;
+    // enable sample shading in the pipeline (sampling for fragment interiors)
+    createInfoRes.multisampleStateInfo.sampleShadingEnable = settings.enable_sample_shading;
+    // min fraction for sample shading; closer to one is smooth
+    createInfoRes.multisampleStateInfo.minSampleShading = settings.enable_sample_shading ? MIN_SAMPLE_SHADING : 0.0f;
+    createInfoRes.multisampleStateInfo.pSampleMask = nullptr;             // Optional
     createInfoRes.multisampleStateInfo.alphaToCoverageEnable = VK_FALSE;  // Optional
     createInfoRes.multisampleStateInfo.alphaToOneEnable = VK_FALSE;       // Optional
 }

@@ -24,9 +24,11 @@ void Scene::Handler::init() {
     reset();
 
     bool suppress = false;
+    bool deferred = true;
 
     auto& pScene = makeScene(true, (!suppress && false));
-    if (true) {
+
+    if (deferred) {
         Mesh::ArcCreateInfo arcInfo;
         Mesh::AxesCreateInfo axesInfo;
         Mesh::CreateInfo meshInfo;
@@ -192,9 +194,7 @@ void Scene::Handler::init() {
         }
 
         return;
-    }
-
-    if (false) {
+    } else {
         // Create info structs
         Mesh::CreateInfo meshInfo;
         Model::CreateInfo modelInfo;

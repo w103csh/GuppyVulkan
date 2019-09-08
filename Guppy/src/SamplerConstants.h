@@ -81,6 +81,8 @@ struct SwapchainInfo {
     bool usesFormat = false;
     bool usesExtent = false;
     float extentFactor = 1.0f;
+    // TODO: This only kind of makes sense here...
+    bool usesSamples = false;
 };
 
 struct MipmapInfo {

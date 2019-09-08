@@ -308,6 +308,11 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
     sampler.imgCreateInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
     sampler.imgCreateInfo.pQueueFamilyIndices = queueFamilyIndices.data();
 
+    // Samples
+    if (sampler.swpchnInfo.usesSamples) {
+        sampler.imgCreateInfo.samples = shell().context().samples;
+    }
+
     // Create image
     vk::assert_success(vkCreateImage(shell().context().dev, &sampler.imgCreateInfo, nullptr, &sampler.image));
 

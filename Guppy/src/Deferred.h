@@ -5,6 +5,10 @@
 #include "Pipeline.h"
 #include "Random.h"
 
+namespace Deferred {
+constexpr bool DO_MSAA = true;
+}
+
 namespace Texture {
 struct CreateInfo;
 namespace Deferred {
@@ -81,6 +85,7 @@ namespace Deferred {
 
 extern const CreateInfo VERT_CREATE_INFO;
 extern const CreateInfo FRAG_CREATE_INFO;
+extern const CreateInfo FRAG_MS_CREATE_INFO;
 extern const CreateInfo MRT_TEX_WS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_TEX_CS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_TEX_FRAG_CREATE_INFO;
@@ -130,6 +135,11 @@ class SSAO : public Graphics {
 class Combine : public Graphics {
    public:
     Combine(Handler& handler);
+    void init() override;
+    void getShaderStageInfoResources(CreateInfoResources& createInfoRes) override;
+
+   private:
+    bool doMSAA_;
 };
 
 }  // namespace Deferred
