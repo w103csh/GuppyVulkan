@@ -6,8 +6,20 @@
 #include "Random.h"
 
 namespace Deferred {
+
 constexpr bool DO_MSAA = true;
-}
+
+// clang-format off
+using PASS_FLAG = enum : FlagBits {
+    DONT_SHADE =        0x00000001,
+};
+// clang-format on
+
+struct PushConstant {
+    FlagBits flags = 0;
+};
+
+}  // namespace Deferred
 
 namespace Texture {
 struct CreateInfo;
@@ -108,13 +120,33 @@ class MRTTexture : public Graphics {
    public:
     MRTTexture(Handler& handler);
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
+
+    // protected:
+    // MRTTexture(Handler& handler, const CreateInfo& pCreateInfo);
 };
+
+//// MRT (TEXTURE WIREFRAME)
+// class MRTTextureWireFrame : public MRTTexture {
+//   public:
+//    MRTTextureWireFrame(Handler& handler);
+//    void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
+//};
 
 // MRT (COLOR)
 class MRTColor : public Graphics {
    public:
     MRTColor(Handler& handler);
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
+
+   protected:
+    MRTColor(Handler& handler, const CreateInfo* pCreateInfo);
+};
+
+// MRT (COLOR WIREFRAME)
+class MRTColorWireFrame : public MRTColor {
+   public:
+    MRTColorWireFrame(Handler& handler);
+    void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
 // MRT (LINE)

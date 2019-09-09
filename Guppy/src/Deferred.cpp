@@ -444,6 +444,14 @@ void MRTTexture::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     GetDefaultBlendInfoResources(createInfoRes);  //
 }
 
+//// MRT (TEXTURE WIREFRAME)
+// MRTTextureWireFrame::MRTTextureWireFrame(Handler& handler) : MRTTexture(handler) {}
+// void MRTTextureWireFrame::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+//    MRTTexture::getRasterizationStateInfoResources(createInfoRes);
+//    createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_LINE;
+//    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_NONE;
+//}
+
 // MRT (COLOR)
 const Pipeline::CreateInfo MRT_COLOR_CREATE_INFO = {
     PIPELINE::DEFERRED_MRT_COLOR,
@@ -455,9 +463,24 @@ const Pipeline::CreateInfo MRT_COLOR_CREATE_INFO = {
     },
 };
 MRTColor::MRTColor(Pipeline::Handler& handler) : Graphics(handler, &MRT_COLOR_CREATE_INFO) {}
+MRTColor::MRTColor(Pipeline::Handler& handler, const CreateInfo* pCreateInfo) : Graphics(handler, pCreateInfo) {}
 
 void MRTColor::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     GetDefaultBlendInfoResources(createInfoRes);  //
+}
+
+// MRT (COLOR WIREFRAME)
+const Pipeline::CreateInfo MRT_COLOR_WF_CREATE_INFO = {
+    PIPELINE::DEFERRED_MRT_WF_COLOR,
+    "Deferred Multiple Render Target Color Wireframe Pipeline",
+    {SHADER::DEFERRED_MRT_COLOR_CS_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
+    {DESCRIPTOR_SET::UNIFORM_DEFAULT},
+};
+MRTColorWireFrame::MRTColorWireFrame(Handler& handler) : MRTColor(handler, &MRT_COLOR_WF_CREATE_INFO) {}
+void MRTColorWireFrame::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+    MRTColor::getRasterizationStateInfoResources(createInfoRes);
+    createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_LINE;
+    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_NONE;
 }
 
 // MRT (LINE)
