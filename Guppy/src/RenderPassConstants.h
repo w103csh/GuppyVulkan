@@ -3,11 +3,11 @@
 
 #include <array>
 #include <glm/glm.hpp>
+#include <list>
 #include <map>
 #include <set>
 #include <string>
 #include <string_view>
-#include <unordered_set>
 #include <utility>
 #include <vector>
 #include <vulkan/vulkan.h>
@@ -94,7 +94,7 @@ struct Resources {
 struct CreateInfo {
     PASS type;
     std::string name;
-    std::unordered_set<PIPELINE> pipelineTypes;
+    std::list<PIPELINE> pipelineTypes;
     FlagBits flags = (FLAG::SWAPCHAIN | FLAG::DEPTH | FLAG::MULTISAMPLE);
     std::vector<std::string> textureIds;
     std::vector<PASS> prePassTypes;

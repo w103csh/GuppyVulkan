@@ -77,16 +77,16 @@ class Base : public Handlee<RenderPass::Handler> {
     constexpr const auto &getDependentTypeOffsetPairs() const { return dependentTypeOffsetPairs_; }
 
     // PIPELINE
-    constexpr const auto &getPipelineBindDataMap() const { return pipelineTypeBindDataMap_; }
+    constexpr const auto &getPipelineBindDataList() const { return pipelineBindDataList_; }
     constexpr const auto &getPipelineData() const { return pipelineData_; }
-    inline auto getPipelineCount() const { return pipelineTypeBindDataMap_.size(); }
+    inline auto getPipelineCount() const { return pipelineBindDataList_.size(); }
     inline std::set<PIPELINE> getPipelineTypes() {
         std::set<PIPELINE> types;
-        for (const auto &keyValue : pipelineTypeBindDataMap_) types.insert(keyValue.first);
+        for (const auto &keyValue : pipelineBindDataList_.getKeyOffsetMap()) types.insert(keyValue.first);
         return types;
     }
     inline void addPipelineTypes(std::set<PIPELINE> &pipelineTypes) const {
-        for (const auto &keyValue : pipelineTypeBindDataMap_) pipelineTypes.insert(keyValue.first);
+        for (const auto &keyValue : pipelineBindDataList_.getKeyOffsetMap()) pipelineTypes.insert(keyValue.first);
     }
     constexpr bool comparePipelineData(const std::unique_ptr<Base> &pOther) const {
         return pipelineData_ == pOther->getPipelineData();
@@ -115,7 +115,7 @@ class Base : public Handlee<RenderPass::Handler> {
 
     // PIPELINE
     PipelineData pipelineData_;
-    std::unordered_map<PIPELINE, std::shared_ptr<Pipeline::BindData>> pipelineTypeBindDataMap_;  // Is this still necessary?
+    Pipeline::pipelineBindDataList pipelineBindDataList_;  // Is this still necessary?
 
     // DESCRIPTOR SET
     std::map<PIPELINE, Descriptor::Set::bindDataMap> pipelineDescSetBindDataMap_;

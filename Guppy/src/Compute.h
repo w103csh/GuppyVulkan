@@ -89,8 +89,7 @@ class Base : public Handlee<Handler> {
     BarrierResource barrierResource_;
 
     // PIPELINE
-    std::unordered_map<PIPELINE, std::shared_ptr<Pipeline::BindData>>
-        pipelineTypeBindDataMap_;  // Is this still necessary? !!!!!
+    Pipeline::pipelineBindDataList pipelineBindDataList_;  // Is this still necessary? !!!!!
 
     // DESCRIPTOR SET
     Descriptor::Set::bindDataMap bindDataMap_;
