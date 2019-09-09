@@ -79,21 +79,22 @@ void Base::record(const uint8_t frameIndex) {
             const auto& pPass = handler().getPass(dependentTypeOffsetPairs_[0].second);
             assert(pPass->TYPE == PASS::SHADOW);
             std::vector<PIPELINE> pipelineTypes;
-            pipelineTypes.reserve(pipelineTypeBindDataMap_.size());
-            for (const auto& [pipelineType, value] : pipelineTypeBindDataMap_) pipelineTypes.push_back(pipelineType);
+            pipelineTypes.reserve(pipelineBindDataList_.size());
+            for (const auto& [pipelineType, value] : pipelineBindDataList_.getKeyOffsetMap())
+                pipelineTypes.push_back(pipelineType);
             ((Shadow::Default*)pPass.get())->record(frameIndex, TYPE, pipelineTypes, priCmd);
         }
 
         beginPass(priCmd, frameIndex, VK_SUBPASS_CONTENTS_INLINE);
 
+        auto& pScene = handler().sceneHandler().getActiveScene();
+
         // MRT (BEZIER 4)
         {
             auto& secCmd = data.secCmds[frameIndex];
-            auto& pScene = handler().sceneHandler().getActiveScene();
 
-            auto it = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_BEZIER_4);
-            assert(it != pipelineTypeBindDataMap_.end());
-            pScene->record(TYPE, it->first, it->second, priCmd, secCmd, frameIndex);
+            pScene->record(TYPE, PIPELINE::DEFERRED_BEZIER_4, pipelineBindDataList_.getValue(PIPELINE::DEFERRED_BEZIER_4),
+                           priCmd, secCmd, frameIndex);
 
             vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
         }
@@ -101,11 +102,9 @@ void Base::record(const uint8_t frameIndex) {
         // MRT (LINE)
         {
             auto& secCmd = data.secCmds[frameIndex];
-            auto& pScene = handler().sceneHandler().getActiveScene();
 
-            auto it = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_MRT_LINE);
-            assert(it != pipelineTypeBindDataMap_.end());
-            pScene->record(TYPE, it->first, it->second, priCmd, secCmd, frameIndex);
+            pScene->record(TYPE, PIPELINE::DEFERRED_MRT_LINE, pipelineBindDataList_.getValue(PIPELINE::DEFERRED_MRT_LINE),
+                           priCmd, secCmd, frameIndex);
 
             vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
         }
@@ -113,11 +112,9 @@ void Base::record(const uint8_t frameIndex) {
         // MRT (COLOR)
         {
             auto& secCmd = data.secCmds[frameIndex];
-            auto& pScene = handler().sceneHandler().getActiveScene();
 
-            auto it = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_MRT_COLOR);
-            assert(it != pipelineTypeBindDataMap_.end());
-            pScene->record(TYPE, it->first, it->second, priCmd, secCmd, frameIndex);
+            pScene->record(TYPE, PIPELINE::DEFERRED_MRT_COLOR, pipelineBindDataList_.getValue(PIPELINE::DEFERRED_MRT_COLOR),
+                           priCmd, secCmd, frameIndex);
 
             vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
         }
@@ -125,11 +122,9 @@ void Base::record(const uint8_t frameIndex) {
         // MRT (TEXTURE)
         {
             auto& secCmd = data.secCmds[frameIndex];
-            auto& pScene = handler().sceneHandler().getActiveScene();
 
-            auto it = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_MRT_TEX);
-            assert(it != pipelineTypeBindDataMap_.end());
-            pScene->record(TYPE, it->first, it->second, priCmd, secCmd, frameIndex);
+            pScene->record(TYPE, PIPELINE::DEFERRED_MRT_TEX, pipelineBindDataList_.getValue(PIPELINE::DEFERRED_MRT_TEX),
+                           priCmd, secCmd, frameIndex);
 
             vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
         }
@@ -152,10 +147,8 @@ void Base::record(const uint8_t frameIndex) {
         // COMBINE
         {
             // TODO: this definitely only needs to be recorded once per swapchain creation!!!
-            auto it = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_COMBINE);
-            assert(it != pipelineTypeBindDataMap_.end());
-
-            handler().getScreenQuad()->draw(TYPE, it->second, getDescSetBindDataMap(it->first).begin()->second, priCmd,
+            handler().getScreenQuad()->draw(TYPE, pipelineBindDataList_.getValue(PIPELINE::DEFERRED_COMBINE),
+                                            getDescSetBindDataMap(PIPELINE::DEFERRED_COMBINE).begin()->second, priCmd,
                                             frameIndex);
         }
 
@@ -277,7 +270,7 @@ void Base::createSubpassDescriptions() {
     subpassDesc.pDepthStencilAttachment = nullptr;
     resources_.subpasses.push_back(subpassDesc);
 
-    assert(resources_.subpasses.size() == pipelineTypeBindDataMap_.size());
+    assert(resources_.subpasses.size() == pipelineBindDataList_.size());
 }
 
 void Base::createDependencies() {

@@ -192,6 +192,7 @@ std::shared_ptr<Pipeline::BindData> Pipeline::Base::makeBindData(const VkPipelin
     VkPipelineStageFlags pushConstantStages = 0;
     for (const auto& range : pushConstantRanges_) pushConstantStages |= range.stageFlags;
     return std::shared_ptr<BindData>(new BindData{
+        TYPE,
         BIND_POINT,
         layout,
         VK_NULL_HANDLE,

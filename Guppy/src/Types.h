@@ -128,6 +128,7 @@ struct ImageInfo {
     VkImage image = VK_NULL_HANDLE;
 };
 
+// This is just quick and dirty. Not fully featured in any way.
 template <typename T>
 struct insertion_ordered_unique_list {
    public:
@@ -141,6 +142,42 @@ struct insertion_ordered_unique_list {
 
    private:
     std::vector<T> list_;
+};
+
+// This is just quick and dirty. Not fully featured in any way.
+template <typename TKey, typename TValue>
+struct insertion_ordered_unique_keyvalue_list {
+   public:
+    void insert(TKey key, TValue value) {
+        auto it = keyOffsetMap_.find(key);
+        if (it == keyOffsetMap_.end()) {
+            assert(keyOffsetMap_.insert({key, static_cast<uint32_t>(list_.size())}).second);
+            list_.emplace_back(std::move(value));
+        } else {
+            list_.at(it->second) = std::move(value);
+        }
+        assert(keyOffsetMap_.size() == list_.size());
+    }
+    constexpr void clear() {
+        keyOffsetMap_.clear();
+        list_.clear();
+    }
+    constexpr auto getOffset(const TKey key) const {
+        auto it = keyOffsetMap_.find(key);  //
+        return it == keyOffsetMap_.end() ? -1 : it->second;
+    }
+    constexpr const auto &getValue(const TKey key) const { return list_.at(keyOffsetMap_.at(key)); }
+    constexpr const auto &getValue(const uint32_t offset) const { return list_.at(offset); }
+    constexpr const auto &getKeyOffsetMap() const { return keyOffsetMap_; }
+    constexpr const auto &getValues() const { return list_; }
+    constexpr auto size() const {
+        assert(keyOffsetMap_.size() == list_.size());
+        return list_.size();
+    }
+
+   private:
+    std::map<TKey, uint32_t> keyOffsetMap_;
+    std::vector<TValue> list_;
 };
 
 #endif  //! TYPE_H

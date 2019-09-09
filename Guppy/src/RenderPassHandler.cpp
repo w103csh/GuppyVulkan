@@ -173,7 +173,7 @@ void RenderPass::Handler::addPipelinePassPairs(pipelinePassSet& set) {
      *  not going to worry about it other than this atm though.
      */
     for (const auto& [passType, offset] : activeTypeOffsetPairs_) {
-        for (const auto [pipelineType, pPipelineBindData] : pPasses_[offset]->getPipelineBindDataMap()) {
+        for (const auto [pipelineType, bindDataOffset] : pPasses_[offset]->getPipelineBindDataList().getKeyOffsetMap()) {
             set.insert({pipelineType, pPasses_[offset]->TYPE});
         }
     }

@@ -54,10 +54,10 @@ RenderPass::Base::Base(RenderPass::Handler& handler, const uint32_t&& offset, co
     for (const auto& passType : pCreateInfo->postPassTypes) dependentTypeOffsetPairs_.push_back({passType, BAD_OFFSET});
 
     for (const auto& pipelineType : pCreateInfo->pipelineTypes) {
-        // If changed from set then a lot of work needs to be done, so I am
+        // If changed from unique list (set) then a lot of work needs to be done, so I am
         // adding some validation here.
-        assert(pipelineTypeBindDataMap_.count(pipelineType) == 0);
-        pipelineTypeBindDataMap_.insert({pipelineType, {}});
+        assert(pipelineBindDataList_.getOffset(pipelineType) == -1);
+        pipelineBindDataList_.insert(pipelineType, nullptr);
     }
 }
 
@@ -228,13 +228,13 @@ void RenderPass::Base::record(const uint8_t frameIndex) {
     auto& secCmd = data.secCmds[frameIndex];
     auto& pScene = handler().sceneHandler().getActiveScene();
 
-    auto it = pipelineTypeBindDataMap_.begin();
-    while (it != pipelineTypeBindDataMap_.end()) {
-        pScene->record(TYPE, it->first, it->second, priCmd, secCmd, frameIndex);
+    auto it = pipelineBindDataList_.getValues().begin();
+    while (it != pipelineBindDataList_.getValues().end()) {
+        pScene->record(TYPE, (*it)->type, (*it), priCmd, secCmd, frameIndex);
 
         ++it;
 
-        if (it != pipelineTypeBindDataMap_.end()) {
+        if (it != pipelineBindDataList_.getValues().end()) {
             vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
             // vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_SECONDARY_COMMAND_BUFFERS);
         }
@@ -249,7 +249,7 @@ void RenderPass::Base::update() {
     assert(status_ & STATUS::PENDING_PIPELINE);
 
     bool isReady = true;
-    for (const auto& [pipelineType, value] : pipelineTypeBindDataMap_) {
+    for (const auto& [pipelineType, value] : pipelineBindDataList_.getKeyOffsetMap()) {
         if (Pipeline::MESHLESS.count(pipelineType) == 0) continue;
 
         // Get pipeline bind data, and check the status
@@ -427,7 +427,7 @@ void RenderPass::Base::createSubpassDescriptions() {
 void RenderPass::Base::createDependencies() {
     // 7.1. Render Pass Creation has examples of what this should be.
     VkSubpassDependency dependency;
-    for (uint32_t i = 0; i < pipelineTypeBindDataMap_.size() - 1; i++) {
+    for (uint32_t i = 0; i < pipelineBindDataList_.size() - 1; i++) {
         dependency = {};
         dependency.srcSubpass = i;
         dependency.dstSubpass = i + 1;
@@ -733,14 +733,7 @@ void RenderPass::Base::updateSubmitResource(SubmitResource& resource, const uint
     resource.commandBufferCount++;
 }
 
-uint32_t RenderPass::Base::getSubpassId(const PIPELINE& type) const {
-    uint32_t id = 0;
-    for (const auto keyValue : pipelineTypeBindDataMap_) {
-        if (keyValue.first == type) break;
-        id++;
-    }
-    return id;  // TODO: is returning 0 for no types okay? Try using std::optional maybe?
-}
+uint32_t RenderPass::Base::getSubpassId(const PIPELINE& type) const { return pipelineBindDataList_.getOffset(type); }
 
 void RenderPass::Base::setSubpassOffsets(const std::vector<std::unique_ptr<Base>>& pPasses) {
     for (auto& [passType, offset] : dependentTypeOffsetPairs_) {
@@ -756,7 +749,7 @@ void RenderPass::Base::setSubpassOffsets(const std::vector<std::unique_ptr<Base>
 }
 
 void RenderPass::Base::setBindData(const PIPELINE& pipelineType, const std::shared_ptr<Pipeline::BindData>& pBindData) {
-    pipelineTypeBindDataMap_[pipelineType] = pBindData;
+    pipelineBindDataList_.insert(pipelineType, pBindData);
 }
 
 void RenderPass::Base::destroy() {

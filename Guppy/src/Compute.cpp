@@ -64,7 +64,7 @@ void Compute::Base::prepare() {
 }
 
 void Compute::Base::setBindData(const PIPELINE& pipelineType, const std::shared_ptr<Pipeline::BindData>& pBindData) {
-    pipelineTypeBindDataMap_[pipelineType] = pBindData;
+    pipelineBindDataList_.insert(pipelineType, pBindData);
 }
 
 void Compute::Base::record(const uint8_t frameIndex, RenderPass::SubmitResource& submitResource) {
@@ -77,8 +77,8 @@ void Compute::Base::record(const uint8_t frameIndex, RenderPass::SubmitResource&
     // handler().commandHandler().beginCmd(cmd);
 
     // PIPELINE
-    assert(pipelineTypeBindDataMap_.size() == 1);  // TODO: This shouldn't be a map right? 1 to 1.
-    const auto& pipelineBindData = pipelineTypeBindDataMap_.at(PIPELINE_TYPE);
+    assert(pipelineBindDataList_.size() == 1);  // TODO: This shouldn't be a map right? 1 to 1.
+    const auto& pipelineBindData = pipelineBindDataList_.getValue(PIPELINE_TYPE);
 
     // DESCRIPTOR
     assert(bindDataMap_.size() == 1 &&
@@ -200,8 +200,8 @@ void PostProcess::Default::record(const uint8_t frameIndex, RenderPass::SubmitRe
     // handler().commandHandler().beginCmd(cmd);
 
     // PIPELINE
-    assert(pipelineTypeBindDataMap_.size() == 1);  // TODO: This shouldn't be a map right? 1 to 1.
-    const auto& pipelineBindData = pipelineTypeBindDataMap_.at(PIPELINE_TYPE);
+    assert(pipelineBindDataList_.size() == 1);  // TODO: This shouldn't be a map right? 1 to 1.
+    const auto& pipelineBindData = pipelineBindDataList_.getValue(PIPELINE_TYPE);
 
     // DESCRIPTOR
     assert(bindDataMap_.size() == 1 &&

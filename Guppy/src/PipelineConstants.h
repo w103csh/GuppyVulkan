@@ -62,6 +62,7 @@ extern const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP;
 extern const std::set<PIPELINE> MESHLESS;
 
 struct BindData {
+    const PIPELINE type;
     const VkPipelineBindPoint bindPoint;
     const VkPipelineLayout layout;
     VkPipeline pipeline;
@@ -73,6 +74,7 @@ struct BindData {
 using pipelineBindDataMapKey = std::pair<PIPELINE, PASS>;
 using pipelineBindDataMapKeyValue = std::pair<const pipelineBindDataMapKey, const std::shared_ptr<Pipeline::BindData>>;
 using pipelineBindDataMap = std::map<pipelineBindDataMapKey, const std::shared_ptr<Pipeline::BindData>>;
+using pipelineBindDataList = insertion_ordered_unique_keyvalue_list<PIPELINE, std::shared_ptr<Pipeline::BindData>>;
 
 // Map of pass types to descriptor set text replace tuples
 using shaderTextReplaceInfoMap = std::map<std::set<PASS>, Descriptor::Set::textReplaceTuples>;
