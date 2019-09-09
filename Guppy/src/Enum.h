@@ -95,6 +95,7 @@ enum class PUSH_CONSTANT {
     DEFAULT = 0,
     PBR,
     POST_PROCESS,
+    DEFERRED,
 };
 
 enum class HANDLER {

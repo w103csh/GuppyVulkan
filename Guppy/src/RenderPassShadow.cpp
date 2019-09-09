@@ -98,6 +98,15 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
                            secCmd, frameIndex, &getDescSetBindDataMap(PIPELINE::SHADOW_COLOR).begin()->second);
             surrogatePipelineTypes.erase(itSurrogate);
 
+            // WIREFRAME
+            itSurrogate =
+                std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), PIPELINE::DEFERRED_MRT_WF_COLOR);
+            assert(itSurrogate != surrogatePipelineTypes.end());
+
+            pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(PIPELINE::SHADOW_COLOR), priCmd,
+                           secCmd, frameIndex, &getDescSetBindDataMap(PIPELINE::SHADOW_COLOR).begin()->second);
+            surrogatePipelineTypes.erase(itSurrogate);
+
             vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
         }
 

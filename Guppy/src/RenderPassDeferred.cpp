@@ -23,6 +23,7 @@ const CreateInfo Deferred_CREATE_INFO = {
         PIPELINE::DEFERRED_BEZIER_4,
         PIPELINE::DEFERRED_MRT_LINE,
         PIPELINE::DEFERRED_MRT_COLOR,
+        PIPELINE::DEFERRED_MRT_WF_COLOR,
         PIPELINE::DEFERRED_MRT_TEX,
         // PIPELINE::DEFERRED_SSAO,
         PIPELINE::DEFERRED_COMBINE,
@@ -115,6 +116,16 @@ void Base::record(const uint8_t frameIndex) {
 
             pScene->record(TYPE, PIPELINE::DEFERRED_MRT_COLOR, pipelineBindDataList_.getValue(PIPELINE::DEFERRED_MRT_COLOR),
                            priCmd, secCmd, frameIndex);
+
+            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+        }
+
+        // MRT (COLOR WIREFRAME)
+        {
+            auto& secCmd = data.secCmds[frameIndex];
+
+            pScene->record(TYPE, PIPELINE::DEFERRED_MRT_WF_COLOR,
+                           pipelineBindDataList_.getValue(PIPELINE::DEFERRED_MRT_WF_COLOR), priCmd, secCmd, frameIndex);
 
             vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
         }
@@ -248,7 +259,7 @@ void Base::createSubpassDescriptions() {
     subpassDesc.pColorAttachments = &resources_.colorAttachments[1];  // POSITION/NORMAL/DIFFUSE/AMBIENT/SPECULAR
     subpassDesc.pResolveAttachments = nullptr;
     subpassDesc.pDepthStencilAttachment = pipelineData_.usesDepth ? &resources_.depthStencilAttachment : nullptr;
-    resources_.subpasses.assign(4, subpassDesc);  // TEXTURE/COLOR/LINE/BEZIER4
+    resources_.subpasses.assign(5, subpassDesc);  // TEXTURE/COLOR/LINE/BEZIER4/COLOR(WIREFRAME)
 
     // SSAO
     if (doSSAO_) {

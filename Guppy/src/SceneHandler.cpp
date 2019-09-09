@@ -128,7 +128,7 @@ void Scene::Handler::init() {
         // BOX
         if (!suppress || false) {
             meshInfo = {};
-            meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
+            meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_WF_COLOR;
             defInstInfo = {};
             // defInstInfo.data.push_back(
             //    {helpers::affine(glm::vec3{1.0f}, glm::vec3{2.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
