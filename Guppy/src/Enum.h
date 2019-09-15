@@ -21,6 +21,11 @@ enum class GAME_KEY {
     KEY_D,
     KEY_E,
     KEY_Q,
+    KEY_O,
+    KEY_P,
+    KEY_K,
+    KEY_L,
+    KEY_I,
     // BRACKET/BRACE KEYS
     KEY_LEFT_BRACKET,
     KEY_RIGHT_BRACKET,
@@ -187,7 +192,7 @@ enum class UNIFORM {
     DEFERRED_SSAO,
     SHADOW_DATA,
     // TESSELLATION
-    BEZIER,
+    TESSELLATION_DEFAULT,
     //
     DONT_CARE,
 };

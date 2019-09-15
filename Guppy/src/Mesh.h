@@ -28,16 +28,16 @@ namespace Mesh {
 using index = uint32_t;
 constexpr Mesh::index BAD_OFFSET = UINT32_MAX;
 
-class Handler;
-
 using CreateInfo = struct {
-    Geometry::CreateInfo geometryCreateInfo = {};
-    bool isIndexed = true;  // This is dumb
-    bool mappable = false;
     PIPELINE pipelineType = PIPELINE::ALL_ENUM;
-    std::set<PASS> passTypes = Uniform::PASS_ALL_SET;
     bool selectable = true;
+    bool mappable = false;
+    Geometry::CreateInfo geometryCreateInfo = {};
+    std::set<PASS> passTypes = Uniform::PASS_ALL_SET;
 };
+
+struct GenericCreateInfo;
+class Handler;
 
 // **********************
 //      Base
@@ -144,7 +144,6 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     FlagBits status_;
 
     // INFO
-    bool isIndexed_;
     bool selectable_;
 
     // DSECRIPTOR
@@ -200,6 +199,10 @@ class Color : public Base {
     const glm::vec3& getVertexPositionAtOffset(size_t offset) const override { return vertices_[offset].position; }
 
    protected:
+    // This is the generic constructor...
+    Color(Mesh::Handler& handler, const GenericCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+          std::shared_ptr<Material::Base>& pMaterial);
+    // Below are the base constructors.
     Color(Mesh::Handler& handler, const std::string&& name, const CreateInfo* pCreateInfo,
           std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
           const MESH&& type = MESH::COLOR);

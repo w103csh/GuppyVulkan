@@ -3,6 +3,7 @@
 
 #include "Face.h"
 #include "FileLoader.h"
+#include "MeshConstants.h"
 #include "PBR.h"  // TODO: this is bad
 // HANDLERS
 #include "DescriptorHandler.h"
@@ -29,7 +30,6 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
       VERTEX_TYPE(vertexType),
       status_(STATUS::PENDING),
       // INFO
-      isIndexed_(pCreateInfo->isIndexed),
       selectable_(pCreateInfo->selectable),
       //
       vertexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
@@ -125,16 +125,13 @@ void Mesh::Base::loadBuffers() {
     pLdgRes_->stgResources.push_back(std::move(stgRes));
 
     // Index buffer
-    if (isIndexed_) {
-        assert(!indices_.empty());
+    if (getIndexCount()) {
         stgRes = {};
         createBufferData(
             pLdgRes_->transferCmd, stgRes, getIndexBufferSize(), getIndexData(), indexRes_,
             static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
             "index");
         pLdgRes_->stgResources.push_back(std::move(stgRes));
-    } else {
-        assert(indices_.empty());
     }
 }
 
@@ -225,7 +222,7 @@ void Mesh::Base::updateBuffers() {
     vkUnmapMemory(dev, vertexRes_.memory);
 
     // INDEX BUFFER
-    if (isIndexed_) {
+    if (getIndexCount()) {
         bufferSize = getIndexBufferSize(true);
         vk::assert_success(vkMapMemory(dev, indexRes_.memory, 0, indexRes_.memoryRequirements.size, 0, &pData));
         memcpy(pData, getVertexData(), static_cast<size_t>(bufferSize));
@@ -464,6 +461,27 @@ void Mesh::Base::destroy() {
 }
 
 // COLOR
+
+Mesh::Color::Color(Mesh::Handler& handler, const GenericCreateInfo* pCreateInfo,
+                   std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
+    : Base{handler,                                             //
+           std::forward<const MESH>(MESH::COLOR),               //
+           VERTEX::COLOR,                                       //
+           FLAG::POLY,                                          //
+           std::forward<const std::string>(pCreateInfo->name),  //
+           pCreateInfo,                                         //
+           pInstanceData,                                       //
+           pMaterial} {
+    assert(vertices_.empty() && pCreateInfo->faces.size());
+    if (pCreateInfo->smoothNormals) {
+        unique_vertices_map_smoothing vertexMap = {};
+        for (auto& face : pCreateInfo->faces) const_cast<Face&>(face).indexVertices(vertexMap, this);
+    } else {
+        unique_vertices_map_non_smoothing vertexMap = {};
+        for (auto& face : pCreateInfo->faces) const_cast<Face&>(face).indexVertices(vertexMap, this);
+    }
+    status_ = STATUS::PENDING_BUFFERS;
+}
 
 Mesh::Color::Color(Mesh::Handler& handler, const std::string&& name, const CreateInfo* pCreateInfo,
                    std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,

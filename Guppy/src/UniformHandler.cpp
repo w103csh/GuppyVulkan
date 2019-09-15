@@ -51,8 +51,8 @@ Uniform::Handler::Handler(Game* pGame)
           Uniform::Manager<Uniform::Shadow::Base>  //
           {"Shadow Data", UNIFORM::DEFERRED_SSAO, 1, "_U_SHDW_DATA"},
           // TESSELLATION
-          Uniform::Manager<Uniform::Tessellation::Bezier::Base>  //
-          {"Bezier Tessellation Data", UNIFORM::BEZIER, 1, "_U_TESS_BEZ"},
+          Uniform::Manager<Uniform::Tessellation::Default::Base>  //
+          {"Tessellation Data", UNIFORM::TESSELLATION_DEFAULT, 2, "_U_TESS_DEF"},
           // STORAGE
           Uniform::Manager<Storage::PostProcess::Base>  //
           {"Storage Default", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
@@ -74,7 +74,7 @@ std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const
             case UNIFORM::PROJECTOR_DEFAULT:            return uniDefPrjMgr().pItems;
             case UNIFORM::SCREEN_SPACE_DEFAULT:         return uniScrDefMgr().pItems;
             case UNIFORM::DEFERRED_SSAO:                return uniDfrSSAOMgr().pItems;
-            case UNIFORM::BEZIER:                       return uniTessBezMgr().pItems;
+            case UNIFORM::TESSELLATION_DEFAULT:         return uniTessDefMgr().pItems;
             case UNIFORM::SHADOW_DATA:                  return uniShdwDataMgr().pItems;
             default:                                    assert(false); exit(EXIT_FAILURE);
         }
@@ -113,7 +113,7 @@ void Uniform::Handler::init() {
     uniScrDefMgr().init(shell().context(), settings());     ++count;
     uniDfrSSAOMgr().init(shell().context(), settings());    ++count;
     uniShdwDataMgr().init(shell().context(), settings());   ++count;
-    uniTessBezMgr().init(shell().context(), settings());    ++count;
+    uniTessDefMgr().init(shell().context(), settings());    ++count;
     strPstPrcMgr().init(shell().context(), settings());     ++count;
     assert(count == managers_.size());
     // clang-format on
@@ -138,7 +138,7 @@ void Uniform::Handler::reset() {
     uniScrDefMgr().destroy(dev);    ++count;
     uniDfrSSAOMgr().destroy(dev);   ++count;
     uniShdwDataMgr().destroy(dev);  ++count;
-    uniTessBezMgr().destroy(dev);   ++count;
+    uniTessDefMgr().destroy(dev);   ++count;
     strPstPrcMgr().destroy(dev);    ++count;
     assert(count == managers_.size());
     // clang-format on
@@ -295,9 +295,22 @@ void Uniform::Handler::createMiscellaneous() {
 void Uniform::Handler::createTessellationData() {
     const auto& dev = shell().context().dev;
 
-    // BEZIER
+    // ARC
     {
-        uniTessBezMgr().insert(dev, true, {{1, 4}});  //
+        Tessellation::Default::DATA data = {};
+        data.outerLevel[Tessellation::Bezier::STRIPS] = 1;
+        data.outerLevel[Tessellation::Bezier::SEGMENTS] = 4;
+        uniTessDefMgr().insert(dev, true, {data});
+    }
+
+    // TRIANGLE
+    {
+        Tessellation::Default::DATA data = {};
+        data.outerLevel[0] = 3;
+        data.outerLevel[1] = 3;
+        data.outerLevel[2] = 3;
+        data.innerLevel[0] = 4;
+        uniTessDefMgr().insert(dev, true, {data});
     }
 }
 
@@ -322,14 +335,12 @@ void Uniform::Handler::createVisualHelpers() {
     }
     // for (auto& light : posLights) {
     //    meshCreateInfo = {};
-    //    meshCreateInfo.isIndexed = false;
     //    meshCreateInfo.model = light.getModel();
     //    std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(&meshCreateInfo, 0.5f);
     //    SceneHandler::getActiveScene()->moveMesh(settings(), shell().context(), std::move(pHelper));
     //}
     // for (auto& light : spotLights) {
     //    meshCreateInfo = {};
-    //    meshCreateInfo.isIndexed = false;
     //    meshCreateInfo.model = light.getModel();
     //    std::unique_ptr<LineMesh> pHelper = std::make_unique<VisualHelper>(&meshCreateInfo, 0.5f);
     //    SceneHandler::getActiveScene()->moveMesh(settings(), shell().context(), std::move(pHelper));

@@ -13,6 +13,7 @@
 #include "Types.h"
 
 #include "DescriptorConstants.h"
+#include "ModelConstants.h"
 #include "PipelineConstants.h"
 #include "RenderPassConstants.h"
 #include "SamplerConstants.h"

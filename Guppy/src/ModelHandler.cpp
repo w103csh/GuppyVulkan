@@ -17,8 +17,8 @@ void Model::Handler::update(std::unique_ptr<Scene::Base> &pScene) {
 
 FileLoader::tinyobj_data Model::Handler::loadData(Model::Base &model) {
     // Get .obj data from the file loader.
-    std::string modelDirectory = helpers::getFilePath(model.modelPath_);
-    FileLoader::tinyobj_data data = {model.modelPath_, modelDirectory.c_str()};
+    std::string modelDirectory = helpers::getFilePath(model.getSettings().modelPath);
+    FileLoader::tinyobj_data data = {model.getSettings().modelPath, modelDirectory.c_str()};
     FileLoader::getObjData(shell(), data);
     assert(data.attrib.vertices.size());
     return data;

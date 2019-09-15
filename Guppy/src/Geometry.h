@@ -5,9 +5,10 @@
 
 namespace Geometry {
 
+// Should this be in the Mesh namespace?
 struct CreateInfo {
     bool doubleSided = false;
-    bool invert = false;
+    bool reverseWinding = false;
     glm::mat4 transform{1.0f};
 };
 

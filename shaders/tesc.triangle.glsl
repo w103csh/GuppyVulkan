@@ -4,8 +4,8 @@
 // UNIFORMS
 #define _DS_UNI_TESS_DEF 0
 
-// layout(constant_id = 0) const int PATCH_CONTROL_POINTS = 4; // bezier control points
-#define PATCH_CONTROL_POINTS 4 // bezier control points
+// layout(constant_id = 0) const int PATCH_CONTROL_POINTS = 6;
+#define PATCH_CONTROL_POINTS 3
 
 layout(set=_DS_UNI_TESS_DEF, binding=0) uniform Default {
     ivec4 outerLevel;
@@ -26,11 +26,9 @@ void main() {
 	outNormal[gl_InvocationID] = inNormal[gl_InvocationID];
 	outColor[gl_InvocationID] = inColor[gl_InvocationID];
 
-    // Some drivers (e.g. Intel) treat these levels incorrectly.  The OpenGL spec
-    // says that level 0 should be the number of strips and level 1 should be
-    // the number of segments per strip.  Unfortunately, not all drivers do this.
-    // If this example doesn't work for you, try switching the right
-    // hand side of the two assignments below.
     gl_TessLevelOuter[0] = float(uniDefault.outerLevel[0]);
     gl_TessLevelOuter[1] = float(uniDefault.outerLevel[1]);
+    gl_TessLevelOuter[2] = float(uniDefault.outerLevel[2]);
+
+    gl_TessLevelInner[0] = float(uniDefault.innerLevel[0]);
 }

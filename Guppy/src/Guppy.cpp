@@ -269,14 +269,39 @@ void Guppy::onKey(GAME_KEY key) {
             handlers_.pUniform->update(light);
         } break;
         case GAME_KEY::KEY_LEFT_BRACKET: {
-            auto& bezier = handlers_.pUniform->uniTessBezMgr().getTypedItem(0);
-            bezier.decSegs();
-            handlers_.pUniform->update(bezier);
+            auto& tessData = handlers_.pUniform->uniTessDefMgr().getTypedItem(0);
+            tessData.decSegs();
+            handlers_.pUniform->update(tessData);
         } break;
         case GAME_KEY::KEY_RIGHT_BRACKET: {
-            auto& bezier = handlers_.pUniform->uniTessBezMgr().getTypedItem(0);
-            bezier.incSegs();
-            handlers_.pUniform->update(bezier);
+            auto& tessData = handlers_.pUniform->uniTessDefMgr().getTypedItem(0);
+            tessData.incSegs();
+            handlers_.pUniform->update(tessData);
+        } break;
+        case GAME_KEY::KEY_O: {
+            auto& tessData = handlers_.pUniform->uniTessDefMgr().getTypedItem(1);
+            tessData.decInnerLevelTriangle();
+            handlers_.pUniform->update(tessData);
+        } break;
+        case GAME_KEY::KEY_P: {
+            auto& tessData = handlers_.pUniform->uniTessDefMgr().getTypedItem(1);
+            tessData.incInnerLevelTriangle();
+            handlers_.pUniform->update(tessData);
+        } break;
+        case GAME_KEY::KEY_K: {
+            auto& tessData = handlers_.pUniform->uniTessDefMgr().getTypedItem(1);
+            tessData.decOuterLevelTriangle();
+            handlers_.pUniform->update(tessData);
+        } break;
+        case GAME_KEY::KEY_L: {
+            auto& tessData = handlers_.pUniform->uniTessDefMgr().getTypedItem(1);
+            tessData.incOuterLevelTriangle();
+            handlers_.pUniform->update(tessData);
+        } break;
+        case GAME_KEY::KEY_I: {
+            auto& tessData = handlers_.pUniform->uniTessDefMgr().getTypedItem(1);
+            tessData.noTessTriangle();
+            handlers_.pUniform->update(tessData);
         } break;
         default:
             break;

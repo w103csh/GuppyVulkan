@@ -57,8 +57,8 @@ std::vector<Face> Plane::make(const Geometry::CreateInfo& geoInfo) {
         {}                         // bitangent
     };
 
-    if (geoInfo.invert) {
-        faces.back().reverse();
+    if (geoInfo.reverseWinding) {
+        faces.back().reverseWinding();
         // faces.back().setSmoothingGroup(1);
     }
 
@@ -95,8 +95,8 @@ std::vector<Face> Plane::make(const Geometry::CreateInfo& geoInfo) {
         {}                         // bitangent
     };
 
-    if (geoInfo.invert) {
-        faces.back().reverse();
+    if (geoInfo.reverseWinding) {
+        faces.back().reverseWinding();
         // faces.back().setSmoothingGroup(1);
     }
 

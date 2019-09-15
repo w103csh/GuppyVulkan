@@ -40,7 +40,7 @@ struct Texture {
 class Complete {
    public:
     // default
-    Complete() : position(), normal(), smoothingGroupId(), color(), texCoord(), tangent(), binormal(){};
+    Complete() : position(), normal(), smoothingGroupId(), color(0.0, 0.0, 0.0, 1.0), texCoord(), tangent(), binormal(){};
     // color
     Complete(const Color &v)
         : position(v.position), normal(v.normal), smoothingGroupId(), color(v.color), texCoord(), tangent(), binormal(){};

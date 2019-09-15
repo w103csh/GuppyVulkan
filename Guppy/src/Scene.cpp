@@ -67,6 +67,7 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
     switch (pipelineType) {
         case PIPELINE::DEFERRED_MRT_COLOR:
         case PIPELINE::DEFERRED_MRT_WF_COLOR:
+        case PIPELINE::TESSELLATION_TRIANGLE_DEFERRED:
         case PIPELINE::PBR_COLOR:
         case PIPELINE::CUBE:
         case PIPELINE::TRI_LIST_COLOR: {
@@ -119,7 +120,7 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
             }
         } break;
         case PIPELINE::DEFERRED_MRT_LINE:
-        case PIPELINE::DEFERRED_BEZIER_4:
+        case PIPELINE::TESSELLATION_BEZIER_4_DEFERRED:
         case PIPELINE::LINE: {
             for (const auto& offset : lineOffsets_) {
                 auto& pMesh = handler().meshHandler().getLineMesh(offset);

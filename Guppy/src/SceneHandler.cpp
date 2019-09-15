@@ -31,6 +31,7 @@ void Scene::Handler::init() {
     if (deferred) {
         Mesh::ArcCreateInfo arcInfo;
         Mesh::AxesCreateInfo axesInfo;
+        Mesh::GenericCreateInfo colorInfo;
         Mesh::CreateInfo meshInfo;
         Model::CreateInfo modelInfo;
         Instance::Default::CreateInfo defInstInfo;
@@ -38,7 +39,7 @@ void Scene::Handler::init() {
         BoundingBoxMinMax groundPlane_bbmm;
 
         // ORIGIN AXES
-        if (!suppress || false) {
+        if (!suppress || true) {
             axesInfo = {};
             axesInfo.pipelineType = PIPELINE::DEFERRED_MRT_LINE;
             axesInfo.lineSize = 500.f;
@@ -51,7 +52,7 @@ void Scene::Handler::init() {
         }
 
         // GROUND PLANE (COLOR)
-        if (!suppress || false) {
+        if (!suppress || true) {
             meshInfo = {};
             meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
             meshInfo.selectable = false;
@@ -60,7 +61,8 @@ void Scene::Handler::init() {
             // defInstInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, glm::vec3{0, -1000, 0})});
             defMatInfo = {};
             defMatInfo.shininess = Material::SHININESS::EGGSHELL;
-            defMatInfo.color = {0.0f, 1.5f, 0.0f};
+            // defMatInfo.color = {0.0f, 1.0f, 0.0f};
+            defMatInfo.color = {0.4f, 0.4f, 0.45f};
             auto& pGroundPlane = meshHandler().makeColorMesh<Mesh::Plane::Color>(&meshInfo, &defMatInfo, &defInstInfo);
             // auto& pGroundPlane = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
             auto offset = pGroundPlane->getOffset();
@@ -101,14 +103,59 @@ void Scene::Handler::init() {
             pScene->addMeshIndex(MESH::TEXTURE, offset);
         }
 
+        // TRIANGLE
+        if (!suppress || false) {
+            defInstInfo = {};
+            defMatInfo = {};
+            defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
+
+            // PIPELINE::TRI_LIST_COLOR is the default
+            colorInfo.name = "Tessellated Triangle Test";
+            colorInfo.pipelineType = PIPELINE::TESSELLATION_TRIANGLE_DEFERRED;
+
+            colorInfo.faces.push_back({});
+            colorInfo.faces.back()[0].position = {0.5, 2.0f, 0.0f};
+            colorInfo.faces.back()[0].color = COLOR_RED;
+            colorInfo.faces.back()[1].position = {2.0, 4.0f, 0.0f};
+            colorInfo.faces.back()[1].color = COLOR_GREEN;
+            colorInfo.faces.back()[2].position = {3.5, 2.0f, 0.0f};
+            colorInfo.faces.back()[2].color = COLOR_BLUE;
+
+            auto offset = meshHandler().makeColorMesh<Mesh::Color>(&colorInfo, &defMatInfo, &defInstInfo)->getOffset();
+            pScene->addMeshIndex(MESH::COLOR, offset);
+        }
+
+        // ICOSAHEDRON
+        if (!suppress || false) {
+            modelInfo = {};
+            modelInfo.async = false;
+            modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
+            modelInfo.settings.modelPath = ICOSAHEDRON_MODEL_PATH;
+            modelInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
+            // This doesn't work right... Need to learn about cubic bezier trianlges.
+            // modelInfo.pipelineType = PIPELINE::TESSELLATION_TRIANGLE_DEFERRED;
+            modelInfo.selectable = true;
+            modelInfo.settings.smoothNormals = false;
+            modelInfo.settings.faceVertexColorsRGB = true;
+
+            defInstInfo = {};
+            defInstInfo.data.push_back({helpers::affine(glm::vec3{2.0f}, {1.0, 0.0, -4.0}, -M_PI_2_FLT, CARDINAL_X)});
+
+            defMatInfo = {};
+            defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
+
+            auto offset = modelHandler().makeColorModel(&modelInfo, &defMatInfo, &defInstInfo)->getOffset();
+            pScene->addModelIndex(offset);
+        }
+
         // ARC
         if (!suppress || false) {
-            // PIPELINE::DEFERRED_BEZIER_4 is the default
             arcInfo = {};
             defInstInfo = {};
             defMatInfo = {};
             defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
 
+            // PIPELINE::DEFERRED_BEZIER_4 is the default
             arcInfo.controlPoints.push_back({{2.0f, 1.0f, 0.0f}});                  // p0 (start)
             arcInfo.controlPoints.push_back({{2.0f, 1.0f, 2.0f * (2.0f / 3.0f)}});  // p1
             arcInfo.controlPoints.push_back({{2.0f * (2.0f / 3.0f), 1.0f, 2.0f}});  // p2
@@ -127,21 +174,52 @@ void Scene::Handler::init() {
 
         // BOX
         if (!suppress || false) {
-            meshInfo = {};
-            meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_WF_COLOR;
-            defInstInfo = {};
-            // defInstInfo.data.push_back(
-            //    {helpers::affine(glm::vec3{1.0f}, glm::vec3{2.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
-            defInstInfo.data.push_back(
-                {helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
-            defMatInfo = {};
-            defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
-            defMatInfo.color = {0.0f, 0.0f, 1.0f};
-            auto& boxColor = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
-            auto offset = boxColor->getOffset();
-            pScene->addMeshIndex(MESH::COLOR, offset);
-            boxColor->putOnTop(groundPlane_bbmm);
-            meshHandler().updateMesh(boxColor);
+            if (true) {
+                meshInfo = {};
+                meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
+                defInstInfo = {};
+                defInstInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, M_PI_2_FLT,
+                                                            glm::vec3{1.0f, 0.0f, 1.0f})});
+                defMatInfo = {};
+                defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
+                defMatInfo.color = {0.0f, 0.0f, 1.0f};
+                auto& boxColor = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+                auto offset = boxColor->getOffset();
+                pScene->addMeshIndex(MESH::COLOR, offset);
+                boxColor->putOnTop(groundPlane_bbmm);
+                meshHandler().updateMesh(boxColor);
+            }
+            if (true) {
+                meshInfo = {};
+                meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_WF_COLOR;
+                defInstInfo = {};
+                defInstInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{-2.0f, 0.0f, -2.0f}, M_PI_2_FLT,
+                                                            glm::vec3{1.0f, 0.0f, 1.0f})});
+                defMatInfo = {};
+                defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
+                defMatInfo.color = {0.0f, 1.0f, 1.0f};
+                auto& boxColor = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
+                auto offset = boxColor->getOffset();
+                pScene->addMeshIndex(MESH::COLOR, offset);
+                boxColor->putOnTop(groundPlane_bbmm);
+                meshHandler().updateMesh(boxColor);
+            }
+            if (true) {
+                meshInfo = {};
+                meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_TEX;
+                defInstInfo = {};
+                defInstInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{-3.5f, 0.0f, 0.5f}, M_PI_2_FLT,
+                                                            glm::vec3{1.0f, 0.0f, 1.0f})});
+                defMatInfo = {};
+                defMatInfo.flags = Material::FLAG::PER_TEXTURE_COLOR;
+                defMatInfo.pTexture = textureHandler().getTexture(Texture::VULKAN_ID);
+                defMatInfo.color = {0.0f, 1.0f, 1.0f};
+                auto& boxColor = meshHandler().makeTextureMesh<Mesh::Box::Texture>(&meshInfo, &defMatInfo, &defInstInfo);
+                auto offset = boxColor->getOffset();
+                pScene->addMeshIndex(MESH::TEXTURE, offset);
+                boxColor->putOnTop(groundPlane_bbmm);
+                meshHandler().updateMesh(boxColor);
+            }
         }
 
         // DRAGON
@@ -150,8 +228,8 @@ void Scene::Handler::init() {
             modelInfo = {};
             modelInfo.async = false;
             modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
-            modelInfo.modelPath = DRAGON_MODEL_PATH;
-            modelInfo.smoothNormals = true;
+            modelInfo.settings.modelPath = DRAGON_MODEL_PATH;
+            modelInfo.settings.smoothNormals = true;
             defInstInfo = {};
             defInstInfo.data.push_back({helpers::affine(glm::vec3{0.07f}, {}, -M_PI_2_FLT, CARDINAL_X)});
             modelInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
@@ -173,9 +251,9 @@ void Scene::Handler::init() {
             modelInfo = {};
             modelInfo.pipelineType = PIPELINE::DEFERRED_MRT_TEX;
             modelInfo.async = false;
-            modelInfo.modelPath = MED_H_MODEL_PATH;
-            modelInfo.smoothNormals = false;
-            modelInfo.visualHelper = false;  // true;
+            modelInfo.settings.modelPath = MED_H_MODEL_PATH;
+            modelInfo.settings.smoothNormals = false;
+            modelInfo.settings.doVisualHelper = false;  // true;
             defInstInfo = {};
             defInstInfo.data.reserve(static_cast<size_t>(count) * static_cast<size_t>(count));
             for (uint32_t i = 0; i < count; i++) {
@@ -192,8 +270,6 @@ void Scene::Handler::init() {
             auto offset = modelHandler().makeTextureModel(&modelInfo, &defMatInfo, &defInstInfo)->getOffset();
             pScene->addModelIndex(offset);
         }
-
-        return;
     } else {
         // Create info structs
         Mesh::CreateInfo meshInfo;
@@ -295,7 +371,7 @@ void Scene::Handler::init() {
             meshInfo = {};
             meshInfo.pipelineType = PIPELINE::CUBE;
             meshInfo.selectable = false;
-            meshInfo.geometryCreateInfo.invert = true;
+            meshInfo.geometryCreateInfo.reverseWinding = true;
             defInstInfo = {};
             defInstInfo.data.push_back({helpers::affine(glm::vec3{10.0f})});
             defMatInfo = {};
@@ -430,8 +506,8 @@ void Scene::Handler::init() {
             modelInfo = {};
             modelInfo.async = false;
             modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
-            modelInfo.modelPath = TORUS_MODEL_PATH;
-            modelInfo.smoothNormals = true;
+            modelInfo.settings.modelPath = TORUS_MODEL_PATH;
+            modelInfo.settings.smoothNormals = true;
             defInstInfo = {};
             defInstInfo.data.push_back({helpers::affine(glm::vec3{0.07f})});
             // MATERIAL
@@ -473,8 +549,8 @@ void Scene::Handler::init() {
             modelInfo = {};
             modelInfo.async = false;
             modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
-            modelInfo.modelPath = DRAGON_MODEL_PATH;
-            modelInfo.smoothNormals = false;
+            modelInfo.settings.modelPath = DRAGON_MODEL_PATH;
+            modelInfo.settings.smoothNormals = false;
             defInstInfo = {};
             // defInstInfo.data.push_back({helpers::affine(glm::vec3{0.07f})});
             modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
@@ -498,9 +574,9 @@ void Scene::Handler::init() {
             modelInfo.pipelineType = PIPELINE::BP_TEX_CULL_NONE;
             modelInfo.async = false;
             // modelInfo.callback = [groundPlane_bbmm](auto pModel) {};
-            modelInfo.visualHelper = false;
-            modelInfo.modelPath = GRASS_LP_MODEL_PATH;
-            modelInfo.smoothNormals = false;
+            modelInfo.settings.doVisualHelper = false;
+            modelInfo.settings.modelPath = GRASS_LP_MODEL_PATH;
+            modelInfo.settings.smoothNormals = false;
             defInstInfo = {};
             defInstInfo.update = false;
             std::srand(static_cast<unsigned>(time(0)));
@@ -542,9 +618,9 @@ void Scene::Handler::init() {
             modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
             modelInfo.async = false;
             modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
-            modelInfo.visualHelper = true;
-            modelInfo.modelPath = ORANGE_MODEL_PATH;
-            modelInfo.smoothNormals = true;
+            modelInfo.settings.doVisualHelper = true;
+            modelInfo.settings.modelPath = ORANGE_MODEL_PATH;
+            modelInfo.settings.smoothNormals = true;
             defInstInfo = {};
             defInstInfo.update = false;
             defInstInfo.data.reserve(static_cast<size_t>(count) * static_cast<size_t>(count));
@@ -566,7 +642,7 @@ void Scene::Handler::init() {
             //// modelCreateInfo.pipelineType = PIPELINE_TYPE::TRI_LIST_TEX;
             //// modelCreateInfo.async = true;
             //// modelCreateInfo.material = {};
-            //// modelCreateInfo.modelPath = PEAR_MODEL_PATH;
+            //// modelCreateInfo.settings.modelPath = PEAR_MODEL_PATH;
             //// modelCreateInfo.model = helpers::affine();
             //// ModelHandler::makeModel(&modelCreateInfo, SceneHandler::getActiveScene(), nullptr);
         }
@@ -577,9 +653,9 @@ void Scene::Handler::init() {
             modelInfo = {};
             modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
             modelInfo.async = false;
-            modelInfo.modelPath = MED_H_MODEL_PATH;
-            modelInfo.smoothNormals = false;
-            modelInfo.visualHelper = true;
+            modelInfo.settings.modelPath = MED_H_MODEL_PATH;
+            modelInfo.settings.smoothNormals = false;
+            modelInfo.settings.doVisualHelper = true;
             defInstInfo = {};
             defInstInfo.data.reserve(static_cast<size_t>(count) * static_cast<size_t>(count));
             for (uint32_t i = 0; i < count; i++) {
@@ -600,9 +676,9 @@ void Scene::Handler::init() {
             modelInfo = {};
             modelInfo.pipelineType = PIPELINE::PBR_TEX;
             modelInfo.async = true;
-            modelInfo.modelPath = MED_H_MODEL_PATH;
-            modelInfo.smoothNormals = false;
-            modelInfo.visualHelper = false;
+            modelInfo.settings.modelPath = MED_H_MODEL_PATH;
+            modelInfo.settings.smoothNormals = false;
+            modelInfo.settings.doVisualHelper = false;
             defInstInfo = {};
             defInstInfo.data.reserve(static_cast<size_t>(count) * static_cast<size_t>(count));
             for (uint32_t i = 0; i < count; i++) {
@@ -627,8 +703,8 @@ void Scene::Handler::init() {
             modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
             modelInfo.async = true;
             modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
-            modelInfo.modelPath = PIG_MODEL_PATH;
-            modelInfo.smoothNormals = true;
+            modelInfo.settings.modelPath = PIG_MODEL_PATH;
+            modelInfo.settings.smoothNormals = true;
             defInstInfo = {};
             defInstInfo.data.push_back({helpers::affine(glm::vec3{2.0f}, {0.0f, 0.0f, -4.0f})});
             // MATERIAL
@@ -639,7 +715,6 @@ void Scene::Handler::init() {
             auto offset = modelHandler().makeColorModel(&modelInfo, &defMatInfo, &defInstInfo)->getOffset();
             pScene->addModelIndex(offset);
         }
-        return;
     }
 }
 

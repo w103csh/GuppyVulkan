@@ -194,6 +194,8 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     {SHADER::TESS_COLOR_VERT, Shader::Tessellation::COLOR_VERT_CREATE_INFO},
     {SHADER::BEZIER_4_TESC, Shader::Tessellation::BEZIER_4_TESC_CREATE_INFO},
     {SHADER::BEZIER_4_TESE, Shader::Tessellation::BEZIER_4_TESE_CREATE_INFO},
+    {SHADER::TRIANGLE_TESC, Shader::Tessellation::TRIANGLE_TESC_CREATE_INFO},
+    {SHADER::TRIANGLE_TESE, Shader::Tessellation::TRIANGLE_TESE_CREATE_INFO},
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {

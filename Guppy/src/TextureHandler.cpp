@@ -267,6 +267,14 @@ void Texture::Handler::makeTexture(std::shared_ptr<Texture::Base>& pTexture, Sam
 
     if (sampler.mipmapInfo.generateMipmaps && sampler.imgCreateInfo.mipLevels > 1) {
         generateMipmaps(sampler, pTexture->pLdgRes);
+    } else if (std::visit(Descriptor::IsInputAttachment{}, pTexture->DESCRIPTOR_TYPE)) {
+        // TODO: Test this once the framerate gets slower to see if using VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL as
+        // the initial layout is faster.
+
+        // helpers::transitionImageLayout(commandHandler().graphicsCmd(), sampler.image, sampler.imgCreateInfo.format,
+        //                               VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+        //                               VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+        //                               sampler.imgCreateInfo.mipLevels, sampler.imgCreateInfo.arrayLayers);
     } else if (pTexture->pLdgRes != nullptr) {
         /* As of now there are memory barries (transitions) in "createImages", "generateMipmaps",
          *	and here. Its kind of confusing and should potentionally be combined into one call

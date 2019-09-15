@@ -18,8 +18,7 @@ void Selection::Manager::makeFace() {
     if (pFaceInfo_ == nullptr) assert(false && "I did not handle this");
 
     Mesh::CreateInfo meshInfo = {};
-    meshInfo.pipelineType = PIPELINE::LINE;
-    meshInfo.isIndexed = false;
+    meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_LINE;  // PIPELINE::LINE;
     meshInfo.mappable = true;
     Instance::Default::CreateInfo instInfo = {};
     Material::Default::CreateInfo matInfo = {};
