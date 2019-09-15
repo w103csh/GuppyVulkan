@@ -6,15 +6,13 @@
 #include "MeshHandler.h"
 #include "ModelHandler.h"
 
-Model::Base::Base(Model::Handler &handler, Model::CreateInfo *pCreateInfo, std::shared_ptr<Instance::Base> &pInstanceData)
+Model::Base::Base(Model::Handler &handler, const Model::index offset, const Model::CreateInfo *pCreateInfo,
+                  std::shared_ptr<Instance::Base> &pInstanceData)
     : Handlee(handler),
       ObjInst3d(pInstanceData),
       PIPELINE_TYPE(pCreateInfo->pipelineType),
-      offset_(pCreateInfo->handlerOffset),
-      modelPath_(pCreateInfo->modelPath),
-      smoothNormals_(pCreateInfo->smoothNormals),
-      visualHelper_(pCreateInfo->visualHelper),
-      visualHelperLineSize_(pCreateInfo->visualHelperLineSize) {}
+      offset_(offset),
+      settings_(pCreateInfo->settings) {}
 
 Model::Base::~Base() = default;
 
@@ -28,9 +26,9 @@ void Model::Base::postLoad(Model::cback callback) {
     });
 }
 
-void Model::Base::addOffset(std::unique_ptr<Mesh::Color> &pMesh) { colorOffsets_.push_back(pMesh->getOffset()); }
-void Model::Base::addOffset(std::unique_ptr<Mesh::Line> &pMesh) { lineOffsets_.push_back(pMesh->getOffset()); }
-void Model::Base::addOffset(std::unique_ptr<Mesh::Texture> &pMesh) { texOffsets_.push_back(pMesh->getOffset()); }
+void Model::Base::addMeshOffset(std::unique_ptr<Mesh::Color> &pMesh) { colorOffsets_.push_back(pMesh->getOffset()); }
+void Model::Base::addMeshOffset(std::unique_ptr<Mesh::Line> &pMesh) { lineOffsets_.push_back(pMesh->getOffset()); }
+void Model::Base::addMeshOffset(std::unique_ptr<Mesh::Texture> &pMesh) { texOffsets_.push_back(pMesh->getOffset()); }
 
 void Model::Base::allMeshAction(std::function<void(Mesh::Base *)> action) {
     for (auto &offset : colorOffsets_) {

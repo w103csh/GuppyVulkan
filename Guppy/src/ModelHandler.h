@@ -29,12 +29,11 @@ class Handler : public Game::Handler {
     template <typename TMaterialCreateInfo, typename TInstanceCreateInfo>
     auto& makeColorModel(Model::CreateInfo* pCreateInfo, TMaterialCreateInfo* pMaterialCreateInfo,
                          TInstanceCreateInfo* pInstanceCreateInfo) {
-        pCreateInfo->handlerOffset = pModels_.size();  // TODO: really?
-
         // INSTANCE
         auto& pInstanceData = meshHandler().makeInstanceData(pInstanceCreateInfo);
 
-        pModels_.emplace_back(std::make_unique<Model::Base>(std::ref(*this), pCreateInfo, pInstanceData));
+        pModels_.emplace_back(std::make_unique<Model::Base>(std::ref(*this), static_cast<Model::index>(pModels_.size()),
+                                                            pCreateInfo, pInstanceData));
 
         if (pCreateInfo->async) {
             ldgColorFutures_[pModels_.back()->getOffset()] = std::make_pair(  //
@@ -53,12 +52,11 @@ class Handler : public Game::Handler {
     template <typename TMaterialCreateInfo, typename TInstanceCreateInfo>
     auto& makeTextureModel(Model::CreateInfo* pCreateInfo, TMaterialCreateInfo* pMaterialCreateInfo,
                            TInstanceCreateInfo* pInstanceCreateInfo) {
-        pCreateInfo->handlerOffset = pModels_.size();  // TODO: really?
-
         // INSTANCE
         auto& pInstanceData = meshHandler().makeInstanceData(pInstanceCreateInfo);
 
-        pModels_.emplace_back(std::make_unique<Model::Base>(std::ref(*this), pCreateInfo, pInstanceData));
+        pModels_.emplace_back(std::make_unique<Model::Base>(std::ref(*this), static_cast<Model::index>(pModels_.size()),
+                                                            pCreateInfo, pInstanceData));
 
         if (pCreateInfo->async) {
             ldgTexFutures_[pModels_.back()->getOffset()] = std::make_pair(  //
@@ -104,10 +102,10 @@ class Handler : public Game::Handler {
 
         // Load .obj data into mesh
         // (The map types have comparison predicates that smooth or not)
-        if (model.smoothNormals_) {
-            FileLoader::loadObjData<unique_vertices_map_smoothing>(data, pMeshes);
+        if (model.getSettings().smoothNormals) {
+            FileLoader::loadObjData<unique_vertices_map_smoothing>(data, pMeshes, model.getSettings());
         } else {
-            FileLoader::loadObjData<unique_vertices_map_non_smoothing>(data, pMeshes);
+            FileLoader::loadObjData<unique_vertices_map_non_smoothing>(data, pMeshes, model.getSettings());
         }
 
         for (auto& pMesh : pMeshes) assert(pMesh->getVertexCount());  // ensure something was loaded
@@ -127,7 +125,7 @@ class Handler : public Game::Handler {
         if (data.materials.empty()) {
             makeTextureMesh(model, pMeshes, &materialCreateInfo, pInstanceData);
         } else {
-            auto modelDirectory = helpers::getFilePath(model.modelPath_);
+            auto modelDirectory = helpers::getFilePath(model.getSettings().modelPath);
             for (auto& tinyobj_mat : data.materials) {
                 makeTexture(tinyobj_mat, modelDirectory, &materialCreateInfo);
                 makeTextureMesh(model, pMeshes, &materialCreateInfo, pInstanceData);
@@ -139,10 +137,10 @@ class Handler : public Game::Handler {
 
         // Load .obj data into mesh
         // (The map types have comparison predicates that smooth or not)
-        if (model.smoothNormals_) {
-            FileLoader::loadObjData<unique_vertices_map_smoothing>(data, pMeshes);
+        if (model.getSettings().smoothNormals) {
+            FileLoader::loadObjData<unique_vertices_map_smoothing>(data, pMeshes, model.getSettings());
         } else {
-            FileLoader::loadObjData<unique_vertices_map_non_smoothing>(data, pMeshes);
+            FileLoader::loadObjData<unique_vertices_map_non_smoothing>(data, pMeshes, model.getSettings());
         }
 
         for (auto& pMesh : pMeshes) assert(pMesh->getVertexCount());  // ensure something was loaded
@@ -156,7 +154,7 @@ class Handler : public Game::Handler {
         auto createInfo = model.getMeshCreateInfo();
         auto& pMesh = meshHandler().make<Model::ColorMesh>(meshHandler().colorMeshes_, &createInfo, pMaterialCreateInfo,
                                                            pInstanceData);
-        model.addOffset(pMesh);
+        model.addMeshOffset(pMesh);
         pMeshes.push_back(pMesh.get());
     }
 
@@ -166,7 +164,7 @@ class Handler : public Game::Handler {
         auto createInfo = model.getMeshCreateInfo();
         auto& pMesh = meshHandler().make<Model::TextureMesh>(meshHandler().texMeshes_, &createInfo, pMaterialCreateInfo,
                                                              pInstanceData);
-        model.addOffset(pMesh);
+        model.addMeshOffset(pMesh);
         pMeshes.push_back(pMesh.get());
     }
 
@@ -179,8 +177,9 @@ class Handler : public Game::Handler {
         }
         pModel->postLoad(callback);
         // Add a visual helper mesh
-        if (pModel->visualHelper_) {
-            for (auto pMesh : pMeshes) meshHandler().makeTangentSpaceVisualHelper(pMesh, pModel->visualHelperLineSize_);
+        if (pModel->getSettings().doVisualHelper) {
+            for (auto pMesh : pMeshes)
+                meshHandler().makeTangentSpaceVisualHelper(pMesh, pModel->getSettings().visualHelperLineSize);
         }
     }
 

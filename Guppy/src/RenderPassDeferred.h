@@ -25,6 +25,10 @@ class Base : public RenderPass::Base {
     void updateClearValues() override;
     void createFramebuffers() override;
 
+    uint32_t inputAttachmentOffset_;
+    uint32_t inputAttachmentCount_;
+    uint32_t mrtPipelineCount_;
+    uint32_t combinePassIndex_;
     bool doSSAO_;
 };
 

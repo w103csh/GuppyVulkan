@@ -39,7 +39,6 @@ class TangentSpace : public Line {
                  std::shared_ptr<Material::Base>& pMaterial, Color* pMesh)
         : Line(handler, "Tangent Space Visual Helper", pCreateInfo, pInstanceData, pMaterial) {
         assert(false && "No way to do tangent space for this yet. Need tex coords currently.");
-        isIndexed_ = false;
         make(pMesh, pCreateInfo);
         status_ = STATUS::PENDING_BUFFERS;
     };
@@ -54,7 +53,6 @@ class TangentSpace : public Line {
     TangentSpace(Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
                  std::shared_ptr<Material::Base>& pMaterial, Texture* pMesh)
         : Line(handler, "Tangent Space Visual Helper", pCreateInfo, pInstanceData, pMaterial) {
-        isIndexed_ = false;
         make(pMesh, pCreateInfo);
         status_ = STATUS::PENDING_BUFFERS;
     };

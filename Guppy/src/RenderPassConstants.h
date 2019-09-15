@@ -47,11 +47,12 @@ extern const std::set<PASS> ALL;
 
 // clang-format off
 using FLAG = enum : FlagBits {
-    NONE =                  0x00000000,
-    SWAPCHAIN =             0x00000001,
-    DEPTH =                 0x00000002,
-    MULTISAMPLE =           0x00000004,
-    SECONDARY_COMMANDS =    0x00000008,
+    NONE =                      0x00000000,
+    SWAPCHAIN =                 0x00000001,
+    DEPTH =                     0x00000002,
+    MULTISAMPLE =               0x00000004,
+    SECONDARY_COMMANDS =        0x00000008,
+    DEPTH_INPUT_ATTACHMENT =    0x00000010,
 };
 // clang-format off
 

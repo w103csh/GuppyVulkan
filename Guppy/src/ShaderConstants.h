@@ -56,6 +56,8 @@ enum class SHADER {
     TESS_COLOR_VERT,
     BEZIER_4_TESC,
     BEZIER_4_TESE,
+    TRIANGLE_TESC,
+    TRIANGLE_TESE,
     // Add new to SHADER_ALL and SHADER_LINK_MAP.
 };
 

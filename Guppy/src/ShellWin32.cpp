@@ -241,6 +241,19 @@ GAME_KEY ShellWin32::getKey(WPARAM wParam, INPUT_ACTION type) {
         case 'Q':
         case 'q':
             key = GAME_KEY::KEY_Q;
+        case 'O':
+            key = GAME_KEY::KEY_O;
+        case 'P':
+            key = GAME_KEY::KEY_P;
+            break;
+        case 'K':
+            key = GAME_KEY::KEY_K;
+            break;
+        case 'L':
+            key = GAME_KEY::KEY_L;
+            break;
+        case 'I':
+            key = GAME_KEY::KEY_I;
             break;
         // BRACKET/BRACE KEYS
         case '[':

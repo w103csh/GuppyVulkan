@@ -1,4 +1,3 @@
-
 #ifndef MODEL_H
 #define MODEL_H
 
@@ -8,6 +7,7 @@
 #include <vector>
 #include <vulkan/vulkan.h>
 
+#include "ConstantsAll.h"
 #include "Handlee.h"
 #include "Helpers.h"
 #include "Instance.h"
@@ -16,42 +16,40 @@
 #include "Obj3d.h"
 
 // clang-format off
-namespace Mesh { class Handler; }
+namespace Model { class Base; }
 // clang-format on
 
 namespace Model {
 
-class Base;
-class Handler;
-
-using index = uint32_t;
-constexpr auto INDEX_MAX = UINT32_MAX;
 using cback = std::function<void(Model::Base *)>;
 
 struct CreateInfo : public Mesh::CreateInfo {
+    Settings settings;
     bool async = false;
-    bool smoothNormals = false;
-    bool visualHelper = false;
-    float visualHelperLineSize = 0.1f;
     Model::cback callback = nullptr;
-    Model::index handlerOffset = Model::INDEX_MAX;  // TODO: this should only be set by the handler...
-    std::string modelPath = "";
 };
 
-class Base : public NonCopyable, public Handlee<Model::Handler>, public ObjInst3d {
-    friend class Model::Handler;
+class Handler;
 
+class Base : public NonCopyable, public Handlee<Model::Handler>, public ObjInst3d {
    public:
-    Base(Model::Handler &handler, Model::CreateInfo *pCreateInfo, std::shared_ptr<Instance::Base> &pInstanceData);
+    Base(Model::Handler &handler, const Model::index offset, const Model::CreateInfo *pCreateInfo,
+         std::shared_ptr<Instance::Base> &pInstanceData);
     virtual ~Base();
 
     const PIPELINE PIPELINE_TYPE;
 
-    inline Model::index getOffset() const { return offset_; }
+    constexpr auto getOffset() const { return offset_; }
+    constexpr const auto &getSettings() const { return settings_; }
 
     void postLoad(Model::cback callback);
 
     const std::vector<Model::index> &getMeshOffsets(MESH type);
+
+    // TODO: Private ? Friend ?
+    void addMeshOffset(std::unique_ptr<Mesh::Color> &pMesh);
+    void addMeshOffset(std::unique_ptr<Mesh::Line> &pMesh);
+    void addMeshOffset(std::unique_ptr<Mesh::Texture> &pMesh);
 
     inline Model::CreateInfo getMeshCreateInfo() {
         Model::CreateInfo createInfo = {};
@@ -67,14 +65,7 @@ class Base : public NonCopyable, public Handlee<Model::Handler>, public ObjInst3
     void updateAggregateBoundingBox(Mesh::Base *pMesh);
 
     Model::index offset_;
-    std::string modelPath_;
-    bool smoothNormals_;
-    bool visualHelper_;
-    float visualHelperLineSize_;
-
-    void addOffset(std::unique_ptr<Mesh::Color> &pMesh);
-    void addOffset(std::unique_ptr<Mesh::Line> &pMesh);
-    void addOffset(std::unique_ptr<Mesh::Texture> &pMesh);
+    Settings settings_;
 
     std::vector<Model::index> colorOffsets_;
     std::vector<Model::index> lineOffsets_;

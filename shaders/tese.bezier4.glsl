@@ -2,11 +2,12 @@
 #version 450
 
 // UNIFORMS
-#define _DS_UNI_BEZ 0
+#define _DS_UNI_DFR_MRT 0
 
-#define CONTROL_POINTS 4
+// layout(constant_id = 0) const int PATCH_CONTROL_POINTS = 4; // bezier control points
+#define PATCH_CONTROL_POINTS 4 // bezier control points
 
-layout(set=_DS_UNI_BEZ, binding=0) uniform CameraDefaultPerspective {
+layout(set=_DS_UNI_DFR_MRT, binding=0) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
     mat4 viewProjection;
@@ -15,15 +16,14 @@ layout(set=_DS_UNI_BEZ, binding=0) uniform CameraDefaultPerspective {
 
 // IN
 layout(isolines) in;
-layout(location=CONTROL_POINTS*0) in vec3 inNormal[];
-layout(location=CONTROL_POINTS*1) in vec4 inColor[];
+layout(location=PATCH_CONTROL_POINTS*0) in vec3 inNormal[];
+layout(location=PATCH_CONTROL_POINTS*1) in vec4 inColor[];
 // OUT
 layout(location=0) out vec3 outPosition;
 layout(location=1) out vec3 outNormal;
 layout(location=2) out vec4 outColor;
 
-void main()
-{
+void main() {
     float u = gl_TessCoord.x;
 
     vec3 p0 = gl_in[0].gl_Position.xyz;

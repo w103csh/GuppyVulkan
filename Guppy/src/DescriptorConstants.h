@@ -52,7 +52,7 @@ enum class DESCRIPTOR_SET {
     SAMPLER_SHADOW,
     SAMPLER_SHADOW_OFFSET,
     // TESSELLATION
-    UNIFORM_BEZIER
+    UNIFORM_TESSELLATION_DEFAULT,
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 
@@ -179,7 +179,7 @@ struct GetTextureImageLayout {
         }
     }
     VkImageLayout operator()(const STORAGE_IMAGE&) const { return VK_IMAGE_LAYOUT_GENERAL; }
-    VkImageLayout operator()(const INPUT_ATTACHMENT&) const { return VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL; }
+    VkImageLayout operator()(const INPUT_ATTACHMENT&) const { return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; }
 };
 // COMBINED SAMPLER
 struct IsCombinedSampler {
@@ -237,6 +237,15 @@ struct IsUniformDynamic {
 struct GetUniformDynamic {
     template <typename T> const UNIFORM_DYNAMIC operator()(const T&) const { return UNIFORM_DYNAMIC::DONT_CARE; }
     const UNIFORM_DYNAMIC operator()(const UNIFORM_DYNAMIC& type) const { return type; }
+};
+// INPUT ATTACHMENT
+struct IsInputAttachment {
+    template <typename T> bool operator()(const T&) const { return false; }
+    bool operator()(const INPUT_ATTACHMENT&) const { return true; }
+};
+struct GetInputAttachment {
+    template <typename T> const INPUT_ATTACHMENT operator()(const T&) const { return INPUT_ATTACHMENT::DONT_CARE; }
+    const INPUT_ATTACHMENT operator()(const INPUT_ATTACHMENT& type) const { return type; }
 };
 // clang-format on
 

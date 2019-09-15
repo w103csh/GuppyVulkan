@@ -353,12 +353,18 @@ void RenderPass::Base::createAttachments() {
         resources_.attachments.back().initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         resources_.attachments.back().finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
         resources_.attachments.back().flags = 0;
-
         // REFERENCE
         resources_.depthStencilAttachment = {
             static_cast<uint32_t>(resources_.attachments.size() - 1),
             VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL,
         };
+        // INPUT ATTACHMENT
+        if (usesDepthInputAttachment()) {
+            resources_.inputAttachments.push_back({
+                resources_.depthStencilAttachment.attachment,
+                VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL,
+            });
+        }
     }
 
     // COLOR ATTACHMENT (MULTI-SAMPLE)
@@ -374,7 +380,6 @@ void RenderPass::Base::createAttachments() {
         resources_.attachments.back().initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         resources_.attachments.back().finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
         resources_.attachments.back().flags = 0;
-
         // REFERENCE
         resources_.colorAttachments.push_back({
             static_cast<uint32_t>(resources_.attachments.size() - 1),
@@ -395,7 +400,6 @@ void RenderPass::Base::createAttachments() {
     resources_.attachments.back().initialLayout = isClear ? VK_IMAGE_LAYOUT_UNDEFINED : initialLayout_;
     resources_.attachments.back().finalLayout = finalLayout_;
     resources_.attachments.back().flags = 0;
-
     // REFERENCE
     if (usesMultiSample()) {
         // Set resolve to swapchain attachment

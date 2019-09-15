@@ -115,6 +115,7 @@ const std::string GRASS_LP_OPAC_TEX_PATH = MODEL_PATH + "grass (low-poly)/low_po
 const std::string PEAR_MODEL_PATH = MODEL_PATH + "pear_export_obj/pear_export.obj";
 // general
 const std::string SPHERE_MODEL_PATH = MODEL_PATH + "sphere.obj";
+const std::string ICOSAHEDRON_MODEL_PATH = MODEL_PATH + "icosahedron.obj";
 const std::string TORUS_MODEL_PATH = MODEL_PATH + "torus.obj";
 const std::string PIG_MODEL_PATH = MODEL_PATH + "pig_triangulated.obj";
 const std::string DRAGON_MODEL_PATH = MODEL_PATH + "dragon.obj";

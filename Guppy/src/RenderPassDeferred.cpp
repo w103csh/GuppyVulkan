@@ -20,15 +20,17 @@ const CreateInfo Deferred_CREATE_INFO = {
     PASS::DEFERRED,
     "Deferred Render Pass",
     {
-        PIPELINE::DEFERRED_BEZIER_4,
+        PIPELINE::TESSELLATION_BEZIER_4_DEFERRED,
         PIPELINE::DEFERRED_MRT_LINE,
         PIPELINE::DEFERRED_MRT_COLOR,
         PIPELINE::DEFERRED_MRT_WF_COLOR,
+        PIPELINE::TESSELLATION_TRIANGLE_DEFERRED,
         PIPELINE::DEFERRED_MRT_TEX,
         // PIPELINE::DEFERRED_SSAO,
         PIPELINE::DEFERRED_COMBINE,
     },
-    (FLAG::SWAPCHAIN | FLAG::DEPTH | (::Deferred::DO_MSAA ? FLAG::MULTISAMPLE : FLAG::NONE)),
+    (FLAG::SWAPCHAIN | FLAG::DEPTH | /*FLAG::DEPTH_INPUT_ATTACHMENT |*/
+     (::Deferred::DO_MSAA ? FLAG::MULTISAMPLE : FLAG::NONE)),
     {
         std::string(RenderPass::SWAPCHAIN_TARGET_ID),
         // TODO: Make below work with above in the base class.
@@ -43,7 +45,12 @@ const CreateInfo Deferred_CREATE_INFO = {
 };
 
 Base::Base(RenderPass::Handler& handler, const index&& offset)
-    : RenderPass::Base{handler, std::forward<const index>(offset), &Deferred_CREATE_INFO}, doSSAO_(false) {
+    : RenderPass::Base{handler, std::forward<const index>(offset), &Deferred_CREATE_INFO},
+      inputAttachmentOffset_(0),
+      inputAttachmentCount_(0),
+      mrtPipelineCount_(0),
+      combinePassIndex_(0),
+      doSSAO_(false) {
     status_ = STATUS::PENDING_MESH | STATUS::PENDING_PIPELINE;
 }
 
@@ -90,77 +97,26 @@ void Base::record(const uint8_t frameIndex) {
 
         auto& pScene = handler().sceneHandler().getActiveScene();
 
-        // MRT (BEZIER 4)
-        {
-            auto& secCmd = data.secCmds[frameIndex];
-
-            pScene->record(TYPE, PIPELINE::DEFERRED_BEZIER_4, pipelineBindDataList_.getValue(PIPELINE::DEFERRED_BEZIER_4),
-                           priCmd, secCmd, frameIndex);
-
-            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
-        }
-
-        // MRT (LINE)
-        {
-            auto& secCmd = data.secCmds[frameIndex];
-
-            pScene->record(TYPE, PIPELINE::DEFERRED_MRT_LINE, pipelineBindDataList_.getValue(PIPELINE::DEFERRED_MRT_LINE),
-                           priCmd, secCmd, frameIndex);
-
-            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
-        }
-
-        // MRT (COLOR)
-        {
-            auto& secCmd = data.secCmds[frameIndex];
-
-            pScene->record(TYPE, PIPELINE::DEFERRED_MRT_COLOR, pipelineBindDataList_.getValue(PIPELINE::DEFERRED_MRT_COLOR),
-                           priCmd, secCmd, frameIndex);
-
-            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
-        }
-
-        // MRT (COLOR WIREFRAME)
-        {
-            auto& secCmd = data.secCmds[frameIndex];
-
-            pScene->record(TYPE, PIPELINE::DEFERRED_MRT_WF_COLOR,
-                           pipelineBindDataList_.getValue(PIPELINE::DEFERRED_MRT_WF_COLOR), priCmd, secCmd, frameIndex);
-
-            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
-        }
-
-        // MRT (TEXTURE)
-        {
-            auto& secCmd = data.secCmds[frameIndex];
-
-            pScene->record(TYPE, PIPELINE::DEFERRED_MRT_TEX, pipelineBindDataList_.getValue(PIPELINE::DEFERRED_MRT_TEX),
-                           priCmd, secCmd, frameIndex);
-
-            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
-        }
-
-        // SSAO
-        if (doSSAO_) {
-            assert(false);  // This used to use descSetBindDataMap2_. I think I made a map so this isn't necessary.
-
-            //// TODO: this definitely only needs to be recorded once per swapchain creation!!!
-            // auto itPipelineBindData = pipelineTypeBindDataMap_.find(PIPELINE::DEFERRED_SSAO);
-            // assert(itPipelineBindData != pipelineTypeBindDataMap_.end());
-
-            // handler().getScreenQuad()->draw(TYPE, itPipelineBindData->second, descSetBindDataMap2_.begin()->second,
-            // priCmd,
-            //                                frameIndex);
-
-            // vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
-        }
-
-        // COMBINE
-        {
-            // TODO: this definitely only needs to be recorded once per swapchain creation!!!
-            handler().getScreenQuad()->draw(TYPE, pipelineBindDataList_.getValue(PIPELINE::DEFERRED_COMBINE),
-                                            getDescSetBindDataMap(PIPELINE::DEFERRED_COMBINE).begin()->second, priCmd,
-                                            frameIndex);
+        for (const auto& pPipelineBindData : pipelineBindDataList_.getValues()) {
+            switch (pPipelineBindData->type) {
+                case PIPELINE::DEFERRED_COMBINE: {
+                    // TODO: this definitely only needs to be recorded once per swapchain creation!!!
+                    handler().getScreenQuad()->draw(TYPE, pipelineBindDataList_.getValue(PIPELINE::DEFERRED_COMBINE),
+                                                    getDescSetBindDataMap(PIPELINE::DEFERRED_COMBINE).begin()->second,
+                                                    priCmd, frameIndex);
+                } break;
+                case PIPELINE::DEFERRED_SSAO: {
+                    // This hasn't been tested in a long time. Might work to just let through.
+                    // TODO: this definitely only needs to be recorded once per swapchain creation!!!
+                    assert(doSSAO_ && false);
+                } break;
+                default: {
+                    // MRT PASSES
+                    auto& secCmd = data.secCmds[frameIndex];
+                    pScene->record(TYPE, pPipelineBindData->type, pPipelineBindData, priCmd, secCmd, frameIndex);
+                    vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+                } break;
+            }
         }
 
         endPass(priCmd);
@@ -181,13 +137,14 @@ void Base::createAttachments() {
     ::RenderPass::Base::createAttachments();
 
     VkAttachmentDescription attachment = {
-        0,                                        // flags VkAttachmentDescriptionFlags
-        VK_FORMAT_UNDEFINED,                      // format VkFormat
-        getSamples(),                             // samples VkSampleCountFlagBits
-        VK_ATTACHMENT_LOAD_OP_CLEAR,              // loadOp VkAttachmentLoadOp
-        VK_ATTACHMENT_STORE_OP_STORE,             // storeOp VkAttachmentStoreOp
-        VK_ATTACHMENT_LOAD_OP_DONT_CARE,          // stencilLoadOp VkAttachmentLoadOp
-        VK_ATTACHMENT_STORE_OP_DONT_CARE,         // stencilStoreOp VkAttachmentStoreOp
+        0,                                 // flags VkAttachmentDescriptionFlags
+        VK_FORMAT_UNDEFINED,               // format VkFormat
+        getSamples(),                      // samples VkSampleCountFlagBits
+        VK_ATTACHMENT_LOAD_OP_CLEAR,       // loadOp VkAttachmentLoadOp
+        VK_ATTACHMENT_STORE_OP_STORE,      // storeOp VkAttachmentStoreOp
+        VK_ATTACHMENT_LOAD_OP_DONT_CARE,   // stencilLoadOp VkAttachmentLoadOp
+        VK_ATTACHMENT_STORE_OP_DONT_CARE,  // stencilStoreOp VkAttachmentStoreOp
+        // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,  // TRY THIS!!!
         VK_IMAGE_LAYOUT_UNDEFINED,                // initialLayout VkImageLayout
         VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL  // finalLayout VkImageLayout
     };
@@ -197,6 +154,8 @@ void Base::createAttachments() {
 
     // auto numTex = pTextures_.size() / textureIds_.size();
 
+    inputAttachmentOffset_ = static_cast<uint32_t>(resources_.colorAttachments.size());
+
     // POSITION
     resources_.colorAttachments.push_back(
         {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
@@ -204,6 +163,8 @@ void Base::createAttachments() {
     auto pTexture = handler().textureHandler().getTexture(Texture::Deferred::POS_2D_ID);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
+    resources_.inputAttachments.push_back(
+        {resources_.colorAttachments.back().attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
 
     // NORMAL
     resources_.colorAttachments.push_back(
@@ -212,6 +173,8 @@ void Base::createAttachments() {
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::NORM_2D_ID);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
+    resources_.inputAttachments.push_back(
+        {resources_.colorAttachments.back().attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
 
     // DIFFUSE
     resources_.colorAttachments.push_back(
@@ -220,6 +183,8 @@ void Base::createAttachments() {
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::DIFFUSE_2D_ID);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
+    resources_.inputAttachments.push_back(
+        {resources_.colorAttachments.back().attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
 
     // AMBIENT
     resources_.colorAttachments.push_back(
@@ -228,6 +193,8 @@ void Base::createAttachments() {
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::AMBIENT_2D_ID);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
+    resources_.inputAttachments.push_back(
+        {resources_.colorAttachments.back().attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
 
     // SPECULAR
     resources_.colorAttachments.push_back(
@@ -236,6 +203,10 @@ void Base::createAttachments() {
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::SPECULAR_2D_ID);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
+    resources_.inputAttachments.push_back(
+        {resources_.colorAttachments.back().attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
+
+    inputAttachmentCount_ = static_cast<uint32_t>(resources_.colorAttachments.size()) - inputAttachmentOffset_;
 
     // SSAO
     if (doSSAO_) {
@@ -253,19 +224,24 @@ void Base::createAttachments() {
 void Base::createSubpassDescriptions() {
     VkSubpassDescription subpassDesc;
 
+    assert(inputAttachmentOffset_ == 1);  // Swapchain should be in 0
+    mrtPipelineCount_ = pipelineBindDataList_.size() - 1 - (doSSAO_ ? 1 : 0);
+
     // MRT
     subpassDesc = {};
-    subpassDesc.colorAttachmentCount = 5;
-    subpassDesc.pColorAttachments = &resources_.colorAttachments[1];  // POSITION/NORMAL/DIFFUSE/AMBIENT/SPECULAR
+    subpassDesc.colorAttachmentCount = inputAttachmentCount_;
+    subpassDesc.pColorAttachments = &resources_.colorAttachments[inputAttachmentOffset_];
     subpassDesc.pResolveAttachments = nullptr;
     subpassDesc.pDepthStencilAttachment = pipelineData_.usesDepth ? &resources_.depthStencilAttachment : nullptr;
-    resources_.subpasses.assign(5, subpassDesc);  // TEXTURE/COLOR/LINE/BEZIER4/COLOR(WIREFRAME)
+    resources_.subpasses.assign(mrtPipelineCount_, subpassDesc);
 
     // SSAO
     if (doSSAO_) {
+        assert(resources_.colorAttachments.size() > (size_t)inputAttachmentCount_ + (size_t)inputAttachmentOffset_);
         subpassDesc = {};
         subpassDesc.colorAttachmentCount = 1;
-        subpassDesc.pColorAttachments = &resources_.colorAttachments[6];  // SSAO
+        subpassDesc.pColorAttachments =
+            &resources_.colorAttachments[(size_t)inputAttachmentOffset_ + (size_t)inputAttachmentCount_];
         subpassDesc.pResolveAttachments = nullptr;
         subpassDesc.pDepthStencilAttachment = nullptr;
         resources_.subpasses.push_back(subpassDesc);
@@ -275,6 +251,8 @@ void Base::createSubpassDescriptions() {
 
     // COMBINE
     subpassDesc = {};
+    subpassDesc.inputAttachmentCount = static_cast<uint32_t>(resources_.inputAttachments.size());
+    subpassDesc.pInputAttachments = resources_.inputAttachments.data();
     subpassDesc.colorAttachmentCount = 1;
     subpassDesc.pColorAttachments = &resources_.colorAttachments[0];  // SWAPCHAIN
     subpassDesc.pResolveAttachments = resources_.resolveAttachments.data();
@@ -282,79 +260,57 @@ void Base::createSubpassDescriptions() {
     resources_.subpasses.push_back(subpassDesc);
 
     assert(resources_.subpasses.size() == pipelineBindDataList_.size());
+    combinePassIndex_ = static_cast<uint32_t>(pipelineBindDataList_.size() - 1);
 }
 
 void Base::createDependencies() {
-    VkSubpassDependency dependency = {};
+    // TODO: There might need to be an external pass dependency for the shadow passes.
 
-    // Garbage from before
-    dependency = {};
-    dependency.srcSubpass = 0;
-    dependency.dstSubpass = 1;
-    dependency.dependencyFlags = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
-    dependency.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-    dependency.srcAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
-    resources_.dependencies.push_back(dependency);
-    dependency.dstSubpass = 1;
-    resources_.dependencies.push_back(dependency);
-    dependency.dstSubpass = 2;
-    resources_.dependencies.push_back(dependency);
-    dependency.dstSubpass = 3;
-    resources_.dependencies.push_back(dependency);
+    VkSubpassDependency depthDependency = {
+        0,  // srcSubpass
+        0,  // dstSubpass
+        // Both stages might have to access the depth-buffer
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,      // srcStageMask
+        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,      // dstStageMask
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,                                                // srcAccessMask
+        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,  // dstAccessMask
+        VK_DEPENDENCY_BY_REGION_BIT,                                                                 // dependencyFlags
+    };
+    // VkSubpassDependency colorDependency = {
+    //    0,                                              // srcSubpass
+    //    0,                                              // dstSubpass
+    //    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,  // srcStageMask
+    //    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,  // dstStageMask
+    //    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,           // srcAccessMask
+    //    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,           // dstAccessMask
+    //    VK_DEPENDENCY_BY_REGION_BIT,
+    //};
 
-    // Below should make sense
-    dependency = {};
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    dependency.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    dependency.dstAccessMask = VK_ACCESS_INPUT_ATTACHMENT_READ_BIT;
-    dependency.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+    for (uint32_t subpass = 0; subpass < mrtPipelineCount_ - 1; subpass++) {
+        depthDependency.srcSubpass = subpass;
+        depthDependency.dstSubpass = subpass + 1;
+        resources_.dependencies.push_back(depthDependency);
+    }
+
     if (doSSAO_) {
         assert(false);
-        // Color to SSAO.
-        dependency.srcSubpass = 0;
-        dependency.dstSubpass = 2;
-        resources_.dependencies.push_back(dependency);
-        // Texture to SSAO.
-        dependency.srcSubpass = 1;
-        dependency.dstSubpass = 2;
-        resources_.dependencies.push_back(dependency);
-        // SSAO to combine
-        dependency.srcSubpass = 2;
-        dependency.dstSubpass = 3;
-        resources_.dependencies.push_back(dependency);
     } else {
-        // Bezier 4 to Line
-        dependency.srcSubpass = 1;
-        dependency.dstSubpass = 2;
-        resources_.dependencies.push_back(dependency);
-        // Line to Color
-        dependency.srcSubpass = 2;
-        dependency.dstSubpass = 3;
-        resources_.dependencies.push_back(dependency);
+        // Color input attachment dependency
+        VkSubpassDependency combineDependency = {
+            0,                                              // srcSubpass
+            0,                                              // dstSubpass
+            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,  // srcStageMask
+            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,          // dstStageMask
+            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,           // srcAccessMask
+            VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,            // dstAccessMask
+            VK_DEPENDENCY_BY_REGION_BIT,                    // dependencyFlags
+        };
 
-        // I think the reason why a dependency is not needed from the "color" pipelines to
-        // the "texture" ones is because they are not compatible, and the driver can detect
-        // it somehow. Not sure though.
-
-        // Bezier 4 to combine.
-        dependency.srcSubpass = 0;
-        dependency.dstSubpass = 4;
-        resources_.dependencies.push_back(dependency);
-        // Line to combine.
-        dependency.srcSubpass = 1;
-        dependency.dstSubpass = 4;
-        resources_.dependencies.push_back(dependency);
-        // Color to combine.
-        dependency.srcSubpass = 2;
-        dependency.dstSubpass = 4;
-        resources_.dependencies.push_back(dependency);
-        // Texture to combine.
-        dependency.srcSubpass = 3;
-        dependency.dstSubpass = 4;
-        resources_.dependencies.push_back(dependency);
+        combineDependency.dstSubpass = static_cast<uint32_t>(resources_.subpasses.size() - 1);
+        for (uint32_t subpass = 0; subpass < combinePassIndex_; subpass++) {
+            combineDependency.srcSubpass = subpass;
+            resources_.dependencies.push_back(combineDependency);
+        }
     }
 }
 

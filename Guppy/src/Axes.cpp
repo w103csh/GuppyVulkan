@@ -40,7 +40,6 @@ void make(std::vector<Vertex::Color>& vertices, float lineSize, bool showNegativ
 Axes::Axes(Handler& handler, const AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
            std::shared_ptr<Material::Base>& pMaterial)
     : Line(handler, "Axes", pCreateInfo, pInstanceData, pMaterial) {
-    isIndexed_ = false;
     make(vertices_, pCreateInfo->lineSize, pCreateInfo->showNegative);
     status_ = STATUS::PENDING_BUFFERS;
 }
@@ -48,7 +47,6 @@ Axes::Axes(Handler& handler, const AxesCreateInfo* pCreateInfo, std::shared_ptr<
 Axes::Axes(Handler& handler, const std::string&& name, const AxesCreateInfo* pCreateInfo,
            std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
     : Line(handler, std::forward<const std::string>(name), pCreateInfo, pInstanceData, pMaterial) {
-    isIndexed_ = false;
     make(vertices_, pCreateInfo->lineSize, pCreateInfo->showNegative);
     status_ = STATUS::PENDING_BUFFERS;
 }

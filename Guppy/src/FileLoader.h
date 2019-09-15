@@ -27,13 +27,13 @@ void getObjData(const Shell &sh, tinyobj_data &data);
 
 /* BECUASE TEMPLATES ARE STUPID ALL OF THIS CODE NEEDS TO BE IN THE HEADER */
 template <typename TMap, class TVertex>
-void loadObjData(const tinyobj_data &data, std::vector<TVertex *> &pMeshes) {
+void loadObjData(const tinyobj_data &data, std::vector<TVertex *> &pMeshes, const Model::Settings &settings) {
     // Map of unique vertices for indexed drawing, and calculating smoothing groups.
     TMap vertexMap;
     // std::vector<std::pair<Vertex::Complete, size_t>> uniqueVertices1;
     // std::vector<std::pair<Vertex::Complete, size_t>> uniqueVertices2;
 
-    bool useColors = !data.attrib.colors.empty();
+    bool useColors = !settings.faceVertexColorsRGB && !data.attrib.colors.empty();
     bool useNormals = !data.attrib.normals.empty();
     bool useTexCoords = !data.attrib.texcoords.empty();
     bool hasNormalMap = false;
@@ -92,6 +92,11 @@ void loadObjData(const tinyobj_data &data, std::vector<TVertex *> &pMeshes) {
                     face[0].color[k] = data.attrib.colors[3 * static_cast<size_t>(index0.vertex_index) + k];
                     face[1].color[k] = data.attrib.colors[3 * static_cast<size_t>(index1.vertex_index) + k];
                     face[2].color[k] = data.attrib.colors[3 * static_cast<size_t>(index2.vertex_index) + k];
+                } else {
+                    // color components
+                    face[0].color[k] = COLOR_RED[k];
+                    face[1].color[k] = COLOR_GREEN[k];
+                    face[2].color[k] = COLOR_BLUE[k];
                 }
 
                 // TODO: These currently will never be used...
@@ -126,6 +131,7 @@ void loadObjData(const tinyobj_data &data, std::vector<TVertex *> &pMeshes) {
                     }
                 }
             }
+            if (settings.reverseFaceWinding) face.reverseWinding();
             face.indexVertices(vertexMap, pMeshes, materialOffset);
         }
     }

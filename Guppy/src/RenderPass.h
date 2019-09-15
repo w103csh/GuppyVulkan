@@ -65,6 +65,7 @@ class Base : public Handlee<RenderPass::Handler> {
     constexpr const auto &getSamples() const { return pipelineData_.samples; }
     constexpr bool usesSwapchain() const { return FLAGS & FLAG::SWAPCHAIN; }
     constexpr bool usesDepth() const { return FLAGS & FLAG::DEPTH; }
+    constexpr bool usesDepthInputAttachment() const { return FLAGS & FLAG::DEPTH_INPUT_ATTACHMENT; }
     constexpr bool usesMultiSample() const { return FLAGS & FLAG::MULTISAMPLE && getSamples() != VK_SAMPLE_COUNT_1_BIT; }
     constexpr bool usesSecondaryCommands() const { return FLAGS & FLAG::SECONDARY_COMMANDS; }
     inline bool hasTargetSampler() const { return pTextures_.size(); }
@@ -158,7 +159,7 @@ class Base : public Handlee<RenderPass::Handler> {
 
     // SAMPLER
     std::vector<std::string> textureIds_;  // TODO: const? Swapchain has an id now.
-    std::vector<std::shared_ptr<Texture::Base>> pTextures_;
+    std::vector<std::shared_ptr<::Texture::Base>> pTextures_;
 
     // BARRIER
     BarrierResource barrierResource_;

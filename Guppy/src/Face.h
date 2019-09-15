@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include "Helpers.h"
-#include "Mesh.h"
+#include "MeshConstants.h"
 #include "Vertex.h"
 
 /*  This is used to store unique vertex information when loading a mesh from a file. The key is a
@@ -39,8 +39,8 @@ class Face {
         return vertices_[index];
     }
 
-    inline void reverse() { std::reverse(std::begin(vertices_), std::end(vertices_)); }
-    inline void setSmoothingGroup(uint32_t id) {
+    inline void reverseWinding() { std::swap(vertices_[1], vertices_[2]); }
+    constexpr void setSmoothingGroup(const uint32_t id) {
         for (auto &v : vertices_) v.smoothingGroupId = id;
     }
 

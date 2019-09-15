@@ -104,6 +104,8 @@ set(SOURCE
     FaceMesh.h
     Mesh.cpp
     Mesh.h
+    MeshConstants.cpp
+    MeshConstants.h
     MeshHandler.cpp
     MeshHandler.h
     Plane.cpp
@@ -113,6 +115,8 @@ set(SOURCE
     # Model
     Model.cpp
     Model.h
+    ModelConstants.cpp
+    ModelConstants.h
     ModelHandler.cpp
     ModelHandler.h
     ModelMesh.cpp

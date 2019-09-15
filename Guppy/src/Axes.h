@@ -15,7 +15,7 @@ class Handler;
 const float AXES_MAX_SIZE = 2000.0f;
 
 struct AxesCreateInfo : public CreateInfo {
-    AxesCreateInfo() : CreateInfo{{}, false, false, PIPELINE::LINE, Uniform::PASS_ALL_SET, false} {};
+    AxesCreateInfo() : CreateInfo{PIPELINE::LINE, false} {};
     float lineSize = 1.0f;
     bool showNegative = false;
 };
