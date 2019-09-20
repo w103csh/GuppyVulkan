@@ -393,6 +393,123 @@ void cramers3(glm::vec3 c1, glm::vec3 c2, glm::vec3 c3, glm::vec3 c4) {
     // auto t_ = glm::determinant(T) / M_;
 }
 
+// triangle adjacency helpers
+namespace {
+constexpr bool any2(const VB_INDEX_TYPE i0, const VB_INDEX_TYPE i1, const VB_INDEX_TYPE i2, const VB_INDEX_TYPE i,
+                    VB_INDEX_TYPE &r0, VB_INDEX_TYPE &r1) {
+    if (i0 == i) {
+        r0 = i1;
+        r1 = i2;
+        return true;
+    }
+    if (i1 == i) {
+        r0 = i0;
+        r1 = i2;
+        return true;
+    }
+    if (i2 == i) {
+        r0 = i0;
+        r1 = i1;
+        return true;
+    }
+    return false;
+}
+constexpr bool any1(const VB_INDEX_TYPE i0, const VB_INDEX_TYPE i1, const VB_INDEX_TYPE i, VB_INDEX_TYPE &r) {
+    if (i0 == i) {
+        r = i1;
+        return true;
+    }
+    if (i1 == i) {
+        r = i0;
+        return true;
+    }
+    return false;
+}
+constexpr bool sharesTwoIndices(const VB_INDEX_TYPE i00, const VB_INDEX_TYPE i10, const VB_INDEX_TYPE i20,
+                                const VB_INDEX_TYPE i01, const VB_INDEX_TYPE i11, VB_INDEX_TYPE &r) {
+    VB_INDEX_TYPE r0 = 0, r1 = 0;
+    if (any2(i00, i10, i20, i01, r0, r1))
+        if (any1(r0, r1, i11, r)) return true;
+    if (any2(i00, i10, i20, i11, r0, r1))
+        if (any1(r0, r1, i01, r)) return true;
+    return false;
+}
+}  // namespace
+
+void makeTriangleAdjacenyList(const std::vector<VB_INDEX_TYPE> &indices, std::vector<VB_INDEX_TYPE> &indicesAdjaceny) {
+    indicesAdjaceny.resize(indices.size() * 3);
+    // I used int64_t in the second loops below.
+    assert(indicesAdjaceny.size() <= INT64_MAX);
+
+    VB_INDEX_TYPE t0, t1, t2, a0, a1, a2, r;
+    bool b0, b1, b2;
+    auto iSize = static_cast<int64_t>(indices.size());
+
+    for (int64_t i = 0; i < static_cast<int64_t>(iSize); i += 3) {
+        // Found flags
+        b0 = b1 = b2 = false;
+        // Triangle indices
+        t0 = indices[i];
+        t1 = indices[i + 1];
+        t2 = indices[i + 2];
+        // Set the triangle indices
+        indicesAdjaceny[(i * 2)] = t0;
+        indicesAdjaceny[(i * 2) + 2] = t1;
+        indicesAdjaceny[(i * 2) + 4] = t2;
+
+        for (int64_t j = i - 3, k = i + 5; j >= 0 || k < iSize; j -= 3, k += 3) {
+            if (j >= 0) {
+                // Adjacency indices
+                a0 = indices[j];
+                a1 = indices[j + 1];
+                a2 = indices[j + 2];
+                // First edge
+                if (!b0 && sharesTwoIndices(a0, a1, a2, t0, t1, r)) {
+                    indicesAdjaceny[(i * 2) + 1] = r;
+                    b0 = true;
+                    if (b0 && b1 && b2) break;
+                }
+                // Second edge
+                if (!b1 && sharesTwoIndices(a0, a1, a2, t1, t2, r)) {
+                    indicesAdjaceny[(i * 2) + 3] = r;
+                    b1 = true;
+                    if (b0 && b1 && b2) break;
+                }
+                // Thired edge
+                if (!b2 && sharesTwoIndices(a0, a1, a2, t2, t0, r)) {
+                    indicesAdjaceny[(i * 2) + 5] = r;
+                    b2 = true;
+                    if (b0 && b1 && b2) break;
+                }
+            }
+            if (k < iSize) {
+                // Adjacency indices
+                a0 = indices[k - 2];
+                a1 = indices[k - 1];
+                a2 = indices[k];
+                // First edge
+                if (!b0 && sharesTwoIndices(a0, a1, a2, t0, t1, r)) {
+                    indicesAdjaceny[(i * 2) + 1] = r;
+                    b0 = true;
+                    if (b0 && b1 && b2) break;
+                }
+                // Second edge
+                if (!b1 && sharesTwoIndices(a0, a1, a2, t1, t2, r)) {
+                    indicesAdjaceny[(i * 2) + 3] = r;
+                    b1 = true;
+                    if (b0 && b1 && b2) break;
+                }
+                // Thired edge
+                if (!b2 && sharesTwoIndices(a0, a1, a2, t2, t0, r)) {
+                    indicesAdjaceny[(i * 2) + 5] = r;
+                    b2 = true;
+                    if (b0 && b1 && b2) break;
+                }
+            }
+        }
+    }
+}
+
 void decomposeScale(const glm::mat4 &m, glm::vec3 &scale) {
     glm::quat orientation{};
     glm::vec3 translation{};

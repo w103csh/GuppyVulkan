@@ -18,6 +18,7 @@ set(SOURCE
     FileLoader.h
     Game.cpp
     Game.h
+    Geometry.cpp
     Geometry.h
     Guppy.cpp
     Guppy.h

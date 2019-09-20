@@ -2,6 +2,7 @@
 #include "ShaderConstants.h"
 
 #include "Deferred.h"
+#include "Geometry.h"
 #include "PBR.h"
 #include "Parallax.h"
 #include "ScreenSpace.h"
@@ -196,6 +197,9 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     {SHADER::BEZIER_4_TESE, Shader::Tessellation::BEZIER_4_TESE_CREATE_INFO},
     {SHADER::TRIANGLE_TESC, Shader::Tessellation::TRIANGLE_TESC_CREATE_INFO},
     {SHADER::TRIANGLE_TESE, Shader::Tessellation::TRIANGLE_TESE_CREATE_INFO},
+    // GEOMETRY
+    {SHADER::WIREFRAME_GEOM, Shader::Geometry::WIREFRAME_CREATE_INFO},
+    {SHADER::SILHOUETTE_GEOM, Shader::Geometry::SILHOUETTE_CREATE_INFO},
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {
@@ -209,6 +213,8 @@ const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {
     // PBR
     {SHADER_LINK::PBR_FRAG, Shader::Link::PBR::FRAG_CREATE_INFO},
     {SHADER_LINK::PBR_MATERIAL, Shader::Link::PBR::MATERIAL_CREATE_INFO},
+    // GEOMETRY
+    {SHADER_LINK::GEOMETRY_FRAG, Shader::Link::Geometry::WIREFRAME_CREATE_INFO},
 };
 
 const std::map<SHADER, std::set<SHADER_LINK>> LINK_MAP = {
@@ -279,6 +285,7 @@ const std::map<SHADER, std::set<SHADER_LINK>> LINK_MAP = {
      {
          SHADER_LINK::COLOR_FRAG,
          SHADER_LINK::DEFAULT_MATERIAL,
+         SHADER_LINK::GEOMETRY_FRAG,
      }},
 };
 

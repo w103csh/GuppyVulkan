@@ -58,6 +58,9 @@ enum class SHADER {
     BEZIER_4_TESE,
     TRIANGLE_TESC,
     TRIANGLE_TESE,
+    // GEOMETRY
+    WIREFRAME_GEOM,
+    SILHOUETTE_GEOM
     // Add new to SHADER_ALL and SHADER_LINK_MAP.
 };
 
@@ -71,6 +74,7 @@ enum class SHADER_LINK {
     DEFAULT_MATERIAL,
     PBR_FRAG,
     PBR_MATERIAL,
+    GEOMETRY_FRAG,
     // Add new to SHADER_LINK_ALL and SHADER_LINK_MAP.
 };
 

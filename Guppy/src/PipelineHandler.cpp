@@ -3,6 +3,7 @@
 
 #include "ConstantsAll.h"
 #include "Deferred.h"
+#include "Geometry.h"
 #include "Material.h"
 #include "Mesh.h"
 #include "Parallax.h"
@@ -42,6 +43,13 @@ void setBase(const VkPipeline& pipeline, VkComputePipelineCreateInfo& info, bool
     }
 }
 
+constexpr bool hasAdjacencyTopology(const VkGraphicsPipelineCreateInfo& info) {
+    return info.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY ||
+           info.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_WITH_ADJACENCY ||
+           info.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY ||
+           info.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_WITH_ADJACENCY;
+}
+
 }  // namespace
 
 Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_HANDLE), maxPushConstantsSize_(UINT32_MAX) {
@@ -67,7 +75,7 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
             case PIPELINE::SCREEN_SPACE_BLUR_B:             insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::BlurB>(std::ref(*this))}); break;
             case PIPELINE::DEFERRED_MRT_TEX:                insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTTexture>(std::ref(*this))}); break;
             case PIPELINE::DEFERRED_MRT_COLOR:              insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTColor>(std::ref(*this))}); break;
-            case PIPELINE::DEFERRED_MRT_WF_COLOR:           insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTColorWireFrame>(std::ref(*this))}); break;
+            case PIPELINE::DEFERRED_MRT_WF_COLOR:           insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTColorWireframe>(std::ref(*this))}); break;
             case PIPELINE::DEFERRED_MRT_LINE:               insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTLine>(std::ref(*this))}); break;
             case PIPELINE::DEFERRED_COMBINE:                insertPair = pPipelines_.insert({type, std::make_unique<Deferred::Combine>(std::ref(*this))}); break;
             case PIPELINE::DEFERRED_SSAO:                   insertPair = pPipelines_.insert({type, std::make_unique<Deferred::SSAO>(std::ref(*this))}); break;
@@ -75,6 +83,7 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
             case PIPELINE::SHADOW_TEX:                      insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Texture>(std::ref(*this))}); break;
             case PIPELINE::TESSELLATION_BEZIER_4_DEFERRED:  insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::Bezier4Deferred>(std::ref(*this))}); break;
             case PIPELINE::TESSELLATION_TRIANGLE_DEFERRED:  insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::TriangleDeferred>(std::ref(*this))}); break;
+            case PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED:    insertPair = pPipelines_.insert({type, std::make_unique<Geometry::Silhouette>(std::ref(*this))}); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on
@@ -278,6 +287,10 @@ void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
 
                     // Give the render pass a chance to override default settings
                     pPass->overridePipelineCreateInfo(pipelineType, createInfoRes);
+
+                    if (hasAdjacencyTopology(graphicsCreateInfo)) {
+                        pPipelineBindData->usesAdjacency = true;
+                    }
 
                     // Save the old pipeline for clean up if necessary
                     if (pPipelineBindData->pipeline != VK_NULL_HANDLE)

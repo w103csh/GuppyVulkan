@@ -4,6 +4,7 @@
 #include <functional>
 #include <glm/glm.hpp>
 #include <memory>
+#include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -15,19 +16,7 @@
 #include "Mesh.h"
 #include "Obj3d.h"
 
-// clang-format off
-namespace Model { class Base; }
-// clang-format on
-
 namespace Model {
-
-using cback = std::function<void(Model::Base *)>;
-
-struct CreateInfo : public Mesh::CreateInfo {
-    Settings settings;
-    bool async = false;
-    Model::cback callback = nullptr;
-};
 
 class Handler;
 
@@ -37,6 +26,7 @@ class Base : public NonCopyable, public Handlee<Model::Handler>, public ObjInst3
          std::shared_ptr<Instance::Base> &pInstanceData);
     virtual ~Base();
 
+    const std::string MODEL_PATH;
     const PIPELINE PIPELINE_TYPE;
 
     constexpr auto getOffset() const { return offset_; }
@@ -54,6 +44,7 @@ class Base : public NonCopyable, public Handlee<Model::Handler>, public ObjInst3
     inline Model::CreateInfo getMeshCreateInfo() {
         Model::CreateInfo createInfo = {};
         createInfo.pipelineType = PIPELINE_TYPE;
+        createInfo.settings = settings_;
         return createInfo;
     }
 
@@ -65,7 +56,7 @@ class Base : public NonCopyable, public Handlee<Model::Handler>, public ObjInst3
     void updateAggregateBoundingBox(Mesh::Base *pMesh);
 
     Model::index offset_;
-    Settings settings_;
+    Mesh::Settings settings_;
 
     std::vector<Model::index> colorOffsets_;
     std::vector<Model::index> lineOffsets_;

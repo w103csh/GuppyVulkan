@@ -198,6 +198,7 @@ std::shared_ptr<Pipeline::BindData> Pipeline::Base::makeBindData(const VkPipelin
         VK_NULL_HANDLE,
         pushConstantStages,
         PUSH_CONSTANT_TYPES,
+        false,
     });
 }
 
@@ -370,7 +371,10 @@ void Pipeline::Graphics::setInfo(CreateInfoResources& createInfoRes, VkGraphicsP
     pGraphicsInfo->pInputAssemblyState = &createInfoRes.inputAssemblyStateInfo;
     pGraphicsInfo->pMultisampleState = &createInfoRes.multisampleStateInfo;
     pGraphicsInfo->pRasterizationState = &createInfoRes.rasterizationStateInfo;
-    pGraphicsInfo->pTessellationState = &createInfoRes.tessellationStateInfo;
+    if (createInfoRes.tessellationStateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO)
+        pGraphicsInfo->pTessellationState = &createInfoRes.tessellationStateInfo;
+    else
+        pGraphicsInfo->pTessellationState = nullptr;
     pGraphicsInfo->pVertexInputState = &createInfoRes.vertexInputStateInfo;
     pGraphicsInfo->pViewportState = &createInfoRes.viewportStateInfo;
 }

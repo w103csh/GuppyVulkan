@@ -45,7 +45,7 @@ Game::Settings::Settings()
       try_sample_rate_shading(true),
       try_compute_shading(true),
       try_tessellation_shading(true),
-      try_geometry_shading(false),
+      try_geometry_shading(true),
       try_wireframe_shading(true),
       enable_sample_shading(true),
       enable_double_clicks(false),

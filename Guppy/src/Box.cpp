@@ -9,12 +9,12 @@
 using namespace Mesh;
 
 namespace {
-void addPlane(const glm::mat4& t, const Geometry::CreateInfo& geoInfo, std::vector<Face>& faces) {
+void addPlane(const glm::mat4& t, const Mesh::Geometry::Info& geoInfo, std::vector<Face>& faces) {
     auto planeFaces = Plane::make(geoInfo);
     for (auto& face : planeFaces) face.transform(t);
     faces.insert(faces.end(), planeFaces.begin(), planeFaces.end());
 }
-void addFaces(Base* pMesh, const Geometry::CreateInfo& geoInfo) {
+void addFaces(Base* pMesh, const Mesh::Geometry::Info& geoInfo) {
     // Mimic approach in loadObj in FileLoader. This way everything is
     // using the same ideas (for testing)...
     unique_vertices_map_non_smoothing vertexMap = {};
@@ -23,7 +23,7 @@ void addFaces(Base* pMesh, const Geometry::CreateInfo& geoInfo) {
 }
 }  // namespace
 
-std::vector<Face> Box::make(const Geometry::CreateInfo& geoInfo) {
+std::vector<Face> Box::make(const Mesh::Geometry::Info& geoInfo) {
     auto offset = Plane::DEFAULT_DIMENSION / 2.0f;
     std::vector<Face> faces;
 
@@ -54,7 +54,7 @@ std::vector<Face> Box::make(const Geometry::CreateInfo& geoInfo) {
 Box::Color::Color(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
                   std::shared_ptr<Material::Base>& pMaterial)
     : Mesh::Color(handler, "Color Box", pCreateInfo, pInstanceData, pMaterial) {
-    addFaces(this, pCreateInfo->geometryCreateInfo);
+    addFaces(this, pCreateInfo->settings.geometryInfo);
     updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
 }
@@ -62,7 +62,7 @@ Box::Color::Color(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Ins
 Box::Texture::Texture(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
                       std::shared_ptr<Material::Base>& pMaterial)
     : Mesh::Texture(handler, "Texture Box", pCreateInfo, pInstanceData, pMaterial) {
-    addFaces(this, pCreateInfo->geometryCreateInfo);
+    addFaces(this, pCreateInfo->settings.geometryInfo);
     updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
 }

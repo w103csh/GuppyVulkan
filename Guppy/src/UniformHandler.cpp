@@ -53,6 +53,9 @@ Uniform::Handler::Handler(Game* pGame)
           // TESSELLATION
           Uniform::Manager<Uniform::Tessellation::Default::Base>  //
           {"Tessellation Data", UNIFORM::TESSELLATION_DEFAULT, 2, "_U_TESS_DEF"},
+          // GEOMETRY
+          Uniform::Manager<Uniform::Geometry::Default::Base>  //
+          {"Geomerty Wireframe", UNIFORM::GEOMETRY_DEFAULT, 1, "_U_GEOM_WF"},
           // STORAGE
           Uniform::Manager<Storage::PostProcess::Base>  //
           {"Storage Default", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
@@ -75,6 +78,7 @@ std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const
             case UNIFORM::SCREEN_SPACE_DEFAULT:         return uniScrDefMgr().pItems;
             case UNIFORM::DEFERRED_SSAO:                return uniDfrSSAOMgr().pItems;
             case UNIFORM::TESSELLATION_DEFAULT:         return uniTessDefMgr().pItems;
+            case UNIFORM::GEOMETRY_DEFAULT:             return uniGeomDefMgr().pItems;
             case UNIFORM::SHADOW_DATA:                  return uniShdwDataMgr().pItems;
             default:                                    assert(false); exit(EXIT_FAILURE);
         }
@@ -114,6 +118,7 @@ void Uniform::Handler::init() {
     uniDfrSSAOMgr().init(shell().context(), settings());    ++count;
     uniShdwDataMgr().init(shell().context(), settings());   ++count;
     uniTessDefMgr().init(shell().context(), settings());    ++count;
+    uniGeomDefMgr().init(shell().context(), settings());     ++count;
     strPstPrcMgr().init(shell().context(), settings());     ++count;
     assert(count == managers_.size());
     // clang-format on
@@ -139,6 +144,7 @@ void Uniform::Handler::reset() {
     uniDfrSSAOMgr().destroy(dev);   ++count;
     uniShdwDataMgr().destroy(dev);  ++count;
     uniTessDefMgr().destroy(dev);   ++count;
+    uniGeomDefMgr().destroy(dev);    ++count;
     strPstPrcMgr().destroy(dev);    ++count;
     assert(count == managers_.size());
     // clang-format on
@@ -170,8 +176,8 @@ void Uniform::Handler::createCameras() {
     {
         assert(camDefPersMgr().pItems.size() == 2);  // sister assert for lights
 
-        createInfo.eye = {2.0f, 10.5f, 0.0f};
-        createInfo.center = {0.0f, 0.0f, 0.0f};
+        createInfo.eye = {5.0f, 10.5f, 0.0f};
+        createInfo.center = {-2.0f, 0.0f, 0.0f};
         createInfo.n = 1.0f;
         createInfo.f = 21.0f;
         // createInfo.fov = 180.0f;
@@ -290,6 +296,12 @@ void Uniform::Handler::createMiscellaneous() {
         // The values are const and set in the constructor.
         uniShdwDataMgr().insert(dev, true);
     }
+
+    // GEOMETRY
+    {
+        // WIREFRAME
+        { uniGeomDefMgr().insert(dev, true); }
+    }
 }
 
 void Uniform::Handler::createTessellationData() {
@@ -356,6 +368,11 @@ void Uniform::Handler::attachSwapchain() {
 
     // Any items that rely on the number of framebuffers, should be validated here. This needs to
     // be thought through.
+
+    // GEOMETRY (WIREFRAME)
+    auto& geomWireframe = uniGeomDefMgr().getTypedItem(0);
+    geomWireframe.updateViewport(shell().context().extent);
+    update(geomWireframe);
 }
 
 void Uniform::Handler::update() {

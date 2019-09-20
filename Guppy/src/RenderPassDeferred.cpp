@@ -25,6 +25,7 @@ const CreateInfo Deferred_CREATE_INFO = {
         PIPELINE::DEFERRED_MRT_COLOR,
         PIPELINE::DEFERRED_MRT_WF_COLOR,
         PIPELINE::TESSELLATION_TRIANGLE_DEFERRED,
+        // PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED,
         PIPELINE::DEFERRED_MRT_TEX,
         // PIPELINE::DEFERRED_SSAO,
         PIPELINE::DEFERRED_COMBINE,
@@ -98,12 +99,31 @@ void Base::record(const uint8_t frameIndex) {
         auto& pScene = handler().sceneHandler().getActiveScene();
 
         for (const auto& pPipelineBindData : pipelineBindDataList_.getValues()) {
+            // Push constant
+            switch (pPipelineBindData->type) {
+                case PIPELINE::TESSELLATION_TRIANGLE_DEFERRED:
+                case PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED:
+                case PIPELINE::TESSELLATION_BEZIER_4_DEFERRED:
+                case PIPELINE::DEFERRED_MRT_COLOR:
+                case PIPELINE::DEFERRED_MRT_LINE: {
+                    ::Deferred::PushConstant pushConstant = {::Deferred::PASS_FLAG::NONE};
+                    vkCmdPushConstants(priCmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                                       static_cast<uint32_t>(sizeof(::Deferred::PushConstant)), &pushConstant);
+                } break;
+                case PIPELINE::DEFERRED_MRT_WF_COLOR: {
+                    ::Deferred::PushConstant pushConstant = {::Deferred::PASS_FLAG::WIREFRAME};
+                    vkCmdPushConstants(priCmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                                       static_cast<uint32_t>(sizeof(::Deferred::PushConstant)), &pushConstant);
+                } break;
+                default:;
+            }
+            // Draw
             switch (pPipelineBindData->type) {
                 case PIPELINE::DEFERRED_COMBINE: {
                     // TODO: this definitely only needs to be recorded once per swapchain creation!!!
-                    handler().getScreenQuad()->draw(TYPE, pipelineBindDataList_.getValue(PIPELINE::DEFERRED_COMBINE),
-                                                    getDescSetBindDataMap(PIPELINE::DEFERRED_COMBINE).begin()->second,
-                                                    priCmd, frameIndex);
+                    handler().getScreenQuad()->draw(TYPE, pipelineBindDataList_.getValue(pPipelineBindData->type),
+                                                    getDescSetBindDataMap(pPipelineBindData->type).begin()->second, priCmd,
+                                                    frameIndex);
                 } break;
                 case PIPELINE::DEFERRED_SSAO: {
                     // This hasn't been tested in a long time. Might work to just let through.

@@ -131,7 +131,8 @@ class Handler : public Game::Handler {
         instInfo.data.push_back({obj.model()});
         auto &pInstanceData = makeInstanceData(&instInfo);
 
-        make<VisualHelper::ModelSpace>(lineMeshes_, &meshInfo, &matInfo, pInstanceData);
+        auto offset = make<VisualHelper::ModelSpace>(lineMeshes_, &meshInfo, &matInfo, pInstanceData)->getOffset();
+        addOffsetToScene(MESH::LINE, offset);
     }
     template <class TMesh>
     void makeTangentSpaceVisualHelper(TMesh pMesh, float lineSize = 0.1f) {
@@ -141,7 +142,9 @@ class Handler : public Game::Handler {
         // MATERIAL
         Material::Default::CreateInfo matInfo = {};
 
-        make<VisualHelper::TangentSpace>(lineMeshes_, &meshInfo, &matInfo, pMesh->pInstanceData_, pMesh);
+        auto offset =
+            make<VisualHelper::TangentSpace>(lineMeshes_, &meshInfo, &matInfo, pMesh->pInstanceData_, pMesh)->getOffset();
+        addOffsetToScene(MESH::LINE, offset);
     }
     void makeSkyBox() { assert(false); }
 
@@ -179,6 +182,9 @@ class Handler : public Game::Handler {
 
    private:
     void reset() override;
+
+    // TODO: Not sure this should be here.
+    void addOffsetToScene(const MESH type, const Mesh::index offset);
 
     // MESH
     // COLOR

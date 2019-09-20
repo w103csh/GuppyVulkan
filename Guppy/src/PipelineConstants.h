@@ -51,6 +51,8 @@ enum class PIPELINE : uint32_t {
     // TESSELLATION
     TESSELLATION_BEZIER_4_DEFERRED,
     TESSELLATION_TRIANGLE_DEFERRED,
+    // GEOMETRY
+    GEOMETRY_SILHOUETTE_DEFERRED,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP
@@ -70,6 +72,7 @@ struct BindData {
     VkPipeline pipeline;
     VkShaderStageFlags pushConstantStages;
     const std::vector<PUSH_CONSTANT> pushConstantTypes;
+    bool usesAdjacency;
 };
 
 // Map of pipeline/pass to bind data shared pointers

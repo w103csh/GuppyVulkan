@@ -3,7 +3,6 @@
 
 #include "Face.h"
 #include "FileLoader.h"
-#include "MeshConstants.h"
 #include "PBR.h"  // TODO: this is bad
 // HANDLERS
 #include "DescriptorHandler.h"
@@ -36,7 +35,8 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
       indexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
       pLdgRes_(nullptr),
       pMaterial_(pMaterial),
-      offset_(BAD_OFFSET)
+      offset_(BAD_OFFSET),
+      settings_(pCreateInfo->settings)
 //
 {
     if (PIPELINE_TYPE == PIPELINE::ALL_ENUM && PASS_TYPES.empty()) {
@@ -63,6 +63,8 @@ Mesh::Base::~Base() = default;
 void Mesh::Base::prepare() {
     assert(status_ ^ STATUS::READY);
     assert(getOffset() != BAD_OFFSET);
+
+    if (settings_.needAdjacenyList) makeAdjacenyList();
 
     if (status_ == STATUS::PENDING_BUFFERS) {
         loadBuffers();
@@ -104,6 +106,12 @@ void Mesh::Base::prepare() {
     }
 }
 
+void Mesh::Base::makeAdjacenyList() {
+    // Only have done triangle adjacency so far.
+    assert(TYPE == MESH::COLOR || TYPE == MESH::TEXTURE);
+    helpers::makeTriangleAdjacenyList(indices_, indicesAdjaceny_);
+}
+
 const Descriptor::Set::BindData& Mesh::Base::getDescriptorSetBindData(const PASS& passType) const {
     for (const auto& [passTypes, bindData] : descSetBindDataMap_) {
         if (passTypes.find(passType) != passTypes.end()) return bindData;
@@ -129,6 +137,18 @@ void Mesh::Base::loadBuffers() {
         stgRes = {};
         createBufferData(
             pLdgRes_->transferCmd, stgRes, getIndexBufferSize(), getIndexData(), indexRes_,
+            static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
+            "index");
+        pLdgRes_->stgResources.push_back(std::move(stgRes));
+    }
+
+    // Index adjacency buffer
+    if (indicesAdjaceny_.size()) {
+        // TODO: I should probably either create this buffer or the normal index buffer. If you
+        // update this then you should also do this everywhere like "updateBuffers" for example.
+        stgRes = {};
+        createBufferData(
+            pLdgRes_->transferCmd, stgRes, getIndexBufferAdjSize(), indicesAdjaceny_.data(), indexAdjacencyRes_,
             static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
             "index");
         pLdgRes_->stgResources.push_back(std::move(stgRes));
@@ -225,8 +245,17 @@ void Mesh::Base::updateBuffers() {
     if (getIndexCount()) {
         bufferSize = getIndexBufferSize(true);
         vk::assert_success(vkMapMemory(dev, indexRes_.memory, 0, indexRes_.memoryRequirements.size, 0, &pData));
-        memcpy(pData, getVertexData(), static_cast<size_t>(bufferSize));
+        memcpy(pData, getIndexData(), static_cast<size_t>(bufferSize));
         vkUnmapMemory(dev, indexRes_.memory);
+    }
+
+    // INDEX BUFFER (ADJACENCY)
+    if (indicesAdjaceny_.size()) {
+        bufferSize = getIndexBufferAdjSize(true);
+        vk::assert_success(
+            vkMapMemory(dev, indexAdjacencyRes_.memory, 0, indexAdjacencyRes_.memoryRequirements.size, 0, &pData));
+        memcpy(pData, indicesAdjaceny_.data(), static_cast<size_t>(bufferSize));
+        vkUnmapMemory(dev, indexAdjacencyRes_.memory);
     }
 }
 
@@ -424,7 +453,19 @@ void Mesh::Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::Bind
     );
 
     // TODO: clean these up!!
-    if (indices_.size()) {
+    if (pPipelineBindData->usesAdjacency) {
+        assert(indicesAdjaceny_.size() && indexAdjacencyRes_.buffer != VK_NULL_HANDLE);
+        // TODO: Make index type value dynamic.
+        vkCmdBindIndexBuffer(cmd, indexAdjacencyRes_.buffer, 0, VK_INDEX_TYPE_UINT32);
+        vkCmdDrawIndexed(                                    //
+            cmd,                                             // VkCommandBuffer commandBuffer
+            static_cast<uint32_t>(indicesAdjaceny_.size()),  // uint32_t indexCount
+            getInstanceCount(),                              // uint32_t instanceCount
+            0,                                               // uint32_t firstIndex
+            0,                                               // int32_t vertexOffset
+            getInstanceFirstInstance()                       // uint32_t firstInstance
+        );
+    } else if (indices_.size()) {
         // TODO: Make index type value dynamic.
         vkCmdBindIndexBuffer(cmd, indexRes_.buffer, 0, VK_INDEX_TYPE_UINT32);
         vkCmdDrawIndexed(               //
@@ -473,7 +514,7 @@ Mesh::Color::Color(Mesh::Handler& handler, const GenericCreateInfo* pCreateInfo,
            pInstanceData,                                       //
            pMaterial} {
     assert(vertices_.empty() && pCreateInfo->faces.size());
-    if (pCreateInfo->smoothNormals) {
+    if (pCreateInfo->settings.geometryInfo.smoothNormals) {
         unique_vertices_map_smoothing vertexMap = {};
         for (auto& face : pCreateInfo->faces) const_cast<Face&>(face).indexVertices(vertexMap, this);
     } else {

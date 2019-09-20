@@ -7,7 +7,7 @@
 #include <unordered_map>
 
 #include "Helpers.h"
-#include "MeshConstants.h"
+#include "Mesh.h"
 #include "Vertex.h"
 
 /*  This is used to store unique vertex information when loading a mesh from a file. The key is a
@@ -15,15 +15,13 @@
     creating more than one mesh based on the vertices, you can smooth vertices and attempt to
     index as many of the vertices as possible.
 */
-typedef std::unordered_multimap<Vertex::Complete, std::pair<size_t, VB_INDEX_TYPE>,
-                                Vertex::Complete::hash_vertex_complete_smoothing,
-                                Vertex::Complete::hash_vertex_complete_smoothing>
-    unique_vertices_map_smoothing;
+using unique_vertices_map_smoothing = std::unordered_multimap<Vertex::Complete, std::pair<size_t, VB_INDEX_TYPE>,
+                                                              Vertex::Complete::hash_vertex_complete_smoothing,
+                                                              Vertex::Complete::hash_vertex_complete_smoothing>;
 
-typedef std::unordered_multimap<Vertex::Complete, std::pair<size_t, VB_INDEX_TYPE>,
-                                Vertex::Complete::hash_vertex_complete_non_smoothing,
-                                Vertex::Complete::hash_vertex_complete_non_smoothing>
-    unique_vertices_map_non_smoothing;
+using unique_vertices_map_non_smoothing = std::unordered_multimap<Vertex::Complete, std::pair<size_t, VB_INDEX_TYPE>,
+                                                                  Vertex::Complete::hash_vertex_complete_non_smoothing,
+                                                                  Vertex::Complete::hash_vertex_complete_non_smoothing>;
 
 class Face {
    public:

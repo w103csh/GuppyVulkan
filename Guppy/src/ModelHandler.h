@@ -102,7 +102,7 @@ class Handler : public Game::Handler {
 
         // Load .obj data into mesh
         // (The map types have comparison predicates that smooth or not)
-        if (model.getSettings().smoothNormals) {
+        if (model.getSettings().geometryInfo.smoothNormals) {
             FileLoader::loadObjData<unique_vertices_map_smoothing>(data, pMeshes, model.getSettings());
         } else {
             FileLoader::loadObjData<unique_vertices_map_non_smoothing>(data, pMeshes, model.getSettings());
@@ -125,7 +125,7 @@ class Handler : public Game::Handler {
         if (data.materials.empty()) {
             makeTextureMesh(model, pMeshes, &materialCreateInfo, pInstanceData);
         } else {
-            auto modelDirectory = helpers::getFilePath(model.getSettings().modelPath);
+            auto modelDirectory = helpers::getFilePath(model.MODEL_PATH);
             for (auto& tinyobj_mat : data.materials) {
                 makeTexture(tinyobj_mat, modelDirectory, &materialCreateInfo);
                 makeTextureMesh(model, pMeshes, &materialCreateInfo, pInstanceData);
@@ -137,7 +137,7 @@ class Handler : public Game::Handler {
 
         // Load .obj data into mesh
         // (The map types have comparison predicates that smooth or not)
-        if (model.getSettings().smoothNormals) {
+        if (model.getSettings().geometryInfo.smoothNormals) {
             FileLoader::loadObjData<unique_vertices_map_smoothing>(data, pMeshes, model.getSettings());
         } else {
             FileLoader::loadObjData<unique_vertices_map_non_smoothing>(data, pMeshes, model.getSettings());

@@ -1,4 +1,3 @@
-
 #ifndef MESH_H
 #define MESH_H
 
@@ -24,17 +23,6 @@ namespace Scene         { class Handler; }
 // clang-format on
 
 namespace Mesh {
-
-using index = uint32_t;
-constexpr Mesh::index BAD_OFFSET = UINT32_MAX;
-
-using CreateInfo = struct {
-    PIPELINE pipelineType = PIPELINE::ALL_ENUM;
-    bool selectable = true;
-    bool mappable = false;
-    Geometry::CreateInfo geometryCreateInfo = {};
-    std::set<PASS> passTypes = Uniform::PASS_ALL_SET;
-};
 
 struct GenericCreateInfo;
 class Handler;
@@ -140,6 +128,13 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
         if (assert) assert(bufferSize == indexRes_.memoryRequirements.size);
         return bufferSize;
     }
+    // INDEX (ADJACENCY)
+    virtual void makeAdjacenyList();
+    inline VkDeviceSize getIndexBufferAdjSize(bool assert = false) const {
+        VkDeviceSize bufferSize = sizeof(indicesAdjaceny_[0]) * indicesAdjaceny_.size();
+        if (assert) assert(bufferSize == indexAdjacencyRes_.memoryRequirements.size);
+        return bufferSize;
+    }
 
     FlagBits status_;
 
@@ -153,6 +148,8 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     BufferResource vertexRes_;
     std::vector<VB_INDEX_TYPE> indices_;
     BufferResource indexRes_;
+    std::vector<VB_INDEX_TYPE> indicesAdjaceny_;
+    BufferResource indexAdjacencyRes_;
     std::unique_ptr<Loading::Resources> pLdgRes_;
     std::shared_ptr<Material::Base> pMaterial_;
 
@@ -163,6 +160,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     void bindPushConstants(VkCommandBuffer cmd) const;  // TODO: I hate this...
 
     Mesh::index offset_;
+    const Settings settings_;
 };
 
 // **********************

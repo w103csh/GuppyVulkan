@@ -2,6 +2,8 @@
 #include "MeshHandler.h"
 
 #include "Shell.h"
+// HANDLERS
+#include "SceneHandler.h"
 
 Mesh::Handler::Handler(Game* pGame)
     : Game::Handler(pGame),                                      //
@@ -26,18 +28,6 @@ bool Mesh::Handler::checkOffset(const MESH type, const Mesh::index offset) {
             assert(false);
             exit(EXIT_FAILURE);
     }
-}
-
-void Mesh::Handler::reset() {
-    // MESHES
-    for (auto& pMesh : colorMeshes_) pMesh->destroy();
-    colorMeshes_.clear();
-    for (auto& pMesh : lineMeshes_) pMesh->destroy();
-    lineMeshes_.clear();
-    for (auto& pMesh : texMeshes_) pMesh->destroy();
-    texMeshes_.clear();
-    // INSTANCE
-    instDefMgr_.destroy(shell().context().dev);
 }
 
 void Mesh::Handler::update() {
@@ -84,4 +74,20 @@ void Mesh::Handler::update() {
 void Mesh::Handler::removeMesh(std::unique_ptr<Mesh::Base>& pMesh) {
     // TODO...
     assert(false);
+}
+
+void Mesh::Handler::reset() {
+    // MESHES
+    for (auto& pMesh : colorMeshes_) pMesh->destroy();
+    colorMeshes_.clear();
+    for (auto& pMesh : lineMeshes_) pMesh->destroy();
+    lineMeshes_.clear();
+    for (auto& pMesh : texMeshes_) pMesh->destroy();
+    texMeshes_.clear();
+    // INSTANCE
+    instDefMgr_.destroy(shell().context().dev);
+}
+
+void Mesh::Handler::addOffsetToScene(const MESH type, const Mesh::index offset) {
+    sceneHandler().getActiveScene()->addMeshIndex(type, offset);
 }
