@@ -27,13 +27,13 @@ void getObjData(const Shell &sh, tinyobj_data &data);
 
 /* BECUASE TEMPLATES ARE STUPID ALL OF THIS CODE NEEDS TO BE IN THE HEADER */
 template <typename TMap, class TVertex>
-void loadObjData(const tinyobj_data &data, std::vector<TVertex *> &pMeshes, const Model::Settings &settings) {
+void loadObjData(const tinyobj_data &data, std::vector<TVertex *> &pMeshes, const Mesh::Settings &settings) {
     // Map of unique vertices for indexed drawing, and calculating smoothing groups.
     TMap vertexMap;
     // std::vector<std::pair<Vertex::Complete, size_t>> uniqueVertices1;
     // std::vector<std::pair<Vertex::Complete, size_t>> uniqueVertices2;
 
-    bool useColors = !settings.faceVertexColorsRGB && !data.attrib.colors.empty();
+    bool useColors = !settings.geometryInfo.faceVertexColorsRGB && !data.attrib.colors.empty();
     bool useNormals = !data.attrib.normals.empty();
     bool useTexCoords = !data.attrib.texcoords.empty();
     bool hasNormalMap = false;
@@ -131,7 +131,7 @@ void loadObjData(const tinyobj_data &data, std::vector<TVertex *> &pMeshes, cons
                     }
                 }
             }
-            if (settings.reverseFaceWinding) face.reverseWinding();
+            if (settings.geometryInfo.reverseFaceWinding) face.reverseWinding();
             face.indexVertices(vertexMap, pMeshes, materialOffset);
         }
     }

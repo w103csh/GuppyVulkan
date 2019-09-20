@@ -45,16 +45,14 @@ const CreateInfo TRIANGLE_TESE_CREATE_INFO = {
 
 namespace Uniform {
 namespace Tessellation {
-namespace Default {
 
-Base::Base(const Buffer::Info&& info, DATA* pData)
+Default::Base::Base(const Buffer::Info&& info, DATA* pData)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
       Buffer::DataItem<DATA>(pData)                          //
 {
     dirty = true;
 }
 
-}  // namespace Default
 }  // namespace Tessellation
 }  // namespace Uniform
 
@@ -139,6 +137,8 @@ const Pipeline::CreateInfo BEZIER_4_CREATE_INFO = {
         DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT,
         DESCRIPTOR_SET::UNIFORM_TESSELLATION_DEFAULT,
     },
+    {},
+    {PUSH_CONSTANT::DEFERRED},
 };
 Bezier4Deferred::Bezier4Deferred(Handler& handler) : Base(handler, &BEZIER_4_CREATE_INFO, 4) {}
 
@@ -159,6 +159,7 @@ const Pipeline::CreateInfo TRIANGLE_DEFERRED_CREATE_INFO = {
     Descriptor::OffsetsMap::Type{
         {UNIFORM::TESSELLATION_DEFAULT, {1}},
     },
+    {PUSH_CONSTANT::DEFERRED},
 };
 TriangleDeferred::TriangleDeferred(Handler& handler) : Base(handler, &TRIANGLE_DEFERRED_CREATE_INFO, 6) {}
 

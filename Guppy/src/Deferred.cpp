@@ -393,6 +393,7 @@ const CreateInfo MRT_COLOR_FRAG_CREATE_INFO = {
     {
         SHADER_LINK::COLOR_FRAG,
         SHADER_LINK::DEFAULT_MATERIAL,
+        SHADER_LINK::GEOMETRY_FRAG,
     },
 };
 
@@ -445,8 +446,8 @@ void MRTTexture::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 }
 
 //// MRT (TEXTURE WIREFRAME)
-// MRTTextureWireFrame::MRTTextureWireFrame(Handler& handler) : MRTTexture(handler) {}
-// void MRTTextureWireFrame::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+// MRTTextureWireframe::MRTTextureWireframe(Handler& handler) : MRTTexture(handler) {}
+// void MRTTextureWireframe::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
 //    MRTTexture::getRasterizationStateInfoResources(createInfoRes);
 //    createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_LINE;
 //    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_NONE;
@@ -461,6 +462,8 @@ const Pipeline::CreateInfo MRT_COLOR_CREATE_INFO = {
         DESCRIPTOR_SET::UNIFORM_DEFAULT,
         // DESCRIPTOR_SET::SAMPLER_DEFAULT,
     },
+    {},
+    {PUSH_CONSTANT::DEFERRED},
 };
 MRTColor::MRTColor(Pipeline::Handler& handler) : Graphics(handler, &MRT_COLOR_CREATE_INFO) {}
 MRTColor::MRTColor(Pipeline::Handler& handler, const CreateInfo* pCreateInfo) : Graphics(handler, pCreateInfo) {}
@@ -473,11 +476,20 @@ void MRTColor::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 const Pipeline::CreateInfo MRT_COLOR_WF_CREATE_INFO = {
     PIPELINE::DEFERRED_MRT_WF_COLOR,
     "Deferred Multiple Render Target Color Wireframe Pipeline",
-    {SHADER::DEFERRED_MRT_COLOR_CS_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
-    {DESCRIPTOR_SET::UNIFORM_DEFAULT},
+    {
+        SHADER::DEFERRED_MRT_COLOR_CS_VERT,
+        // SHADER::WIREFRAME_GEOM,
+        SHADER::DEFERRED_MRT_COLOR_FRAG,
+    },
+    {
+        DESCRIPTOR_SET::UNIFORM_DEFAULT,
+        DESCRIPTOR_SET::UNIFORM_GEOMETRY_DEFAULT,
+    },
+    {},
+    {PUSH_CONSTANT::DEFERRED},
 };
-MRTColorWireFrame::MRTColorWireFrame(Handler& handler) : MRTColor(handler, &MRT_COLOR_WF_CREATE_INFO) {}
-void MRTColorWireFrame::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+MRTColorWireframe::MRTColorWireframe(Handler& handler) : MRTColor(handler, &MRT_COLOR_WF_CREATE_INFO) {}
+void MRTColorWireframe::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     MRTColor::getRasterizationStateInfoResources(createInfoRes);
     createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_LINE;
     createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_NONE;
@@ -492,6 +504,8 @@ const Pipeline::CreateInfo MRT_LINE_CREATE_INFO = {
         DESCRIPTOR_SET::UNIFORM_DEFAULT,
         // DESCRIPTOR_SET::SAMPLER_DEFAULT,
     },
+    {},
+    {PUSH_CONSTANT::DEFERRED},
 };
 MRTLine::MRTLine(Pipeline::Handler& handler) : Graphics(handler, &MRT_LINE_CREATE_INFO) {}
 

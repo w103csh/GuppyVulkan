@@ -7,7 +7,7 @@
 using namespace Mesh;
 
 namespace {
-void addFaces(Base* pMesh, const Geometry::CreateInfo& geoInfo) {
+void addFaces(Base* pMesh, const Mesh::Geometry::Info& geoInfo) {
     // Mimic approach in loadObj in FileLoader. This way everything is
     // using the same ideas (for testing)...
     unique_vertices_map_smoothing vertexMap = {};
@@ -16,7 +16,7 @@ void addFaces(Base* pMesh, const Geometry::CreateInfo& geoInfo) {
 }
 }  // namespace
 
-std::vector<Face> Plane::make(const Geometry::CreateInfo& geoInfo) {
+std::vector<Face> Plane::make(const Mesh::Geometry::Info& geoInfo) {
     float width, height;
     width = height = Plane::DEFAULT_DIMENSION;
     float l = (width / 2 * -1), r = (width / 2);
@@ -57,7 +57,7 @@ std::vector<Face> Plane::make(const Geometry::CreateInfo& geoInfo) {
         {}                         // bitangent
     };
 
-    if (geoInfo.reverseWinding) {
+    if (geoInfo.reverseFaceWinding) {
         faces.back().reverseWinding();
         // faces.back().setSmoothingGroup(1);
     }
@@ -95,7 +95,7 @@ std::vector<Face> Plane::make(const Geometry::CreateInfo& geoInfo) {
         {}                         // bitangent
     };
 
-    if (geoInfo.reverseWinding) {
+    if (geoInfo.reverseFaceWinding) {
         faces.back().reverseWinding();
         // faces.back().setSmoothingGroup(1);
     }
@@ -110,7 +110,7 @@ std::vector<Face> Plane::make(const Geometry::CreateInfo& geoInfo) {
 Plane::Color::Color(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
                     std::shared_ptr<Material::Base>& pMaterial)
     : Mesh::Color(handler, "Color Plane", pCreateInfo, pInstanceData, pMaterial) {
-    addFaces(this, pCreateInfo->geometryCreateInfo);
+    addFaces(this, pCreateInfo->settings.geometryInfo);
     updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
 }
@@ -118,7 +118,7 @@ Plane::Color::Color(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<I
 Plane::Texture::Texture(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
                         std::shared_ptr<Material::Base>& pMaterial)
     : Mesh::Texture(handler, "Texture Plane", pCreateInfo, pInstanceData, pMaterial) {
-    addFaces(this, pCreateInfo->geometryCreateInfo);
+    addFaces(this, pCreateInfo->settings.geometryInfo);
     updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
 }

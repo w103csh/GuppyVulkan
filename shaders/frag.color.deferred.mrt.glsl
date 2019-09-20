@@ -4,7 +4,7 @@
 // DECLARATIONS
 vec3 setColorDefaults();
 float getMaterialShininess();
-
+void geomShade(inout vec4 color);
 // IN
 layout(location=0) in vec3 fragPosition;
 
@@ -31,4 +31,6 @@ void main() {
 	outDiffuse = vec4(Kd, opacity);
 	outAmbient = vec4(Ka, 0.0);
 	outSpecular = vec4(Ks, 0.0);
+
+    geomShade(outDiffuse);
 }

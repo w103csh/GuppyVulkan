@@ -11,7 +11,9 @@ constexpr bool DO_MSAA = true;
 
 // clang-format off
 using PASS_FLAG = enum : FlagBits {
+    NONE =              0x00000000,
     DONT_SHADE =        0x00000001,
+    WIREFRAME =         0x00000002,
 };
 // clang-format on
 
@@ -126,9 +128,9 @@ class MRTTexture : public Graphics {
 };
 
 //// MRT (TEXTURE WIREFRAME)
-// class MRTTextureWireFrame : public MRTTexture {
+// class MRTTextureWireframe : public MRTTexture {
 //   public:
-//    MRTTextureWireFrame(Handler& handler);
+//    MRTTextureWireframe(Handler& handler);
 //    void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
 //};
 
@@ -143,9 +145,9 @@ class MRTColor : public Graphics {
 };
 
 // MRT (COLOR WIREFRAME)
-class MRTColorWireFrame : public MRTColor {
+class MRTColorWireframe : public MRTColor {
    public:
-    MRTColorWireFrame(Handler& handler);
+    MRTColorWireframe(Handler& handler);
     void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
 };
 

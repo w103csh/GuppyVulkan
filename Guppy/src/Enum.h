@@ -193,6 +193,8 @@ enum class UNIFORM {
     SHADOW_DATA,
     // TESSELLATION
     TESSELLATION_DEFAULT,
+    // GEOMETRY
+    GEOMETRY_DEFAULT,
     //
     DONT_CARE,
 };

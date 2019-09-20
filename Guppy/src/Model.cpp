@@ -10,6 +10,7 @@ Model::Base::Base(Model::Handler &handler, const Model::index offset, const Mode
                   std::shared_ptr<Instance::Base> &pInstanceData)
     : Handlee(handler),
       ObjInst3d(pInstanceData),
+      MODEL_PATH(pCreateInfo->modelPath),
       PIPELINE_TYPE(pCreateInfo->pipelineType),
       offset_(offset),
       settings_(pCreateInfo->settings) {}

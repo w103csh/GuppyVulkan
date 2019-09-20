@@ -114,6 +114,15 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
                 surrogatePipelineTypes.erase(itSurrogate);
             }
 
+            // SILHOUETTE
+            itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(),
+                                    PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED);
+            if (itSurrogate != surrogatePipelineTypes.end()) {
+                pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(PIPELINE::SHADOW_COLOR),
+                               priCmd, secCmd, frameIndex, &getDescSetBindDataMap(PIPELINE::SHADOW_COLOR).begin()->second);
+                surrogatePipelineTypes.erase(itSurrogate);
+            }
+
             vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
         }
 

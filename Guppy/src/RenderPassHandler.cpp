@@ -121,7 +121,7 @@ void RenderPass::Handler::init() {
         meshInfo.passTypes.clear();
     }
     meshInfo.selectable = false;
-    meshInfo.geometryCreateInfo.transform = helpers::affine(glm::vec3{2.0f});
+    meshInfo.settings.geometryInfo.transform = helpers::affine(glm::vec3{2.0f});
 
     Instance::Default::CreateInfo defInstInfo = {};
     Material::Default::CreateInfo defMatInfo = {};

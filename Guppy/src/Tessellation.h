@@ -1,6 +1,8 @@
 #ifndef TESSELLATION_H
 #define TESSELLATION_H
 
+#include <glm/glm.hpp>
+
 #include "BufferItem.h"
 #include "ConstantsAll.h"
 #include "Descriptor.h"

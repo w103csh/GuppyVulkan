@@ -15,7 +15,7 @@ constexpr auto DEFAULT_DIMENSION = 1.0f;
 constexpr auto VERTEX_SIZE = 4;
 constexpr auto INDEX_SIZE = 6;
 
-std::vector<Face> make(const Geometry::CreateInfo& geoInfo = {});
+std::vector<Face> make(const Mesh::Geometry::Info& geoInfo = {});
 
 class Color : public Mesh::Color {
     friend class Handler;

@@ -206,6 +206,8 @@ static glm::vec3 triangleNormal(const glm::vec3 &a, const glm::vec3 &b, const gl
 
 static glm::vec3 positionOnLine(const glm::vec3 &a, const glm::vec3 &b, float t) { return a + ((b - a) * t); }
 
+void makeTriangleAdjacenyList(const std::vector<VB_INDEX_TYPE> &indices, std::vector<VB_INDEX_TYPE> &indiciesAdjacency);
+
 static void destroyCommandBuffers(const VkDevice &dev, const VkCommandPool &pool, std::vector<VkCommandBuffer> &cmds) {
     if (!cmds.empty()) {
         vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(cmds.size()), cmds.data());

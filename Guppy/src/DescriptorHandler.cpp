@@ -8,6 +8,7 @@
 #include <variant>
 
 #include "Deferred.h"
+#include "Geometry.h"
 #include "Mesh.h"
 #include "Parallax.h"
 #include "PBR.h"
@@ -58,6 +59,7 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::SAMPLER_SHADOW:                            pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_SHADOW_OFFSET:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::SAMPLER_OFFSET_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_TESSELLATION_DEFAULT:              pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Tessellation::DEFAULT_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::UNIFORM_GEOMETRY_DEFAULT:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Geometry::DEFAULT_CREATE_INFO)); break;
             default: assert(false);  // add new pipelines here
                 // clang-format on
         }
@@ -683,7 +685,8 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
 
             uniformHandler().getWriteInfos(bindingInfo.descType, itOffsetsMap->second, itInfoMap->second);
 
-            assert(itInfoMap->second.bufferInfos.size() == (itInfoMap->second.uniqueDataSets * itInfoMap->second.descCount));
+            assert(static_cast<uint32_t>(itInfoMap->second.bufferInfos.size()) ==
+                   (itInfoMap->second.uniqueDataSets * itInfoMap->second.descCount));
 
         } else if (std::visit(IsUniformDynamic{}, bindingInfo.descType)) {
             // MATERIAL

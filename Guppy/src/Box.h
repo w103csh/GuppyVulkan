@@ -13,7 +13,7 @@ namespace Mesh {
 class Handler;
 namespace Box {
 
-std::vector<Face> make(const Geometry::CreateInfo& geoInfo = {});
+std::vector<Face> make(const Mesh::Geometry::Info& geoInfo = {});
 
 class Color : public Mesh::Color {
    public:
