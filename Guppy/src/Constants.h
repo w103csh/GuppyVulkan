@@ -10,8 +10,6 @@
 
 #define USE_DEBUG_UI
 
-extern const bool LIMIT_FRAMERATE;
-
 constexpr bool PRIMARY_MONITOR = 0;
 // TODO: a proper dynamic buffer allocator.
 /*  I am using this for the mean time to restrict the number of textures, so
@@ -61,6 +59,7 @@ const glm::vec4 COLOR_RED = {1.0f, 0.0f, 0.0f, 1.0f};
 const glm::vec4 COLOR_GREEN = {0.0f, 1.0f, 0.0f, 1.0f};
 const glm::vec4 COLOR_BLUE = {0.0f, 0.0f, 1.0f, 1.0f};
 const glm::vec4 COLOR_WHITE = {1.0f, 1.0f, 1.0f, 1.0f};
+const glm::vec4 COLOR_YELLOW = {1.0f, 1.0f, 0.0f, 1.0f};
 
 // X
 const glm::vec3 CARDINAL_X = glm::vec3(1.0f, 0.0f, 0.0f);

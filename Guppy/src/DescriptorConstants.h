@@ -13,10 +13,15 @@
 
 enum class PIPELINE : uint32_t;
 enum class PASS : uint32_t;
+// clang-format off
+namespace Buffer { struct Info; }
+// clang-format on
 
 enum class DESCRIPTOR_SET {
     // DEFAULT
     UNIFORM_DEFAULT,
+    UNIFORM_CAMERA_ONLY,
+    UNIFORM_OBJ3D,
     SAMPLER_DEFAULT,
     SAMPLER_CUBE_DEFAULT,
     PROJECTOR_DEFAULT,
@@ -55,6 +60,9 @@ enum class DESCRIPTOR_SET {
     UNIFORM_TESSELLATION_DEFAULT,
     // GEOMETRY
     UNIFORM_GEOMETRY_DEFAULT,
+    // PARTICLE
+    UNIFORM_PARTICLE_WAVE,
+    UNIFORM_PARTICLE_FOUNTAIN,
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 
@@ -78,8 +86,6 @@ struct CreateInfo {
     Uniform::offsets offsets;
     std::string_view textureId = "";
 };
-
-extern const std::set<DESCRIPTOR> DESCRIPTORS;
 
 // Wrapper class for multimap. Uniforms are unique to desriptor sets, but
 // samplers can have multiples of the same type. This wraps the insert to
@@ -161,6 +167,15 @@ struct HassPerFramebufferData {
             case UNIFORM::LIGHT_POSITIONAL_PBR:
             case UNIFORM::LIGHT_POSITIONAL_SHADOW:
             case UNIFORM::LIGHT_SPOT_DEFAULT:
+            case UNIFORM::PARTICLE_WAVE:
+                return true;
+            default:
+                return false;
+        }
+    }
+    bool operator()(const UNIFORM_DYNAMIC& type) const {
+        switch (type) {
+            case UNIFORM_DYNAMIC::MATERIAL_PARTICLE_FOUNTAIN:
                 return true;
             default:
                 return false;
@@ -311,12 +326,17 @@ using textReplaceTuples = std::vector<textReplaceTuple>;
 
 namespace Default {
 extern const CreateInfo UNIFORM_CREATE_INFO;
+extern const CreateInfo UNIFORM_CAMERA_ONLY_CREATE_INFO;
+extern const CreateInfo UNIFORM_OBJ3D_CREATE_INFO;
 extern const CreateInfo SAMPLER_CREATE_INFO;
 extern const CreateInfo CUBE_SAMPLER_CREATE_INFO;
 extern const CreateInfo PROJECTOR_SAMPLER_CREATE_INFO;
 }  // namespace Default
 
 }  // namespace Set
+
+std::string GetPerframeBufferWarning(const DESCRIPTOR descType, const Buffer::Info& buffInfo,
+                                     const Set::ResourceInfo& resInfo, bool doAssert = true);
 
 }  // namespace Descriptor
 

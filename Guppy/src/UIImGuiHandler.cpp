@@ -15,7 +15,7 @@
 #include "RenderPassHandler.h"
 #include "SceneHandler.h"
 
-void UI::ImGuiHandler::update() {
+void UI::ImGuiHandler::frame() {
     // Start the Dear ImGui frame
     ImGui_ImplVulkan_NewFrame();
     ImGui_ImplGlfw_NewFrame();

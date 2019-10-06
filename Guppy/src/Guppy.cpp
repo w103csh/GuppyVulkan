@@ -15,6 +15,7 @@
 #include "MaterialHandler.h"
 #include "MeshHandler.h"
 #include "ModelHandler.h"
+#include "ParticleHandler.h"
 #include "PipelineHandler.h"
 #include "RenderPassHandler.h"
 #include "SceneHandler.h"
@@ -37,6 +38,7 @@ Guppy::Guppy(const std::vector<std::string>& args)
         std::make_unique<Material::Handler>(this),
         std::make_unique<Mesh::Handler>(this),
         std::make_unique<Model::Handler>(this),
+        std::make_unique<Particle::Handler>(this),
         std::make_unique<Pipeline::Handler>(this),
         std::make_unique<RenderPass::Handler>(this),
         std::make_unique<Scene::Handler>(this),
@@ -96,6 +98,7 @@ void Guppy::attachShell(Shell& sh) {
     handlers_.pUniform->init();
     handlers_.pDescriptor->init();
     handlers_.pMesh->init();
+    handlers_.pParticle->init();
     handlers_.pCompute->init();
     handlers_.pPipeline->init();
     handlers_.pShader->init();
@@ -146,35 +149,35 @@ void Guppy::attachSwapchain() {
     // vkResetCommandBuffer(handlers_.pCommand->graphicsCmd(), 0);
 }
 
-/*  This function is for updating things regardless of framerate. It is based on settings.ticks_per_second,
-    and should be called that many times per second. add_game_time is weird and appears to limit the amount
-    of ticks per second arbitrarily, so this in reality could do anything.
-    NOTE: Things like input should not used here since this is not guaranteed to be called each time input
-    is collected. This function could be called as many as
-*/
+/* This function is for updating things regardless of framerate. It is based on settings.ticks_per_second,
+ *  and should be called that many times per second.
+ * NOTE: add_game_time is weird and appears to limit the amount of ticks per second arbitrarily, so this
+ *  in reality could do anything...
+ * NOTE: Things like input should not be used here since this is not guaranteed to be called each time input
+ *  is collected. This function could be called as many as... The rest of this comment disappeared.
+ */
 void Guppy::onTick() {
     if (sim_paused_) return;
 
-    auto& pScene = handlers_.pScene->getActiveScene();
-
     // TODO: Should this be "on_frame"? every other frame? async? ... I have no clue yet.
-    handlers_.pLoading->cleanup();
-    handlers_.pTexture->update();
-
-    // TODO: move to SceneHandler::update or something!
-    handlers_.pModel->update(pScene);
-    handlers_.pPipeline->update();
-    handlers_.pMesh->update();
-    handlers_.pCompute->update();
+    handlers_.pLoading->tick();
+    handlers_.pTexture->tick();
+    handlers_.pModel->tick();
+    handlers_.pPipeline->tick();
+    handlers_.pMesh->tick();
+    handlers_.pParticle->tick();
+    handlers_.pCompute->tick();
 
     // for (auto &worker : workers_) worker->update_simulation();
 }
 
 void Guppy::onFrame(float framePred) {
+    // shell().log(Shell::LOG_DEBUG, std::to_string(shell().getCurrentTime()).c_str());
     handlers_.pPass->acquireBackBuffer();
     // PRE-DRAW
-    handlers_.pUniform->update();
-    handlers_.pUI->update();
+    handlers_.pUniform->frame();
+    handlers_.pParticle->frame();
+    handlers_.pUI->frame();
     // DRAW
     handlers_.pPass->recordPasses();
     // POST-DRAW
@@ -188,6 +191,11 @@ void Guppy::onFrame(float framePred) {
 
 void Guppy::onKey(GAME_KEY key) {
     switch (key) {
+        case GAME_KEY::KEY_MINUS:
+        case GAME_KEY::KEY_EQUALS:
+        case GAME_KEY::KEY_BACKSPACE:
+            // Used by the shell.
+            break;
         case GAME_KEY::KEY_SHUTDOWN:
         case GAME_KEY::KEY_ESC:
             shell().quit();
@@ -262,6 +270,8 @@ void Guppy::onKey(GAME_KEY key) {
             //    }
             //    // defUBO_.shaderData.fog.maxDistance += 10.0f;
             //});
+            Particle::StartInfo info = {0};
+            handlers_.pParticle->startFountain(info);
         } break;
         case GAME_KEY::KEY_8: {
             auto& light = handlers_.pUniform->getDefPosLight();
@@ -341,6 +351,7 @@ void Guppy::detachShell() {
     handlers_.pTexture->destroy();
     handlers_.pMaterial->destroy();
     handlers_.pMesh->destroy();
+    handlers_.pParticle->destroy();
     handlers_.pCompute->destroy();
     handlers_.pScene->destroy();
     handlers_.pUI->destroy();

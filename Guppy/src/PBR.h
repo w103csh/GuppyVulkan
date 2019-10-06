@@ -31,14 +31,14 @@ struct DATA {
 };
 class Base : public Light::Base<DATA> {
    public:
-    Base(const Buffer::Info &&info, DATA *pData, CreateInfo *pCreateInfo);
+    Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo);
 
     void update(glm::vec3 &&position, const uint32_t frameIndex);
 
     inline const glm::vec3 &getPosition() { return position; }
 
-    void transform(const glm::mat4 t, uint32_t index = 0) override {
-        Obj3d::transform(t);
+    void transform(const glm::mat4 t, const uint32_t index = 0) override {
+        Obj3d::AbstractBase::transform(t);
         position = getWorldSpacePosition();
     }
 
@@ -69,7 +69,7 @@ struct CreateInfo : public Material::CreateInfo {
 
 class Base : public Material::Base, public Buffer::DataItem<DATA> {
    public:
-    Base(const Buffer::Info &&info, PBR::DATA *pData, PBR::CreateInfo *pCreateInfo);
+    Base(const Buffer::Info &&info, PBR::DATA *pData, const PBR::CreateInfo *pCreateInfo);
 
     FlagBits getFlags() override { return pData_->flags; }
     void setFlags(FlagBits flags) override {
@@ -77,7 +77,7 @@ class Base : public Material::Base, public Buffer::DataItem<DATA> {
         setData();
     }
 
-    void setTextureData() override;
+    void setTextureData() override { status_ = SetDefaultTextureData(this, pData_); }
     void setTinyobjData(const tinyobj::material_t &m) override;
 
     void setRoughness(float r);

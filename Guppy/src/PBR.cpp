@@ -10,7 +10,7 @@
 //      Light
 // **********************
 
-Light::PBR::Positional::Base::Base(const Buffer::Info&& info, DATA* pData, CreateInfo* pCreateInfo)
+Light::PBR::Positional::Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
       Light::Base<DATA>(pData, pCreateInfo),                 //
       position(getWorldSpacePosition()) {}
@@ -24,7 +24,7 @@ void Light::PBR::Positional::Base::update(glm::vec3&& position, const uint32_t f
 //      Material
 // **********************
 
-Material::PBR::Base::Base(const Buffer::Info&& info, PBR::DATA* pData, PBR::CreateInfo* pCreateInfo)
+Material::PBR::Base::Base(const Buffer::Info&& info, PBR::DATA* pData, const PBR::CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
       Material::Base(MATERIAL::PBR, pCreateInfo),
       Buffer::DataItem<PBR::DATA>(pData)  //
@@ -34,36 +34,6 @@ Material::PBR::Base::Base(const Buffer::Info&& info, PBR::DATA* pData, PBR::Crea
     pData_->opacity = pCreateInfo->opacity;
     setRoughness(pCreateInfo->roughness);
     setData();
-}
-
-void Material::PBR::Base::setTextureData() {
-    float xRepeat, yRepeat;
-    xRepeat = yRepeat = repeat_;
-
-    if (pTexture_ != nullptr) {
-        // REPEAT
-        // Deal with non-square images
-        auto aspect = pTexture_->aspect;
-        if (aspect > 1.0f) {
-            yRepeat *= aspect;
-        } else if (aspect < 1.0f) {
-            xRepeat *= (1 / aspect);
-        }
-        // FLAGS
-        pData_->flags &= ~Material::FLAG::PER_MAX_ENUM;
-        pData_->flags |= Material::FLAG::PER_TEXTURE_COLOR;
-        pData_->texFlags = pTexture_->flags;
-    } else {
-        pData_->texFlags = 0;
-    }
-
-    pData_->xRepeat = xRepeat;
-    pData_->yRepeat = yRepeat;
-
-    if (status_ == STATUS::PENDING_TEXTURE && pTexture_->status == STATUS::READY)  //
-        status_ = STATUS::READY;
-
-    dirty = true;
 }
 
 void Material::PBR::Base::setTinyobjData(const tinyobj::material_t& m) {

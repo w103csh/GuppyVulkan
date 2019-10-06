@@ -24,10 +24,10 @@ class Axes : public Line {
     friend class Handler;
 
    protected:
-    Axes(Handler& handler, const AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-         std::shared_ptr<Material::Base>& pMaterial);
-    Axes(Handler& handler, const std::string&& name, const AxesCreateInfo* pCreateInfo,
-         std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
+    Axes(Handler& handler, const index&& offset, const AxesCreateInfo* pCreateInfo,
+         std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
+    Axes(Handler& handler, const index&& offset, const std::string&& name, const AxesCreateInfo* pCreateInfo,
+         std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
 };
 
 }  // namespace Mesh

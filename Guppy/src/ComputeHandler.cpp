@@ -65,10 +65,10 @@ Compute::Handler::Handler(Game* pGame) : Game::Handler(pGame) {
 void Compute::Handler::init() {
     // reset();
     for (auto& [passType, pCompute] : pComputePendingMap_) pCompute->init();
-    update();
+    tick();
 }
 
-void Compute::Handler::update() {
+void Compute::Handler::tick() {
     for (auto it = pComputePendingMap_.begin(); it != pComputePendingMap_.end();) {
         it->second->prepare();
         if (it->second->getStatus() == STATUS::READY) {

@@ -1,6 +1,8 @@
 
 #include "RenderPassShadow.h"
 
+#include <array>
+
 #include "ConstantsAll.h"
 #include "Shadow.h"
 // HANDLERS
@@ -64,6 +66,19 @@ void Base::createFramebuffers() {
     }
 }
 
+namespace {
+std::array<PIPELINE, 4> COLOR_LIST = {
+    PIPELINE::DEFERRED_MRT_COLOR,              //
+    PIPELINE::DEFERRED_MRT_WF_COLOR,           //
+    PIPELINE::TESSELLATION_TRIANGLE_DEFERRED,  //
+    PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED,    //
+    // PIPELINE::PARTICLE_WAVE_DEFERRED,
+};
+std::array<PIPELINE, 1> TEX_LIST = {
+    PIPELINE::DEFERRED_MRT_TEX,
+};
+}  // namespace
+
 void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::vector<PIPELINE>& surrogatePipelineTypes,
                   const VkCommandBuffer& priCmd) {
     if (getStatus() != STATUS::READY) update();
@@ -75,69 +90,27 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
 
         std::vector<PIPELINE>::iterator itSurrogate;
 
-        // Skip these for now. This means they won't cast a shadow...
-        {
-            itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(),
-                                    PIPELINE::TESSELLATION_BEZIER_4_DEFERRED);
-            if (itSurrogate != surrogatePipelineTypes.end()) surrogatePipelineTypes.erase(itSurrogate);
-
-            itSurrogate =
-                std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), PIPELINE::DEFERRED_MRT_LINE);
-            if (itSurrogate != surrogatePipelineTypes.end()) surrogatePipelineTypes.erase(itSurrogate);
-        }
-
         // COLOR
-        {
-            itSurrogate =
-                std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), PIPELINE::DEFERRED_MRT_COLOR);
+        for (const auto& pipelineType : COLOR_LIST) {
+            itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), pipelineType);
             if (itSurrogate != surrogatePipelineTypes.end()) {
                 pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(PIPELINE::SHADOW_COLOR),
                                priCmd, secCmd, frameIndex, &getDescSetBindDataMap(PIPELINE::SHADOW_COLOR).begin()->second);
                 surrogatePipelineTypes.erase(itSurrogate);
             }
-
-            // WIREFRAME
-            itSurrogate =
-                std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), PIPELINE::DEFERRED_MRT_WF_COLOR);
-            if (itSurrogate != surrogatePipelineTypes.end()) {
-                pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(PIPELINE::SHADOW_COLOR),
-                               priCmd, secCmd, frameIndex, &getDescSetBindDataMap(PIPELINE::SHADOW_COLOR).begin()->second);
-                surrogatePipelineTypes.erase(itSurrogate);
-            }
-
-            // TRIANGLE
-            itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(),
-                                    PIPELINE::TESSELLATION_TRIANGLE_DEFERRED);
-            if (itSurrogate != surrogatePipelineTypes.end()) {
-                pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(PIPELINE::SHADOW_COLOR),
-                               priCmd, secCmd, frameIndex, &getDescSetBindDataMap(PIPELINE::SHADOW_COLOR).begin()->second);
-                surrogatePipelineTypes.erase(itSurrogate);
-            }
-
-            // SILHOUETTE
-            itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(),
-                                    PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED);
-            if (itSurrogate != surrogatePipelineTypes.end()) {
-                pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(PIPELINE::SHADOW_COLOR),
-                               priCmd, secCmd, frameIndex, &getDescSetBindDataMap(PIPELINE::SHADOW_COLOR).begin()->second);
-                surrogatePipelineTypes.erase(itSurrogate);
-            }
-
-            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
         }
+
+        vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
 
         // TEXTURE
-        {
-            itSurrogate =
-                std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), PIPELINE::DEFERRED_MRT_TEX);
+        for (const auto& pipelineType : TEX_LIST) {
+            itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), pipelineType);
             if (itSurrogate != surrogatePipelineTypes.end()) {
                 pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(PIPELINE::SHADOW_TEX), priCmd,
                                secCmd, frameIndex, &getDescSetBindDataMap(PIPELINE::SHADOW_TEX).begin()->second);
                 surrogatePipelineTypes.erase(itSurrogate);
             }
         }
-
-        assert(surrogatePipelineTypes.size() == 1 && surrogatePipelineTypes[0] == PIPELINE::DEFERRED_COMBINE);
 
         endPass(priCmd);
     }

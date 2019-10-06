@@ -51,7 +51,7 @@ class ShellGLFW : public TShell {
         glfwSetKeyCallback(window_, glfw_key_callback);
         setupImGui();
 
-        double currentTime = glfwGetTime();
+        currentTime_ = glfwGetTime();
 
         // Main loop
         while (!glfwWindowShouldClose(window_)) {
@@ -69,20 +69,19 @@ class ShellGLFW : public TShell {
             TShell::acquireBackBuffer();
 
             double now = glfwGetTime();
-            double elapsed = now - currentTime;
+            double elapsed = now - currentTime_;
+            currentTime_ = now;
 
-            InputHandler::updateInput(static_cast<float>(elapsed));
-            TShell::onMouse(InputHandler::getMouseInput());  // TODO: this stuff is all out of whack
+            InputHandler::inst().updateInput(static_cast<float>(elapsed));
+            TShell::onMouse(InputHandler::inst().getMouseInput());  // TODO: this stuff is all out of whack
 
             TShell::addGameTime(static_cast<float>(elapsed));
 
             TShell::presentBackBuffer();
 
-            currentTime = now;
-
-            if (LIMIT_FRAMERATE) {
-                // TODO: this is crude and inaccurate.
-                auto Hz = static_cast<uint64_t>(1000 / 10);  // Hz
+            if (limitFramerate) {
+                // TODO: this is inaccurate.
+                auto Hz = static_cast<uint64_t>(1000 / framesPerSecondLimit);  // Hz
                 if (TShell::settings_.enable_directory_listener) TShell::asyncAlert(Hz);
             } else {
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
@@ -90,7 +89,7 @@ class ShellGLFW : public TShell {
 #endif
             }
 
-            InputHandler::clear();
+            InputHandler::inst().clear();
         }
 
         vkDeviceWaitIdle(TShell::context().dev);

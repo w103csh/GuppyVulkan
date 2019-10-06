@@ -8,6 +8,7 @@
 #include "ConstantsAll.h"
 #include "BufferItem.h"
 #include "Descriptor.h"
+#include "Obj3d.h"
 #include "Texture.h"
 
 namespace Material {
@@ -70,16 +71,19 @@ class Base : public Descriptor::Base {
 
     inline bool hasTexture() const { return pTexture_ != nullptr; }
     constexpr const auto& getTexture() const { return pTexture_; }
+    constexpr const auto& getRepeat() const { return repeat_; }
 
     virtual FlagBits getFlags() = 0;
     virtual void setFlags(FlagBits flags) = 0;
+    // TODO: this isn't actually enforced anywhere. There should be an pure virtual function on Descriptor::Base
+    // for getData() or something, and then this could be enforced in a setData function.
     virtual void setTextureData(){};
 
     // OBJ
     virtual void setTinyobjData(const tinyobj::material_t& m){};
 
    protected:
-    Base(const MATERIAL&& type, Material::CreateInfo* pCreateInfo);
+    Base(const MATERIAL&& type, const CreateInfo* pCreateInfo);
 
     STATUS status_;
 
@@ -87,6 +91,10 @@ class Base : public Descriptor::Base {
     std::shared_ptr<Texture::Base> pTexture_;
     float repeat_;
 };
+
+// FUNCTIONS
+
+STATUS SetDefaultTextureData(Material::Base* pMaterial, DATA* pData);
 
 // DEFAULT
 
@@ -112,7 +120,7 @@ struct CreateInfo : public Material::CreateInfo {
 
 class Base : public Material::Base, public Buffer::DataItem<DATA> {
    public:
-    Base(const Buffer::Info&& info, Default::DATA* pData, Default::CreateInfo* pCreateInfo);
+    Base(const Buffer::Info&& info, Default::DATA* pData, const Default::CreateInfo* pCreateInfo);
 
     FlagBits getFlags() override { return pData_->flags; }
     void setFlags(FlagBits flags) override {
@@ -120,7 +128,7 @@ class Base : public Material::Base, public Buffer::DataItem<DATA> {
         setData();
     }
 
-    void setTextureData() override;
+    void setTextureData() override { status_ = SetDefaultTextureData(this, pData_); }
     void setTinyobjData(const tinyobj::material_t& m) override;
 
    private:
@@ -135,6 +143,26 @@ static void copyTinyobjData(const tinyobj::material_t& m, Default::CreateInfo& m
 }
 
 }  // namespace Default
+
+// OBJ3D
+
+namespace Obj3d {
+
+struct DATA : public Material::DATA {
+    glm::mat4 model{1.0f};
+};
+
+struct CreateInfo : public Material::CreateInfo {
+    glm::mat4 model;
+};
+
+class Base : public ::Obj3d::AbstractBase, public Material::Base {
+   public:
+    Base(const MATERIAL&& type, const CreateInfo* pCreateInfo)
+        : Material::Base(std::forward<const MATERIAL>(type), pCreateInfo) {}
+};
+
+}  // namespace Obj3d
 
 };  // namespace Material
 

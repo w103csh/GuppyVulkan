@@ -1,6 +1,7 @@
 
 #include "Deferred.h"
 
+#include "Random.h"
 // HANDLERS
 #include "PipelineHandler.h"
 
@@ -168,13 +169,13 @@ const CreateInfo SSAO_2D_CREATE_INFO = {
     INPUT_ATTACHMENT::DONT_CARE,
 };
 
-CreateInfo MakeSSAORandRotationTex(Random& rand) {
+CreateInfo MakeSSAORandRotationTex() {
     uint32_t size = 4;
     uint32_t channels = 4;  // VK_FORMAT_R16G16B16A16_SFLOAT
 
     float* pData = new float[static_cast<size_t>(channels) * static_cast<size_t>(size) * static_cast<size_t>(size)]();
     for (uint32_t i = 0; i < size * size; i++) {
-        glm::vec3 v = rand.uniformCircle();
+        glm::vec3 v = Random::inst().uniformCircle();
         pData[i * channels + 0] = v.x;
         pData[i * channels + 1] = v.y;
         pData[i * channels + 2] = v.z;
@@ -211,9 +212,9 @@ SSAO::SSAO(const Buffer::Info&& info, DATA* pData)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
       Buffer::DataItem<DATA>(pData) {}
 
-void SSAO::init(Random& rand) {
+void SSAO::init() {
     for (int i = 0; i < KERNEL_SIZE; i++) {
-        glm::vec3 randDir = rand.uniformHemisphere();
+        glm::vec3 randDir = Random::inst().uniformHemisphere();
         float scale = ((float)(i * i)) / (KERNEL_SIZE * KERNEL_SIZE);
         randDir *= glm::mix(0.1f, 1.0f, scale);
 

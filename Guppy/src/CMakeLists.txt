@@ -36,8 +36,6 @@ set(SOURCE
     Material.h
     MaterialHandler.cpp
     MaterialHandler.h
-    Obj3d.cpp
-    Obj3d.h
     Parallax.cpp
     Parallax.h
     PBR.cpp
@@ -91,9 +89,6 @@ set(SOURCE
     Instance.cpp
     Instance.h
     InstanceManager.h
-    ObjDrawInst3d.h
-    ObjInst3d.cpp
-    ObjInst3d.h
     # Mesh
     Arc.cpp
     Arc.h
@@ -122,6 +117,19 @@ set(SOURCE
     ModelHandler.h
     ModelMesh.cpp
     ModelMesh.h
+    # Object 3d
+    Obj3d.cpp
+    Obj3d.h
+    Obj3dDrawInst.h
+    Obj3dInst.h
+    # Particle
+    Particle.cpp
+    Particle.h
+    ParticleBuffer.cpp
+    ParticleBuffer.h
+    ParticleConstants.h
+    ParticleHandler.cpp
+    ParticleHandler.h
     # Pipeline
     Pipeline.cpp
     Pipeline.h
@@ -142,8 +150,6 @@ set(SOURCE
     RenderPassScreenSpace.cpp
     RenderPassScreenSpace.h
     # Shader
-    Shader.cpp
-    Shader.h
     ShaderConstants.cpp
     ShaderConstants.h
     ShaderHandler.cpp

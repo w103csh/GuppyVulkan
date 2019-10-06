@@ -17,9 +17,10 @@ class ModelSpace : public Axes {
     friend class Handler;
 
    protected:
-    ModelSpace(Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-               std::shared_ptr<Material::Base>& pMaterial)
-        : Axes(handler, "Model Space Visual Helper", pCreateInfo, pInstanceData, pMaterial) {}
+    ModelSpace(Handler& handler, const index&& offset, AxesCreateInfo* pCreateInfo,
+               std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
+        : Axes(handler, std::forward<const index>(offset), "Model Space Visual Helper", pCreateInfo, pInstanceData,
+               pMaterial) {}
 };
 
 class TangentSpace : public Line {
@@ -35,9 +36,11 @@ class TangentSpace : public Line {
     //    make(pMesh.get(), pCreateInfo);
     //    status_ = STATUS::PENDING_BUFFERS;
     //};
-    TangentSpace(Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-                 std::shared_ptr<Material::Base>& pMaterial, Color* pMesh)
-        : Line(handler, "Tangent Space Visual Helper", pCreateInfo, pInstanceData, pMaterial) {
+    TangentSpace(Handler& handler, const index&& offset, AxesCreateInfo* pCreateInfo,
+                 std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
+                 Color* pMesh)
+        : Line(handler, std::forward<const index>(offset), "Tangent Space Visual Helper", pCreateInfo, pInstanceData,
+               pMaterial) {
         assert(false && "No way to do tangent space for this yet. Need tex coords currently.");
         make(pMesh, pCreateInfo);
         status_ = STATUS::PENDING_BUFFERS;
@@ -50,9 +53,11 @@ class TangentSpace : public Line {
     //    make(pMesh.get(), pCreateInfo);
     //    status_ = STATUS::PENDING_BUFFERS;
     //};
-    TangentSpace(Handler& handler, AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-                 std::shared_ptr<Material::Base>& pMaterial, Texture* pMesh)
-        : Line(handler, "Tangent Space Visual Helper", pCreateInfo, pInstanceData, pMaterial) {
+    TangentSpace(Handler& handler, const index&& offset, AxesCreateInfo* pCreateInfo,
+                 std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
+                 Texture* pMesh)
+        : Line(handler, std::forward<const index>(offset), "Tangent Space Visual Helper", pCreateInfo, pInstanceData,
+               pMaterial) {
         make(pMesh, pCreateInfo);
         status_ = STATUS::PENDING_BUFFERS;
     };
@@ -63,7 +68,7 @@ class TangentSpace : public Line {
         // Determine the line size, which needs to account for the model matrix
         // having a scale.
         glm::vec3 scale = {};
-        helpers::decomposeScale(getModel(), scale);
+        helpers::decomposeScale(model(), scale);
         glm::vec3 lineSize{1.0f};
         lineSize /= scale;  // inverse scale of model matrix
         lineSize *= pCreateInfo->lineSize;

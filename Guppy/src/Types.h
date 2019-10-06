@@ -17,10 +17,39 @@ enum class PASS : uint32_t;
 using FlagBits = uint32_t;
 // Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)
 using VB_INDEX_TYPE = uint32_t;
+constexpr VB_INDEX_TYPE BAD_VB_INDEX = UINT32_MAX;
 
 // TODO: make a data structure so this can be const in the handlers.
 template <typename TEnum, typename TType>
 using enumPointerTypeMap = std::map<TEnum, std::unique_ptr<TType>>;
+
+namespace Pipeline {
+struct CreateInfoResources {
+    // BLENDING
+    std::vector<VkPipelineColorBlendAttachmentState> blendAttachmentStates = {};
+    VkPipelineColorBlendStateCreateInfo colorBlendStateInfo = {};
+    // DYNAMIC
+    VkDynamicState dynamicStates[VK_DYNAMIC_STATE_RANGE_SIZE];
+    VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
+    // INPUT ASSEMBLY
+    std::vector<VkVertexInputBindingDescription> bindDescs;
+    std::vector<VkVertexInputAttributeDescription> attrDescs;
+    VkPipelineVertexInputStateCreateInfo vertexInputStateInfo = {};
+    // std::vector<VkVertexInputBindingDivisorDescriptionEXT> vertexInputBindDivDescs;
+    // VkPipelineVertexInputDivisorStateCreateInfoEXT vertexInputDivInfo = {};
+    // FIXED FUNCTION
+    VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo = {};
+    VkPipelineTessellationStateCreateInfo tessellationStateInfo = {};
+    VkPipelineViewportStateCreateInfo viewportStateInfo = {};
+    VkPipelineRasterizationStateCreateInfo rasterizationStateInfo = {};
+    VkPipelineMultisampleStateCreateInfo multisampleStateInfo = {};
+    VkPipelineDepthStencilStateCreateInfo depthStencilStateInfo = {};
+    // SHADER
+    std::vector<VkPipelineShaderStageCreateInfo> shaderStageInfos;
+    std::vector<std::vector<VkSpecializationMapEntry>> specializationMapEntries;
+    std::vector<VkSpecializationInfo> specializationInfo;
+};
+}  // namespace Pipeline
 
 class NonCopyable {
    public:
@@ -45,6 +74,20 @@ struct ImageResource {
     VkImage image = VK_NULL_HANDLE;
     VkDeviceMemory memory = VK_NULL_HANDLE;
     VkImageView view = VK_NULL_HANDLE;
+};
+
+struct LoadingResource {
+    LoadingResource()
+        :  //
+          shouldWait(false),
+          graphicsCmd(VK_NULL_HANDLE),
+          transferCmd(VK_NULL_HANDLE),
+          semaphore(VK_NULL_HANDLE){};
+    bool shouldWait;
+    VkCommandBuffer graphicsCmd, transferCmd;
+    std::vector<BufferResource> stgResources;
+    std::vector<VkFence> fences;
+    VkSemaphore semaphore;
 };
 
 // template <typename T>

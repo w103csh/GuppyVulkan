@@ -17,14 +17,14 @@ std::vector<Face> make(const Mesh::Geometry::Info& geoInfo = {});
 
 class Color : public Mesh::Color {
    public:
-    Color(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-          std::shared_ptr<Material::Base>& pMaterial);
+    Color(Handler& handler, const index&& offset, CreateInfo* pCreateInfo,
+          std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
 };
 
 class Texture : public Mesh::Texture {
    public:
-    Texture(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-            std::shared_ptr<Material::Base>& pMaterial);
+    Texture(Handler& handler, const index&& offset, CreateInfo* pCreateInfo,
+            std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
 };
 
 }  // namespace Box

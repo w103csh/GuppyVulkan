@@ -3,7 +3,6 @@
 
 #include "ConstantsAll.h"
 #include "Pipeline.h"
-#include "Random.h"
 
 namespace Deferred {
 
@@ -49,7 +48,7 @@ const std::string_view SSAO_2D_ID = "Deferred 2D SSAO Texture";
 extern const CreateInfo SSAO_2D_CREATE_INFO;
 
 const std::string_view SSAO_RAND_2D_ID = "Deferred 2D SSAO Random Texture";
-CreateInfo MakeSSAORandRotationTex(Random& rand);
+CreateInfo MakeSSAORandRotationTex();
 
 }  // namespace Deferred
 }  // namespace Texture
@@ -67,7 +66,7 @@ class SSAO : public Descriptor::Base, public Buffer::DataItem<DATA> {
    public:
     SSAO(const Buffer::Info&& info, DATA* pData);
 
-    void init(Random& rand);
+    void init();
 };
 
 }  // namespace Deferred

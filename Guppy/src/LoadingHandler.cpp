@@ -9,12 +9,30 @@ Loading::Handler::Handler(Game* pGame) : Game::Handler(pGame){};
 
 void Loading::Handler::init() {
     reset();
-    cleanup();
+    tick();
+}
+
+// This used to be called cleanup but was executed during onTick, so I changed the name.
+void Loading::Handler::tick() {
+    // Check loading resources for cleanup
+    if (!ldgResources_.empty()) {
+        auto itRes = ldgResources_.begin();
+        while (itRes != ldgResources_.end()) {
+            auto& pRes = (*itRes);
+            // Check if mesh loading resources can be cleaned up.
+            if (destroyResource(*pRes)) {
+                // Remove the resources from the list if all goes well.
+                itRes = ldgResources_.erase(itRes);
+            } else {
+                ++itRes;
+            }
+        }
+    }
 }
 
 // thread sync
-std::unique_ptr<Loading::Resources> Loading::Handler::createLoadingResources() const {
-    auto pLdgRes = std::make_unique<Loading::Resources>();
+std::unique_ptr<LoadingResource> Loading::Handler::createLoadingResources() const {
+    auto pLdgRes = std::make_unique<LoadingResource>();
 
     // There should always be at least a graphics queue...
     VkCommandBufferAllocateInfo alloc_info = {};
@@ -38,7 +56,7 @@ std::unique_ptr<Loading::Resources> Loading::Handler::createLoadingResources() c
     return pLdgRes;
 }
 
-void Loading::Handler::loadSubmit(std::unique_ptr<Loading::Resources> pLdgRes) {
+void Loading::Handler::loadSubmit(std::unique_ptr<LoadingResource> pLdgRes) {
     auto queueFamilyIndices = commandHandler().getUniqueQueueFamilies(true, false, true, false);
     pLdgRes->shouldWait = queueFamilyIndices.size() > 1;
 
@@ -105,28 +123,11 @@ void Loading::Handler::loadSubmit(std::unique_ptr<Loading::Resources> pLdgRes) {
     ldgResources_.push_back(std::move(pLdgRes));
 }
 
-void Loading::Handler::cleanup() {
-    // Check loading resources for cleanup
-    if (!ldgResources_.empty()) {
-        auto itRes = ldgResources_.begin();
-        while (itRes != ldgResources_.end()) {
-            auto& pRes = (*itRes);
-            // Check if mesh loading resources can be cleaned up.
-            if (destroyResource(*pRes)) {
-                // Remove the resources from the list if all goes well.
-                itRes = ldgResources_.erase(itRes);
-            } else {
-                ++itRes;
-            }
-        }
-    }
-}
-
 void Loading::Handler::getFences(std::vector<VkFence>& fences) {
     for (const auto& res : ldgResources_) fences.insert(fences.end(), res->fences.begin(), res->fences.end());
 }
 
-bool Loading::Handler::destroyResource(Loading::Resources& resource) const {
+bool Loading::Handler::destroyResource(LoadingResource& resource) const {
     // Check fences for cleanup
     bool ready = true;
     for (auto& fence : resource.fences) ready &= vkGetFenceStatus(shell().context().dev, fence) == VK_SUCCESS;

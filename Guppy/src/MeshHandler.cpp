@@ -6,31 +6,17 @@
 #include "SceneHandler.h"
 
 Mesh::Handler::Handler(Game* pGame)
-    : Game::Handler(pGame),                                      //
-      instDefMgr_{"Default Instance Data", (2 * 1000000) + 100}  //
+    : Game::Handler(pGame),                                          //
+      instObj3dMgr_{"Instance Object 3d Data", (2 * 1000000) + 100}  //
 {}
 
 void Mesh::Handler::init() {
     reset();
     // INSTANCE
-    instDefMgr_.init(shell().context(), settings());
+    instObj3dMgr_.init(shell().context(), settings());
 }
 
-bool Mesh::Handler::checkOffset(const MESH type, const Mesh::index offset) {
-    switch (type) {
-        case MESH::COLOR:
-            return offset < colorMeshes_.size();
-        case MESH::LINE:
-            return offset < lineMeshes_.size();
-        case MESH::TEXTURE:
-            return offset < texMeshes_.size();
-        default:
-            assert(false);
-            exit(EXIT_FAILURE);
-    }
-}
-
-void Mesh::Handler::update() {
+void Mesh::Handler::tick() {
     // Check loading futures...
     if (!ldgFutures_.empty()) {
         for (auto it = ldgFutures_.begin(); it != ldgFutures_.end();) {
@@ -71,6 +57,20 @@ void Mesh::Handler::update() {
     }
 }
 
+bool Mesh::Handler::checkOffset(const MESH type, const Mesh::index offset) {
+    switch (type) {
+        case MESH::COLOR:
+            return offset < colorMeshes_.size();
+        case MESH::LINE:
+            return offset < lineMeshes_.size();
+        case MESH::TEXTURE:
+            return offset < texMeshes_.size();
+        default:
+            assert(false);
+            exit(EXIT_FAILURE);
+    }
+}
+
 void Mesh::Handler::removeMesh(std::unique_ptr<Mesh::Base>& pMesh) {
     // TODO...
     assert(false);
@@ -85,7 +85,7 @@ void Mesh::Handler::reset() {
     for (auto& pMesh : texMeshes_) pMesh->destroy();
     texMeshes_.clear();
     // INSTANCE
-    instDefMgr_.destroy(shell().context().dev);
+    instObj3dMgr_.destroy(shell().context().dev);
 }
 
 void Mesh::Handler::addOffsetToScene(const MESH type, const Mesh::index offset) {

@@ -17,7 +17,6 @@ class Handler : public Game::Handler {
     virtual void init() override {}
     virtual void reset() override {}
     virtual void destroy() override {}
-    virtual void update() {}
     virtual void draw(const VkCommandBuffer& cmd, const uint8_t frameIndex) {}
 };
 

@@ -177,16 +177,16 @@ class Base {
         auto dataOffset = info.dataOffset + ((index == -1) ? 0 : index);
 
         auto pData = static_cast<uint8_t *>(resource.pMappedData) + memoryOffset;
+        // If index is not set copy the entire range for the item.
+        VkDeviceSize range = (index == -1) ? (info.count * resource.data.ALIGNMENT) : resource.data.ALIGNMENT;
 
         if (KEEP_MAPPED) {
-            // If index is not set copy the entire range for the item.
-            VkDeviceSize range = (index == -1) ? (info.count * resource.data.ALIGNMENT) : resource.data.ALIGNMENT;
             memcpy(pData, &resource.data.get(dataOffset), range);
         } else {
-            // TODO: only map the region being copied???
+            // TODO: Only map the region that is being copied???
             vk::assert_success(
                 vkMapMemory(dev, resource.memory, 0, resource.memoryRequirements.size, 0, &resource.pMappedData));
-            memcpy(pData, &resource.data.get(dataOffset), resource.data.ALIGNMENT);
+            memcpy(pData, &resource.data.get(dataOffset), range);
             vkUnmapMemory(dev, resource.memory);
         }
     }

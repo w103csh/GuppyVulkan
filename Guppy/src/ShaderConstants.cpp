@@ -5,6 +5,7 @@
 #include "Geometry.h"
 #include "PBR.h"
 #include "Parallax.h"
+#include "Particle.h"
 #include "ScreenSpace.h"
 #include "Shadow.h"
 #include "Tessellation.h"
@@ -200,6 +201,10 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     // GEOMETRY
     {SHADER::WIREFRAME_GEOM, Shader::Geometry::WIREFRAME_CREATE_INFO},
     {SHADER::SILHOUETTE_GEOM, Shader::Geometry::SILHOUETTE_CREATE_INFO},
+    // PARTICLE
+    {SHADER::WAVE_COLOR_DEFERRED_MRT_VERT, Shader::Particle::WAVE_COLOR_VERT_DEFERRED_MRT_CREATE_INFO},
+    {SHADER::FOUNTAIN_PART_DEFERRED_MRT_VERT, Shader::Particle::FOUNTAIN_PART_VERT_DEFERRED_MRT_CREATE_INFO},
+    {SHADER::FOUNTAIN_PART_DEFERRED_MRT_FRAG, Shader::Particle::FOUNTAIN_PART_FRAG_DEFERRED_MRT_CREATE_INFO},
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {

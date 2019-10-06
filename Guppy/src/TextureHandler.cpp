@@ -17,7 +17,6 @@
 #include "LoadingHandler.h"
 #include "MaterialHandler.h"
 #include "ShaderHandler.h"
-#include "UniformHandler.h"  // Random
 
 Texture::Handler::Handler(Game* pGame)
     : Game::Handler(pGame),  //
@@ -26,8 +25,8 @@ Texture::Handler::Handler(Game* pGame)
 void Texture::Handler::init() {
     reset();
 
-    auto ssaoRandTexCreateInfo = Deferred::MakeSSAORandRotationTex(uniformHandler().rand);
-    auto shadowOffsetTexCreateInfo = Shadow::MakeOffsetTex(uniformHandler().rand);
+    auto ssaoRandTexCreateInfo = Deferred::MakeSSAORandRotationTex();
+    auto shadowOffsetTexCreateInfo = Shadow::MakeOffsetTex();
 
     // Transition storage images. I can't think of a better time to do this. Its
     // not great but oh well.
@@ -36,6 +35,10 @@ void Texture::Handler::init() {
         &Texture::VULKAN_CREATE_INFO,
         &Texture::HARDWOOD_CREATE_INFO,
         &Texture::NEON_BLUE_TUX_GUPPY_CREATE_INFO,
+        &Texture::BLUEWATER_CREATE_INFO,
+        &Texture::FIRE_CREATE_INFO,
+        &Texture::SMOKE_CREATE_INFO,
+        &Texture::STAR_CREATE_INFO,
         &Texture::MEDIEVAL_HOUSE_CREATE_INFO,
         &Texture::WOOD_CREATE_INFO,
         &Texture::MYBRICK_CREATE_INFO,
@@ -301,7 +304,7 @@ void Texture::Handler::makeTexture(std::shared_ptr<Texture::Base>& pTexture, Sam
     sampler.cleanup();
 }
 
-void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes) {
+void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<LoadingResource>& pLdgRes) {
     // Loading data only settings for image
     if (pLdgRes != nullptr) {
         assert(sampler.imgCreateInfo.arrayLayers == sampler.pPixels.size());
@@ -378,7 +381,7 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
     }
 }
 
-void Texture::Handler::createDepthImage(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes) {
+void Texture::Handler::createDepthImage(Sampler::Base& sampler, std::unique_ptr<LoadingResource>& pLdgRes) {
     assert(pLdgRes == nullptr);
     assert(sampler.pPixels.empty());
 
@@ -408,7 +411,7 @@ void Texture::Handler::createDepthImage(Sampler::Base& sampler, std::unique_ptr<
                                sampler.image, sampler.memory);
 }
 
-void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes) {
+void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<LoadingResource>& pLdgRes) {
     // This was the way before mip maps
     // transitionImageLayout(
     //    srcQueueFamilyIndexFinal,

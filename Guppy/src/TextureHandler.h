@@ -17,6 +17,7 @@ class Handler : public Game::Handler {
     Handler(Game* pGame);
 
     void init() override;
+    inline void tick() override { update(); };
     inline void destroy() override { reset(); }
 
     // Note: pCreateInfo will be copied because of asynchronous loading, so all
@@ -26,7 +27,6 @@ class Handler : public Game::Handler {
     const std::shared_ptr<Texture::Base> getTexture(const std::string_view& name) const;
     const std::shared_ptr<Texture::Base> getTexture(const uint32_t index) const;
     const std::shared_ptr<Texture::Base> getTexture(const std::string_view& name, const uint8_t frameIndex) const;
-    bool update(std::shared_ptr<Texture::Base> pTexture = nullptr);
     inline uint32_t getCount() { return static_cast<uint32_t>(pTextures_.size()); }
 
     // TODO: should these be public? Moved these for render to sampler.
@@ -45,14 +45,16 @@ class Handler : public Game::Handler {
    private:
     void reset() override;
 
+    bool update(std::shared_ptr<Texture::Base> pTexture = nullptr);
+
     std::shared_ptr<Texture::Base> asyncLoad(std::shared_ptr<Texture::Base> pTexture, CreateInfo createInfo);
     void load(std::shared_ptr<Texture::Base>& pTexture, const CreateInfo* pCreateInfo);
 
     void createTexture(std::shared_ptr<Texture::Base> pTexture, bool stageResources = true);
     void makeTexture(std::shared_ptr<Texture::Base>& pTexture, Sampler::Base& texSampler);
-    void createImage(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes);
-    void createDepthImage(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes);
-    void generateMipmaps(Sampler::Base& sampler, std::unique_ptr<Loading::Resources>& pLdgRes);
+    void createImage(Sampler::Base& sampler, std::unique_ptr<LoadingResource>& pLdgRes);
+    void createDepthImage(Sampler::Base& sampler, std::unique_ptr<LoadingResource>& pLdgRes);
+    void generateMipmaps(Sampler::Base& sampler, std::unique_ptr<LoadingResource>& pLdgRes);
     void createImageView(const VkDevice& dev, const Sampler::Base& sampler, const uint32_t baseArrayLayer,
                          const uint32_t layerCount, Sampler::LayerResource& layerResource);
 

@@ -1,7 +1,34 @@
 
 #include "Obj3d.h"
 
-BoundingBoxMinMax Obj3d::getBoundingBoxMinMax(bool transform, uint32_t index) const {
+namespace Obj3d {
+
+glm::mat4 TranslateToTop(const BoundingBoxMinMax &bottomBBMM, const BoundingBoxMinMax &topBBMM) {
+    // TODO: account for UP_VECTOR
+
+    // bottom
+    float inXCtr, inYCtr, inZCtr;
+    inXCtr = bottomBBMM.xMin + std::abs((bottomBBMM.xMax - bottomBBMM.xMin) / 2);
+    inYCtr = bottomBBMM.yMax;  // top
+    inZCtr = bottomBBMM.zMin + std::abs((bottomBBMM.zMax - bottomBBMM.zMin) / 2);
+
+    // top
+    float myXCtr, myYCtr, myZCtr;
+    myXCtr = topBBMM.xMin + std::abs((topBBMM.xMax - topBBMM.xMin) / 2);
+    myYCtr = topBBMM.yMin;  // bottom
+    myZCtr = topBBMM.zMin + std::abs((topBBMM.zMax - topBBMM.zMin) / 2);
+
+    return glm::translate(glm::mat4(1.0f),  //
+                          {
+                              //(inXCtr - myXCtr),  //
+                              0.0f,
+                              (inYCtr - myYCtr),
+                              //(inZCtr - myZCtr)  //
+                              0.0f,
+                          });
+}
+
+BoundingBoxMinMax AbstractBase::getBoundingBoxMinMax(bool transform, uint32_t index) const {
     BoundingBoxMinMax bbmm = {FLT_MAX, -FLT_MAX, FLT_MAX, -FLT_MAX, FLT_MAX, -FLT_MAX};
     for (auto v : boundingBox_) {
         if (transform) v = model(index) * glm::vec4(v, 1.0f);
@@ -15,7 +42,7 @@ BoundingBoxMinMax Obj3d::getBoundingBoxMinMax(bool transform, uint32_t index) co
     return bbmm;
 }
 
-bool Obj3d::testBoundingBox(const Ray &ray, const float &tMin, bool useDirection, uint32_t index) const {
+bool AbstractBase::testBoundingBox(const Ray &ray, const float &tMin, bool useDirection, uint32_t index) const {
     // Numbers are ransformed into world space
     auto bbmm = getBoundingBoxMinMax(true, index);
 
@@ -87,16 +114,18 @@ bool Obj3d::testBoundingBox(const Ray &ray, const float &tMin, bool useDirection
     return true;
 }
 
-void Obj3d::putOnTop(const BoundingBoxMinMax &inBoundingBoxMinMax, uint32_t index) {
+void AbstractBase::putOnTop(const BoundingBoxMinMax &inBoundingBoxMinMax, uint32_t index) {
     auto myBoundingBoxMinMax = getBoundingBoxMinMax(true, index);
-    auto t = translateToTop(inBoundingBoxMinMax, myBoundingBoxMinMax);
+    auto t = TranslateToTop(inBoundingBoxMinMax, myBoundingBoxMinMax);
     transform(t, index);
 }
 
-BoundingBox Obj3d::getBoundingBox(uint32_t index) const {
+BoundingBox AbstractBase::getBoundingBox(uint32_t index) const {
     BoundingBox bb = {};
     for (size_t i = 0; i < boundingBox_.size(); i++) {
         bb[i] = model(index) * glm::vec4(boundingBox_[i], 1.0f);
     }
     return bb;
 }
+
+}  // namespace Obj3d

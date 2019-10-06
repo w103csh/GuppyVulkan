@@ -20,7 +20,7 @@ void Selection::Manager::makeFace() {
     Mesh::CreateInfo meshInfo = {};
     meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_LINE;  // PIPELINE::LINE;
     meshInfo.mappable = true;
-    Instance::Default::CreateInfo instInfo = {};
+    Instance::Obj3d::CreateInfo instInfo = {};
     Material::Default::CreateInfo matInfo = {};
     matInfo.flags = Material::FLAG::HIDE & Material::FLAG::PER_VERTEX_COLOR;
     auto& pFaceMesh = handler().meshHandler().makeLineMesh<Mesh::Face>(&meshInfo, &matInfo, &instInfo);

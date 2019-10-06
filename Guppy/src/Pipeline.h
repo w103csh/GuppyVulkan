@@ -11,7 +11,6 @@
 #include "DescriptorSet.h"
 #include "Handlee.h"
 #include "Helpers.h"
-#include "Obj3d.h"
 #include "Material.h"
 #include "RenderPass.h"
 

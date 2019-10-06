@@ -15,6 +15,7 @@
 #include "DescriptorConstants.h"
 #include "MeshConstants.h"
 #include "ModelConstants.h"
+#include "ParticleConstants.h"
 #include "PipelineConstants.h"
 #include "RenderPassConstants.h"
 #include "SamplerConstants.h"

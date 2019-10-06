@@ -100,7 +100,8 @@ class Shell {
         VkPipelineStageFlags waitDstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
     };
 
-    constexpr const Context &context() const { return ctx_; }
+    constexpr const auto &context() const { return ctx_; }
+    constexpr const auto &getCurrentTime() const { return currentTime_; }
 
     // LOGGING
     enum LogPriority {
@@ -120,11 +121,14 @@ class Shell {
     virtual void watchDirectory(const std::string &directory,
                                 const std::function<void(std::string)> callback) = 0;  // TODO: think this through
 
-    inline void onKey(GAME_KEY key) { game_.onKey(key); }                   // TODO: think this through
+    void onKey(GAME_KEY key);
     inline void onMouse(const MouseInput &input) { game_.onMouse(input); }  // TODO: think this through
 
     // SWAPCHAIN
     void resizeSwapchain(uint32_t widthHint, uint32_t heightHint, bool refreshCapabilities = true);
+
+    bool limitFramerate;
+    uint8_t framesPerSecondLimit;
 
    protected:
     Shell(Game &game);
@@ -153,6 +157,8 @@ class Shell {
 
     std::vector<LayerProperties> layerProps_;          // *
     std::vector<VkExtensionProperties> instExtProps_;  // *
+
+    double currentTime_;
 
    private:
     bool debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t object,

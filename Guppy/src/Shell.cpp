@@ -17,8 +17,11 @@
 #include "InputHandler.h"
 
 Shell::Shell(Game &game)
-    : game_(game),                                   //
+    : limitFramerate(true),                          //
+      framesPerSecondLimit(10),                      //
+      game_(game),                                   //
       settings_(game.settings()),                    //
+      currentTime_(0.0),                             //
       ctx_(),                                        //
       gameTick_(1.0f / settings_.ticks_per_second),  //
       gameTime_(gameTick_) {
@@ -33,7 +36,7 @@ Shell::Shell(Game &game)
         instanceExtensions_.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 
-    InputHandler::init(this);
+    InputHandler::inst().init(this);
 }
 
 void Shell::log(LogPriority priority, const char *msg) const {
@@ -269,22 +272,31 @@ void Shell::createDev() {
     deviceFeatures.geometryShader = ctx_.geometryShadingEnabled_ ? VK_TRUE : VK_FALSE;
     deviceFeatures.fillModeNonSolid = ctx_.wireframeShadingEnabled_ ? VK_TRUE : VK_FALSE;
 
-    VkDeviceCreateInfo dev_info = {};
-    dev_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    dev_info.queueCreateInfoCount = static_cast<uint32_t>(queue_infos.size());
-    dev_info.pQueueCreateInfos = queue_infos.data();
+    //// extension features
+    // VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT vAttrDivFeatures = {};
+    // vAttrDivFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_FEATURES_EXT;
+    // vAttrDivFeatures.pNext = nullptr;  // Maybe you can chain these using this pointer???
+    // vAttrDivFeatures.vertexAttributeInstanceRateDivisor = VK_TRUE;
+    // vAttrDivFeatures.vertexAttributeInstanceRateZeroDivisor = VK_FALSE;
+
+    VkDeviceCreateInfo devInfo = {};
+    devInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    devInfo.queueCreateInfoCount = static_cast<uint32_t>(queue_infos.size());
+    devInfo.pQueueCreateInfos = queue_infos.data();
     if (settings_.enable_debug_markers) {
         deviceExtensions_.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-        dev_info.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions_.size());
-        dev_info.ppEnabledExtensionNames = deviceExtensions_.data();
+        devInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions_.size());
+        devInfo.ppEnabledExtensionNames = deviceExtensions_.data();
         deviceExtensions_.pop_back();  // TODO: add this to assert check instead of removing
     } else {
-        dev_info.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions_.size());
-        dev_info.ppEnabledExtensionNames = deviceExtensions_.data();
+        devInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions_.size());
+        devInfo.ppEnabledExtensionNames = deviceExtensions_.data();
     }
-    dev_info.pEnabledFeatures = &deviceFeatures;
+    devInfo.pEnabledFeatures = &deviceFeatures;
+    //// extension features
+    // devInfo.pNext = &vAttrDivFeatures;
 
-    vk::assert_success(vkCreateDevice(ctx_.physicalDev, &dev_info, nullptr, &ctx_.dev));
+    vk::assert_success(vkCreateDevice(ctx_.physicalDev, &devInfo, nullptr, &ctx_.dev));
 }
 
 void Shell::createBackBuffers() {
@@ -368,6 +380,21 @@ void Shell::destroySwapchain() {
 
     vkDestroySurfaceKHR(ctx_.instance, ctx_.surface, nullptr);
     ctx_.surface = VK_NULL_HANDLE;
+}
+
+void Shell::onKey(GAME_KEY key) {
+    switch (key) {
+        case GAME_KEY::KEY_MINUS: {
+            if (framesPerSecondLimit > 1) framesPerSecondLimit--;
+        } break;
+        case GAME_KEY::KEY_EQUALS: {
+            if (framesPerSecondLimit < UINT8_MAX) framesPerSecondLimit++;
+        } break;
+        case GAME_KEY::KEY_BACKSPACE: {
+            limitFramerate = !limitFramerate;
+        } break;
+    }
+    game_.onKey(key);
 }
 
 void Shell::resizeSwapchain(uint32_t widthHint, uint32_t heightHint, bool refreshCapabilities) {

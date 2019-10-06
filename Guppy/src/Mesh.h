@@ -12,7 +12,7 @@
 #include "Helpers.h"
 #include "Instance.h"
 #include "Material.h"
-#include "ObjDrawInst3d.h"
+#include "Obj3dDrawInst.h"
 #include "Shell.h"
 #include "Texture.h"
 
@@ -27,11 +27,9 @@ namespace Mesh {
 struct GenericCreateInfo;
 class Handler;
 
-// **********************
-//      Base
-// **********************
+// BASE
 
-class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawInst3d {
+class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Obj3d::InstanceDraw {
     friend class Mesh::Handler;
     friend class Descriptor::Handler;  // Reference (TODO: get rid of this)
 
@@ -39,6 +37,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     typedef enum FLAG {
         POLY = 0x00000001,
         LINE = 0x00000002,
+        UNKNOWN = 0x00000003,
         // THROUGH 0x00000008
     } FLAG;
 
@@ -47,11 +46,12 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     const std::string NAME;
     const std::set<PASS> PASS_TYPES;
     const PIPELINE PIPELINE_TYPE;
+    const Settings SETTINGS;
     const MESH TYPE;
     const VERTEX VERTEX_TYPE;
 
-    inline Mesh::index getOffset() const { return offset_; }
-    inline FlagBits getStatus() const { return status_; }
+    constexpr const auto& getOffset() const { return offset_; }
+    constexpr const auto& getStatus() const { return status_; }
 
     // MATERIAL
     inline auto& getMaterial() const { return pMaterial_; }
@@ -106,8 +106,8 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     virtual void destroy();
 
    protected:
-    Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags, const std::string&& name,
-         const CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
+    Base(Mesh::Handler& handler, const index&& offset, const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags,
+         const std::string&& name, const CreateInfo* pCreateInfo, std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData,
          std::shared_ptr<Material::Base>& pMaterial);
     Base() = delete;
     /*  THIS IS SUPER IMPORTANT BECAUSE SCENE HAS A VECTOR OF POLYMORPHIC UNIQUE_PTRs OF THIS CLASS.
@@ -150,7 +150,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     BufferResource indexRes_;
     std::vector<VB_INDEX_TYPE> indicesAdjaceny_;
     BufferResource indexAdjacencyRes_;
-    std::unique_ptr<Loading::Resources> pLdgRes_;
+    std::unique_ptr<LoadingResource> pLdgRes_;
     std::shared_ptr<Material::Base> pMaterial_;
 
    private:
@@ -160,12 +160,9 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public ObjDrawIn
     void bindPushConstants(VkCommandBuffer cmd) const;  // TODO: I hate this...
 
     Mesh::index offset_;
-    const Settings settings_;
 };
 
-// **********************
-//      Color
-// **********************
+// COLOR
 
 class Color : public Base {
     friend class Mesh::Handler;
@@ -185,7 +182,7 @@ class Color : public Base {
             assert(index < vertices_.size());
             vertices_[index] = v.getColorVertex();
         }
-        updateBoundingBox(vertices_.back());
+        pInstObj3d_->updateBoundingBox(vertices_.back());
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
     inline uint32_t getVertexCount() const override { return vertices_.size(); }
@@ -198,15 +195,15 @@ class Color : public Base {
 
    protected:
     // This is the generic constructor...
-    Color(Mesh::Handler& handler, const GenericCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-          std::shared_ptr<Material::Base>& pMaterial);
+    Color(Mesh::Handler& handler, const index&& offset, const GenericCreateInfo* pCreateInfo,
+          std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
     // Below are the base constructors.
-    Color(Mesh::Handler& handler, const std::string&& name, const CreateInfo* pCreateInfo,
-          std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
+    Color(Mesh::Handler& handler, const index&& offset, const std::string&& name, const CreateInfo* pCreateInfo,
+          std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
           const MESH&& type = MESH::COLOR);
-    Color(Mesh::Handler& handler, const FLAG&& flags, const std::string&& name, const CreateInfo* pCreateInfo,
-          std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
-          const MESH&& type = MESH::COLOR);
+    Color(Mesh::Handler& handler, const index&& offset, const FLAG&& flags, const std::string&& name,
+          const CreateInfo* pCreateInfo, std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData,
+          std::shared_ptr<Material::Base>& pMaterial, const MESH&& type = MESH::COLOR);
 
     std::vector<Vertex::Color> vertices_;
 };
@@ -222,13 +219,11 @@ class Line : public Color {
     ~Line();
 
    protected:
-    Line(Mesh::Handler& handler, const std::string&& name, const CreateInfo* pCreateInfo,
-         std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
+    Line(Mesh::Handler& handler, const index&& offset, const std::string&& name, const CreateInfo* pCreateInfo,
+         std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
 };
 
-// **********************
-//      Texture
-// **********************
+// TEXTURE
 
 class Texture : public Base {
     friend class Mesh::Handler;
@@ -248,7 +243,7 @@ class Texture : public Base {
             assert(index < vertices_.size());
             vertices_[index] = v.getTextureVertex();
         }
-        updateBoundingBox(vertices_.back());
+        pInstObj3d_->updateBoundingBox(vertices_.back());
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
     inline uint32_t getVertexCount() const override { return vertices_.size(); }
@@ -260,8 +255,8 @@ class Texture : public Base {
     const glm::vec3& getVertexPositionAtOffset(size_t offset) const override { return vertices_[offset].position; }
 
    protected:
-    Texture(Mesh::Handler& handler, const std::string&& name, const CreateInfo* pCreateInfo,
-            std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
+    Texture(Mesh::Handler& handler, const index&& offset, const std::string&& name, const CreateInfo* pCreateInfo,
+            std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
 
     std::vector<Vertex::Texture> vertices_;
 };

@@ -9,11 +9,12 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <vulkan/vulkan.h>
 
 #include "Enum.h"
 
+struct BufferResource;
 class Shell;
-
 // clang-format off
 namespace Command       { class Handler; }
 namespace Compute       { class Handler; }
@@ -22,6 +23,7 @@ namespace Loading       { class Handler; }
 namespace Material      { class Handler; }
 namespace Mesh          { class Handler; }
 namespace Model         { class Handler; }
+namespace Particle      { class Handler; }
 namespace Pipeline      { class Handler; }
 namespace RenderPass    { class Handler; }
 namespace Scene         { class Handler; }
@@ -90,7 +92,7 @@ class Game {
     virtual void onTick() {}
     virtual void onFrame(float framePred) {}
     virtual void onKey(GAME_KEY key) {}               // TODO: bad design
-    virtual void onMouse(const MouseInput &input){};  // TODO: bad design & misleading name
+    virtual void onMouse(const MouseInput &input) {}  // TODO: bad design & misleading name
 
     // HANDLER
     struct Handlers {
@@ -101,6 +103,7 @@ class Game {
         std::unique_ptr<Material::Handler> pMaterial;
         std::unique_ptr<Mesh::Handler> pMesh;
         std::unique_ptr<Model::Handler> pModel;
+        std::unique_ptr<Particle::Handler> pParticle;
         std::unique_ptr<Pipeline::Handler> pPipeline;
         std::unique_ptr<RenderPass::Handler> pPass;
         std::unique_ptr<Scene::Handler> pScene;
@@ -116,6 +119,8 @@ class Game {
         Handler &operator=(const Handler &) = delete;  // Prevent assignment
 
         virtual void init() = 0;
+        virtual void tick() {}
+        virtual void frame() {}
         virtual void destroy() { reset(); };
 
         constexpr const auto &settings() const { return pGame_->settings(); }
@@ -128,6 +133,7 @@ class Game {
         inline Material::Handler &materialHandler() const { return std::ref(*pGame_->handlers_.pMaterial); }
         inline Mesh::Handler &meshHandler() const { return std::ref(*pGame_->handlers_.pMesh); }
         inline Model::Handler &modelHandler() const { return std::ref(*pGame_->handlers_.pModel); }
+        inline Particle::Handler &particleHandler() const { return std::ref(*pGame_->handlers_.pParticle); }
         inline Pipeline::Handler &pipelineHandler() const { return std::ref(*pGame_->handlers_.pPipeline); }
         inline RenderPass::Handler &passHandler() const { return std::ref(*pGame_->handlers_.pPass); }
         inline Scene::Handler &sceneHandler() const { return std::ref(*pGame_->handlers_.pScene); }
@@ -141,6 +147,10 @@ class Game {
         virtual ~Handler() = default;
 
         virtual void reset() = 0;
+        // TODO: not sure about this being here...
+        virtual void createBuffer(const VkCommandBuffer &cmd, const VkBufferUsageFlagBits usage, const VkDeviceSize size,
+                                  const std::string &&name, BufferResource &stgRes, BufferResource &buffRes,
+                                  const void *data, const bool mappable = false);
 
         Game *pGame_;
     };

@@ -15,16 +15,17 @@
 
 // BASE
 
-Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags,
-                 const std::string&& name, const CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-                 std::shared_ptr<Material::Base>& pMaterial)
+Mesh::Base::Base(Mesh::Handler& handler, const index&& offset, const MESH&& type, const VERTEX&& vertexType,
+                 const FLAG&& flags, const std::string&& name, const CreateInfo* pCreateInfo,
+                 std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
     : Handlee(handler),
-      ObjDrawInst3d(pInstanceData),
+      Obj3d::InstanceDraw(pInstanceData),
       FLAGS(flags),
       MAPPABLE(pCreateInfo->mappable),
       NAME(name),
       PASS_TYPES(pCreateInfo->passTypes),
       PIPELINE_TYPE(pCreateInfo->pipelineType),
+      SETTINGS(pCreateInfo->settings),
       TYPE(type),
       VERTEX_TYPE(vertexType),
       status_(STATUS::PENDING),
@@ -35,8 +36,7 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
       indexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
       pLdgRes_(nullptr),
       pMaterial_(pMaterial),
-      offset_(BAD_OFFSET),
-      settings_(pCreateInfo->settings)
+      offset_(offset)
 //
 {
     if (PIPELINE_TYPE == PIPELINE::ALL_ENUM && PASS_TYPES.empty()) {
@@ -54,7 +54,7 @@ Mesh::Base::Base(Mesh::Handler& handler, const MESH&& type, const VERTEX&& verte
         assert(PIPELINE_TYPE != PIPELINE::ALL_ENUM);
         assert(Mesh::Base::handler().pipelineHandler().checkVertexPipelineMap(VERTEX_TYPE, PIPELINE_TYPE));
     }
-    assert(pInstanceData_ != nullptr);
+    assert(pInstObj3d_ != nullptr);
     assert(pMaterial_ != nullptr);
 }
 
@@ -62,9 +62,8 @@ Mesh::Base::~Base() = default;
 
 void Mesh::Base::prepare() {
     assert(status_ ^ STATUS::READY);
-    assert(getOffset() != BAD_OFFSET);
 
-    if (settings_.needAdjacenyList) makeAdjacenyList();
+    if (SETTINGS.needAdjacenyList) makeAdjacenyList();
 
     if (status_ == STATUS::PENDING_BUFFERS) {
         loadBuffers();
@@ -91,11 +90,11 @@ void Mesh::Base::prepare() {
             pPipeline->updateStatus();
     }
 
-    /*  TODO: apparently you can allocate the descriptor sets immediately, and then
-        you just need to wait to use the sets until they have been updated with valid
-        resources... I should implement this. As of now just wait until we
-        can allocate and update all at once.
-    */
+    /* TODO: apparently you can allocate the descriptor sets immediately, and then
+     *  you just need to wait to use the sets until they have been updated with valid
+     *  resources... I should implement this. As of now just wait until we
+     *  can allocate and update all at once.
+     */
     if (status_ == STATUS::READY) {
         // Screen quad mesh will not keep track of descriptor data.
         if (PIPELINE_TYPE == PIPELINE::ALL_ENUM && PASS_TYPES.empty()) return;
@@ -125,20 +124,23 @@ void Mesh::Base::loadBuffers() {
 
     pLdgRes_ = handler().loadingHandler().createLoadingResources();
 
+    VkBufferUsageFlagBits vertexUsage =
+        static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+
     // Vertex buffer
     BufferResource stgRes = {};
-    createBufferData(
-        pLdgRes_->transferCmd, stgRes, getVertexBufferSize(), getVertexData(), vertexRes_,
-        static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT), "vertex");
+    handler().createBuffer(pLdgRes_->transferCmd, vertexUsage, getVertexBufferSize(), NAME + " vertex", stgRes, vertexRes_,
+                           getVertexData(), MAPPABLE);
     pLdgRes_->stgResources.push_back(std::move(stgRes));
+
+    VkBufferUsageFlagBits indexUsage =
+        static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
 
     // Index buffer
     if (getIndexCount()) {
         stgRes = {};
-        createBufferData(
-            pLdgRes_->transferCmd, stgRes, getIndexBufferSize(), getIndexData(), indexRes_,
-            static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
-            "index");
+        handler().createBuffer(pLdgRes_->transferCmd, indexUsage, getIndexBufferSize(), NAME + " index", stgRes, indexRes_,
+                               getIndexData(), MAPPABLE);
         pLdgRes_->stgResources.push_back(std::move(stgRes));
     }
 
@@ -147,10 +149,8 @@ void Mesh::Base::loadBuffers() {
         // TODO: I should probably either create this buffer or the normal index buffer. If you
         // update this then you should also do this everywhere like "updateBuffers" for example.
         stgRes = {};
-        createBufferData(
-            pLdgRes_->transferCmd, stgRes, getIndexBufferAdjSize(), indicesAdjaceny_.data(), indexAdjacencyRes_,
-            static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
-            "index");
+        handler().createBuffer(pLdgRes_->transferCmd, indexUsage, getIndexBufferAdjSize(), NAME + " adjacency index", stgRes,
+                               indexAdjacencyRes_, indicesAdjaceny_.data(), MAPPABLE);
         pLdgRes_->stgResources.push_back(std::move(stgRes));
     }
 }
@@ -222,11 +222,9 @@ void Mesh::Base::bindPushConstants(VkCommandBuffer cmd) const {
 }
 
 void Mesh::Base::addVertex(const Face& face) {
-    // currently not used
     for (uint8_t i = 0; i < Face::NUM_VERTICES; i++) {
-        auto face = getFace(i);
-        face.calculateTangentSpaceVectors();
-        addVertex(face[i], face.getIndex(i));
+        auto index = face.getIndex(i);
+        addVertex(face[i], index == BAD_VB_INDEX ? -1 : index);
     }
 }
 
@@ -291,7 +289,7 @@ void Mesh::Base::selectFace(const Ray& ray, float& tMin, Face& face, size_t offs
     float beta, gamma, t, M;
 
     std::array<glm::vec4, 2> localRay = {glm::vec4(ray.e, 1.0f), glm::vec4(ray.d, 1.0f)};
-    worldToLocal(localRay);
+    pInstObj3d_->worldToLocal(localRay);
 
     float t0 = 0.0f;  //, t1 = glm::distance(localRay[0], localRay[1]);  // TODO: like this???
 
@@ -503,9 +501,10 @@ void Mesh::Base::destroy() {
 
 // COLOR
 
-Mesh::Color::Color(Mesh::Handler& handler, const GenericCreateInfo* pCreateInfo,
-                   std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
+Mesh::Color::Color(Mesh::Handler& handler, const index&& offset, const GenericCreateInfo* pCreateInfo,
+                   std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
     : Base{handler,                                             //
+           std::forward<const index>(offset),                   //
            std::forward<const MESH>(MESH::COLOR),               //
            VERTEX::COLOR,                                       //
            FLAG::POLY,                                          //
@@ -524,10 +523,11 @@ Mesh::Color::Color(Mesh::Handler& handler, const GenericCreateInfo* pCreateInfo,
     status_ = STATUS::PENDING_BUFFERS;
 }
 
-Mesh::Color::Color(Mesh::Handler& handler, const std::string&& name, const CreateInfo* pCreateInfo,
-                   std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
+Mesh::Color::Color(Mesh::Handler& handler, const index&& offset, const std::string&& name, const CreateInfo* pCreateInfo,
+                   std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
                    const MESH&& type)
     : Base{handler,                                //
+           std::forward<const index>(offset),      //
            std::forward<const MESH>(type),         //
            VERTEX::COLOR,                          //
            FLAG::POLY,                             //
@@ -536,10 +536,12 @@ Mesh::Color::Color(Mesh::Handler& handler, const std::string&& name, const Creat
            pInstanceData,                          //
            pMaterial} {}
 
-Mesh::Color::Color(Mesh::Handler& handler, const FLAG&& flags, const std::string&& name, const CreateInfo* pCreateInfo,
-                   std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
+Mesh::Color::Color(Mesh::Handler& handler, const index&& offset, const FLAG&& flags, const std::string&& name,
+                   const CreateInfo* pCreateInfo, std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData,
+                   std::shared_ptr<Material::Base>& pMaterial,
                    const MESH&& type)
     : Base{handler,                                //
+           std::forward<const index>(offset),      //
            std::forward<const MESH>(type),         //
            VERTEX::COLOR,                          //
            std::forward<const FLAG>(flags),        //
@@ -552,10 +554,11 @@ Mesh::Color::~Color() = default;
 
 // LINE
 
-Mesh::Line::Line(Mesh::Handler& handler, const std::string&& name, const CreateInfo* pCreateInfo,
-                 std::shared_ptr<Instance::Base>& pInstanceData,
+Mesh::Line::Line(Mesh::Handler& handler, const index&& offset, const std::string&& name, const CreateInfo* pCreateInfo,
+                 std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData,
                  std::shared_ptr<Material::Base>& pMaterial)
     : Color{handler,                                //
+            std::forward<const index>(offset),      //
             FLAG::LINE,                             //
             std::forward<const std::string>(name),  //
             pCreateInfo,                            //
@@ -567,10 +570,11 @@ Mesh::Line::~Line() = default;
 
 // TEXTURE
 
-Mesh::Texture::Texture(Mesh::Handler& handler, const std::string&& name, const CreateInfo* pCreateInfo,
-                       std::shared_ptr<Instance::Base>& pInstanceData,
+Mesh::Texture::Texture(Mesh::Handler& handler, const index&& offset, const std::string&& name, const CreateInfo* pCreateInfo,
+                       std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData,
                        std::shared_ptr<Material::Base>& pMaterial)
     : Base{handler,                                //
+           std::forward<const index>(offset),      //
            MESH::TEXTURE,                          //
            VERTEX::TEXTURE,                        //
            FLAG::POLY,                             //

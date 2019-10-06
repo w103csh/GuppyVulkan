@@ -53,6 +53,19 @@ glm::mat4 getBias() {
     return bias;
 }
 
+glm::mat3 makeArbitraryBasis(const glm::vec3 &dir) {
+    glm::mat3 basis;
+    glm::vec3 u, v, n;
+    v = dir;
+    n = glm::cross(glm::vec3(1, 0, 0), v);
+    if (glm::length(n) < 0.00001f) n = glm::cross(glm::vec3(0, 1, 0), v);
+    u = glm::cross(v, n);
+    basis[0] = glm::normalize(u);
+    basis[1] = glm::normalize(v);
+    basis[2] = glm::normalize(n);
+    return basis;
+}
+
 bool hasStencilComponent(VkFormat format) {
     return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT ||
            format == VK_FORMAT_D32_SFLOAT_S8_UINT;

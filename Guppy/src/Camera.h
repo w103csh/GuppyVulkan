@@ -35,7 +35,7 @@ struct DATA {
     // rem 4
 };
 
-class Base : public Obj3d, public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
+class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
    public:
     Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo);
 
@@ -52,13 +52,13 @@ class Base : public Obj3d, public Descriptor::Base, public Buffer::PerFramebuffe
 
     // FORWARD_VECTOR is negated here (cameras look in the negative Z direction traditionally).
     // Not sure if this will cause confusion in the future.
-    inline glm::vec3 getWorldSpaceDirection(const glm::vec3 &d = -FORWARD_VECTOR, uint32_t index = 0) const override {
+    inline glm::vec3 getWorldSpaceDirection(const glm::vec3 &d = -FORWARD_VECTOR, const uint32_t index = 0) const override {
         // TODO: deal with model_...
         glm::vec3 direction = glm::inverse(data_.view) * glm::vec4(d, 0.0f);
         return glm::normalize(direction);
     }
 
-    inline glm::vec3 getWorldSpacePosition(const glm::vec3 &p = {}, uint32_t index = 0) const override {
+    inline glm::vec3 getWorldSpacePosition(const glm::vec3 &p = {}, const uint32_t index = 0) const override {
         // TODO: deal with model_...
         return glm::inverse(data_.view) * glm::vec4(p, 1.0f);
     }
@@ -88,7 +88,7 @@ class Base : public Obj3d, public Descriptor::Base, public Buffer::PerFramebuffe
     // this is not actually the projection matrix!!!
     inline void setProjectionData() { data_.projection = clip_ * proj_; }
 
-    inline const glm::mat4 &model(uint32_t index = 0) const override { return model_; }
+    inline const glm::mat4 &model(const uint32_t index = 0) const override { return model_; }
     glm::mat4 model_;
 
     glm::mat4 clip_;

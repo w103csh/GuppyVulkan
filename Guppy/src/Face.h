@@ -27,22 +27,19 @@ class Face {
    public:
     static const uint8_t NUM_VERTICES = 3;
 
-    Face() : indices_(), meshOffset_(), vertices_() {}
+    Face();
     Face(Vertex::Complete va, Vertex::Complete vb, Vertex::Complete vc, VB_INDEX_TYPE ia, VB_INDEX_TYPE ib, VB_INDEX_TYPE ic,
-         size_t meshOffset)
-        : indices_{ia, ib, ic}, meshOffset_(meshOffset), vertices_{va, vb, vc} {}
+         size_t meshOffset);
 
-    Vertex::Complete &operator[](uint8_t index) {
-        assert(index >= 0 && index < 3);
-        return vertices_[index];
-    }
+    constexpr auto &operator[](const uint8_t index) { return vertices_.at(index); }
+    constexpr const auto &operator[](const uint8_t index) const { return vertices_.at(index); }
 
     inline void reverseWinding() { std::swap(vertices_[1], vertices_[2]); }
     constexpr void setSmoothingGroup(const uint32_t id) {
         for (auto &v : vertices_) v.smoothingGroupId = id;
     }
 
-    inline VB_INDEX_TYPE getIndex(uint8_t offset) { return indices_[offset]; }
+    constexpr auto getIndex(const uint8_t offset) const { return indices_.at(offset); }
 
     void calculateNormal();
     void calculateTangentSpaceVectors();

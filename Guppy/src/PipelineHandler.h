@@ -23,6 +23,7 @@ class Handler : public Game::Handler {
     Handler(Game *pGame);
 
     void init() override;
+    void tick() override;
     inline void destroy() override {
         reset();
         cleanup();
@@ -58,7 +59,6 @@ class Handler : public Game::Handler {
     // CLEAN UP
     void needsUpdate(const std::vector<SHADER> types);
     void cleanup(int frameIndex = -1);
-    void update();
 
    private:
     void reset() override;

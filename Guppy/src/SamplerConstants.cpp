@@ -6,15 +6,14 @@
 
 // IMAGES
 const std::string IMG_PATH = DATA_PATH + "images/";
-
-// STATUE
 const std::string STATUE_TEX_PATH = IMG_PATH + "texture.jpg";
-// VULKAN LOGO
 const std::string VULKAN_TEX_PATH = IMG_PATH + "vulkan.png";
-// HARDWOOD
 const std::string HARDWOOD_FLOOR_TEX_PATH = IMG_PATH + "hardwood_floor.jpg";
-// NEON BLUE TUX GUPPY
 const std::string NEON_BLUE_TUX_GUPPY_TEX_PATH = IMG_PATH + "neon_blue_tux_guppy.jpg";
+const std::string BLUEWATER_TEX_PATH = IMG_PATH + "bluewater.png";
+const std::string FIRE_TEX_PATH = IMG_PATH + "fire.png";
+const std::string SMOKE_TEX_PATH = IMG_PATH + "smoke.png";
+const std::string STAR_TEX_PATH = IMG_PATH + "star.png";
 // WOOD
 const std::string WOOD_PATH = IMG_PATH + "Wood_007/";
 const std::string WOOD_007_DIFF_TEX_PATH = WOOD_PATH + "Wood_007_COLOR.jpg";
@@ -70,6 +69,34 @@ const CreateInfo HARDWOOD_CREATE_INFO = {
 const CreateInfo NEON_BLUE_TUX_GUPPY_CREATE_INFO = {
     "Neon Blue Tux Guppy Color Sampler",
     {{{Sampler::USAGE::COLOR, NEON_BLUE_TUX_GUPPY_TEX_PATH}}},
+    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+};
+
+// BLUEWATER
+const CreateInfo BLUEWATER_CREATE_INFO = {
+    "Bluewater Color Sampler",
+    {{{Sampler::USAGE::COLOR, BLUEWATER_TEX_PATH}}},
+    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+};
+
+// FIRE
+const CreateInfo FIRE_CREATE_INFO = {
+    "Fire Color Sampler",
+    {{{Sampler::USAGE::COLOR, FIRE_TEX_PATH}}},
+    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+};
+
+// SMOKE
+const CreateInfo SMOKE_CREATE_INFO = {
+    "Smoke Color Sampler",
+    {{{Sampler::USAGE::COLOR, SMOKE_TEX_PATH}}},
+    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+};
+
+// STAR
+const CreateInfo STAR_CREATE_INFO = {
+    "Star Color Sampler",
+    {{{Sampler::USAGE::COLOR, STAR_TEX_PATH}}},
     VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 };
 

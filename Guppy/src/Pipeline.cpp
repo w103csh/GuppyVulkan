@@ -15,14 +15,12 @@
 #include "TextureHandler.h"
 
 void Pipeline::GetDefaultColorInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    Vertex::Color::getInputDescriptions(createInfoRes);
+    Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
     // bindings
-    Vertex::Color::getBindingDescriptions(createInfoRes.bindDescs);
-    Instance::Default::DATA::getBindingDescriptions(createInfoRes.bindDescs);
     createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
     // attributes
-    Vertex::Color::getAttributeDescriptions(createInfoRes.attrDescs);
-    Instance::Default::DATA::getAttributeDescriptions(createInfoRes.attrDescs);
     createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
         static_cast<uint32_t>(createInfoRes.attrDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
@@ -36,14 +34,12 @@ void Pipeline::GetDefaultColorInputAssemblyInfoResources(CreateInfoResources& cr
 }
 
 void Pipeline::GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    Vertex::Texture::getInputDescriptions(createInfoRes);
+    Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
     // bindings
-    Vertex::Texture::getBindingDescriptions(createInfoRes.bindDescs);
-    Instance::Default::DATA::getBindingDescriptions(createInfoRes.bindDescs);
     createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
     // attributes
-    Vertex::Texture::getAttributeDescriptions(createInfoRes.attrDescs);
-    Instance::Default::DATA::getAttributeDescriptions(createInfoRes.attrDescs);
     createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
         static_cast<uint32_t>(createInfoRes.attrDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
@@ -57,13 +53,21 @@ void Pipeline::GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources& 
 }
 
 void Pipeline::GetDefaultScreenQuadInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    GetDefaultTextureInputAssemblyInfoResources(createInfoRes);
+    Vertex::Texture::getScreenQuadInputDescriptions(createInfoRes);
+    // bindings
+    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
     // attributes
-    createInfoRes.attrDescs.clear();
-    Vertex::Texture::getScreenQuadAttributeDescriptions(createInfoRes.attrDescs);
     createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
         static_cast<uint32_t>(createInfoRes.attrDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
+    // topology
+    createInfoRes.inputAssemblyStateInfo = {};
+    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
+    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
+    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 }
 
 // BASE
@@ -343,6 +347,7 @@ void Pipeline::Graphics::setInfo(CreateInfoResources& createInfoRes, VkGraphicsP
     createInfoRes.blendAttachmentStates.clear();
     createInfoRes.bindDescs.clear();
     createInfoRes.attrDescs.clear();
+    // createInfoRes.vertexInputBindDivDescs.clear();
 
     // Gather info from derived classes...
     getBlendInfoResources(createInfoRes);
@@ -360,6 +365,14 @@ void Pipeline::Graphics::setInfo(CreateInfoResources& createInfoRes, VkGraphicsP
     pGraphicsInfo->flags = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;
     // INPUT ASSEMBLY
     pGraphicsInfo->pInputAssemblyState = &createInfoRes.inputAssemblyStateInfo;
+    // if (createInfoRes.vertexInputBindDivDescs.size()) {
+    //    createInfoRes.vertexInputDivInfo = {};
+    //    createInfoRes.vertexInputDivInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_DIVISOR_STATE_CREATE_INFO_EXT;
+    //    createInfoRes.vertexInputDivInfo.vertexBindingDivisorCount =
+    //        static_cast<uint32_t>(createInfoRes.vertexInputBindDivDescs.size());
+    //    createInfoRes.vertexInputDivInfo.pVertexBindingDivisors = createInfoRes.vertexInputBindDivDescs.data();
+    //    createInfoRes.vertexInputStateInfo.pNext = &createInfoRes.vertexInputDivInfo;
+    //}
     pGraphicsInfo->pVertexInputState = &createInfoRes.vertexInputStateInfo;
     // SHADER
     pGraphicsInfo->stageCount = static_cast<uint32_t>(createInfoRes.shaderStageInfos.size());

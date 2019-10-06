@@ -21,7 +21,7 @@ class Base {
     inline VkDeviceSize layerSize() const {
         return static_cast<VkDeviceSize>(imgCreateInfo.extent.width) *   //
                static_cast<VkDeviceSize>(imgCreateInfo.extent.height) *  //
-               static_cast<VkDeviceSize>(BYTES_PER_CHANNEL) *             //
+               static_cast<VkDeviceSize>(BYTES_PER_CHANNEL) *            //
                static_cast<VkDeviceSize>(NUM_CHANNELS);
     }
     inline VkDeviceSize size() const { return layerSize() * static_cast<VkDeviceSize>(imgCreateInfo.arrayLayers); }

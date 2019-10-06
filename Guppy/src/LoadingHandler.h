@@ -1,46 +1,34 @@
 #ifndef LDG_RESOURCE_HANDLER_H
 #define LDG_RESOURCE_HANDLER_H
 
+#include <memory>
 #include <vector>
 #include <vulkan/vulkan.h>
 
 #include "Game.h"
 #include "Helpers.h"
+#include "Types.h"
 
 namespace Loading {
-
-struct Resources {
-    Resources()
-        :  //
-          shouldWait(false),
-          graphicsCmd(VK_NULL_HANDLE),
-          transferCmd(VK_NULL_HANDLE),
-          semaphore(VK_NULL_HANDLE){};
-    bool shouldWait;
-    VkCommandBuffer graphicsCmd, transferCmd;
-    std::vector<BufferResource> stgResources;
-    std::vector<VkFence> fences;
-    VkSemaphore semaphore;
-};
 
 class Handler : public Game::Handler {
    public:
     Handler(Game *pGame);
 
     void init() override;
-    inline void destroy() override { cleanup(); };
+    void tick() override;
+    inline void destroy() override { tick(); };
 
-    std::unique_ptr<Loading::Resources> createLoadingResources() const;
-    void loadSubmit(std::unique_ptr<Loading::Resources> pLdgRes);
-    void cleanup();
+    std::unique_ptr<LoadingResource> createLoadingResources() const;
+    void loadSubmit(std::unique_ptr<LoadingResource> pLdgRes);
 
     void getFences(std::vector<VkFence> &fences);
 
    private:
     void reset() override{};
-    bool destroyResource(Loading::Resources &resource) const;
+    bool destroyResource(LoadingResource &resource) const;
 
-    std::vector<std::unique_ptr<Loading::Resources>> ldgResources_;
+    std::vector<std::unique_ptr<LoadingResource>> ldgResources_;
 };
 
 }  // namespace Loading
