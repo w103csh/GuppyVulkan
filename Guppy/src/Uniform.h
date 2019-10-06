@@ -8,7 +8,6 @@
 #include "BufferItem.h"
 #include "ConstantsAll.h"
 #include "Descriptor.h"
-#include "Helpers.h"
 
 namespace Uniform {
 

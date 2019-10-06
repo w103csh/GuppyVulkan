@@ -41,7 +41,8 @@ enum class GAME_KEY {
     KEY_9,
     KEY_0,
     KEY_MINUS,
-    KEY_EQUAL,
+    KEY_EQUALS,
+    KEY_BACKSPACE,
     // FUNCTION KEYS
     KEY_F1,
     KEY_F2,
@@ -103,32 +104,23 @@ enum class PUSH_CONSTANT {
     DEFERRED,
 };
 
-enum class HANDLER {
-    //
-    DESCRIPTOR,
-    MATERIAL,
-    TEXTURE,
-};
-
 enum class MATERIAL {
-    //
     DEFAULT,
     PBR,
+    PARTICLE_FOUNTAIN,
 };
 
 enum class INPUT_ACTION {
-    //
     UP,
     DOWN,
     DBLCLK,
-    UNKNOWN
+    UNKNOWN,
 };
 
 enum class MESH {
-    //
     COLOR = 0,
     LINE,
-    TEXTURE
+    TEXTURE,
 };
 
 // Add new to either RenderPass::ALL & Compute::ALL
@@ -164,7 +156,6 @@ enum class COMBINED_SAMPLER {
 };
 
 enum class STORAGE_BUFFER {
-    //
     POST_PROCESS,
     //
     DONT_CARE,
@@ -186,6 +177,7 @@ enum class UNIFORM {
     LIGHT_POSITIONAL_PBR,
     LIGHT_POSITIONAL_SHADOW,
     // GENERAL
+    OBJ3D,
     FOG_DEFAULT,
     PROJECTOR_DEFAULT,
     SCREEN_SPACE_DEFAULT,
@@ -195,6 +187,8 @@ enum class UNIFORM {
     TESSELLATION_DEFAULT,
     // GEOMETRY
     GEOMETRY_DEFAULT,
+    // PARTICLE
+    PARTICLE_WAVE,
     //
     DONT_CARE,
 };
@@ -203,6 +197,7 @@ enum class UNIFORM_DYNAMIC {
     // MATERIAL
     MATERIAL_DEFAULT,
     MATERIAL_PBR,
+    MATERIAL_PARTICLE_FOUNTAIN,
     //
     DONT_CARE,
 };

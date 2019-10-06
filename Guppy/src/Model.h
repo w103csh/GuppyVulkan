@@ -14,16 +14,16 @@
 #include "Instance.h"
 #include "Material.h"
 #include "Mesh.h"
-#include "Obj3d.h"
+#include "Obj3dInst.h"
 
 namespace Model {
 
 class Handler;
 
-class Base : public NonCopyable, public Handlee<Model::Handler>, public ObjInst3d {
+class Base : public NonCopyable, public Handlee<Model::Handler>, public Obj3d::Instance {
    public:
     Base(Model::Handler &handler, const Model::index offset, const Model::CreateInfo *pCreateInfo,
-         std::shared_ptr<Instance::Base> &pInstanceData);
+         std::shared_ptr<::Instance::Obj3d::Base> &pInstanceData);
     virtual ~Base();
 
     const std::string MODEL_PATH;

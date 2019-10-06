@@ -7,6 +7,7 @@
 #include "Material.h"
 #include "Mesh.h"
 #include "Parallax.h"
+#include "Particle.h"
 #include "PBR.h"
 #include "Pipeline.h"
 #include "ScreenSpace.h"
@@ -84,6 +85,8 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
             case PIPELINE::TESSELLATION_BEZIER_4_DEFERRED:  insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::Bezier4Deferred>(std::ref(*this))}); break;
             case PIPELINE::TESSELLATION_TRIANGLE_DEFERRED:  insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::TriangleDeferred>(std::ref(*this))}); break;
             case PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED:    insertPair = pPipelines_.insert({type, std::make_unique<Geometry::Silhouette>(std::ref(*this))}); break;
+            case PIPELINE::PARTICLE_WAVE_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Particle::Wave>(std::ref(*this))}); break;
+            case PIPELINE::PARTICLE_FOUNTAIN_DEFERRED:      insertPair = pPipelines_.insert({type, std::make_unique<Particle::Fountain>(std::ref(*this))}); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on
@@ -130,6 +133,31 @@ void Pipeline::Handler::init() {
 
     // PIPELINES
     for (auto& [type, pPipeline] : pPipelines_) pPipeline->init();
+}
+
+void Pipeline::Handler::tick() {
+    if (needsUpdateSet_.empty()) return;
+
+    pipelinePassSet updateSet;
+
+    auto itUpdate = needsUpdateSet_.begin();
+    auto itMap = pipelineBindDataMap_.begin();
+
+    while (itUpdate != needsUpdateSet_.end() && itMap != pipelineBindDataMap_.end()) {
+        while (itMap != pipelineBindDataMap_.end() && *itUpdate != itMap->first.first) ++itMap;
+        while (itMap != pipelineBindDataMap_.end() && *itUpdate == itMap->first.first) {
+            updateSet.insert({itMap->first.first, itMap->first.second});
+            ++itMap;
+        }
+        ++itUpdate;
+    }
+
+    if (updateSet.empty()) return;
+
+    createPipelines(updateSet);
+    passHandler().updateBindData(updateSet);
+
+    needsUpdateSet_.clear();
 }
 
 std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
@@ -377,29 +405,4 @@ void Pipeline::Handler::cleanup(int frameIndex) {
             pair.first = static_cast<int>(frameIndex);
         }
     }
-}
-
-void Pipeline::Handler::update() {
-    if (needsUpdateSet_.empty()) return;
-
-    pipelinePassSet updateSet;
-
-    auto itUpdate = needsUpdateSet_.begin();
-    auto itMap = pipelineBindDataMap_.begin();
-
-    while (itUpdate != needsUpdateSet_.end() && itMap != pipelineBindDataMap_.end()) {
-        while (itMap != pipelineBindDataMap_.end() && *itUpdate != itMap->first.first) ++itMap;
-        while (itMap != pipelineBindDataMap_.end() && *itUpdate == itMap->first.first) {
-            updateSet.insert({itMap->first.first, itMap->first.second});
-            ++itMap;
-        }
-        ++itUpdate;
-    }
-
-    if (updateSet.empty()) return;
-
-    createPipelines(updateSet);
-    passHandler().updateBindData(updateSet);
-
-    needsUpdateSet_.clear();
 }

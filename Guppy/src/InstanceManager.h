@@ -1,8 +1,9 @@
 #ifndef INSTANCE_MANAGER_H
 #define INSTANCE_MANAGER_H
 
-#include <glm/glm.hpp>
-#include <utility>
+#include <memory>
+#include <string>
+#include <type_traits>
 #include <vulkan/vulkan.h>
 
 #include "BufferManager.h"
@@ -10,11 +11,13 @@
 
 namespace Instance {
 
-template <class TDerived>
-class Manager : public Buffer::Manager::Base<Instance::Base, TDerived, std::shared_ptr> {
+template <class TBase, class TDerived>
+class Manager : public Buffer::Manager::Base<TBase, TDerived, std::shared_ptr> {
+    static_assert(std::is_base_of<Instance::Base, TBase>::value, "TBase must be a descendant of Instance::Base");
+
    public:
     Manager(const std::string&& name, const VkDeviceSize&& maxSize)
-        : Buffer::Manager::Base<Instance::Base, TDerived, std::shared_ptr>{
+        : Buffer::Manager::Base<TBase, TDerived, std::shared_ptr>{
               std::forward<const std::string>(name),
               std::forward<const VkDeviceSize>(maxSize),
               true,

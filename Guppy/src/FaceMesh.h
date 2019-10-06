@@ -8,8 +8,8 @@ namespace Mesh {
 class Handler;
 class Face : public Line {
    public:
-    Face(Handler &handler, CreateInfo *pCreateInfo, std::shared_ptr<Instance::Base> &pInstanceData,
-         std::shared_ptr<Material::Base> &pMaterial);
+    Face(Handler &handler, const index &&offset, CreateInfo *pCreateInfo,
+         std::shared_ptr<::Instance::Obj3d::Base> &pInstanceData, std::shared_ptr<Material::Base> &pMaterial);
 };
 }  // namespace Mesh
 

@@ -21,8 +21,8 @@
 #include "Geometry.h"
 #include "Helpers.h"
 #include "Light.h"
+#include "Particle.h"
 #include "PBR.h"
-#include "Random.h"
 #include "ScreenSpace.h"
 #include "Shadow.h"
 #include "Storage.h"
@@ -67,6 +67,7 @@ class Handler : public Game::Handler {
     Handler(Game* pGame);
 
     void init() override;
+    void frame() override;
 
     // DESCRIPTOR
     uint32_t getDescriptorCount(const DESCRIPTOR& descType, const Uniform::offsets& offsets);
@@ -76,7 +77,6 @@ class Handler : public Game::Handler {
 
     void createVisualHelpers();
     void attachSwapchain();
-    void update();
 
     // MAIN CAMERA
     inline Camera::Default::Perspective::Base& getMainCamera() {
@@ -84,7 +84,7 @@ class Handler : public Game::Handler {
     }
 
     // FIRST LIGHT
-    inline Light::Default::Positional::Base& getDefPosLight(uint32_t index = 0) {
+    inline Light::Default::Positional::Base& getDefPosLight(const uint32_t index = 0) {
         assert(index < lgtDefPosMgr().pItems.size());
         return std::ref(*(Light::Default::Positional::Base*)(lgtDefPosMgr().pItems[index].get()));
     }
@@ -107,9 +107,6 @@ class Handler : public Game::Handler {
     // DESCRIPTOR
     inline const auto& getOffsetsMgr() const { return offsetsManager_; }
 
-    // RANDOM
-    Random rand;  // TODO: where should this go?
-
    private:
     void reset() override;
 
@@ -119,6 +116,7 @@ class Handler : public Game::Handler {
                                          const Uniform::offsets& offsets) const;
 
     // clang-format off
+   public: // TODO: Should these all be public???
     inline Manager<Camera::Default::Perspective::Base>& camDefPersMgr() { return std::get<Uniform::Manager<Camera::Default::Perspective::Base>>(managers_[0]);};
     inline Manager<Light::Default::Positional::Base>& lgtDefPosMgr() { return std::get<Uniform::Manager<Light::Default::Positional::Base>>(managers_[1]);};
     inline Manager<Light::PBR::Positional::Base>& lgtPbrPosMgr() { return std::get<Uniform::Manager<Light::PBR::Positional::Base>>(managers_[2]);};
@@ -129,12 +127,12 @@ class Handler : public Game::Handler {
     inline Manager<ScreenSpace::Default>& uniScrDefMgr() { return std::get<Uniform::Manager<ScreenSpace::Default>>(managers_[7]);};
     inline Manager<Deferred::SSAO>& uniDfrSSAOMgr() { return std::get<Uniform::Manager<Deferred::SSAO>>(managers_[8]);};
     inline Manager<Shadow::Base>& uniShdwDataMgr() { return std::get<Uniform::Manager<Shadow::Base>>(managers_[9]);};
-   public: // Why aren't these public? If the memory is host visible then they should be public right?
     inline Manager<Tessellation::Default::Base>& uniTessDefMgr() { return std::get<Uniform::Manager<Tessellation::Default::Base>>(managers_[10]);};
-   private:
     inline Manager<Geometry::Default::Base>& uniGeomDefMgr() { return std::get<Uniform::Manager<Geometry::Default::Base>>(managers_[11]);};
-    inline Manager<Storage::PostProcess::Base>& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[12]);};
-
+    inline Manager<Particle::Wave::Base>& uniWaveMgr() { return std::get<Uniform::Manager<Particle::Wave::Base>>(managers_[12]);};
+    inline Manager<Storage::PostProcess::Base>& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[13]);};
+    
+   private:
     template <class T> inline Manager<T>& getManager() { assert(false); }
     template <> inline Manager<Camera::Default::Perspective::Base>& getManager() { return camDefPersMgr(); }
     template <> inline Manager<Light::Default::Positional::Base>& getManager() { return lgtDefPosMgr(); }
@@ -148,6 +146,7 @@ class Handler : public Game::Handler {
     template <> inline Manager<Shadow::Base>& getManager() { return uniShdwDataMgr(); }
     template <> inline Manager<Tessellation::Default::Base>& getManager() { return uniTessDefMgr(); }
     template <> inline Manager<Geometry::Default::Base>& getManager() { return uniGeomDefMgr(); }
+    template <> inline Manager<Particle::Wave::Base>& getManager() { return uniWaveMgr(); }
     template <> inline Manager<Storage::PostProcess::Base>& getManager() { return strPstPrcMgr(); }
     // clang-format on
 
@@ -169,10 +168,11 @@ class Handler : public Game::Handler {
         Manager<Deferred::SSAO>,                      //
         Manager<Shadow::Base>,                        //
         Manager<Tessellation::Default::Base>,         //
-        Manager<Geometry::Default::Base>,           //
+        Manager<Geometry::Default::Base>,             //
+        Manager<Particle::Wave::Base>,                //
         Manager<Storage::PostProcess::Base>           //
         >;
-    std::array<Manager, 13> managers_;
+    std::array<Manager, 14> managers_;
 
     // DESCRIPTOR
     OffsetsManager offsetsManager_;

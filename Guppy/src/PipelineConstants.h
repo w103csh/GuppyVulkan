@@ -53,6 +53,9 @@ enum class PIPELINE : uint32_t {
     TESSELLATION_TRIANGLE_DEFERRED,
     // GEOMETRY
     GEOMETRY_SILHOUETTE_DEFERRED,
+    // PARTICLE
+    PARTICLE_WAVE_DEFERRED,
+    PARTICLE_FOUNTAIN_DEFERRED,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP
@@ -91,30 +94,6 @@ struct CreateInfo {
     std::vector<DESCRIPTOR_SET> descriptorSets;
     Descriptor::OffsetsMap uniformOffsets;
     std::vector<PUSH_CONSTANT> pushConstantTypes;
-};
-
-struct CreateInfoResources {
-    // BLENDING
-    std::vector<VkPipelineColorBlendAttachmentState> blendAttachmentStates = {};
-    VkPipelineColorBlendStateCreateInfo colorBlendStateInfo = {};
-    // DYNAMIC
-    VkDynamicState dynamicStates[VK_DYNAMIC_STATE_RANGE_SIZE];
-    VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
-    // INPUT ASSEMBLY
-    std::vector<VkVertexInputBindingDescription> bindDescs;
-    std::vector<VkVertexInputAttributeDescription> attrDescs;
-    VkPipelineVertexInputStateCreateInfo vertexInputStateInfo = {};
-    // FIXED FUNCTION
-    VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo = {};
-    VkPipelineTessellationStateCreateInfo tessellationStateInfo = {};
-    VkPipelineViewportStateCreateInfo viewportStateInfo = {};
-    VkPipelineRasterizationStateCreateInfo rasterizationStateInfo = {};
-    VkPipelineMultisampleStateCreateInfo multisampleStateInfo = {};
-    VkPipelineDepthStencilStateCreateInfo depthStencilStateInfo = {};
-    // SHADER
-    std::vector<VkPipelineShaderStageCreateInfo> shaderStageInfos;
-    std::vector<std::vector<VkSpecializationMapEntry>> specializationMapEntries;
-    std::vector<VkSpecializationInfo> specializationInfo;
 };
 
 namespace Default {

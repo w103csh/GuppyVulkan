@@ -22,8 +22,8 @@ class Arc : public Line {
     friend class Handler;
 
    protected:
-    Arc(Handler& handler, const ArcCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-        std::shared_ptr<Material::Base>& pMaterial);
+    Arc(Handler& handler, const index&& offset, const ArcCreateInfo* pCreateInfo,
+        std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
 };
 
 }  // namespace Mesh

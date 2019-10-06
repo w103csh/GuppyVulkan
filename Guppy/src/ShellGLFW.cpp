@@ -20,8 +20,8 @@ void glfw_resize_callback(GLFWwindow* window, int w, int h) {
 }
 
 void glfw_cursor_pos_callback(GLFWwindow* window, double xpos, double ypos) {
-    InputHandler::updateMousePosition(static_cast<float>(xpos), static_cast<float>(ypos), 0.0, IS_LOOKING,
-                                      !ImGui::GetIO().WantCaptureMouse, MOUSE_PRIMARY, MOUSE_SECONDARY);
+    InputHandler::inst().updateMousePosition(static_cast<float>(xpos), static_cast<float>(ypos), 0.0, IS_LOOKING,
+                                             !ImGui::GetIO().WantCaptureMouse, MOUSE_PRIMARY, MOUSE_SECONDARY);
 }
 
 void glfw_mouse_button_callback(GLFWwindow* window, int button, int action, int mods) {
@@ -162,7 +162,10 @@ void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, in
                 gKey = GAME_KEY::KEY_MINUS;
                 break;
             case GLFW_KEY_EQUAL:
-                gKey = GAME_KEY::KEY_EQUAL;
+                gKey = GAME_KEY::KEY_EQUALS;
+                break;
+            case GLFW_KEY_BACKSPACE:
+                gKey = GAME_KEY::KEY_BACKSPACE;
                 break;
             // FUNCTION KEYS
             case GLFW_KEY_F1:
@@ -214,7 +217,7 @@ void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, in
                 gKey = GAME_KEY::KEY_UNKNOWN;
                 break;
         }
-        InputHandler::updateKeyInput(gKey, type);
+        InputHandler::inst().updateKeyInput(gKey, type);
 
         if (NOTIFY_ON_KEY_UP && type == INPUT_ACTION::UP) {
             auto pShell = reinterpret_cast<Shell*>(glfwGetWindowUserPointer(window));

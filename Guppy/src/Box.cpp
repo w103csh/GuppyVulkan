@@ -10,7 +10,7 @@ using namespace Mesh;
 
 namespace {
 void addPlane(const glm::mat4& t, const Mesh::Geometry::Info& geoInfo, std::vector<Face>& faces) {
-    auto planeFaces = Plane::make(geoInfo);
+    auto planeFaces = Plane::make({}, geoInfo);
     for (auto& face : planeFaces) face.transform(t);
     faces.insert(faces.end(), planeFaces.begin(), planeFaces.end());
 }
@@ -19,7 +19,13 @@ void addFaces(Base* pMesh, const Mesh::Geometry::Info& geoInfo) {
     // using the same ideas (for testing)...
     unique_vertices_map_non_smoothing vertexMap = {};
     auto faces = Box::make(geoInfo);
-    for (auto& face : faces) face.indexVertices(vertexMap, pMesh);
+    for (auto& face : faces) {
+        if (pMesh->SETTINGS.indexVertices) {
+            face.indexVertices(vertexMap, pMesh);
+        } else {
+            pMesh->addVertex(face);
+        }
+    }
 }
 }  // namespace
 
@@ -51,18 +57,18 @@ std::vector<Face> Box::make(const Mesh::Geometry::Info& geoInfo) {
     return faces;
 }
 
-Box::Color::Color(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-                  std::shared_ptr<Material::Base>& pMaterial)
-    : Mesh::Color(handler, "Color Box", pCreateInfo, pInstanceData, pMaterial) {
+Box::Color::Color(Handler& handler, const index&& offset, CreateInfo* pCreateInfo,
+                  std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
+    : Mesh::Color(handler, std::forward<const index>(offset), "Color Box", pCreateInfo, pInstanceData, pMaterial) {
     addFaces(this, pCreateInfo->settings.geometryInfo);
-    updateBoundingBox(vertices_);
+    pInstObj3d_->updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
 }
 
-Box::Texture::Texture(Handler& handler, CreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-                      std::shared_ptr<Material::Base>& pMaterial)
-    : Mesh::Texture(handler, "Texture Box", pCreateInfo, pInstanceData, pMaterial) {
+Box::Texture::Texture(Handler& handler, const index&& offset, CreateInfo* pCreateInfo,
+                      std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
+    : Mesh::Texture(handler, std::forward<const index>(offset), "Texture Box", pCreateInfo, pInstanceData, pMaterial) {
     addFaces(this, pCreateInfo->settings.geometryInfo);
-    updateBoundingBox(vertices_);
+    pInstObj3d_->updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
 }

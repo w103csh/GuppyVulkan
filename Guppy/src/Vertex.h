@@ -10,23 +10,22 @@
 #include <vulkan/vulkan.h>
 
 #include "Helpers.h"
+#include "Types.h"
 
 namespace Vertex {
 
 const uint32_t BINDING = 0;
 
 struct Color {
-    static void getBindingDescriptions(std::vector<VkVertexInputBindingDescription> &descs);
-    static void getAttributeDescriptions(std::vector<VkVertexInputAttributeDescription> &descs);
+    static void getInputDescriptions(Pipeline::CreateInfoResources &createInfoRes);
     glm::vec3 position;
     glm::vec3 normal{0.0f};
     glm::vec4 color{1.0f};
 };
 
 struct Texture {
-    static void getBindingDescriptions(std::vector<VkVertexInputBindingDescription> &descs);
-    static void getAttributeDescriptions(std::vector<VkVertexInputAttributeDescription> &descs);
-    static void getScreenQuadAttributeDescriptions(std::vector<VkVertexInputAttributeDescription> &descs);
+    static void getInputDescriptions(Pipeline::CreateInfoResources &createInfoRes);
+    static void getScreenQuadInputDescriptions(Pipeline::CreateInfoResources &createInfoRes);
     glm::vec3 position;
     glm::vec3 normal;
     glm::vec2 texCoord;

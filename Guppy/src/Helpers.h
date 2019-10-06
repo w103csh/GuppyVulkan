@@ -155,6 +155,8 @@ static glm::mat4 affine(glm::vec3 scale = glm::vec3(1.0f), glm::vec3 translate =
 // TODO: constant?
 glm::mat4 getBias();
 
+glm::mat3 makeArbitraryBasis(const glm::vec3 &dir);
+
 static std::string makeVec3String(std::string prefix, glm::vec3 v) {
     std::stringstream ss;
     ss << prefix << "(" << v.x << ", " << v.y << ", " << v.z << ")" << std::endl;

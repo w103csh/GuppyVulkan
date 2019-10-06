@@ -4,13 +4,16 @@
 #include "Mesh.h"
 #include "Shell.h"
 // HANDLERS
+#include "SceneHandler.h"
 #include "TextureHandler.h"
 
 Model::Handler::Handler(Game *pGame) : Game::Handler(pGame) {}
 
 bool Model::Handler::checkOffset(const Model::index offset) { return offset < pModels_.size(); }
 
-void Model::Handler::update(std::unique_ptr<Scene::Base> &pScene) {
+void Model::Handler::tick() {
+    // TODO: move to SceneHandler::update or something!
+    auto &pScene = sceneHandler().getActiveScene();
     checkFutures(pScene, ldgColorFutures_);
     checkFutures(pScene, ldgTexFutures_);
 }

@@ -4,48 +4,48 @@
 
 #include <glm/glm.hpp>
 #include <set>
-#include <vulkan/vulkan.h>
 
-#include "Helpers.h"
 #include "Singleton.h"
 #include "Shell.h"
 
-class InputHandler : public Singleton {
+class InputHandler : public Singleton<InputHandler> {
+    friend class Singleton<InputHandler>;
+
    public:
-    static void init(Shell* sh);
+    void init(Shell* sh);
 
-    static inline const glm::vec3& getPosDir() { return inst_.posDir_; }
-    static inline const glm::vec3& getLookDir() { return inst_.lookDir_; }
+    constexpr const glm::vec3& getPosDir() { return posDir_; }
+    constexpr const glm::vec3& getLookDir() { return lookDir_; }
 
-    static inline void updateKeyInput(GAME_KEY key, INPUT_ACTION type) {
+    inline void updateKeyInput(GAME_KEY key, INPUT_ACTION type) {
         switch (type) {
             case INPUT_ACTION::UP:
-                inst_.currKeyInput_.erase(key);
+                currKeyInput_.erase(key);
                 break;
             case INPUT_ACTION::DOWN:
-                inst_.currKeyInput_.insert(key);
+                currKeyInput_.insert(key);
                 break;
             default:;
         }
     }
 
-    static inline void updateMousePosition(float xPos, float yPos, float zDelta, bool isLooking, bool move = false,
-                                           bool primary = false, bool secondary = false) {
-        inst_.currMouseInput_.xPos = xPos;
-        inst_.currMouseInput_.yPos = yPos;
-        inst_.currMouseInput_.zDelta = zDelta;
-        inst_.currMouseInput_.moving = move;
-        inst_.currMouseInput_.primary = primary;
-        inst_.currMouseInput_.secondary = secondary;
-        inst_.isLooking_ = isLooking;
+    inline void updateMousePosition(float xPos, float yPos, float zDelta, bool isLooking, bool move = false,
+                                    bool primary = false, bool secondary = false) {
+        currMouseInput_.xPos = xPos;
+        currMouseInput_.yPos = yPos;
+        currMouseInput_.zDelta = zDelta;
+        currMouseInput_.moving = move;
+        currMouseInput_.primary = primary;
+        currMouseInput_.secondary = secondary;
+        isLooking_ = isLooking;
     }
 
-    static inline void mouseLeave() { inst_.hasFocus_ = true; }
-    static void updateInput(float elapsed);
-    static void clear() { inst_.reset(); }
+    constexpr void mouseLeave() { hasFocus_ = true; }
+    void updateInput(float elapsed);
+    void clear() { reset(); }
 
     // TODO: all this stuff is garbage
-    static const MouseInput& getMouseInput() { return inst_.currMouseInput_; }
+    constexpr const MouseInput& getMouseInput() const { return currMouseInput_; }
 
    private:
     InputHandler()
@@ -56,11 +56,10 @@ class InputHandler : public Singleton {
           hasFocus_(false),
           currMouseInput_{0.0f, 0.0f, 0.0f},
           prevMouseInput_{0.0f, 0.0f, 0.0f},
-          lookDir_(){};  // Prevent construction
-    ~InputHandler(){};   // Prevent destruction
+          lookDir_() {}         // Prevent construction
+    ~InputHandler() = default;  // Prevent destruction
 
-    static InputHandler inst_;
-    void reset() override;
+    void reset();
 
     void updateKeyInput();
     void updateMouseInput();

@@ -17,7 +17,7 @@ class ImGuiHandler : public UI::Handler {
           showDemoWindow_(false),
           showSelectionInfoWindow_(false) {}
 
-    void update() override;
+    void frame() override;
     void draw(const VkCommandBuffer& cmd, const uint8_t frameIndex) override;
 
     // Application main menu (TODO: move this to a UI class)

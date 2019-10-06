@@ -1,6 +1,8 @@
 
 #include "Shadow.h"
 
+#include "Random.h"
+
 namespace {
 constexpr uint32_t MAP_WIDTH = 540;
 constexpr uint32_t MAP_HEIGHT = MAP_WIDTH;
@@ -48,7 +50,7 @@ const CreateInfo MAP_2D_ARRAY_CREATE_INFO = {
     COMBINED_SAMPLER::PIPELINE_DEPTH,
 };
 
-CreateInfo MakeOffsetTex(Random& rand) {
+CreateInfo MakeOffsetTex() {
     uint32_t samples = SAMPLES_U * SAMPLES_V;
     uint32_t bufSize = OFFSET_WIDTH * OFFSET_HEIGHT * samples * 2;
     float* pData = new float[bufSize];
@@ -64,10 +66,10 @@ CreateInfo MakeOffsetTex(Random& rand) {
 
                 glm::vec4 v;
                 // Center on grid and jitter
-                v.x = (x1 + 0.5f) + rand.nextFloatNegZeroPoint5ToPosZeroPoint5();
-                v.y = (y1 + 0.5f) + rand.nextFloatNegZeroPoint5ToPosZeroPoint5();
-                v.z = (x2 + 0.5f) + rand.nextFloatNegZeroPoint5ToPosZeroPoint5();
-                v.w = (y2 + 0.5f) + rand.nextFloatNegZeroPoint5ToPosZeroPoint5();
+                v.x = (x1 + 0.5f) + Random::inst().nextFloatNegZeroPoint5ToPosZeroPoint5();
+                v.y = (y1 + 0.5f) + Random::inst().nextFloatNegZeroPoint5ToPosZeroPoint5();
+                v.z = (x2 + 0.5f) + Random::inst().nextFloatNegZeroPoint5ToPosZeroPoint5();
+                v.w = (y2 + 0.5f) + Random::inst().nextFloatNegZeroPoint5ToPosZeroPoint5();
 
                 // Scale between 0 and 1
                 v.x /= SAMPLES_U;

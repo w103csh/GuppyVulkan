@@ -11,6 +11,7 @@
 #include "Geometry.h"
 #include "Mesh.h"
 #include "Parallax.h"
+#include "Particle.h"
 #include "PBR.h"
 #include "Pipeline.h"
 #include "RenderPass.h"
@@ -27,9 +28,11 @@
 
 Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_HANDLE) {
     for (const auto& type : Descriptor::Set::ALL) {
+        // clang-format off
         switch (type) {
-                // clang-format off
             case DESCRIPTOR_SET::UNIFORM_DEFAULT:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::UNIFORM_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::UNIFORM_CAMERA_ONLY:                       pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::UNIFORM_CAMERA_ONLY_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::UNIFORM_OBJ3D:                             pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::UNIFORM_OBJ3D_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_DEFAULT:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT:                      pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::CUBE_SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::PROJECTOR_DEFAULT:                         pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::PROJECTOR_SAMPLER_CREATE_INFO)); break;
@@ -60,9 +63,11 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::SAMPLER_SHADOW_OFFSET:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::SAMPLER_OFFSET_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_TESSELLATION_DEFAULT:              pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Tessellation::DEFAULT_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_GEOMETRY_DEFAULT:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Geometry::DEFAULT_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::UNIFORM_PARTICLE_WAVE:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::WAVE_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN:                 pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::FOUNTAIN_CREATE_INFO)); break;
             default: assert(false);  // add new pipelines here
-                // clang-format on
         }
+        // clang-format on
         assert(pDescriptorSets_.back()->TYPE == type);
     }
 }
@@ -245,7 +250,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
 
             /* There are two types of offset overrides that need to be resolved at this point.
              *
-             *  Pipeline Defaults: These are offsets that are should be used for a specific
+             *  Pipeline Defaults: These are offsets that should be used for a specific
              *      pipeline across all passes. They should be declared in the create info for
              *      the pipeline.
              *
@@ -256,7 +261,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
              *
              *      TODO: add the create info stuff mentioned above, and validate the types.
              *
-             *  Non-defaults: These are offsets that are should be used only for a pipeline
+             *  Non-defaults: These are offsets that should be used only for a pipeline
              *      (or all pipelines) and a specfic pass (or multiple passes). They should
              *      be declared in the create info for the pass.
              *
@@ -266,7 +271,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
              *      (ex: PIPELINE::ALL_ENUM, PASS::SAMPLER)
              *
              *   Non-defaults should override any pipeline defaults, and pipeline defaults
-             *   should override the main defualts declared in the OffsetsManager map.
+             *   should override the main defaults declared in the OffsetsManager map.
              *
              */
             for (const auto& pipelineType : pipelineTypes) {
@@ -690,6 +695,13 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
 
         } else if (std::visit(IsUniformDynamic{}, bindingInfo.descType)) {
             // MATERIAL
+
+            itInfoMap->second.descCount = 1;
+            itInfoMap->second.bufferInfos.resize(itInfoMap->second.uniqueDataSets);
+
+            auto sMsg =
+                Descriptor::GetPerframeBufferWarning(bindingInfo.descType, pMaterial->BUFFER_INFO, itInfoMap->second);
+            if (sMsg.size()) shell().log(Shell::LOG_WARN, sMsg.c_str());
 
             assert(pMaterial != nullptr);
             pMaterial->setDescriptorInfo(itInfoMap->second, 0);

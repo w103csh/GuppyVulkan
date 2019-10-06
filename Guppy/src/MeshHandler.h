@@ -31,15 +31,13 @@ class Handler : public Game::Handler {
     template <class TMeshType, class TMeshBaseType, typename TMeshCreateInfo, typename TMaterialCreateInfo,
               typename... TArgs>
     auto &make(std::vector<TMeshBaseType> &meshes, TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
-               std::shared_ptr<Instance::Base> &pInstanceData, TArgs... args) {
+               std::shared_ptr<Instance::Obj3d::Base> &pInstObj3d, TArgs... args) {
         // MATERIAL
         auto &pMaterial = materialHandler().makeMaterial(pMaterialCreateInfo);
 
-        // INSTANTIATE
-        meshes.emplace_back(new TMeshType(std::ref(*this), pCreateInfo, pInstanceData, pMaterial, args...));
-
-        // SET VALUES
-        meshes.back()->offset_ = meshes.size() - 1;
+        meshes.emplace_back(
+            new TMeshType(std::ref(*this), static_cast<index>(meshes.size()), pCreateInfo, pInstObj3d, pMaterial, args...));
+        assert(meshes.back()->getOffset() == meshes.size() - 1);
 
         switch (meshes.back()->getStatus()) {
             case STATUS::PENDING_VERTICES:
@@ -50,7 +48,8 @@ class Handler : public Game::Handler {
                 meshes.back()->prepare();
                 break;
             default:
-                throw std::runtime_error("Invalid mesh status after instantiation");
+                assert(false && "Invalid mesh status after instantiation");
+                exit(EXIT_FAILURE);
         }
 
         return meshes.back();
@@ -60,6 +59,7 @@ class Handler : public Game::Handler {
     Handler(Game *pGame);
 
     void init() override;
+    void tick() override;
 
     bool checkOffset(const MESH type, const Mesh::index offset);
 
@@ -86,36 +86,36 @@ class Handler : public Game::Handler {
     //}
 
     template <typename TInstanceCreateInfo>
-    std::shared_ptr<Instance::Base> &makeInstanceData(TInstanceCreateInfo *pInfo) {
-        std::shared_ptr<Instance::Base> &pInstanceData = pInfo->pSharedData;
-        if (pInstanceData == nullptr) {
+    std::shared_ptr<Instance::Obj3d::Base> &makeInstanceObj3d(TInstanceCreateInfo *pInfo) {
+        std::shared_ptr<Instance::Obj3d::Base> &pInstObj3d = pInfo->pSharedData;
+        if (pInstObj3d == nullptr) {
             if (pInfo == nullptr || pInfo->data.empty())
-                instDefMgr_.insert(shell().context().dev, true);
+                instObj3dMgr_.insert(shell().context().dev, true);
             else
-                instDefMgr_.insert(shell().context().dev, pInfo->update, pInfo->data);
-            pInstanceData = instDefMgr_.pItems.back();
+                instObj3dMgr_.insert(shell().context().dev, pInfo->update, pInfo->data);
+            pInstObj3d = instObj3dMgr_.pItems.back();
         }
-        return pInstanceData;
+        return pInstObj3d;
     }
 
     // WARNING !!! THE REFERENCES RETURNED GO BAD !!! (TODO: what should be returned? anything?)
     template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo, typename TInstanceCreateInfo>
     auto &makeColorMesh(TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
                         TInstanceCreateInfo *pInstanceCreateInfo) {
-        auto &pInstanceData = makeInstanceData(pInstanceCreateInfo);
-        return make<TMeshType>(colorMeshes_, pCreateInfo, pMaterialCreateInfo, pInstanceData);
+        auto &pInstObj3d = makeInstanceObj3d(pInstanceCreateInfo);
+        return make<TMeshType>(colorMeshes_, pCreateInfo, pMaterialCreateInfo, pInstObj3d);
     }
     template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo, typename TInstanceCreateInfo>
     auto &makeLineMesh(TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
                        TInstanceCreateInfo *pInstanceCreateInfo) {
-        auto &pInstanceData = makeInstanceData(pInstanceCreateInfo);
-        return make<TMeshType>(lineMeshes_, pCreateInfo, pMaterialCreateInfo, pInstanceData);
+        auto &pInstObj3d = makeInstanceObj3d(pInstanceCreateInfo);
+        return make<TMeshType>(lineMeshes_, pCreateInfo, pMaterialCreateInfo, pInstObj3d);
     }
     template <class TMeshType, typename TMeshCreateInfo, typename TMaterialCreateInfo, typename TInstanceCreateInfo>
     auto &makeTextureMesh(TMeshCreateInfo *pCreateInfo, TMaterialCreateInfo *pMaterialCreateInfo,
                           TInstanceCreateInfo *pInstanceCreateInfo) {
-        auto &pInstanceData = makeInstanceData(pInstanceCreateInfo);
-        return make<TMeshType>(texMeshes_, pCreateInfo, pMaterialCreateInfo, pInstanceData);
+        auto &pInstObj3d = makeInstanceObj3d(pInstanceCreateInfo);
+        return make<TMeshType>(texMeshes_, pCreateInfo, pMaterialCreateInfo, pInstObj3d);
     }
 
     // TODO: Do these pollute this class? Should this be in a derived Handler?
@@ -127,11 +127,11 @@ class Handler : public Game::Handler {
         // MATERIAL
         Material::Default::CreateInfo matInfo = {};
         // INSTANCE
-        Instance::Default::CreateInfo instInfo = {};
+        Instance::Obj3d::CreateInfo instInfo = {};
         instInfo.data.push_back({obj.model()});
-        auto &pInstanceData = makeInstanceData(&instInfo);
+        auto &pInstObj3d = makeInstanceObj3d(&instInfo);
 
-        auto offset = make<VisualHelper::ModelSpace>(lineMeshes_, &meshInfo, &matInfo, pInstanceData)->getOffset();
+        auto offset = make<VisualHelper::ModelSpace>(lineMeshes_, &meshInfo, &matInfo, pInstObj3d)->getOffset();
         addOffsetToScene(MESH::LINE, offset);
     }
     template <class TMesh>
@@ -143,7 +143,7 @@ class Handler : public Game::Handler {
         Material::Default::CreateInfo matInfo = {};
 
         auto offset =
-            make<VisualHelper::TangentSpace>(lineMeshes_, &meshInfo, &matInfo, pMesh->pInstanceData_, pMesh)->getOffset();
+            make<VisualHelper::TangentSpace>(lineMeshes_, &meshInfo, &matInfo, pMesh->pInstObj3d_, pMesh)->getOffset();
         addOffsetToScene(MESH::LINE, offset);
     }
     void makeSkyBox() { assert(false); }
@@ -172,12 +172,11 @@ class Handler : public Game::Handler {
 
     void removeMesh(std::unique_ptr<Mesh::Base> &pMesh);
 
-    void update();
-    inline void updateInstanceData(const Buffer::Info &info) { instDefMgr_.updateData(shell().context().dev, info); }
+    inline void updateInstanceData(const Buffer::Info &info) { instObj3dMgr_.updateData(shell().context().dev, info); }
 
     template <typename TMesh>
     inline void updateMesh(std::unique_ptr<TMesh> &pMesh) {
-        instDefMgr_.updateData(shell().context().dev, pMesh->pInstanceData_->BUFFER_INFO);
+        instObj3dMgr_.updateData(shell().context().dev, pMesh->pInstObj3d_->BUFFER_INFO);
     }
 
    private:
@@ -194,7 +193,7 @@ class Handler : public Game::Handler {
     std::vector<std::unique_ptr<Mesh::Texture>> texMeshes_;
 
     // INSTANCE
-    Instance::Manager<Instance::Default::Base> instDefMgr_;
+    Instance::Manager<Instance::Obj3d::Base, Instance::Obj3d::Base> instObj3dMgr_;
 
     // LOADING
     std::vector<std::future<Mesh::Base *>> ldgFutures_;

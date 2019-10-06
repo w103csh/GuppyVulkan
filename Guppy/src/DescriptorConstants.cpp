@@ -1,25 +1,12 @@
 
 #include "DescriptorConstants.h"
 
+#include <sstream>
+
+#include "BufferItem.h"
 #include "ConstantsAll.h"
 
 namespace Descriptor {
-
-const std::set<DESCRIPTOR> DESCRIPTORS = {
-    // UNIFORM
-    UNIFORM::CAMERA_PERSPECTIVE_DEFAULT,
-    UNIFORM::LIGHT_POSITIONAL_DEFAULT,
-    UNIFORM::LIGHT_SPOT_DEFAULT,
-    UNIFORM::LIGHT_POSITIONAL_PBR,
-    UNIFORM::FOG_DEFAULT,
-    UNIFORM::PROJECTOR_DEFAULT,
-    // UNIFORM DYNAMIC
-    UNIFORM_DYNAMIC::MATERIAL_DEFAULT,
-    UNIFORM_DYNAMIC::MATERIAL_PBR,
-    // COMBINED SAMPLER
-    COMBINED_SAMPLER::MATERIAL,
-    COMBINED_SAMPLER::PIPELINE,
-};  // namespace Descriptor
 
 void OffsetsMap::insert(const DESCRIPTOR& key, const Uniform::offsets& value) {
     if (std::visit(IsCombinedSampler{}, key)) {
@@ -42,6 +29,8 @@ const std::set<DESCRIPTOR_SET> ALL = {
     // DESCRIPTOR_SET::SWAPCHAIN_IMAGE,
     // DEFAULT
     DESCRIPTOR_SET::UNIFORM_DEFAULT,
+    DESCRIPTOR_SET::UNIFORM_CAMERA_ONLY,
+    DESCRIPTOR_SET::UNIFORM_OBJ3D,
     DESCRIPTOR_SET::SAMPLER_DEFAULT,
     DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT,
     DESCRIPTOR_SET::PROJECTOR_DEFAULT,
@@ -78,6 +67,9 @@ const std::set<DESCRIPTOR_SET> ALL = {
     DESCRIPTOR_SET::UNIFORM_TESSELLATION_DEFAULT,
     // GEOMETRY
     DESCRIPTOR_SET::UNIFORM_GEOMETRY_DEFAULT,
+    // PARTICLE
+    DESCRIPTOR_SET::UNIFORM_PARTICLE_WAVE,
+    DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN,
 };
 
 void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& write) const {
@@ -97,7 +89,7 @@ void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& writ
         assert(imageInfos.empty() && texelBufferView == VK_NULL_HANDLE);
 
         offset *= descCount;
-        assert((offset + descCount) <= bufferInfos.size());
+        assert((offset + descCount) <= static_cast<uint32_t>(bufferInfos.size()));
 
         write.descriptorCount = descCount;
         write.pBufferInfo = &bufferInfos.at(offset);
@@ -136,6 +128,22 @@ const CreateInfo UNIFORM_CREATE_INFO = {
     },
 };
 
+const CreateInfo UNIFORM_CAMERA_ONLY_CREATE_INFO = {
+    DESCRIPTOR_SET::UNIFORM_CAMERA_ONLY,
+    "_DS_UNI_CAM_ONLY",
+    {
+        {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
+    },
+};
+
+const CreateInfo UNIFORM_OBJ3D_CREATE_INFO = {
+    DESCRIPTOR_SET::UNIFORM_OBJ3D,
+    "_DS_UNI_OBJ3D",
+    {
+        {{0, 0}, {UNIFORM::OBJ3D}},
+    },
+};
+
 const CreateInfo SAMPLER_CREATE_INFO = {
     DESCRIPTOR_SET::SAMPLER_DEFAULT,
     "_DS_SMP_DEF",
@@ -168,5 +176,18 @@ const CreateInfo PROJECTOR_SAMPLER_CREATE_INFO = {
 }  // namespace Default
 
 }  // namespace Set
+
+std::string GetPerframeBufferWarning(const DESCRIPTOR descType, const Buffer::Info& buffInfo,
+                                     const Set::ResourceInfo& resInfo, bool doAssert) {
+    if (buffInfo.count != resInfo.uniqueDataSets) {
+        std::stringstream sMsg;
+        sMsg << "Descriptor with type (" << std::visit(Descriptor::GetDescriptorTypeString{}, descType);
+        sMsg << ") has BUFFER_INFO count of (" << buffInfo.count;
+        sMsg << ") and a uniqueDataSets count of (" << resInfo.uniqueDataSets << ").";
+        if (doAssert) assert(false);
+        return sMsg.str();
+    }
+    return "";
+}
 
 }  // namespace Descriptor

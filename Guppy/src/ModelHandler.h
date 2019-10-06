@@ -22,6 +22,7 @@ class Handler : public Game::Handler {
     Handler(Game* pGame);
 
     void init() override{};
+    void tick() override;
     inline void destroy() override { reset(); }
 
     bool checkOffset(const Model::index offset);
@@ -30,7 +31,7 @@ class Handler : public Game::Handler {
     auto& makeColorModel(Model::CreateInfo* pCreateInfo, TMaterialCreateInfo* pMaterialCreateInfo,
                          TInstanceCreateInfo* pInstanceCreateInfo) {
         // INSTANCE
-        auto& pInstanceData = meshHandler().makeInstanceData(pInstanceCreateInfo);
+        auto& pInstanceData = meshHandler().makeInstanceObj3d(pInstanceCreateInfo);
 
         pModels_.emplace_back(std::make_unique<Model::Base>(std::ref(*this), static_cast<Model::index>(pModels_.size()),
                                                             pCreateInfo, pInstanceData));
@@ -53,7 +54,7 @@ class Handler : public Game::Handler {
     auto& makeTextureModel(Model::CreateInfo* pCreateInfo, TMaterialCreateInfo* pMaterialCreateInfo,
                            TInstanceCreateInfo* pInstanceCreateInfo) {
         // INSTANCE
-        auto& pInstanceData = meshHandler().makeInstanceData(pInstanceCreateInfo);
+        auto& pInstanceData = meshHandler().makeInstanceObj3d(pInstanceCreateInfo);
 
         pModels_.emplace_back(std::make_unique<Model::Base>(std::ref(*this), static_cast<Model::index>(pModels_.size()),
                                                             pCreateInfo, pInstanceData));
@@ -74,8 +75,6 @@ class Handler : public Game::Handler {
 
     std::unique_ptr<Model::Base>& getModel(Model::index offset) { return pModels_.at(offset); }
 
-    void update(std::unique_ptr<Scene::Base>& pScene);
-
    private:
     void reset() override{};
 
@@ -83,7 +82,7 @@ class Handler : public Game::Handler {
 
     template <typename TMaterialCreateInfo>
     std::vector<Mesh::Color*> loadColor(Model::Base& model, TMaterialCreateInfo materialCreateInfo,
-                                        std::shared_ptr<Instance::Base> pInstanceData) {
+                                        std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData) {
         auto data = loadData(model);
         auto createInfo = model.getMeshCreateInfo();
 
@@ -115,7 +114,7 @@ class Handler : public Game::Handler {
 
     template <typename TMaterialCreateInfo>
     std::vector<Mesh::Texture*> loadTexture(Model::Base& model, TMaterialCreateInfo materialCreateInfo,
-                                            std::shared_ptr<Instance::Base> pInstanceData) {
+                                            std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData) {
         auto data = loadData(model);
         auto createInfo = model.getMeshCreateInfo();
 
@@ -150,7 +149,7 @@ class Handler : public Game::Handler {
 
     template <typename TMaterialCreateInfo>
     void makeColorMesh(Model::Base& model, std::vector<Mesh::Color*>& pMeshes, TMaterialCreateInfo* pMaterialCreateInfo,
-                       std::shared_ptr<Instance::Base>& pInstanceData) {
+                       std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData) {
         auto createInfo = model.getMeshCreateInfo();
         auto& pMesh = meshHandler().make<Model::ColorMesh>(meshHandler().colorMeshes_, &createInfo, pMaterialCreateInfo,
                                                            pInstanceData);
@@ -160,7 +159,7 @@ class Handler : public Game::Handler {
 
     template <typename TMaterialCreateInfo>
     void makeTextureMesh(Model::Base& model, std::vector<Mesh::Texture*>& pMeshes, TMaterialCreateInfo* pMaterialCreateInfo,
-                         std::shared_ptr<Instance::Base>& pInstanceData) {
+                         std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData) {
         auto createInfo = model.getMeshCreateInfo();
         auto& pMesh = meshHandler().make<Model::TextureMesh>(meshHandler().texMeshes_, &createInfo, pMaterialCreateInfo,
                                                              pInstanceData);

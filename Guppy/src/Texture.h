@@ -32,7 +32,7 @@ class Base {
     FlagBits flags;  // TODO: Still needed?
     bool usesSwapchain;
     float aspect;  // TODO: Set per sampler passing a dynamic list to shaders?
-    std::unique_ptr<Loading::Resources> pLdgRes;
+    std::unique_ptr<LoadingResource> pLdgRes;
 
     std::vector<Sampler::Base> samplers;
 };

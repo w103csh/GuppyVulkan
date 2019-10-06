@@ -35,7 +35,6 @@ class Item {
 
    protected:
     /*  Virtual inheritance only.
-
         I am going to assert here to make it clear that its best to avoid this
         constructor being called. It gave me some headaches, so this will hopefully
         force me to call the constructors in the same order. The order is that "the
@@ -48,7 +47,7 @@ class Item {
 template <typename TDATA>
 class DataItem : public virtual Buffer::Item {
    public:
-    typedef TDATA DATA;
+    using DATA = TDATA;
 
     DataItem(TDATA* pData) : pData_(pData) { assert(pData_); }
 
@@ -62,7 +61,7 @@ class DataItem : public virtual Buffer::Item {
 template <typename TDATA>
 class PerFramebufferDataItem : public Buffer::DataItem<TDATA> {
    public:
-    PerFramebufferDataItem(TDATA* pData) : Buffer::DataItem<TDATA>(pData) {}
+    PerFramebufferDataItem(TDATA* pData) : Buffer::DataItem<TDATA>(pData), data_(*pData) {}
 
    protected:
     void setData(const uint32_t index = UINT32_MAX) override {

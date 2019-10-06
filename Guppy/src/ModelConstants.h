@@ -6,11 +6,9 @@
 
 #include "MeshConstants.h"
 
-// clang-format off
-namespace Model { class Base; }
-// clang-format on
-
 namespace Model {
+
+class Base;
 
 using index = uint32_t;
 constexpr auto INDEX_MAX = UINT32_MAX;

@@ -113,24 +113,28 @@ void RenderPass::Handler::init() {
     submitInfos_.assign(RESOURCE_SIZE, {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr});
 
     // SCREEN QUAD
-    Mesh::CreateInfo meshInfo = {};
+    Mesh::Plane::CreateInfo planeInfo = {};
     // Indicate to the Mesh construction validation that this is a special
     // mesh because I don't want to do a bunch of work atm.
     {
-        meshInfo.pipelineType = PIPELINE::ALL_ENUM;
-        meshInfo.passTypes.clear();
+        planeInfo.pipelineType = PIPELINE::ALL_ENUM;
+        planeInfo.passTypes.clear();
     }
-    meshInfo.selectable = false;
-    meshInfo.settings.geometryInfo.transform = helpers::affine(glm::vec3{2.0f});
+    planeInfo.selectable = false;
+    planeInfo.settings.geometryInfo.transform = helpers::affine(glm::vec3{2.0f});
 
-    Instance::Default::CreateInfo defInstInfo = {};
+    Instance::Obj3d::CreateInfo instObj3dInfo = {};
     Material::Default::CreateInfo defMatInfo = {};
     defMatInfo.flags = 0;
 
     // Create the default screen quad.
     screenQuadOffset_ =
-        meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&meshInfo, &defMatInfo, &defInstInfo)->getOffset();
+        meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&planeInfo, &defMatInfo, &instObj3dInfo)->getOffset();
     assert(screenQuadOffset_ != Mesh::BAD_OFFSET);
+}
+
+void RenderPass::Handler::frame() {
+    // At one point something was here
 }
 
 Uniform::offsetsMap RenderPass::Handler::makeUniformOffsetsMap() {
@@ -358,10 +362,6 @@ void RenderPass::Handler::submit(const uint8_t submitCount) {
 
     vk::assert_success(
         vkQueueSubmit(commandHandler().graphicsQueue(), submitCount, &submitInfos_[0], frameFences_[frameIndex_]));
-}
-
-void RenderPass::Handler::update() {
-    // At one point something was here
 }
 
 void RenderPass::Handler::updateFrameIndex() {

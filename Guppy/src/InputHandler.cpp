@@ -1,8 +1,11 @@
 
-#include <glm/glm.hpp>
+#include "InputHandler.h"
+
 #include <sstream>
 
-#include "InputHandler.h"
+#include "Helpers.h"
+
+namespace {
 
 const bool MY_DEBUG = false;
 
@@ -14,30 +17,30 @@ constexpr float K_Z_MOVE_FACT = 2.0f;
 constexpr float M_X_LOOK_FACT = 0.1f;
 constexpr float M_Y_LOOK_FACT = -0.1f;
 
-InputHandler InputHandler::inst_;
+}  // namespace
 
 void InputHandler::init(Shell* sh) {
     if (sh != nullptr)
-        inst_.sh_ = sh;
+        sh_ = sh;
     else
-        inst_.reset();
-    assert(inst_.sh_);
+        reset();
+    assert(sh_);
 }
 
 void InputHandler::updateInput(float elapsed) {
-    // inst_.reset();
+    // reset();
 
-    inst_.updateKeyInput();
-    inst_.updateMouseInput();
+    updateKeyInput();
+    updateMouseInput();
 
     // account for time
-    inst_.posDir_ *= elapsed;
-    // inst_.lookDir_ *= (0.001 / elapsed);
+    posDir_ *= elapsed;
+    // lookDir_ *= (0.001 / elapsed);
 
-    if (MY_DEBUG && glm::any(glm::notEqual(inst_.posDir_, glm::vec3(0.0f)))) {
+    if (MY_DEBUG && glm::any(glm::notEqual(posDir_, glm::vec3(0.0f)))) {
         std::stringstream ss;
         ss << "move (" << elapsed << "):";
-        inst_.sh_->log(Shell::LOG_INFO, helpers::makeVec3String(ss.str(), inst_.posDir_).c_str());
+        sh_->log(Shell::LOG_INFO, helpers::makeVec3String(ss.str(), posDir_).c_str());
     }
 }
 
@@ -125,7 +128,7 @@ void InputHandler::updateMouseInput() {
 }
 
 void InputHandler::reset() {
-    inst_.lookDir_ = {};
-    inst_.posDir_ = {};
+    lookDir_ = {};
+    posDir_ = {};
     currMouseInput_.moving = false;
 }

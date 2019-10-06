@@ -19,9 +19,8 @@ class Handler : public Game::Handler {
     Handler(Game* pGame);
 
     void init() override;
+    void tick() override;
     inline void destroy() override { reset(); }
-
-    void update();
 
     // NOTE: this is not in order!!!
     void getActivePassTypes(std::set<PASS>& types, const PIPELINE& pipelineTypeIn = PIPELINE::ALL_ENUM);

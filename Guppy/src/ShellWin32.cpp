@@ -147,7 +147,7 @@ LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
             getMouseModifier(wParam, lParam);
         } break;
         case WM_MOUSELEAVE: {
-            InputHandler::mouseLeave();
+            InputHandler::inst().mouseLeave();
         } break;
         case WM_LBUTTONDOWN:
         case WM_LBUTTONUP:
@@ -297,7 +297,10 @@ GAME_KEY ShellWin32::getKey(WPARAM wParam, INPUT_ACTION type) {
             key = GAME_KEY::KEY_MINUS;
             break;
         case '=':
-            key = GAME_KEY::KEY_EQUAL;
+            key = GAME_KEY::KEY_EQUALS;
+            break;
+        case VK_BACK:
+            key = GAME_KEY::KEY_BACKSPACE;
             break;
         // FUNCTION KEYS
         case VK_F1:
@@ -349,7 +352,7 @@ GAME_KEY ShellWin32::getKey(WPARAM wParam, INPUT_ACTION type) {
             key = GAME_KEY::KEY_UNKNOWN;
             break;
     }
-    InputHandler::updateKeyInput(key, type);
+    InputHandler::inst().updateKeyInput(key, type);
     return key;
 }
 
@@ -370,7 +373,7 @@ void ShellWin32::getMouse(UINT uMsg, LPARAM lParam) {
         case WM_RBUTTONDOWN: {
             // float xPos = static_cast<float>(GET_X_LPARAM(lParam));
             // float yPos = static_cast<float>(GET_Y_LPARAM(lParam));
-            // InputHandler::get().addMouseInput(xPos, yPos);
+            // InputHandler::inst().addMouseInput(xPos, yPos);
         } break;
             // DOUBLE CLICK (SETTINGS TOGGLE)
         case WM_LBUTTONDBLCLK:
@@ -400,7 +403,7 @@ void ShellWin32::getMouseModifier(WPARAM wParam, LPARAM lParam) {
             // nothing here yet...
         } break;
     }
-    InputHandler::updateMousePosition(xPos, yPos, zDelta, isLooking);
+    InputHandler::inst().updateMousePosition(xPos, yPos, zDelta, isLooking);
 }
 
 void ShellWin32::quit() const { PostQuitMessage(0); }
@@ -415,7 +418,7 @@ void ShellWin32::run() {
     resizeSwapchain(settings_.initial_width, settings_.initial_height, false);
 
     Win32Timer timer;
-    double current_time = timer.get();
+    currentTime_ = timer.get();
 
     while (true) {
         bool quit = false;
@@ -445,26 +448,25 @@ void ShellWin32::run() {
         } else {
             acquireBackBuffer();
 
-            // TODO: simplify this?
             double now = timer.get();
-            double elapsed = now - current_time;
-            current_time = now;
+            double elapsed = now - currentTime_;
+            currentTime_ = now;
 
-            InputHandler::updateInput(static_cast<float>(elapsed));
+            InputHandler::inst().updateInput(static_cast<float>(elapsed));
             addGameTime(static_cast<float>(elapsed));
 
             presentBackBuffer();
         }
 
-        if (LIMIT_FRAMERATE) {
+        if (limitFramerate) {
             // TODO: this is crude and inaccurate.
-            DWORD Hz = static_cast<DWORD>(1000 / 10);  // 30Hz
+            DWORD Hz = static_cast<DWORD>(1000 / framesPerSecondLimit);  // 30Hz
             if (settings_.enable_directory_listener) asyncAlert(Hz);
         } else {
             if (settings_.enable_directory_listener) asyncAlert(0);
         }
 
-        InputHandler::clear();
+        InputHandler::inst().clear();
     }
 
     // Free any directory listening handles

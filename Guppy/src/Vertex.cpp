@@ -3,92 +3,102 @@
 
 #include "Vertex.h"
 
-void Vertex::Color::getBindingDescriptions(std::vector<VkVertexInputBindingDescription>& descs) {
-    descs.push_back({});
-    descs.back().binding = BINDING;
-    descs.back().stride = sizeof(Vertex::Color);
-    descs.back().inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-}
+// COLOR
 
-void Vertex::Color::getAttributeDescriptions(std::vector<VkVertexInputAttributeDescription>& descs) {
+void Vertex::Color::getInputDescriptions(Pipeline::CreateInfoResources& createInfoRes) {
+    const auto BINDING = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.bindDescs.push_back({});
+    createInfoRes.bindDescs.back().binding = BINDING;
+    createInfoRes.bindDescs.back().stride = sizeof(Vertex::Color);
+    createInfoRes.bindDescs.back().inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
     // position
-    descs.push_back({});
-    descs.back().binding = BINDING;
-    descs.back().location = 0;
-    descs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
-    descs.back().offset = offsetof(Vertex::Color, position);
+    createInfoRes.attrDescs.push_back({});
+    createInfoRes.attrDescs.back().binding = BINDING;
+    createInfoRes.attrDescs.back().location = 0;
+    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
+    createInfoRes.attrDescs.back().offset = offsetof(Vertex::Color, position);
 
     // normal
-    descs.push_back({});
-    descs.back().binding = BINDING;
-    descs.back().location = 1;
-    descs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
-    descs.back().offset = offsetof(Vertex::Color, normal);
+    createInfoRes.attrDescs.push_back({});
+    createInfoRes.attrDescs.back().binding = BINDING;
+    createInfoRes.attrDescs.back().location = 1;
+    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
+    createInfoRes.attrDescs.back().offset = offsetof(Vertex::Color, normal);
 
     // color
-    descs.push_back({});
-    descs.back().binding = BINDING;
-    descs.back().location = 2;
-    descs.back().format = VK_FORMAT_R32G32B32A32_SFLOAT;  // vec4
-    descs.back().offset = offsetof(Vertex::Color, color);
+    createInfoRes.attrDescs.push_back({});
+    createInfoRes.attrDescs.back().binding = BINDING;
+    createInfoRes.attrDescs.back().location = 2;
+    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32A32_SFLOAT;  // vec4
+    createInfoRes.attrDescs.back().offset = offsetof(Vertex::Color, color);
 }
 
-void Vertex::Texture::getBindingDescriptions(std::vector<VkVertexInputBindingDescription>& descs) {
-    descs.push_back({});
-    descs.back().binding = BINDING;
-    descs.back().stride = sizeof(Vertex::Texture);
-    descs.back().inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-}
+// TEXTURE
 
-void Vertex::Texture::getAttributeDescriptions(std::vector<VkVertexInputAttributeDescription>& descs) {
+void Vertex::Texture::getInputDescriptions(Pipeline::CreateInfoResources& createInfoRes) {
+    const auto BINDING = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.bindDescs.push_back({});
+    createInfoRes.bindDescs.back().binding = BINDING;
+    createInfoRes.bindDescs.back().stride = sizeof(Vertex::Texture);
+    createInfoRes.bindDescs.back().inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
     // position
-    descs.push_back({});
-    descs.back().binding = BINDING;
-    descs.back().location = 0;
-    descs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
-    descs.back().offset = offsetof(Vertex::Texture, position);
+    createInfoRes.attrDescs.push_back({});
+    createInfoRes.attrDescs.back().binding = BINDING;
+    createInfoRes.attrDescs.back().location = 0;
+    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
+    createInfoRes.attrDescs.back().offset = offsetof(Vertex::Texture, position);
 
     // normal
-    descs.push_back({});
-    descs.back().binding = BINDING;
-    descs.back().location = 1;
-    descs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
-    descs.back().offset = offsetof(Vertex::Texture, normal);
+    createInfoRes.attrDescs.push_back({});
+    createInfoRes.attrDescs.back().binding = BINDING;
+    createInfoRes.attrDescs.back().location = 1;
+    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
+    createInfoRes.attrDescs.back().offset = offsetof(Vertex::Texture, normal);
 
     // texture coordinate
-    descs.push_back({});
-    descs.back().binding = BINDING;
-    descs.back().location = 2;
-    descs.back().format = VK_FORMAT_R32G32_SFLOAT;  // vec2
-    descs.back().offset = offsetof(Vertex::Texture, texCoord);
+    createInfoRes.attrDescs.push_back({});
+    createInfoRes.attrDescs.back().binding = BINDING;
+    createInfoRes.attrDescs.back().location = 2;
+    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32_SFLOAT;  // vec2
+    createInfoRes.attrDescs.back().offset = offsetof(Vertex::Texture, texCoord);
 
     // image space tangent
-    descs.push_back({});
-    descs.back().binding = BINDING;
-    descs.back().location = 3;
-    descs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
-    descs.back().offset = offsetof(Vertex::Texture, tangent);
+    createInfoRes.attrDescs.push_back({});
+    createInfoRes.attrDescs.back().binding = BINDING;
+    createInfoRes.attrDescs.back().location = 3;
+    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
+    createInfoRes.attrDescs.back().offset = offsetof(Vertex::Texture, tangent);
 
     // image space bitangent
-    descs.push_back({});
-    descs.back().binding = BINDING;
-    descs.back().location = 4;
-    descs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
-    descs.back().offset = offsetof(Vertex::Texture, bitangent);
+    createInfoRes.attrDescs.push_back({});
+    createInfoRes.attrDescs.back().binding = BINDING;
+    createInfoRes.attrDescs.back().location = 4;
+    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
+    createInfoRes.attrDescs.back().offset = offsetof(Vertex::Texture, bitangent);
 }
 
-void Vertex::Texture::getScreenQuadAttributeDescriptions(std::vector<VkVertexInputAttributeDescription>& descs) {
+// SCREEN_QUAD
+
+void Vertex::Texture::getScreenQuadInputDescriptions(Pipeline::CreateInfoResources& createInfoRes) {
+    const auto BINDING = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.bindDescs.push_back({});
+    createInfoRes.bindDescs.back().binding = BINDING;
+    createInfoRes.bindDescs.back().stride = sizeof(Vertex::Texture);
+    createInfoRes.bindDescs.back().inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
     // position
-    descs.push_back({});
-    descs.back().binding = BINDING;
-    descs.back().location = 0;
-    descs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
-    descs.back().offset = offsetof(Vertex::Texture, position);
+    createInfoRes.attrDescs.push_back({});
+    createInfoRes.attrDescs.back().binding = BINDING;
+    createInfoRes.attrDescs.back().location = 0;
+    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
+    createInfoRes.attrDescs.back().offset = offsetof(Vertex::Texture, position);
 
     // texture coordinate
-    descs.push_back({});
-    descs.back().binding = BINDING;
-    descs.back().location = 1;
-    descs.back().format = VK_FORMAT_R32G32_SFLOAT;  // vec2
-    descs.back().offset = offsetof(Vertex::Texture, texCoord);
+    createInfoRes.attrDescs.push_back({});
+    createInfoRes.attrDescs.back().binding = BINDING;
+    createInfoRes.attrDescs.back().location = 1;
+    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32_SFLOAT;  // vec2
+    createInfoRes.attrDescs.back().offset = offsetof(Vertex::Texture, texCoord);
 }

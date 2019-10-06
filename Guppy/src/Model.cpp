@@ -7,9 +7,9 @@
 #include "ModelHandler.h"
 
 Model::Base::Base(Model::Handler &handler, const Model::index offset, const Model::CreateInfo *pCreateInfo,
-                  std::shared_ptr<Instance::Base> &pInstanceData)
+                  std::shared_ptr<::Instance::Obj3d::Base> &pInstanceData)
     : Handlee(handler),
-      ObjInst3d(pInstanceData),
+      Obj3d::Instance(pInstanceData),
       MODEL_PATH(pCreateInfo->modelPath),
       PIPELINE_TYPE(pCreateInfo->pipelineType),
       offset_(offset),
@@ -63,4 +63,6 @@ const std::vector<Model::index> &Model::Base::getMeshOffsets(MESH type) {
     }
 }
 
-void Model::Base::updateAggregateBoundingBox(Mesh::Base *pMesh) { updateBoundingBox(pMesh->getBoundingBoxMinMax(false)); }
+void Model::Base::updateAggregateBoundingBox(Mesh::Base *pMesh) {
+    pInstObj3d_->updateBoundingBox(pMesh->getBoundingBoxMinMax(false));
+}

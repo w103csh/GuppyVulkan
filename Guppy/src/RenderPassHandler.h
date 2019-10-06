@@ -26,11 +26,11 @@ class Handler : public Game::Handler {
     void getActivePassTypes(std::set<PASS>& types, const PIPELINE& pipelineTypeIn = PIPELINE::ALL_ENUM);
 
     void init() override;
+    void frame() override;
     void destroy() override;
 
     void acquireBackBuffer();
     void recordPasses();
-    void update();
     void updateFrameIndex();
 
     inline const auto& getPass(const index& offset) { return pPasses_.at(offset); }

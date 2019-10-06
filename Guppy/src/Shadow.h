@@ -1,10 +1,12 @@
 #ifndef SHADOW_H
 #define SHADOW_H
 
+#include <glm/glm.hpp>
+#include <string_view>
+
 #include "BufferItem.h"
 #include "ConstantsAll.h"
 #include "Pipeline.h"
-#include "Random.h"
 
 namespace Texture {
 struct CreateInfo;
@@ -14,7 +16,7 @@ const std::string_view MAP_2D_ARRAY_ID = "Shadow 2D Array Map Texture";
 extern const CreateInfo MAP_2D_ARRAY_CREATE_INFO;
 
 const std::string_view OFFSET_2D_ID = "Shadow Offset 2D Texture";
-CreateInfo MakeOffsetTex(Random& rand);
+CreateInfo MakeOffsetTex();
 
 }  // namespace Shadow
 }  // namespace Texture

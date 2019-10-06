@@ -1,27 +1,16 @@
 #ifndef RANDOM_H
 #define RANDOM_H
 
-#include <random>
-
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
+#include <random>
 
-class Random {
-   private:
-    // TODO: make these static in the next functions, and then make
-    // the class a namespace, or singleton.
-    std::mt19937 mt19937_generator_;
-    std::uniform_real_distribution<float> distr_0_1_;
+#include "Singleton.h"
 
-    std::default_random_engine dre_generator_;
-    std::uniform_real_distribution<float> distr_neg05_pos05_;
+class Random : public Singleton<Random> {
+    friend class Singleton<Random>;
 
    public:
-    Random() : distr_0_1_(0.0f, 1.0f), distr_neg05_pos05_(-0.5f, 0.5f) {
-        std::random_device rd;
-        mt19937_generator_.seed(rd());
-    }
-
     inline float nextFloatZeroToOne() { return distr_0_1_(mt19937_generator_); }
 
     template <typename T>
@@ -52,6 +41,21 @@ class Random {
 
     // The book called this "jitter".
     float nextFloatNegZeroPoint5ToPosZeroPoint5() { return distr_neg05_pos05_(dre_generator_); }
+
+   private:
+    Random() : distr_0_1_(0.0f, 1.0f), distr_neg05_pos05_(-0.5f, 0.5f) {
+        std::random_device rd;
+        mt19937_generator_.seed(rd());
+    }
+    ~Random() = default;
+
+    // TODO: make these static in the next functions, and then make
+    // the class a namespace, or singleton.
+    std::mt19937 mt19937_generator_;
+    std::uniform_real_distribution<float> distr_0_1_;
+
+    std::default_random_engine dre_generator_;
+    std::uniform_real_distribution<float> distr_neg05_pos05_;
 };
 
 #endif  // RANDOM_H

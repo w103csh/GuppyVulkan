@@ -14,7 +14,7 @@ enum class PASS : uint32_t;
 namespace Mesh {
 
 using index = uint32_t;
-constexpr Mesh::index BAD_OFFSET = UINT32_MAX;
+constexpr index BAD_OFFSET = UINT32_MAX;
 
 namespace Geometry {
 struct Info {

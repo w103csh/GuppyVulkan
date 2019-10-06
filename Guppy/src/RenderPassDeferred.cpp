@@ -5,6 +5,7 @@
 #include "Deferred.h"
 #include "RenderPassShadow.h"
 // HANDLERS
+#include "ParticleHandler.h"
 #include "PipelineHandler.h"
 #include "DescriptorHandler.h"
 #include "RenderPassHandler.h"
@@ -24,6 +25,8 @@ const CreateInfo Deferred_CREATE_INFO = {
         PIPELINE::DEFERRED_MRT_LINE,
         PIPELINE::DEFERRED_MRT_COLOR,
         PIPELINE::DEFERRED_MRT_WF_COLOR,
+        PIPELINE::PARTICLE_WAVE_DEFERRED,
+        PIPELINE::PARTICLE_FOUNTAIN_DEFERRED,
         PIPELINE::TESSELLATION_TRIANGLE_DEFERRED,
         // PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED,
         PIPELINE::DEFERRED_MRT_TEX,
@@ -129,6 +132,10 @@ void Base::record(const uint8_t frameIndex) {
                     // This hasn't been tested in a long time. Might work to just let through.
                     // TODO: this definitely only needs to be recorded once per swapchain creation!!!
                     assert(doSSAO_ && false);
+                } break;
+                case PIPELINE::PARTICLE_FOUNTAIN_DEFERRED: {
+                    handler().particleHandler().record(TYPE, pPipelineBindData, priCmd, frameIndex);
+                    vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
                 } break;
                 default: {
                     // MRT PASSES

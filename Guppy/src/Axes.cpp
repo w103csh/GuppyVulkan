@@ -37,16 +37,17 @@ void make(std::vector<Vertex::Color>& vertices, float lineSize, bool showNegativ
 }
 }  // namespace
 
-Axes::Axes(Handler& handler, const AxesCreateInfo* pCreateInfo, std::shared_ptr<Instance::Base>& pInstanceData,
-           std::shared_ptr<Material::Base>& pMaterial)
-    : Line(handler, "Axes", pCreateInfo, pInstanceData, pMaterial) {
+Axes::Axes(Handler& handler, const index&& offset, const AxesCreateInfo* pCreateInfo,
+           std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
+    : Line(handler, std::forward<const index>(offset), "Axes", pCreateInfo, pInstanceData, pMaterial) {
     make(vertices_, pCreateInfo->lineSize, pCreateInfo->showNegative);
     status_ = STATUS::PENDING_BUFFERS;
 }
 
-Axes::Axes(Handler& handler, const std::string&& name, const AxesCreateInfo* pCreateInfo,
-           std::shared_ptr<Instance::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
-    : Line(handler, std::forward<const std::string>(name), pCreateInfo, pInstanceData, pMaterial) {
+Axes::Axes(Handler& handler, const index&& offset, const std::string&& name, const AxesCreateInfo* pCreateInfo,
+           std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
+    : Line(handler, std::forward<const index>(offset), std::forward<const std::string>(name), pCreateInfo, pInstanceData,
+           pMaterial) {
     make(vertices_, pCreateInfo->lineSize, pCreateInfo->showNegative);
     status_ = STATUS::PENDING_BUFFERS;
 }

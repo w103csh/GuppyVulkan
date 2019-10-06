@@ -40,22 +40,25 @@ Uniform::Handler::Handler(Game* pGame)
           Uniform::Manager<Light::Shadow::Positional>  //
           {"Shadow Positional Light", UNIFORM::LIGHT_POSITIONAL_SHADOW, 20, "_U_LGT_SHDW_POS"},
           // MISCELLANEOUS
-          Uniform::Manager<Uniform::Default::Fog::Base>  //
+          Uniform::Manager<Default::Fog::Base>  //
           {"Default Fog", UNIFORM::FOG_DEFAULT, 5, "_U_DEF_FOG"},
-          Uniform::Manager<Uniform::Default::Projector::Base>  //
+          Uniform::Manager<Default::Projector::Base>  //
           {"Default Projector", UNIFORM::PROJECTOR_DEFAULT, 5, "_U_DEF_PRJ"},
-          Uniform::Manager<Uniform::ScreenSpace::Default>  //
+          Uniform::Manager<ScreenSpace::Default>  //
           {"Screen Space Default", UNIFORM::SCREEN_SPACE_DEFAULT, 5, "_U_SCR_DEF"},
-          Uniform::Manager<Uniform::Deferred::SSAO>  //
+          Uniform::Manager<Deferred::SSAO>  //
           {"Deferred SSAO", UNIFORM::DEFERRED_SSAO, 5, "_U_DFR_SSAO"},
-          Uniform::Manager<Uniform::Shadow::Base>  //
+          Uniform::Manager<Shadow::Base>  //
           {"Shadow Data", UNIFORM::DEFERRED_SSAO, 1, "_U_SHDW_DATA"},
           // TESSELLATION
-          Uniform::Manager<Uniform::Tessellation::Default::Base>  //
+          Uniform::Manager<Tessellation::Default::Base>  //
           {"Tessellation Data", UNIFORM::TESSELLATION_DEFAULT, 2, "_U_TESS_DEF"},
           // GEOMETRY
-          Uniform::Manager<Uniform::Geometry::Default::Base>  //
+          Uniform::Manager<Geometry::Default::Base>  //
           {"Geomerty Wireframe", UNIFORM::GEOMETRY_DEFAULT, 1, "_U_GEOM_WF"},
+          // PARTICLE
+          Uniform::Manager<Particle::Wave::Base>  //
+          {"Particle Wave", UNIFORM::PARTICLE_WAVE, 3, "_U_PRTCL_WAVE"},
           // STORAGE
           Uniform::Manager<Storage::PostProcess::Base>  //
           {"Storage Default", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
@@ -79,6 +82,7 @@ std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const
             case UNIFORM::DEFERRED_SSAO:                return uniDfrSSAOMgr().pItems;
             case UNIFORM::TESSELLATION_DEFAULT:         return uniTessDefMgr().pItems;
             case UNIFORM::GEOMETRY_DEFAULT:             return uniGeomDefMgr().pItems;
+            case UNIFORM::PARTICLE_WAVE:                return uniWaveMgr().pItems;
             case UNIFORM::SHADOW_DATA:                  return uniShdwDataMgr().pItems;
             default:                                    assert(false); exit(EXIT_FAILURE);
         }
@@ -118,7 +122,8 @@ void Uniform::Handler::init() {
     uniDfrSSAOMgr().init(shell().context(), settings());    ++count;
     uniShdwDataMgr().init(shell().context(), settings());   ++count;
     uniTessDefMgr().init(shell().context(), settings());    ++count;
-    uniGeomDefMgr().init(shell().context(), settings());     ++count;
+    uniGeomDefMgr().init(shell().context(), settings());    ++count;
+    uniWaveMgr().init(shell().context(), settings());       ++count;
     strPstPrcMgr().init(shell().context(), settings());     ++count;
     assert(count == managers_.size());
     // clang-format on
@@ -127,6 +132,49 @@ void Uniform::Handler::init() {
     createLights();
     createMiscellaneous();
     createTessellationData();
+}
+
+void Uniform::Handler::frame() {
+    const auto frameIndex = passHandler().getFrameIndex();
+
+    // MAIN CAMERA
+    auto& camera = getMainCamera();
+    camera.update(InputHandler::inst().getPosDir(), InputHandler::inst().getLookDir(), frameIndex);
+    update(camera, static_cast<int>(frameIndex));
+
+    // DEFAULT POSITIONAL
+    for (uint32_t i = 0; i < lgtDefPosMgr().pItems.size(); i++) {
+        auto& lgt = lgtDefPosMgr().getTypedItem(i);
+        lgt.update(camera.getCameraSpacePosition(lgt.getPosition()), frameIndex);
+        // lgt.update(glm::vec3(lgt.getPosition()), frameIndex);
+        update(lgt, static_cast<int>(frameIndex));
+    }
+    // lgtDefPosMgr().update(shell().context().dev);
+    // PBR POSITIONAL
+    for (uint32_t i = 0; i < lgtPbrPosMgr().pItems.size(); i++) {
+        auto& lgt = lgtPbrPosMgr().getTypedItem(i);
+        lgt.update(camera.getCameraSpacePosition(lgt.getPosition()), frameIndex);
+        update(lgt, static_cast<int>(frameIndex));
+    }
+    // lgtDefPosMgr().update(shell().context().dev);
+
+    // DEFAULT SPOT
+    for (uint32_t i = 0; i < lgtDefSptMgr().pItems.size(); i++) {
+        auto& lgt = lgtDefSptMgr().getTypedItem(i);
+        lgt.update(camera.getCameraSpaceDirection(lgt.getDirection()), camera.getCameraSpacePosition(lgt.getPosition()),
+                   frameIndex);
+        update(lgt, static_cast<int>(frameIndex));
+    }
+
+    // POST-PROCESS
+    auto& computeData = strPstPrcMgr().getTypedItem(0);
+    computeData.reset(frameIndex);
+    update(computeData, static_cast<int>(frameIndex));
+
+    // SHADOW POSITIONAL
+    auto& lgtShdwPos = lgtShdwPosMgr().getTypedItem(0);
+    lgtShdwPos.update(camera.getCameraSpaceToWorldSpaceTransform(), frameIndex);
+    update(lgtShdwPos, static_cast<int>(frameIndex));
 }
 
 void Uniform::Handler::reset() {
@@ -144,7 +192,8 @@ void Uniform::Handler::reset() {
     uniDfrSSAOMgr().destroy(dev);   ++count;
     uniShdwDataMgr().destroy(dev);  ++count;
     uniTessDefMgr().destroy(dev);   ++count;
-    uniGeomDefMgr().destroy(dev);    ++count;
+    uniGeomDefMgr().destroy(dev);   ++count;
+    uniWaveMgr().destroy(dev);      ++count;
     strPstPrcMgr().destroy(dev);    ++count;
     assert(count == managers_.size());
     // clang-format on
@@ -287,7 +336,7 @@ void Uniform::Handler::createMiscellaneous() {
     {
         uniDfrSSAOMgr().insert(dev);
         auto& ssaoKernel = uniDfrSSAOMgr().getTypedItem(0);
-        ssaoKernel.init(rand);
+        ssaoKernel.init();
         update(ssaoKernel);
     }
 
@@ -375,49 +424,6 @@ void Uniform::Handler::attachSwapchain() {
     update(geomWireframe);
 }
 
-void Uniform::Handler::update() {
-    const auto frameIndex = passHandler().getFrameIndex();
-
-    // MAIN CAMERA
-    auto& camera = getMainCamera();
-    camera.update(InputHandler::getPosDir(), InputHandler::getLookDir(), frameIndex);
-    update(camera, static_cast<int>(frameIndex));
-
-    // DEFAULT POSITIONAL
-    for (uint32_t i = 0; i < lgtDefPosMgr().pItems.size(); i++) {
-        auto& lgt = lgtDefPosMgr().getTypedItem(i);
-        lgt.update(camera.getCameraSpacePosition(lgt.getPosition()), frameIndex);
-        // lgt.update(glm::vec3(lgt.getPosition()), frameIndex);
-        update(lgt, static_cast<int>(frameIndex));
-    }
-    // lgtDefPosMgr().update(shell().context().dev);
-    // PBR POSITIONAL
-    for (uint32_t i = 0; i < lgtPbrPosMgr().pItems.size(); i++) {
-        auto& lgt = lgtPbrPosMgr().getTypedItem(i);
-        lgt.update(camera.getCameraSpacePosition(lgt.getPosition()), frameIndex);
-        update(lgt, static_cast<int>(frameIndex));
-    }
-    // lgtDefPosMgr().update(shell().context().dev);
-
-    // DEFAULT SPOT
-    for (uint32_t i = 0; i < lgtDefSptMgr().pItems.size(); i++) {
-        auto& lgt = lgtDefSptMgr().getTypedItem(i);
-        lgt.update(camera.getCameraSpaceDirection(lgt.getDirection()), camera.getCameraSpacePosition(lgt.getPosition()),
-                   frameIndex);
-        update(lgt, static_cast<int>(frameIndex));
-    }
-
-    // POST-PROCESS
-    auto& computeData = strPstPrcMgr().getTypedItem(0);
-    computeData.reset(frameIndex);
-    update(computeData, static_cast<int>(frameIndex));
-
-    // SHADOW POSITIONAL
-    auto& lgtShdwPos = lgtShdwPosMgr().getTypedItem(0);
-    lgtShdwPos.update(camera.getCameraSpaceToWorldSpaceTransform(), frameIndex);
-    update(lgtShdwPos, static_cast<int>(frameIndex));
-}
-
 uint32_t Uniform::Handler::getDescriptorCount(const DESCRIPTOR& descType, const Uniform::offsets& offsets) {
     return getDescriptorCount(getItems(descType), offsets);
 }
@@ -463,13 +469,8 @@ void Uniform::Handler::getWriteInfos(const DESCRIPTOR& descType, const Uniform::
     // Set the buffer infos
     uint32_t i = 0;
     for (const auto& offset : resolvedOffsets) {
-        if (pItems[offset]->BUFFER_INFO.count != setResInfo.uniqueDataSets) {
-            std::stringstream sMsg;
-            sMsg << "Uniform with descriptor type (" << std::visit(Descriptor::GetDescriptorTypeString{}, descType);
-            sMsg << ") has BUFFER_INFO count of (" << pItems[offset]->BUFFER_INFO.count;
-            sMsg << ") and a uniqueDataSets count of (" << setResInfo.uniqueDataSets << ").";
-            shell().log(Shell::LOG_WARN, sMsg.str().c_str());
-        }
+        auto sMsg = Descriptor::GetPerframeBufferWarning(descType, pItems[offset]->BUFFER_INFO, setResInfo);
+        if (sMsg.size()) shell().log(Shell::LOG_WARN, sMsg.c_str());
         pItems[offset]->setDescriptorInfo(setResInfo, i++);
     }
 }

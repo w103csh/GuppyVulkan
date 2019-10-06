@@ -35,6 +35,18 @@ extern const CreateInfo HARDWOOD_CREATE_INFO;
 constexpr std::string_view NEON_BLUE_TUX_GUPPY_ID = "Neon Blue Tux Guppy Texture";
 extern const CreateInfo NEON_BLUE_TUX_GUPPY_CREATE_INFO;
 
+constexpr std::string_view BLUEWATER_ID = "Bluewater Texture";
+extern const CreateInfo BLUEWATER_CREATE_INFO;
+
+constexpr std::string_view FIRE_ID = "Fire Texture";
+extern const CreateInfo FIRE_CREATE_INFO;
+
+constexpr std::string_view SMOKE_ID = "Smoke Texture";
+extern const CreateInfo SMOKE_CREATE_INFO;
+
+constexpr std::string_view STAR_ID = "Star Texture";
+extern const CreateInfo STAR_CREATE_INFO;
+
 constexpr std::string_view MEDIEVAL_HOUSE_ID = "Medieval House Texture";
 extern const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO;
 

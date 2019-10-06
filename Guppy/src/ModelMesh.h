@@ -20,15 +20,15 @@ class ColorMesh : public Mesh::Color {
     friend class Mesh::Handler;
 
    protected:
-    ColorMesh(Mesh::Handler &handler, Model::CreateInfo *pCreateInfo, std::shared_ptr<Instance::Base> &pInstanceData,
-              std::shared_ptr<Material::Base> &pMaterial);
+    ColorMesh(Mesh::Handler &handler, const index &&offset, Model::CreateInfo *pCreateInfo,
+              std::shared_ptr<::Instance::Obj3d::Base> &pInstanceData, std::shared_ptr<Material::Base> &pMaterial);
 };
 class TextureMesh : public Mesh::Texture {
     friend class Mesh::Handler;
 
    protected:
-    TextureMesh(Mesh::Handler &handler, Model::CreateInfo *pCreateInfo, std::shared_ptr<Instance::Base> &pInstanceData,
-                std::shared_ptr<Material::Base> &pMaterial);
+    TextureMesh(Mesh::Handler &handler, const index &&offset, Model::CreateInfo *pCreateInfo,
+                std::shared_ptr<::Instance::Obj3d::Base> &pInstanceData, std::shared_ptr<Material::Base> &pMaterial);
 };
 
 }  // namespace Model
