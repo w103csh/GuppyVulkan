@@ -1,3 +1,18 @@
+ - Investigate running out of memory problems. Currently all of the render pass textures are
+    created regardless if they are going to be used (e.g., normal & deferred are allocated at
+    the same time). When you resize the window to say 4k resolution you hit a legit out of
+    memory error. There are a bunch of ways to address this: make texture creation dynamic,
+    allocate textures in larger chunks, figure out a proper allocation strategy for all memory,
+    limit the resolution of the framebuffer based on device memory size, etc... This is really
+    a phantom issue though because I have been allocating way more resource than I use, and
+    stream videos and things while developing.
+
+ - Validation layer warning for projection texture "0x19" layout is because there is no barrier
+    on the image resource for the first frame. This can be fixed by either using the same
+    command buffer for all pass cmds, transitioning truly undefined image memory to shader
+    read only for seemingly no reason, or setting up some kind of barrier/dependency. The only
+    reasonable option seems to be the last one, but I am going to try to ignore it for now
+    because it only affects the first frame.
 
  - Generate the screen quad in a vertex shader, and remove all the SCREEN_QUAD code. 
 

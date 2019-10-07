@@ -314,8 +314,8 @@ struct Helper {
     const Descriptor::Set::Resource* pResource;  // Set resource
     uint32_t resourceOffset;                     // Set resource offset
     DESCRIPTOR_SET setType;                      // Set type
-    std::set<PASS> passTypes2;  // Pass types the resource can be used for. (Can be different from resource pointer's
-                                // *type set because of culling.Saved for use in potential culling of shader modules.)
+    std::set<PASS> passTypes2;  // Pass types the resource can be used for (Can be different from resource pointer's type
+                                // set because of culling. Saved for use in potential culling of shader modules).
 };
 using helpers = std::vector<Helper>;
 using resourceHelpers = std::vector<helpers>;

@@ -177,13 +177,16 @@ void Pipeline::Base::prepareDescriptorSetInfo() {
 
             // Add the culled sets to a layouts data structure that can be used to create
             // the pipeline layouts.
-            if (layoutsMap_.count(helper.passTypes1) == 0) {
-                layoutsMap_.insert(std::pair<std::set<PASS>, Layouts>{
-                    helper.passTypes2,
+            auto it = layoutsMap_.find(helper.passTypes1);
+            if (it == layoutsMap_.end()) {
+                auto insertPair = layoutsMap_.insert(std::pair<std::set<PASS>, Layouts>{
+                    helper.passTypes1,
                     {VK_NULL_HANDLE, {}},
                 });
+                assert(insertPair.second);
+                it = insertPair.first;
             }
-            layoutsMap_.at(helper.passTypes2).descSetLayouts.push_back(helper.pResource->layout);
+            it->second.descSetLayouts.push_back(helper.pResource->layout);
         }
     }
 
