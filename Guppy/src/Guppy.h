@@ -38,7 +38,7 @@ class Guppy : public Game {
     bool multithread_;
     bool use_push_constants_;
     bool sim_paused_;
-    bool sim_fade_;
+    // bool sim_fade_;
     // Simulation sim_;
 };
 

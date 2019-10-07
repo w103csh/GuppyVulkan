@@ -88,8 +88,8 @@ class Base : public Material::Obj3d::Base, public Buffer::PerFramebufferDataItem
 
     void setTextureData() override { status_ = SetDefaultTextureData(this, &data_); }
 
-    constexpr auto getDelta() const { return data_.delta; }
-    constexpr bool shouldDraw(const float lastTimeOfBirth) const {
+    virtual_inline auto getDelta() const { return data_.delta; }
+    virtual_inline bool shouldDraw(const float lastTimeOfBirth) const {
         return data_.delta >= 0.0 && data_.delta < (lastTimeOfBirth + data_.lifespan + 0.0001f);
     }
 

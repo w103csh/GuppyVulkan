@@ -35,7 +35,7 @@ class Base : public Buffer::DataItem<DATA>, public Instance::Base {
    public:
     Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo);
 
-    constexpr auto getLastTimeOfBirth() const { return pData_[BUFFER_INFO.count - 1].timeOfBirth; }
+    virtual_inline auto getLastTimeOfBirth() const { return pData_[BUFFER_INFO.count - 1].timeOfBirth; }
 };
 
 }  // namespace Fountain
@@ -50,6 +50,8 @@ namespace Buffer {
 
 class Base : public NonCopyable, public Handlee<Handler> {
    public:
+    virtual ~Base() = default;
+
     const std::string NAME;
     const PIPELINE PIPELINE_TYPE;
 

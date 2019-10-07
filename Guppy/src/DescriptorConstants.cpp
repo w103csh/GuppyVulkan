@@ -10,7 +10,6 @@ namespace Descriptor {
 
 void OffsetsMap::insert(const DESCRIPTOR& key, const Uniform::offsets& value) {
     if (std::visit(IsCombinedSampler{}, key)) {
-        auto x = offsets_.count(key);
         offsets_.insert({key, value});
     } else {
         // Samplers are the only type allowed to have multiple elements, so

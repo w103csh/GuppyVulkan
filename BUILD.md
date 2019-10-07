@@ -51,7 +51,7 @@ To create your local git repository:
 This repository attempts to resolve some of its dependencies by using
 components found from the following places, in this order:
 
-1. CMake or Environment variable overrides (e.g., -DVULKAN_HEADERS_INSTALL_DIR)
+1. CMake or Environment variable overrides (e.g., -DGLSLANG_INSTALL_DIR)
 1. [LunarG Vulkan SDK](https://vulkan.lunarg.com/), located by the `VULKAN_SDK` environment variable
 1. System-installed packages, mostly applicable on Linux
 
@@ -60,7 +60,7 @@ resolved with the "install directory" override and are listed below. The
 "install directory" override can also be used to force the use of a specific
 version of that dependency.
 
-#### Vulkan-Headers
+<!-- #### Vulkan-Headers
 
 > **Note: This is not necessary if when you install the [LunarG Vulkan SDK](https://vulkan.lunarg.com/)**
 > **, you also add `VULKAN_SDK` as an environmental**
@@ -73,7 +73,7 @@ building this repository. The Vulkan-Headers repository is required because it
 contains the Vulkan API definition files (registry) that are required to build
 the samples. You must also take note of the headers' install
 directory and pass it on the CMake command line for building this repository,
-as described below.
+as described below. -->
 
 #### glslang (not applicable for macOS)
 
@@ -88,6 +88,9 @@ of building glslang. You must also take note of the glslang install directory
 and pass it on the CMake command line for building this repository, as
 described below.
 
+> **Note: There are some helpful comments in the set_env_vars.bat script for building and using debug and release versions that coexist at the**
+> **same time.**
+
 #### GLM
 
 You can download GLM from [here](https://github.com/g-truc/glm/tags).
@@ -99,15 +102,35 @@ the [Dear ImGui](https://github.com/ocornut/imgui) debug UI. Eventually [Dear Im
 > **Note: For macOS I had to clone the git repository and build a dynamic library that was**
 > **version 3.3 which supports MoltenVK.**
 
+#### ImGui
+
+There currently is a repository dependency on the [dear imgui library](https://github.com/ocornut/imgui) in the cmake scripts. You need to clone the repository when running `Cmake` (described later) add the absolute path of the cloned repository to either:
+1. A command line arugment `-DIMGUI_REPO_DIR=absolute_path_to_repo_directory`
+1. Or an environmental variable named `IMGUI_REPO_DIR`
+
+After `CMake` has successfully setup the build files there are flags to turn off the `ImGui` UI layer entirely by commenting out the `USE_DEBUG_UI` in `Constants.h`. Making this flag dynamic through from the `CMake` scripts has not been done yet, but I plan on doing it and it should be simple. Unfortunately for now the [dear imgui library](https://github.com/ocornut/imgui) repo is a dependency.
+
+> **Note: The latest known working commit of the [dear imgui library](https://github.com/ocornut/imgui) repo can be found in `current_versions.json`.**
+
 #### MoltenVK (macOS only)
 
-This repository has a required dependency on the
+This repository has a required dependency (macOS only) on the
 [MoltenVK repository](https://github.com/w103csh/MoltenVK/commits/master) that I forked.
-You must clone the repository and build its `Packaging (macOS)` product before
+You have to clone the repository and build its `Packaging (macOS)` product before
 building this repository. The MotenVK repository is required because it
 contains a glsl to spir-v converter that the engine uses for hot swapping shaders during
 runtime. This dependency will be removed soon (hopefully) because the necessary
 dependency is actually [glslang](https://github.com/KhronosGroup/glslang), which comes with the macOS download of the [LunarG Vulkan SDK](https://vulkan.lunarg.com/) for macOS.
+
+#### FMod (optional)
+
+If you have want sound available during runtime the engine currently has some light hooks for the [FMod library](https://www.fmod.com/). There are two ways to add `Fmod` to the `CMake` build process:
+1. Command line arugment `-DFMOD_DIR=absolute_path_to_sdk_directory`
+1. Or by adding the absolute path of the SDK to an environmental variable named `FMOD_DIR`
+
+>**Hint: Currently the FMod SDK directory the `CMake` module looks for contains the directories `api`, `bin`, `doc`, `plugins`, ...**
+
+
 
 ### Building Dependent Repositories with Known-Good Revisions
 
@@ -189,8 +212,7 @@ generate the native platform files. -->
     - [2015](https://www.visualstudio.com/vs/older-downloads/) -->
     - [2017](https://www.visualstudio.com/vs/downloads/)
     - [2019](https://www.visualstudio.com/vs/downloads/)
-  - The Community Edition of each of the above versions is sufficient, as
-    well as any more capable edition.
+  - The Community Edition of each of the above versions is sufficient, as well as any more capable editions.
 - [CMake](http://www.cmake.org/download/) (Version 2.8.11 or better)
   - Use the installer option to add CMake to the system PATH
 - Git Client Support
@@ -215,11 +237,12 @@ create a build directory and generate the Visual Studio project files:
     cd GuppyVulkan
     mkdir build
     cd build
-    cmake -A x64 -DVULKAN_HEADERS_INSTALL_DIR=absolute_path_to_install_dir \
-                 -DGLM_LIB_DIR=absolute_path_to_install_dir \
+    cmake -A x64 -DGLM_LIB_DIR=absolute_path_to_install_dir \
                  -DGLSLANG_INSTALL_DIR=absolute_path_to_install_dir
                  -DGLFW_INCLUDE_DIR=absolute_path_to_include_dir \
                  -DGLFW_LIB=absolute_path_to_lib_file \
+                 -DIMGUI_REPO_DIR=absolute_path_to_lib_file \
+                 -DFMOD_DIR=absolute_path_to_lib_file \
                  ..
 
 > **Note: The path delimeters must be forward slashes even on Windows.**
@@ -234,13 +257,6 @@ specify it for Visual Studio 2017, for example, with:
 
     64-bit: -G "Visual Studio 15 2017 Win64"
     32-bit: -G "Visual Studio 15 2017"
-
-When generating the project files, the absolute path to a Vulkan-Headers
-install directory must be provided. This can be done by setting the
-`VULKAN_HEADERS_INSTALL_DIR` environment variable or by setting the
-`VULKAN_HEADERS_INSTALL_DIR` CMake variable with the `-D` CMake option. In
-either case, the variable should point to the installation directory of a
-Vulkan-Headers repository built with the install target.
 
 When generating the project files, the absolute path to a GLM
 install directory must be provided. This can be done by setting the
@@ -257,6 +273,8 @@ case, the variable should point to the installation directory of a glslang
 repository built with the install target.
 
 When generating the project file, the absolute path to a glfw include directory, and a glfw library file must be provided. This can be done by setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` environment variable or by setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` CMake variable with the -D CMake option. In either case, the variable should point to the installation directory of a glslang repository built with the install target.
+
+> **Note: There are other similar `CMake` dependency flags that need to be set described in the section [Repository Set-Up](#repository-set-up)**
 
 The above steps create a Windows solution file named
 `GuppyVulkan.sln` in the build directory.
@@ -313,7 +331,6 @@ create a build directory and generate the make files.
     mkdir build
     cd build
     cmake -DCMAKE_BUILD_TYPE=Debug \
-          -DVULKAN_HEADERS_INSTALL_DIR=absolute_path_to_install_dir \
           -DVULKAN_LOADER_INSTALL_DIR=absolute_path_to_install_dir \
           -DGLSLANG_INSTALL_DIR=absolute_path_to_install_dir \
           -DCMAKE_INSTALL_PREFIX=install ..
@@ -323,13 +340,6 @@ create a build directory and generate the make files.
 > to specify the location of the repository root differently.
 
 Use `-DCMAKE_BUILD_TYPE` to specify a Debug or Release build.
-
-When generating the project files, the absolute path to a Vulkan-Headers
-install directory must be provided. This can be done by setting the
-`VULKAN_HEADERS_INSTALL_DIR` environment variable or by setting the
-`VULKAN_HEADERS_INSTALL_DIR` CMake variable with the `-D` CMake option. In
-either case, the variable should point to the installation directory of a
-Vulkan-Headers repository built with the install target.
 
 When generating the project files, the absolute path to a Vulkan-Loader
 install directory must be provided. This can be done by setting the
@@ -405,8 +415,8 @@ $ ./gradlew build
 These are what I know worked for me. Other things could work for you, but I do not
 know for sure.
 
-- macOS Mojave
-- Xcode Version 10.2
+- macOS ~~Mojave~~ Catalina
+- Xcode Version ~~10.2~~ 11.1
 - [CMake](http://www.cmake.org/download/) (Version 3.13.4 or better)
   - Use the installer option to add CMake to the system PATH
 - Python
@@ -428,11 +438,14 @@ create a build directory and generate the Xcode project files:
 
     cd GuppyVulkan
     mkdir build
+    cd build
     python ../buildMac.py .. \
             -DMVK_PACKAGE_DIR=absolute_path_to_package_dir \
             -DGLM_LIB_DIR=absolute_path_to_install_dir \
             -DGLFW_INCLUDE_DIR=absolute_path_to_include_dir \
             -DGLFW_LIB=absolute_path_to_lib_file \
+            -DIMGUI_REPO_DIR=absolute_path_to_lib_file \
+            -DFMOD_DIR=absolute_path_to_lib_file \
             ..
 
 > The `..` parameter tells `cmake` the location of the root of the
@@ -465,6 +478,8 @@ setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` CMake variable with the
 `-D` CMake option. In either case, the variable should point to the
 installation directory of a glslang repository built with the install
 target.
+
+> **Note: There are other similar `CMake` dependency flags that need to be set described in the section [Repository Set-Up](#repository-set-up)**
 
 > **<b>Note: I only had success with <code>.dylib</code> library files</b>**
 > **<b>in gerenal. Build the libraries with the dynamic option if your not</b>**

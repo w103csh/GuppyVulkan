@@ -57,7 +57,7 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
     // Return or assert on fail
     if (!success) {
         if (doAssert) {
-            if (!success) shell().log(Shell::LOG_ERR, ("Error compiling: " + createInfo.fileName).c_str());
+            if (!success) shell().log(Shell::LogPriority::LOG_ERR, ("Error compiling: " + createInfo.fileName).c_str());
             assert(success);
         } else {
             return false;

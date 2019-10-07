@@ -15,6 +15,8 @@
 #include "TextureHandler.h"
 
 void Pipeline::GetDefaultColorInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
     Vertex::Color::getInputDescriptions(createInfoRes);
     Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
     // bindings
@@ -34,6 +36,8 @@ void Pipeline::GetDefaultColorInputAssemblyInfoResources(CreateInfoResources& cr
 }
 
 void Pipeline::GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
     Vertex::Texture::getInputDescriptions(createInfoRes);
     Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
     // bindings
@@ -53,6 +57,8 @@ void Pipeline::GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources& 
 }
 
 void Pipeline::GetDefaultScreenQuadInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
     Vertex::Texture::getScreenQuadInputDescriptions(createInfoRes);
     // bindings
     createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
@@ -177,13 +183,16 @@ void Pipeline::Base::prepareDescriptorSetInfo() {
 
             // Add the culled sets to a layouts data structure that can be used to create
             // the pipeline layouts.
-            if (layoutsMap_.count(helper.passTypes1) == 0) {
-                layoutsMap_.insert(std::pair<std::set<PASS>, Layouts>{
-                    helper.passTypes2,
+            auto it = layoutsMap_.find(helper.passTypes1);
+            if (it == layoutsMap_.end()) {
+                auto insertPair = layoutsMap_.insert(std::pair<std::set<PASS>, Layouts>{
+                    helper.passTypes1,
                     {VK_NULL_HANDLE, {}},
                 });
+                assert(insertPair.second);
+                it = insertPair.first;
             }
-            layoutsMap_.at(helper.passTypes2).descSetLayouts.push_back(helper.pResource->layout);
+            it->second.descSetLayouts.push_back(helper.pResource->layout);
         }
     }
 
@@ -244,7 +253,7 @@ const std::shared_ptr<Pipeline::BindData>& Pipeline::Base::getBindData(const PAS
     // Look for default if a non-default wasn't found.
     if (itLayoutMap == layoutsMap_.end()) {
         itLayoutMap = layoutsMap_.begin();
-        for (; itLayoutMap != layoutsMap_.end(); ++itLayoutMap, 1)
+        for (; itLayoutMap != layoutsMap_.end(); ++itLayoutMap)
             if (itLayoutMap->first == Uniform::PASS_ALL_SET) break;
     }
     assert(itLayoutMap != layoutsMap_.end());
@@ -282,7 +291,7 @@ const std::shared_ptr<Pipeline::BindData>& Pipeline::Base::getBindData(const PAS
                 assert(false);
                 auto nh = bindDataMap_.extract(itBindData->first);
                 nh.key().insert(passType);
-                auto& key = nh.key();
+                // auto& key = nh.key();
                 return bindDataMap_.insert(std::move(nh)).node.mapped();
             }
         }

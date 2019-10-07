@@ -86,10 +86,6 @@ void Base::start() {
     start_ = true;
 }
 
-namespace {
-int lastIndex = -1;
-}
-
 void Base::update(const float time, const float lastTimeOfBirth, const uint32_t frameIndex) {
     if (start_) {
         data_.time = time;
@@ -193,6 +189,8 @@ void Fountain::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 }
 
 void Fountain::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
     Vertex::Color::getInputDescriptions(createInfoRes);
     Instance::Particle::Fountain::DATA::getInputDescriptions(createInfoRes);
     // bindings

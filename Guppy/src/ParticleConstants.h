@@ -2,6 +2,7 @@
 #define PARTICLE_CONSTANTS_H
 
 #include <glm/glm.hpp>
+#include <list>
 #include <memory>
 #include <utility>
 

@@ -9,6 +9,10 @@
 #include "Game.h"
 #include "Helpers.h"
 #include "ShellMac.h"
+// HANLDERS
+#include "InputHandler.h"
+#include "SoundHandler.h"
+#include "SoundFModHandler.h"
 
 namespace {
 
@@ -28,9 +32,20 @@ void streamCallback(ConstFSEventStreamRef streamRef, void* clientCallBackInfo, s
 
 }  // namespace
 
-ShellMac::ShellMac(Game& game) : Shell(game), watchDirStreamRef(NULL) {}
+ShellMac::ShellMac(Game& game)
+    : Shell(game,
+            Shell::Handlers{
+                std::make_unique<Input::Handler>(this),
+#ifdef USE_FMOD
+                std::make_unique<Sound::FModHandler>(this),
+#else
+                std::make_unique<Sound::Handler>(this),
+#endif
+            }),
+      watchDirStreamRef(NULL) {
+}
 
-ShellMac::~ShellMac() { cleanup_vk(); }
+ShellMac::~ShellMac() { cleanupVk(); }
 
 void ShellMac::setPlatformSpecificExtensions() {
     // instanceExtensions_.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
@@ -51,8 +66,8 @@ VkBool32 ShellMac::canPresent(VkPhysicalDevice phy, uint32_t queueFamily) {
 
 void ShellMac::quit() const { assert(false); }
 
-void ShellMac::destroy_context() {
-    Shell::destroy_context();
+void ShellMac::destroyContext() {
+    Shell::destroyContext();
     if (watchDirStreamRef) {
         FSEventStreamStop(watchDirStreamRef);
         FSEventStreamUnscheduleFromRunLoop(watchDirStreamRef, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);

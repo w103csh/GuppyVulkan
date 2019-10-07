@@ -7,6 +7,7 @@
 #include <memory>
 #include <set>
 #include <variant>
+#include <vector>
 #include <vulkan/vulkan.h>
 
 #include "Enum.h"
@@ -26,7 +27,7 @@ using enumPointerTypeMap = std::map<TEnum, std::unique_ptr<TType>>;
 namespace Pipeline {
 struct CreateInfoResources {
     // BLENDING
-    std::vector<VkPipelineColorBlendAttachmentState> blendAttachmentStates = {};
+    std::vector<VkPipelineColorBlendAttachmentState> blendAttachmentStates;
     VkPipelineColorBlendStateCreateInfo colorBlendStateInfo = {};
     // DYNAMIC
     VkDynamicState dynamicStates[VK_DYNAMIC_STATE_RANGE_SIZE];
@@ -194,7 +195,8 @@ struct insertion_ordered_unique_keyvalue_list {
     void insert(TKey key, TValue value) {
         auto it = keyOffsetMap_.find(key);
         if (it == keyOffsetMap_.end()) {
-            assert(keyOffsetMap_.insert({key, static_cast<uint32_t>(list_.size())}).second);
+            auto insertPair = keyOffsetMap_.insert({key, static_cast<uint32_t>(list_.size())});
+            assert(insertPair.second);
             list_.emplace_back(std::move(value));
         } else {
             list_.at(it->second) = std::move(value);

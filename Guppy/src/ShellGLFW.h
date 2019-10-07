@@ -8,6 +8,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 #include <type_traits>
+#include <utility>
 #include <vulkan/vulkan.h>
 
 #include "Helpers.h"
@@ -31,19 +32,21 @@ class ShellGLFW : public TShell {
         // Setup window
         glfwSetErrorCallback(glfw_error_callback);
         if (!glfwInit()) {
-            TShell::log(TShell::LOG_ERR, "GLFW: Failed to initialize\n");
+            TShell::log(TShell::LogPriority::LOG_ERR, "GLFW: Failed to initialize\n");
             assert(false);
         }
         createWindow();
 
         // Setup Vulkan
         if (!glfwVulkanSupported()) {
-            TShell::log(TShell::LOG_ERR, "GLFW: Vulkan Not Supported\n");
+            TShell::log(TShell::LogPriority::LOG_ERR, "GLFW: Vulkan Not Supported\n");
             assert(false);
         }
 
         setPlatformSpecificExtensions();
         TShell::initVk();
+
+        TShell::init();
 
         // input listeners (set before imgui init because it installs it own callbacks)
         glfwSetCursorPosCallback(window_, glfw_cursor_pos_callback);
@@ -51,7 +54,7 @@ class ShellGLFW : public TShell {
         glfwSetKeyCallback(window_, glfw_key_callback);
         setupImGui();
 
-        currentTime_ = glfwGetTime();
+        TShell::currentTime_ = glfwGetTime();
 
         // Main loop
         while (!glfwWindowShouldClose(window_)) {
@@ -69,19 +72,20 @@ class ShellGLFW : public TShell {
             TShell::acquireBackBuffer();
 
             double now = glfwGetTime();
-            double elapsed = now - currentTime_;
-            currentTime_ = now;
+            double elapsed = now - TShell::currentTime_;
+            TShell::currentTime_ = now;
 
-            InputHandler::inst().updateInput(static_cast<float>(elapsed));
-            TShell::onMouse(InputHandler::inst().getMouseInput());  // TODO: this stuff is all out of whack
+            TShell::update(elapsed);
+
+            TShell::onMouse(TShell::handlers_.pInput->getMouseInput());  // TODO: this stuff is all out of whack
 
             TShell::addGameTime(static_cast<float>(elapsed));
 
             TShell::presentBackBuffer();
 
-            if (limitFramerate) {
+            if (TShell::limitFramerate) {
                 // TODO: this is inaccurate.
-                auto Hz = static_cast<uint64_t>(1000 / framesPerSecondLimit);  // Hz
+                auto Hz = static_cast<uint64_t>(1000 / TShell::framesPerSecondLimit);  // Hz
                 if (TShell::settings_.enable_directory_listener) TShell::asyncAlert(Hz);
             } else {
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
@@ -89,10 +93,12 @@ class ShellGLFW : public TShell {
 #endif
             }
 
-            InputHandler::inst().clear();
+            TShell::handlers_.pInput->clear();
         }
 
         vkDeviceWaitIdle(TShell::context().dev);
+
+        TShell::destroy();
 
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
@@ -120,15 +126,11 @@ class ShellGLFW : public TShell {
 
         TShell::resizeSwapchain(w, h, false);
 
-        ImGui_ImplVulkan_SetFrameCount(TShell::context().imageCount);  // Remove this?
-        // getUI()->getRenderPass()->init(ctx, settings_);
-
         // ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(ctx.physical_dev, ctx.dev, &getUI()->getRenderPass(),
         //                                                          nullptr, w, h);
 
         windowData_.Surface = TShell::context().surface;
         windowData_.SurfaceFormat = TShell::context().surfaceFormat;
-        windowData_.PresentMode = TShell::context().mode;
         windowData_.PresentMode = TShell::context().mode;
 
         // Setup Platform/Renderer bindings
@@ -176,7 +178,7 @@ class ShellGLFW : public TShell {
     void quit() const override { glfwSetWindowShouldClose(window_, GLFW_TRUE); }
 
     GLFWwindow* window_;
-    ImGui_ImplVulkanH_WindowData windowData_;
+    ImGui_ImplVulkanH_Window windowData_;
 };
 
 #endif  // !SHELL_GLFW_H

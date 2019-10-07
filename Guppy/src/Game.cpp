@@ -23,7 +23,7 @@
 Game::~Game() = default;
 
 Game::Game(const std::string& name, const std::vector<std::string>& args, Handlers&& handlers)
-    : handlers_(std::forward<Handlers>(handlers)), settings_(), shell_(nullptr) {
+    : handlers_(std::move(handlers)), settings_(), shell_(nullptr) {
     settings_.name = name;
     parse_args(args);
 }
@@ -48,14 +48,20 @@ Game::Settings::Settings()
       try_sampler_anisotropy(true),  // TODO: Not sure what this does
       try_sample_rate_shading(true),
       try_compute_shading(true),
+#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+      try_tessellation_shading(false),
+      try_geometry_shading(false),
+#else
       try_tessellation_shading(true),
       try_geometry_shading(true),
+#endif
       try_wireframe_shading(true),
       enable_sample_shading(true),
       enable_double_clicks(false),
       enable_debug_markers(false),
       enable_directory_listener(true),
-      assert_on_recompile_shader(false) {}
+      assert_on_recompile_shader(false) {
+}
 
 void Game::Handler::createBuffer(const VkCommandBuffer& cmd, const VkBufferUsageFlagBits usage, const VkDeviceSize size,
                                  const std::string&& name, BufferResource& stgRes, BufferResource& buffRes, const void* data,

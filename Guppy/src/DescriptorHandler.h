@@ -65,7 +65,7 @@ class Handler : public Game::Handler {
             if (pSet->TYPE == type) return pSet;
         }
         assert(false);
-        throw std::runtime_error("Unrecognized set type");
+        exit(EXIT_FAILURE);
     }
 
     void prepareDescriptorSet(std::unique_ptr<Descriptor::Set::Base>& pSet);

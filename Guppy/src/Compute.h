@@ -39,6 +39,8 @@ class Base : public Handlee<Handler> {
     friend class Handler;
 
    public:
+    virtual ~Base() = default;
+
     void init();
     void prepare();
 

@@ -53,9 +53,6 @@ void Default::Base::updateViewport(const VkExtent2D& extent) {
     float h2 = extent.height / 2.0f;
     pData_->viewport = glm::mat4(glm::vec4(w2, 0.0f, 0.0f, 0.0f), glm::vec4(0.0f, h2, 0.0f, 0.0f),
                                  glm::vec4(0.0f, 0.0f, 1.0f, 0.0f), glm::vec4(w2 + 0, h2 + 0, 0.0f, 1.0f));
-
-    glm::mat4 x = helpers::affine(glm::vec3{1.0f}, {3.0f, 1.0f, 2.0f});
-
     dirty = true;
 }
 

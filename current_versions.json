@@ -1,36 +1,27 @@
 {
   "repos" : [
     {
+      "name" : "LunarG Vulkan SDK",
+      "version" : "1.1.121.2"
+    },
+    {
       "name" : "glslang",
       "url" : "https://github.com/KhronosGroup/glslang.git",
       "sub_dir" : "glslang",
       "build_dir" : "glslang/build",
       "install_dir" : "glslang/build/install",
-      "commit" : "a440fbb04f82b5cb19541802a31abdf1aeb94abe",
+      "commit" : "34953810a62c5230cc059cfdf42dc44c5aab2246",
       "prebuild" : [
         "python update_glslang_sources.py"
       ]
-    },
-    {
-      "name" : "Vulkan-Headers",
-      "url" : "https://github.com/KhronosGroup/Vulkan-Headers.git",
-      "sub_dir" : "Vulkan-Headers",
-      "build_dir" : "Vulkan-Headers/build",
-      "install_dir" : "Vulkan-Headers/build/install",
-      "commit" : "46979500a03de8ec5d5cc65b8a090a8b99eb190a"
     },
     {
       "name" : "GLM",
       "version" : "0.9.9.5"
     },
     {
-      "name" : "LunarG Vulkan SDK",
-      "version" : "1.1.101.0"
-    },
-    {
       "name" : "ImGui",
-      "version" : "125e62491eb29d4d91429ba7653a50714f9fe123",
-      "change_commits" : ["01a6f00164dbb97f7748393994f1201ada5be23b - Changed some things to get it to work with my frame data & descriptor pools."]
+      "commit" : "aeb64814995d624f6b3c2122d9e8312474e168f6"
     },
     {
       "name" : "GLFW",
@@ -38,12 +29,32 @@
         { "platform": "Win32", "version": "glfw-3.2.1.bin.WIN64", "file" : "glfw3.lib" },
         { "platform": "macOS", "version": "5292914ce19ed2dc6c6abfd591c4df18820a466a", "file" : "libglfw.3.3.dylib" }
       ]
+    },
+    {
+      "name" : "MoltenVK",
+      "data" : [
+        {
+          "platform": "macOS",
+          "version": "https://github.com/w103csh/MoltenVK.git",
+          "file" : "N/A",
+          "last-working-forked-commit": "ba5a8745b4b2e3d5ec66c6acf54fdb934219f21e"
+        }
+      ]
+    },
+    {
+      "name" : "FMod",
+      "data" : [
+        { "platform": "Win32", "version": "2.00.04", "file" : "fmod_vc.lib" },
+        { "platform": "macOS", "version": "2.00.04", "file" : "libfmod.dylib" }
+      ]
     }
   ],
   "install_names" : {
       "glslang" : "GLSLANG_INSTALL_DIR",
-      "Vulkan-Headers" : "VULKAN_HEADERS_INSTALL_DIR",
       "GLM" : "GLM_INSTALL_DIR",
-      "GLFW" : ["GLFW_INCLUDE_DIR", "GLFW_LIB"]
+      "ImGui" : "IMGUI_REPO_DIR",
+      "GLFW" : ["GLFW_INCLUDE_DIR", "GLFW_LIB"],
+      "MoltenVk" : "MVK_PACKAGE_DIR",
+      "FMod" : "FMOD_DIR"
     }
 }

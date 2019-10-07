@@ -13,11 +13,13 @@ namespace Descriptor {
 
 template <class TBase, class TDerived, template <typename> class TSmartPointer>
 class Manager : public Buffer::Manager::Base<TBase, TDerived, TSmartPointer> {
+    using TManager = Buffer::Manager::Base<TBase, TDerived, TSmartPointer>;
+
    public:
     Manager(const std::string &&name, const DESCRIPTOR &&descriptorType, const VkDeviceSize &&maxSize,
             const bool &&keepMapped, const std::string &&macroName = "N/A",
             const VkSharingMode &&sharingMode = VK_SHARING_MODE_EXCLUSIVE, const VkBufferCreateFlags &&flags = 0)
-        : Buffer::Manager::Base<TBase, TDerived, TSmartPointer>(
+        : TManager(
               //
               std::forward<const std::string>(name),                          //
               std::forward<const VkDeviceSize>(maxSize),                      //
@@ -35,14 +37,12 @@ class Manager : public Buffer::Manager::Base<TBase, TDerived, TSmartPointer> {
     void init(const Shell::Context &ctx, const Game::Settings &settings,
               std::vector<uint32_t> queueFamilyIndices = {}) override {
         // TODO: dump the alignment padding here so you can see how bad it is...
-        const auto &limits = ctx.physicalDevProps[ctx.physicalDevIndex].properties.limits;
-        if (sizeof(typename TDerived::DATA) % limits.minUniformBufferOffsetAlignment != 0) {
-            Buffer::Manager::Base<TBase, TDerived, TSmartPointer>::alignment_ =
-                (sizeof(typename TDerived::DATA) + limits.minUniformBufferOffsetAlignment - 1) &
-                ~(limits.minUniformBufferOffsetAlignment - 1);
+        const auto &minAlignment =
+            ctx.physicalDevProps[ctx.physicalDevIndex].properties.limits.minUniformBufferOffsetAlignment;
+        if (sizeof(typename TDerived::DATA) % minAlignment != 0) {
+            TManager::alignment_ = (sizeof(typename TDerived::DATA) + minAlignment - 1) & ~(minAlignment - 1);
         }
-        Buffer::Manager::Base<TBase, TDerived, TSmartPointer>::init(ctx, settings,
-                                                                    std::forward<std::vector<uint32_t>>(queueFamilyIndices));
+        TManager::init(ctx, settings, std::forward<std::vector<uint32_t>>(queueFamilyIndices));
     }
 
    private:

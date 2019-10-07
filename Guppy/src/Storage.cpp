@@ -32,7 +32,6 @@ Storage::PostProcess::DATA::DATA()
     for (int i = 0; i < 5; i++) {
         weights[i] /= sum;
     }
-    auto x = 1;
 }
 
 Storage::PostProcess::Base::Base(const Buffer::Info&& info, DATA* pData,

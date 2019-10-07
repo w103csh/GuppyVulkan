@@ -124,7 +124,6 @@ void Compute::Handler::updateBindData(const pipelinePassSet& set) {
     // Update pipeline bind data for all compute resources.
     for (const auto& pair : set) {
         if (Compute::ALL.count(pair.second)) {
-            bool found = false;
             auto it = pComputeMap_.find(pair.second);
             if (it != pComputeMap_.end()) {
                 it->second->setBindData(pair.first, bindDataMap.at(pair));
@@ -179,7 +178,6 @@ void Compute::Handler::submitResources(std::vector<const SubmitResource*>& pReso
 }
 
 void Compute::Handler::reset() {
-    const auto& dev = shell().context().dev;
     for (auto& [passType, pCompute] : pComputeMap_) pCompute->destroy();
     pComputeMap_.clear();
     for (auto& [passType, pCompute] : pComputePendingMap_) pCompute->destroy();

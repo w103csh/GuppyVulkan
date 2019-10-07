@@ -236,7 +236,7 @@ void Texture::Handler::load(std::shared_ptr<Texture::Base>& pTexture, const Crea
                 pTexture->aspect = sampler.aspect;
             } else if (!helpers::almost_equal(sampler.aspect, pTexture->aspect, 1)) {
                 std::string msg = "\nSampler \"" + samplerCreateInfo.name + "\" has an inconsistent aspect.\n";
-                shell().log(Shell::LOG_WARN, msg.c_str());
+                shell().log(Shell::LogPriority::LOG_WARN, msg.c_str());
             }
         }
     }
@@ -538,8 +538,6 @@ void Texture::Handler::createDescInfo(std::shared_ptr<Texture::Base>& pTexture, 
 }
 
 void Texture::Handler::attachSwapchain() {
-    const auto& ctx = shell().context();
-
     // Update swapchain dependent textures
     std::vector<std::string> updateList;
     for (auto& pTexture : pTextures_) {

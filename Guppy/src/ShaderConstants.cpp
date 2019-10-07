@@ -121,6 +121,41 @@ const CreateInfo DEFAULT_MATERIAL_CREATE_INFO = {
 
 }  // namespace Link
 
+namespace Tessellation {
+
+const CreateInfo COLOR_VERT_CREATE_INFO = {
+    SHADER::TESS_COLOR_VERT,
+    "Tessellation Color Vertex Shader",
+    "vert.color.tess.passthrough.glsl",
+    VK_SHADER_STAGE_VERTEX_BIT,
+};
+const CreateInfo BEZIER_4_TESC_CREATE_INFO = {
+    SHADER::BEZIER_4_TESC,
+    "Bezier 4 Control Point Tesselation Control Shader",
+    "tesc.bezier4.glsl",
+    VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
+};
+const CreateInfo BEZIER_4_TESE_CREATE_INFO = {
+    SHADER::BEZIER_4_TESE,
+    "Bezier 4 Control Point Tesselation Evaluation Shader",
+    "tese.bezier4.glsl",
+    VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
+};
+const CreateInfo TRIANGLE_TESC_CREATE_INFO = {
+    SHADER::TRIANGLE_TESC,
+    "Triangle Tesselation Control Shader",
+    "tesc.triangle.glsl",
+    VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
+};
+const CreateInfo TRIANGLE_TESE_CREATE_INFO = {
+    SHADER::TRIANGLE_TESE,
+    "Triangle Tesselation Evaluation Shader",
+    "tese.triangle.glsl",
+    VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
+};
+
+}  // namespace Tessellation
+
 // const std::string LIGHT_DEFAULT_POSITIONAL_STRUCT_STRING = MULTILINE(
 //    //
 //    struct LightDefaultPositional {

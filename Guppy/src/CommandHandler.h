@@ -24,10 +24,10 @@ class Handler : public Game::Handler {
 
     // clang-format off
     // INDEX
-    constexpr uint32_t Command::Handler::graphicsIndex() const { return shell().context().graphicsIndex; }
-    constexpr uint32_t Command::Handler::presentIndex() const { return shell().context().presentIndex; }
-    constexpr uint32_t Command::Handler::transferIndex() const { return shell().context().transferIndex; }
-    constexpr uint32_t Command::Handler::computeIndex() const { return shell().context().computeIndex; }
+    constexpr uint32_t graphicsIndex() const { return shell().context().graphicsIndex; }
+    constexpr uint32_t presentIndex() const {  return shell().context().presentIndex; }
+    constexpr uint32_t transferIndex() const { return shell().context().transferIndex; }
+    constexpr uint32_t computeIndex() const {  return shell().context().computeIndex; }
     const uint32_t &getIndex(const QUEUE type);
     // QUEUE
     const VkQueue &graphicsQueue() const { return shell().context().queues.at(graphicsIndex()); }

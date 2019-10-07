@@ -117,6 +117,19 @@ extern const std::map<SHADER, Shader::CreateInfo> ALL;
 extern const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL;
 extern const std::map<SHADER, std::set<SHADER_LINK>> LINK_MAP;
 
+/* When this was defined in Tessellation.h clang was throwing initialization
+ *  errors, so I moved it here. I tried to make a TessellationConstants.h and it did
+ *  not help the problem. The extern const initializers might be revealing that they
+ *  are not reliable enough... ugh.
+ */
+namespace Tessellation {
+extern const CreateInfo COLOR_VERT_CREATE_INFO;
+extern const CreateInfo BEZIER_4_TESC_CREATE_INFO;
+extern const CreateInfo BEZIER_4_TESE_CREATE_INFO;
+extern const CreateInfo TRIANGLE_TESC_CREATE_INFO;
+extern const CreateInfo TRIANGLE_TESE_CREATE_INFO;
+}  // namespace Tessellation
+
 }  // namespace Shader
 
 #endif  // !SHADER_CONSTANTS_H

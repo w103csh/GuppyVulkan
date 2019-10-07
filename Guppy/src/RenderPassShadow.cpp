@@ -50,8 +50,6 @@ void Base::createFramebuffers() {
     createInfo.height = extent_.height;
     createInfo.layers = 1;
 
-    auto& pTexture = pTextures_[0]->samplers[0];
-
     for (uint8_t frameIndex = 0; frameIndex < attachmentViewsList.size(); frameIndex++) {
         auto& attachmentViews = attachmentViewsList[frameIndex];
 

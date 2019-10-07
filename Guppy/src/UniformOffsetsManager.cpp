@@ -47,7 +47,7 @@ void Uniform::OffsetsManager::initializeMap() {
         assert(std::visit(Descriptor::HasOffsets{}, descType));
         assert(offsets.size());
 
-        offsetsMapKey& key = std::make_pair(descType, PIPELINE::ALL_ENUM);
+        const offsetsMapKey& key = std::make_pair(descType, PIPELINE::ALL_ENUM);
         assert(offsetsMap_.count(key) == 0);
         offsetsMap_.insert({std::move(key), {{offsets, PASS_ALL_SET}}});
     }
@@ -65,9 +65,7 @@ void Uniform::OffsetsManager::validateAddType(const offsetsMap& map, const ADD_T
             case ADD_TYPE::RenderPass:
                 break;
         }
-        for (const auto& keyValue2 : offsetPassMap) {
-            const auto& offsets = keyValue2.first;
-            const auto& passTypes = keyValue2.second;
+        for (const auto& [offsets, passTypes] : offsetPassMap) {
             switch (addType) {
                 case ADD_TYPE::Pipeline:
                     assert(passTypes == Uniform::PASS_ALL_SET);

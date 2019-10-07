@@ -34,7 +34,7 @@ class Base : public Handlee<RenderPass::Handler> {
     const PASS TYPE;
 
     virtual void init();
-    constexpr const bool isIntialized() const { return isInitialized_; }
+    constexpr bool isIntialized() const { return isInitialized_; }
 
     // LIFECYCLE
     void create();
@@ -44,7 +44,7 @@ class Base : public Handlee<RenderPass::Handler> {
     void overridePipelineCreateInfo(const PIPELINE &type, Pipeline::CreateInfoResources &createInfoRes);
     virtual void record(const uint8_t frameIndex);
     virtual void update();
-    constexpr const auto getStatus() const { return status_; }
+    constexpr auto getStatus() const { return status_; }
 
     // PRIMARY
     virtual void beginPass(const VkCommandBuffer &cmd, const uint8_t frameIndex,

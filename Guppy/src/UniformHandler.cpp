@@ -64,8 +64,8 @@ Uniform::Handler::Handler(Game* pGame)
           {"Storage Default", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
           //
       },
-      hasVisualHelpers(false),
-      mainCameraOffset_(0) {}
+      mainCameraOffset_(0),
+      hasVisualHelpers(false) {}
 
 std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const DESCRIPTOR& type) {
     // clang-format off
@@ -139,7 +139,7 @@ void Uniform::Handler::frame() {
 
     // MAIN CAMERA
     auto& camera = getMainCamera();
-    camera.update(InputHandler::inst().getPosDir(), InputHandler::inst().getLookDir(), frameIndex);
+    camera.update(shell().inputHandler().getPosDir(), shell().inputHandler().getLookDir(), frameIndex);
     update(camera, static_cast<int>(frameIndex));
 
     // DEFAULT POSITIONAL
@@ -470,7 +470,7 @@ void Uniform::Handler::getWriteInfos(const DESCRIPTOR& descType, const Uniform::
     uint32_t i = 0;
     for (const auto& offset : resolvedOffsets) {
         auto sMsg = Descriptor::GetPerframeBufferWarning(descType, pItems[offset]->BUFFER_INFO, setResInfo);
-        if (sMsg.size()) shell().log(Shell::LOG_WARN, sMsg.c_str());
+        if (sMsg.size()) shell().log(Shell::LogPriority::LOG_WARN, sMsg.c_str());
         pItems[offset]->setDescriptorInfo(setResInfo, i++);
     }
 }

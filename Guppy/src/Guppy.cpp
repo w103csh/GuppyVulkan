@@ -10,7 +10,7 @@
 #include "CommandHandler.h"
 #include "ComputeHandler.h"
 #include "DescriptorHandler.h"
-#include "InputHandler.h"
+#include "InputHandler.h"  // (shell)
 #include "LoadingHandler.h"
 #include "MaterialHandler.h"
 #include "MeshHandler.h"
@@ -20,9 +20,13 @@
 #include "RenderPassHandler.h"
 #include "SceneHandler.h"
 #include "ShaderHandler.h"
+#include "SoundHandler.h"  // (shell)
 #include "TextureHandler.h"
 #include "UIHandler.h"
 #include "UniformHandler.h"
+// REMOVE BELOW???
+#include "InputHandler.h"
+#include "SoundHandler.h"
 
 #ifdef USE_DEBUG_UI
 #include "UIImGuiHandler.h"
@@ -54,8 +58,8 @@ Guppy::Guppy(const std::vector<std::string>& args)
     // TODO: use these or get rid of them...
     multithread_(true),
     use_push_constants_(false),
-    sim_paused_(false),
-    sim_fade_(false)
+    sim_paused_(false)
+    // sim_fade_(false),
     // sim_(5000),
 // clang-format on
 {
@@ -254,6 +258,20 @@ void Guppy::onKey(GAME_KEY key) {
             //        light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Y * -2.0f)));
             //    }
             //});
+
+            // The fade doesn't work right, and the result change from day to day.
+            Sound::StartInfo startInfo = {};
+            // startInfo.volume = Sound::START_ZERO_VOLUME;
+            startInfo.volume = 0.5f;
+            // Sound::EffectInfo effectInfo = {Sound::EFFECT::FADE, 5.0f};
+            // if (!shell().soundHandler().start(Sound::TYPE::OCEAN_WAVES, &startInfo, &effectInfo)) {
+            if (!shell().soundHandler().start(Sound::TYPE::OCEAN_WAVES, &startInfo, nullptr)) {
+                // effectInfo = {Sound::EFFECT::FADE, 8.0f, 0.0f, Sound::PLAYBACK::STOP};
+                // shell().soundHandler().addEffect(Sound::TYPE::OCEAN_WAVES, &effectInfo);
+                // shell().soundHandler().pause(Sound::TYPE::OCEAN_WAVES);
+                shell().soundHandler().stop(Sound::TYPE::OCEAN_WAVES);
+            }
+
         } break;
         case GAME_KEY::KEY_7: {
             // Shader::Handler::defaultUniformAction([](auto& defUBO) {

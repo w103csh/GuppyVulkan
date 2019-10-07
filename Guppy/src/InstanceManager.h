@@ -22,8 +22,12 @@ class Manager : public Buffer::Manager::Base<TBase, TDerived, std::shared_ptr> {
               std::forward<const VkDeviceSize>(maxSize),
               true,
               VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+              // This used to not have the VK_MEMORY_PROPERTY_HOST_COHERENT_BIT set. It was needed to work
+              // with the macOS build. TBH I am not sure which would be faster - using the coherent bit,
+              // or flusing and invalidating. I just set the bit because I didn't know how to test it atm.
               static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
-                                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT),
+                                                    VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
+                                                    VK_MEMORY_PROPERTY_HOST_COHERENT_BIT),
           } {}
 };
 

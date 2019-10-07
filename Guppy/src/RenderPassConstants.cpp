@@ -42,7 +42,7 @@ const Sampler::CreateInfo DEFAULT_2D_SAMPLER_CREATE_INFO = {
     0,
     SAMPLER::CLAMP_TO_BORDER,
     (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
-    {false, false, 1},
+    {{false, false}, 1},
     VK_FORMAT_R32G32B32A32_SFLOAT,  // VK_FORMAT_R8G8B8A8_UNORM,
 };
 
@@ -55,7 +55,7 @@ const Sampler::CreateInfo PROJECT_2D_SAMPLER_CREATE_INFO = {
     0,
     SAMPLER::CLAMP_TO_BORDER,
     (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
-    {false, false, 1},
+    {{false, false}, 1},
 };
 const Sampler::CreateInfo PROJECT_2D_ARRAY_SAMPLER_CREATE_INFO = {
     "Render Pass Project 2D Array Color Sampler",
@@ -66,7 +66,7 @@ const Sampler::CreateInfo PROJECT_2D_ARRAY_SAMPLER_CREATE_INFO = {
     0,
     SAMPLER::CLAMP_TO_BORDER,
     (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
-    {false, false, 1},
+    {{false, false}, 1},
 };
 const Sampler::CreateInfo SWAPCHAIN_TARGET_SAMPLER_CREATE_INFO = {
     "Swapchain Target Sampler",     //
@@ -77,7 +77,7 @@ const Sampler::CreateInfo SWAPCHAIN_TARGET_SAMPLER_CREATE_INFO = {
     0,
     SAMPLER::CLAMP_TO_BORDER,
     VK_IMAGE_USAGE_SAMPLED_BIT,
-    {false, false, 1},
+    {{false, false}, 1},
 };
 
 // TEXTURE

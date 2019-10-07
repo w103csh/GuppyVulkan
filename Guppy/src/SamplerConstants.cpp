@@ -186,7 +186,7 @@ const CreateInfo PISA_HDR_CREATE_INFO = {
     VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
     SAMPLER::CUBE,
     VK_IMAGE_USAGE_SAMPLED_BIT,
-    {false, false, 1},
+    {{false, false}, 1},
 };
 
 // SKYBOX
@@ -206,7 +206,7 @@ const CreateInfo SKYBOX_CREATE_INFO = {
     VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
     SAMPLER::CUBE,
     VK_IMAGE_USAGE_SAMPLED_BIT,
-    {false, false, 1},
+    {{false, false}, 1},
 };
 
 uint32_t GetMipLevels(const VkExtent3D& extent) {
