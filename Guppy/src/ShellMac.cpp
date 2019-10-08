@@ -9,6 +9,9 @@
 #include "Game.h"
 #include "Helpers.h"
 #include "ShellMac.h"
+// HANLDERS
+#include "InputHandler.h"
+#include "SoundHandler.h"
 
 namespace {
 
@@ -28,7 +31,13 @@ void streamCallback(ConstFSEventStreamRef streamRef, void* clientCallBackInfo, s
 
 }  // namespace
 
-ShellMac::ShellMac(Game& game) : Shell(game), watchDirStreamRef(NULL) {}
+ShellMac::ShellMac(Game& game)
+    : Shell(game,
+            Shell::Handlers{
+                std::make_unique<Input::Handler>(this),
+                std::make_unique<Sound::Handler>(this),
+            }),
+      watchDirStreamRef(NULL) {}
 
 ShellMac::~ShellMac() { cleanup_vk(); }
 

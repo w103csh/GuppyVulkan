@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 #include <thread>
+#include <utility>
 
 #include <tchar.h>
 #include <windowsx.h>
@@ -14,6 +15,9 @@
 #include "Game.h"
 #include "Helpers.h"
 #include "ShellWin32.h"
+// HANLDERS
+#include "InputHandler.h"
+#include "SoundHandler.h"
 
 VOID WINAPI FileIOCompletionRoutine(DWORD, DWORD, LPOVERLAPPED);
 
@@ -43,7 +47,15 @@ class Win32Timer {
 }  // namespace
 
 ShellWin32::ShellWin32(Game& game)
-    : Shell(game), hinstance_(nullptr), hwnd_(nullptr), hmodule_(nullptr), minimized_(false) {}
+    : Shell(game,
+            Shell::Handlers{
+                std::make_unique<Input::Handler>(this),
+                std::make_unique<Sound::Handler>(this),
+            }),
+      hinstance_(nullptr),
+      hwnd_(nullptr),
+      hmodule_(nullptr),
+      minimized_(false) {}
 
 ShellWin32::~ShellWin32() {
     cleanupVk();
@@ -147,7 +159,7 @@ LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
             getMouseModifier(wParam, lParam);
         } break;
         case WM_MOUSELEAVE: {
-            InputHandler::inst().mouseLeave();
+            handlers_.pInput->mouseLeave();
         } break;
         case WM_LBUTTONDOWN:
         case WM_LBUTTONUP:
@@ -175,7 +187,7 @@ LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
         } break;
         case WM_KEYDOWN: {
             auto key = getKey(wParam, INPUT_ACTION::DOWN);
-            game_.onKey(key);
+            onKey(key);
         } break;
             // GENERAL
         case WM_DESTROY: {
@@ -352,7 +364,7 @@ GAME_KEY ShellWin32::getKey(WPARAM wParam, INPUT_ACTION type) {
             key = GAME_KEY::KEY_UNKNOWN;
             break;
     }
-    InputHandler::inst().updateKeyInput(key, type);
+    handlers_.pInput->updateKeyInput(key, type);
     return key;
 }
 
@@ -403,7 +415,7 @@ void ShellWin32::getMouseModifier(WPARAM wParam, LPARAM lParam) {
             // nothing here yet...
         } break;
     }
-    InputHandler::inst().updateMousePosition(xPos, yPos, zDelta, isLooking);
+    handlers_.pInput->updateMousePosition(xPos, yPos, zDelta, isLooking);
 }
 
 void ShellWin32::quit() const { PostQuitMessage(0); }
@@ -452,7 +464,7 @@ void ShellWin32::run() {
             double elapsed = now - currentTime_;
             currentTime_ = now;
 
-            InputHandler::inst().updateInput(static_cast<float>(elapsed));
+            handlers_.pInput->updateInput(static_cast<float>(elapsed));
             addGameTime(static_cast<float>(elapsed));
 
             presentBackBuffer();
@@ -466,7 +478,7 @@ void ShellWin32::run() {
             if (settings_.enable_directory_listener) asyncAlert(0);
         }
 
-        InputHandler::inst().clear();
+        handlers_.pInput->clear();
     }
 
     // Free any directory listening handles
@@ -475,7 +487,6 @@ void ShellWin32::run() {
     }
 
     destroyContext();
-
     DestroyWindow(hwnd_);
 }
 

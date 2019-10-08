@@ -1,6 +1,7 @@
 /*
  * This came from LunarG Hologram sample, but has been radically altered at this point.
  */
+#include "Shell.h"
 
 #include <cassert>
 #include <array>
@@ -9,14 +10,15 @@
 #include <sstream>
 #include <set>
 
-#include "Shell.h"
-
 #include "EventHandlers.h"
 #include "Game.h"
 #include "Helpers.h"
 #include "InputHandler.h"
+// HANDLERS
+#include "InputHandler.h"
+#include "SoundHandler.h"
 
-Shell::Shell(Game &game)
+Shell::Shell(Game &game, Handlers &&handlers)
     : limitFramerate(true),                          //
       framesPerSecondLimit(10),                      //
       game_(game),                                   //
@@ -24,7 +26,8 @@ Shell::Shell(Game &game)
       currentTime_(0.0),                             //
       ctx_(),                                        //
       gameTick_(1.0f / settings_.ticks_per_second),  //
-      gameTime_(gameTick_) {
+      gameTime_(gameTick_),
+      handlers_(std::move(handlers)) {
     // require generic WSI extensions
     instanceExtensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     deviceExtensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -35,13 +38,23 @@ Shell::Shell(Game &game)
         instanceExtensions_.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
         instanceExtensions_.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
-
-    InputHandler::inst().init(this);
 }
+
+Shell::~Shell() = default;
 
 void Shell::log(LogPriority priority, const char *msg) const {
     std::ostream &st = (priority >= LOG_ERR) ? std::cerr : std::cout;
     st << msg << std::endl;
+}
+
+void Shell::init() {
+    // TODO: Add init functions here...
+    handlers_.pSound->init();
+}
+
+void Shell::destroy() {
+    // TODO: Add destroy functions here...
+    handlers_.pSound->reset();
 }
 
 void Shell::initVk() {

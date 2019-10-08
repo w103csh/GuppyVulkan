@@ -255,6 +255,8 @@ endif()
 message(STATUS "Using GLFW library located at ${GLFW_LIB}")
 set(GLFW_LIBRARIES ${GLFW_LIB})
 
+############# FMOD
+include(FindFMOD)
 
 if(NOT APPLE)
     ############# VULKAN HEADER

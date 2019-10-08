@@ -139,7 +139,7 @@ void Uniform::Handler::frame() {
 
     // MAIN CAMERA
     auto& camera = getMainCamera();
-    camera.update(InputHandler::inst().getPosDir(), InputHandler::inst().getLookDir(), frameIndex);
+    camera.update(shell().inputHandler().getPosDir(), shell().inputHandler().getLookDir(), frameIndex);
     update(camera, static_cast<int>(frameIndex));
 
     // DEFAULT POSITIONAL

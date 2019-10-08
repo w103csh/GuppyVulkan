@@ -23,6 +23,9 @@
 #include "TextureHandler.h"
 #include "UIHandler.h"
 #include "UniformHandler.h"
+// REMOVE BELOW???
+#include "InputHandler.h"
+#include "SoundHandler.h"
 
 #ifdef USE_DEBUG_UI
 #include "UIImGuiHandler.h"

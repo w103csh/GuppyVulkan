@@ -23,7 +23,7 @@
 Game::~Game() = default;
 
 Game::Game(const std::string& name, const std::vector<std::string>& args, Handlers&& handlers)
-    : handlers_(std::forward<Handlers>(handlers)), settings_(), shell_(nullptr) {
+    : handlers_(std::move(handlers)), settings_(), shell_(nullptr) {
     settings_.name = name;
     parse_args(args);
 }

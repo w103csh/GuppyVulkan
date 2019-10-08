@@ -5,17 +5,16 @@
 #include <glm/glm.hpp>
 #include <set>
 
-#include "Singleton.h"
 #include "Shell.h"
 
-class InputHandler : public Singleton<InputHandler> {
-    friend class Singleton<InputHandler>;
+namespace Input {
 
+class Handler : public Shell::Handler {
    public:
-    void init(Shell* sh);
+    Handler(Shell* pShell);
 
-    constexpr const glm::vec3& getPosDir() { return posDir_; }
-    constexpr const glm::vec3& getLookDir() { return lookDir_; }
+    constexpr const glm::vec3& getPosDir() const { return posDir_; }
+    constexpr const glm::vec3& getLookDir() const { return lookDir_; }
 
     inline void updateKeyInput(GAME_KEY key, INPUT_ACTION type) {
         switch (type) {
@@ -48,17 +47,6 @@ class InputHandler : public Singleton<InputHandler> {
     constexpr const MouseInput& getMouseInput() const { return currMouseInput_; }
 
    private:
-    InputHandler()
-        : sh_(nullptr),
-          currKeyInput_(),
-          posDir_(),
-          isLooking_(false),
-          hasFocus_(false),
-          currMouseInput_{0.0f, 0.0f, 0.0f},
-          prevMouseInput_{0.0f, 0.0f, 0.0f},
-          lookDir_() {}         // Prevent construction
-    ~InputHandler() = default;  // Prevent destruction
-
     void reset();
 
     void updateKeyInput();
@@ -82,5 +70,7 @@ class InputHandler : public Singleton<InputHandler> {
     MouseInput prevMouseInput_;
     glm::vec3 lookDir_;
 };
+
+}  // namespace Input
 
 #endif  // !INPUT_HANDLER_H

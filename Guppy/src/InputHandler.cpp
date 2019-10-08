@@ -19,15 +19,17 @@ constexpr float M_Y_LOOK_FACT = -0.1f;
 
 }  // namespace
 
-void InputHandler::init(Shell* sh) {
-    if (sh != nullptr)
-        sh_ = sh;
-    else
-        reset();
-    assert(sh_);
-}
+Input::Handler::Handler(Shell* pShell)
+    : Shell::Handler(pShell),
+      currKeyInput_(),
+      posDir_(),
+      isLooking_(false),
+      hasFocus_(false),
+      currMouseInput_{0.0f, 0.0f, 0.0f},
+      prevMouseInput_{0.0f, 0.0f, 0.0f},
+      lookDir_() {}
 
-void InputHandler::updateInput(float elapsed) {
+void Input::Handler::updateInput(float elapsed) {
     // reset();
 
     updateKeyInput();
@@ -44,7 +46,7 @@ void InputHandler::updateInput(float elapsed) {
     }
 }
 
-void InputHandler::updateKeyInput() {
+void Input::Handler::updateKeyInput() {
     std::stringstream ss;
 
     for (auto& key : currKeyInput_) {
@@ -93,7 +95,7 @@ void InputHandler::updateKeyInput() {
     }
 }
 
-void InputHandler::updateMouseInput() {
+void Input::Handler::updateMouseInput() {
     std::stringstream ss;
 
     if (isLooking_) {
@@ -127,7 +129,7 @@ void InputHandler::updateMouseInput() {
     isLooking_ = false;
 }
 
-void InputHandler::reset() {
+void Input::Handler::reset() {
     lookDir_ = {};
     posDir_ = {};
     currMouseInput_.moving = false;

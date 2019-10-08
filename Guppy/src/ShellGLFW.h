@@ -8,6 +8,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 #include <type_traits>
+#include <utility>
 #include <vulkan/vulkan.h>
 
 #include "Helpers.h"
@@ -45,6 +46,8 @@ class ShellGLFW : public TShell {
         setPlatformSpecificExtensions();
         TShell::initVk();
 
+        init();
+
         // input listeners (set before imgui init because it installs it own callbacks)
         glfwSetCursorPosCallback(window_, glfw_cursor_pos_callback);
         glfwSetMouseButtonCallback(window_, glfw_mouse_button_callback);
@@ -72,8 +75,8 @@ class ShellGLFW : public TShell {
             double elapsed = now - currentTime_;
             currentTime_ = now;
 
-            InputHandler::inst().updateInput(static_cast<float>(elapsed));
-            TShell::onMouse(InputHandler::inst().getMouseInput());  // TODO: this stuff is all out of whack
+            handlers_.pInput->updateInput(static_cast<float>(elapsed));
+            TShell::onMouse(handlers_.pInput->getMouseInput());  // TODO: this stuff is all out of whack
 
             TShell::addGameTime(static_cast<float>(elapsed));
 
@@ -89,10 +92,12 @@ class ShellGLFW : public TShell {
 #endif
             }
 
-            InputHandler::inst().clear();
+            handlers_.pInput->clear();
         }
 
         vkDeviceWaitIdle(TShell::context().dev);
+
+        destroy();
 
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
