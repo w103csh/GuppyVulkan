@@ -428,6 +428,7 @@ create a build directory and generate the Xcode project files:
 
     cd GuppyVulkan
     mkdir build
+    cd build
     python ../buildMac.py .. \
             -DMVK_PACKAGE_DIR=absolute_path_to_package_dir \
             -DGLM_LIB_DIR=absolute_path_to_install_dir \
