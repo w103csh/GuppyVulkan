@@ -229,6 +229,8 @@ create a build directory and generate the Visual Studio project files:
 
 The `-A` option is used to select either the "Win32" or "x64" architecture.
 
+> **Note: Currently only x64 builds are working.**
+
 If a generator for a specific version of Visual Studio is required, you can
 specify it for Visual Studio 2017, for example, with:
 
