@@ -68,7 +68,9 @@ void Camera::Default::Perspective::Base::setAspect(float aspect) {
 
 void Camera::Default::Perspective::Base::update(const glm::vec3 &pos_dir, const glm::vec3 &look_dir,
                                                 const uint32_t frameIndex) {
-    if (updateView(pos_dir, look_dir)) update(frameIndex);
+    // bool wasUpdate = updateView(pos_dir, look_dir);  // This is triple buffered so just update always for now.
+    updateView(pos_dir, look_dir);
+    update(frameIndex);
 }
 
 void Camera::Default::Perspective::Base::update(const uint32_t frameIndex) {
