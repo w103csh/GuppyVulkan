@@ -155,7 +155,7 @@ class MRTLine : public Graphics {
    public:
     MRTLine(Handler& handler);
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
-    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes);
+    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
 // SSAO

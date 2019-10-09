@@ -16,10 +16,10 @@ Compute::Base::Base(Compute::Handler& handler, const Compute::CreateInfo* pCreat
       PASS_TYPE(pCreateInfo->passType),
       POST_PASS_TYPE(pCreateInfo->postPassType),
       QUEUE_TYPE(pCreateInfo->queueType),
-      status_(STATUS::PENDING),
       groupCountX_(pCreateInfo->groupCountX),
       groupCountY_(pCreateInfo->groupCountY),
       groupCountZ_(pCreateInfo->groupCountZ),
+      status_(STATUS::PENDING),
       isFramebufferCountDependent_(false),
       isFramebufferImageSizeDependent_(false),
       fence_(VK_NULL_HANDLE) {
@@ -68,7 +68,7 @@ void Compute::Base::setBindData(const PIPELINE& pipelineType, const std::shared_
 }
 
 void Compute::Base::record(const uint8_t frameIndex, RenderPass::SubmitResource& submitResource) {
-    auto syncIndex = (std::min)(static_cast<uint8_t>(cmds_.size() - 1), frameIndex);
+    // auto syncIndex = (std::min)(static_cast<uint8_t>(cmds_.size() - 1), frameIndex);
 
     // COMMAND
     auto& cmd = submitResource.commandBuffers[submitResource.commandBufferCount - 1];
@@ -159,7 +159,6 @@ void Compute::Base::destroySyncResources() {
 }
 
 void Compute::Base::detachSwapchain() {
-    const auto& dev = handler().shell().context().dev;
     // SYNC
     if (isFramebufferCountDependent_) {
         destroySyncResources();
@@ -191,7 +190,7 @@ PostProcess::Default::Default(Handler& handler)  //
     : Compute::Base{handler, &DEFAULT_CREATE_INFO} {}
 
 void PostProcess::Default::record(const uint8_t frameIndex, RenderPass::SubmitResource& submitResource) {
-    auto syncIndex = (std::min)(static_cast<uint8_t>(cmds_.size() - 1), frameIndex);
+    // auto syncIndex = (std::min)(static_cast<uint8_t>(cmds_.size() - 1), frameIndex);
 
     // COMMAND
     auto& cmd = submitResource.commandBuffers[submitResource.commandBufferCount - 1];

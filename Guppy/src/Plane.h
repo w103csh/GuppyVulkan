@@ -27,7 +27,7 @@ struct CreateInfo : public Mesh::CreateInfo {
 std::vector<Face> make(const Plane::Info& planeInfo = {}, const Mesh::Geometry::Info& geoInfo = {});
 
 class Color : public Mesh::Color {
-    friend class Handler;
+    friend class Mesh::Handler;  // clang
 
    protected:
     Color(Handler& handler, const index&& offset, CreateInfo* pCreateInfo,
@@ -35,7 +35,7 @@ class Color : public Mesh::Color {
 };
 
 class Texture : public Mesh::Texture {
-    friend class Handler;
+    friend class Mesh::Handler;  // clang
 
    protected:
     Texture(Handler& handler, const index&& offset, CreateInfo* pCreateInfo,

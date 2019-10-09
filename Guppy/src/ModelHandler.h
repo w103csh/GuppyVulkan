@@ -2,6 +2,7 @@
 #define MODEL_HANDLER_H
 
 #include <future>
+#include <memory>
 #include <unordered_map>
 #include <vector>
 
@@ -80,9 +81,10 @@ class Handler : public Game::Handler {
 
     FileLoader::tinyobj_data loadData(Model::Base& model);
 
+    // clang requires pInstanceData to be pass by value.
     template <typename TMaterialCreateInfo>
     std::vector<Mesh::Color*> loadColor(Model::Base& model, TMaterialCreateInfo materialCreateInfo,
-                                        std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData) {
+                                        std::shared_ptr<::Instance::Obj3d::Base> pInstanceData) {
         auto data = loadData(model);
         auto createInfo = model.getMeshCreateInfo();
 
@@ -112,9 +114,10 @@ class Handler : public Game::Handler {
         return pMeshes;
     }
 
+    // clang requires pInstanceData to not be pass by value.
     template <typename TMaterialCreateInfo>
     std::vector<Mesh::Texture*> loadTexture(Model::Base& model, TMaterialCreateInfo materialCreateInfo,
-                                            std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData) {
+                                            std::shared_ptr<::Instance::Obj3d::Base> pInstanceData) {
         auto data = loadData(model);
         auto createInfo = model.getMeshCreateInfo();
 

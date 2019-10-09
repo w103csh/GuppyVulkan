@@ -56,7 +56,7 @@ const CreateInfo DEFAULT_2D_ARRAY_CREATE_INFO = {
     0,
     SAMPLER::CLAMP_TO_BORDER,
     VK_IMAGE_USAGE_SAMPLED_BIT,
-    {false, false, 1},
+    {{false, false}, 1},
 };
 
 const CreateInfo COMPUTE_2D_ARRAY_CREATE_INFO = {
@@ -68,7 +68,7 @@ const CreateInfo COMPUTE_2D_ARRAY_CREATE_INFO = {
     0,
     SAMPLER::CLAMP_TO_BORDER,
     VK_IMAGE_USAGE_STORAGE_BIT,
-    {false, false, 1},
+    {{false, false}, 1},
 };
 
 // LOG
@@ -81,7 +81,7 @@ const Sampler::CreateInfo HDR_LOG_SAMPLER_CREATE_INFO = {
     0,
     SAMPLER::CLAMP_TO_BORDER,
     (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT),
-    {false, false, 1},
+    {{false, false}, 1},
     VK_FORMAT_R32_SFLOAT,
     Sampler::CHANNELS::_1,
 };
@@ -96,7 +96,7 @@ const Sampler::CreateInfo HDR_LOG_BLIT_A_SAMPLER_CREATE_INFO = {
     0,
     SAMPLER::CLAMP_TO_EDGE,
     (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT),
-    {false, true, 1},
+    {{false, true}, 1},
     VK_FORMAT_R32_SFLOAT,
 };
 const Sampler::CreateInfo HDR_LOG_BLIT_B_SAMPLER_CREATE_INFO = {
@@ -108,7 +108,7 @@ const Sampler::CreateInfo HDR_LOG_BLIT_B_SAMPLER_CREATE_INFO = {
     0,
     SAMPLER::DEFAULT,
     (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT),
-    {false, true, 1},
+    {{false, true}, 1},
     VK_FORMAT_R32_SFLOAT,
 };
 
@@ -122,7 +122,7 @@ const Sampler::CreateInfo BLUR_2D_SAMPLER_CREATE_INFO = {
     0,
     SAMPLER::CLAMP_TO_BORDER,
     (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
-    {false, false, 1},
+    {{false, false}, 1},
     VK_FORMAT_R32G32B32A32_SFLOAT,  // VK_FORMAT_R8G8B8A8_UNORM,
 };
 

@@ -10,6 +10,15 @@
 
 #define USE_DEBUG_UI
 
+// Class functions with a virtual base cannot have constexpr member functions
+// with clang. This makes me think that msvc is just ignoring it, but I'll leave
+// this for now.
+#ifdef __clang__
+#define virtual_inline inline
+#elif _MSC_VER
+#define virtual_inline constexpr
+#endif
+
 constexpr bool PRIMARY_MONITOR = 0;
 // TODO: a proper dynamic buffer allocator.
 /*  I am using this for the mean time to restrict the number of textures, so

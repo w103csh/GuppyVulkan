@@ -247,7 +247,7 @@ const std::shared_ptr<Pipeline::BindData>& Pipeline::Base::getBindData(const PAS
     // Look for default if a non-default wasn't found.
     if (itLayoutMap == layoutsMap_.end()) {
         itLayoutMap = layoutsMap_.begin();
-        for (; itLayoutMap != layoutsMap_.end(); ++itLayoutMap, 1)
+        for (; itLayoutMap != layoutsMap_.end(); ++itLayoutMap)
             if (itLayoutMap->first == Uniform::PASS_ALL_SET) break;
     }
     assert(itLayoutMap != layoutsMap_.end());
@@ -285,7 +285,7 @@ const std::shared_ptr<Pipeline::BindData>& Pipeline::Base::getBindData(const PAS
                 assert(false);
                 auto nh = bindDataMap_.extract(itBindData->first);
                 nh.key().insert(passType);
-                auto& key = nh.key();
+                // auto& key = nh.key();
                 return bindDataMap_.insert(std::move(nh)).node.mapped();
             }
         }

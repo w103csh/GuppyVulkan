@@ -26,6 +26,8 @@ Scene::Handler::~Handler() = default;
 void Scene::Handler::init() {
     reset();
 
+    const auto& ctx = shell().context();
+
     bool suppress = false;
     bool deferred = true;
     bool particles = true;
@@ -132,7 +134,7 @@ void Scene::Handler::init() {
         }
 
         // TRIANGLE
-        if (!suppress || false) {
+        if ((!suppress || false) && ctx.tessellationShadingEnabled_) {
             instObj3dInfo = {};
             defMatInfo = {};
             defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
@@ -177,7 +179,7 @@ void Scene::Handler::init() {
         }
 
         // ARC
-        if (!suppress || false) {
+        if ((!suppress || false) && ctx.tessellationShadingEnabled_) {
             arcInfo = {};
             instObj3dInfo = {};
             defMatInfo = {};
@@ -217,7 +219,7 @@ void Scene::Handler::init() {
                 boxColor->putOnTop(groundPlane_bbmm);
                 meshHandler().updateMesh(boxColor);
             }
-            if (true) {
+            if (true && ctx.geometryShadingEnabled_) {
                 meshInfo = {};
                 meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_WF_COLOR;
                 instObj3dInfo = {};
@@ -254,7 +256,7 @@ void Scene::Handler::init() {
         if (!suppress || true) {
             // MODEL
             modelInfo = {};
-            if (false) {
+            if (false && ctx.geometryShadingEnabled_) {
                 modelInfo.pipelineType = PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED;
                 modelInfo.settings.needAdjacenyList = true;
             } else {
@@ -625,8 +627,8 @@ void Scene::Handler::init() {
             float f1 = 0.03f;
             // float f1 = 0.2f;
             float f2 = f1 * 5.0f;
-            float low = f2 * 0.05f;
-            float high = f2 * 3.0f;
+            // float low = f2 * 0.05f;
+            // float high = f2 * 3.0f;
             instObj3dInfo.data.reserve(static_cast<size_t>(count) * static_cast<size_t>(count) * 4);
             for (uint32_t i = 0; i < count; i++) {
                 x = static_cast<float>(i) * f2;

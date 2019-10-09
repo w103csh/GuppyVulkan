@@ -54,8 +54,8 @@ Guppy::Guppy(const std::vector<std::string>& args)
     // TODO: use these or get rid of them...
     multithread_(true),
     use_push_constants_(false),
-    sim_paused_(false),
-    sim_fade_(false)
+    sim_paused_(false)
+    // sim_fade_(false),
     // sim_(5000),
 // clang-format on
 {

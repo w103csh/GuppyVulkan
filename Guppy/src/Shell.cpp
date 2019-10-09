@@ -393,6 +393,7 @@ void Shell::onKey(GAME_KEY key) {
         case GAME_KEY::KEY_BACKSPACE: {
             limitFramerate = !limitFramerate;
         } break;
+        default:;
     }
     game_.onKey(key);
 }

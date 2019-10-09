@@ -70,8 +70,8 @@ class Base : public Descriptor::Base {
     const STATUS& getStatus() const { return status_; }
 
     inline bool hasTexture() const { return pTexture_ != nullptr; }
-    constexpr const auto& getTexture() const { return pTexture_; }
-    constexpr const auto& getRepeat() const { return repeat_; }
+    virtual_inline const auto& getTexture() const { return pTexture_; }
+    virtual_inline const auto& getRepeat() const { return repeat_; }
 
     virtual FlagBits getFlags() = 0;
     virtual void setFlags(FlagBits flags) = 0;

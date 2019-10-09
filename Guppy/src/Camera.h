@@ -73,9 +73,9 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
     }
     Ray getRay(glm::vec2 &&position, const VkExtent2D &extent, float distance);
 
-    constexpr const auto &getMVP() const { return data_.viewProjection; }
-    constexpr const auto &getMV() const { return data_.view; }
-    constexpr const auto &getClip() const { return clip_; }
+    virtual_inline const auto &getMVP() const { return data_.viewProjection; }
+    virtual_inline const auto &getMV() const { return data_.view; }
+    virtual_inline const auto &getClip() const { return clip_; }
 
     void setAspect(float aspect);
     void update(const glm::vec3 &pos_dir, const glm::vec3 &look_dir, const uint32_t frameIndex);

@@ -142,7 +142,7 @@ void Command::Handler::beginCmd(const VkCommandBuffer& cmd, const VkCommandBuffe
     begin_info.pNext = nullptr;
     begin_info.flags = inheritanceInfo == nullptr
                            ? 0
-                           : VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_PASS_CONTINUE_BIT;
+                           : VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
     begin_info.pInheritanceInfo = inheritanceInfo;
     vk::assert_success(vkBeginCommandBuffer(cmd, &begin_info));
 }

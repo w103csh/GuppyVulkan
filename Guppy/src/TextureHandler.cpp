@@ -538,8 +538,6 @@ void Texture::Handler::createDescInfo(std::shared_ptr<Texture::Base>& pTexture, 
 }
 
 void Texture::Handler::attachSwapchain() {
-    const auto& ctx = shell().context();
-
     // Update swapchain dependent textures
     std::vector<std::string> updateList;
     for (auto& pTexture : pTextures_) {

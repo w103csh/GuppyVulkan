@@ -14,9 +14,9 @@
 
 RenderPass::Base::Base(RenderPass::Handler& handler, const uint32_t&& offset, const RenderPass::CreateInfo* pCreateInfo)
     : Handlee(handler),
+      FLAGS(pCreateInfo->flags),
       NAME(pCreateInfo->name),
       OFFSET(offset),
-      FLAGS(pCreateInfo->flags),
       TYPE(pCreateInfo->type),
       pass(VK_NULL_HANDLE),
       data{},
@@ -35,15 +35,15 @@ RenderPass::Base::Base(RenderPass::Handler& handler, const uint32_t&& offset, co
       depth_{},
       descPipelineOffsets_(pCreateInfo->descPipelineOffsets),
       textureIds_(pCreateInfo->textureIds),
+      extent_(BAD_EXTENT_2D),
       isInitialized_(false),
       // SETTINGS
       format_(VK_FORMAT_UNDEFINED),
       depthFormat_(VK_FORMAT_UNDEFINED),
-      finalLayout_(pCreateInfo->finalLayout),
       initialLayout_(pCreateInfo->initialLayout),
+      finalLayout_(pCreateInfo->finalLayout),
       commandCount_(0),
-      semaphoreCount_(0),
-      extent_(BAD_EXTENT_2D) {
+      semaphoreCount_(0) {
     // This is sloppy, but I don't really feel like changing a bunch of things.
     if (textureIds_.empty()) textureIds_.emplace_back(std::string(SWAPCHAIN_TARGET_ID));
     assert(textureIds_.size());
@@ -157,8 +157,8 @@ void RenderPass::Base::create() {
 
     if (handler().settings().enable_debug_markers) {
         std::string markerName = NAME + " render pass";
-        ext::DebugMarkerSetObjectName(handler().shell().context().dev, (uint64_t)pass, VK_DEBUG_REPORT_OBJECT_TYPE_PASS_EXT,
-                                      markerName.c_str());
+        ext::DebugMarkerSetObjectName(handler().shell().context().dev, (uint64_t)pass,
+                                      VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, markerName.c_str());
     }
 }
 
@@ -316,7 +316,7 @@ void RenderPass::Base::createPass() {
 
 void RenderPass::Base::createBeginInfo() {
     beginInfo_ = {};
-    beginInfo_.sType = VK_STRUCTURE_TYPE_PASS_BEGIN_INFO;
+    beginInfo_.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     beginInfo_.renderPass = pass;
 
     if (usesSecondaryCommands()) {
@@ -335,7 +335,8 @@ void RenderPass::Base::createBeginInfo() {
         secCmdBeginInfo_ = {};
         secCmdBeginInfo_.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         secCmdBeginInfo_.pNext = nullptr;
-        secCmdBeginInfo_.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_PASS_CONTINUE_BIT;
+        secCmdBeginInfo_.flags =
+            VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
         secCmdBeginInfo_.pInheritanceInfo = &inheritInfo_;
     }
 }

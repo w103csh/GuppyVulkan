@@ -14,7 +14,7 @@ class Handler;
 namespace VisualHelper {
 
 class ModelSpace : public Axes {
-    friend class Handler;
+    friend class Mesh::Handler; // clang
 
    protected:
     ModelSpace(Handler& handler, const index&& offset, AxesCreateInfo* pCreateInfo,
@@ -24,7 +24,7 @@ class ModelSpace : public Axes {
 };
 
 class TangentSpace : public Line {
-    friend class Handler;
+    friend class Mesh::Handler; // clang
 
    protected:
     // COLOR

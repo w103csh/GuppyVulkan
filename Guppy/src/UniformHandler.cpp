@@ -64,8 +64,8 @@ Uniform::Handler::Handler(Game* pGame)
           {"Storage Default", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
           //
       },
-      hasVisualHelpers(false),
-      mainCameraOffset_(0) {}
+      mainCameraOffset_(0),
+      hasVisualHelpers(false) {}
 
 std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const DESCRIPTOR& type) {
     // clang-format off

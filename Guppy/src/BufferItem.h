@@ -66,12 +66,13 @@ class PerFramebufferDataItem : public Buffer::DataItem<TDATA> {
    protected:
     void setData(const uint32_t index = UINT32_MAX) override {
         if (index == UINT32_MAX) {
-            for (uint32_t i = 0; i < BUFFER_INFO.count; i++) std::memcpy(&pData_[i], &data_, sizeof(TDATA));
+            for (uint32_t i = 0; i < Item::BUFFER_INFO.count; i++)
+                std::memcpy(&DataItem<TDATA>::pData_[i], &data_, sizeof(TDATA));
         } else {
-            assert(index < BUFFER_INFO.count);
-            std::memcpy(&pData_[index], &data_, sizeof(TDATA));
+            assert(index < Item::BUFFER_INFO.count);
+            std::memcpy(&DataItem<TDATA>::pData_[index], &data_, sizeof(TDATA));
         }
-        dirty = true;
+        Item::dirty = true;
     }
 
     TDATA data_;

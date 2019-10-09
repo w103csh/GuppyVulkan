@@ -436,10 +436,8 @@ void Mesh::Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::Bind
                             descSetBindData.dynamicOffsets.data());
 
     // VERTEX
-    VkBuffer vertexBuffers[] = {vertexRes_.buffer};
-    VkDeviceSize vertexOffsets[] = {0};
-    VkDeviceSize test = 0;
-    vkCmdBindVertexBuffers(cmd, Vertex::BINDING, 1, &vertexRes_.buffer, &test);
+    VkDeviceSize offsets[] = {0};
+    vkCmdBindVertexBuffers(cmd, Vertex::BINDING, 1, &vertexRes_.buffer, offsets);
 
     // INSTANCE (as of now there will always be at least one instance binding)
     vkCmdBindVertexBuffers(         //

@@ -96,7 +96,7 @@ CreateInfo MakeOffsetTex() {
         0,
         SAMPLER::DEFAULT_NEAREST,
         VK_IMAGE_USAGE_SAMPLED_BIT,
-        {false, false, 1},
+        {{false, false}, 1},
         VK_FORMAT_R32G32B32A32_SFLOAT,
         Sampler::CHANNELS::_4,
         sizeof(float),

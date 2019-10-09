@@ -41,7 +41,7 @@ using USAGE = enum {
 
 // Note: the values here are used for byte offsets,
 // and other things that rely on them.
-using CHANNELS = enum {
+using CHANNELS = enum : uint8_t {
     _1 = 1,
     _2 = 2,
     _3 = 3,

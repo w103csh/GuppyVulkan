@@ -30,7 +30,7 @@ void streamCallback(ConstFSEventStreamRef streamRef, void* clientCallBackInfo, s
 
 ShellMac::ShellMac(Game& game) : Shell(game), watchDirStreamRef(NULL) {}
 
-ShellMac::~ShellMac() { cleanup_vk(); }
+ShellMac::~ShellMac() { cleanupVk(); }
 
 void ShellMac::setPlatformSpecificExtensions() {
     // instanceExtensions_.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
@@ -51,8 +51,8 @@ VkBool32 ShellMac::canPresent(VkPhysicalDevice phy, uint32_t queueFamily) {
 
 void ShellMac::quit() const { assert(false); }
 
-void ShellMac::destroy_context() {
-    Shell::destroy_context();
+void ShellMac::destroyContext() {
+    Shell::destroyContext();
     if (watchDirStreamRef) {
         FSEventStreamStop(watchDirStreamRef);
         FSEventStreamUnscheduleFromRunLoop(watchDirStreamRef, CFRunLoopGetCurrent(), kCFRunLoopDefaultMode);

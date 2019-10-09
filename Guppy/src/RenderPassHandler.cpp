@@ -213,8 +213,6 @@ const std::unique_ptr<Mesh::Texture>& RenderPass::Handler::getScreenQuad() {
 }
 
 void RenderPass::Handler::attachSwapchain() {
-    const auto& ctx = shell().context();
-
     // SWAPCHAIN
     createSwapchainResources();
 

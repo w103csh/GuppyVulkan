@@ -28,8 +28,8 @@ Descriptor::Set::Base::Base(Handler& handler, const CreateInfo* pCreateInfo)
       MACRO_NAME(pCreateInfo->macroName),
       bindingMap_(pCreateInfo->bindingMap),
       setCount_(0),
-      resources_(1),
-      defaultResourceOffset_(0) {
+      defaultResourceOffset_(0),
+      resources_(1) {
     // Create the default resource
     assert(resources_.size() == 1);
     for (const auto& [key, bindingInfo] : getBindingMap()) getDefaultResource().offsets.insert(bindingInfo.descType, {});

@@ -35,9 +35,8 @@ void Instance::Particle::Fountain::DATA::getInputDescriptions(Pipeline::CreateIn
 }
 
 Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
-    : Instance::Base(),  //
-      Buffer::DataItem<DATA>(pData),
-      Buffer::Item(std::forward<const Buffer::Info>(info)) {
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
+      Buffer::DataItem<DATA>(pData) {
     auto& numParticles = BUFFER_INFO.count;
 
     glm::vec3 v(0.0f);
@@ -75,7 +74,7 @@ namespace Buffer {
 
 Base::Base(Particle::Handler& handler, const index offset, const std::string&& name, const PIPELINE& pipelineType,
            const std::vector<std::shared_ptr<Material::Base>>& pMaterials)
-    : Handlee(handler), NAME(name), PIPELINE_TYPE(pipelineType), offset_(offset), status_(STATUS::READY) {
+    : Handlee(handler), NAME(name), PIPELINE_TYPE(pipelineType), status_(STATUS::READY), offset_(offset) {
     assert(PIPELINE_TYPE != PIPELINE::ALL_ENUM);
     // TODO: This should work if a material is not needed...
     assert(pMaterials.size() && "Can't handle particle buffers without a material currently.");
@@ -163,9 +162,9 @@ void Fountain::start(const StartInfo& info) {
 void Fountain::update(const float time, const uint32_t frameIndex) {
     float lastTimeOfBirth = pInstFntn_->getLastTimeOfBirth();
     for (const auto& instance : getInstances()) {
-        auto& pMaterial = std::static_pointer_cast<Material::Particle::Fountain::Base>(instance.second);
-        pMaterial->update(time, lastTimeOfBirth, frameIndex);
-        handler().materialHandler().update(pMaterial, frameIndex);
+        std::static_pointer_cast<Material::Particle::Fountain::Base>(instance.second)
+            ->update(time, lastTimeOfBirth, frameIndex);
+        handler().materialHandler().update(instance.second, frameIndex);
     }
 }
 

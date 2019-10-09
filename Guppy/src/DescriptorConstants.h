@@ -204,8 +204,8 @@ struct IsCombinedSampler {
     bool operator()(const COMBINED_SAMPLER&) const { return true; }
 };
 struct GetCombinedSampler {
-    template <typename T> const COMBINED_SAMPLER operator()(const T&) const { return COMBINED_SAMPLER::DONT_CARE; }
-    const COMBINED_SAMPLER operator()(const COMBINED_SAMPLER& type) const { return type; }
+    template <typename T> COMBINED_SAMPLER operator()(const T&) const { return COMBINED_SAMPLER::DONT_CARE; }
+    COMBINED_SAMPLER operator()(const COMBINED_SAMPLER& type) const { return type; }
 };
 struct IsCombinedSamplerMaterial {
     template <typename T> bool operator()(const T&) const { return false; }
@@ -221,8 +221,8 @@ struct IsStorageBuffer {
     bool operator()(const STORAGE_BUFFER&) const { return true; }
 };
 struct GetStorageBuffer {
-    template <typename T> const STORAGE_BUFFER operator()(const T&) const { return STORAGE_BUFFER::DONT_CARE; }
-    const STORAGE_BUFFER operator()(const STORAGE_BUFFER& type) const { return type; }
+    template <typename T> STORAGE_BUFFER operator()(const T&) const { return STORAGE_BUFFER::DONT_CARE; }
+    STORAGE_BUFFER operator()(const STORAGE_BUFFER& type) const { return type; }
 };
 // STORAGE IMAGE
 struct IsStorageImage {
@@ -230,8 +230,8 @@ struct IsStorageImage {
     bool operator()(const STORAGE_IMAGE&) const { return true; }
 };
 struct GetStorageImage {
-    template <typename T> const STORAGE_IMAGE operator()(const T&) const { return STORAGE_IMAGE::DONT_CARE; }
-    const STORAGE_IMAGE operator()(const STORAGE_IMAGE& type) const { return type; }
+    template <typename T> STORAGE_IMAGE operator()(const T&) const { return STORAGE_IMAGE::DONT_CARE; }
+    STORAGE_IMAGE operator()(const STORAGE_IMAGE& type) const { return type; }
 };
 struct IsSwapchainStorageImage {
     template <typename T> bool operator()(const T&) const { return false; }
@@ -243,8 +243,8 @@ struct IsUniform {
     bool operator()(const UNIFORM&) const { return true; }
 };
 struct GetUniform {
-    template <typename T> const UNIFORM operator()(const T&) const { return UNIFORM::DONT_CARE; }
-    const UNIFORM operator()(const UNIFORM& type) const { return type; }
+    template <typename T> UNIFORM operator()(const T&) const { return UNIFORM::DONT_CARE; }
+    UNIFORM operator()(const UNIFORM& type) const { return type; }
 };
 // UNIFORM DYNAMIC
 struct IsUniformDynamic {
@@ -252,8 +252,8 @@ struct IsUniformDynamic {
     bool operator()(const UNIFORM_DYNAMIC&) const { return true; }
 };
 struct GetUniformDynamic {
-    template <typename T> const UNIFORM_DYNAMIC operator()(const T&) const { return UNIFORM_DYNAMIC::DONT_CARE; }
-    const UNIFORM_DYNAMIC operator()(const UNIFORM_DYNAMIC& type) const { return type; }
+    template <typename T> UNIFORM_DYNAMIC operator()(const T&) const { return UNIFORM_DYNAMIC::DONT_CARE; }
+    UNIFORM_DYNAMIC operator()(const UNIFORM_DYNAMIC& type) const { return type; }
 };
 // INPUT ATTACHMENT
 struct IsInputAttachment {
@@ -261,8 +261,8 @@ struct IsInputAttachment {
     bool operator()(const INPUT_ATTACHMENT&) const { return true; }
 };
 struct GetInputAttachment {
-    template <typename T> const INPUT_ATTACHMENT operator()(const T&) const { return INPUT_ATTACHMENT::DONT_CARE; }
-    const INPUT_ATTACHMENT operator()(const INPUT_ATTACHMENT& type) const { return type; }
+    template <typename T> INPUT_ATTACHMENT operator()(const T&) const { return INPUT_ATTACHMENT::DONT_CARE; }
+    INPUT_ATTACHMENT operator()(const INPUT_ATTACHMENT& type) const { return type; }
 };
 // clang-format on
 

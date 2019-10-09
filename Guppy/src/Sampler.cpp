@@ -92,9 +92,9 @@ Sampler::Base::Base(const CreateInfo* pCreateInfo, bool needsData)
       swpchnInfo(pCreateInfo->swpchnInfo),
       mipmapInfo(pCreateInfo->mipmapCreateInfo.info),
       aspect(BAD_ASPECT),
+      imageViewType(pCreateInfo->imageViewType),
       image(VK_NULL_HANDLE),
       memory(VK_NULL_HANDLE),
-      imageViewType(pCreateInfo->imageViewType),
       imgInfo{}  //
 {
     // Image create info
