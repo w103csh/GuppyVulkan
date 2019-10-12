@@ -47,6 +47,7 @@
   "install_names" : {
       "glslang" : "GLSLANG_INSTALL_DIR",
       "GLM" : "GLM_INSTALL_DIR",
+      "ImGui" : "IMGUI_REPO_DIR",
       "GLFW" : ["GLFW_INCLUDE_DIR", "GLFW_LIB"],
       "MoltenVk" : "MVK_PACKAGE_DIR",
       "FMod" : "FMOD_DIR"

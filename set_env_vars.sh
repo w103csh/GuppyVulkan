@@ -15,3 +15,5 @@ export GLFW_INCLUDE_DIR=/Users/colin/Repos/glfw/include
 export GLFW_LIB=/Users/colin/Repos/glfw/glfw-build/src/libglfw.3.dylib
 # FMOD
 export FMOD_DIR="/Users/Shared/libs/FMOD Programmers API"
+# IMGUI
+export IMGUI_REPO_DIR=/Users/colin/Repos/imgui
