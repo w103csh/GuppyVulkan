@@ -126,15 +126,11 @@ class ShellGLFW : public TShell {
 
         TShell::resizeSwapchain(w, h, false);
 
-        ImGui_ImplVulkan_SetFrameCount(TShell::context().imageCount);  // Remove this?
-        // getUI()->getRenderPass()->init(ctx, settings_);
-
         // ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(ctx.physical_dev, ctx.dev, &getUI()->getRenderPass(),
         //                                                          nullptr, w, h);
 
         windowData_.Surface = TShell::context().surface;
         windowData_.SurfaceFormat = TShell::context().surfaceFormat;
-        windowData_.PresentMode = TShell::context().mode;
         windowData_.PresentMode = TShell::context().mode;
 
         // Setup Platform/Renderer bindings
@@ -182,7 +178,7 @@ class ShellGLFW : public TShell {
     void quit() const override { glfwSetWindowShouldClose(window_, GLFW_TRUE); }
 
     GLFWwindow* window_;
-    ImGui_ImplVulkanH_WindowData windowData_;
+    ImGui_ImplVulkanH_Window windowData_;
 };
 
 #endif  // !SHELL_GLFW_H

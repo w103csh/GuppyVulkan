@@ -206,12 +206,10 @@ file(GLOB UTILS
 #     utils/*.hpp
 #     )
 
-# message(STATUS ${IMGUI})
-
 # target links
 set(LINKS
     ${GLFW_LIBRARIES}
-    ${IMGUI}
+    ${IMGUI_LIB}
     )
     
 # target includes
@@ -220,8 +218,11 @@ set(INCLUDES
     ${GLM_LIB_DIR}
     ${EXT_LIB_DIR}
     ${GLFW_INCLUDE_DIR}
-    ${IMGUI_DIR}
+    ${IMGUI_INCLUDE_DIRS}
     )
+
+# message(STATUS "IMGUI_INCLUDE_DIRS: ${IMGUI_INCLUDE_DIRS}")
+# message(STATUS ${IMGUI_LIB})
 
 if(FMOD_FOUND)
     list(APPEND LINKS ${FMOD_LIBRARIES})

@@ -447,8 +447,7 @@ add_subdirectory(shaders)
 add_subdirectory(libs)
 
 # TODO: make this optional
-set(IMGUI ${ImGui})
-add_subdirectory(imgui)
+include(MakeImGuiLibrary)
 
 add_subdirectory(Guppy)
 

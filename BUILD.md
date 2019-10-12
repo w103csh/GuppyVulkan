@@ -102,6 +102,16 @@ the [Dear ImGui](https://github.com/ocornut/imgui) debug UI. Eventually [Dear Im
 > **Note: For macOS I had to clone the git repository and build a dynamic library that was**
 > **version 3.3 which supports MoltenVK.**
 
+#### ImGui
+
+There currently is a repository dependency on the [dear imgui library](https://github.com/ocornut/imgui) in the cmake scripts. You need to clone the repository when running `Cmake` (described later) add the absolute path of the cloned repository to either:
+1. A command line arugment `-DIMGUI_REPO_DIR=absolute_path_to_repo_directory`
+1. Or an environmental variable named `IMGUI_REPO_DIR`
+
+After `CMake` has successfully setup the build files there are flags to turn off the `ImGui` UI layer entirely by commenting out the `USE_DEBUG_UI` in `Constants.h`. Making this flag dynamic through from the `CMake` scripts has not been done yet, but I plan on doing it and it should be simple. Unfortunately for now the [dear imgui library](https://github.com/ocornut/imgui) repo is a dependency.
+
+> **Note: The latest known working commit of the [dear imgui library](https://github.com/ocornut/imgui) repo can be found in `current_versions.json`.**
+
 #### MoltenVK (macOS only)
 
 This repository has a required dependency (macOS only) on the
@@ -116,7 +126,7 @@ dependency is actually [glslang](https://github.com/KhronosGroup/glslang), which
 
 If you have want sound available during runtime the engine currently has some light hooks for the [FMod library](https://www.fmod.com/). There are two ways to add `Fmod` to the `CMake` build process:
 1. Command line arugment `-DFMOD_DIR=absolute_path_to_sdk_directory`
-1. Or by adding the path to an environmental variable named `FMOD_DIR`
+1. Or by adding the absolute path of the SDK to an environmental variable named `FMOD_DIR`
 
 >**Hint: Currently the FMod SDK directory the `CMake` module looks for contains the directories `api`, `bin`, `doc`, `plugins`, ...**
 
@@ -202,8 +212,7 @@ generate the native platform files. -->
     - [2015](https://www.visualstudio.com/vs/older-downloads/) -->
     - [2017](https://www.visualstudio.com/vs/downloads/)
     - [2019](https://www.visualstudio.com/vs/downloads/)
-  - The Community Edition of each of the above versions is sufficient, as
-    well as any more capable edition.
+  - The Community Edition of each of the above versions is sufficient, as well as any more capable editions.
 - [CMake](http://www.cmake.org/download/) (Version 2.8.11 or better)
   - Use the installer option to add CMake to the system PATH
 - Git Client Support
@@ -232,6 +241,8 @@ create a build directory and generate the Visual Studio project files:
                  -DGLSLANG_INSTALL_DIR=absolute_path_to_install_dir
                  -DGLFW_INCLUDE_DIR=absolute_path_to_include_dir \
                  -DGLFW_LIB=absolute_path_to_lib_file \
+                 -DIMGUI_REPO_DIR=absolute_path_to_lib_file \
+                 -DFMOD_DIR=absolute_path_to_lib_file \
                  ..
 
 > **Note: The path delimeters must be forward slashes even on Windows.**
@@ -262,6 +273,8 @@ case, the variable should point to the installation directory of a glslang
 repository built with the install target.
 
 When generating the project file, the absolute path to a glfw include directory, and a glfw library file must be provided. This can be done by setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` environment variable or by setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` CMake variable with the -D CMake option. In either case, the variable should point to the installation directory of a glslang repository built with the install target.
+
+> **Note: There are other similar `CMake` dependency flags that need to be set described in the section [Repository Set-Up](#repository-set-up)**
 
 The above steps create a Windows solution file named
 `GuppyVulkan.sln` in the build directory.
@@ -431,6 +444,8 @@ create a build directory and generate the Xcode project files:
             -DGLM_LIB_DIR=absolute_path_to_install_dir \
             -DGLFW_INCLUDE_DIR=absolute_path_to_include_dir \
             -DGLFW_LIB=absolute_path_to_lib_file \
+            -DIMGUI_REPO_DIR=absolute_path_to_lib_file \
+            -DFMOD_DIR=absolute_path_to_lib_file \
             ..
 
 > The `..` parameter tells `cmake` the location of the root of the
@@ -463,6 +478,8 @@ setting the `GLFW_INCLUDE_DIR` & `GLFW_LIB` CMake variable with the
 `-D` CMake option. In either case, the variable should point to the
 installation directory of a glslang repository built with the install
 target.
+
+> **Note: There are other similar `CMake` dependency flags that need to be set described in the section [Repository Set-Up](#repository-set-up)**
 
 > **<b>Note: I only had success with <code>.dylib</code> library files</b>**
 > **<b>in gerenal. Build the libraries with the dynamic option if your not</b>**

@@ -35,6 +35,8 @@ void RenderPass::ImGui::postCreate() {
     init_info.Queue = ctx.queues.at(ctx.graphicsIndex);
     init_info.PipelineCache = handler().pipelineHandler().getPipelineCache();
     init_info.DescriptorPool = handler().descriptorHandler().getPool();
+    init_info.MinImageCount = handler().shell().context().imageCount;  // use the minImageCount?
+    init_info.ImageCount = handler().shell().context().imageCount;
     init_info.Allocator = nullptr;
     init_info.CheckVkResultFn = (void (*)(VkResult))vk::assert_success;
 
@@ -56,7 +58,7 @@ void RenderPass::ImGui::postCreate() {
     vk::assert_success(vkResetCommandBuffer(handler().commandHandler().graphicsCmd(), 0));
     handler().commandHandler().beginCmd(handler().commandHandler().graphicsCmd());
 
-    ImGui_ImplVulkan_InvalidateFontUploadObjects();
+    ImGui_ImplVulkan_DestroyFontUploadObjects();
 }
 
 void RenderPass::ImGui::record(const uint8_t frameIndex) {
