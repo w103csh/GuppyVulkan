@@ -46,7 +46,7 @@ class ShellGLFW : public TShell {
         setPlatformSpecificExtensions();
         TShell::initVk();
 
-        init();
+        TShell::init();
 
         // input listeners (set before imgui init because it installs it own callbacks)
         glfwSetCursorPosCallback(window_, glfw_cursor_pos_callback);
@@ -75,9 +75,9 @@ class ShellGLFW : public TShell {
             double elapsed = now - TShell::currentTime_;
             TShell::currentTime_ = now;
 
-            update(elapsed);
+            TShell::update(elapsed);
 
-            TShell::onMouse(handlers_.pInput->getMouseInput());  // TODO: this stuff is all out of whack
+            TShell::onMouse(TShell::handlers_.pInput->getMouseInput());  // TODO: this stuff is all out of whack
 
             TShell::addGameTime(static_cast<float>(elapsed));
 
@@ -93,12 +93,12 @@ class ShellGLFW : public TShell {
 #endif
             }
 
-            handlers_.pInput->clear();
+            TShell::handlers_.pInput->clear();
         }
 
         vkDeviceWaitIdle(TShell::context().dev);
 
-        destroy();
+        TShell::destroy();
 
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();

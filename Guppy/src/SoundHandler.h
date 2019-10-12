@@ -3,6 +3,7 @@
 #define SOUND_HANDLER_H
 
 #include <assert.h>
+#include <float.h>
 #include <map>
 
 #include "Shell.h"

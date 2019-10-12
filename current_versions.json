@@ -34,14 +34,14 @@
     {
       "name" : "MoltenVK",
       "data" : [
-        { "platform": "macOS", "version": "I forgot to write down the version when I added it.", "file" : "N/A" }
+        { "platform": "macOS", "version": "https://github.com/w103csh/MoltenVK.git", "file" : "N/A" }
       ]
     },
     {
       "name" : "FMod",
       "data" : [
         { "platform": "Win32", "version": "2.00.04", "file" : "fmod_vc.lib" },
-        { "platform": "macOS", "version": "TODO", "file" : "TODO" }
+        { "platform": "macOS", "version": "2.00.04", "file" : "libfmod.dylib" }
       ]
     }
   ],

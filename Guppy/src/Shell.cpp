@@ -24,10 +24,10 @@ Shell::Shell(Game &game, Handlers &&handlers)
       game_(game),                                   //
       settings_(game.settings()),                    //
       currentTime_(0.0),                             //
+      handlers_(std::move(handlers)),                //
       ctx_(),                                        //
       gameTick_(1.0f / settings_.ticks_per_second),  //
-      gameTime_(gameTick_),
-      handlers_(std::move(handlers)) {
+      gameTime_(gameTick_) {
     // require generic WSI extensions
     instanceExtensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     deviceExtensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);

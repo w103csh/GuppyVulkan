@@ -38,7 +38,7 @@ ShellMac::ShellMac(Game& game)
                 std::make_unique<Input::Handler>(this),
 #ifdef USE_FMOD
                 std::make_unique<Sound::FModHandler>(this),
-#elif
+#else
                 std::make_unique<Sound::Handler>(this),
 #endif
             }),
