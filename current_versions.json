@@ -33,7 +33,12 @@
     {
       "name" : "MoltenVK",
       "data" : [
-        { "platform": "macOS", "version": "https://github.com/w103csh/MoltenVK.git", "file" : "N/A" }
+        {
+          "platform": "macOS",
+          "version": "https://github.com/w103csh/MoltenVK.git",
+          "file" : "N/A",
+          "last-working-forked-commit": "ba5a8745b4b2e3d5ec66c6acf54fdb934219f21e"
+        }
       ]
     },
     {

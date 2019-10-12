@@ -415,8 +415,8 @@ $ ./gradlew build
 These are what I know worked for me. Other things could work for you, but I do not
 know for sure.
 
-- macOS Mojave
-- Xcode Version 10.2
+- macOS ~~Mojave~~ Catalina
+- Xcode Version ~~10.2~~ 11.1
 - [CMake](http://www.cmake.org/download/) (Version 3.13.4 or better)
   - Use the installer option to add CMake to the system PATH
 - Python

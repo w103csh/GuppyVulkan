@@ -50,28 +50,28 @@ void finalize_glslang() {}
 
 bool GLSLtoSPV(const VkShaderStageFlagBits shaderType, std::vector<const char *> pShaders,
                std::vector<unsigned int> &spirv) {
-    MVKShaderStage shaderStage;
+    MVKGLSLConversionShaderStage shaderStage;
     switch (shaderType) {
         case VK_SHADER_STAGE_VERTEX_BIT:
-            shaderStage = kMVKShaderStageVertex;
+            shaderStage = kMVKGLSLConversionShaderStageVertex;
             break;
         case VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT:
-            shaderStage = kMVKShaderStageTessControl;
+            shaderStage = kMVKGLSLConversionShaderStageTessControl;
             break;
         case VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT:
-            shaderStage = kMVKShaderStageTessEval;
+            shaderStage = kMVKGLSLConversionShaderStageTessEval;
             break;
         case VK_SHADER_STAGE_GEOMETRY_BIT:
-            shaderStage = kMVKShaderStageGeometry;
+            shaderStage = kMVKGLSLConversionShaderStageGeometry;
             break;
         case VK_SHADER_STAGE_FRAGMENT_BIT:
-            shaderStage = kMVKShaderStageFragment;
+            shaderStage = kMVKGLSLConversionShaderStageFragment;
             break;
         case VK_SHADER_STAGE_COMPUTE_BIT:
-            shaderStage = kMVKShaderStageCompute;
+            shaderStage = kMVKGLSLConversionShaderStageCompute;
             break;
         default:
-            shaderStage = kMVKShaderStageAuto;
+            shaderStage = kMVKGLSLConversionShaderStageAuto;
             break;
     }
 
