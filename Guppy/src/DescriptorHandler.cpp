@@ -316,7 +316,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
                                     ss << "} conflict with current offsets : {";
                                     for (const auto& offset : search->second) ss << offset << ",";
                                     ss << "}.";
-                                    shell().log(Shell::LOG_WARN, ss.str().c_str());
+                                    shell().log(Shell::LogPriority::LOG_WARN, ss.str().c_str());
                                 }
                             }
                             assert(itNonDefault->offsets.map().size() >= itDefault->offsets.map().size());
@@ -701,7 +701,7 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
 
             auto sMsg =
                 Descriptor::GetPerframeBufferWarning(bindingInfo.descType, pMaterial->BUFFER_INFO, itInfoMap->second);
-            if (sMsg.size()) shell().log(Shell::LOG_WARN, sMsg.c_str());
+            if (sMsg.size()) shell().log(Shell::LogPriority::LOG_WARN, sMsg.c_str());
 
             assert(pMaterial != nullptr);
             pMaterial->setDescriptorInfo(itInfoMap->second, 0);

@@ -18,13 +18,13 @@ set(API_NAME "Vulkan" CACHE STRING "API name to use when building")
 set(MAJOR "1")
 string(TOLOWER ${API_NAME} API_LOWERCASE)
 
-set(VULKAN_HEADERS_INSTALL_DIR "HEADERS-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Headers install directory")
+# set(VULKAN_HEADERS_INSTALL_DIR "HEADERS-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Headers install directory")
 set(GLM_LIB_DIR "GLM-NOTFOUND" CACHE PATH "Absolute path to a GLM library directory")
 set(GLFW_INCLUDE_DIR "GLFW-INCLUDE-NOTFOUND" CACHE PATH "Absolute path to a GLFW include directory")
 set(GLFW_LIB "GLFW-LIB-NOTFOUND" CACHE PATH "Absolute path to a GLFW library directory")
-if(NOT APPLE)
-    set(VULKAN_LOADER_INSTALL_DIR "LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
-endif()
+# if(NOT APPLE)
+#     set(VULKAN_LOADER_INSTALL_DIR "LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
+# endif()
 
 set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH};${VULKAN_HEADERS_INSTALL_DIR};${VULKAN_LOADER_INSTALL_DIR};${GLM_INSTALL_DIR};
                        $ENV{VULKAN_HEADERS_INSTALL_DIR};$ENV{VULKAN_LOADER_INSTALL_DIR};$ENV{GLM_INSTALL_DIR})
@@ -255,18 +255,20 @@ endif()
 message(STATUS "Using GLFW library located at ${GLFW_LIB}")
 set(GLFW_LIBRARIES ${GLFW_LIB})
 
+############# FMOD
+include(FindFMOD)
 
 if(NOT APPLE)
-    ############# VULKAN HEADER
-    set(VULKAN_HEADERS_INSTALL_DIR "VULKAN-HEADERS-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Headers install directory")
-    if(NOT VULKAN_HEADERS_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_HEADERS_INSTALL_DIR})
-        message(FATAL_ERROR "Must define location of vulkan headers -- see BUILD.md")
-    endif()
+    # ############# VULKAN HEADER
+    # set(VULKAN_HEADERS_INSTALL_DIR "VULKAN-HEADERS-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Headers install directory")
+    # if(NOT VULKAN_HEADERS_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_HEADERS_INSTALL_DIR})
+    #     message(FATAL_ERROR "Must define location of vulkan headers -- see BUILD.md")
+    # endif()
 
-    # Cmake command line option overrides environment variable
-    if(NOT VULKAN_HEADERS_INSTALL_DIR)
-        set(VULKAN_HEADERS_INSTALL_DIR $ENV{VULKAN_HEADERS_INSTALL_DIR})
-    endif()
+    # # Cmake command line option overrides environment variable
+    # if(NOT VULKAN_HEADERS_INSTALL_DIR)
+    #     set(VULKAN_HEADERS_INSTALL_DIR $ENV{VULKAN_HEADERS_INSTALL_DIR})
+    # endif()
 
     ############# GLSLANG
     set(GLSLANG_INSTALL_DIR "GLSLANG-NOTFOUND" CACHE PATH "Absolute path to a glslang install directory")
@@ -279,16 +281,16 @@ if(NOT APPLE)
         set(GLSLANG_INSTALL_DIR $ENV{GLSLANG_INSTALL_DIR})
     endif()
 
-    ############# VULKAN LOADER
-    set(VULKAN_LOADER_INSTALL_DIR "VULKAN-LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
-    if(NOT VULKAN_LOADER_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_LOADER_INSTALL_DIR})
-        message(FATAL_ERROR "Must define location of vulkan loader -- see BUILD.md")
-    endif()
+    # ############# VULKAN LOADER
+    # set(VULKAN_LOADER_INSTALL_DIR "VULKAN-LOADER-NOTFOUND" CACHE PATH "Absolute path to a Vulkan-Loader install directory")
+    # if(NOT VULKAN_LOADER_INSTALL_DIR AND NOT DEFINED ENV{VULKAN_LOADER_INSTALL_DIR})
+    #     message(FATAL_ERROR "Must define location of vulkan loader -- see BUILD.md")
+    # endif()
 
-    # Cmake command line option overrides environment variable
-    if(NOT VULKAN_LOADER_INSTALL_DIR)
-        set(VULKAN_LOADER_INSTALL_DIR $ENV{VULKAN_LOADER_INSTALL_DIR})
-    endif()
+    # # Cmake command line option overrides environment variable
+    # if(NOT VULKAN_LOADER_INSTALL_DIR)
+    #     set(VULKAN_LOADER_INSTALL_DIR $ENV{VULKAN_LOADER_INSTALL_DIR})
+    # endif()
 
     message(STATUS "Using glslang install located at ${GLSLANG_INSTALL_DIR}")
     set(SPIRV_TOOLS_BINARY_ROOT "${GLSLANG_INSTALL_DIR}/lib"

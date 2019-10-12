@@ -50,11 +50,11 @@ void checkFailure(const Shell& shell, const std::string path, const stbi_uc* pPi
     std::stringstream ss;
     if (auto failure_reason = stbi_failure_reason()) {
         ss << "Error: \"" << failure_reason << "\" in file \"" << path << std::endl;
-        shell.log(Shell::LOG_ERR, ss.str().c_str());
+        shell.log(Shell::LogPriority::LOG_ERR, ss.str().c_str());
     }
     if (pPixels == NULL) {  // TODO: this doesn't work
         ss << "failed to load " << path << std::endl;
-        shell.log(Shell::LOG_ERR, ss.str().c_str());
+        shell.log(Shell::LogPriority::LOG_ERR, ss.str().c_str());
         throw std::runtime_error(ss.str());
     }
 }
@@ -64,7 +64,7 @@ void validateChannels(const Shell& shell, Sampler::Base& sampler, const std::str
         std::stringstream ss;
         ss << "Image at path \"" << path << "\" loaded for " << sampler.NUM_CHANNELS << " channels but only has " << c
            << " channels.";
-        shell.log(Shell::LOG_WARN, ss.str().c_str());
+        shell.log(Shell::LogPriority::LOG_WARN, ss.str().c_str());
     }
 }
 
@@ -74,7 +74,7 @@ void validateDimensions(const Shell& shell, Sampler::Base& sampler, const std::s
     if (w != sampler.imgCreateInfo.extent.height) ss << "invalid " << path << " (height)! " << std::endl;
     auto errMsg = ss.str();
     if (!errMsg.empty()) {
-        shell.log(Shell::LOG_ERR, errMsg.c_str());
+        shell.log(Shell::LogPriority::LOG_ERR, errMsg.c_str());
         assert(false);
         throw std::runtime_error(errMsg);
     }

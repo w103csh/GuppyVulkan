@@ -23,7 +23,7 @@
 Game::~Game() = default;
 
 Game::Game(const std::string& name, const std::vector<std::string>& args, Handlers&& handlers)
-    : handlers_(std::forward<Handlers>(handlers)), settings_(), shell_(nullptr) {
+    : handlers_(std::move(handlers)), settings_(), shell_(nullptr) {
     settings_.name = name;
     parse_args(args);
 }
@@ -60,7 +60,8 @@ Game::Settings::Settings()
       enable_double_clicks(false),
       enable_debug_markers(false),
       enable_directory_listener(true),
-      assert_on_recompile_shader(false) {}
+      assert_on_recompile_shader(false) {
+}
 
 void Game::Handler::createBuffer(const VkCommandBuffer& cmd, const VkBufferUsageFlagBits usage, const VkDeviceSize size,
                                  const std::string&& name, BufferResource& stgRes, BufferResource& buffRes, const void* data,

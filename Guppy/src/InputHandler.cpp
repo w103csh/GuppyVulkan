@@ -19,15 +19,17 @@ constexpr float M_Y_LOOK_FACT = -0.1f;
 
 }  // namespace
 
-void InputHandler::init(Shell* sh) {
-    if (sh != nullptr)
-        sh_ = sh;
-    else
-        reset();
-    assert(sh_);
-}
+Input::Handler::Handler(Shell* pShell)
+    : Shell::Handler(pShell),
+      currKeyInput_(),
+      posDir_(),
+      isLooking_(false),
+      hasFocus_(false),
+      currMouseInput_{0.0f, 0.0f, 0.0f},
+      prevMouseInput_{0.0f, 0.0f, 0.0f},
+      lookDir_() {}
 
-void InputHandler::updateInput(float elapsed) {
+void Input::Handler::updateInput(float elapsed) {
     // reset();
 
     updateKeyInput();
@@ -40,11 +42,11 @@ void InputHandler::updateInput(float elapsed) {
     if (MY_DEBUG && glm::any(glm::notEqual(posDir_, glm::vec3(0.0f)))) {
         std::stringstream ss;
         ss << "move (" << elapsed << "):";
-        sh_->log(Shell::LOG_INFO, helpers::makeVec3String(ss.str(), posDir_).c_str());
+        sh_->log(Shell::LogPriority::LOG_INFO, helpers::makeVec3String(ss.str(), posDir_).c_str());
     }
 }
 
-void InputHandler::updateKeyInput() {
+void Input::Handler::updateKeyInput() {
     std::stringstream ss;
 
     for (auto& key : currKeyInput_) {
@@ -89,11 +91,11 @@ void InputHandler::updateKeyInput() {
 
     if (MY_DEBUG && ss.str().size() > 0) {
         ss << "\n Y position direction: ";
-        sh_->log(Shell::LOG_INFO, helpers::makeVec3String(ss.str(), posDir_).c_str());
+        sh_->log(Shell::LogPriority::LOG_INFO, helpers::makeVec3String(ss.str(), posDir_).c_str());
     }
 }
 
-void InputHandler::updateMouseInput() {
+void Input::Handler::updateMouseInput() {
     std::stringstream ss;
 
     if (isLooking_) {
@@ -120,14 +122,14 @@ void InputHandler::updateMouseInput() {
     }
 
     if (MY_DEBUG && ss.str().size() > 0) {
-        sh_->log(Shell::LOG_INFO, ss.str().c_str());
+        sh_->log(Shell::LogPriority::LOG_INFO, ss.str().c_str());
     }
 
     prevMouseInput_ = currMouseInput_;
     isLooking_ = false;
 }
 
-void InputHandler::reset() {
+void Input::Handler::reset() {
     lookDir_ = {};
     posDir_ = {};
     currMouseInput_.moving = false;

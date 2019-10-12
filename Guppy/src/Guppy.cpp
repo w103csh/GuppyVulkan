@@ -10,7 +10,7 @@
 #include "CommandHandler.h"
 #include "ComputeHandler.h"
 #include "DescriptorHandler.h"
-#include "InputHandler.h"
+#include "InputHandler.h"  // (shell)
 #include "LoadingHandler.h"
 #include "MaterialHandler.h"
 #include "MeshHandler.h"
@@ -20,6 +20,7 @@
 #include "RenderPassHandler.h"
 #include "SceneHandler.h"
 #include "ShaderHandler.h"
+#include "SoundHandler.h"  // (shell)
 #include "TextureHandler.h"
 #include "UIHandler.h"
 #include "UniformHandler.h"
@@ -254,6 +255,15 @@ void Guppy::onKey(GAME_KEY key) {
             //        light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Y * -2.0f)));
             //    }
             //});
+            Sound::StartInfo startInfo = {};
+            startInfo.volume = Sound::START_ZERO_VOLUME;
+            Sound::EffectInfo effectInfo = {Sound::EFFECT::FADE, 5.0f};
+            if (!shell().soundHandler().start(Sound::TYPE::OCEAN_WAVES, &startInfo, &effectInfo)) {
+                // effectInfo = {Sound::EFFECT::FADE, 8.0f, 0.0f, Sound::PLAYBACK::STOP};
+                // shell().soundHandler().addEffect(Sound::TYPE::OCEAN_WAVES, &effectInfo);
+                // shell().soundHandler().pause(Sound::TYPE::OCEAN_WAVES);
+                shell().soundHandler().stop(Sound::TYPE::OCEAN_WAVES);
+            }
         } break;
         case GAME_KEY::KEY_7: {
             // Shader::Handler::defaultUniformAction([](auto& defUBO) {

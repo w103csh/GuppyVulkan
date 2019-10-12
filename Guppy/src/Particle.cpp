@@ -189,6 +189,8 @@ void Fountain::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 }
 
 void Fountain::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
     Vertex::Color::getInputDescriptions(createInfoRes);
     Instance::Particle::Fountain::DATA::getInputDescriptions(createInfoRes);
     // bindings

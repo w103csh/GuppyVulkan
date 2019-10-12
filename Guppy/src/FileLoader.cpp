@@ -31,11 +31,11 @@ void FileLoader::getObjData(const Shell &sh, tinyobj_data &data) {
     std::string warn, err;
     if (!tinyobj::LoadObj(&data.attrib, &data.shapes, &data.materials, &warn, &err, data.filename.c_str(),
                           data.mtl_basedir.c_str())) {
-        sh.log(Shell::LOG_ERR, err.c_str());
+        sh.log(Shell::LogPriority::LOG_ERR, err.c_str());
         throw std::runtime_error(err);
     }
     if (!warn.empty()) {
-        sh.log(Shell::LOG_WARN, warn.c_str());
+        sh.log(Shell::LogPriority::LOG_WARN, warn.c_str());
     }
 }
 

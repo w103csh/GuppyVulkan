@@ -7,12 +7,18 @@
 
 #include <functional>
 #include <map>
+#include <memory>
 #include <queue>
 #include <vector>
 #include <stdexcept>
 #include <vulkan/vulkan.h>
 
 #include "Game.h"
+
+// clang-format off
+namespace Input { class Handler; }
+namespace Sound { class Handler; }
+// clang-format on
 
 // structure for comparing char arrays
 struct less_str {
@@ -23,7 +29,7 @@ class Shell {
    public:
     Shell(const Shell &sh) = delete;
     Shell &operator=(const Shell &sh) = delete;
-    virtual ~Shell() {}
+    virtual ~Shell();
 
     struct BackBuffer {
         uint32_t imageIndex;
@@ -104,7 +110,7 @@ class Shell {
     constexpr const auto &getCurrentTime() const { return currentTime_; }
 
     // LOGGING
-    enum LogPriority {
+    enum class LogPriority {
         LOG_DEBUG,
         LOG_INFO,
         LOG_WARN,
@@ -130,8 +136,40 @@ class Shell {
     bool limitFramerate;
     uint8_t framesPerSecondLimit;
 
+    // HANDLERS
+    struct Handlers {
+        std::unique_ptr<Input::Handler> pInput;
+        std::unique_ptr<Sound::Handler> pSound;
+    };
+
+    // HANDLER
+    class Handler {
+       public:
+        Handler(const Handler &) = delete;             // Prevent construction by copying
+        Handler &operator=(const Handler &) = delete;  // Prevent assignment
+
+        inline Input::Handler &inputHandler() const { return std::ref(*pShell_->handlers_.pInput); }
+        inline Sound::Handler &soundHandler() const { return std::ref(*pShell_->handlers_.pSound); }
+
+       protected:
+        Handler(Shell *pShell) : pShell_(pShell) {}
+        virtual ~Handler() = default;
+
+        virtual void init() = 0;
+        virtual void destroy() = 0;
+
+        Shell *pShell_;
+    };
+
+    inline Input::Handler &inputHandler() const { return std::ref(*handlers_.pInput); }
+    inline Sound::Handler &soundHandler() const { return std::ref(*handlers_.pSound); }
+
    protected:
-    Shell(Game &game);
+    Shell(Game &game, Handlers &&handlers);
+
+    void init();
+    void update(double elapsed);
+    void destroy();
 
     virtual uint32_t getDesiredVersion() { return VK_MAKE_VERSION(1, 1, 0); }
     virtual void setPlatformSpecificExtensions() = 0;
@@ -159,6 +197,7 @@ class Shell {
     std::vector<VkExtensionProperties> instExtProps_;  // *
 
     double currentTime_;
+    const Handlers handlers_;
 
    private:
     bool debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t object,

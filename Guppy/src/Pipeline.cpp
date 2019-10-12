@@ -15,6 +15,8 @@
 #include "TextureHandler.h"
 
 void Pipeline::GetDefaultColorInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
     Vertex::Color::getInputDescriptions(createInfoRes);
     Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
     // bindings
@@ -34,6 +36,8 @@ void Pipeline::GetDefaultColorInputAssemblyInfoResources(CreateInfoResources& cr
 }
 
 void Pipeline::GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
     Vertex::Texture::getInputDescriptions(createInfoRes);
     Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
     // bindings
@@ -53,6 +57,8 @@ void Pipeline::GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources& 
 }
 
 void Pipeline::GetDefaultScreenQuadInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
     Vertex::Texture::getScreenQuadInputDescriptions(createInfoRes);
     // bindings
     createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());

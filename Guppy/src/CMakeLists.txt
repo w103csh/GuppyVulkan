@@ -31,7 +31,7 @@ set(SOURCE
     Light.h
     LoadingHandler.cpp
     LoadingHandler.h
-    Main.cpp
+    main.cpp
     Material.cpp
     Material.h
     MaterialHandler.cpp
@@ -48,6 +48,10 @@ set(SOURCE
     SelectionManager.cpp
     SelectionManager.h
     Singleton.h
+    SoundHandler.cpp
+    SoundHandler.h
+    SoundFModHandler.cpp
+    SoundFmodHandler.h
     Storage.cpp
     Storage.h
     Tessellation.cpp
@@ -219,6 +223,11 @@ set(INCLUDES
     ${IMGUI_DIR}
     )
 
+if(FMOD_FOUND)
+    list(APPEND LINKS ${FMOD_LIBRARIES})
+    list(APPEND INCLUDES ${FMOD_INCLUDE_DIRS})
+endif()
+
 # message(STATUS "LINKS: ${LINKS}")
 # message(STATUS "INCLUDES: ${INCLUDES}")
 
@@ -230,7 +239,7 @@ if(WIN32)
 
     list(APPEND LINKS
         ${GLSLANG_LIBRARIES}
-        ${VULKAN_LOADER}
+        ${Vulkan_LIBRARY} # ${VULKAN_LOADER} # Used to use the loader here instead...
         ${SPIRV_TOOLS_LIBRARIES}
         )
 
@@ -301,7 +310,7 @@ if(UNIX)
             )
 
         add_executable(${TARGET_NAME}
-            Main.cpp
+            main.cpp
             ${SOURCE}
             ${UTILS}
             )
@@ -337,10 +346,17 @@ else()
 
     target_link_libraries(${TARGET_NAME} ${LINKS})
 
+    if(FMOD_FOUND)
+        add_custom_command(TARGET ${TARGET_NAME} POST_BUILD
+            COMMAND ${CMAKE_COMMAND} -E copy_if_different
+            ${FMOD_LIBRARY_DIR}/fmod${FMOD_SUFFIX}.dll      # file(s) to copy
+            "$(OutDir)"                                     # destination
+            )
+    endif()
+
 endif()
 
 set_target_properties(${TARGET_NAME} PROPERTIES
     CXX_STANDARD 17
     )
 
-    

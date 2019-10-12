@@ -1,6 +1,7 @@
 /*
  * This came from LunarG Hologram sample, but has been radically altered at this point.
  */
+#include "Shell.h"
 
 #include <cassert>
 #include <array>
@@ -9,14 +10,15 @@
 #include <sstream>
 #include <set>
 
-#include "Shell.h"
-
 #include "EventHandlers.h"
 #include "Game.h"
 #include "Helpers.h"
 #include "InputHandler.h"
+// HANDLERS
+#include "InputHandler.h"
+#include "SoundHandler.h"
 
-Shell::Shell(Game &game)
+Shell::Shell(Game &game, Handlers &&handlers)
     : limitFramerate(true),                          //
       framesPerSecondLimit(10),                      //
       game_(game),                                   //
@@ -24,7 +26,8 @@ Shell::Shell(Game &game)
       currentTime_(0.0),                             //
       ctx_(),                                        //
       gameTick_(1.0f / settings_.ticks_per_second),  //
-      gameTime_(gameTick_) {
+      gameTime_(gameTick_),
+      handlers_(std::move(handlers)) {
     // require generic WSI extensions
     instanceExtensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     deviceExtensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
@@ -35,13 +38,29 @@ Shell::Shell(Game &game)
         instanceExtensions_.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
         instanceExtensions_.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
-
-    InputHandler::inst().init(this);
 }
 
+Shell::~Shell() = default;
+
 void Shell::log(LogPriority priority, const char *msg) const {
-    std::ostream &st = (priority >= LOG_ERR) ? std::cerr : std::cout;
+    std::ostream &st = (priority >= LogPriority::LOG_ERR) ? std::cerr : std::cout;
     st << msg << std::endl;
+}
+
+void Shell::init() {
+    // TODO: Add init functions here...
+    handlers_.pSound->init();
+}
+
+void Shell::update(double elapsed) {
+    // TODO: Add init functions here...
+    handlers_.pSound->update();
+    handlers_.pInput->updateInput(static_cast<float>(elapsed));
+}
+
+void Shell::destroy() {
+    // TODO: Add destroy functions here...
+    handlers_.pSound->destroy();
 }
 
 void Shell::initVk() {
@@ -62,15 +81,15 @@ void Shell::cleanupVk() {
 
 bool Shell::debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t object,
                                 size_t location, int32_t msgCode, const char *layerPrefix, const char *msg) {
-    LogPriority prio = LOG_WARN;
+    LogPriority prio = LogPriority::LOG_WARN;
     if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-        prio = LOG_ERR;
+        prio = LogPriority::LOG_ERR;
     else if (flags & (VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT))
-        prio = LOG_WARN;
+        prio = LogPriority::LOG_WARN;
     else if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-        prio = LOG_INFO;
+        prio = LogPriority::LOG_INFO;
     else if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
-        prio = LOG_DEBUG;
+        prio = LogPriority::LOG_DEBUG;
 
     std::stringstream ss;
     ss << layerPrefix << ": " << msg;
@@ -826,27 +845,27 @@ void Shell::determineDeviceFeatureSupport(const PhysicalDeviceProperties &props)
     // sampler anisotropy
     ctx_.samplerAnisotropyEnabled_ = props.features.samplerAnisotropy && settings_.try_sampler_anisotropy;
     if (settings_.try_sampler_anisotropy && !ctx_.samplerAnisotropyEnabled_)
-        log(Shell::LOG_WARN, "cannot enable sampler anisotropy");
+        log(LogPriority::LOG_WARN, "cannot enable sampler anisotropy");
     // sample rate shading
     ctx_.sampleRateShadingEnabled_ = props.features.sampleRateShading && settings_.try_sample_rate_shading;
     if (settings_.try_sample_rate_shading && !ctx_.sampleRateShadingEnabled_)
-        log(Shell::LOG_WARN, "cannot enable sample rate shading");
+        log(LogPriority::LOG_WARN, "cannot enable sample rate shading");
     // compute shading (TODO: this should be more robust)
     ctx_.computeShadingEnabled_ = props.features.fragmentStoresAndAtomics && settings_.try_compute_shading;
     if (settings_.try_compute_shading && !ctx_.computeShadingEnabled_)  //
-        log(Shell::LOG_WARN, "cannot enable compute shading (actually just can't enable fragment stores and atomics)");
+        log(LogPriority::LOG_WARN, "cannot enable compute shading (actually just can't enable fragment stores and atomics)");
     // tessellation shading
     ctx_.tessellationShadingEnabled_ = props.features.tessellationShader && settings_.try_tessellation_shading;
     if (settings_.try_tessellation_shading && !ctx_.tessellationShadingEnabled_)  //
-        log(Shell::LOG_WARN, "cannot enable tessellation shading");
+        log(LogPriority::LOG_WARN, "cannot enable tessellation shading");
     // geometry shading
     ctx_.geometryShadingEnabled_ = props.features.geometryShader && settings_.try_geometry_shading;
     if (settings_.try_geometry_shading && !ctx_.geometryShadingEnabled_)  //
-        log(Shell::LOG_WARN, "cannot enable geometry shading");
+        log(LogPriority::LOG_WARN, "cannot enable geometry shading");
     // wireframe shading
     ctx_.wireframeShadingEnabled_ = props.features.fillModeNonSolid && settings_.try_wireframe_shading;
     if (settings_.try_wireframe_shading && !ctx_.wireframeShadingEnabled_)  //
-        log(Shell::LOG_WARN, "cannot enable wire frame shading (actually just can't enable fill mode non-solid)");
+        log(LogPriority::LOG_WARN, "cannot enable wire frame shading (actually just can't enable fill mode non-solid)");
 }
 
 void Shell::determineSampleCount(const PhysicalDeviceProperties &props) {
@@ -931,7 +950,7 @@ void Shell::determineSwapchainSurfaceFormat() {
             }
         }
     }
-    log(Shell::LOG_INFO, "choosing first available swap surface format!");
+    log(LogPriority::LOG_INFO, "choosing first available swap surface format!");
     ctx_.surfaceFormat = ctx_.surfaceProps.surfFormats[0];
 }
 
