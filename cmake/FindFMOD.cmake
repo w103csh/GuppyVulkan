@@ -5,8 +5,9 @@ ENDIF()
 
 # MESSAGE(STATUS "ENV{FMOD_DIR}: $ENV{FMOD_DIR}")
 
-# Not sure how the "L" libraries are different
-IF(FALSE)
+IF(TRUE)
+  # The "L" appears to control message logging. I like the log messages so I'll
+  # leave it for now.
   SET(FMOD_SUFFIX L)
 ENDIF()
 # MESSAGE(STATUS "FMOD_SUFFIX: ${FMOD_SUFFIX}")
@@ -41,7 +42,7 @@ IF (WIN32)
   SET(FMOD_LIB_NAME fmod${FMOD_SUFFIX}_vc)
   SET(FMOD_PACKAGE_ARGS FMOD_INCLUDE_DIR FMOD_LIBRARY_DIR)
 ELSEIF(APPLE)
-  SET(FMOD_LIB_NAME libfmod${FMOD_SUFFIX}.dylib2)
+  SET(FMOD_LIB_NAME libfmod${FMOD_SUFFIX}.dylib)
   SET(FMOD_PACKAGE_ARGS FMOD_INCLUDE_DIR)
 ENDIF()
 # MESSAGE(STATUS "FMOD_LIB_NAME: ${FMOD_LIB_NAME}")

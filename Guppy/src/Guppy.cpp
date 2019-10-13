@@ -255,15 +255,20 @@ void Guppy::onKey(GAME_KEY key) {
             //        light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Y * -2.0f)));
             //    }
             //});
+
+            // The fade doesn't work right, and the result change from day to day.
             Sound::StartInfo startInfo = {};
-            startInfo.volume = Sound::START_ZERO_VOLUME;
-            Sound::EffectInfo effectInfo = {Sound::EFFECT::FADE, 5.0f};
-            if (!shell().soundHandler().start(Sound::TYPE::OCEAN_WAVES, &startInfo, &effectInfo)) {
+            // startInfo.volume = Sound::START_ZERO_VOLUME;
+            startInfo.volume = 0.5f;
+            // Sound::EffectInfo effectInfo = {Sound::EFFECT::FADE, 5.0f};
+            // if (!shell().soundHandler().start(Sound::TYPE::OCEAN_WAVES, &startInfo, &effectInfo)) {
+            if (!shell().soundHandler().start(Sound::TYPE::OCEAN_WAVES, &startInfo, nullptr)) {
                 // effectInfo = {Sound::EFFECT::FADE, 8.0f, 0.0f, Sound::PLAYBACK::STOP};
                 // shell().soundHandler().addEffect(Sound::TYPE::OCEAN_WAVES, &effectInfo);
                 // shell().soundHandler().pause(Sound::TYPE::OCEAN_WAVES);
                 shell().soundHandler().stop(Sound::TYPE::OCEAN_WAVES);
             }
+
         } break;
         case GAME_KEY::KEY_7: {
             // Shader::Handler::defaultUniformAction([](auto& defUBO) {

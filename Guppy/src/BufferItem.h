@@ -60,6 +60,8 @@ class DataItem : public virtual Buffer::Item {
 // This is pretty slow on a bunch of levels, but I'd rather just have it work atm.
 template <typename TDATA>
 class PerFramebufferDataItem : public Buffer::DataItem<TDATA> {
+    using TItem = Buffer::DataItem<TDATA>;
+    
    public:
     PerFramebufferDataItem(TDATA* pData) : Buffer::DataItem<TDATA>(pData), data_(*pData) {}
 
@@ -67,15 +69,18 @@ class PerFramebufferDataItem : public Buffer::DataItem<TDATA> {
     void setData(const uint32_t index = UINT32_MAX) override {
         if (index == UINT32_MAX) {
             for (uint32_t i = 0; i < Item::BUFFER_INFO.count; i++)
-                std::memcpy(&DataItem<TDATA>::pData_[i], &data_, sizeof(TDATA));
+                std::memcpy(PerFramebufferDataItem::getData(i * TItem::BUFFER_INFO.bufferInfo.range), &data_, sizeof(TDATA));
         } else {
             assert(index < Item::BUFFER_INFO.count);
-            std::memcpy(&DataItem<TDATA>::pData_[index], &data_, sizeof(TDATA));
+            std::memcpy(PerFramebufferDataItem::getData(index * TItem::BUFFER_INFO.bufferInfo.range), &data_, sizeof(TDATA));
         }
         Item::dirty = true;
     }
 
     TDATA data_;
+
+   private:
+    inline void* getData(const VkDeviceSize offset) { return (((uint8_t*)TItem::pData_) + offset); }
 };
 
 }  // namespace Buffer

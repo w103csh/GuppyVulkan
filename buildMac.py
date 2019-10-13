@@ -47,6 +47,10 @@ if not schemeExists:
     sys.exit()
 else:
     print('Updating scheme: %s\n' % schemePath)
+    print(''\
+        '** Note ** Remember that in order to debug gpu data you need to change the scheme\n'\
+        'setting for GPU Frame Capture to "Metal" instead of "Automatically Enabled". There\n'\
+        'are a couple of screen shots in the /misc folder to remind you how to do it.\n')
 
 tree = ET.parse(schemePath)
 root = tree.getroot()
