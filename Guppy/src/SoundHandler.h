@@ -51,7 +51,7 @@ class Handler : public Shell::Handler {
     Handler(Shell *pShell);
 
     virtual void init() override {}
-    virtual void update() {}
+    virtual void update(const double) override {}
     virtual bool start(const TYPE type, const StartInfo *pStartInfo, const EffectInfo *pEffectInfo = nullptr) {
         return false;
     }

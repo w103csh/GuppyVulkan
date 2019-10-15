@@ -48,18 +48,19 @@ void Shell::log(LogPriority priority, const char *msg) const {
 }
 
 void Shell::init() {
-    // TODO: Add init functions here...
+    // TODO: Add init functions here... inline ???
     handlers_.pSound->init();
 }
 
-void Shell::update(double elapsed) {
-    // TODO: Add init functions here...
-    handlers_.pSound->update();
-    handlers_.pInput->updateInput(static_cast<float>(elapsed));
+void Shell::update(const double elapsed) {
+    // TODO: Add update functions here... inline ???
+    handlers_.pSound->update(elapsed);
+    handlers_.pInput->updateInput(static_cast<float>(elapsed));  // remove me !!!!!
+    handlers_.pInput->update(elapsed);
 }
 
 void Shell::destroy() {
-    // TODO: Add destroy functions here...
+    // TODO: Add destroy functions here... inline ???
     handlers_.pSound->destroy();
 }
 

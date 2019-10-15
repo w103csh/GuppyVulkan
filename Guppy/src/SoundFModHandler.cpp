@@ -108,7 +108,7 @@ bool Sound::FModHandler::start(const TYPE type, const StartInfo *pStartInfo, con
     return true;
 }
 
-void Sound::FModHandler::update() {
+void Sound::FModHandler::update(const double) {
     FMOD_ERRCHECK(system_->update());
 
     FMOD_RESULT result;
