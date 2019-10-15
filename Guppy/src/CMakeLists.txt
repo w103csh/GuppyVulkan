@@ -242,7 +242,14 @@ if(WIN32)
         ${GLSLANG_LIBRARIES}
         ${Vulkan_LIBRARY} # ${VULKAN_LOADER} # Used to use the loader here instead...
         ${SPIRV_TOOLS_LIBRARIES}
+        XInput
         )
+
+    IF(TRUE) # Not sure if a flag is needed yet
+        add_definitions(-DUSE_XINPUT)
+        list(APPEND SOURCE XInputHelper.h)
+        list(APPEND LINKS XInput)
+    ENDIF()
 
 elseif(APPLE)
     list(APPEND SOURCE ShellMac.cpp ShellMac.h)

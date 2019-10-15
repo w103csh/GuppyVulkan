@@ -21,7 +21,7 @@ class FModHandler : public Handler {
 
     void init() override;
     bool start(const TYPE type, const StartInfo *pStartInfo, const EffectInfo *pEffectInfo = nullptr) override;
-    void update() override;
+    void update(const double) override;
     void pause(const TYPE type) override;
     void stop(const TYPE type) override;
     void destroy() override;

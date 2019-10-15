@@ -43,6 +43,7 @@ class Handler : public Shell::Handler {
     }
 
     constexpr void mouseLeave() { hasFocus_ = true; }
+    void update(const double elapsed) override;
     void updateInput(float elapsed);
     void clear() { reset(); }
 
@@ -55,16 +56,7 @@ class Handler : public Shell::Handler {
     void updateKeyInput();
     void updateMouseInput();
 
-    Shell* sh_;
-
     std::set<GAME_KEY> currKeyInput_;
-    /*  This is not really a position direction vector. Its a holder for how much
-        the object should move in each direction.
-
-        x-component : left & right
-        y-component : forward & back
-        z-component : up & down
-    */
     glm::vec3 posDir_;
 
     bool isLooking_;

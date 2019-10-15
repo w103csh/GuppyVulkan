@@ -57,6 +57,15 @@ static std::string textReplace(std::string &text, std::string s1, std::string s2
 // { macro identifier, line to replace, line to append to, value }
 typedef std::tuple<std::string, std::string, std::string, int> macroInfo;
 
+template <typename T>
+constexpr bool checkInterval(const T t, const T interval, T &lastTick) {
+    if (t - interval > lastTick) {
+        lastTick = t;
+        return true;
+    }
+    return false;
+}
+
 std::vector<macroInfo> getMacroReplaceInfo(const std::string_view &macroIdentifierPrefix, const std::string &text);
 
 void macroReplace(const macroInfo &info, int itemCount, std::string &text);
@@ -157,10 +166,15 @@ glm::mat4 getBias();
 
 glm::mat3 makeArbitraryBasis(const glm::vec3 &dir);
 
-static std::string makeVec3String(std::string prefix, glm::vec3 v) {
-    std::stringstream ss;
-    ss << prefix << "(" << v.x << ", " << v.y << ", " << v.z << ")" << std::endl;
-    return ss.str();
+template <typename TVec>
+static std::string makeVecString(TVec v) {
+    std::string s = "(";
+    for (auto i = 0; i < v.length(); i++) {
+        s += std::to_string(v[i]);
+        if (i + 1 < v.length()) s += ", ";
+    }
+    s += ")";
+    return s;
 }
 
 bool hasStencilComponent(VkFormat format);

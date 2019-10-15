@@ -11,6 +11,7 @@
 #include <queue>
 #include <vector>
 #include <stdexcept>
+#include <type_traits>
 #include <vulkan/vulkan.h>
 
 #include "Game.h"
@@ -107,7 +108,11 @@ class Shell {
     };
 
     constexpr const auto &context() const { return ctx_; }
-    constexpr const auto &getCurrentTime() const { return currentTime_; }
+    template <typename T = double>
+    constexpr T getCurrentTime() const {
+        static_assert(std::is_floating_point<T>::value, "T must be a floating point type");
+        return static_cast<T>(currentTime_);
+    }
 
     // LOGGING
     enum class LogPriority {
@@ -158,6 +163,7 @@ class Shell {
         virtual ~Handler() = default;
 
         virtual void init() = 0;
+        virtual void update(const double elapsed) = 0;
         virtual void destroy() = 0;
 
         Shell *pShell_;
@@ -170,7 +176,7 @@ class Shell {
     Shell(Game &game, Handlers &&handlers);
 
     void init();
-    void update(double elapsed);
+    void update(const double elapsed);
     void destroy();
 
     virtual uint32_t getDesiredVersion() { return VK_MAKE_VERSION(1, 1, 0); }
