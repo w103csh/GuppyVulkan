@@ -142,7 +142,7 @@ void Particle::Handler::record(const PASS passType, const std::shared_ptr<Pipeli
                                const VkCommandBuffer& cmd, const uint8_t frameIndex) {
     //
     switch (pPipelineBindData->type) {
-        case PIPELINE::PARTICLE_FOUNTAIN_TF_DEFERRED:
+        // case PIPELINE::PARTICLE_FOUNTAIN_TF_DEFERRED:
         case PIPELINE::PARTICLE_FOUNTAIN_DEFERRED: {
             // TODO: I know this is slow but its not important atm.
             for (const auto& pBuffer : pBuffers_) {
