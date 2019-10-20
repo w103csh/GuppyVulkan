@@ -1,6 +1,7 @@
 
 #include "TextureConstants.h"
 
+#include "Random.h"
 #include "Texture.h"
 
 namespace Texture {
@@ -85,5 +86,32 @@ const CreateInfo SKYBOX_CREATE_INFO = {
     std::string(SKYBOX_ID),
     {Sampler::SKYBOX_CREATE_INFO},
 };
+
+CreateInfo MakeRandom1dTex(const std::string_view& textureId, const uint32_t bufSize) {
+    float* pData = new float[bufSize];
+
+    for (uint32_t i = 0; i < bufSize; i++) {
+        pData[i] = Random::inst().nextFloatZeroToOne();
+    }
+
+    Sampler::CreateInfo sampInfo = {
+        std::string(textureId) + " Sampler",
+        {{{::Sampler::USAGE::RANDOM}}},
+        VK_IMAGE_VIEW_TYPE_1D,
+        {bufSize, 1, 1},
+        {},
+        0,
+        SAMPLER::DEFAULT_NEAREST,
+        VK_IMAGE_USAGE_SAMPLED_BIT,
+        {{false, false}, 1},
+        VK_FORMAT_R32_SFLOAT,
+        Sampler::CHANNELS::_1,
+        sizeof(float),
+    };
+
+    sampInfo.layersInfo.infos.front().pPixel = (stbi_uc*)pData;
+
+    return {std::string(textureId) + " Texture", {sampInfo}, false};
+}
 
 }  // namespace Texture

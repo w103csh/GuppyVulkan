@@ -170,7 +170,7 @@ void Descriptor::Handler::createLayouts() {
 
             vk::assert_success(vkCreateDescriptorSetLayout(shell().context().dev, &createInfo, nullptr, &res.layout));
 
-            if (settings().enable_debug_markers) {
+            if (shell().context().debugMarkersEnabled) {
                 std::string markerName = " descriptor set layout";  // TODO: a meaningful name
                 ext::DebugMarkerSetObjectName(shell().context().dev, (uint64_t)res.layout,
                                               VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, markerName.c_str());
@@ -548,6 +548,8 @@ void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::
     std::set<PASS> passTypes;
     passHandler().getActivePassTypes(passTypes, pipelineType);
     computeHandler().getActivePassTypes(passTypes, pipelineType);
+
+    assert(passTypes.size() && "No active pass types have the pipeline type");
 
     // Get the same descriptor sets info as the pipeline layouts.
     auto resHelpers =

@@ -13,7 +13,7 @@ Mesh::Handler::Handler(Game* pGame)
 void Mesh::Handler::init() {
     reset();
     // INSTANCE
-    instObj3dMgr_.init(shell().context(), settings());
+    instObj3dMgr_.init(shell().context());
 }
 
 void Mesh::Handler::tick() {

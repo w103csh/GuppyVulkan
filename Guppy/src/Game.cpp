@@ -56,9 +56,9 @@ Game::Settings::Settings()
       try_geometry_shading(true),
 #endif
       try_wireframe_shading(true),
+      try_debug_markers(false),
       enable_sample_shading(true),
       enable_double_clicks(false),
-      enable_debug_markers(false),
       enable_directory_listener(true),
       assert_on_recompile_shader(false) {
 }
@@ -103,7 +103,7 @@ void Game::Handler::createBuffer(const VkCommandBuffer& cmd, const VkBufferUsage
     helpers::copyBuffer(cmd, stgRes.buffer, buffRes.buffer, buffRes.memoryRequirements.size);
 
     // Name the buffers for debugging
-    if (settings().enable_debug_markers) {
+    if (shell().context().debugMarkersEnabled) {
         std::string markerName = name + " buffer";
         ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)buffRes.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                       markerName.c_str());

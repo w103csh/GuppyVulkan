@@ -69,9 +69,9 @@ class Game {
         bool try_tessellation_shading;
         bool try_geometry_shading;
         bool try_wireframe_shading;
+        bool try_debug_markers;
         bool enable_sample_shading;
         bool enable_double_clicks;
-        bool enable_debug_markers;
         bool enable_directory_listener;
         bool assert_on_recompile_shader;
     };
@@ -188,7 +188,7 @@ class Game {
             } else if (*it == "-nr") {
                 settings_.no_render = true;
             } else if (*it == "-dbgm") {
-                settings_.enable_debug_markers = true;
+                settings_.try_debug_markers = true;
             }
         }
     }

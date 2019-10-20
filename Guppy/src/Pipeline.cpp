@@ -234,7 +234,7 @@ void Pipeline::Base::makePipelineLayouts() {
         vk::assert_success(
             vkCreatePipelineLayout(handler().shell().context().dev, &layoutInfo, nullptr, &keyValue.second.pipelineLayout));
 
-        if (handler().settings().enable_debug_markers) {
+        if (handler().shell().context().debugMarkersEnabled) {
             std::string markerName = NAME + " pipeline layout";
             ext::DebugMarkerSetObjectName(handler().shell().context().dev, (uint64_t)&keyValue.second.pipelineLayout,
                                           VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, markerName.c_str());

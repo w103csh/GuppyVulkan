@@ -80,7 +80,7 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
     stageInfo.stage = createInfo.stage;
     stageInfo.pName = "main";
 
-    if (settings().enable_debug_markers) {
+    if (shell().context().debugMarkersEnabled) {
         std::string markerName = createInfo.name + "shader module";
         ext::DebugMarkerSetObjectName(shell().context().dev, (uint64_t)stageInfo.module,
                                       VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, markerName.c_str());

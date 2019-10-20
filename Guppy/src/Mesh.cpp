@@ -195,7 +195,7 @@ void Mesh::Base::createBufferData(const VkCommandBuffer& cmd, BufferResource& st
     helpers::copyBuffer(cmd, stgRes.buffer, res.buffer, res.memoryRequirements.size);
 
     // Name the buffers for debugging
-    if (handler().settings().enable_debug_markers) {
+    if (handler().shell().context().debugMarkersEnabled) {
         std::string markerName = NAME + " " + bufferType + " mesh buffer";
         ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)res.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                       markerName.c_str());

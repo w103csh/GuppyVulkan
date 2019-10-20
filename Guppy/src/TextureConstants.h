@@ -62,6 +62,8 @@ extern const CreateInfo PISA_HDR_CREATE_INFO;
 constexpr std::string_view SKYBOX_ID = "Skybox Texture";
 extern const CreateInfo SKYBOX_CREATE_INFO;
 
+Texture::CreateInfo MakeRandom1dTex(const std::string_view& textureId, const uint32_t bufSize);
+
 }  // namespace Texture
 
 #endif  // !TEXTURE_CONSTANTS_H

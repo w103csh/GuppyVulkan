@@ -2,11 +2,20 @@
 #define PARTICLE_H
 
 #include <glm/glm.hpp>
+#include <string_view>
 
 #include "BufferItem.h"
 #include "ConstantsAll.h"
 #include "Instance.h"
 #include "Pipeline.h"
+
+// TEXTURE
+
+namespace Texture {
+namespace Particle {
+constexpr std::string_view RAND_1D_ID = "Statue Texture";
+}  // namespace Particle
+}  // namespace Texture
 
 // SHADER
 
@@ -15,6 +24,7 @@ namespace Particle {
 extern const CreateInfo WAVE_COLOR_VERT_DEFERRED_MRT_CREATE_INFO;
 extern const CreateInfo FOUNTAIN_PART_VERT_DEFERRED_MRT_CREATE_INFO;
 extern const CreateInfo FOUNTAIN_PART_FRAG_DEFERRED_MRT_CREATE_INFO;
+// extern const CreateInfo FOUNTAIN_PART_TF_VERT_CREATE_INFO;
 }  // namespace Particle
 }  // namespace Shader
 
@@ -139,6 +149,14 @@ class Fountain : public Graphics {
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
 };
+
+// class FountainTF : public Graphics {
+//   public:
+//    const bool IS_DEFERRED;
+//    FountainTF(Handler& handler, const bool isDeferred = true);
+//    void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
+//    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
+//};
 
 }  // namespace Particle
 }  // namespace Pipeline

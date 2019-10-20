@@ -134,7 +134,7 @@ void Scene::Handler::init() {
         }
 
         // TRIANGLE
-        if ((!suppress || false) && ctx.tessellationShadingEnabled_) {
+        if ((!suppress || false) && ctx.tessellationShadingEnabled) {
             instObj3dInfo = {};
             defMatInfo = {};
             defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
@@ -179,7 +179,7 @@ void Scene::Handler::init() {
         }
 
         // ARC
-        if ((!suppress || false) && ctx.tessellationShadingEnabled_) {
+        if ((!suppress || false) && ctx.tessellationShadingEnabled) {
             arcInfo = {};
             instObj3dInfo = {};
             defMatInfo = {};
@@ -219,7 +219,7 @@ void Scene::Handler::init() {
                 boxColor->putOnTop(groundPlane_bbmm);
                 meshHandler().updateMesh(boxColor);
             }
-            if (true && ctx.geometryShadingEnabled_) {
+            if (true && ctx.geometryShadingEnabled) {
                 meshInfo = {};
                 meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_WF_COLOR;
                 instObj3dInfo = {};
@@ -256,7 +256,7 @@ void Scene::Handler::init() {
         if (!suppress || true) {
             // MODEL
             modelInfo = {};
-            if (false && ctx.geometryShadingEnabled_) {
+            if (false && ctx.geometryShadingEnabled) {
                 modelInfo.pipelineType = PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED;
                 modelInfo.settings.needAdjacenyList = true;
             } else {

@@ -32,6 +32,7 @@ const CreateInfo Deferred_CREATE_INFO = {
 #endif
         PIPELINE::PARTICLE_WAVE_DEFERRED,
         PIPELINE::PARTICLE_FOUNTAIN_DEFERRED,
+        // PIPELINE::PARTICLE_FOUNTAIN_TF_DEFERRED,
 #ifndef VK_USE_PLATFORM_MACOS_MVK
         // PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED,
         PIPELINE::TESSELLATION_TRIANGLE_DEFERRED,
@@ -140,6 +141,7 @@ void Base::record(const uint8_t frameIndex) {
                     // TODO: this definitely only needs to be recorded once per swapchain creation!!!
                     assert(doSSAO_ && false);
                 } break;
+                //case PIPELINE::PARTICLE_FOUNTAIN_TF_DEFERRED:
                 case PIPELINE::PARTICLE_FOUNTAIN_DEFERRED: {
                     handler().particleHandler().record(TYPE, pPipelineBindData, priCmd, frameIndex);
                     vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);

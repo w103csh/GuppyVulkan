@@ -111,20 +111,20 @@ void Uniform::Handler::init() {
 
     // clang-format off
     uint8_t count = 0;
-    camDefPersMgr().init(shell().context(), settings());    ++count;
-    lgtDefPosMgr().init(shell().context(), settings());     ++count;
-    lgtPbrPosMgr().init(shell().context(), settings());     ++count;
-    lgtDefSptMgr().init(shell().context(), settings());     ++count;
-    lgtShdwPosMgr().init(shell().context(), settings());    ++count;
-    uniDefFogMgr().init(shell().context(), settings());     ++count;
-    uniDefPrjMgr().init(shell().context(), settings());     ++count;
-    uniScrDefMgr().init(shell().context(), settings());     ++count;
-    uniDfrSSAOMgr().init(shell().context(), settings());    ++count;
-    uniShdwDataMgr().init(shell().context(), settings());   ++count;
-    uniTessDefMgr().init(shell().context(), settings());    ++count;
-    uniGeomDefMgr().init(shell().context(), settings());    ++count;
-    uniWaveMgr().init(shell().context(), settings());       ++count;
-    strPstPrcMgr().init(shell().context(), settings());     ++count;
+    camDefPersMgr().init(shell().context());    ++count;
+    lgtDefPosMgr().init(shell().context());     ++count;
+    lgtPbrPosMgr().init(shell().context());     ++count;
+    lgtDefSptMgr().init(shell().context());     ++count;
+    lgtShdwPosMgr().init(shell().context());    ++count;
+    uniDefFogMgr().init(shell().context());     ++count;
+    uniDefPrjMgr().init(shell().context());     ++count;
+    uniScrDefMgr().init(shell().context());     ++count;
+    uniDfrSSAOMgr().init(shell().context());    ++count;
+    uniShdwDataMgr().init(shell().context());   ++count;
+    uniTessDefMgr().init(shell().context());    ++count;
+    uniGeomDefMgr().init(shell().context());    ++count;
+    uniWaveMgr().init(shell().context());       ++count;
+    strPstPrcMgr().init(shell().context());     ++count;
     assert(count == managers_.size());
     // clang-format on
 

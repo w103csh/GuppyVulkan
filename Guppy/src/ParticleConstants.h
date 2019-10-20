@@ -44,6 +44,7 @@ struct CreateInfo {
     float lifespan{5.5f};                        // Particle lifespan
     glm::mat3 emitterBasis{1.0f};                // Rotation that rotates y axis to the direction of emitter
     float size{1.0f};                            // Size of particle
+    // bool transformFeedback = false;
 };
 
 }  // namespace Fountain

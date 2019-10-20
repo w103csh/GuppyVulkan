@@ -19,21 +19,32 @@
 #include "SoundHandler.h"
 
 Shell::Shell(Game &game, Handlers &&handlers)
-    : limitFramerate(true),                          //
-      framesPerSecondLimit(10),                      //
-      game_(game),                                   //
-      settings_(game.settings()),                    //
-      currentTime_(0.0),                             //
-      handlers_(std::move(handlers)),                //
-      ctx_(),                                        //
-      gameTick_(1.0f / settings_.ticks_per_second),  //
-      gameTime_(gameTick_) {
-    // require generic WSI extensions
-    instanceExtensions_.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
-    deviceExtensions_.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
-
-    // require "standard" validation layers
-    if (settings_.validate) {
+    : limitFramerate(true),
+      framesPerSecondLimit(10),
+      game_(game),
+      settings_(game.settings()),
+      instanceExtensions_{
+          VK_KHR_SURFACE_EXTENSION_NAME,  // require generic WSI extensions
+      },
+      /** Device extensions:
+       *    If an extension is required to run flip that flag and the program will not start without it. If you want the
+       * extension to be optional set the required flag to false. If you do not want the extension to try to be enabled set
+       * the last flag and the extension will not be enabled even if its possible.
+       */
+      deviceExtensionInfo_{
+          {VK_KHR_SWAPCHAIN_EXTENSION_NAME, true, true},
+          {VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false, settings_.try_debug_markers},
+          {VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME, false, false},
+          {VK_EXT_TRANSFORM_FEEDBACK_EXTENSION_NAME, false, false},
+      },
+      currentTime_(0.0),
+      handlers_(std::move(handlers)),
+      ctx_(),
+      gameTick_(1.0f / settings_.ticks_per_second),
+      gameTime_(gameTick_),
+      debugReportCallback_(VK_NULL_HANDLE),
+      debugUtilsMessenger_(VK_NULL_HANDLE) {
+    if (settings_.validate) {  // require "standard" validation layers
         instanceLayers_.push_back("VK_LAYER_LUNARG_standard_validation");
         instanceExtensions_.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
         instanceExtensions_.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -67,6 +78,8 @@ void Shell::destroy() {
 void Shell::initVk() {
     initInstance();
 
+    ext::CreateInstanceEXTs(ctx_.instance);
+
     initDebugReport();
     initValidationMessenger();
 
@@ -74,8 +87,8 @@ void Shell::initVk() {
 }
 
 void Shell::cleanupVk() {
-    if (settings_.validate) ext::DestroyDebugReportCallbackEXT(ctx_.instance, ctx_.debugReport, nullptr);
-    if (settings_.validate) ext::DestroyDebugUtilsMessengerEXT(ctx_.instance, ctx_.debugUtilsMessenger, nullptr);
+    if (settings_.validate) ext::vkDestroyDebugReportCallbackEXT(ctx_.instance, debugReportCallback_, nullptr);
+    if (settings_.validate) ext::vkDestroyDebugUtilsMessengerEXT(ctx_.instance, debugUtilsMessenger_, nullptr);
 
     destroyInstance();
 }
@@ -185,19 +198,19 @@ void Shell::initInstance() {
 void Shell::initDebugReport() {
     if (!settings_.validate) return;
 
-    VkDebugReportCallbackCreateInfoEXT debug_report_info = {};
-    debug_report_info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+    VkDebugReportCallbackCreateInfoEXT debugReportInfo = {};
+    debugReportInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
 
-    debug_report_info.flags =
+    debugReportInfo.flags =
         VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
     if (settings_.validate_verbose) {
-        debug_report_info.flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT;
+        debugReportInfo.flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT;
     }
 
-    debug_report_info.pfnCallback = debugReportCallback;
-    debug_report_info.pUserData = reinterpret_cast<void *>(this);
+    debugReportInfo.pfnCallback = debugReportCallback;
+    debugReportInfo.pUserData = reinterpret_cast<void *>(this);
 
-    vk::assert_success(ext::CreateDebugReportCallbackEXT(ctx_.instance, &debug_report_info, nullptr, &ctx_.debugReport));
+    ext::vkCreateDebugReportCallbackEXT(ctx_.instance, &debugReportInfo, nullptr, &debugReportCallback_);
 }
 
 void Shell::initValidationMessenger() {
@@ -210,10 +223,10 @@ void Shell::initValidationMessenger() {
         VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;  // | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
     debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
                             VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    debugInfo.pfnUserCallback = debug_callback;
+    debugInfo.pfnUserCallback = events::debugCallback;
     debugInfo.pUserData = nullptr;  // Optional
 
-    vk::assert_success(ext::CreateDebugUtilsMessengerEXT(ctx_.instance, &debugInfo, nullptr, &ctx_.debugUtilsMessenger));
+    vk::assert_success(ext::vkCreateDebugUtilsMessengerEXT(ctx_.instance, &debugInfo, nullptr, &debugUtilsMessenger_));
 }
 
 void Shell::initPhysicalDev() {
@@ -228,10 +241,7 @@ void Shell::initPhysicalDev() {
 void Shell::createContext() {
     createDev();
 
-    if (settings_.enable_debug_markers) {
-        ext::CreateDebugMarkerEXTs(ctx_.dev, ctx_.physicalDev);
-    }
-
+    ext::CreateDeviceEXTs(ctx_);
     initDevQueues();
 
     // TODO: should this do this?
@@ -285,36 +295,38 @@ void Shell::createDev() {
 
     // features
     VkPhysicalDeviceFeatures deviceFeatures = {};
-    deviceFeatures.samplerAnisotropy = ctx_.samplerAnisotropyEnabled_ ? VK_TRUE : VK_FALSE;
-    deviceFeatures.sampleRateShading = ctx_.sampleRateShadingEnabled_ ? VK_TRUE : VK_FALSE;
-    deviceFeatures.fragmentStoresAndAtomics = ctx_.computeShadingEnabled_ ? VK_TRUE : VK_FALSE;
-    deviceFeatures.tessellationShader = ctx_.tessellationShadingEnabled_ ? VK_TRUE : VK_FALSE;
-    deviceFeatures.geometryShader = ctx_.geometryShadingEnabled_ ? VK_TRUE : VK_FALSE;
-    deviceFeatures.fillModeNonSolid = ctx_.wireframeShadingEnabled_ ? VK_TRUE : VK_FALSE;
+    deviceFeatures.samplerAnisotropy = ctx_.samplerAnisotropyEnabled ? VK_TRUE : VK_FALSE;
+    deviceFeatures.sampleRateShading = ctx_.sampleRateShadingEnabled ? VK_TRUE : VK_FALSE;
+    deviceFeatures.fragmentStoresAndAtomics = ctx_.computeShadingEnabled ? VK_TRUE : VK_FALSE;
+    deviceFeatures.tessellationShader = ctx_.tessellationShadingEnabled ? VK_TRUE : VK_FALSE;
+    deviceFeatures.geometryShader = ctx_.geometryShadingEnabled ? VK_TRUE : VK_FALSE;
+    deviceFeatures.fillModeNonSolid = ctx_.wireframeShadingEnabled ? VK_TRUE : VK_FALSE;
 
-    //// extension features
-    // VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT vAttrDivFeatures = {};
-    // vAttrDivFeatures.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_FEATURES_EXT;
-    // vAttrDivFeatures.pNext = nullptr;  // Maybe you can chain these using this pointer???
-    // vAttrDivFeatures.vertexAttributeInstanceRateDivisor = VK_TRUE;
-    // vAttrDivFeatures.vertexAttributeInstanceRateZeroDivisor = VK_FALSE;
+    // Phyiscal device extensions names
+    auto &phyDevProps = ctx_.physicalDevProps[ctx_.physicalDevIndex];
+    std::vector<const char *> enabledExtensionNames;
+    for (const auto &extInfo : phyDevProps.phyDevExtInfos)
+        if (extInfo.valid) enabledExtensionNames.push_back(extInfo.name);
 
     VkDeviceCreateInfo devInfo = {};
     devInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     devInfo.queueCreateInfoCount = static_cast<uint32_t>(queue_infos.size());
     devInfo.pQueueCreateInfos = queue_infos.data();
-    if (settings_.enable_debug_markers) {
-        deviceExtensions_.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-        devInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions_.size());
-        devInfo.ppEnabledExtensionNames = deviceExtensions_.data();
-        deviceExtensions_.pop_back();  // TODO: add this to assert check instead of removing
-    } else {
-        devInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions_.size());
-        devInfo.ppEnabledExtensionNames = deviceExtensions_.data();
-    }
     devInfo.pEnabledFeatures = &deviceFeatures;
-    //// extension features
-    // devInfo.pNext = &vAttrDivFeatures;
+    devInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensionNames.size());
+    devInfo.ppEnabledExtensionNames = enabledExtensionNames.data();
+
+    // Physical device extension featrues (For some reason using the name above doesn't always work)
+    void **pNext = &(const_cast<void *>(devInfo.pNext));
+    if (ctx_.vertexAttributeDivisorEnabled) {
+        assert(false);  // Never tested. Was using the name above sufficient?
+        *pNext = &phyDevProps.featVertAttrDiv;
+        pNext = &phyDevProps.featVertAttrDiv.pNext;
+    }
+    if (ctx_.transformFeedbackEnabled) {
+        *pNext = &phyDevProps.featTransFback;
+        pNext = &phyDevProps.featTransFback.pNext;
+    }
 
     vk::assert_success(vkCreateDevice(ctx_.physicalDev, &devInfo, nullptr, &ctx_.dev));
 }
@@ -380,7 +392,7 @@ void Shell::createSwapchain() {
         with a library like stb_image_resize. Each mip level can then be loaded into the image in the same way that
         you loaded the original image.
     */
-    ctx_.linearBlittingSupported_ =
+    ctx_.linearBlittingSupported =
         helpers::findSupportedFormat(ctx_.physicalDev, {ctx_.surfaceFormat.format}, VK_IMAGE_TILING_OPTIMAL,
                                      VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != VK_FORMAT_UNDEFINED;
 
@@ -695,9 +707,9 @@ void Shell::enumeratePhysicalDevs(uint32_t physicalDevCount) {
 
     for (auto &dev : devs) {
         PhysicalDeviceProperties props;
-        props.device = std::move(dev);
+        props.device = dev;
 
-        // queue family properties
+        // Queue family properties
         vkGetPhysicalDeviceQueueFamilyProperties(props.device, &props.queueFamilyCount, NULL);
         assert(props.queueFamilyCount >= 1);
 
@@ -705,25 +717,91 @@ void Shell::enumeratePhysicalDevs(uint32_t physicalDevCount) {
         vkGetPhysicalDeviceQueueFamilyProperties(props.device, &props.queueFamilyCount, props.queueProps.data());
         assert(props.queueFamilyCount >= 1);
 
-        // memory properties
+        // Memory properties
         vkGetPhysicalDeviceMemoryProperties(props.device, &props.memoryProperties);
 
-        // properties
-        vkGetPhysicalDeviceProperties(props.device, &props.properties);
-
-        // extensions
+        // Extension properties
         uint32_t extensionCount;
         vkEnumerateDeviceExtensionProperties(props.device, NULL, &extensionCount, NULL);
-        props.extensions.resize(extensionCount);
-        vkEnumerateDeviceExtensionProperties(dev, NULL, &extensionCount, props.extensions.data());
+        props.extensionProperties.resize(extensionCount);
+        vkEnumerateDeviceExtensionProperties(dev, NULL, &extensionCount, props.extensionProperties.data());
 
-        // layer extensions
+        // This could all be faster, but I doubt it will make a significant difference at any point.
+        for (const auto &extInfo : deviceExtensionInfo_) {
+            auto &it =
+                std::find_if(props.extensionProperties.begin(), props.extensionProperties.end(),
+                             [&extInfo](const auto &extProp) { return strcmp(extInfo.name, extProp.extensionName) == 0; });
+
+            if (it == props.extensionProperties.end()) {
+                // TODO: better logging
+                if (extInfo.required) {
+                    assert(false && "Couldn't find required extension");
+                    exit(EXIT_FAILURE);
+                }
+                props.phyDevExtInfos.push_back(extInfo);
+                props.phyDevExtInfos.back().valid = false;
+            } else {
+                props.phyDevExtInfos.push_back(extInfo);
+
+                if (strcmp(extInfo.name, (char *)VK_KHR_SWAPCHAIN_EXTENSION_NAME) == 0) {
+                    props.phyDevExtInfos.back().valid = true;
+                    continue;
+
+                } else if (strcmp(extInfo.name, (char *)VK_EXT_DEBUG_MARKER_EXTENSION_NAME) == 0) {
+                    if (extInfo.tryToEnabled) {
+                        assert(false);  // TODO: what should this be ?? There are a bunch of extensions functions.
+                    }
+
+                } else if (strcmp(extInfo.name, (char *)VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME) == 0) {
+                    if (extInfo.tryToEnabled) {
+                        assert(false);  // Not tested.
+                        VkPhysicalDeviceFeatures2 features = {};
+                        features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+                        features.pNext = &props.featVertAttrDiv;
+                        vkGetPhysicalDeviceFeatures2(props.device, &features);
+                        // Check features
+                        if (props.featVertAttrDiv.vertexAttributeInstanceRateDivisor) {
+                            props.featVertAttrDiv.vertexAttributeInstanceRateZeroDivisor = VK_FALSE;
+                            props.phyDevExtInfos.back().valid = true;
+                            continue;
+                        }
+                    }
+
+                } else if (strcmp(extInfo.name, (char *)VK_EXT_TRANSFORM_FEEDBACK_EXTENSION_NAME) == 0) {
+                    if (extInfo.tryToEnabled) {
+                        VkPhysicalDeviceFeatures2 features = {};
+                        features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
+                        features.pNext = &props.featTransFback;
+                        vkGetPhysicalDeviceFeatures2(props.device, &features);
+                        // Check features
+                        if (props.featTransFback.transformFeedback) {
+                            props.featTransFback.geometryStreams = VK_FALSE;
+                            props.phyDevExtInfos.back().valid = true;
+                            continue;
+                        }
+                    }
+
+                } else {
+                    assert(false && "Unhandled physical device extension");
+                    exit(EXIT_FAILURE);
+                }
+
+                props.phyDevExtInfos.back().valid = false;
+            }
+        }
+
+        // Physical device features
+        vkGetPhysicalDeviceFeatures(props.device, &props.features);
+
+        // TODO: enumerate extension properties.
+
+        // Physical device properties
+        vkGetPhysicalDeviceProperties(props.device, &props.properties);
+
+        // Layer extension properties
         for (auto &layer_prop : layerProps_) {
             enumerateDeviceLayerExtensionProperties(props, layer_prop);
         }
-
-        // features
-        vkGetPhysicalDeviceFeatures(props.device, &props.features);
 
         ctx_.physicalDevProps.push_back(props);
     }
@@ -742,8 +820,19 @@ void Shell::pickPhysicalDev() {
             ctx_.physicalDevIndex = i;
             ctx_.physicalDev = props.device;
 
-            // convenience variables ...
+            // Convenience variables
             ctx_.memProps = ctx_.physicalDevProps[ctx_.physicalDevIndex].memoryProperties;
+            deviceExtensionInfo_ = props.phyDevExtInfos;
+
+            // Flags
+            for (const auto &extInfo : deviceExtensionInfo_) {
+                if (strcmp(extInfo.name, (char *)VK_EXT_DEBUG_MARKER_EXTENSION_NAME) == 0)
+                    ctx_.debugMarkersEnabled = extInfo.valid;
+                if (strcmp(extInfo.name, (char *)VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME) == 0)
+                    ctx_.vertexAttributeDivisorEnabled = extInfo.valid;
+                if (strcmp(extInfo.name, (char *)VK_EXT_TRANSFORM_FEEDBACK_EXTENSION_NAME) == 0)
+                    ctx_.transformFeedbackEnabled = extInfo.valid;
+            }
 
             break;
         }
@@ -829,50 +918,44 @@ bool Shell::determineQueueFamiliesSupport(const PhysicalDeviceProperties &props,
 }
 
 bool Shell::determineDeviceExtensionSupport(const PhysicalDeviceProperties &props) {
-    if (deviceExtensions_.empty()) return true;
-    // TODO: This won't work right if either list is not unique, but I don't feel like changing it atm.
-    size_t count = 0;
-    size_t req_ext_count = deviceExtensions_.size();
-    for (const auto &extension : props.extensions) {
-        for (const auto &req_ext_name : deviceExtensions_) {
-            if (std::strcmp(req_ext_name, extension.extensionName) == 0) count++;
-            if (count == req_ext_count) return true;
-        }
+    if (deviceExtensionInfo_.empty()) return true;
+    for (const auto &extInfo : props.phyDevExtInfos) {
+        if (extInfo.required && !extInfo.valid) return false;
     }
-    return false;
+    return true;
 }
 
 void Shell::determineDeviceFeatureSupport(const PhysicalDeviceProperties &props) {
     // sampler anisotropy
-    ctx_.samplerAnisotropyEnabled_ = props.features.samplerAnisotropy && settings_.try_sampler_anisotropy;
-    if (settings_.try_sampler_anisotropy && !ctx_.samplerAnisotropyEnabled_)
+    ctx_.samplerAnisotropyEnabled = props.features.samplerAnisotropy && settings_.try_sampler_anisotropy;
+    if (settings_.try_sampler_anisotropy && !ctx_.samplerAnisotropyEnabled)
         log(LogPriority::LOG_WARN, "cannot enable sampler anisotropy");
     // sample rate shading
-    ctx_.sampleRateShadingEnabled_ = props.features.sampleRateShading && settings_.try_sample_rate_shading;
-    if (settings_.try_sample_rate_shading && !ctx_.sampleRateShadingEnabled_)
+    ctx_.sampleRateShadingEnabled = props.features.sampleRateShading && settings_.try_sample_rate_shading;
+    if (settings_.try_sample_rate_shading && !ctx_.sampleRateShadingEnabled)
         log(LogPriority::LOG_WARN, "cannot enable sample rate shading");
     // compute shading (TODO: this should be more robust)
-    ctx_.computeShadingEnabled_ = props.features.fragmentStoresAndAtomics && settings_.try_compute_shading;
-    if (settings_.try_compute_shading && !ctx_.computeShadingEnabled_)  //
+    ctx_.computeShadingEnabled = props.features.fragmentStoresAndAtomics && settings_.try_compute_shading;
+    if (settings_.try_compute_shading && !ctx_.computeShadingEnabled)  //
         log(LogPriority::LOG_WARN, "cannot enable compute shading (actually just can't enable fragment stores and atomics)");
     // tessellation shading
-    ctx_.tessellationShadingEnabled_ = props.features.tessellationShader && settings_.try_tessellation_shading;
-    if (settings_.try_tessellation_shading && !ctx_.tessellationShadingEnabled_)  //
+    ctx_.tessellationShadingEnabled = props.features.tessellationShader && settings_.try_tessellation_shading;
+    if (settings_.try_tessellation_shading && !ctx_.tessellationShadingEnabled)  //
         log(LogPriority::LOG_WARN, "cannot enable tessellation shading");
     // geometry shading
-    ctx_.geometryShadingEnabled_ = props.features.geometryShader && settings_.try_geometry_shading;
-    if (settings_.try_geometry_shading && !ctx_.geometryShadingEnabled_)  //
+    ctx_.geometryShadingEnabled = props.features.geometryShader && settings_.try_geometry_shading;
+    if (settings_.try_geometry_shading && !ctx_.geometryShadingEnabled)  //
         log(LogPriority::LOG_WARN, "cannot enable geometry shading");
     // wireframe shading
-    ctx_.wireframeShadingEnabled_ = props.features.fillModeNonSolid && settings_.try_wireframe_shading;
-    if (settings_.try_wireframe_shading && !ctx_.wireframeShadingEnabled_)  //
+    ctx_.wireframeShadingEnabled = props.features.fillModeNonSolid && settings_.try_wireframe_shading;
+    if (settings_.try_wireframe_shading && !ctx_.wireframeShadingEnabled)  //
         log(LogPriority::LOG_WARN, "cannot enable wire frame shading (actually just can't enable fill mode non-solid)");
 }
 
 void Shell::determineSampleCount(const PhysicalDeviceProperties &props) {
     /* DEPENDS on determine_device_feature_support */
     ctx_.samples = VK_SAMPLE_COUNT_1_BIT;
-    if (ctx_.sampleRateShadingEnabled_) {
+    if (ctx_.sampleRateShadingEnabled) {
         VkSampleCountFlags counts = std::min(props.properties.limits.framebufferColorSampleCounts,
                                              props.properties.limits.framebufferDepthSampleCounts);
         // return the highest possible one for now
@@ -1053,8 +1136,8 @@ void Shell::determineApiVersion(uint32_t &version) {
                 exit(-1);
             }
 
-            // Go through the list of physical devices and select only those that are capable of running the API version we
-            // want.
+            // Go through the list of physical devices and select only those that are capable of running the API version
+            // we want.
             for (uint32_t dev = 0; dev < physical_devices.size(); ++dev) {
                 VkPhysicalDeviceProperties physical_device_props = {};
                 vkGetPhysicalDeviceProperties(physical_devices[dev], &physical_device_props);

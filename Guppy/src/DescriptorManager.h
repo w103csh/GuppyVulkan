@@ -34,15 +34,14 @@ class Manager : public Buffer::Manager::Base<TBase, TDerived, TSmartPointer> {
     const DESCRIPTOR DESCRIPTOR_TYPE;
     const std::string MACRO_NAME;
 
-    void init(const Shell::Context &ctx, const Game::Settings &settings,
-              std::vector<uint32_t> queueFamilyIndices = {}) override {
+    void init(const Shell::Context &ctx, std::vector<uint32_t> queueFamilyIndices = {}) override {
         // TODO: dump the alignment padding here so you can see how bad it is...
         const auto &minAlignment =
             ctx.physicalDevProps[ctx.physicalDevIndex].properties.limits.minUniformBufferOffsetAlignment;
         if (sizeof(typename TDerived::DATA) % minAlignment != 0) {
             TManager::alignment_ = (sizeof(typename TDerived::DATA) + minAlignment - 1) & ~(minAlignment - 1);
         }
-        TManager::init(ctx, settings, std::forward<std::vector<uint32_t>>(queueFamilyIndices));
+        TManager::init(ctx, std::forward<std::vector<uint32_t>>(queueFamilyIndices));
     }
 
    private:
