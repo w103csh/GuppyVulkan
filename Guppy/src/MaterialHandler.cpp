@@ -11,9 +11,9 @@ Material::Handler::Handler(Game* pGame)
 
 void Material::Handler::init() {
     reset();
-    defMgr_.init(shell().context(), settings());
-    pbrMgr_.init(shell().context(), settings());
-    fntnMgr_.init(shell().context(), settings());
+    defMgr_.init(shell().context());
+    pbrMgr_.init(shell().context());
+    fntnMgr_.init(shell().context());
 }
 
 void Material::Handler::updateTexture(const std::shared_ptr<Texture::Base>& pTexture) {

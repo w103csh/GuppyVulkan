@@ -155,7 +155,7 @@ void RenderPass::Base::create() {
 
     createBeginInfo();
 
-    if (handler().settings().enable_debug_markers) {
+    if (handler().shell().context().debugMarkersEnabled) {
         std::string markerName = NAME + " render pass";
         ext::DebugMarkerSetObjectName(handler().shell().context().dev, (uint64_t)pass,
                                       VK_DEBUG_REPORT_OBJECT_TYPE_RENDER_PASS_EXT, markerName.c_str());
@@ -773,7 +773,7 @@ void RenderPass::Base::createSemaphores() {
 
 void RenderPass::Base::createAttachmentDebugMarkers() {
     auto& ctx = handler().shell().context();
-    if (handler().settings().enable_debug_markers) {
+    if (handler().shell().context().debugMarkersEnabled) {
         std::string markerName;
         uint32_t count = 0;
         for (auto& color : images_) {

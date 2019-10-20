@@ -87,6 +87,7 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
             case PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED:    insertPair = pPipelines_.insert({type, std::make_unique<Geometry::Silhouette>(std::ref(*this))}); break;
             case PIPELINE::PARTICLE_WAVE_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Particle::Wave>(std::ref(*this))}); break;
             case PIPELINE::PARTICLE_FOUNTAIN_DEFERRED:      insertPair = pPipelines_.insert({type, std::make_unique<Particle::Fountain>(std::ref(*this))}); break;
+            //case PIPELINE::PARTICLE_FOUNTAIN_TF_DEFERRED:   insertPair = pPipelines_.insert({type, std::make_unique<Particle::FountainTF>(std::ref(*this))}); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on
@@ -222,7 +223,7 @@ void Pipeline::Handler::createPipeline(const std::string&& name, VkGraphicsPipel
                                        VkPipeline& pipeline) {
     vk::assert_success(vkCreateGraphicsPipelines(shell().context().dev, cache_, 1, &createInfo, nullptr, &pipeline));
 
-    if (settings().enable_debug_markers) {
+    if (shell().context().debugMarkersEnabled) {
         std::string markerName = name + " graphics pipline";
         ext::DebugMarkerSetObjectName(shell().context().dev, (uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                                       markerName.c_str());
@@ -233,7 +234,7 @@ void Pipeline::Handler::createPipeline(const std::string&& name, VkComputePipeli
                                        VkPipeline& pipeline) {
     vk::assert_success(vkCreateComputePipelines(shell().context().dev, cache_, 1, &createInfo, nullptr, &pipeline));
 
-    if (settings().enable_debug_markers) {
+    if (shell().context().debugMarkersEnabled) {
         std::string markerName = name + " compute pipline";
         ext::DebugMarkerSetObjectName(shell().context().dev, (uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
                                       markerName.c_str());

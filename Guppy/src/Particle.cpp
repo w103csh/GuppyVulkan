@@ -9,7 +9,6 @@
 // SHADER
 
 namespace Shader {
-
 namespace Particle {
 const CreateInfo WAVE_COLOR_VERT_DEFERRED_MRT_CREATE_INFO = {
     SHADER::WAVE_COLOR_DEFERRED_MRT_VERT,            //
@@ -29,7 +28,12 @@ const CreateInfo FOUNTAIN_PART_FRAG_DEFERRED_MRT_CREATE_INFO = {
     "frag.particle.deferred.mrt.fountain.glsl",      //
     VK_SHADER_STAGE_FRAGMENT_BIT,                    //
 };
-
+// const CreateInfo FOUNTAIN_PART_TF_VERT_CREATE_INFO = {
+//    SHADER::FOUNTAIN_PART_TF_VERT,                         //
+//    "Particle Fountain Transform Feedback Vertex Shader",  //
+//    "vert.particle.fountain.tf.glsl",                      //
+//    VK_SHADER_STAGE_VERTEX_BIT,                            //
+//};
 }  // namespace Particle
 }  // namespace Shader
 
@@ -124,8 +128,9 @@ const CreateInfo FOUNTAIN_CREATE_INFO = {
     DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN,
     "_DS_UNI_PRTCL_FNTN",
     {
-        {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
-        {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_PARTICLE_FOUNTAIN}},
+        {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}}, {{1, 0},
+        {UNIFORM_DYNAMIC::MATERIAL_PARTICLE_FOUNTAIN}},
+        //{{2, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Particle::RAND_1D_ID}},
     },
 };
 
@@ -211,6 +216,50 @@ void Fountain::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes)
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 }
+
+//// FOUNTAIN (TRANSFORM FEEDBACK)
+// const CreateInfo FOUNTAIN_TF_CREATE_INFO = {
+//    PIPELINE::PARTICLE_FOUNTAIN_TF_DEFERRED,
+//    "Particle Fountain Transform Feedback Pipeline",
+//    {
+//        SHADER::FOUNTAIN_PART_TF_VERT,
+//        // SHADER::FOUNTAIN_PART_DEFERRED_MRT_FRAG,
+//    },
+//    {
+//        DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN,
+//        // DESCRIPTOR_SET::SAMPLER_DEFAULT,
+//    },
+//};
+// FountainTF::FountainTF(Handler& handler, bool isDeferred)
+//    : Graphics(handler, &FOUNTAIN_TF_CREATE_INFO), IS_DEFERRED(isDeferred) {}
+//
+// void FountainTF::getBlendInfoResources(CreateInfoResources& createInfoRes) {
+//    if (IS_DEFERRED)
+//        Deferred::GetDefaultBlendInfoResources(createInfoRes);
+//    else
+//        Graphics::getBlendInfoResources(createInfoRes);
+//}
+//
+// void FountainTF::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+//    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+//
+//    Instance::Particle::FountainTF::DATA::getInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_VERTEX);
+//    // bindings
+//    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount =
+//    static_cast<uint32_t>(createInfoRes.bindDescs.size()); createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions =
+//    createInfoRes.bindDescs.data();
+//    // attributes
+//    createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
+//        static_cast<uint32_t>(createInfoRes.attrDescs.size());
+//    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
+//    // topology
+//    createInfoRes.inputAssemblyStateInfo = {};
+//    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+//    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
+//    createInfoRes.inputAssemblyStateInfo.flags = 0;
+//    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
+//    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+//}
 
 }  // namespace Particle
 }  // namespace Pipeline

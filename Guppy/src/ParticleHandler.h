@@ -69,7 +69,7 @@ class Handler : public Game::Handler {
             pMaterials.emplace_back(materialHandler().makeMaterial(&matInfo));
         }
         // INSTANCE
-        TInstanceCreateInfo instInfo = TInstanceCreateInfo(pCreateInfo, numberOfParticles);
+        TInstanceCreateInfo instInfo(pCreateInfo, numberOfParticles);
         // Assume all isntance data derived from Fountain::Base for now.
         auto &pInstFntn = makeInstanceParticleFountain(&instInfo);
 

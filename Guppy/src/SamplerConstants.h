@@ -35,6 +35,7 @@ using USAGE = enum {
     DEPTH =         0x00000020,
     SPECULAR =      0x00000100,
     DONT_CARE =     0x00000200,
+    RANDOM =        0x00000400,
     ALPHA =         0x00001000,
     HEIGHT =        0x00010000,
 };

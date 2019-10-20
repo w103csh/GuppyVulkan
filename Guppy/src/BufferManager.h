@@ -89,11 +89,10 @@ class Base {
     const VkSharingMode MODE;
     const VkBufferCreateFlags FLAGS;
 
-    virtual void init(const Shell::Context &ctx, const Game::Settings &settings,
-                      std::vector<uint32_t> queueFamilyIndices = {}) {
+    virtual void init(const Shell::Context &ctx, std::vector<uint32_t> queueFamilyIndices = {}) {
         reset(ctx.dev);
         queueFamilyIndices_ = queueFamilyIndices;
-        createBuffer(ctx, settings);
+        createBuffer(ctx);
     }
 
     template <typename TCreateInfo>
@@ -199,7 +198,7 @@ class Base {
         }
     }
 
-    void createBuffer(const Shell::Context &ctx, const Game::Settings &settings) {
+    void createBuffer(const Shell::Context &ctx) {
         resources_.push_back({MAX_SIZE, alignment_});
         auto &resource = resources_.back();
 
@@ -253,7 +252,7 @@ class Base {
 
         vk::assert_success(vkBindBufferMemory(ctx.dev, resource.buffer, resource.memory, 0));
 
-        if (settings.enable_debug_markers) {
+        if (ctx.debugMarkersEnabled) {
             std::string markerName = NAME + " block (" + std::to_string(resources_.size()) + ")";
             ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)resource.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
                                           markerName.c_str());

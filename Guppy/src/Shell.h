@@ -51,30 +51,46 @@ class Shell {
         std::vector<VkPresentModeKHR> presentModes;
     };  // *
 
+    struct ExtensionInfo {
+        const char *name;
+        bool required;
+        bool tryToEnabled;
+        bool valid;
+    };
+
     struct PhysicalDeviceProperties {
         VkPhysicalDevice device;
         uint32_t queueFamilyCount;
         std::vector<VkQueueFamilyProperties> queueProps;
         VkPhysicalDeviceMemoryProperties memoryProperties;
         VkPhysicalDeviceProperties properties;
-        std::vector<VkExtensionProperties> extensions;
-        std::multimap<const char *, VkExtensionProperties, less_str> layerExtensionMap = {};
+        std::vector<VkExtensionProperties> extensionProperties;
+        std::multimap<const char *, VkExtensionProperties, less_str> layerExtensionMap;
         VkPhysicalDeviceFeatures features;
-    };  // *
+        // Physical device extensions
+        std::vector<ExtensionInfo> phyDevExtInfos;
+        VkPhysicalDeviceVertexAttributeDivisorFeaturesEXT featVertAttrDiv{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_VERTEX_ATTRIBUTE_DIVISOR_FEATURES_EXT};
+        // VkPhysicalDeviceVertexAttributeDivisorPropertiesEXT propsVertAttrDiv;
+        VkPhysicalDeviceTransformFeedbackFeaturesEXT featTransFback{
+            VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TRANSFORM_FEEDBACK_FEATURES_EXT};
+        // VkPhysicalDeviceTransformFeedbackPropertiesEXT propsTransFback;
+    };
 
     struct Context {
         VkInstance instance = VK_NULL_HANDLE;
-        VkDebugReportCallbackEXT debugReport = VK_NULL_HANDLE;
-        VkDebugUtilsMessengerEXT debugUtilsMessenger = VK_NULL_HANDLE;
 
-        // TODO: These should not be public...
-        bool samplerAnisotropyEnabled_ = false;    // *
-        bool sampleRateShadingEnabled_ = false;    // *
-        bool linearBlittingSupported_ = false;     // *
-        bool computeShadingEnabled_ = false;       // *
-        bool tessellationShadingEnabled_ = false;  // *
-        bool geometryShadingEnabled_ = false;      // *
-        bool wireframeShadingEnabled_ = false;     // *
+        // TODO: make these const after setting somehow.
+        bool samplerAnisotropyEnabled = false;
+        bool sampleRateShadingEnabled = false;
+        bool linearBlittingSupported = false;
+        bool computeShadingEnabled = false;
+        bool tessellationShadingEnabled = false;
+        bool geometryShadingEnabled = false;
+        bool wireframeShadingEnabled = false;
+        bool vertexAttributeDivisorEnabled = false;
+        bool transformFeedbackEnabled = false;
+        bool debugMarkersEnabled = false;
 
         VkPhysicalDevice physicalDev = VK_NULL_HANDLE;
         std::vector<PhysicalDeviceProperties> physicalDevProps;  // *
@@ -199,7 +215,7 @@ class Shell {
     std::vector<const char *> instanceLayers_;
     std::vector<const char *> instanceExtensions_;
 
-    std::vector<const char *> deviceExtensions_;
+    std::vector<ExtensionInfo> deviceExtensionInfo_;
 
     std::vector<LayerProperties> layerProps_;          // *
     std::vector<VkExtensionProperties> instExtProps_;  // *
@@ -283,6 +299,9 @@ class Shell {
 
     const float gameTick_;
     float gameTime_;
+
+    VkDebugReportCallbackEXT debugReportCallback_;
+    VkDebugUtilsMessengerEXT debugUtilsMessenger_;
 };
 
 #endif  // SHELL_H
