@@ -331,6 +331,9 @@ void Pipeline::Base::destroy() {
 
 void Pipeline::Compute::setInfo(CreateInfoResources& createInfoRes, VkGraphicsPipelineCreateInfo* pGraphicsInfo,
                                 VkComputePipelineCreateInfo* pComputeInfo) {
+    // Gather info from derived classes...
+    getShaderStageInfoResources(createInfoRes);
+
     assert(pGraphicsInfo == nullptr && pComputeInfo != nullptr);
     pComputeInfo->sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
     pComputeInfo->flags = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;

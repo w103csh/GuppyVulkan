@@ -87,7 +87,8 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
             case PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED:    insertPair = pPipelines_.insert({type, std::make_unique<Geometry::Silhouette>(std::ref(*this))}); break;
             case PIPELINE::PARTICLE_WAVE_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Particle::Wave>(std::ref(*this))}); break;
             case PIPELINE::PARTICLE_FOUNTAIN_DEFERRED:      insertPair = pPipelines_.insert({type, std::make_unique<Particle::Fountain>(std::ref(*this))}); break;
-            //case PIPELINE::PARTICLE_FOUNTAIN_TF_DEFERRED:   insertPair = pPipelines_.insert({type, std::make_unique<Particle::FountainTF>(std::ref(*this))}); break;
+            case PIPELINE::PARTICLE_EULER_COMPUTE:          insertPair = pPipelines_.insert({type, std::make_unique<Particle::Euler>(std::ref(*this))}); break;
+            case PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED:insertPair = pPipelines_.insert({type, std::make_unique<Particle::FountainEuler>(std::ref(*this))}); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on

@@ -83,11 +83,14 @@ class Handler : public Game::Handler {
         instFntnMgr_.updateData(shell().context().dev, pBuffer->pInstanceData_->BUFFER_INFO);
     }
 
-    void record(const PASS passType, const std::shared_ptr<Pipeline::BindData> &pPipelineBindDataconst,
-                const VkCommandBuffer &cmd, const uint8_t frameIndex);
+    void recordDraw(const PASS passType, const std::shared_ptr<Pipeline::BindData> &pPipelineBindData,
+                    const VkCommandBuffer &cmd, const uint8_t frameIndex);
+    void recordDispatch(const PASS passType, const std::shared_ptr<Pipeline::BindData> &pPipelineBindData,
+                        const VkCommandBuffer &cmd, const uint8_t frameIndex);
 
    private:
     void reset() override;
+    inline bool hasInstFntnEulerMgr() const { return pInstFntnEulerMgr_ != nullptr; }
 
     bool doUpdate_;
 
@@ -95,6 +98,8 @@ class Handler : public Game::Handler {
     std::vector<std::unique_ptr<Particle::Buffer::Base>> pBuffers_;
     // INSTANCE
     Instance::Manager<Instance::Particle::Fountain::Base, Instance::Particle::Fountain::Base> instFntnMgr_;
+    std::unique_ptr<Instance::Manager<Instance::Particle::FountainEuler::Base, Instance::Particle::FountainEuler::Base>>
+        pInstFntnEulerMgr_;
     // LOADING
     std::unordered_set<Particle::Buffer::index> ldgOffsets_;
 };

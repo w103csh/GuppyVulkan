@@ -7,15 +7,26 @@
 #include "TextureHandler.h"
 #include "UniformHandler.h"
 
+namespace {
+constexpr uint32_t NUM_PARTICLES_EULER = 4000;
+}
+
 Particle::Handler::Handler(Game* pGame)
     : Game::Handler(pGame),  //
       doUpdate_(false),
-      instFntnMgr_{"Instance Particle Fountain Data", 8000 * 5} {}
+      instFntnMgr_{"Instance Particle Fountain Data", 8000 * 5},
+      pInstFntnEulerMgr_(nullptr) {}
 
 void Particle::Handler::init() {
     reset();
-    // INSTANCE
+
     instFntnMgr_.init(shell().context());
+    if (hasInstFntnEulerMgr()) pInstFntnEulerMgr_->init(shell().context());
+
+    // Unfortunately the textures have to be created inside init
+    auto rand1dTexnfo =
+        Texture::MakeRandom1dTex(Texture::Particle::RAND_1D_ID, Sampler::Particle::RAND_1D_ID, NUM_PARTICLES_EULER * 3);
+    textureHandler().make(&rand1dTexnfo);
 }
 
 void Particle::Handler::tick() {
@@ -44,7 +55,7 @@ void Particle::Handler::frame() {
     // WAVE
     {
         auto& wave = uniformHandler().uniWaveMgr().getTypedItem(0);
-        wave.update(static_cast<float>(shell().getCurrentTime()), frameIndex);
+        wave.update(shell().getCurrentTime<float>(), frameIndex);
         uniformHandler().update(wave, static_cast<int>(frameIndex));
     }
 
@@ -57,7 +68,7 @@ void Particle::Handler::frame() {
         //        shell().log(Shell::LOG_DEBUG, ("delta: " + std::to_string(pMat->getDelta())).c_str());
         //    }
         //}
-        pBuffer->update(static_cast<float>(shell().getCurrentTime()), frameIndex);
+        pBuffer->update(shell().getCurrentTime<float>(), shell().getElapsedTime<float>(), frameIndex);
     }
 }
 
@@ -80,7 +91,7 @@ void Particle::Handler::create() {
         // BLUEWATER
         if (true) {
             fntnInfo = {};
-            fntnInfo.pipelineType = PIPELINE::PARTICLE_FOUNTAIN_DEFERRED;
+            fntnInfo.pipelineTypeGraphics = PIPELINE::PARTICLE_FOUNTAIN_DEFERRED;
             fntnInfo.pTexture = textureHandler().getTexture(Texture::BLUEWATER_ID);
             fntnInfo.emitterBasis = helpers::makeArbitraryBasis({-1.0f, 2.0f, 0.0f});
             fntnInfo.lifespan = 20.0f;
@@ -93,40 +104,34 @@ void Particle::Handler::create() {
             makeBuffer<Particle::Buffer::Fountain, Material::Particle::Fountain::CreateInfo,
                        Instance::Particle::Fountain::CreateInfo>(&fntnInfo, 8000, models);
         }
-        // BLUEWATER (TF)
-        if (true) {
-            ////
-            // fntnInfo = {};
-            // fntnInfo.pipelineType = PIPELINE::PARTICLE_FOUNTAIN_TF_DEFERRED;
-            // fntnInfo.pTexture = textureHandler().getTexture(Texture::BLUEWATER_ID);
-            // fntnInfo.emitterBasis = helpers::makeArbitraryBasis({-1.0f, 2.0f, 0.0f});
-            // fntnInfo.lifespan = 6.0f;
-            // fntnInfo.size = 0.1f;
-            // fntnInfo.transformFeedback = true;
+        // BLUEWATER (EULER)
+        if (true && hasInstFntnEulerMgr()) {
+            fntnInfo = {};
+            fntnInfo.pipelineTypeCompute = PIPELINE::PARTICLE_EULER_COMPUTE;
+            fntnInfo.pipelineTypeGraphics = PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED;
+            fntnInfo.pTexture = textureHandler().getTexture(Texture::BLUEWATER_ID);
+            fntnInfo.emitterBasis = helpers::makeArbitraryBasis({-1.0f, 2.0f, 0.0f});
+            fntnInfo.lifespan = 6.0f;
+            fntnInfo.size = 0.1f;
 
-            // const uint32_t numParticles = 4000;
-            // auto rand1dTexnfo = Texture::MakeRandom1dTex(Texture::Particle::RAND_1D_ID, numParticles);
+            models.clear();
+            models.push_back(helpers::affine(glm::vec3{0.25f}, glm::vec3{1.0f, 4.0f, -1.0f}, M_PI_FLT, CARDINAL_X));
+            // models.push_back(helpers::affine(glm::vec3{0.5f}, glm::vec3{1.0f}, M_PI_2_FLT, CARDINAL_Y));
 
-            // textureHandler().make(&rand1dTexnfo);
-
-            // models.clear();
-            // models.push_back(helpers::affine(glm::vec3{0.5f}, glm::vec3{1.0f}));
-            //// models.push_back(helpers::affine(glm::vec3{0.5f}, glm::vec3{1.0f}, M_PI_2_FLT, CARDINAL_Y));
-
-            //{
-            //    // MATERIAL
-            //    std::vector<std::shared_ptr<Material::Base>> pMaterials;
-            //    for (const auto& model : models) {
-            //        Material::Particle::Fountain::CreateInfo matInfo(&fntnInfo, model, shell().context().imageCount);
-            //        pMaterials.emplace_back(materialHandler().makeMaterial(&matInfo));
-            //    }
-            //    // INSTANCE
-            //    Instance::Particle::FountainTF::CreateInfo instInfo(&fntnInfo, numParticles);
-            //    pInstFntnTFMgr_->insert(shell().context().dev, &instInfo);
-            //    auto& pInstFntn = pInstFntnTFMgr_->pItems.back();
-            //    // BUFFER
-            //    make<Particle::Buffer::FountainTF>(pBuffers_, &fntnInfo, pMaterials, pInstFntn);
-            //}
+            {
+                // MATERIAL
+                std::vector<std::shared_ptr<Material::Base>> pMaterials;
+                for (const auto& model : models) {
+                    Material::Particle::Fountain::CreateInfo matInfo(&fntnInfo, model, shell().context().imageCount);
+                    pMaterials.emplace_back(materialHandler().makeMaterial(&matInfo));
+                }
+                // INSTANCE
+                Instance::Particle::FountainEuler::CreateInfo instInfo(&fntnInfo, NUM_PARTICLES_EULER);
+                pInstFntnEulerMgr_->insert(shell().context().dev, &instInfo);
+                auto& pInstFntn = pInstFntnEulerMgr_->pItems.back();
+                // BUFFER
+                make<Particle::Buffer::FountainEuler>(pBuffers_, &fntnInfo, pMaterials, pInstFntn);
+            }
         }
     }
 
@@ -138,28 +143,39 @@ void Particle::Handler::startFountain(const StartInfo& info) {
     pBuffers_.at(info.bufferOffset)->start(info);  //
 }
 
-void Particle::Handler::record(const PASS passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                               const VkCommandBuffer& cmd, const uint8_t frameIndex) {
-    //
-    switch (pPipelineBindData->type) {
-        // case PIPELINE::PARTICLE_FOUNTAIN_TF_DEFERRED:
-        case PIPELINE::PARTICLE_FOUNTAIN_DEFERRED: {
-            // TODO: I know this is slow but its not important atm.
-            for (const auto& pBuffer : pBuffers_) {
-                if (pBuffer->PIPELINE_TYPE == pPipelineBindData->type) {
-                    if (pBuffer->getStatus() == STATUS::READY) {
-                        for (const auto& instance : pBuffer->getInstances()) {
-                            if (pBuffer->shouldDraw(instance)) {
-                                pBuffer->draw(passType, pPipelineBindData,
-                                              pBuffer->getDescriptorSetBindData(passType, instance), cmd, frameIndex);
-                            }
-                        }
+void Particle::Handler::recordDraw(const PASS passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+                                   const VkCommandBuffer& cmd, const uint8_t frameIndex) {
+    // TODO: I know this is slow but its not important atm.
+    for (const auto& pBuffer : pBuffers_) {
+        if (pBuffer->PIPELINE_TYPE_GRAPHICS == pPipelineBindData->type) {
+            if (pBuffer->getStatus() == STATUS::READY) {
+                for (const auto& instance : pBuffer->getInstances()) {
+                    if (pBuffer->shouldDraw(instance)) {
+                        pBuffer->draw(passType, pPipelineBindData,
+                                      pBuffer->getDescriptorSetBindData(passType, instance.graphicsDescSetBindDataMap), cmd,
+                                      frameIndex);
                     }
                 }
             }
-        } break;
-        default:
-            assert(false && "Unhandled pipeline type");
+        }
+    }
+}
+
+void Particle::Handler::recordDispatch(const PASS passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+                                       const VkCommandBuffer& cmd, const uint8_t frameIndex) {
+    // TODO: I know this is slow but its not important atm.
+    for (const auto& pBuffer : pBuffers_) {
+        if (pBuffer->PIPELINE_TYPE_COMPUTE == pPipelineBindData->type) {
+            if (pBuffer->getStatus() == STATUS::READY) {
+                for (const auto& instance : pBuffer->getInstances()) {
+                    if (pBuffer->shouldDraw(instance)) {
+                        pBuffer->dispatch(passType, pPipelineBindData,
+                                          pBuffer->getDescriptorSetBindData(passType, instance.computeDescSetBindDataMap),
+                                          cmd, frameIndex);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -168,5 +184,16 @@ void Particle::Handler::reset() {
     for (auto& pBuffer : pBuffers_) pBuffer->destroy();
     pBuffers_.clear();
     // INSTANCE
+    // Fountain
     instFntnMgr_.destroy(shell().context().dev);
+    // FountainEuler
+    if (pInstFntnEulerMgr_ == nullptr && shell().context().computeShadingEnabled) {
+        pInstFntnEulerMgr_ = std::make_unique<
+            Instance::Manager<Instance::Particle::FountainEuler::Base, Instance::Particle::FountainEuler::Base>>(
+            "Instance Particle Fountain Data", (4000 * 5) * 2, false,
+            static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT));
+    } else if (pInstFntnEulerMgr_ != nullptr) {
+        pInstFntnEulerMgr_->destroy(shell().context().dev);
+        if (!shell().context().computeShadingEnabled) pInstFntnEulerMgr_ = nullptr;
+    }
 }

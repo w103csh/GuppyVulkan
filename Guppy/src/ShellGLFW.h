@@ -72,14 +72,14 @@ class ShellGLFW : public TShell {
             TShell::acquireBackBuffer();
 
             double now = glfwGetTime();
-            double elapsed = now - TShell::currentTime_;
+            TShell::elapsedTime_ = now - TShell::currentTime_;
             TShell::currentTime_ = now;
 
-            TShell::update(elapsed);
+            TShell::update(TShell::elapsedTime_);
 
             TShell::onMouse(TShell::handlers_.pInput->getMouseInput());  // TODO: this stuff is all out of whack
 
-            TShell::addGameTime(static_cast<float>(elapsed));
+            TShell::addGameTime(static_cast<float>(TShell::elapsedTime_));
 
             TShell::presentBackBuffer();
 

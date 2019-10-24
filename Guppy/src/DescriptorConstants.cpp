@@ -69,6 +69,7 @@ const std::set<DESCRIPTOR_SET> ALL = {
     // PARTICLE
     DESCRIPTOR_SET::UNIFORM_PARTICLE_WAVE,
     DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN,
+    DESCRIPTOR_SET::PARTICLE_EULER,
 };
 
 void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& write) const {

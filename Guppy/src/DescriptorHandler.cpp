@@ -20,6 +20,7 @@
 #include "Tessellation.h"
 // HANDLERS
 #include "ComputeHandler.h"
+#include "ParticleHandler.h"
 #include "PipelineHandler.h"
 #include "RenderPassHandler.h"
 #include "ShaderHandler.h"
@@ -65,6 +66,7 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::UNIFORM_GEOMETRY_DEFAULT:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Geometry::DEFAULT_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_PARTICLE_WAVE:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::WAVE_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN:                 pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::FOUNTAIN_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::PARTICLE_EULER:                            pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::EULER_CREATE_INFO)); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on
@@ -541,7 +543,7 @@ VkDescriptorSetLayoutBinding Descriptor::Handler::getDecriptorSetLayoutBinding(
 // TODO: add params that can indicate to free/reallocate
 void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::Set::bindDataMap& bindDataMap,
                                       const std::shared_ptr<Material::Base>& pMaterial,
-                                      const std::shared_ptr<Texture::Base>& pTexture) {
+                                      const std::shared_ptr<Texture::Base>& pTexture, const Buffer::Item* pBuffItem) {
     bindDataMap.clear();
 
     // Get a list of active passes for the pipeline type.
@@ -549,7 +551,7 @@ void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::
     passHandler().getActivePassTypes(passTypes, pipelineType);
     computeHandler().getActivePassTypes(passTypes, pipelineType);
 
-    assert(passTypes.size() && "No active pass types have the pipeline type");
+    assert(passTypes.size() && "No active pass types contain the pipeline type");
 
     // Get the same descriptor sets info as the pipeline layouts.
     auto resHelpers =
@@ -597,7 +599,7 @@ void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::
 
                 // Update
                 updateDescriptorSets(pSet->getBindingMap(), pSet->getDescriptorOffsets(helper.resourceOffset),
-                                     itResOffsetsMap->second, pMaterial, pTexture);
+                                     itResOffsetsMap->second, pMaterial, pTexture, pBuffItem);
             }
             const auto& [pInfoMap, sets] = itResOffsetsMap->second;
 
@@ -654,7 +656,8 @@ void Descriptor::Handler::allocateDescriptorSets(const Descriptor::Set::Resource
 void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bindingMap,
                                                const Descriptor::OffsetsMap& offsets, Set::resourceInfoMapSetsPair& pair,
                                                const std::shared_ptr<Material::Base>& pMaterial,
-                                               const std::shared_ptr<Texture::Base>& pTexture) const {
+                                               const std::shared_ptr<Texture::Base>& pTexture,
+                                               const Buffer::Item* pBuffItem) const {
     std::vector<std::vector<VkWriteDescriptorSet>> writesList(pair.second.size());
     assert(writesList.size() == pair.second.size());
 
@@ -750,9 +753,23 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
 
             assert(itInfoMap->second.uniqueDataSets == itInfoMap->second.imageInfos.size());
 
+        } else if (std::visit(IsStorageBuffer{}, bindingInfo.descType)) {
+            switch (std::visit(GetStorageBuffer{}, bindingInfo.descType)) {
+                case STORAGE_BUFFER::PARTICLE_EULER: {
+                    itInfoMap->second.bufferInfos.push_back(pBuffItem->BUFFER_INFO.bufferInfo);
+                    itInfoMap->second.bufferInfos.back().range =
+                        pBuffItem->BUFFER_INFO.bufferInfo.range * pBuffItem->BUFFER_INFO.count;
+                    itInfoMap->second.descCount = 1;
+                } break;
+                default: {
+                    assert(false && "Unhandled descriptor type");
+                    exit(EXIT_FAILURE);
+                }
+            }
+
         } else {
-            assert(false);
-            throw std::runtime_error("Unhandled descriptor type");
+            assert(false && "Unhandled descriptor type");
+            exit(EXIT_FAILURE);
         }
 
         // Make sure descCount was set.

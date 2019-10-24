@@ -87,7 +87,7 @@ const CreateInfo SKYBOX_CREATE_INFO = {
     {Sampler::SKYBOX_CREATE_INFO},
 };
 
-CreateInfo MakeRandom1dTex(const std::string_view& textureId, const uint32_t bufSize) {
+CreateInfo MakeRandom1dTex(const std::string_view& textureId, const std::string_view& samplerId, const uint32_t bufSize) {
     float* pData = new float[bufSize];
 
     for (uint32_t i = 0; i < bufSize; i++) {
@@ -95,7 +95,7 @@ CreateInfo MakeRandom1dTex(const std::string_view& textureId, const uint32_t buf
     }
 
     Sampler::CreateInfo sampInfo = {
-        std::string(textureId) + " Sampler",
+        std::string(samplerId),
         {{{::Sampler::USAGE::RANDOM}}},
         VK_IMAGE_VIEW_TYPE_1D,
         {bufSize, 1, 1},
@@ -111,7 +111,7 @@ CreateInfo MakeRandom1dTex(const std::string_view& textureId, const uint32_t buf
 
     sampInfo.layersInfo.infos.front().pPixel = (stbi_uc*)pData;
 
-    return {std::string(textureId) + " Texture", {sampInfo}, false};
+    return {std::string(textureId), {sampInfo}, false};
 }
 
 }  // namespace Texture

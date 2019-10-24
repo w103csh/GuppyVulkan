@@ -37,11 +37,22 @@ layout(set=_DS_UNI_PRTCL_FNTN, binding=1) uniform ParticleFountain {
 } uniFountain;
 
 // IN
-layout(location=0) in vec3 inPosition;
+layout(location=0) in vec3 inPositionNotUsed;
 layout(location=1) in vec3 inNormal;
 layout(location=2) in vec4 inColor;
-layout(location=3) in vec3 inVelocity;
-layout(location=4) in float inTimeOfBirth;
+/**
+ * data0[0]: position.x
+ * data0[1]: position.y
+ * data0[2]: position.z
+ * data0[3]: padding
+ *
+ * data1[0]: veloctiy.x
+ * data2[1]: veloctiy.y
+ * data3[2]: veloctiy.z
+ * data4[3]: age
+ */
+layout(location=3) in vec4 inData0;
+layout(location=4) in vec4 inData1;
 
 // OUT
 layout(location=0) out vec3 outPosition;        // camera space
@@ -57,18 +68,12 @@ const vec2 texCoords[] = vec2[](vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 0), 
 void main() {
     mat4 mViewModel = camera.view * uniFountain.model;
 
-    float t = uniFountain.delta - inTimeOfBirth;
-    if (t >= 0 && t < uniFountain.data0[3]) {
-        vec3 pos = uniFountain.data1.xyz +
-            (inVelocity * t) +
-            (uniFountain.data0.xyz * t * t);
-        outPosition = (mViewModel * vec4(pos, 1.0)).xyz +
+    if (inData1[3] >= 0.0) {
+        outPosition = (mViewModel * vec4(inData0.xyz, 1.0)).xyz +
             (offsets[gl_VertexIndex] * uniFountain.data1[3]);
-        outTransparency = mix(1.0, 0.0, t / uniFountain.data0[3]);
+        outTransparency = clamp(1.0 - inData1[3] / uniFountain.data0[3], 0.0, 1.0);
     } else {
-        // Particle doesn't "exist", draw fully transparent
         outPosition = vec3(0.0);
-        outTransparency = 0.0;
     }
 
     outTexCoord = texCoords[gl_VertexIndex];

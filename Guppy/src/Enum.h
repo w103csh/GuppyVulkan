@@ -157,6 +157,7 @@ enum class COMBINED_SAMPLER {
 
 enum class STORAGE_BUFFER {
     POST_PROCESS,
+    PARTICLE_EULER,
     //
     DONT_CARE,
 };

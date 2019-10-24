@@ -467,11 +467,11 @@ void ShellWin32::run() {
             acquireBackBuffer();
 
             double now = timer.get();
-            double elapsed = now - currentTime_;
+            elapsedTime_ = now - currentTime_;
             currentTime_ = now;
 
-            update(elapsed);
-            addGameTime(static_cast<float>(elapsed));
+            update(elapsedTime_);
+            addGameTime(static_cast<float>(elapsedTime_));
 
             presentBackBuffer();
         }
