@@ -16,14 +16,14 @@ const CreateInfo WAVE_COLOR_VERT_DEFERRED_MRT_CREATE_INFO = {
     "vert.color.deferred.mrt.wave.glsl",             //
     VK_SHADER_STAGE_VERTEX_BIT,                      //
 };
-const CreateInfo FOUNTAIN_PART_VERT_DEFERRED_MRT_CREATE_INFO = {
-    SHADER::FOUNTAIN_PART_DEFERRED_MRT_VERT,       //
-    "Particle Fountain (Deferred) Vertex Shader",  //
-    "vert.particle.deferred.mrt.fountain.glsl",    //
-    VK_SHADER_STAGE_VERTEX_BIT,                    //
+const CreateInfo FOUNTAIN_PART_VERT_CREATE_INFO = {
+    SHADER::FOUNTAIN_PART_VERT,         //
+    "Particle Fountain Vertex Shader",  //
+    "vert.particle.fountain.glsl",      //
+    VK_SHADER_STAGE_VERTEX_BIT,         //
 };
 const CreateInfo FOUNTAIN_PART_FRAG_DEFERRED_MRT_CREATE_INFO = {
-    SHADER::FOUNTAIN_PART_DEFERRED_MRT_VERT,         //
+    SHADER::FOUNTAIN_PART_DEFERRED_MRT_FRAG,         //
     "Particle Fountain (Deferred) Fragment Shader",  //
     "frag.particle.deferred.mrt.fountain.glsl",      //
     VK_SHADER_STAGE_FRAGMENT_BIT,                    //
@@ -34,11 +34,11 @@ const CreateInfo PARTICLE_EULER_CREATE_INFO = {
     "comp.particle.euler.glsl",       //
     VK_SHADER_STAGE_COMPUTE_BIT,      //
 };
-const CreateInfo FOUNTAIN_PART_EULER_VERT_DEFERRED_MRT_CREATE_INFO = {
-    SHADER::FOUNTAIN_PART_EULER_DEFERRED_MRT_VERT,       //
-    "Particle Fountain Euler (Deferred) Vertex Shader",  //
-    "vert.particle.deferred.mrt.fountainEuler.glsl",     //
-    VK_SHADER_STAGE_VERTEX_BIT,                          //
+const CreateInfo FOUNTAIN_PART_EULER_VERT_CREATE_INFO = {
+    SHADER::FOUNTAIN_PART_EULER_VERT,         //
+    "Particle Fountain Euler Vertex Shader",  //
+    "vert.particle.fountainEuler.glsl",       //
+    VK_SHADER_STAGE_VERTEX_BIT,               //
 };
 }  // namespace Particle
 }  // namespace Shader
@@ -198,7 +198,7 @@ const CreateInfo FOUNTAIN_CREATE_INFO = {
     PIPELINE::PARTICLE_FOUNTAIN_DEFERRED,
     "Particle Fountain (Deferred) Pipeline",
     {
-        SHADER::FOUNTAIN_PART_DEFERRED_MRT_VERT,
+        SHADER::FOUNTAIN_PART_VERT,
         SHADER::FOUNTAIN_PART_DEFERRED_MRT_FRAG,
     },
     {
@@ -275,7 +275,7 @@ const CreateInfo FOUNTAIN_EULER_CREATE_INFO = {
     PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED,
     "Particle Fountain Euler (Deferred) Pipeline",
     {
-        SHADER::FOUNTAIN_PART_EULER_DEFERRED_MRT_VERT,
+        SHADER::FOUNTAIN_PART_EULER_VERT,
         SHADER::FOUNTAIN_PART_DEFERRED_MRT_FRAG,
     },
     {

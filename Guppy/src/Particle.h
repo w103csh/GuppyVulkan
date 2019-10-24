@@ -30,10 +30,10 @@ constexpr std::string_view RAND_1D_ID = "Particle Random 1D Texture";
 namespace Shader {
 namespace Particle {
 extern const CreateInfo WAVE_COLOR_VERT_DEFERRED_MRT_CREATE_INFO;
-extern const CreateInfo FOUNTAIN_PART_VERT_DEFERRED_MRT_CREATE_INFO;
+extern const CreateInfo FOUNTAIN_PART_VERT_CREATE_INFO;
 extern const CreateInfo FOUNTAIN_PART_FRAG_DEFERRED_MRT_CREATE_INFO;
 extern const CreateInfo PARTICLE_EULER_CREATE_INFO;
-extern const CreateInfo FOUNTAIN_PART_EULER_VERT_DEFERRED_MRT_CREATE_INFO;
+extern const CreateInfo FOUNTAIN_PART_EULER_VERT_CREATE_INFO;
 }  // namespace Particle
 }  // namespace Shader
 
