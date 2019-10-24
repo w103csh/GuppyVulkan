@@ -295,7 +295,7 @@ const CreateInfo FRAG_BLUR_CREATE_INFO = {
 const CreateInfo COMP_CREATE_INFO = {
     SHADER::SCREEN_SPACE_COMP,
     "Screen Space Compute Shader",
-    "hdr.comp.glsl",
+    "comp.hdr.glsl",
     VK_SHADER_STAGE_COMPUTE_BIT,
 };
 

@@ -32,7 +32,9 @@ const CreateInfo Deferred_CREATE_INFO = {
 #endif
         PIPELINE::PARTICLE_WAVE_DEFERRED,
         PIPELINE::PARTICLE_FOUNTAIN_DEFERRED,
-        // PIPELINE::PARTICLE_FOUNTAIN_TF_DEFERRED,
+        // The two below are dependent on one another... Make this a thing?
+        PIPELINE::PARTICLE_EULER_COMPUTE,
+        PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED,
 #ifndef VK_USE_PLATFORM_MACOS_MVK
         // PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED,
         PIPELINE::TESSELLATION_TRIANGLE_DEFERRED,
@@ -60,7 +62,6 @@ Base::Base(RenderPass::Handler& handler, const index&& offset)
     : RenderPass::Base{handler, std::forward<const index>(offset), &Deferred_CREATE_INFO},
       inputAttachmentOffset_(0),
       inputAttachmentCount_(0),
-      mrtPipelineCount_(0),
       combinePassIndex_(0),
       doSSAO_(false) {
     status_ = STATUS::PENDING_MESH | STATUS::PENDING_PIPELINE;
@@ -93,6 +94,12 @@ void Base::record(const uint8_t frameIndex) {
         bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
         bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
         vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
+
+        // COMPUTE
+        {
+            auto& pPipelineBindData = pipelineBindDataList_.getValue(PIPELINE::PARTICLE_EULER_COMPUTE);
+            handler().particleHandler().recordDispatch(TYPE, pPipelineBindData, priCmd, frameIndex);
+        }
 
         // SHADOW
         {
@@ -141,9 +148,9 @@ void Base::record(const uint8_t frameIndex) {
                     // TODO: this definitely only needs to be recorded once per swapchain creation!!!
                     assert(doSSAO_ && false);
                 } break;
-                //case PIPELINE::PARTICLE_FOUNTAIN_TF_DEFERRED:
+                case PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED:
                 case PIPELINE::PARTICLE_FOUNTAIN_DEFERRED: {
-                    handler().particleHandler().record(TYPE, pPipelineBindData, priCmd, frameIndex);
+                    handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
                     vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
                 } break;
                 default: {
@@ -261,7 +268,13 @@ void Base::createSubpassDescriptions() {
     VkSubpassDescription subpassDesc;
 
     assert(inputAttachmentOffset_ == 1);  // Swapchain should be in 0
-    mrtPipelineCount_ = pipelineBindDataList_.size() - 1 - (doSSAO_ ? 1 : 0);
+
+    uint32_t mrtPipelineCount = 0;
+    for (const auto& [pipelineType, badData] : pipelineBindDataList_.getKeyOffsetMap()) {
+        if (pipelineType == PIPELINE::PARTICLE_EULER_COMPUTE) continue;
+        if (pipelineType == PIPELINE::DEFERRED_SSAO && !doSSAO_) continue;
+        mrtPipelineCount++;
+    }
 
     // MRT
     subpassDesc = {};
@@ -269,7 +282,7 @@ void Base::createSubpassDescriptions() {
     subpassDesc.pColorAttachments = &resources_.colorAttachments[inputAttachmentOffset_];
     subpassDesc.pResolveAttachments = nullptr;
     subpassDesc.pDepthStencilAttachment = pipelineData_.usesDepth ? &resources_.depthStencilAttachment : nullptr;
-    resources_.subpasses.assign(mrtPipelineCount_, subpassDesc);
+    resources_.subpasses.assign(mrtPipelineCount, subpassDesc);
 
     // SSAO
     if (doSSAO_) {
@@ -322,10 +335,25 @@ void Base::createDependencies() {
     //    VK_DEPENDENCY_BY_REGION_BIT,
     //};
 
-    for (uint32_t subpass = 0; subpass < mrtPipelineCount_ - 1; subpass++) {
+    uint32_t subpass = 0;
+    for (const auto& [pipelineType, badData] : pipelineBindDataList_.getKeyOffsetMap()) {
+        if (pipelineType == PIPELINE::PARTICLE_EULER_COMPUTE) continue;
+        if (pipelineType == PIPELINE::DEFERRED_SSAO && !doSSAO_) continue;
+        if (pipelineType == PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED) {
+            // Dispatch writes into a storage buffer. Draw consumes that buffer as an instance vertex buffer.
+            resources_.dependencies.push_back({
+                VK_SUBPASS_EXTERNAL,
+                subpass,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
+            });
+        }
         depthDependency.srcSubpass = subpass;
         depthDependency.dstSubpass = subpass + 1;
         resources_.dependencies.push_back(depthDependency);
+        subpass++;
     }
 
     if (doSSAO_) {
@@ -343,7 +371,7 @@ void Base::createDependencies() {
         };
 
         combineDependency.dstSubpass = static_cast<uint32_t>(resources_.subpasses.size() - 1);
-        for (uint32_t subpass = 0; subpass < combinePassIndex_; subpass++) {
+        for (subpass = 0; subpass < combinePassIndex_; subpass++) {
             combineDependency.srcSubpass = subpass;
             resources_.dependencies.push_back(combineDependency);
         }

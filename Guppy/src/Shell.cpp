@@ -38,6 +38,7 @@ Shell::Shell(Game &game, Handlers &&handlers)
           {VK_EXT_TRANSFORM_FEEDBACK_EXTENSION_NAME, false, false},
       },
       currentTime_(0.0),
+      elapsedTime_(0.0),
       handlers_(std::move(handlers)),
       ctx_(),
       gameTick_(1.0f / settings_.ticks_per_second),

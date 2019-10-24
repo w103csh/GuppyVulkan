@@ -9,11 +9,19 @@
 #include "Instance.h"
 #include "Pipeline.h"
 
+// SAMPLER
+
+namespace Sampler {
+namespace Particle {
+constexpr std::string_view RAND_1D_ID = "Particle Random 1D Sampler";
+}  // namespace Particle
+}  // namespace Sampler
+
 // TEXTURE
 
 namespace Texture {
 namespace Particle {
-constexpr std::string_view RAND_1D_ID = "Statue Texture";
+constexpr std::string_view RAND_1D_ID = "Particle Random 1D Texture";
 }  // namespace Particle
 }  // namespace Texture
 
@@ -24,7 +32,8 @@ namespace Particle {
 extern const CreateInfo WAVE_COLOR_VERT_DEFERRED_MRT_CREATE_INFO;
 extern const CreateInfo FOUNTAIN_PART_VERT_DEFERRED_MRT_CREATE_INFO;
 extern const CreateInfo FOUNTAIN_PART_FRAG_DEFERRED_MRT_CREATE_INFO;
-// extern const CreateInfo FOUNTAIN_PART_TF_VERT_CREATE_INFO;
+extern const CreateInfo PARTICLE_EULER_CREATE_INFO;
+extern const CreateInfo FOUNTAIN_PART_EULER_VERT_DEFERRED_MRT_CREATE_INFO;
 }  // namespace Particle
 }  // namespace Shader
 
@@ -102,11 +111,13 @@ class Base : public Material::Obj3d::Base, public Buffer::PerFramebufferDataItem
     virtual_inline bool shouldDraw(const float lastTimeOfBirth) const {
         return data_.delta >= 0.0 && data_.delta < (lastTimeOfBirth + data_.lifespan + 0.0001f);
     }
+    virtual_inline bool shouldDrawEuler() const { return start_; }
 
     const glm::mat4& model(const uint32_t index = 0) const override { return data_.model; }
 
     void start();
     void update(const float time, const float lastTimeOfBirth, const uint32_t frameIndex);
+    void updateEuler(const float elapsed, const uint32_t frameIndex);
 
    private:
     bool start_;
@@ -123,6 +134,7 @@ namespace Set {
 namespace Particle {
 extern const CreateInfo WAVE_CREATE_INFO;
 extern const CreateInfo FOUNTAIN_CREATE_INFO;
+extern const CreateInfo EULER_CREATE_INFO;
 }  // namespace Particle
 }  // namespace Set
 }  // namespace Descriptor
@@ -150,13 +162,20 @@ class Fountain : public Graphics {
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
-// class FountainTF : public Graphics {
-//   public:
-//    const bool IS_DEFERRED;
-//    FountainTF(Handler& handler, const bool isDeferred = true);
-//    void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
-//    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
-//};
+class Euler : public Compute {
+   public:
+    const uint32_t LOCAL_SIZE_X;
+    Euler(Handler& handler);
+    void getShaderStageInfoResources(CreateInfoResources& createInfoRes) override;
+};
+
+class FountainEuler : public Graphics {
+   public:
+    const bool IS_DEFERRED;
+    FountainEuler(Handler& handler, const bool isDeferred = true);
+    void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
+    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
+};
 
 }  // namespace Particle
 }  // namespace Pipeline

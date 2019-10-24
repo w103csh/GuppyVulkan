@@ -138,7 +138,6 @@ class BlurB : public Graphics {
 };
 
 // COMPUTE DEFAULT
-extern const CreateInfo COMPUTE_DEFAULT_CREATE_INFO;
 class ComputeDefault : public Compute {
    public:
     ComputeDefault(Handler& handler);

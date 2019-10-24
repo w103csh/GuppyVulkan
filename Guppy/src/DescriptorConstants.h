@@ -63,6 +63,7 @@ enum class DESCRIPTOR_SET {
     // PARTICLE
     UNIFORM_PARTICLE_WAVE,
     UNIFORM_PARTICLE_FOUNTAIN,
+    PARTICLE_EULER,
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 
@@ -136,7 +137,14 @@ struct GetVkMemoryProperty {
 struct HasOffsets {
     template <typename T> bool operator()(const T&) const { return false; }
     bool operator()(const UNIFORM&) const { return true; }
-    bool operator()(const STORAGE_BUFFER&) const { return true; }
+    bool operator()(const STORAGE_BUFFER& type) const {
+        switch (type) {
+            case STORAGE_BUFFER::PARTICLE_EULER:
+                return false;
+            default:
+                return true;
+        }
+    }
     //bool operator()(const STORAGE_IMAGE& type) const { return true; }
 };
 struct IsImage {

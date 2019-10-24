@@ -28,12 +28,18 @@ const CreateInfo FOUNTAIN_PART_FRAG_DEFERRED_MRT_CREATE_INFO = {
     "frag.particle.deferred.mrt.fountain.glsl",      //
     VK_SHADER_STAGE_FRAGMENT_BIT,                    //
 };
-// const CreateInfo FOUNTAIN_PART_TF_VERT_CREATE_INFO = {
-//    SHADER::FOUNTAIN_PART_TF_VERT,                         //
-//    "Particle Fountain Transform Feedback Vertex Shader",  //
-//    "vert.particle.fountain.tf.glsl",                      //
-//    VK_SHADER_STAGE_VERTEX_BIT,                            //
-//};
+const CreateInfo PARTICLE_EULER_CREATE_INFO = {
+    SHADER::PARTICLE_EULER_COMP,      //
+    "Particle Euler Compute Shader",  //
+    "comp.particle.euler.glsl",       //
+    VK_SHADER_STAGE_COMPUTE_BIT,      //
+};
+const CreateInfo FOUNTAIN_PART_EULER_VERT_DEFERRED_MRT_CREATE_INFO = {
+    SHADER::FOUNTAIN_PART_EULER_DEFERRED_MRT_VERT,       //
+    "Particle Fountain Euler (Deferred) Vertex Shader",  //
+    "vert.particle.deferred.mrt.fountainEuler.glsl",     //
+    VK_SHADER_STAGE_VERTEX_BIT,                          //
+};
 }  // namespace Particle
 }  // namespace Shader
 
@@ -106,6 +112,13 @@ void Base::update(const float time, const float lastTimeOfBirth, const uint32_t 
     }
 }
 
+void Base::updateEuler(const float elapsed, const uint32_t frameIndex) {
+    if (start_) {
+        data_.delta = elapsed;
+        setData(frameIndex);
+    }
+}
+
 }  // namespace Fountain
 }  // namespace Particle
 }  // namespace Material
@@ -128,9 +141,18 @@ const CreateInfo FOUNTAIN_CREATE_INFO = {
     DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN,
     "_DS_UNI_PRTCL_FNTN",
     {
-        {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}}, {{1, 0},
-        {UNIFORM_DYNAMIC::MATERIAL_PARTICLE_FOUNTAIN}},
-        //{{2, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Particle::RAND_1D_ID}},
+        {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
+        {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_PARTICLE_FOUNTAIN}},
+    },
+};
+
+const CreateInfo EULER_CREATE_INFO = {
+    DESCRIPTOR_SET::PARTICLE_EULER,
+    "_DS_PRTCL_EULER",
+    {
+        {{0, 0}, {UNIFORM_DYNAMIC::MATERIAL_PARTICLE_FOUNTAIN}},
+        {{1, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Particle::RAND_1D_ID}},
+        {{2, 0}, {STORAGE_BUFFER::PARTICLE_EULER}},
     },
 };
 
@@ -217,49 +239,80 @@ void Fountain::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes)
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 }
 
-//// FOUNTAIN (TRANSFORM FEEDBACK)
-// const CreateInfo FOUNTAIN_TF_CREATE_INFO = {
-//    PIPELINE::PARTICLE_FOUNTAIN_TF_DEFERRED,
-//    "Particle Fountain Transform Feedback Pipeline",
-//    {
-//        SHADER::FOUNTAIN_PART_TF_VERT,
-//        // SHADER::FOUNTAIN_PART_DEFERRED_MRT_FRAG,
-//    },
-//    {
-//        DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN,
-//        // DESCRIPTOR_SET::SAMPLER_DEFAULT,
-//    },
-//};
-// FountainTF::FountainTF(Handler& handler, bool isDeferred)
-//    : Graphics(handler, &FOUNTAIN_TF_CREATE_INFO), IS_DEFERRED(isDeferred) {}
-//
-// void FountainTF::getBlendInfoResources(CreateInfoResources& createInfoRes) {
-//    if (IS_DEFERRED)
-//        Deferred::GetDefaultBlendInfoResources(createInfoRes);
-//    else
-//        Graphics::getBlendInfoResources(createInfoRes);
-//}
-//
-// void FountainTF::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-//    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-//
-//    Instance::Particle::FountainTF::DATA::getInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_VERTEX);
-//    // bindings
-//    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount =
-//    static_cast<uint32_t>(createInfoRes.bindDescs.size()); createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions =
-//    createInfoRes.bindDescs.data();
-//    // attributes
-//    createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
-//        static_cast<uint32_t>(createInfoRes.attrDescs.size());
-//    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
-//    // topology
-//    createInfoRes.inputAssemblyStateInfo = {};
-//    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-//    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
-//    createInfoRes.inputAssemblyStateInfo.flags = 0;
-//    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
-//    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
-//}
+// EULER (COMPUTE)
+const Pipeline::CreateInfo EULER_CREATE_INFO = {
+    PIPELINE::PARTICLE_EULER_COMPUTE,
+    "Particle Euler Compute Pipeline",
+    {SHADER::PARTICLE_EULER_COMP},
+    {DESCRIPTOR_SET::PARTICLE_EULER},
+};
+Euler::Euler(Pipeline::Handler& handler) : Compute(handler, &EULER_CREATE_INFO), LOCAL_SIZE_X(1000) {}
+
+void Euler::getShaderStageInfoResources(CreateInfoResources& createInfoRes) {
+    // This of course wouldn't work with the local_size stuff in glsl.
+
+    // createInfoRes.specializationMapEntries.push_back({{}});
+
+    //// Use specialization constants to set the local size x value for the shader.
+    // createInfoRes.specializationMapEntries.back().back().constantID = 0;
+    // createInfoRes.specializationMapEntries.back().back().offset = 0;
+    // createInfoRes.specializationMapEntries.back().back().size = sizeof(LOCAL_SIZE_X);
+
+    // createInfoRes.specializationInfo.push_back({});
+    // createInfoRes.specializationInfo.back().mapEntryCount =
+    //    static_cast<uint32_t>(createInfoRes.specializationMapEntries.back().size());
+    // createInfoRes.specializationInfo.back().pMapEntries = createInfoRes.specializationMapEntries.back().data();
+    // createInfoRes.specializationInfo.back().dataSize = sizeof(LOCAL_SIZE_X);
+    // createInfoRes.specializationInfo.back().pData = &LOCAL_SIZE_X;
+
+    // assert(createInfoRes.shaderStageInfos.size() == 1);
+    //// Add the specialization to the compute shader info.
+    // createInfoRes.shaderStageInfos.back().pSpecializationInfo = &createInfoRes.specializationInfo.back();
+}
+
+// FOUTAIN EULER
+const CreateInfo FOUNTAIN_EULER_CREATE_INFO = {
+    PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED,
+    "Particle Fountain Euler (Deferred) Pipeline",
+    {
+        SHADER::FOUNTAIN_PART_EULER_DEFERRED_MRT_VERT,
+        SHADER::FOUNTAIN_PART_DEFERRED_MRT_FRAG,
+    },
+    {
+        DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN,
+        DESCRIPTOR_SET::SAMPLER_DEFAULT,
+    },
+};
+FountainEuler::FountainEuler(Handler& handler, bool isDeferred)
+    : Graphics(handler, &FOUNTAIN_EULER_CREATE_INFO), IS_DEFERRED(isDeferred) {}
+
+void FountainEuler::getBlendInfoResources(CreateInfoResources& createInfoRes) {
+    if (IS_DEFERRED)
+        Deferred::GetDefaultBlendInfoResources(createInfoRes);
+    else
+        Graphics::getBlendInfoResources(createInfoRes);
+}
+
+void FountainEuler::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    Vertex::Color::getInputDescriptions(createInfoRes);
+    Instance::Particle::FountainEuler::DATA::getInputDescriptions(createInfoRes);
+    // bindings
+    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
+    // attributes
+    createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
+        static_cast<uint32_t>(createInfoRes.attrDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
+    // topology
+    createInfoRes.inputAssemblyStateInfo = {};
+    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
+    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
+    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+}
 
 }  // namespace Particle
 }  // namespace Pipeline

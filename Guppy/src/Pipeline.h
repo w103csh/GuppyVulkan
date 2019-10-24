@@ -38,6 +38,9 @@ class Base : public Handlee<Pipeline::Handler> {
    public:
     virtual ~Base() = default;
 
+    // INFOS
+    virtual void getShaderStageInfoResources(CreateInfoResources &createInfoRes) {}
+
     const VkPipelineBindPoint BIND_POINT;
     const std::vector<DESCRIPTOR_SET> DESCRIPTOR_SET_TYPES;
     const std::string NAME;
@@ -123,7 +126,6 @@ class Graphics : public Base {
     virtual void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
     virtual void getMultisampleStateInfoResources(CreateInfoResources &createInfoRes);
     virtual void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes);
-    virtual void getShaderStageInfoResources(CreateInfoResources &createInfoRes) {}
     virtual void getTesselationInfoResources(CreateInfoResources &createInfoRes);
     virtual void getViewportStateInfoResources(CreateInfoResources &createInfoRes);
 };

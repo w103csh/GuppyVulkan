@@ -129,6 +129,11 @@ class Shell {
         static_assert(std::is_floating_point<T>::value, "T must be a floating point type");
         return static_cast<T>(currentTime_);
     }
+    template <typename T = double>
+    constexpr T getElapsedTime() const {
+        static_assert(std::is_floating_point<T>::value, "T must be a floating point type");
+        return static_cast<T>(elapsedTime_);
+    }
 
     // LOGGING
     enum class LogPriority {
@@ -220,7 +225,7 @@ class Shell {
     std::vector<LayerProperties> layerProps_;          // *
     std::vector<VkExtensionProperties> instExtProps_;  // *
 
-    double currentTime_;
+    double currentTime_, elapsedTime_;
     const Handlers handlers_;
 
    private:
