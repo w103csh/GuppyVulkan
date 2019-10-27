@@ -19,6 +19,7 @@ class Base : public RenderPass::Base {
 
    private:
     void createAttachments() override;
+    void createDependencies() override;
     void createImageResources() override {}
     void createDepthResource() override {}
     void createFramebuffers() override;

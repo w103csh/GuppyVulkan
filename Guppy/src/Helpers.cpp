@@ -55,13 +55,12 @@ glm::mat4 getBias() {
 
 glm::mat3 makeArbitraryBasis(const glm::vec3 &dir) {
     glm::mat3 basis;
-    glm::vec3 u, v, n;
-    v = dir;
-    n = glm::cross(glm::vec3(1, 0, 0), v);
-    if (glm::length(n) < 0.00001f) n = glm::cross(glm::vec3(0, 1, 0), v);
-    u = glm::cross(v, n);
+    glm::vec3 u, n;
+    n = glm::cross(glm::vec3(1, 0, 0), dir);
+    if (glm::length(n) < 0.00001f) n = glm::cross(glm::vec3(0, 1, 0), dir);
+    u = glm::cross(dir, n);
     basis[0] = glm::normalize(u);
-    basis[1] = glm::normalize(v);
+    basis[1] = glm::normalize(dir);
     basis[2] = glm::normalize(n);
     return basis;
 }

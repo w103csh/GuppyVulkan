@@ -34,6 +34,7 @@ extern const CreateInfo FOUNTAIN_PART_VERT_CREATE_INFO;
 extern const CreateInfo FOUNTAIN_PART_FRAG_DEFERRED_MRT_CREATE_INFO;
 extern const CreateInfo PARTICLE_EULER_CREATE_INFO;
 extern const CreateInfo FOUNTAIN_PART_EULER_VERT_CREATE_INFO;
+extern const CreateInfo SHADOW_FOUNTAIN_PART_EULER_VERT_CREATE_INFO;
 }  // namespace Particle
 }  // namespace Shader
 
@@ -74,6 +75,8 @@ struct DATA : public Material::Obj3d::DATA {
     glm::mat4 emitterBasis;              // Rotation that rotates y axis to the direction of emitter
     float time = ::Particle::BAD_TIME;   // Simulation time
     float delta = ::Particle::BAD_TIME;  // Elapsed time between frames from the start signal
+    float velocityLowerBound = 1.25f;    // Lower bound of the generated random velocity (euler)
+    float velocityUpperBound = 1.5f;     // Upper bound of the generated random velocity (euler)
     glm::vec2 _padding;
 };
 
@@ -93,6 +96,8 @@ struct CreateInfo : public Material::Obj3d::CreateInfo {
     glm::mat3 emitterBasis;
     glm::vec3 emitterPosition;
     float size;
+    float velocityLowerBound;
+    float velocityUpperBound;
 };
 
 // TODO: The data here really should be separated from the material data. I made it one large dynamic uniform
@@ -142,8 +147,12 @@ extern const CreateInfo EULER_CREATE_INFO;
 // PIPELINE
 
 namespace Pipeline {
+
+void GetFountainEulerInputAssemblyInfoResources(CreateInfoResources& createInfoRes);
+
 struct CreateInfo;
 class Handler;
+
 namespace Particle {
 
 class Wave : public Graphics {
@@ -156,6 +165,7 @@ class Wave : public Graphics {
 
 class Fountain : public Graphics {
    public:
+    const bool DO_BLEND;
     const bool IS_DEFERRED;
     Fountain(Handler& handler, const bool isDeferred = true);
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
@@ -171,12 +181,21 @@ class Euler : public Compute {
 
 class FountainEuler : public Graphics {
    public:
+    const bool DO_BLEND;
     const bool IS_DEFERRED;
     FountainEuler(Handler& handler, const bool isDeferred = true);
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
+class ShadowFountainEuler : public Pipeline::Graphics {
+   public:
+    ShadowFountainEuler(Handler& handler);
+
+   private:
+    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
+    void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
+};
 }  // namespace Particle
 }  // namespace Pipeline
 

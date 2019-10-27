@@ -4,7 +4,7 @@
 #include "Random.h"
 
 namespace {
-constexpr uint32_t MAP_WIDTH = 540;
+constexpr uint32_t MAP_WIDTH = 1024;  // 540;
 constexpr uint32_t MAP_HEIGHT = MAP_WIDTH;
 constexpr uint32_t SAMPLES_U = 4;
 constexpr uint32_t SAMPLES_V = 8;

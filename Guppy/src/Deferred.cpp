@@ -411,18 +411,58 @@ const CreateInfo SSAO_FRAG_CREATE_INFO = {
 namespace Pipeline {
 namespace Deferred {
 
-void GetDefaultBlendInfoResources(CreateInfoResources& createInfoRes) {
+void GetBlendInfoResources(CreateInfoResources& createInfoRes, bool blend) {
+    // Blend disabled
     VkPipelineColorBlendAttachmentState state = {VK_FALSE};
     state.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
 
-    // Position/Normal/Diffuse/Ambient/Specular
-    createInfoRes.blendAttachmentStates.assign(5, state);
+    if (!blend) {
+        // Position/Normal/Diffuse/Ambient/Specular
+        createInfoRes.blendAttachmentStates.assign(5, state);
 
-    createInfoRes.colorBlendStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr};
-    createInfoRes.colorBlendStateInfo.attachmentCount = static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size());
-    createInfoRes.colorBlendStateInfo.pAttachments = createInfoRes.blendAttachmentStates.data();
-    createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
+        createInfoRes.colorBlendStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr};
+        createInfoRes.colorBlendStateInfo.attachmentCount =
+            static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size());
+        createInfoRes.colorBlendStateInfo.pAttachments = createInfoRes.blendAttachmentStates.data();
+        createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
+
+    } else {
+        // Position/Normal
+        createInfoRes.blendAttachmentStates.assign(2, state);
+
+        // I am not sure why the blend state below was not blending things properly. I thought it through and it seemed like
+        // it should work at the time. Note: src are the incoming fragment values, and dst are the values already in the
+        // attachment.
+
+        // Blend enabled
+        state = {};
+        state.blendEnable = VK_TRUE;
+        state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+        state.colorBlendOp = VK_BLEND_OP_ADD;
+        state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+        state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+        state.alphaBlendOp = VK_BLEND_OP_ADD;
+        // Additive blending
+        // state.colorBlendOp = VK_BLEND_OP_ADD;
+        // state.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        // state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+        // state.alphaBlendOp = VK_BLEND_OP_ADD;
+        // state.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+        // state.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+
+        // Diffuse/Ambient/Specular
+        createInfoRes.blendAttachmentStates.push_back(state);
+        createInfoRes.blendAttachmentStates.push_back(state);
+        createInfoRes.blendAttachmentStates.push_back(state);
+
+        createInfoRes.colorBlendStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr};
+        createInfoRes.colorBlendStateInfo.attachmentCount =
+            static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size() - 1);
+        createInfoRes.colorBlendStateInfo.pAttachments = &createInfoRes.blendAttachmentStates[0];
+        createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
+    }
 }
 
 // MRT (TEXTURE)
@@ -443,7 +483,7 @@ const Pipeline::CreateInfo MRT_TEX_CREATE_INFO = {
 MRTTexture::MRTTexture(Pipeline::Handler& handler) : Graphics(handler, &MRT_TEX_CREATE_INFO) {}
 
 void MRTTexture::getBlendInfoResources(CreateInfoResources& createInfoRes) {
-    GetDefaultBlendInfoResources(createInfoRes);  //
+    GetBlendInfoResources(createInfoRes);  //
 }
 
 //// MRT (TEXTURE WIREFRAME)
@@ -470,7 +510,7 @@ MRTColor::MRTColor(Pipeline::Handler& handler) : Graphics(handler, &MRT_COLOR_CR
 MRTColor::MRTColor(Pipeline::Handler& handler, const CreateInfo* pCreateInfo) : Graphics(handler, pCreateInfo) {}
 
 void MRTColor::getBlendInfoResources(CreateInfoResources& createInfoRes) {
-    GetDefaultBlendInfoResources(createInfoRes);  //
+    GetBlendInfoResources(createInfoRes);  //
 }
 
 // MRT (COLOR WIREFRAME)
@@ -511,7 +551,7 @@ const Pipeline::CreateInfo MRT_LINE_CREATE_INFO = {
 MRTLine::MRTLine(Pipeline::Handler& handler) : Graphics(handler, &MRT_LINE_CREATE_INFO) {}
 
 void MRTLine::getBlendInfoResources(CreateInfoResources& createInfoRes) {
-    GetDefaultBlendInfoResources(createInfoRes);  //
+    GetBlendInfoResources(createInfoRes);  //
 }
 
 void MRTLine::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {

@@ -8,6 +8,7 @@
 // HANDLERS
 #include "PipelineHandler.h"
 #include "DescriptorHandler.h"
+#include "ParticleHandler.h"
 #include "RenderPassHandler.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
@@ -34,6 +35,18 @@ void Base::createAttachments() {
     resources_.attachments.back().initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
     resources_.attachments.back().finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
     resources_.attachments.back().flags = 0;
+}
+
+void Base::createDependencies() {
+    ::RenderPass::Base::createDependencies();
+    resources_.dependencies.push_back({
+        VK_SUBPASS_EXTERNAL,
+        pipelineBindDataList_.getOffset(PIPELINE::SHADOW_PARTICLE_FOUNTAIN_EULER),
+        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+        VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
+        VK_ACCESS_SHADER_WRITE_BIT,
+        VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
+    });
 }
 
 void Base::createFramebuffers() {
@@ -65,12 +78,12 @@ void Base::createFramebuffers() {
 }
 
 namespace {
-std::array<PIPELINE, 4> COLOR_LIST = {
+std::array<PIPELINE, 5> COLOR_LIST = {
     PIPELINE::DEFERRED_MRT_COLOR,              //
     PIPELINE::DEFERRED_MRT_WF_COLOR,           //
     PIPELINE::TESSELLATION_TRIANGLE_DEFERRED,  //
     PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED,    //
-    // PIPELINE::PARTICLE_WAVE_DEFERRED,
+    // PIPELINE::PARTICLE_WAVE_DEFERRED,        //
 };
 std::array<PIPELINE, 1> TEX_LIST = {
     PIPELINE::DEFERRED_MRT_TEX,
@@ -100,6 +113,17 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
 
         vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
 
+        // PARTICLE
+        itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(),
+                                PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED);
+        if (itSurrogate != std::end(surrogatePipelineTypes)) {
+            handler().particleHandler().recordDraw(
+                TYPE, pipelineBindDataList_.getValue(PIPELINE::SHADOW_PARTICLE_FOUNTAIN_EULER), priCmd, frameIndex);
+            surrogatePipelineTypes.erase(itSurrogate);
+        }
+
+        vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+
         // TEXTURE
         for (const auto& pipelineType : TEX_LIST) {
             itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), pipelineType);
@@ -118,7 +142,11 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
 const CreateInfo DEFAULT_CREATE_INFO = {
     PASS::SHADOW,
     "Shadow Render Pass",
-    {PIPELINE::SHADOW_COLOR, PIPELINE::SHADOW_TEX},
+    {
+        PIPELINE::SHADOW_COLOR,
+        PIPELINE::SHADOW_PARTICLE_FOUNTAIN_EULER,
+        PIPELINE::SHADOW_TEX,
+    },
     FLAG::DEPTH,  // This actually enables the depth test from overridePipelineCreateInfo. Not sure if I like this.
     {
         std::string(Texture::Shadow::MAP_2D_ARRAY_ID),

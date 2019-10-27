@@ -110,6 +110,8 @@ set(SOURCE
     MeshHandler.h
     Plane.cpp
     Plane.h
+    Torus.cpp
+    Torus.h
     VisualHelper.cpp
     VisualHelper.h
     # Model

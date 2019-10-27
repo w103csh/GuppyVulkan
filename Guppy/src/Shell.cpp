@@ -296,12 +296,13 @@ void Shell::createDev() {
 
     // features
     VkPhysicalDeviceFeatures deviceFeatures = {};
-    deviceFeatures.samplerAnisotropy = ctx_.samplerAnisotropyEnabled ? VK_TRUE : VK_FALSE;
-    deviceFeatures.sampleRateShading = ctx_.sampleRateShadingEnabled ? VK_TRUE : VK_FALSE;
-    deviceFeatures.fragmentStoresAndAtomics = ctx_.computeShadingEnabled ? VK_TRUE : VK_FALSE;
-    deviceFeatures.tessellationShader = ctx_.tessellationShadingEnabled ? VK_TRUE : VK_FALSE;
-    deviceFeatures.geometryShader = ctx_.geometryShadingEnabled ? VK_TRUE : VK_FALSE;
-    deviceFeatures.fillModeNonSolid = ctx_.wireframeShadingEnabled ? VK_TRUE : VK_FALSE;
+    deviceFeatures.samplerAnisotropy = ctx_.samplerAnisotropyEnabled;
+    deviceFeatures.sampleRateShading = ctx_.sampleRateShadingEnabled;
+    deviceFeatures.fragmentStoresAndAtomics = ctx_.computeShadingEnabled;
+    deviceFeatures.tessellationShader = ctx_.tessellationShadingEnabled;
+    deviceFeatures.geometryShader = ctx_.geometryShadingEnabled;
+    deviceFeatures.fillModeNonSolid = ctx_.wireframeShadingEnabled;
+    deviceFeatures.independentBlend = ctx_.independentBlendEnabled;
 
     // Phyiscal device extensions names
     auto &phyDevProps = ctx_.physicalDevProps[ctx_.physicalDevIndex];
@@ -951,6 +952,10 @@ void Shell::determineDeviceFeatureSupport(const PhysicalDeviceProperties &props)
     ctx_.wireframeShadingEnabled = props.features.fillModeNonSolid && settings_.try_wireframe_shading;
     if (settings_.try_wireframe_shading && !ctx_.wireframeShadingEnabled)  //
         log(LogPriority::LOG_WARN, "cannot enable wire frame shading (actually just can't enable fill mode non-solid)");
+    // independent attachment blending
+    ctx_.independentBlendEnabled = props.features.independentBlend && settings_.try_independent_blend;
+    if (settings_.try_independent_blend && !ctx_.independentBlendEnabled)  //
+        log(LogPriority::LOG_WARN, "cannot enable independent attachment blending");
 }
 
 void Shell::determineSampleCount(const PhysicalDeviceProperties &props) {

@@ -1,8 +1,9 @@
 
 #include "Particle.h"
 
-#include "ParticleBuffer.h"
 #include "Deferred.h"
+#include "ParticleBuffer.h"
+#include "Shadow.h"
 // HANDLERS
 #include "PipelineHandler.h"
 
@@ -39,6 +40,12 @@ const CreateInfo FOUNTAIN_PART_EULER_VERT_CREATE_INFO = {
     "Particle Fountain Euler Vertex Shader",  //
     "vert.particle.fountainEuler.glsl",       //
     VK_SHADER_STAGE_VERTEX_BIT,               //
+};
+const CreateInfo SHADOW_FOUNTAIN_PART_EULER_VERT_CREATE_INFO = {
+    SHADER::SHADOW_FOUNTAIN_PART_EULER_VERT,           //
+    "Particle Fountain Euler (Shadow) Vertex Shader",  //
+    "vert.particle.fountainEuler.shadow.glsl",         //
+    VK_SHADER_STAGE_VERTEX_BIT,                        //
 };
 }  // namespace Particle
 }  // namespace Shader
@@ -85,16 +92,15 @@ Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo
     // Fountain
     data_.acceleration = pCreateInfo->acceleration;
     data_.lifespan = pCreateInfo->lifespan;
+    data_.emitterBasis = pCreateInfo->emitterBasis;
     data_.emitterPosition = pCreateInfo->emitterPosition;
     data_.size = pCreateInfo->size;
-    data_.emitterBasis = pCreateInfo->emitterBasis;
+    data_.velocityLowerBound = pCreateInfo->velocityLowerBound;
+    data_.velocityUpperBound = pCreateInfo->velocityUpperBound;
     setData();
 }
 
-void Base::start() {
-    assert(!start_);
-    start_ = true;
-}
+void Base::start() { start_ = true; }
 
 void Base::update(const float time, const float lastTimeOfBirth, const uint32_t frameIndex) {
     if (start_) {
@@ -163,6 +169,28 @@ const CreateInfo EULER_CREATE_INFO = {
 // PIPELINE
 
 namespace Pipeline {
+
+void GetFountainEulerInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    Vertex::Color::getInputDescriptions(createInfoRes);
+    Instance::Particle::FountainEuler::DATA::getInputDescriptions(createInfoRes);
+    // bindings
+    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
+    // attributes
+    createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
+        static_cast<uint32_t>(createInfoRes.attrDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
+    // topology
+    createInfoRes.inputAssemblyStateInfo = {};
+    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
+    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
+    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+}
+
 namespace Particle {
 
 // WAVE
@@ -182,7 +210,7 @@ Wave::Wave(Handler& handler, bool isDeferred) : Graphics(handler, &WAVE_CREATE_I
 
 void Wave::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     if (IS_DEFERRED)
-        Deferred::GetDefaultBlendInfoResources(createInfoRes);
+        Deferred::GetBlendInfoResources(createInfoRes);
     else
         Graphics::getBlendInfoResources(createInfoRes);
 }
@@ -206,13 +234,16 @@ const CreateInfo FOUNTAIN_CREATE_INFO = {
         DESCRIPTOR_SET::SAMPLER_DEFAULT,
     },
 };
-Fountain::Fountain(Handler& handler, bool isDeferred) : Graphics(handler, &FOUNTAIN_CREATE_INFO), IS_DEFERRED(isDeferred) {}
+Fountain::Fountain(Handler& handler, bool isDeferred)
+    : Graphics(handler, &FOUNTAIN_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(isDeferred) {}
 
 void Fountain::getBlendInfoResources(CreateInfoResources& createInfoRes) {
-    if (IS_DEFERRED)
-        Deferred::GetDefaultBlendInfoResources(createInfoRes);
-    else
+    if (IS_DEFERRED) {
+        if (DO_BLEND) assert(handler().shell().context().independentBlendEnabled);
+        Deferred::GetBlendInfoResources(createInfoRes, DO_BLEND);
+    } else {
         Graphics::getBlendInfoResources(createInfoRes);
+    }
 }
 
 void Fountain::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
@@ -270,7 +301,7 @@ void Euler::getShaderStageInfoResources(CreateInfoResources& createInfoRes) {
     // createInfoRes.shaderStageInfos.back().pSpecializationInfo = &createInfoRes.specializationInfo.back();
 }
 
-// FOUTAIN EULER
+// FOUNTAIN EULER
 const CreateInfo FOUNTAIN_EULER_CREATE_INFO = {
     PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED,
     "Particle Fountain Euler (Deferred) Pipeline",
@@ -284,34 +315,37 @@ const CreateInfo FOUNTAIN_EULER_CREATE_INFO = {
     },
 };
 FountainEuler::FountainEuler(Handler& handler, bool isDeferred)
-    : Graphics(handler, &FOUNTAIN_EULER_CREATE_INFO), IS_DEFERRED(isDeferred) {}
+    : Graphics(handler, &FOUNTAIN_EULER_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(isDeferred) {}
 
 void FountainEuler::getBlendInfoResources(CreateInfoResources& createInfoRes) {
-    if (IS_DEFERRED)
-        Deferred::GetDefaultBlendInfoResources(createInfoRes);
-    else
+    if (IS_DEFERRED) {
+        if (DO_BLEND) assert(handler().shell().context().independentBlendEnabled);
+        Deferred::GetBlendInfoResources(createInfoRes, DO_BLEND);
+    } else {
         Graphics::getBlendInfoResources(createInfoRes);
+    }
 }
 
 void FountainEuler::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+    GetFountainEulerInputAssemblyInfoResources(createInfoRes);
+}
 
-    Vertex::Color::getInputDescriptions(createInfoRes);
-    Instance::Particle::FountainEuler::DATA::getInputDescriptions(createInfoRes);
-    // bindings
-    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
-    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
-    // attributes
-    createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
-        static_cast<uint32_t>(createInfoRes.attrDescs.size());
-    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
-    // topology
-    createInfoRes.inputAssemblyStateInfo = {};
-    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
-    createInfoRes.inputAssemblyStateInfo.flags = 0;
-    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+// SHADOW FOUNTAIN EULER
+const Pipeline::CreateInfo SHADOW_FOUNTAIN_EULER_CREATE_INFO = {
+    PIPELINE::SHADOW_PARTICLE_FOUNTAIN_EULER,
+    "Particle Fountain Euler (Shadow) Pipeline",
+    {SHADER::SHADOW_FOUNTAIN_PART_EULER_VERT, SHADER::SHADOW_FRAG},
+    {DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN},
+};
+ShadowFountainEuler::ShadowFountainEuler(Pipeline::Handler& handler)
+    : Graphics(handler, &SHADOW_FOUNTAIN_EULER_CREATE_INFO) {}
+
+void ShadowFountainEuler::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    GetFountainEulerInputAssemblyInfoResources(createInfoRes);
+}
+
+void ShadowFountainEuler::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+    GetShadowRasterizationStateInfoResources(createInfoRes);
 }
 
 }  // namespace Particle

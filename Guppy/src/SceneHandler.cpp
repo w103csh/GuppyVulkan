@@ -9,6 +9,7 @@
 #include "Model.h"
 #include "Plane.h"
 #include "Shell.h"
+#include "Torus.h"
 // HANDLERS
 #include "InputHandler.h"
 #include "MeshHandler.h"
@@ -40,6 +41,7 @@ void Scene::Handler::init() {
         Mesh::GenericCreateInfo colorInfo;
         Mesh::CreateInfo meshInfo;
         Mesh::Plane::CreateInfo planeInfo;
+        Mesh::Torus::CreateInfo torusInfo;
         Model::CreateInfo modelInfo;
         Instance::Obj3d::CreateInfo instObj3dInfo;
         Material::Default::CreateInfo defMatInfo;
@@ -155,6 +157,23 @@ void Scene::Handler::init() {
             pScene->addMeshIndex(MESH::COLOR, offset);
         }
 
+        // BURNT ORANGE TORUS
+        if (!suppress && false) {
+            torusInfo = {};
+            torusInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
+            // INSTANCE
+            instObj3dInfo = {};
+            instObj3dInfo.data.push_back({helpers::affine(glm::vec3{0.07f}, glm::vec3{-1.0f, 2.0f, -1.0f})});
+            // MATERIAL
+            defMatInfo = {};
+            defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
+            defMatInfo.ambientCoeff = {0.8f, 0.3f, 0.0f};
+            defMatInfo.color = {0.8f, 0.3f, 0.0f};
+            auto offset =
+                meshHandler().makeColorMesh<Mesh::Torus::Color>(&torusInfo, &defMatInfo, &instObj3dInfo)->getOffset();
+            pScene->addMeshIndex(MESH::COLOR, offset);
+        }
+
         // ICOSAHEDRON
         if (!suppress || false) {
             modelInfo = {};
@@ -253,7 +272,7 @@ void Scene::Handler::init() {
         }
 
         // PIG
-        if (!suppress || true) {
+        if (!suppress || false) {
             // MODEL
             modelInfo = {};
             if (false && ctx.geometryShadingEnabled) {

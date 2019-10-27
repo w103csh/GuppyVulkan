@@ -8,7 +8,7 @@
 #include "UniformHandler.h"
 
 namespace {
-constexpr uint32_t NUM_PARTICLES_EULER = 4000;
+constexpr uint32_t NUM_PARTICLES_EULER = 16;
 }
 
 Particle::Handler::Handler(Game* pGame)
@@ -24,9 +24,9 @@ void Particle::Handler::init() {
     if (hasInstFntnEulerMgr()) pInstFntnEulerMgr_->init(shell().context());
 
     // Unfortunately the textures have to be created inside init
-    auto rand1dTexnfo =
-        Texture::MakeRandom1dTex(Texture::Particle::RAND_1D_ID, Sampler::Particle::RAND_1D_ID, NUM_PARTICLES_EULER * 3);
-    textureHandler().make(&rand1dTexnfo);
+    auto rand1dTexInfo =
+        Texture::MakeRandom1dTex(Texture::Particle::RAND_1D_ID, Sampler::Particle::RAND_1D_ID, NUM_PARTICLES_EULER * 4);
+    textureHandler().make(&rand1dTexInfo);
 }
 
 void Particle::Handler::tick() {
@@ -111,18 +111,21 @@ void Particle::Handler::create() {
             fntnInfo.pipelineTypeGraphics = PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED;
             fntnInfo.pTexture = textureHandler().getTexture(Texture::BLUEWATER_ID);
             fntnInfo.emitterBasis = helpers::makeArbitraryBasis({-1.0f, 2.0f, 0.0f});
-            fntnInfo.lifespan = 6.0f;
+            fntnInfo.lifespan = 8.0f;
             fntnInfo.size = 0.1f;
 
             models.clear();
-            models.push_back(helpers::affine(glm::vec3{0.25f}, glm::vec3{1.0f, 4.0f, -1.0f}, M_PI_FLT, CARDINAL_X));
-            // models.push_back(helpers::affine(glm::vec3{0.5f}, glm::vec3{1.0f}, M_PI_2_FLT, CARDINAL_Y));
+            // models.push_back(helpers::affine(glm::vec3{0.07f}, glm::vec3{1.0f, 4.0f, -1.0f}, M_PI_FLT, CARDINAL_X));
+            models.push_back(helpers::affine(glm::vec3{0.07f}, glm::vec3{-1.0f, 0.2f, -1.0f}));
 
             {
                 // MATERIAL
                 std::vector<std::shared_ptr<Material::Base>> pMaterials;
                 for (const auto& model : models) {
                     Material::Particle::Fountain::CreateInfo matInfo(&fntnInfo, model, shell().context().imageCount);
+                    matInfo.color = {0.8f, 0.3f, 0.0f};
+                    matInfo.velocityLowerBound = 2.0f;
+                    matInfo.velocityUpperBound = 3.5f;
                     pMaterials.emplace_back(materialHandler().makeMaterial(&matInfo));
                 }
                 // INSTANCE
@@ -153,6 +156,18 @@ void Particle::Handler::recordDraw(const PASS passType, const std::shared_ptr<Pi
                     if (pBuffer->shouldDraw(instance)) {
                         pBuffer->draw(passType, pPipelineBindData,
                                       pBuffer->getDescriptorSetBindData(passType, instance.graphicsDescSetBindDataMap), cmd,
+                                      frameIndex);
+                    }
+                }
+            }
+        }
+        // This is how lazy I am right now...
+        if (pBuffer->PIPELINE_TYPE_SHADOW == pPipelineBindData->type) {
+            if (pBuffer->getStatus() == STATUS::READY) {
+                for (const auto& instance : pBuffer->getInstances()) {
+                    if (pBuffer->shouldDraw(instance)) {
+                        pBuffer->draw(passType, pPipelineBindData,
+                                      pBuffer->getDescriptorSetBindData(passType, instance.shadowDescSetBindDataMap), cmd,
                                       frameIndex);
                     }
                 }
