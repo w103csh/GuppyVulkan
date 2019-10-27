@@ -38,11 +38,11 @@ void Selection::Manager::updateFace(std::unique_ptr<Face> pFace) {
             handler().materialHandler().update(pMesh->getMaterial());
         }
 
-        auto v0 = (*pFaceInfo_->pFace)[0].getColorVertex();
+        auto v0 = (*pFaceInfo_->pFace)[0].getVertex<Vertex::Color>();
         v0.color = {1.0f, 0.0f, 0.0f, 1.0f};  // red
-        auto v1 = (*pFaceInfo_->pFace)[1].getColorVertex();
+        auto v1 = (*pFaceInfo_->pFace)[1].getVertex<Vertex::Color>();
         v1.color = {0.0f, 1.0f, 0.0f, 1.0f};  // green
-        auto v2 = (*pFaceInfo_->pFace)[2].getColorVertex();
+        auto v2 = (*pFaceInfo_->pFace)[2].getVertex<Vertex::Color>();
         v2.color = {0.0f, 0.0f, 1.0f, 1.0f};  // blue
 
         pMesh->addVertex(v0, 0);

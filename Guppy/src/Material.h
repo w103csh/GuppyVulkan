@@ -24,8 +24,8 @@ using FLAG = enum : FlagBits {
     PER_MATERIAL_COLOR =        0x00000001,
     PER_VERTEX_COLOR =          0x00000002,
     PER_TEXTURE_COLOR =         0x00000004,
-    //
     PER_MAX_ENUM =              0x0000000F,
+    //
     MODE_LAMERTIAN =            0x00000010,
     MODE_BLINN_PHONG =          0x00000020,
     MODE_TOON_SHADE =           0x00000040,
@@ -36,6 +36,8 @@ using FLAG = enum : FlagBits {
     REFRACT =                   0x00000800,
     //
     METAL =                     0x00001000,
+    //
+    IS_MESH =                   0x00010000,
     //
     BITS_MAX_ENUM =             0x7FFFFFFF
 };

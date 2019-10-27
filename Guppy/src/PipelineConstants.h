@@ -58,6 +58,7 @@ enum class PIPELINE : uint32_t {
     PARTICLE_FOUNTAIN_DEFERRED,
     PARTICLE_EULER_COMPUTE,
     PARTICLE_FOUNTAIN_EULER_DEFERRED,
+    SHADOW_PARTICLE_FOUNTAIN_EULER,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP

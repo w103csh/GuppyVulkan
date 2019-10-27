@@ -70,6 +70,7 @@ class Game {
         bool try_geometry_shading;
         bool try_wireframe_shading;
         bool try_debug_markers;
+        bool try_independent_blend;
         bool enable_sample_shading;
         bool enable_double_clicks;
         bool enable_directory_listener;

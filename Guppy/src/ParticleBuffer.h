@@ -56,12 +56,18 @@ struct DATA {
      * data0[3]: padding
      *
      * data1[0]: veloctiy.x
-     * data2[1]: veloctiy.y
-     * data3[2]: veloctiy.z
-     * data4[3]: age
+     * data1[1]: veloctiy.y
+     * data1[2]: veloctiy.z
+     * data1[3]: age
+     *
+     * data2[0]: rotation angle
+     * data2[1]: rotation velocity
+     * data2[2]: padding
+     * data2[3]: padding
      */
     glm::vec4 data0;
     glm::vec4 data1;
+    glm::vec4 data2;
 };
 
 class Base;
@@ -98,6 +104,7 @@ class Base : public NonCopyable, public Handlee<Handler> {
     const std::string NAME;
     const PIPELINE PIPELINE_TYPE_COMPUTE;
     const PIPELINE PIPELINE_TYPE_GRAPHICS;
+    const PIPELINE PIPELINE_TYPE_SHADOW;
 
     virtual void start(const StartInfo& info) = 0;
     virtual void update(const float time, const float elapsed, const uint32_t frameIndex) = 0;
@@ -124,19 +131,22 @@ class Base : public NonCopyable, public Handlee<Handler> {
 
    protected:
     Base(Particle::Handler& handler, const index offset, const std::string&& name,
-         const ::Particle::Fountain::CreateInfo* pCreateInfo,
-         const std::vector<std::shared_ptr<Material::Base>>& pMaterials);
+         const ::Particle::Fountain::CreateInfo* pCreateInfo, const std::vector<std::shared_ptr<Material::Base>>& pMaterials,
+         const PIPELINE pipelineTypeShadow = PIPELINE::ALL_ENUM);
 
     FlagBits status_;
+
+    std::vector<VB_INDEX_TYPE> indices_;
+    BufferResource indexRes_;
+    std::vector<Vertex::Color> vertices_;
+    BufferResource vertexRes_;
+    std::vector<InstanceInfo> instances_;
 
    private:
     void loadBuffers();
 
     index offset_;
-    BufferResource vertexRes_;                  // Not used atm.
-    std::vector<Vertex::Color> vertices_;       // Not used atm.
-    std::unique_ptr<LoadingResource> pLdgRes_;  // Not used atm.
-    std::vector<InstanceInfo> instances_;
+    std::unique_ptr<LoadingResource> pLdgRes_;
 };
 
 // FOUNTAIN
@@ -184,6 +194,9 @@ class FountainEuler : public Base {
 
    protected:
     std::shared_ptr<::Instance::Particle::FountainEuler::Base> pInstFntn_;
+
+   private:
+    bool doTorus_;
 };
 
 }  // namespace Buffer

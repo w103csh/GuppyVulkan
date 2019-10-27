@@ -177,10 +177,10 @@ class Color : public Base {
     }
     inline void addVertex(const Vertex::Complete& v, int32_t index = -1) override {
         if (index == -1) {
-            vertices_.push_back(v.getColorVertex());
+            vertices_.push_back(v.getVertex<Vertex::Color>());
         } else {
             assert(index < vertices_.size());
-            vertices_[index] = v.getColorVertex();
+            vertices_[index] = v.getVertex<Vertex::Color>();
         }
         pInstObj3d_->updateBoundingBox(vertices_.back());
     }
@@ -238,10 +238,10 @@ class Texture : public Base {
     }
     inline void addVertex(const Vertex::Complete& v, int32_t index = -1) override {
         if (index == -1) {
-            vertices_.push_back(v.getTextureVertex());
+            vertices_.push_back(v.getVertex<Vertex::Texture>());
         } else {
             assert(index < vertices_.size());
-            vertices_[index] = v.getTextureVertex();
+            vertices_[index] = v.getVertex<Vertex::Texture>();
         }
         pInstObj3d_->updateBoundingBox(vertices_.back());
     }

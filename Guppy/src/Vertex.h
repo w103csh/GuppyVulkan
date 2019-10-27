@@ -89,8 +89,17 @@ class Complete {
         return glm::all(glm::epsilonEqual(texCoord, other.texCoord, FLT_EPSILON));
     }
 
-    inline Color getColorVertex() const { return {position, normal, color}; }
-    inline Texture getTextureVertex() const { return {position, normal, texCoord, tangent, binormal}; }
+    template <typename TVertex>
+    TVertex getVertex() const;
+
+    template <>
+    Vertex::Color getVertex() const {
+        return {position, normal, color};
+    }
+    template <>
+    Vertex::Texture getVertex() const {
+        return {position, normal, texCoord, tangent, binormal};
+    }
 
     inline void transform(const glm::mat4 &t) { position = t * glm::vec4{position, 1.0f}; }
 

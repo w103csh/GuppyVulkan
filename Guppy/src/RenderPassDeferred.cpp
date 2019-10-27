@@ -17,7 +17,7 @@ namespace Deferred {
 
 // DEFERRED
 
-const CreateInfo Deferred_CREATE_INFO = {
+const CreateInfo DEFERRED_CREATE_INFO = {
     PASS::DEFERRED,
     "Deferred Render Pass",
     {
@@ -59,7 +59,7 @@ const CreateInfo Deferred_CREATE_INFO = {
 };
 
 Base::Base(RenderPass::Handler& handler, const index&& offset)
-    : RenderPass::Base{handler, std::forward<const index>(offset), &Deferred_CREATE_INFO},
+    : RenderPass::Base{handler, std::forward<const index>(offset), &DEFERRED_CREATE_INFO},
       inputAttachmentOffset_(0),
       inputAttachmentCount_(0),
       combinePassIndex_(0),

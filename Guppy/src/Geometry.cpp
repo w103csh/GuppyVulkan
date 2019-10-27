@@ -98,7 +98,7 @@ Silhouette::Silhouette(Handler& handler, bool isDeferred)
 
 void Silhouette::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     if (IS_DEFERRED)
-        Deferred::GetDefaultBlendInfoResources(createInfoRes);
+        Deferred::GetBlendInfoResources(createInfoRes);
     else
         Graphics::getBlendInfoResources(createInfoRes);
 }

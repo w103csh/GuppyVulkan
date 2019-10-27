@@ -31,8 +31,9 @@ constexpr index BAD_OFFSET = UINT32_MAX;
 
 struct InstanceInfo {
     std::shared_ptr<Material::Base> pMaterial;
-    Descriptor::Set::bindDataMap graphicsDescSetBindDataMap;
     Descriptor::Set::bindDataMap computeDescSetBindDataMap;
+    Descriptor::Set::bindDataMap graphicsDescSetBindDataMap;
+    Descriptor::Set::bindDataMap shadowDescSetBindDataMap;
 };
 
 }  // namespace Buffer

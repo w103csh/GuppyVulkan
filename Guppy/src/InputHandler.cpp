@@ -186,7 +186,7 @@ void Input::Handler::update(const double elapsed) {
         if (cntlr.getCurrState().Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER) {
             posDir_ += -CARDINAL_Y * static_cast<float>(elapsed) * 1.5f;
         }
-        lookDir_ += glm::vec3{cntlr.thumbRNorm.x, cntlr.thumbRNorm.y, 0.0f} * static_cast<float>(elapsed) * 4.0f;
+        lookDir_ += glm::vec3{cntlr.thumbRNorm.x, cntlr.thumbRNorm.y, 0.0f} * static_cast<float>(elapsed) * 8.0f;
         posDir_ += glm::vec3{cntlr.thumbLNorm.x, 0.0f, cntlr.thumbLNorm.y} * static_cast<float>(elapsed) * 2.5f;
     }
 #endif  // USE_XINPUT

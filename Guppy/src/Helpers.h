@@ -141,13 +141,13 @@ static glm::mat4 viewToWorld(glm::vec3 position, glm::vec3 focalPoint, glm::vec3
     // m[3][2] = dot(position, f);
 
     if (up.x == 1.0f) {
-        // TODO: rotate
+        assert(false && "TODO: rotate");
     } else if (up.y == 1.0f) {
         // glm::lookAt defaults to looking in -z by default so rotate it to positive...
         m = glm::rotate(m, M_PI_FLT, CARDINAL_Y);
         // m = glm::rotate(m, M_PI_FLT, glm::vec3(glm::row(m, 1)));
     } else if (up.z == 1.0f) {
-        // TODO: rotate
+        assert(false && "TODO: rotate");
     } else {
         throw std::runtime_error("Up vector not accounted for.");
     }

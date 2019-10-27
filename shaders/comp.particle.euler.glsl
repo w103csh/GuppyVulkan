@@ -11,12 +11,18 @@ struct Particle {
      * data0[3]: padding
      *
      * data1[0]: veloctiy.x
-     * data2[1]: veloctiy.y
-     * data3[2]: veloctiy.z
-     * data4[3]: age
+     * data1[1]: veloctiy.y
+     * data1[2]: veloctiy.z
+     * data1[3]: age
+     *
+     * data2[0]: rotation angle
+     * data2[1]: rotation velocity
+     * data2[2]: padding
+     * data2[3]: padding
      */
     vec4 data0;
     vec4 data1;
+    vec4 data2;
 };
 
 const float PI = 3.14159265359;
@@ -54,6 +60,8 @@ layout(set=_DS_PRTCL_EULER, binding=0) uniform ParticleFountain {
     mat4 emitterBasis;      // Rotation that rotates y axis to the direction of emitter
     float time;             // Simulation time
     float delta;            // Elapsed time between frames
+    float velLB;            // Lower bound of the generated random velocity (euler)
+    float velUB;            // Upper bound of the generated random velocity (euler)
 } uniFountain;
 
 // SAMPLERS
@@ -65,30 +73,37 @@ layout(set=_DS_PRTCL_EULER, binding=2, std140) buffer ParticleBuffer {
 };
 
 // IN
-layout(local_size_x=1000, local_size_y=1, local_size_z=1) in;
+layout(local_size_x=16, local_size_y=1, local_size_z=1) in;
 
 vec3 randomInitialVelocity() {
     int index = int(gl_GlobalInvocationID.x);
     float theta = mix(0.0, PI / 8.0, texelFetch(sampRandom, index, 0).r);
     float phi = mix(0.0, 2.0 * PI, texelFetch(sampRandom, index + 1, 0).r);
-    float velocity = mix(1.25, 1.5, texelFetch(sampRandom, index + 2, 0).r);
+    float velocity = mix(uniFountain.velLB, uniFountain.velUB, texelFetch(sampRandom, index + 2, 0).r);
     vec3 v = vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
     return normalize(mat3(uniFountain.emitterBasis) * v) * velocity;
+}
+
+float randomInitialRotationalVelocity() {
+    return mix(-15.0, 15.0, texelFetch(sampRandom, int(gl_GlobalInvocationID.x) + 3, 0).r);
 }
 
 void main() {
     uint index = gl_GlobalInvocationID.x;
     if (particles[index].data1[3] < 0 || particles[index].data1[3] > uniFountain.data0[3]) {
         // The particle is past it's lifetime, recycle.
-        particles[index].data0.xyz = uniFountain.data1.xyz;
-        particles[index].data1.xyz = randomInitialVelocity();
-        if (particles[index].data1[3] < 0)
+        particles[index].data0.xyz = uniFountain.data1.xyz;                             // position
+        particles[index].data1.xyz = randomInitialVelocity();                           // veloctiy
+        particles[index].data2.xy = vec2(0.0, randomInitialRotationalVelocity());       // rotation
+        if (particles[index].data1[3] < 0)                                              // age
             particles[index].data1[3] += uniFountain.delta;
         else
-            particles[index].data1[3] = (particles[index].data1[3] - uniFountain.data0[3]) + uniFountain.delta;
+            particles[index].data1[3] += -uniFountain.data0[3] + uniFountain.delta;
     } else {
-        particles[index].data0.xyz += particles[index].data1.xyz * uniFountain.delta;
-        particles[index].data1.xyz += uniFountain.data0.xyz * uniFountain.delta;
-        particles[index].data1[3] += uniFountain.delta;
+        particles[index].data0.xyz += particles[index].data1.xyz * uniFountain.delta;   // position
+        particles[index].data1.xyz += uniFountain.data0.xyz * uniFountain.delta;        // velocity
+        particles[index].data2.x = mod(particles[index].data2.x +                       // rotation
+            particles[index].data2.y * uniFountain.delta, 2.0 * PI);
+        particles[index].data1[3] += uniFountain.delta;                                 // age
     }
 }

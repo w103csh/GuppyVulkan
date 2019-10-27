@@ -91,6 +91,7 @@ class Shell {
         bool vertexAttributeDivisorEnabled = false;
         bool transformFeedbackEnabled = false;
         bool debugMarkersEnabled = false;
+        bool independentBlendEnabled = false;
 
         VkPhysicalDevice physicalDev = VK_NULL_HANDLE;
         std::vector<PhysicalDeviceProperties> physicalDevProps;  // *

@@ -19,8 +19,9 @@ layout(set=_DS_SMP_DEF, binding=0) uniform sampler2DArray sampParticle;
 
 // IN
 layout(location=0) in vec3 inPosition;        // camera space
-layout(location=1) in float inTransparency;
-layout(location=2) in vec2 inTexCoord;
+layout(location=1) in vec3 inNormal;          // camera space
+layout(location=3) in vec2 inTexCoord;
+layout(location=4) in float inTransparency;
 
 // OUT
 layout(location=0) out vec4 outPosition;
@@ -33,6 +34,7 @@ layout(location=4) out vec4 outSpecular;
 const uint PER_MATERIAL_COLOR       = 0x00000001u;
 const uint PER_VERTEX_COLOR         = 0x00000002u;
 const uint PER_TEXTURE_COLOR        = 0x00000004u;
+const uint IS_MESH                  = 0x00010000u;
 
 // GLOBAL
 vec3    Ka,     // ambient coefficient
@@ -43,7 +45,7 @@ float opacity, height;
 
 void main() {
     
-    if ((uniFountain.flags & PER_TEXTURE_COLOR) > 0) {
+    if ((uniFountain.flags & PER_TEXTURE_COLOR) > 0 && (uniFountain.flags & IS_MESH) == 0) {
 
         vec2 texCoord = vec2(
             (inTexCoord.x * uniFountain.xRepeat),
@@ -66,11 +68,18 @@ void main() {
 
     }
     
-    outDiffuse = vec4(Kd, opacity * inTransparency);
+    float alpha = opacity * inTransparency;
+
+    outDiffuse = vec4(Kd, alpha);
     if (outDiffuse[3] < 0.15)
         discard;
     outPosition = vec4(inPosition, 1.0);
-    outNormal = vec4(0);
-    outAmbient = vec4(Ka, -2.0);
-    outSpecular = vec4(Ks, 0);
+    // [3] is used for shininess
+    outNormal = vec4(inNormal, 100.0);
+    outAmbient = vec4(Ka, alpha);
+    // Remove this if I ever add the default material
+    if (all(equal(Ks, vec3(0))))
+        outSpecular = vec4(0.9, 0.9, 0.9, alpha);
+    else
+        outSpecular = vec4(Ks, alpha);
 }

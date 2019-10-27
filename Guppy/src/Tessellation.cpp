@@ -42,7 +42,7 @@ Base::Base(Handler& handler, const CreateInfo* pCreateInfo, const uint32_t patch
 
 void Base::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     if (IS_DEFERRED)
-        Deferred::GetDefaultBlendInfoResources(createInfoRes);
+        Deferred::GetBlendInfoResources(createInfoRes);
     else
         Graphics::getBlendInfoResources(createInfoRes);
 }
