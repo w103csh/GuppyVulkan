@@ -8,8 +8,9 @@
 #include "UniformHandler.h"
 
 namespace {
-constexpr uint32_t NUM_PARTICLES_EULER = 16;
-}
+constexpr uint32_t NUM_PARTICLES_BW_EULER = Particle::NUM_PARTICLES_EULER_MIN;
+constexpr uint32_t NUM_PARTICLES_FIRE = Particle::NUM_PARTICLES_EULER_MIN * 2;
+}  // namespace
 
 Particle::Handler::Handler(Game* pGame)
     : Game::Handler(pGame),  //
@@ -25,7 +26,7 @@ void Particle::Handler::init() {
 
     // Unfortunately the textures have to be created inside init
     auto rand1dTexInfo =
-        Texture::MakeRandom1dTex(Texture::Particle::RAND_1D_ID, Sampler::Particle::RAND_1D_ID, NUM_PARTICLES_EULER * 4);
+        Texture::MakeRandom1dTex(Texture::Particle::RAND_1D_ID, Sampler::Particle::RAND_1D_ID, NUM_PARTICLES_FIRE * 4);
     textureHandler().make(&rand1dTexInfo);
 }
 
@@ -91,6 +92,7 @@ void Particle::Handler::create() {
         // BLUEWATER
         if (true) {
             fntnInfo = {};
+            fntnInfo.name = "Bluewater Fountain Particle Buffer";
             fntnInfo.pipelineTypeGraphics = PIPELINE::PARTICLE_FOUNTAIN_DEFERRED;
             fntnInfo.pTexture = textureHandler().getTexture(Texture::BLUEWATER_ID);
             fntnInfo.emitterBasis = helpers::makeArbitraryBasis({-1.0f, 2.0f, 0.0f});
@@ -99,41 +101,82 @@ void Particle::Handler::create() {
 
             models.clear();
             models.push_back(helpers::affine(glm::vec3{0.5f}, glm::vec3{1.0f}));
-            models.push_back(helpers::affine(glm::vec3{0.5f}, glm::vec3{1.0f}, M_PI_2_FLT, CARDINAL_Y));
+            models.push_back(helpers::affine(glm::vec3{0.5f}, glm::vec3{-3.0f, 0.0f, 0.0f}, M_PI_2_FLT, CARDINAL_Y));
 
             makeBuffer<Particle::Buffer::Fountain, Material::Particle::Fountain::CreateInfo,
                        Instance::Particle::Fountain::CreateInfo>(&fntnInfo, 8000, models);
         }
-        // BLUEWATER (EULER)
-        if (true && hasInstFntnEulerMgr()) {
-            fntnInfo = {};
-            fntnInfo.pipelineTypeCompute = PIPELINE::PARTICLE_EULER_COMPUTE;
-            fntnInfo.pipelineTypeGraphics = PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED;
-            fntnInfo.pTexture = textureHandler().getTexture(Texture::BLUEWATER_ID);
-            fntnInfo.emitterBasis = helpers::makeArbitraryBasis({-1.0f, 2.0f, 0.0f});
-            fntnInfo.lifespan = 8.0f;
-            fntnInfo.size = 0.1f;
+        // EULER (COMPUTE)
+        if (hasInstFntnEulerMgr()) {
+            // TORUS
+            if (true) {
+                fntnInfo = {};
+                fntnInfo.name = "Bluewater Euler Particle Buffer";
+                fntnInfo.pipelineTypeCompute = PIPELINE::PARTICLE_EULER_COMPUTE;
+                fntnInfo.pipelineTypeGraphics = PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED;
+                fntnInfo.pTexture = textureHandler().getTexture(Texture::BLUEWATER_ID);
+                fntnInfo.emitterBasis = helpers::makeArbitraryBasis({-1.0f, 2.0f, 0.0f});
+                fntnInfo.lifespan = 8.0f;
+                fntnInfo.size = 0.1f;
 
-            models.clear();
-            // models.push_back(helpers::affine(glm::vec3{0.07f}, glm::vec3{1.0f, 4.0f, -1.0f}, M_PI_FLT, CARDINAL_X));
-            models.push_back(helpers::affine(glm::vec3{0.07f}, glm::vec3{-1.0f, 0.2f, -1.0f}));
+                models.clear();
+                // models.push_back(helpers::affine(glm::vec3{0.07f}, glm::vec3{1.0f, 4.0f, -1.0f}, M_PI_FLT, CARDINAL_X));
+                models.push_back(helpers::affine(glm::vec3{0.07f}, glm::vec3{-1.0f, 0.2f, -1.0f}));
 
-            {
-                // MATERIAL
-                std::vector<std::shared_ptr<Material::Base>> pMaterials;
-                for (const auto& model : models) {
-                    Material::Particle::Fountain::CreateInfo matInfo(&fntnInfo, model, shell().context().imageCount);
-                    matInfo.color = {0.8f, 0.3f, 0.0f};
-                    matInfo.velocityLowerBound = 2.0f;
-                    matInfo.velocityUpperBound = 3.5f;
-                    pMaterials.emplace_back(materialHandler().makeMaterial(&matInfo));
+                {
+                    // MATERIAL
+                    std::vector<std::shared_ptr<Material::Base>> pMaterials;
+                    for (const auto& model : models) {
+                        Material::Particle::Fountain::CreateInfo matInfo(&fntnInfo, model, shell().context().imageCount);
+                        matInfo.color = {0.8f, 0.3f, 0.0f};
+                        matInfo.velocityLowerBound = 2.0f;
+                        matInfo.velocityUpperBound = 3.5f;
+                        pMaterials.emplace_back(materialHandler().makeMaterial(&matInfo));
+                    }
+                    // INSTANCE
+                    Instance::Particle::FountainEuler::CreateInfo instInfo(&fntnInfo, NUM_PARTICLES_BW_EULER);
+                    instInfo.countInRange = true;
+                    pInstFntnEulerMgr_->insert(shell().context().dev, &instInfo);
+                    auto& pInstFntn = pInstFntnEulerMgr_->pItems.back();
+                    // BUFFER
+                    make<Particle::Buffer::Euler::Torus>(pBuffers_, &fntnInfo, pMaterials, pInstFntn);
                 }
-                // INSTANCE
-                Instance::Particle::FountainEuler::CreateInfo instInfo(&fntnInfo, NUM_PARTICLES_EULER);
-                pInstFntnEulerMgr_->insert(shell().context().dev, &instInfo);
-                auto& pInstFntn = pInstFntnEulerMgr_->pItems.back();
-                // BUFFER
-                make<Particle::Buffer::FountainEuler>(pBuffers_, &fntnInfo, pMaterials, pInstFntn);
+            }
+            // FIRE
+            if (true) {
+                fntnInfo = {};
+                fntnInfo.name = "Fire Euler Particle Buffer";
+                fntnInfo.pipelineTypeCompute = PIPELINE::PARTICLE_EULER_COMPUTE;
+                fntnInfo.pipelineTypeGraphics = PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED;
+                fntnInfo.pTexture = textureHandler().getTexture(Texture::FIRE_ID);
+                // fntnInfo.pTexture = textureHandler().getTexture(Texture::BLUEWATER_ID);
+                fntnInfo.emitterBasis = helpers::makeArbitraryBasis({0.0f, 1.0f, 0.0f});
+                fntnInfo.lifespan = 3.0f;
+                fntnInfo.size = 0.5f;
+                fntnInfo.acceleration = {0.0f, 0.1f, 0.0f};
+                fntnInfo.computeFlag = Particle::Euler::FLAG::FIRE;
+
+                models.clear();
+                models.push_back(helpers::affine(glm::vec3{1.0f}, glm::vec3{-3.0f, 0.0f, -3.0f}));
+
+                {
+                    // MATERIAL
+                    std::vector<std::shared_ptr<Material::Base>> pMaterials;
+                    for (const auto& model : models) {
+                        Material::Particle::Fountain::CreateInfo matInfo(&fntnInfo, model, shell().context().imageCount);
+                        // matInfo.color = {0.8f, 0.3f, 0.0f};
+                        // matInfo.velocityLowerBound = 2.0f;
+                        // matInfo.velocityUpperBound = 3.5f;
+                        pMaterials.emplace_back(materialHandler().makeMaterial(&matInfo));
+                    }
+                    // INSTANCE
+                    Instance::Particle::FountainEuler::CreateInfo instInfo(&fntnInfo, NUM_PARTICLES_FIRE);
+                    instInfo.countInRange = true;
+                    pInstFntnEulerMgr_->insert(shell().context().dev, &instInfo);
+                    auto& pInstFntn = pInstFntnEulerMgr_->pItems.back();
+                    // BUFFER
+                    make<Particle::Buffer::Euler::Base>(pBuffers_, &fntnInfo, pMaterials, pInstFntn);
+                }
             }
         }
     }

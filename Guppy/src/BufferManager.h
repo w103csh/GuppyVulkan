@@ -98,7 +98,7 @@ class Base {
     template <typename TCreateInfo>
     void insert(const VkDevice &dev, TCreateInfo *pCreateInfo) {
         assert(pItems.size() < MAX_SIZE);
-        auto info = fill(dev, std::vector<typename TDerived::DATA>(pCreateInfo->dataCount));
+        auto info = fill(dev, std::vector<typename TDerived::DATA>(pCreateInfo->dataCount), pCreateInfo->countInRange);
         pItems.emplace_back(new TDerived(std::move(info), get(info), pCreateInfo));
         if (pCreateInfo == nullptr || pCreateInfo->update) updateData(dev, pItems.back()->BUFFER_INFO);
     }
@@ -106,7 +106,7 @@ class Base {
     void insert(const VkDevice &dev, bool update = true,
                 const std::vector<typename TDerived::DATA> &data = std::vector<typename TDerived::DATA>(1)) {
         assert(pItems.size() < MAX_SIZE);
-        auto info = fill(dev, data);
+        auto info = fill(dev, data, false);
         pItems.emplace_back(new TDerived(std::move(info), get(info)));
         if (update) updateData(dev, pItems.back()->BUFFER_INFO);
     }
@@ -130,7 +130,7 @@ class Base {
    protected:
     virtual void setInfo(Buffer::Info &info){};
 
-    Buffer::Info fill(const VkDevice &dev, const std::vector<typename TDerived::DATA> data) {
+    Buffer::Info fill(const VkDevice &dev, const std::vector<typename TDerived::DATA> data, const bool countInRange) {
         assert(resources_.size() && "Did you initialize the manager?");
         auto &resource = resources_.back();
 
@@ -143,10 +143,10 @@ class Base {
 
         Buffer::Info info = {};
         info.bufferInfo.buffer = resource.buffer;
-        info.bufferInfo.range = alignment_;
+        info.bufferInfo.range = countInRange ? alignment_ * data.size() : alignment_;
         // Note: The offset for descriptor buffer info is 0 for a dynamic buffer. This
         // is overriden in "Descriptor::Manager::setInfo".
-        info.memoryOffset = info.bufferInfo.offset = info.bufferInfo.range * resource.currentOffset;
+        info.memoryOffset = info.bufferInfo.offset = alignment_ * resource.currentOffset;
         info.resourcesOffset = resources_.size() - 1;
         info.dataOffset = resource.currentOffset;
         // TODO: putting this here could be super confusing. It relies on the update

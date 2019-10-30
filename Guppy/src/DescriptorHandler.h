@@ -7,15 +7,13 @@
 #include <string>
 #include <vulkan/vulkan.h>
 
-#include "BufferItem.h"
+#include "Descriptor.h"
 #include "ConstantsAll.h"
 #include "Game.h"
 #include "DescriptorSet.h"
 
 // clang-format off
-namespace Material  { class Base; }
 namespace Texture   { class Base; }
-namespace Shader    { class Base; }
 // clang-format on
 
 namespace Descriptor {
@@ -44,8 +42,8 @@ class Handler : public Game::Handler {
 
     // DESCRIPTOR
     void getBindData(const PIPELINE& pipelineType, Descriptor::Set::bindDataMap& bindDataMap,
-                     const std::shared_ptr<Material::Base>& pMaterial = nullptr,
-                     const std::shared_ptr<Texture::Base>& pTexture = nullptr, const Buffer::Item* pBuffItem = nullptr);
+                     const std::vector<Descriptor::Base*> pDynamicItems = {},
+                     const std::shared_ptr<Texture::Base>& pTexture = nullptr);
     void updateBindData(const std::vector<std::string> textureIds);
 
    private:
@@ -74,13 +72,12 @@ class Handler : public Game::Handler {
     void allocateDescriptorSets(const Descriptor::Set::Resource& resource, std::vector<VkDescriptorSet>& descriptorSets);
 
     void updateDescriptorSets(const Descriptor::bindingMap& bindingMap, const Descriptor::OffsetsMap& offsets,
-                              Set::resourceInfoMapSetsPair& pair, const std::shared_ptr<Material::Base>& pMaterial = nullptr,
-                              const std::shared_ptr<Texture::Base>& pTexture = nullptr,
-                              const Buffer::Item* pBuffItem = nullptr) const;
+                              Set::resourceInfoMapSetsPair& pair, const std::vector<Descriptor::Base*> pDynamicItems,
+                              const std::shared_ptr<Texture::Base>& pTexture = nullptr) const;
 
     VkWriteDescriptorSet getWrite(const Descriptor::bindingMapKeyValue& keyValue, const VkDescriptorSet& set) const;
     void getDynamicOffsets(const std::unique_ptr<Descriptor::Set::Base>& pSet, std::vector<uint32_t>& dynamicOffsets,
-                           const std::shared_ptr<Material::Base>& pMaterial);
+                           const std::vector<Descriptor::Base*> pDynamicItems);
 
     // BINDING
     VkDescriptorSetLayoutBinding getDecriptorSetLayoutBinding(const Descriptor::bindingMapKeyValue& keyValue,

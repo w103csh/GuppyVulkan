@@ -102,12 +102,7 @@ enum class PUSH_CONSTANT {
     PBR,
     POST_PROCESS,
     DEFERRED,
-};
-
-enum class MATERIAL {
-    DEFAULT,
-    PBR,
-    PARTICLE_FOUNTAIN,
+    PARTICLE_EULER_COMPUTE,
 };
 
 enum class INPUT_ACTION {
@@ -155,16 +150,21 @@ enum class COMBINED_SAMPLER {
     DONT_CARE,
 };
 
-enum class STORAGE_BUFFER {
-    POST_PROCESS,
-    PARTICLE_EULER,
+enum class STORAGE_IMAGE {
+    PIPELINE,
+    SWAPCHAIN,
     //
     DONT_CARE,
 };
 
-enum class STORAGE_IMAGE {
-    PIPELINE,
-    SWAPCHAIN,
+enum class STORAGE_BUFFER {
+    POST_PROCESS,
+    //
+    DONT_CARE,
+};
+
+enum class STORAGE_BUFFER_DYNAMIC {
+    PARTICLE_EULER,
     //
     DONT_CARE,
 };

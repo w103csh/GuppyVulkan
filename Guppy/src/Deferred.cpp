@@ -210,7 +210,8 @@ namespace Deferred {
 
 SSAO::SSAO(const Buffer::Info&& info, DATA* pData)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-      Buffer::DataItem<DATA>(pData) {}
+      Buffer::DataItem<DATA>(pData),
+      Descriptor::Base(UNIFORM::DEFERRED_SSAO) {}
 
 void SSAO::init() {
     for (int i = 0; i < KERNEL_SIZE; i++) {
@@ -428,39 +429,45 @@ void GetBlendInfoResources(CreateInfoResources& createInfoRes, bool blend) {
         createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
 
     } else {
-        // Position/Normal
+        // Position/Normal (blend disabled)
         createInfoRes.blendAttachmentStates.assign(2, state);
 
-        // I am not sure why the blend state below was not blending things properly. I thought it through and it seemed like
-        // it should work at the time. Note: src are the incoming fragment values, and dst are the values already in the
-        // attachment.
-
-        // Blend enabled
-        state = {};
         state.blendEnable = VK_TRUE;
-        state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-        state.colorBlendOp = VK_BLEND_OP_ADD;
-        state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-        state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-        state.alphaBlendOp = VK_BLEND_OP_ADD;
-        // Additive blending
-        // state.colorBlendOp = VK_BLEND_OP_ADD;
-        // state.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-        // state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
-        // state.alphaBlendOp = VK_BLEND_OP_ADD;
-        // state.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-        // state.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+        if (true) {
+            // This one makes the most sense to me. I found the other two online.
+            state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            state.colorBlendOp = VK_BLEND_OP_ADD;
+            state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+            state.alphaBlendOp = VK_BLEND_OP_ADD;
+        } else if (false) {
+            // Additive blending
+            state.colorBlendOp = VK_BLEND_OP_ADD;
+            state.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            state.alphaBlendOp = VK_BLEND_OP_ADD;
+            state.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            state.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+        } else {
+            // Premulitplied alpha
+            state.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            state.colorBlendOp = VK_BLEND_OP_ADD;
+            state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+            state.alphaBlendOp = VK_BLEND_OP_ADD;
+        }
 
-        // Diffuse/Ambient/Specular
+        // Diffuse/Ambient/Specular (blend enabled)
         createInfoRes.blendAttachmentStates.push_back(state);
         createInfoRes.blendAttachmentStates.push_back(state);
         createInfoRes.blendAttachmentStates.push_back(state);
 
         createInfoRes.colorBlendStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr};
         createInfoRes.colorBlendStateInfo.attachmentCount =
-            static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size() - 1);
-        createInfoRes.colorBlendStateInfo.pAttachments = &createInfoRes.blendAttachmentStates[0];
+            static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size());
+        createInfoRes.colorBlendStateInfo.pAttachments = createInfoRes.blendAttachmentStates.data();
         createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
     }
 }
@@ -483,7 +490,7 @@ const Pipeline::CreateInfo MRT_TEX_CREATE_INFO = {
 MRTTexture::MRTTexture(Pipeline::Handler& handler) : Graphics(handler, &MRT_TEX_CREATE_INFO) {}
 
 void MRTTexture::getBlendInfoResources(CreateInfoResources& createInfoRes) {
-    GetBlendInfoResources(createInfoRes);  //
+    GetBlendInfoResources(createInfoRes, true);  //
 }
 
 //// MRT (TEXTURE WIREFRAME)

@@ -37,6 +37,7 @@ Storage::PostProcess::DATA::DATA()
 Storage::PostProcess::Base::Base(const Buffer::Info&& info, DATA* pData,
                                  const Buffer::CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-      Buffer::PerFramebufferDataItem<DATA>(pData) {
+      Buffer::PerFramebufferDataItem<DATA>(pData),
+      Descriptor::Base(STORAGE_BUFFER::POST_PROCESS) {
     dirty = true;
 }

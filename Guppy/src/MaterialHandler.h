@@ -61,10 +61,10 @@ class Handler : public Game::Handler {
 
     inline void update(const std::shared_ptr<Material::Base> &pMaterial, const int index = -1) {
         // clang-format off
-        switch (pMaterial->TYPE) {
-            case MATERIAL::DEFAULT:             update(std::static_pointer_cast<Material::Default::Base>(pMaterial), std::forward<const int>(index)); break;
-            case MATERIAL::PBR:                 update(std::static_pointer_cast<Material::PBR::Base>(pMaterial), std::forward<const int>(index)); break;
-            case MATERIAL::PARTICLE_FOUNTAIN:   update(std::static_pointer_cast<Material::Particle::Fountain::Base>(pMaterial), std::forward<const int>(index)); break;
+        switch (std::visit(Descriptor::GetUniformDynamic{}, pMaterial->getDescriptorType())) {
+            case UNIFORM_DYNAMIC::MATERIAL_DEFAULT:             update(std::static_pointer_cast<Material::Default::Base>(pMaterial), std::forward<const int>(index)); break;
+            case UNIFORM_DYNAMIC::MATERIAL_PBR:                 update(std::static_pointer_cast<Material::PBR::Base>(pMaterial), std::forward<const int>(index)); break;
+            case UNIFORM_DYNAMIC::MATERIAL_PARTICLE_FOUNTAIN:   update(std::static_pointer_cast<Material::Particle::Fountain::Base>(pMaterial), std::forward<const int>(index)); break;
             default: assert(false && "Unhandled material type."); exit(EXIT_FAILURE);
         }
         // clang-format on

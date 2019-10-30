@@ -57,7 +57,7 @@ Game::Settings::Settings()
 #endif
       try_wireframe_shading(true),
       try_debug_markers(false),
-      try_independent_blend(false),
+      try_independent_blend(true),
       enable_sample_shading(true),
       enable_double_clicks(false),
       enable_directory_listener(true),

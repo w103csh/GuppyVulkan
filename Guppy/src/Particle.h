@@ -75,8 +75,8 @@ struct DATA : public Material::Obj3d::DATA {
     glm::mat4 emitterBasis;              // Rotation that rotates y axis to the direction of emitter
     float time = ::Particle::BAD_TIME;   // Simulation time
     float delta = ::Particle::BAD_TIME;  // Elapsed time between frames from the start signal
-    float velocityLowerBound = 1.25f;    // Lower bound of the generated random velocity (euler)
-    float velocityUpperBound = 1.5f;     // Upper bound of the generated random velocity (euler)
+    float velocityLowerBound;            // Lower bound of the generated random velocity (euler)
+    float velocityUpperBound;            // Upper bound of the generated random velocity (euler)
     glm::vec2 _padding;
 };
 
@@ -96,8 +96,8 @@ struct CreateInfo : public Material::Obj3d::CreateInfo {
     glm::mat3 emitterBasis;
     glm::vec3 emitterPosition;
     float size;
-    float velocityLowerBound;
-    float velocityUpperBound;
+    float velocityLowerBound = 1.25f;
+    float velocityUpperBound = 1.5f;
 };
 
 // TODO: The data here really should be separated from the material data. I made it one large dynamic uniform
@@ -183,7 +183,7 @@ class FountainEuler : public Graphics {
    public:
     const bool DO_BLEND;
     const bool IS_DEFERRED;
-    FountainEuler(Handler& handler, const bool isDeferred = true);
+    FountainEuler(Handler& handler, const bool doBlend = true, const bool isDeferred = true);
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
 };

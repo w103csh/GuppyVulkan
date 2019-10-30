@@ -40,8 +40,9 @@ struct CreateInfo : public Buffer::CreateInfo {
 template <typename TDATA>
 class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer::PerFramebufferDataItem<TDATA> {
    public:
-    Base(TDATA *pData, const CreateInfo *pCreateInfo)
-        : Buffer::PerFramebufferDataItem<TDATA>(pData),  //
+    Base(const DESCRIPTOR &&descType, TDATA *pData, const CreateInfo *pCreateInfo)
+        : Buffer::PerFramebufferDataItem<TDATA>(pData),                //
+          Descriptor::Base(std::forward<const DESCRIPTOR>(descType)),  //
           model_(pCreateInfo->model) {}
 
     inline const glm::mat4 &model(const uint32_t index = 0) const override { return model_; }

@@ -93,11 +93,12 @@ void main() {
 
         if (inData1[3] >= 0.0) {
             outPosition = (mViewModel * vec4(inPosition, 1.0)).xyz;
-            outTransparency = clamp(1.0 - inData1[3] / uniFountain.data0[3], 0.0, 1.0);
         } else {
             outPosition = vec3(0.0);
         }
+        outTransparency = 1.0;
         outTexCoord = vec2(0.0);
+        outNormal = normalize(mat3(mViewModel) * inNormal);
 
     // Billboarded quad
     } else {
@@ -110,9 +111,8 @@ void main() {
             outPosition = vec3(0.0);
         }
         outTexCoord = texCoords[gl_VertexIndex];
+        outNormal = vec3(0.0, 0.0, 1.0);
     }
-
-    outNormal = normalize(mat3(mViewModel) * inNormal);
 
     gl_Position = camera.projection * vec4(outPosition, 1.0);
 }

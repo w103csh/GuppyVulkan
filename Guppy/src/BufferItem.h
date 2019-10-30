@@ -11,6 +11,7 @@ namespace Buffer {
 struct CreateInfo {
     uint32_t dataCount = 1;
     bool update = true;
+    bool countInRange = false;
 };
 
 struct Info {
@@ -34,13 +35,13 @@ class Item {
     bool dirty;
 
    protected:
-    /*  Virtual inheritance only.
-        I am going to assert here to make it clear that its best to avoid this
-        constructor being called. It gave me some headaches, so this will hopefully
-        force me to call the constructors in the same order. The order is that "the
-        most derived class calls the constructor" of the virtually inherited
-        class (this), so just add the public constructor above to that level.
-    */
+    /** Virtual inheritance only.
+     *   I am going to assert here to make it clear that its best to avoid this
+     *   constructor being called. It gave me some headaches, so this will hopefully
+     *   force me to call the constructors in the same order. The order is that "the
+     *   most derived class calls the constructor" of the virtually inherited
+     *   class (this), so just add the public constructor above to that level.
+     */
     Item() : dirty(false) { assert(false); }
 };
 
@@ -55,13 +56,13 @@ class DataItem : public virtual Buffer::Item {
 
    protected:
     TDATA* pData_;
-};  // namespace Buffer
+};
 
 // This is pretty slow on a bunch of levels, but I'd rather just have it work atm.
 template <typename TDATA>
 class PerFramebufferDataItem : public Buffer::DataItem<TDATA> {
     using TItem = Buffer::DataItem<TDATA>;
-    
+
    public:
     PerFramebufferDataItem(TDATA* pData) : Buffer::DataItem<TDATA>(pData), data_(*pData) {}
 

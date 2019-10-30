@@ -542,8 +542,8 @@ VkDescriptorSetLayoutBinding Descriptor::Handler::getDecriptorSetLayoutBinding(
 
 // TODO: add params that can indicate to free/reallocate
 void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::Set::bindDataMap& bindDataMap,
-                                      const std::shared_ptr<Material::Base>& pMaterial,
-                                      const std::shared_ptr<Texture::Base>& pTexture, const Buffer::Item* pBuffItem) {
+                                      const std::vector<Descriptor::Base*> pDynamicItems,
+                                      const std::shared_ptr<Texture::Base>& pTexture) {
     bindDataMap.clear();
 
     // Get a list of active passes for the pipeline type.
@@ -561,20 +561,33 @@ void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::
         assert(helpers.size());
         auto& pSet = getSet(helpers.front().setType);
 
-        // Check for a texture offset.
-        uint32_t textureOffset = 0;
+        /**
+         * TODO: This code is barely working (specifically the offset key values generated here). I need to change this if I
+         * continue to add dynamic buffer types. It won't even work right at the time I am writing this, but I strongly feel
+         * that changing this to work correctly is going to be a huge pain, and is not worth it until my priorities change.
+         */
+        uint32_t textureOffset = 0, storageBufferOffset = 0;
         if (pSet->hasTextureMaterial()) {
             assert(pTexture != nullptr);
             textureOffset = pTexture->OFFSET;
+        } else if (pSet->hasStorageBufferDynamic()) {
+            bool found = false;
+            for (const auto& pItem : pDynamicItems) {
+                if (std::visit(IsStorageBufferDynamic{}, pItem->getDescriptorType())) {
+                    assert(!found && "This will only work if there is one dynamic storage buffer. Sorry. Good luck.");
+                    storageBufferOffset = static_cast<uint32_t>(pItem->BUFFER_INFO.itemOffset);
+                    found = true;
+                }
+            }
         }
 
-        // TODO: there are double fetches from the maps here.
+        auto descriptorSetsMapKey = std::make_pair(textureOffset, storageBufferOffset);
 
         // Get/create the resource offset map for the material (or 0 if no material).
-        auto itDescSetsMap = pSet->descriptorSetsMap_.find(textureOffset);
+        auto itDescSetsMap = pSet->descriptorSetsMap_.find(descriptorSetsMapKey);
         if (itDescSetsMap == pSet->descriptorSetsMap_.end()) {
             // Add a element with the proper number of sets
-            auto it = pSet->descriptorSetsMap_.insert({textureOffset, {}});
+            auto it = pSet->descriptorSetsMap_.insert({descriptorSetsMapKey, {}});
             assert(it.second);
             itDescSetsMap = it.first;
         }
@@ -599,7 +612,7 @@ void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::
 
                 // Update
                 updateDescriptorSets(pSet->getBindingMap(), pSet->getDescriptorOffsets(helper.resourceOffset),
-                                     itResOffsetsMap->second, pMaterial, pTexture, pBuffItem);
+                                     itResOffsetsMap->second, pDynamicItems, pTexture);
             }
             const auto& [pInfoMap, sets] = itResOffsetsMap->second;
 
@@ -630,7 +643,7 @@ void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::
             }
 
             // DYNAMIC OFFSETS
-            getDynamicOffsets(pSet, itBindDataMap->second.dynamicOffsets, pMaterial);
+            getDynamicOffsets(pSet, itBindDataMap->second.dynamicOffsets, pDynamicItems);
 
             // This is for convenience. Might be more of a pain than its worth. I already
             // had to change it to a shared_ptr.
@@ -655,9 +668,8 @@ void Descriptor::Handler::allocateDescriptorSets(const Descriptor::Set::Resource
 
 void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bindingMap,
                                                const Descriptor::OffsetsMap& offsets, Set::resourceInfoMapSetsPair& pair,
-                                               const std::shared_ptr<Material::Base>& pMaterial,
-                                               const std::shared_ptr<Texture::Base>& pTexture,
-                                               const Buffer::Item* pBuffItem) const {
+                                               const std::vector<Descriptor::Base*> pDynamicItems,
+                                               const std::shared_ptr<Texture::Base>& pTexture) const {
     std::vector<std::vector<VkWriteDescriptorSet>> writesList(pair.second.size());
     assert(writesList.size() == pair.second.size());
 
@@ -698,18 +710,29 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
             assert(static_cast<uint32_t>(itInfoMap->second.bufferInfos.size()) ==
                    (itInfoMap->second.uniqueDataSets * itInfoMap->second.descCount));
 
-        } else if (std::visit(IsUniformDynamic{}, bindingInfo.descType)) {
-            // MATERIAL
+        } else if (std::visit(IsDynamic{}, bindingInfo.descType)) {
+            // DYNAMIC
 
             itInfoMap->second.descCount = 1;
             itInfoMap->second.bufferInfos.resize(itInfoMap->second.uniqueDataSets);
 
-            auto sMsg =
-                Descriptor::GetPerframeBufferWarning(bindingInfo.descType, pMaterial->BUFFER_INFO, itInfoMap->second);
-            if (sMsg.size()) shell().log(Shell::LogPriority::LOG_WARN, sMsg.c_str());
+            bool found = false;
+            for (const auto& pItem : pDynamicItems) {
+                if (pItem->getDescriptorType() == bindingInfo.descType) {
+                    if (std::visit(IsUniformDynamic{}, bindingInfo.descType)) {
+                        auto sMsg = Descriptor::GetPerframeBufferWarning(bindingInfo.descType, pItem->BUFFER_INFO,
+                                                                         itInfoMap->second);
+                        if (sMsg.size()) shell().log(Shell::LogPriority::LOG_WARN, sMsg.c_str());
+                    } else if (std::visit(IsStorageBufferDynamic{}, bindingInfo.descType)) {
+                        assert(itInfoMap->second.bufferInfos.size() == 1);
+                    }
 
-            assert(pMaterial != nullptr);
-            pMaterial->setDescriptorInfo(itInfoMap->second, 0);
+                    pItem->setDescriptorInfo(itInfoMap->second, 0);
+                    found = true;
+                    break;
+                }
+            }
+            assert(found);
 
         } else if (std::visit(IsCombinedSamplerMaterial{}, bindingInfo.descType)) {
             // MATERIAL SAMPLER
@@ -753,20 +776,6 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
 
             assert(itInfoMap->second.uniqueDataSets == itInfoMap->second.imageInfos.size());
 
-        } else if (std::visit(IsStorageBuffer{}, bindingInfo.descType)) {
-            switch (std::visit(GetStorageBuffer{}, bindingInfo.descType)) {
-                case STORAGE_BUFFER::PARTICLE_EULER: {
-                    itInfoMap->second.bufferInfos.push_back(pBuffItem->BUFFER_INFO.bufferInfo);
-                    itInfoMap->second.bufferInfos.back().range =
-                        pBuffItem->BUFFER_INFO.bufferInfo.range * pBuffItem->BUFFER_INFO.count;
-                    itInfoMap->second.descCount = 1;
-                } break;
-                default: {
-                    assert(false && "Unhandled descriptor type");
-                    exit(EXIT_FAILURE);
-                }
-            }
-
         } else {
             assert(false && "Unhandled descriptor type");
             exit(EXIT_FAILURE);
@@ -805,9 +814,9 @@ void Descriptor::Handler::updateBindData(const std::vector<std::string> textureI
                         isValidType |= std::visit(IsSwapchainStorageImage{}, bindingInfo.descType);
                         assert(isValidType);
                         assert(pSet->descriptorSetsMap_.size() == 1);
-                        for (auto& [resourceOffset, descriptorSets] : pSet->descriptorSetsMap_.at(0)) {
+                        for (auto& [resourceOffset, descriptorSets] : pSet->descriptorSetsMap_.at({0, 0})) {
                             updateDescriptorSets(pSet->getBindingMap(), pSet->getDescriptorOffsets(resourceOffset),
-                                                 descriptorSets);
+                                                 descriptorSets, {});
                         }
                     }
                 }
@@ -829,11 +838,18 @@ VkWriteDescriptorSet Descriptor::Handler::getWrite(const Descriptor::bindingMapK
 
 void Descriptor::Handler::getDynamicOffsets(const std::unique_ptr<Descriptor::Set::Base>& pSet,
                                             std::vector<uint32_t>& dynamicOffsets,
-                                            const std::shared_ptr<Material::Base>& pMaterial) {
+                                            const std::vector<Descriptor::Base*> pDynamicItems) {
     for (auto& [key, bindingInfo] : pSet->getBindingMap()) {
-        if (std::visit(IsUniformDynamic{}, bindingInfo.descType)) {
-            assert(pMaterial != nullptr);
-            dynamicOffsets.push_back(static_cast<uint32_t>(pMaterial->BUFFER_INFO.memoryOffset));
+        if (std::visit(IsDynamic{}, bindingInfo.descType)) {
+            auto it = std::find_if(pDynamicItems.begin(), pDynamicItems.end(), [&bindingInfo](const auto& pItem) {
+                return pItem->getDescriptorType() == bindingInfo.descType;
+            });
+            if (it != pDynamicItems.end()) {
+                dynamicOffsets.push_back(static_cast<uint32_t>((*it)->BUFFER_INFO.memoryOffset));
+            } else {
+                assert(false && "Dynamic descriptor item is expected");
+                exit(EXIT_FAILURE);
+            }
         }
     }
 }

@@ -37,7 +37,8 @@ DATA::DATA() : weights{}, edgeThreshold(0.5f), luminanceThreshold(1.7f) {
 
 Default::Default(const Buffer::Info&& info, DATA* pData)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-      Buffer::DataItem<DATA>(pData) {
+      Buffer::DataItem<DATA>(pData),
+      Descriptor::Base(UNIFORM::SCREEN_SPACE_DEFAULT) {
     dirty = true;
 }
 

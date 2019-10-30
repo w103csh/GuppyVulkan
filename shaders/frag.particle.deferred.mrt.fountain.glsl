@@ -45,7 +45,7 @@ float opacity, height;
 
 void main() {
     
-    if ((uniFountain.flags & PER_TEXTURE_COLOR) > 0 && (uniFountain.flags & IS_MESH) == 0) {
+    if (true && (uniFountain.flags & PER_TEXTURE_COLOR) > 0 && (uniFountain.flags & IS_MESH) == 0) {
 
         vec2 texCoord = vec2(
             (inTexCoord.x * uniFountain.xRepeat),
@@ -67,12 +67,14 @@ void main() {
         opacity = uniFountain.opacity;
 
     }
-    
+
     float alpha = opacity * inTransparency;
 
-    outDiffuse = vec4(Kd, alpha);
-    if (outDiffuse[3] < 0.15)
+    if (alpha < 0.15)
         discard;
+    
+
+    outDiffuse = vec4(Kd, alpha);
     outPosition = vec4(inPosition, 1.0);
     // [3] is used for shininess
     outNormal = vec4(inNormal, 100.0);

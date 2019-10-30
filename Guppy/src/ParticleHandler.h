@@ -14,6 +14,8 @@
 
 namespace Particle {
 
+constexpr uint32_t NUM_PARTICLES_EULER_MIN = 1024;
+
 class Handler : public Game::Handler {
     friend class Buffer::Base;
 

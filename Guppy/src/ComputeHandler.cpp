@@ -72,7 +72,7 @@ void Compute::Handler::tick() {
     for (auto it = pComputePendingMap_.begin(); it != pComputePendingMap_.end();) {
         it->second->prepare();
         if (it->second->getStatus() == STATUS::READY) {
-            descriptorHandler().getBindData(it->second->PIPELINE_TYPE, it->second->bindDataMap_, nullptr, nullptr);
+            descriptorHandler().getBindData(it->second->PIPELINE_TYPE, it->second->bindDataMap_);
             pComputeMap_.insert(pComputeMap_.end(), std::move(*it));
             it = pComputePendingMap_.erase(it);
         } else {

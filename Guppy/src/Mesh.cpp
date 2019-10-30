@@ -99,7 +99,8 @@ void Mesh::Base::prepare() {
         // Screen quad mesh will not keep track of descriptor data.
         if (PIPELINE_TYPE == PIPELINE::ALL_ENUM && PASS_TYPES.empty()) return;
 
-        handler().descriptorHandler().getBindData(PIPELINE_TYPE, descSetBindDataMap_, pMaterial_, pMaterial_->getTexture());
+        handler().descriptorHandler().getBindData(PIPELINE_TYPE, descSetBindDataMap_, {pMaterial_.get()},
+                                                  pMaterial_->getTexture());
     } else {
         handler().ldgOffsets_.insert({TYPE, getOffset()});
     }

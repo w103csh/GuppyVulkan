@@ -188,8 +188,6 @@ const CreateInfo TRIANGLE_TESE_CREATE_INFO = {
 //    //
 //);
 
-const std::multimap<SHADER, Shader::CreateInfo> info = {{SHADER::SHADOW_COLOR_VERT, {}}};
-
 const std::map<SHADER, Shader::CreateInfo> ALL = {
     // DEFAULT
     {SHADER::COLOR_VERT, Shader::COLOR_VERT_CREATE_INFO},
