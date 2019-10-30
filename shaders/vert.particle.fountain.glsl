@@ -26,14 +26,17 @@ layout(set=_DS_UNI_PRTCL_FNTN, binding=1) uniform ParticleFountain {
 
     // Material::Particle::Fountain::DATA
     // 0, 1, 2 : Particle acceleration (gravity)
-    // 4 :       Particle lifespan
+    // 3 :       Particle lifespan
     vec4 data0;
     // 0, 1, 2 : World position of the emitter.
-    // 4 :       Size of particle
+    // 3 :       Simulation time
     vec4 data1;
     mat4 emitterBasis;      // Rotation that rotates y axis to the direction of emitter
-    float time;             // Simulation time
+    float minParticleSize;  // Minimum size of particle (used as default)
+    float maxParticleSize;  // Maximum size of particle
     float delta;            // Elapsed time between frames
+    float velLB;            // Lower bound of the generated random velocity (euler)
+    float velUB;            // Upper bound of the generated random velocity (euler)
 } uniFountain;
 
 // IN
@@ -64,7 +67,7 @@ void main() {
             (inVelocity * t) +
             (uniFountain.data0.xyz * t * t);
         outPosition = (mViewModel * vec4(pos, 1.0)).xyz +
-            (offsets[gl_VertexIndex] * uniFountain.data1[3]);
+            (offsets[gl_VertexIndex] * uniFountain.minParticleSize);
         outTransparency = mix(1.0, 0.0, t / uniFountain.data0[3]);
     } else {
         // Particle doesn't "exist", draw fully transparent

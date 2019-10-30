@@ -339,6 +339,9 @@ void Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>&
 
     vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
+    vkCmdPushConstants(cmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                       static_cast<uint32_t>(sizeof(pushConstant_)), &pushConstant_);
+
     vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
                             static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
                             descSetBindData.descriptorSets[setIndex].data(),

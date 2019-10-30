@@ -23,17 +23,6 @@ layout(set=_DS_UNI_PRTCL_FNTN, binding=1) uniform ParticleFountain {
 
     // Material::Obj3d::DATA
     mat4 model;
-
-    // Material::Particle::Fountain::DATA
-    // 0, 1, 2 : Particle acceleration (gravity)
-    // 4 :       Particle lifespan
-    vec4 data0;
-    // 0, 1, 2 : World position of the emitter.
-    // 4 :       Size of particle
-    vec4 data1;
-    mat4 emitterBasis;      // Rotation that rotates y axis to the direction of emitter
-    float time;             // Simulation time
-    float delta;            // Elapsed time between frames
 } uniFountain;
 
 // IN
@@ -47,9 +36,9 @@ layout(location=2) in vec4 inColor;
  * data0[3]: padding
  *
  * data1[0]: veloctiy.x
- * data2[1]: veloctiy.y
- * data3[2]: veloctiy.z
- * data4[3]: age
+ * data1[1]: veloctiy.y
+ * data1[2]: veloctiy.z
+ * data1[3]: age
  *
  * data2[0]: rotation angle
  * data2[1]: rotation velocity

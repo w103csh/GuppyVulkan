@@ -25,11 +25,16 @@ namespace {
 
 // clang-format off
 const std::vector<PASS> DEFAULT = {
-    //PASS::SAMPLER_PROJECT,
-    //PASS::DEFAULT,
+#if false
+#if DO_PROJECTOR
+    PASS::SAMPLER_PROJECT,
+#endif
+    PASS::DEFAULT,
     //PASS::SAMPLER_DEFAULT,
     //PASS::SCREEN_SPACE,
+#else
     PASS::DEFERRED,
+#endif
 // UI pass needs to always be last since it
 // is optional
 #ifdef USE_DEBUG_UI
@@ -45,16 +50,16 @@ RenderPass::Handler::Handler(Game* pGame)
     for (const auto& type : RenderPass::ALL) {
         // clang-format off
         switch (type) {
-            case PASS::DEFAULT:                 pPasses_.emplace_back(std::make_unique<RenderPass::Base>(               std::ref(*this), static_cast<index>(pPasses_.size()), &RenderPass::DEFAULT_CREATE_INFO)); break;
-            case PASS::SAMPLER_PROJECT:         pPasses_.emplace_back(std::make_unique<RenderPass::Base>(               std::ref(*this), static_cast<index>(pPasses_.size()), &RenderPass::PROJECT_CREATE_INFO)); break;
-            case PASS::SAMPLER_DEFAULT:         pPasses_.emplace_back(std::make_unique<RenderPass::Base>(               std::ref(*this), static_cast<index>(pPasses_.size()), &RenderPass::SAMPLER_DEFAULT_CREATE_INFO)); break;
-            case PASS::SCREEN_SPACE:            pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::Base>(  std::ref(*this), static_cast<index>(pPasses_.size()), &RenderPass::ScreenSpace::CREATE_INFO)); break;
-            case PASS::SCREEN_SPACE_HDR_LOG:    pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::HdrLog>(std::ref(*this), static_cast<index>(pPasses_.size()))); break;
-            case PASS::SCREEN_SPACE_BRIGHT:     pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::Bright>(std::ref(*this), static_cast<index>(pPasses_.size()))); break;
-            case PASS::SCREEN_SPACE_BLUR_A:     pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::BlurA>( std::ref(*this), static_cast<index>(pPasses_.size()))); break;
-            case PASS::SCREEN_SPACE_BLUR_B:     pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::BlurB>( std::ref(*this), static_cast<index>(pPasses_.size()))); break;
-            case PASS::DEFERRED:                pPasses_.emplace_back(std::make_unique<RenderPass::Deferred::Base>(     std::ref(*this), static_cast<index>(pPasses_.size()))); break;
-            case PASS::SHADOW:                  pPasses_.emplace_back(std::make_unique<RenderPass::Shadow::Default>(       std::ref(*this), static_cast<index>(pPasses_.size()))); break;
+            case PASS::DEFAULT:                 pPasses_.emplace_back(std::make_unique<RenderPass::Base>                (std::ref(*this), static_cast<index>(pPasses_.size()), &RenderPass::DEFAULT_CREATE_INFO)); break;
+            case PASS::SAMPLER_PROJECT:         pPasses_.emplace_back(std::make_unique<RenderPass::Base>                (std::ref(*this), static_cast<index>(pPasses_.size()), &RenderPass::PROJECT_CREATE_INFO)); break;
+            case PASS::SAMPLER_DEFAULT:         pPasses_.emplace_back(std::make_unique<RenderPass::Base>                (std::ref(*this), static_cast<index>(pPasses_.size()), &RenderPass::SAMPLER_DEFAULT_CREATE_INFO)); break;
+            case PASS::SCREEN_SPACE:            pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::Base>   (std::ref(*this), static_cast<index>(pPasses_.size()), &RenderPass::ScreenSpace::CREATE_INFO)); break;
+            case PASS::SCREEN_SPACE_HDR_LOG:    pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::HdrLog> (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
+            case PASS::SCREEN_SPACE_BRIGHT:     pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::Bright> (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
+            case PASS::SCREEN_SPACE_BLUR_A:     pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::BlurA>  (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
+            case PASS::SCREEN_SPACE_BLUR_B:     pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::BlurB>  (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
+            case PASS::DEFERRED:                pPasses_.emplace_back(std::make_unique<RenderPass::Deferred::Base>      (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
+            case PASS::SHADOW:                  pPasses_.emplace_back(std::make_unique<RenderPass::Shadow::Default>     (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
             case PASS::IMGUI:
 #ifdef USE_DEBUG_UI
                                                 pPasses_.emplace_back(std::make_unique<RenderPass::ImGui>(              std::ref(*this), static_cast<index>(pPasses_.size())));

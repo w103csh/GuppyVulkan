@@ -329,8 +329,8 @@ vec3 blinnPhongPositionalShadow(
 #endif
 
 void main() {
-    vec3 pos = subpassLoad(posInput, gl_SampleID).xyz;
-    vec3 v = normalize(-pos);
+    vec4 pos = subpassLoad(posInput, gl_SampleID);
+    vec3 v = normalize(-pos.xyz);
     vec4 norm = subpassLoad(normInput, gl_SampleID);
     vec4 diff = subpassLoad(diffInput, gl_SampleID);
     vec4 amb = subpassLoad(ambInput, gl_SampleID);
@@ -340,8 +340,11 @@ void main() {
     // Using the opacity at this point causes a blend with the background color...
     float alpha = true ? 1.0 : diff.a;
 
-    // outColor = vec4(diff.rgb, alpha);
-    // return;
+    // Using the 4th component of posInput as a flag to flat shade.
+    if (pos.w < 0.0) {
+        outColor = vec4(diff.rgb, alpha);
+        return;
+    }
 
 #if _U_LGT_SHDW_POS
 
@@ -349,7 +352,7 @@ void main() {
     float La = 0.2;
     vec3 Ka = La * mix(amb.rgb, diff.rgb, 0.5); // amb has no color
     vec3 KdKs = blinnPhongPositionalShadow(
-        pos,
+        pos.xyz,
         norm.xyz,
         v,
         diff.rgb,
@@ -363,7 +366,7 @@ void main() {
 
     outColor = vec4(
         blinnPhongPositional(
-            pos,
+            pos.xyz,
             norm.xyz,
             v,
             diff.rgb,
@@ -372,7 +375,7 @@ void main() {
             norm.w
             )
         + blinnPhongSpot(
-            pos,
+            pos.xyz,
             norm.xyz,
             v,
             diff.rgb,

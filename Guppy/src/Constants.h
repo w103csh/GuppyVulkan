@@ -9,6 +9,7 @@
 #include <vulkan/vulkan.h>
 
 #define USE_DEBUG_UI
+#define DO_PROJECTOR 0  // Not sure where this should go, or if this is a good solution to the problem.
 
 // Class functions with a virtual base cannot have constexpr member functions
 // with clang. This makes me think that msvc is just ignoring it, but I'll leave

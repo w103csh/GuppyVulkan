@@ -119,7 +119,9 @@ const Pipeline::CreateInfo TRI_LIST_COLOR_CREATE_INFO = {
     {SHADER::COLOR_VERT, SHADER::COLOR_FRAG},
     {
         DESCRIPTOR_SET::UNIFORM_DEFAULT,
+#if DO_PROJECTOR
         DESCRIPTOR_SET::PROJECTOR_DEFAULT,
+#endif
     },
     // Descriptor::OffsetsMap::Type{
     //    {UNIFORM::FOG_DEFAULT, {1}},

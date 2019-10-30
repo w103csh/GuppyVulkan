@@ -75,7 +75,7 @@ void main() {
     
 
     outDiffuse = vec4(Kd, alpha);
-    outPosition = vec4(inPosition, 1.0);
+    outPosition = vec4(inPosition, -1.0);
     // [3] is used for shininess
     outNormal = vec4(inNormal, 100.0);
     outAmbient = vec4(Ka, alpha);

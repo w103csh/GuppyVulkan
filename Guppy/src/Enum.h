@@ -102,7 +102,7 @@ enum class PUSH_CONSTANT {
     PBR,
     POST_PROCESS,
     DEFERRED,
-    PARTICLE_EULER_COMPUTE,
+    PARTICLE_EULER,
 };
 
 enum class INPUT_ACTION {
