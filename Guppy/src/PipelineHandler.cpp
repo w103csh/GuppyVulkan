@@ -177,7 +177,7 @@ std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
             case PUSH_CONSTANT::DEFAULT:                range.size = sizeof(Pipeline::Default::PushConstant); break;
             case PUSH_CONSTANT::POST_PROCESS:           range.size = sizeof(::Compute::PostProcess::PushConstant); break;
             case PUSH_CONSTANT::DEFERRED:               range.size = sizeof(::Deferred::PushConstant); break;
-            case PUSH_CONSTANT::PARTICLE_EULER_COMPUTE: range.size = sizeof(::Particle::Euler::PushConstant); break;
+            case PUSH_CONSTANT::PARTICLE_EULER:         range.size = sizeof(::Particle::Euler::PushConstant); break;
             default: assert(false && "Unknown push constant"); exit(EXIT_FAILURE);
         }
         // clang-format on

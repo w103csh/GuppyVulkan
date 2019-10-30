@@ -91,11 +91,12 @@ Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo
     // Obj3d
     data_.model = pCreateInfo->model;
     // Fountain
-    data_.acceleration = pCreateInfo->acceleration;
-    data_.lifespan = pCreateInfo->lifespan;
-    data_.emitterBasis = pCreateInfo->emitterBasis;
-    data_.emitterPosition = pCreateInfo->emitterPosition;
-    data_.size = pCreateInfo->size;
+    data_.acceleration = pCreateInfo->fntnInfo.acceleration;
+    data_.lifespan = pCreateInfo->fntnInfo.lifespan;
+    data_.emitterBasis = pCreateInfo->fntnInfo.emitterBasis;
+    data_.emitterPosition = pCreateInfo->fntnInfo.emitterBasis * glm::vec4(.0f, 0.0f, 0.0f, 1.0f);
+    data_.minParticleSize = pCreateInfo->fntnInfo.minParticleSize;
+    data_.maxParticleSize = pCreateInfo->fntnInfo.maxParticleSize;
     data_.velocityLowerBound = pCreateInfo->velocityLowerBound;
     data_.velocityUpperBound = pCreateInfo->velocityUpperBound;
     setData();
@@ -278,7 +279,7 @@ const Pipeline::CreateInfo EULER_CREATE_INFO = {
     {SHADER::PARTICLE_EULER_COMP},
     {DESCRIPTOR_SET::PARTICLE_EULER},
     {},
-    {PUSH_CONSTANT::PARTICLE_EULER_COMPUTE},
+    {PUSH_CONSTANT::PARTICLE_EULER},
 };
 Euler::Euler(Pipeline::Handler& handler) : Compute(handler, &EULER_CREATE_INFO), LOCAL_SIZE_X(1024) {}
 
@@ -316,6 +317,8 @@ const CreateInfo FOUNTAIN_EULER_CREATE_INFO = {
         DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN,
         DESCRIPTOR_SET::SAMPLER_DEFAULT,
     },
+    {},
+    {PUSH_CONSTANT::PARTICLE_EULER},
 };
 FountainEuler::FountainEuler(Handler& handler, const bool doBlend, bool isDeferred)
     : Graphics(handler, &FOUNTAIN_EULER_CREATE_INFO), DO_BLEND(doBlend), IS_DEFERRED(isDeferred) {}

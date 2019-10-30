@@ -71,31 +71,24 @@ struct DATA : public Material::Obj3d::DATA {
     glm::vec3 acceleration;              // Particle acceleration (gravity)
     float lifespan;                      // Particle lifespan
     glm::vec3 emitterPosition;           // World position of the emitter.
-    float size;                          // Size of particle
-    glm::mat4 emitterBasis;              // Rotation that rotates y axis to the direction of emitter
     float time = ::Particle::BAD_TIME;   // Simulation time
+    glm::mat4 emitterBasis;              // Rotation that rotates y axis to the direction of emitter
+    float minParticleSize;               // Minimum size of particle (used as default)
+    float maxParticleSize;               // Maximum size of particle
     float delta = ::Particle::BAD_TIME;  // Elapsed time between frames from the start signal
     float velocityLowerBound;            // Lower bound of the generated random velocity (euler)
     float velocityUpperBound;            // Upper bound of the generated random velocity (euler)
-    glm::vec2 _padding;
+    glm::vec3 _padding;
 };
 
 struct CreateInfo : public Material::Obj3d::CreateInfo {
     CreateInfo(const ::Particle::Fountain::CreateInfo* pCreateInfo, const glm::mat4 m, const uint32_t imageCount)
-        : acceleration(pCreateInfo->acceleration),
-          lifespan(pCreateInfo->lifespan),
-          emitterBasis(pCreateInfo->emitterBasis),
-          emitterPosition(m * glm::vec4{0.0f, 0.0f, 0.0f, 1.0f}),
-          size(pCreateInfo->size) {
+        : fntnInfo(*pCreateInfo) {
         dataCount = imageCount;
         pTexture = pCreateInfo->pTexture;
         model = m;
     }
-    glm::vec3 acceleration;
-    float lifespan;
-    glm::mat3 emitterBasis;
-    glm::vec3 emitterPosition;
-    float size;
+    ::Particle::Fountain::CreateInfo fntnInfo;
     float velocityLowerBound = 1.25f;
     float velocityUpperBound = 1.5f;
 };

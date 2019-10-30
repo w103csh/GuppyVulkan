@@ -285,12 +285,14 @@ void Guppy::onKey(GAME_KEY key) {
             //    }
             //    // defUBO_.shaderData.fog.maxDistance += 10.0f;
             //});
-            Particle::StartInfo info0 = {0};
+            Particle::StartInfo info0 = {0, {1}};
             handlers_.pParticle->startFountain(info0);
             Particle::StartInfo info1 = {1};
             handlers_.pParticle->startFountain(info1);
-            Particle::StartInfo info2 = {2};
+            Particle::StartInfo info2 = {2, {0}};
             handlers_.pParticle->startFountain(info2);
+            Particle::StartInfo info3 = {3};
+            handlers_.pParticle->startFountain(info3);
         } break;
         case GAME_KEY::KEY_8: {
             auto& light = handlers_.pUniform->getDefPosLight();

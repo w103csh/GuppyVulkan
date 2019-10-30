@@ -425,7 +425,7 @@ void Scene::Handler::init() {
         }
 
         // PROJECT PLANE (I AM PASS DEPENDENT AND SHOULDN'T BE HERE!!!! REMOVE INCLUDE IF YOU CAN.)
-        if (!suppress || false) {
+        if (!suppress && (DO_PROJECTOR || false)) {
             std::set<PASS> activePassTypes;
             passHandler().getActivePassTypes(activePassTypes);
             // TODO: these types of checks are not great. The active passes should be able to change at runtime.

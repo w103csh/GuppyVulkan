@@ -4,7 +4,13 @@
 #define _DS_UNI_PRTCL_FNTN 0
 
 // FLAGS
-const uint IS_MESH                  = 0x00010000u;
+const uint IS_MESH      = 0x00010000u;
+const uint SMOKE        = 0x00000004u;
+
+// PUSH CONSTANTS
+layout(push_constant) uniform PushConstantsBlock {
+    uint flags;
+} pushConstants;
 
 // BINDINGS
 layout(set=_DS_UNI_PRTCL_FNTN, binding=0) uniform CameraDefaultPerspective {
@@ -29,14 +35,17 @@ layout(set=_DS_UNI_PRTCL_FNTN, binding=1) uniform ParticleFountain {
 
     // Material::Particle::Fountain::DATA
     // 0, 1, 2 : Particle acceleration (gravity)
-    // 4 :       Particle lifespan
+    // 3 :       Particle lifespan
     vec4 data0;
     // 0, 1, 2 : World position of the emitter.
-    // 4 :       Size of particle
+    // 3 :       Simulation time
     vec4 data1;
     mat4 emitterBasis;      // Rotation that rotates y axis to the direction of emitter
-    float time;             // Simulation time
+    float minParticleSize;  // Minimum size of particle (used as default)
+    float maxParticleSize;  // Maximum size of particle
     float delta;            // Elapsed time between frames
+    float velLB;            // Lower bound of the generated random velocity (euler)
+    float velUB;            // Upper bound of the generated random velocity (euler)
 } uniFountain;
 
 // IN
@@ -50,9 +59,9 @@ layout(location=2) in vec4 inColor;
  * data0[3]: padding
  *
  * data1[0]: veloctiy.x
- * data2[1]: veloctiy.y
- * data3[2]: veloctiy.z
- * data4[3]: age
+ * data1[1]: veloctiy.y
+ * data1[2]: veloctiy.z
+ * data1[3]: age
  *
  * data2[0]: rotation angle
  * data2[1]: rotation velocity
@@ -100,13 +109,22 @@ void main() {
         outTexCoord = vec2(0.0);
         outNormal = normalize(mat3(mViewModel) * inNormal);
 
-    // Billboarded quad
+    // Billboard-ed quad
     } else {
+
+        float agePct = inData1[3] / uniFountain.data0[3];
+
+        float particleSize;
+        if ((pushConstants.flags & SMOKE) > 0) {
+            particleSize = mix(uniFountain.minParticleSize, uniFountain.maxParticleSize, agePct);
+        } else {
+            particleSize = uniFountain.minParticleSize;
+        }
 
         if (inData1[3] >= 0.0) {
             outPosition = (mViewModel * vec4(inData0.xyz, 1.0)).xyz +
-                (offsets[gl_VertexIndex] * uniFountain.data1[3]);
-            outTransparency = clamp(1.0 - inData1[3] / uniFountain.data0[3], 0.0, 1.0);
+                (offsets[gl_VertexIndex] * particleSize);
+            outTransparency = clamp(1.0 - agePct, 0.0, 1.0);
         } else {
             outPosition = vec3(0.0);
         }

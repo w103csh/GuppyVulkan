@@ -24,10 +24,13 @@ struct StartInfo {
 };
 
 namespace Euler {
+// clang-format off
 enum class FLAG : FlagBits {
-    FOUNTAIN = 0x01,
-    FIRE = 0x02,
+    FOUNTAIN =  0x01,
+    FIRE =      0x02,
+    SMOKE =     0x04,
 };
+// clang-format on
 using PushConstant = FLAG;
 }  // namespace Euler
 
@@ -59,7 +62,8 @@ struct CreateInfo {
     glm::vec3 acceleration{0.0f, -0.05f, 0.0f};  // Particle acceleration (gravity)
     float lifespan{5.5f};                        // Particle lifespan
     glm::mat3 emitterBasis{1.0f};                // Rotation that rotates y axis to the direction of emitter
-    float size{1.0f};                            // Size of particle
+    float minParticleSize = 1.0f;                // Minimum size of particle (used as default)
+    float maxParticleSize = 1.0f;                // Maximum size of particle
     Euler::PushConstant computeFlag = Euler::FLAG::FOUNTAIN;
 };
 

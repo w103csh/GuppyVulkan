@@ -33,6 +33,7 @@ const float PI = 3.14159265359;
 // FLAGS
 const uint DEFAULT              = 0x00000001u;
 const uint FIRE                 = 0x00000002u;
+const uint SMOKE                = 0x00000004u;
 
 // PUSH CONSTANTS
 layout(push_constant) uniform PushConstantsBlock {
@@ -55,13 +56,14 @@ layout(set=_DS_PRTCL_EULER, binding=0) uniform ParticleFountain {
 
     // Material::Particle::Fountain::DATA
     // 0, 1, 2 : Particle acceleration (gravity)
-    // 4 :       Particle lifespan
+    // 3 :       Particle lifespan
     vec4 data0;
     // 0, 1, 2 : World position of the emitter.
-    // 4 :       Size of particle
+    // 3 :       Simulation time
     vec4 data1;
     mat4 emitterBasis;      // Rotation that rotates y axis to the direction of emitter
-    float time;             // Simulation time
+    float minParticleSize;  // Minimum size of particle (used as default)
+    float maxParticleSize;  // Maximum size of particle
     float delta;            // Elapsed time between frames
     float velLB;            // Lower bound of the generated random velocity (euler)
     float velUB;            // Upper bound of the generated random velocity (euler)
@@ -76,19 +78,23 @@ layout(set=_DS_PRTCL_EULER, binding=2, std140) buffer ParticleBuffer {
 };
 
 vec3 randomInitialVelocity() {
-    vec3 v;
+    float velocity; vec3 v;
     int index = int(gl_GlobalInvocationID.x);
     if ((pushConstants.flags & FIRE) > 0) {
-        float velocity = mix(0.1, 0.5, texelFetch(sampRandom, index + 1, 0).r);
-        // v = normalize(mat3(uniFountain.emitterBasis) * vec3(0, 1, 0)) * velocity;
-        v = vec3(0, velocity, 0);
+        velocity = mix(0.1, 0.5, texelFetch(sampRandom, index + 1, 0).r);
+        v = vec3(0, 1, 0);
+    } else if ((pushConstants.flags & SMOKE) > 0) {
+        float theta = mix(0.0, PI / 1.5, texelFetch(sampRandom, index, 0).r);
+        float phi = mix(0.0, 2.0 * PI, texelFetch(sampRandom, index + 1, 0).r);
+        velocity = mix(0.1, 0.2, texelFetch(sampRandom, index + 2, 0).r);
+        v = vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
     } else {
         float theta = mix(0.0, PI / 8.0, texelFetch(sampRandom, index, 0).r);
         float phi = mix(0.0, 2.0 * PI, texelFetch(sampRandom, index + 1, 0).r);
-        float velocity = mix(uniFountain.velLB, uniFountain.velUB, texelFetch(sampRandom, index + 2, 0).r);
+        velocity = mix(uniFountain.velLB, uniFountain.velUB, texelFetch(sampRandom, index + 2, 0).r);
         v = vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
-        v = normalize(mat3(uniFountain.emitterBasis) * v) * velocity;
     }
+    v = normalize(mat3(uniFountain.emitterBasis) * v) * velocity;
     return v;
 }
 
@@ -108,7 +114,7 @@ float randomInitialRotationalVelocity() {
 }
 
 // LOCAL SIZE
-layout(local_size_x=1024, local_size_y=1, local_size_z=1) in;
+layout(local_size_x=512, local_size_y=1, local_size_z=1) in;
 
 void main() {
     uint index = gl_GlobalInvocationID.x;
