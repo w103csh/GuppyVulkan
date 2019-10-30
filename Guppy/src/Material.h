@@ -67,8 +67,6 @@ struct DATA {
 
 class Base : public Descriptor::Base {
    public:
-    const MATERIAL TYPE;
-
     const STATUS& getStatus() const { return status_; }
 
     inline bool hasTexture() const { return pTexture_ != nullptr; }
@@ -85,7 +83,7 @@ class Base : public Descriptor::Base {
     virtual void setTinyobjData(const tinyobj::material_t& m){};
 
    protected:
-    Base(const MATERIAL&& type, const CreateInfo* pCreateInfo);
+    Base(const DESCRIPTOR&& descType, const CreateInfo* pCreateInfo);
 
     STATUS status_;
 
@@ -160,8 +158,8 @@ struct CreateInfo : public Material::CreateInfo {
 
 class Base : public ::Obj3d::AbstractBase, public Material::Base {
    public:
-    Base(const MATERIAL&& type, const CreateInfo* pCreateInfo)
-        : Material::Base(std::forward<const MATERIAL>(type), pCreateInfo) {}
+    Base(const DESCRIPTOR&& descType, const CreateInfo* pCreateInfo)
+        : Material::Base(std::forward<const DESCRIPTOR>(descType), pCreateInfo) {}
 };
 
 }  // namespace Obj3d

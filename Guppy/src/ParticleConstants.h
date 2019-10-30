@@ -4,6 +4,7 @@
 #include <glm/glm.hpp>
 #include <list>
 #include <memory>
+#include <string>
 #include <utility>
 
 #include "PipelineConstants.h"
@@ -21,6 +22,14 @@ struct StartInfo {
     uint32_t bufferOffset;
     std::list<uint32_t> instanceOffsets;
 };
+
+namespace Euler {
+enum class FLAG : FlagBits {
+    FOUNTAIN = 0x01,
+    FIRE = 0x02,
+};
+using PushConstant = FLAG;
+}  // namespace Euler
 
 // BUFFER
 
@@ -43,6 +52,7 @@ struct InstanceInfo {
 namespace Fountain {
 
 struct CreateInfo {
+    std::string name = "";
     PIPELINE pipelineTypeGraphics = PIPELINE::ALL_ENUM;
     PIPELINE pipelineTypeCompute = PIPELINE::ALL_ENUM;
     std::shared_ptr<Texture::Base> pTexture = nullptr;
@@ -50,6 +60,7 @@ struct CreateInfo {
     float lifespan{5.5f};                        // Particle lifespan
     glm::mat3 emitterBasis{1.0f};                // Rotation that rotates y axis to the direction of emitter
     float size{1.0f};                            // Size of particle
+    Euler::PushConstant computeFlag = Euler::FLAG::FOUNTAIN;
 };
 
 }  // namespace Fountain

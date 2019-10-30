@@ -39,7 +39,8 @@ void Instance::Obj3d::DATA::getInputDescriptions(Pipeline::CreateInfoResources& 
 
 Instance::Obj3d::Base::Base(const Buffer::Info&& info, Obj3d::DATA* pData)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-      Buffer::DataItem<Obj3d::DATA>(pData) {
+      Buffer::DataItem<Obj3d::DATA>(pData),
+      Instance::Base(STORAGE_BUFFER_DYNAMIC::DONT_CARE) {
     dirty = true;
 }
 

@@ -58,7 +58,8 @@ namespace Particle {
 namespace Wave {
 Base::Base(const Buffer::Info&& info, DATA* pData, const Buffer::CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-      Buffer::PerFramebufferDataItem<DATA>(pData) {
+      Buffer::PerFramebufferDataItem<DATA>(pData),
+      Descriptor::Base(UNIFORM::PARTICLE_WAVE) {
     setData();
 }
 
@@ -79,7 +80,7 @@ namespace Fountain {
 
 Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Material::Obj3d::Base(MATERIAL::PARTICLE_FOUNTAIN, pCreateInfo),
+      Material::Obj3d::Base(UNIFORM_DYNAMIC::MATERIAL_PARTICLE_FOUNTAIN, pCreateInfo),
       Buffer::PerFramebufferDataItem<DATA>(pData),
       start_(false) {
     // Base
@@ -158,7 +159,7 @@ const CreateInfo EULER_CREATE_INFO = {
     {
         {{0, 0}, {UNIFORM_DYNAMIC::MATERIAL_PARTICLE_FOUNTAIN}},
         {{1, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Particle::RAND_1D_ID}},
-        {{2, 0}, {STORAGE_BUFFER::PARTICLE_EULER}},
+        {{2, 0}, {STORAGE_BUFFER_DYNAMIC::PARTICLE_EULER}},
     },
 };
 
@@ -235,7 +236,7 @@ const CreateInfo FOUNTAIN_CREATE_INFO = {
     },
 };
 Fountain::Fountain(Handler& handler, bool isDeferred)
-    : Graphics(handler, &FOUNTAIN_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(isDeferred) {}
+    : Graphics(handler, &FOUNTAIN_CREATE_INFO), DO_BLEND(true), IS_DEFERRED(isDeferred) {}
 
 void Fountain::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     if (IS_DEFERRED) {
@@ -276,8 +277,10 @@ const Pipeline::CreateInfo EULER_CREATE_INFO = {
     "Particle Euler Compute Pipeline",
     {SHADER::PARTICLE_EULER_COMP},
     {DESCRIPTOR_SET::PARTICLE_EULER},
+    {},
+    {PUSH_CONSTANT::PARTICLE_EULER_COMPUTE},
 };
-Euler::Euler(Pipeline::Handler& handler) : Compute(handler, &EULER_CREATE_INFO), LOCAL_SIZE_X(1000) {}
+Euler::Euler(Pipeline::Handler& handler) : Compute(handler, &EULER_CREATE_INFO), LOCAL_SIZE_X(1024) {}
 
 void Euler::getShaderStageInfoResources(CreateInfoResources& createInfoRes) {
     // This of course wouldn't work with the local_size stuff in glsl.
@@ -314,8 +317,8 @@ const CreateInfo FOUNTAIN_EULER_CREATE_INFO = {
         DESCRIPTOR_SET::SAMPLER_DEFAULT,
     },
 };
-FountainEuler::FountainEuler(Handler& handler, bool isDeferred)
-    : Graphics(handler, &FOUNTAIN_EULER_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(isDeferred) {}
+FountainEuler::FountainEuler(Handler& handler, const bool doBlend, bool isDeferred)
+    : Graphics(handler, &FOUNTAIN_EULER_CREATE_INFO), DO_BLEND(doBlend), IS_DEFERRED(isDeferred) {}
 
 void FountainEuler::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     if (IS_DEFERRED) {

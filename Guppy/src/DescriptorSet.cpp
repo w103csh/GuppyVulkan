@@ -122,6 +122,13 @@ bool Descriptor::Set::Base::hasTextureMaterial() const {
     return false;
 }
 
+bool Descriptor::Set::Base::hasStorageBufferDynamic() const {
+    for (const auto& [key, bindingInfo] : getBindingMap()) {
+        if (std::visit(IsStorageBufferDynamic{}, bindingInfo.descType)) return true;
+    }
+    return false;
+}
+
 void Descriptor::Set::Base::findResourceForPipeline(std::vector<Resource>::iterator& it, const PIPELINE& type) {
     while (it != resources_.end()) {
         if (it->pipelineTypes.count(type) > 0) return;

@@ -41,7 +41,8 @@ void DATA::getInputDescriptions(Pipeline::CreateInfoResources& createInfoRes) {
 
 Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-      Buffer::DataItem<DATA>(pData) {
+      Buffer::DataItem<DATA>(pData),
+      Instance::Base(STORAGE_BUFFER_DYNAMIC::DONT_CARE) {
     auto& numParticles = BUFFER_INFO.count;
 
     glm::vec3 v(0.0f);
@@ -101,7 +102,8 @@ void DATA::getInputDescriptions(Pipeline::CreateInfoResources& createInfoRes) {
 
 Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-      Buffer::DataItem<DATA>(pData) {
+      Buffer::DataItem<DATA>(pData),
+      Instance::Base(STORAGE_BUFFER_DYNAMIC::PARTICLE_EULER) {
     float rate = pCreateInfo->pInfo->lifespan / BUFFER_INFO.count;
     for (uint64_t i = 0; i < BUFFER_INFO.count; i++) {
         // age
@@ -123,11 +125,10 @@ namespace Buffer {
 
 // BASE
 
-Base::Base(Particle::Handler& handler, const index offset, const std::string&& name,
-           const ::Particle::Fountain::CreateInfo* pCreateInfo,
-           const std::vector<std::shared_ptr<Material::Base>>& pMaterials, const PIPELINE pipelineTypeShadow)
+Base::Base(Particle::Handler& handler, const index offset, const ::Particle::Fountain::CreateInfo* pCreateInfo,
+           const std::vector<std::shared_ptr<Material::Base>>& pMaterials, const PIPELINE&& pipelineTypeShadow)
     : Handlee(handler),
-      NAME(name),
+      NAME(pCreateInfo->name),
       PIPELINE_TYPE_COMPUTE(pCreateInfo->pipelineTypeCompute),
       PIPELINE_TYPE_GRAPHICS(pCreateInfo->pipelineTypeGraphics),
       PIPELINE_TYPE_SHADOW(pipelineTypeShadow),
@@ -161,16 +162,20 @@ void Base::prepare() {
         for (auto& instance : instances_) {
             if (PIPELINE_TYPE_COMPUTE != PIPELINE::ALL_ENUM) {
                 handler().descriptorHandler().getBindData(PIPELINE_TYPE_COMPUTE, instance.computeDescSetBindDataMap,
-                                                          instance.pMaterial, instance.pMaterial->getTexture(),
-                                                          getInstanceBufferItem());
+                                                          getGraphicsDynDescItems(instance),
+                                                          instance.pMaterial->getTexture());
             }
             if (PIPELINE_TYPE_GRAPHICS != PIPELINE::ALL_ENUM) {
                 handler().descriptorHandler().getBindData(PIPELINE_TYPE_GRAPHICS, instance.graphicsDescSetBindDataMap,
-                                                          instance.pMaterial, instance.pMaterial->getTexture());
+                                                          {instance.pMaterial.get()}, instance.pMaterial->getTexture());
             }
             if (PIPELINE_TYPE_SHADOW != PIPELINE::ALL_ENUM) {
-                handler().descriptorHandler().getBindData(PIPELINE_TYPE_SHADOW, instance.shadowDescSetBindDataMap,
-                                                          instance.pMaterial, instance.pMaterial->getTexture());
+                std::set<PASS> passTypes;
+                handler().passHandler().getActivePassTypes(passTypes, PIPELINE_TYPE_SHADOW);
+                if (passTypes.size()) {
+                    handler().descriptorHandler().getBindData(PIPELINE_TYPE_SHADOW, instance.shadowDescSetBindDataMap,
+                                                              {instance.pMaterial.get()}, instance.pMaterial->getTexture());
+                }
             }
         }
     } else {
@@ -222,8 +227,7 @@ const Descriptor::Set::BindData& Base::getDescriptorSetBindData(const PASS& pass
 Fountain::Fountain(Particle::Handler& handler, const index&& offset, const ::Particle::Fountain::CreateInfo* pCreateInfo,
                    const std::vector<std::shared_ptr<Material::Base>>& pMaterials,
                    std::shared_ptr<::Instance::Particle::Fountain::Base>& pInstFntn)
-    : Base(handler, std::forward<const index>(offset), "Particle Fountain Buffer", pCreateInfo, pMaterials),
-      pInstFntn_(pInstFntn) {
+    : Base(handler, std::forward<const index>(offset), pCreateInfo, pMaterials), pInstFntn_(pInstFntn) {
     assert(getInstances().size());
     assert(pInstFntn_ != nullptr);
 }
@@ -289,38 +293,22 @@ void Fountain::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindDa
     );
 }
 
-// FOUNTAIN (EULER)
+// EULER
 
-FountainEuler::FountainEuler(Particle::Handler& handler, const index&& offset,
-                             const ::Particle::Fountain::CreateInfo* pCreateInfo,
-                             const std::vector<std::shared_ptr<Material::Base>>& pMaterials,
-                             std::shared_ptr<::Instance::Particle::FountainEuler::Base>& pInstFntn)
-    : Base(handler, std::forward<const index>(offset), "Particle Fountain Transform Feedback Buffer", pCreateInfo,
-           pMaterials, PIPELINE::SHADOW_PARTICLE_FOUNTAIN_EULER),
+namespace Euler {
+
+Base::Base(Particle::Handler& handler, const index&& offset, const ::Particle::Fountain::CreateInfo* pCreateInfo,
+           const std::vector<std::shared_ptr<Material::Base>>& pMaterials,
+           std::shared_ptr<::Instance::Particle::FountainEuler::Base>& pInstFntn, const PIPELINE&& pipelineTypeShadow)
+    : Buffer::Base(handler, std::forward<const index>(offset), pCreateInfo, pMaterials,
+                   std::forward<const PIPELINE>(pipelineTypeShadow)),
       pInstFntn_(pInstFntn),
-      doTorus_(true) {
+      pushConstant_(pCreateInfo->computeFlag) {
     assert(getInstances().size());
     assert(pInstFntn_ != nullptr);
-
-    // Torus
-    if (doTorus_) {
-        Mesh::Torus::Info torusInfo = {};
-        Mesh::Torus::make(torusInfo, vertices_, indices_);
-        for (auto& instance : instances_) {
-            if (instance.pMaterial == nullptr) {
-                assert(false);
-                continue;
-            }
-            FlagBits matFlags = instance.pMaterial->getFlags();
-            matFlags |= Material::FLAG::IS_MESH;
-            instance.pMaterial->setFlags(matFlags);
-            handler.materialHandler().update(instance.pMaterial);
-        }
-        status_ |= PENDING_BUFFERS;
-    }
 }
 
-void FountainEuler::start(const StartInfo& info) {
+void Base::start(const StartInfo& info) {
     if (info.instanceOffsets.empty()) {
         // Using empty offsets vector to indicate start all.
         for (auto& instance : getInstances())
@@ -332,21 +320,21 @@ void FountainEuler::start(const StartInfo& info) {
     }
 }
 
-void FountainEuler::update(const float time, const float elapsed, const uint32_t frameIndex) {
+void Base::update(const float time, const float elapsed, const uint32_t frameIndex) {
     for (const auto& instance : getInstances()) {
         std::static_pointer_cast<Material::Particle::Fountain::Base>(instance.pMaterial)->updateEuler(elapsed, frameIndex);
         handler().materialHandler().update(instance.pMaterial, frameIndex);
     }
 }
 
-bool FountainEuler::shouldDraw(const InstanceInfo& instance) {
+bool Base::shouldDraw(const InstanceInfo& instance) {
     return status_ == STATUS::READY &&
            std::static_pointer_cast<Material::Particle::Fountain::Base>(instance.pMaterial)->shouldDrawEuler();
 }
 
-void FountainEuler::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                         const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
-                         const uint8_t frameIndex) const {
+void Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+                const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                const uint8_t frameIndex) const {
     auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
 
     vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
@@ -357,7 +345,7 @@ void FountainEuler::draw(const PASS& passType, const std::shared_ptr<Pipeline::B
                             static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
                             descSetBindData.dynamicOffsets.data());
 
-    // Instance Fountain
+    // Instance
     vkCmdBindVertexBuffers(                          //
         cmd,                                         // VkCommandBuffer commandBuffer
         1,                                           // uint32_t firstBinding
@@ -366,7 +354,7 @@ void FountainEuler::draw(const PASS& passType, const std::shared_ptr<Pipeline::B
         &pInstFntn_->BUFFER_INFO.memoryOffset        // const VkDeviceSize* pOffsets
     );
 
-    if (doTorus_) {
+    if (vertices_.size() && indices_.size()) {
         assert(vertices_.size() && indices_.size());
         VkDeviceSize offsets[] = {0};
         vkCmdBindVertexBuffers(cmd, Vertex::BINDING, 1, &vertexRes_.buffer, offsets);
@@ -392,12 +380,15 @@ void FountainEuler::draw(const PASS& passType, const std::shared_ptr<Pipeline::B
     }
 }
 
-void FountainEuler::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                             const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
-                             const uint8_t frameIndex) const {
+void Base::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+                    const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                    const uint8_t frameIndex) const {
     auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
 
     vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+
+    vkCmdPushConstants(cmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                       static_cast<uint32_t>(sizeof(pushConstant_)), &pushConstant_);
 
     vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
                             static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
@@ -406,8 +397,32 @@ void FountainEuler::dispatch(const PASS& passType, const std::shared_ptr<Pipelin
                             descSetBindData.dynamicOffsets.data());
 
     // DISPATCH
-    vkCmdDispatch(cmd, pInstFntn_->BUFFER_INFO.count / 16, 1, 1);
+    vkCmdDispatch(cmd, pInstFntn_->BUFFER_INFO.count / NUM_PARTICLES_EULER_MIN, 1, 1);
 }
+
+// FOUNTAIN
+
+Torus::Torus(Particle::Handler& handler, const index&& offset, const ::Particle::Fountain::CreateInfo* pCreateInfo,
+             const std::vector<std::shared_ptr<Material::Base>>& pMaterials,
+             std::shared_ptr<::Instance::Particle::FountainEuler::Base>& pInstFntn)
+    : Euler::Base(handler, std::forward<const index>(offset), pCreateInfo, pMaterials, pInstFntn,
+                  PIPELINE::SHADOW_PARTICLE_FOUNTAIN_EULER) {
+    Mesh::Torus::Info torusInfo = {};
+    Mesh::Torus::make(torusInfo, vertices_, indices_);
+    for (auto& instance : instances_) {
+        if (instance.pMaterial == nullptr) {
+            assert(false);
+            continue;
+        }
+        FlagBits matFlags = instance.pMaterial->getFlags();
+        matFlags |= Material::FLAG::IS_MESH;
+        instance.pMaterial->setFlags(matFlags);
+        handler.materialHandler().update(instance.pMaterial);
+    }
+    status_ |= PENDING_BUFFERS;
+}
+
+}  // namespace Euler
 
 }  // namespace Buffer
 }  // namespace Particle

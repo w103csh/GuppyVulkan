@@ -21,9 +21,9 @@ struct DATA {
 class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
    public:
     Base(const Buffer::Info&& info, DATA* pData)
-        : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-          Buffer::DataItem<DATA>(pData)                          //
-    {
+        : Buffer::Item(std::forward<const Buffer::Info>(info)),
+          Buffer::DataItem<DATA>(pData),
+          Descriptor::Base(UNIFORM::PROJECTOR_DEFAULT) {
         dirty = true;
     }
 };
@@ -48,9 +48,9 @@ struct DATA {
 class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
    public:
     Base(const Buffer::Info&& info, DATA* pData)
-        : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-          Buffer::DataItem<DATA>(pData)                          //
-    {
+        : Buffer::Item(std::forward<const Buffer::Info>(info)),
+          Buffer::DataItem<DATA>(pData),
+          Descriptor::Base(UNIFORM::FOG_DEFAULT) {
         dirty = true;
     }
 };

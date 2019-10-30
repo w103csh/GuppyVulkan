@@ -161,6 +161,7 @@ using DESCRIPTOR = std::variant<  //
     COMBINED_SAMPLER,             //
     STORAGE_IMAGE,                //
     STORAGE_BUFFER,               //
+    STORAGE_BUFFER_DYNAMIC,       //
     INPUT_ATTACHMENT              //
     >;
 
@@ -212,6 +213,7 @@ struct insertion_ordered_unique_keyvalue_list {
         return it == keyOffsetMap_.end() ? -1 : it->second;
     }
     constexpr const auto &getValue(const TKey key) const { return list_.at(keyOffsetMap_.at(key)); }
+    constexpr bool hasKey(const TKey key) const { return keyOffsetMap_.count(key) > 0; }
     constexpr const auto &getValue(const uint32_t offset) const { return list_.at(offset); }
     constexpr const auto &getKeyOffsetMap() const { return keyOffsetMap_; }
     constexpr const auto &getValues() const { return list_; }

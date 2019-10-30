@@ -32,14 +32,14 @@ const CreateInfo DEFERRED_CREATE_INFO = {
 #endif
         PIPELINE::PARTICLE_WAVE_DEFERRED,
         PIPELINE::PARTICLE_FOUNTAIN_DEFERRED,
-        // The two below are dependent on one another... Make this a thing?
-        PIPELINE::PARTICLE_EULER_COMPUTE,
-        PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED,
 #ifndef VK_USE_PLATFORM_MACOS_MVK
         // PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED,
         PIPELINE::TESSELLATION_TRIANGLE_DEFERRED,
 #endif
         PIPELINE::DEFERRED_MRT_TEX,
+        // The two below are dependent on one another... Make this a thing?
+        PIPELINE::PARTICLE_EULER_COMPUTE,
+        PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED,
         // PIPELINE::DEFERRED_SSAO,
         PIPELINE::DEFERRED_COMBINE,
     },

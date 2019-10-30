@@ -264,7 +264,7 @@ void RenderPass::Base::update() {
                 assert(it.second);
 
                 // Get or make descriptor bind data.
-                handler().descriptorHandler().getBindData(pipelineType, it.first->second, nullptr, nullptr);
+                handler().descriptorHandler().getBindData(pipelineType, it.first->second);
                 assert(it.first->second.size());
             }
         }

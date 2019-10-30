@@ -48,7 +48,7 @@ void Scene::Handler::init() {
         Obj3d::BoundingBoxMinMax groundPlane_bbmm;
 
         // ORIGIN AXES
-        if (!suppress || true) {
+        if (!suppress || false) {
             axesInfo = {};
             axesInfo.pipelineType = PIPELINE::DEFERRED_MRT_LINE;
             axesInfo.lineSize = 500.f;
@@ -105,34 +105,38 @@ void Scene::Handler::init() {
             planeInfo.settings.geometryInfo.doubleSided = true;
             instObj3dInfo = {};
             // defInstInfo.data.push_back({helpers::affine(glm::vec3{5.0f})});
-            instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, {4.0f, 2.0f, 2.0f})});
+            instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, {-2.0f, 1.0f, 2.0f})});
             defMatInfo = {};
-            defMatInfo.pTexture = textureHandler().getTexture(Texture::NEON_BLUE_TUX_GUPPY_ID);
+            // defMatInfo.pTexture = textureHandler().getTexture(Texture::NEON_BLUE_TUX_GUPPY_ID);
+            defMatInfo.pTexture = textureHandler().getTexture(Texture::FIRE_ID);
             auto offset =
                 meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&planeInfo, &defMatInfo, &instObj3dInfo)->getOffset();
             pScene->addMeshIndex(MESH::TEXTURE, offset);
         }
 
-        // PLAIN OLD PLANE (COLOR)
+        // WAVE
         if (!suppress || false) {
-            planeInfo = {};
-            // planeInfo.pipelineType = PIPELINE::DEFERRED_MRT_WF_COLOR;
-            planeInfo.pipelineType = PIPELINE::PARTICLE_WAVE_DEFERRED;
-            planeInfo.selectable = true;
-            planeInfo.settings.geometryInfo.faceVertexColorsRGB = true;
-            // planeInfo.settings.indexVertices = false;
-            planeInfo.settings.geometryInfo.doubleSided = true;
-            planeInfo.settings.geometryInfo.transform =
-                helpers::affine(glm::vec3{5.0f, 1.0f, 1.0f}, {4.0f, 2.0f, 2.0f}, -M_PI_2_FLT, CARDINAL_X);
-            planeInfo.planeInfo.horizontalDivisions = 200;
-            planeInfo.planeInfo.verticalDivisions = 1;
-            instObj3dInfo = {};
-            defMatInfo = {};
-            defMatInfo.color = {0.5f, 0.25f, 0.75f};
-            defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
-            auto offset =
-                meshHandler().makeColorMesh<Mesh::Plane::Color>(&planeInfo, &defMatInfo, &instObj3dInfo)->getOffset();
-            pScene->addMeshIndex(MESH::COLOR, offset);
+            if (particles) {
+                planeInfo = {};
+                // planeInfo.pipelineType = PIPELINE::DEFERRED_MRT_WF_COLOR;
+                planeInfo.pipelineType = PIPELINE::PARTICLE_WAVE_DEFERRED;
+                planeInfo.selectable = true;
+                planeInfo.settings.geometryInfo.faceVertexColorsRGB = true;
+                // planeInfo.settings.indexVertices = false;
+                planeInfo.settings.geometryInfo.doubleSided = true;
+                planeInfo.settings.geometryInfo.transform =
+                    helpers::affine(glm::vec3{5.0f, 1.0f, 1.0f}, {4.0f, 2.0f, 2.0f}, -M_PI_2_FLT, CARDINAL_X);
+                planeInfo.planeInfo.horizontalDivisions = 200;
+                planeInfo.planeInfo.verticalDivisions = 1;
+                instObj3dInfo = {};
+                defMatInfo = {};
+                defMatInfo.color = {0.5f, 0.25f, 0.75f};
+                // defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
+                // defMatInfo.pTexture = textureHandler().getTexture(Texture::FIRE_ID);
+                auto offset =
+                    meshHandler().makeColorMesh<Mesh::Plane::Color>(&planeInfo, &defMatInfo, &instObj3dInfo)->getOffset();
+                pScene->addMeshIndex(MESH::COLOR, offset);
+            }
         }
 
         // TRIANGLE

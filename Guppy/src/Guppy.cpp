@@ -292,6 +292,8 @@ void Guppy::onKey(GAME_KEY key) {
             handlers_.pParticle->startFountain(info0);
             Particle::StartInfo info1 = {1};
             handlers_.pParticle->startFountain(info1);
+            Particle::StartInfo info2 = {2};
+            handlers_.pParticle->startFountain(info2);
         } break;
         case GAME_KEY::KEY_8: {
             auto& light = handlers_.pUniform->getDefPosLight();

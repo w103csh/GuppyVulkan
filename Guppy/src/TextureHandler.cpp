@@ -394,8 +394,10 @@ void Texture::Handler::createDepthImage(Sampler::Base& sampler, std::unique_ptr<
     VkFormatProperties props;
     vkGetPhysicalDeviceFormatProperties(shell().context().physicalDev, sampler.imgCreateInfo.format, &props);
     if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        // bool b = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT & props.linearTilingFeatures;
         sampler.imgCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
     } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+        // bool b = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT & props.optimalTilingFeatures;
         sampler.imgCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
     } else {
         // TODO: Try other depth formats.

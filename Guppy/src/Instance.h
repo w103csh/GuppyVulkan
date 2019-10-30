@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "BufferItem.h"
+#include "Descriptor.h"
 #include "Obj3d.h"
 #include "Types.h"
 
@@ -17,9 +18,9 @@ namespace Instance {
 
 // BASE
 
-class Base : public virtual Buffer::Item {
+class Base : public Descriptor::Base {
    protected:
-    Base() {}
+    Base(const DESCRIPTOR&& descType) : Descriptor::Base(std::forward<const DESCRIPTOR>(descType)) {}
 };
 
 template <typename TDATA, typename TBase>

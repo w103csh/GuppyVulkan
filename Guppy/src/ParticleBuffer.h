@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "ConstantsAll.h"
+#include "Descriptor.h"
 #include "Handlee.h"
 #include "Instance.h"
 #include "Particle.h"
@@ -117,7 +118,7 @@ class Base : public NonCopyable, public Handlee<Handler> {
     constexpr const auto& getStatus() const { return status_; }
     constexpr const auto& getInstances() const { return instances_; }
 
-    virtual const ::Buffer::Item* getInstanceBufferItem() const = 0;
+    virtual const std::vector<Descriptor::Base*> getGraphicsDynDescItems(const InstanceInfo& instance) const = 0;
 
     // TODO: These are directly copied from Mesh::Base. Changed getDescriptorSetBindData slightly.
     virtual void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
@@ -130,9 +131,9 @@ class Base : public NonCopyable, public Handlee<Handler> {
                                                               const Descriptor::Set::bindDataMap& map) const;
 
    protected:
-    Base(Particle::Handler& handler, const index offset, const std::string&& name,
-         const ::Particle::Fountain::CreateInfo* pCreateInfo, const std::vector<std::shared_ptr<Material::Base>>& pMaterials,
-         const PIPELINE pipelineTypeShadow = PIPELINE::ALL_ENUM);
+    Base(Particle::Handler& handler, const index offset, const ::Particle::Fountain::CreateInfo* pCreateInfo,
+         const std::vector<std::shared_ptr<Material::Base>>& pMaterials,
+         const PIPELINE&& pipelineTypeShadow = PIPELINE::ALL_ENUM);
 
     FlagBits status_;
 
@@ -161,7 +162,9 @@ class Fountain : public Base {
     void update(const float time, const float elapsed, const uint32_t frameIndex) override;
     bool shouldDraw(const InstanceInfo& instance) override;
 
-    const ::Buffer::Item* getInstanceBufferItem() const override { return pInstFntn_.get(); }
+    const std::vector<Descriptor::Base*> getGraphicsDynDescItems(const InstanceInfo& instance) const override {
+        return {instance.pMaterial.get(), pInstFntn_.get()};
+    }
 
     void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
               const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
@@ -171,19 +174,24 @@ class Fountain : public Base {
     std::shared_ptr<::Instance::Particle::Fountain::Base> pInstFntn_;
 };
 
-// FOUNTAIN (EULER)
+// EULER
+namespace Euler {
 
-class FountainEuler : public Base {
+// BASE
+class Base : public Buffer::Base {
    public:
-    FountainEuler(Particle::Handler& handler, const index&& offset, const ::Particle::Fountain::CreateInfo* pCreateInfo,
-                  const std::vector<std::shared_ptr<Material::Base>>& pMaterials,
-                  std::shared_ptr<::Instance::Particle::FountainEuler::Base>& pInstFntn);
+    Base(Particle::Handler& handler, const index&& offset, const ::Particle::Fountain::CreateInfo* pCreateInfo,
+         const std::vector<std::shared_ptr<Material::Base>>& pMaterials,
+         std::shared_ptr<::Instance::Particle::FountainEuler::Base>& pInstFntn,
+         const PIPELINE&& pipelineTypeShadow = PIPELINE::ALL_ENUM);
 
     void start(const StartInfo& info) override;
     void update(const float time, const float elapsed, const uint32_t frameIndex) override;
     bool shouldDraw(const InstanceInfo& instance) override;
 
-    const ::Buffer::Item* getInstanceBufferItem() const override { return pInstFntn_.get(); }
+    const std::vector<Descriptor::Base*> getGraphicsDynDescItems(const InstanceInfo& instance) const override {
+        return {instance.pMaterial.get(), pInstFntn_.get()};
+    }
 
     void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
               const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
@@ -196,8 +204,18 @@ class FountainEuler : public Base {
     std::shared_ptr<::Instance::Particle::FountainEuler::Base> pInstFntn_;
 
    private:
-    bool doTorus_;
+    ::Particle::Euler::PushConstant pushConstant_;
+};  // namespace Euler
+
+// FOUNTAIN
+class Torus : public Base {
+   public:
+    Torus(Particle::Handler& handler, const index&& offset, const ::Particle::Fountain::CreateInfo* pCreateInfo,
+          const std::vector<std::shared_ptr<Material::Base>>& pMaterials,
+          std::shared_ptr<::Instance::Particle::FountainEuler::Base>& pInstFntn);
 };
+
+}  // namespace Euler
 
 }  // namespace Buffer
 }  // namespace Particle

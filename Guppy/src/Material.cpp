@@ -6,8 +6,8 @@
 
 // BASE
 
-Material::Base::Base(const MATERIAL &&type, const CreateInfo *pCreateInfo)  //
-    : TYPE(type),                                                           //
+Material::Base::Base(const DESCRIPTOR &&descType, const CreateInfo *pCreateInfo)  //
+    : Descriptor::Base(std::forward<const DESCRIPTOR>(descType)),
       pTexture_(pCreateInfo->pTexture),
       repeat_(pCreateInfo->repeat) {
     status_ = (hasTexture() && pTexture_->status != STATUS::READY) ? STATUS::PENDING_TEXTURE : STATUS::READY;
@@ -52,7 +52,7 @@ STATUS Material::SetDefaultTextureData(Material::Base *pMaterial, DATA *pData) {
 
 Material::Default::Base::Base(const Buffer::Info &&info, Default::DATA *pData, const Default::CreateInfo *pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Material::Base(MATERIAL::DEFAULT, pCreateInfo),
+      Material::Base(UNIFORM_DYNAMIC::MATERIAL_DEFAULT, pCreateInfo),
       Buffer::DataItem<Default::DATA>(pData)  //
 {
     pData_->color = pCreateInfo->color;

@@ -337,7 +337,10 @@ void main() {
     vec4 spec = subpassLoad(specInput, gl_SampleID);
     // float ssaoData = subpassLoad(ssaoDataInput)[0];
 
-    // outColor = diff;
+    // Using the opacity at this point causes a blend with the background color...
+    float alpha = true ? 1.0 : diff.a;
+
+    // outColor = vec4(diff.rgb, alpha);
     // return;
 
 #if _U_LGT_SHDW_POS
@@ -354,7 +357,7 @@ void main() {
         norm.w
     );
 
-    outColor = vec4((Ka + KdKs), diff.a);
+    outColor = vec4((Ka + KdKs), alpha);
 
 #else
 
@@ -377,7 +380,7 @@ void main() {
             spec.rgb,
             norm.w
             )
-        ,diff.a
+        , alpha
     );
 
 #endif

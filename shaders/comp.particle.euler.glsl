@@ -30,11 +30,14 @@ const float PI = 3.14159265359;
 // // SPECIALIZATION CONSTANTS (This doesn't work for local size unfortunately)
 // layout (constant_id = 0) const uint _LOCAL_SIZE_X = 1000;
 
-// // PUSH CONSTANTS
-// layout(push_constant) uniform PushConstantsBlock {
-//     uint readOffset;
-//     uint writeOffset;
-// } pushConstants;
+// FLAGS
+const uint DEFAULT              = 0x00000001u;
+const uint FIRE                 = 0x00000002u;
+
+// PUSH CONSTANTS
+layout(push_constant) uniform PushConstantsBlock {
+    uint flags;
+} pushConstants;
 
 // UNIFORMS
 layout(set=_DS_PRTCL_EULER, binding=0) uniform ParticleFountain {
@@ -72,27 +75,46 @@ layout(set=_DS_PRTCL_EULER, binding=2, std140) buffer ParticleBuffer {
     Particle particles[];
 };
 
-// IN
-layout(local_size_x=16, local_size_y=1, local_size_z=1) in;
-
 vec3 randomInitialVelocity() {
+    vec3 v;
     int index = int(gl_GlobalInvocationID.x);
-    float theta = mix(0.0, PI / 8.0, texelFetch(sampRandom, index, 0).r);
-    float phi = mix(0.0, 2.0 * PI, texelFetch(sampRandom, index + 1, 0).r);
-    float velocity = mix(uniFountain.velLB, uniFountain.velUB, texelFetch(sampRandom, index + 2, 0).r);
-    vec3 v = vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
-    return normalize(mat3(uniFountain.emitterBasis) * v) * velocity;
+    if ((pushConstants.flags & FIRE) > 0) {
+        float velocity = mix(0.1, 0.5, texelFetch(sampRandom, index + 1, 0).r);
+        // v = normalize(mat3(uniFountain.emitterBasis) * vec3(0, 1, 0)) * velocity;
+        v = vec3(0, velocity, 0);
+    } else {
+        float theta = mix(0.0, PI / 8.0, texelFetch(sampRandom, index, 0).r);
+        float phi = mix(0.0, 2.0 * PI, texelFetch(sampRandom, index + 1, 0).r);
+        float velocity = mix(uniFountain.velLB, uniFountain.velUB, texelFetch(sampRandom, index + 2, 0).r);
+        v = vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
+        v = normalize(mat3(uniFountain.emitterBasis) * v) * velocity;
+    }
+    return v;
+}
+
+vec3 randomInitialPosition() {
+    vec3 p;
+    if ((pushConstants.flags & FIRE) > 0) {
+        float offset = mix(-2.0, 2.0, texelFetch(sampRandom, int(gl_GlobalInvocationID.x), 0).r);
+        p = uniFountain.data0.xyx + vec3(offset, 0, 0);
+    } else {
+        p = uniFountain.data1.xyz;
+    }
+    return p;
 }
 
 float randomInitialRotationalVelocity() {
     return mix(-15.0, 15.0, texelFetch(sampRandom, int(gl_GlobalInvocationID.x) + 3, 0).r);
 }
 
+// LOCAL SIZE
+layout(local_size_x=1024, local_size_y=1, local_size_z=1) in;
+
 void main() {
     uint index = gl_GlobalInvocationID.x;
     if (particles[index].data1[3] < 0 || particles[index].data1[3] > uniFountain.data0[3]) {
         // The particle is past it's lifetime, recycle.
-        particles[index].data0.xyz = uniFountain.data1.xyz;                             // position
+        particles[index].data0.xyz = randomInitialPosition();                           // position
         particles[index].data1.xyz = randomInitialVelocity();                           // veloctiy
         particles[index].data2.xy = vec2(0.0, randomInitialRotationalVelocity());       // rotation
         if (particles[index].data1[3] < 0)                                              // age
