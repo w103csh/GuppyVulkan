@@ -62,9 +62,9 @@ class Handler : public Game::Handler {
     inline void update(const std::shared_ptr<Material::Base> &pMaterial, const int index = -1) {
         // clang-format off
         switch (std::visit(Descriptor::GetUniformDynamic{}, pMaterial->getDescriptorType())) {
-            case UNIFORM_DYNAMIC::MATERIAL_DEFAULT:             update(std::static_pointer_cast<Material::Default::Base>(pMaterial), std::forward<const int>(index)); break;
-            case UNIFORM_DYNAMIC::MATERIAL_PBR:                 update(std::static_pointer_cast<Material::PBR::Base>(pMaterial), std::forward<const int>(index)); break;
-            case UNIFORM_DYNAMIC::MATERIAL_PARTICLE_FOUNTAIN:   update(std::static_pointer_cast<Material::Particle::Fountain::Base>(pMaterial), std::forward<const int>(index)); break;
+            case UNIFORM_DYNAMIC::MATERIAL_DEFAULT:         update(std::static_pointer_cast<Material::Default::Base>(pMaterial), std::forward<const int>(index)); break;
+            case UNIFORM_DYNAMIC::MATERIAL_PBR:             update(std::static_pointer_cast<Material::PBR::Base>(pMaterial), std::forward<const int>(index)); break;
+            case UNIFORM_DYNAMIC::MATERIAL_OBJ3D:           update(std::static_pointer_cast<Material::Obj3d::Default>(pMaterial), std::forward<const int>(index)); break;
             default: assert(false && "Unhandled material type."); exit(EXIT_FAILURE);
         }
         // clang-format on
@@ -91,23 +91,23 @@ class Handler : public Game::Handler {
         pbrMgr_.insert(shell().context().dev, pCreateInfo);
         return pbrMgr_.pItems.back();
     }
-    // PARTICLE FOUNTAIN
+    // OBJ3D
     template <>
-    std::shared_ptr<Material::Base> &makeMaterial(Material::Particle::Fountain::CreateInfo *pCreateInfo) {
-        fntnMgr_.insert(shell().context().dev, pCreateInfo);
-        return fntnMgr_.pItems.back();
+    std::shared_ptr<Material::Base> &makeMaterial(Material::Obj3d::CreateInfo *pCreateInfo) {
+        obj3dMgr_.insert(shell().context().dev, pCreateInfo);
+        return obj3dMgr_.pItems.back();
     }
 
     // clang-format off
     template <class T> inline Manager<T>& getManager() { /*static_assert(false, "Not implemented");*/ }
     template <> inline Manager<Material::Default::Base>& getManager() { return defMgr_; }
     template <> inline Manager<Material::PBR::Base>& getManager() { return pbrMgr_; }
-    template <> inline Manager<Material::Particle::Fountain::Base>& getManager() { return fntnMgr_; }
+    template <> inline Manager<Material::Obj3d::Default>& getManager() { return obj3dMgr_; }
     // clang-format on
 
     Manager<Material::Default::Base> defMgr_;
     Manager<Material::PBR::Base> pbrMgr_;
-    Manager<Material::Particle::Fountain::Base> fntnMgr_;
+    Manager<Material::Obj3d::Default> obj3dMgr_;
 };
 
 }  // namespace Material

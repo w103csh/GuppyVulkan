@@ -15,7 +15,8 @@ std::string FileLoader::readFile(std::string filepath) {
     std::ifstream file(ROOT_PATH + filepath, std::ios::binary);
 
     if (!file.is_open()) {
-        throw std::runtime_error("failed to open file!");
+        assert(false && "failed to open file!");
+        exit(EXIT_FAILURE);
     }
 
     std::stringstream ss;

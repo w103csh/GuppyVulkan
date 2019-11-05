@@ -79,10 +79,11 @@ void Shell::destroy() {
 void Shell::initVk() {
     initInstance();
 
-    ext::CreateInstanceEXTs(ctx_.instance);
-
-    initDebugReport();
-    initValidationMessenger();
+    if (settings_.validate) {
+        ext::CreateInstanceEXTs(ctx_.instance);
+        initDebugReport();
+        initValidationMessenger();
+    }
 
     initPhysicalDev();
 }

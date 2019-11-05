@@ -1,19 +1,16 @@
     
 #version 450
 
-#define _DS_UNI_PRTCL_FNTN 0
 #define _DS_SMP_DEF 0
 
-layout(set=_DS_UNI_PRTCL_FNTN, binding=1) uniform ParticleFountain {
-    // Material::Base::DATA
-    vec3 color;             // Diffuse color for dielectrics, f0 for metallic
-    float opacity;          // Overall opacity
-    // 16
-    uint flags;             // Flags (general/material)
-    uint texFlags;          // Flags (texture)
-    float xRepeat;          // Texture xRepeat
-    float yRepeat;          // Texture yRepeat
-} uniFountain;
+// DECLARATIONS
+vec3  getMaterialColor();
+uint  getMaterialFlags();
+float getMaterialOpacity();
+float getMaterialXRepeat();
+float getMaterialYRepeat();
+bool  isPerTextureColor();
+bool  isMesh();
 
 layout(set=_DS_SMP_DEF, binding=0) uniform sampler2DArray sampParticle;
 
@@ -30,26 +27,16 @@ layout(location=2) out vec4 outDiffuse;
 layout(location=3) out vec4 outAmbient;
 layout(location=4) out vec4 outSpecular;
 
-// FLAGS
-const uint PER_MATERIAL_COLOR       = 0x00000001u;
-const uint PER_VERTEX_COLOR         = 0x00000002u;
-const uint PER_TEXTURE_COLOR        = 0x00000004u;
-const uint IS_MESH                  = 0x00010000u;
-
-// GLOBAL
-vec3    Ka,     // ambient coefficient
-        Kd,     // diffuse coefficient
-        Ks,     // specular coefficient
-        n;      // normal
-float opacity, height;
-
 void main() {
+    vec3 Kd, Ks, Ka;
+    float opacity;
+    bool meshFlag = isMesh();
     
-    if (true && (uniFountain.flags & PER_TEXTURE_COLOR) > 0 && (uniFountain.flags & IS_MESH) == 0) {
+    if (true && isPerTextureColor() && !meshFlag) {
 
         vec2 texCoord = vec2(
-            (inTexCoord.x * uniFountain.xRepeat),
-            (inTexCoord.y * uniFountain.yRepeat)
+            (inTexCoord.x * getMaterialXRepeat()),
+            (inTexCoord.y * getMaterialYRepeat())
         );
 
         vec4 samp = texture(sampParticle, vec3(texCoord, 0));
@@ -61,10 +48,10 @@ void main() {
 
     } else {
 
-        Kd = uniFountain.color;
+        Kd = getMaterialColor();
         Ks = vec3(0.5);
         Ka = Kd;
-        opacity = uniFountain.opacity;
+        opacity = getMaterialOpacity();
 
     }
 
@@ -73,9 +60,8 @@ void main() {
     if (alpha < 0.15)
         discard;
     
-
+    outPosition = vec4(inPosition, meshFlag ? 1.0 : -1.0);
     outDiffuse = vec4(Kd, alpha);
-    outPosition = vec4(inPosition, -1.0);
     // [3] is used for shininess
     outNormal = vec4(inNormal, 100.0);
     outAmbient = vec4(Ka, alpha);

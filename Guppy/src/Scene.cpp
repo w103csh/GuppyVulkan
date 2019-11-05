@@ -69,7 +69,7 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
         case PIPELINE::DEFERRED_MRT_WF_COLOR:
         case PIPELINE::TESSELLATION_TRIANGLE_DEFERRED:
         case PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED:
-        case PIPELINE::PARTICLE_WAVE_DEFERRED:
+        case PIPELINE::PRTCL_WAVE_DEFERRED:
         case PIPELINE::PBR_COLOR:
         case PIPELINE::CUBE:
         case PIPELINE::TRI_LIST_COLOR: {

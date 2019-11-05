@@ -33,6 +33,7 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
         switch (type) {
             case DESCRIPTOR_SET::UNIFORM_DEFAULT:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::UNIFORM_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_CAMERA_ONLY:                       pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::UNIFORM_CAMERA_ONLY_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::UNIFORM_CAM_MATOBJ3D:                      pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::UNIFORM_CAM_MATOBJ3D_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_OBJ3D:                             pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::UNIFORM_OBJ3D_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_DEFAULT:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT:                      pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::CUBE_SAMPLER_CREATE_INFO)); break;
@@ -64,9 +65,10 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::SAMPLER_SHADOW_OFFSET:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::SAMPLER_OFFSET_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_TESSELLATION_DEFAULT:              pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Tessellation::DEFAULT_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_GEOMETRY_DEFAULT:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Geometry::DEFAULT_CREATE_INFO)); break;
-            case DESCRIPTOR_SET::UNIFORM_PARTICLE_WAVE:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::WAVE_CREATE_INFO)); break;
-            case DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN:                 pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::FOUNTAIN_CREATE_INFO)); break;
-            case DESCRIPTOR_SET::PARTICLE_EULER:                            pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::EULER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::UNIFORM_PRTCL_WAVE:                        pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::WAVE_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN:                    pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::FOUNTAIN_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::PRTCL_EULER:                               pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::EULER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::PRTCL_ATTRACTOR:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::ATTRACTOR_CREATE_INFO)); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on
@@ -542,8 +544,7 @@ VkDescriptorSetLayoutBinding Descriptor::Handler::getDecriptorSetLayoutBinding(
 
 // TODO: add params that can indicate to free/reallocate
 void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::Set::bindDataMap& bindDataMap,
-                                      const std::vector<Descriptor::Base*> pDynamicItems,
-                                      const std::shared_ptr<Texture::Base>& pTexture) {
+                                      const std::vector<Descriptor::Base*> pDynamicItems) {
     bindDataMap.clear();
 
     // Get a list of active passes for the pipeline type.
@@ -562,26 +563,43 @@ void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::
         auto& pSet = getSet(helpers.front().setType);
 
         /**
-         * TODO: This code is barely working (specifically the offset key values generated here). I need to change this if I
-         * continue to add dynamic buffer types. It won't even work right at the time I am writing this, but I strongly feel
-         * that changing this to work correctly is going to be a huge pain, and is not worth it until my priorities change.
+         * Determine a unique key for the descriptor set bind data based on the dynamic descriptors that are required for the
+         * by the user.
          */
-        uint32_t textureOffset = 0, storageBufferOffset = 0;
-        if (pSet->hasTextureMaterial()) {
-            assert(pTexture != nullptr);
-            textureOffset = pTexture->OFFSET;
-        } else if (pSet->hasStorageBufferDynamic()) {
-            bool found = false;
-            for (const auto& pItem : pDynamicItems) {
-                if (std::visit(IsStorageBufferDynamic{}, pItem->getDescriptorType())) {
-                    assert(!found && "This will only work if there is one dynamic storage buffer. Sorry. Good luck.");
-                    storageBufferOffset = static_cast<uint32_t>(pItem->BUFFER_INFO.itemOffset);
-                    found = true;
+        Set::mapKey descriptorSetsMapKey = {};
+        auto itDescSetsMapKey = descriptorSetsMapKey.begin();
+        auto itCmbSampMat = pDynamicItems.begin();
+        auto itStrBuffDyn = pDynamicItems.begin();
+        for (const auto& [key, bindingInfo] : pSet->getBindingMap()) {
+            if (std::visit(IsCombinedSamplerMaterial{}, bindingInfo.descType)) {
+                // MATERIAL SAMPLER
+                itCmbSampMat = std::find_if(itCmbSampMat, pDynamicItems.end(), [](const auto& pItem) {
+                    return std::visit(IsMaterial{}, pItem->getDescriptorType());
+                });
+                if (itDescSetsMapKey != descriptorSetsMapKey.end() && itCmbSampMat != pDynamicItems.end() &&
+                    static_cast<Material::Base*>(*itCmbSampMat)->getTexture() != nullptr) {
+                    *itDescSetsMapKey = static_cast<Material::Base*>(*itCmbSampMat)->getTexture()->OFFSET;
+                    itDescSetsMapKey++;
+                    itCmbSampMat++;
+                } else {
+                    assert(false && "No space left in key, or no material for the sampler.");
+                    exit(EXIT_FAILURE);
+                }
+            } else if (std::visit(IsStorageBufferDynamic{}, bindingInfo.descType)) {
+                // DYNAMIC STORAGE BUFFER
+                itStrBuffDyn = std::find_if(itStrBuffDyn, pDynamicItems.end(), [](const auto& pItem) {
+                    return std::visit(IsStorageBufferDynamic{}, pItem->getDescriptorType());
+                });
+                if (itDescSetsMapKey != descriptorSetsMapKey.end() && itStrBuffDyn != pDynamicItems.end()) {
+                    *itDescSetsMapKey = static_cast<uint32_t>((*itStrBuffDyn)->BUFFER_INFO.itemOffset);
+                    itDescSetsMapKey++;
+                    itStrBuffDyn++;
+                } else {
+                    assert(false && "No space left in key, or no storage buffer.");
+                    exit(EXIT_FAILURE);
                 }
             }
         }
-
-        auto descriptorSetsMapKey = std::make_pair(textureOffset, storageBufferOffset);
 
         // Get/create the resource offset map for the material (or 0 if no material).
         auto itDescSetsMap = pSet->descriptorSetsMap_.find(descriptorSetsMapKey);
@@ -612,7 +630,7 @@ void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::
 
                 // Update
                 updateDescriptorSets(pSet->getBindingMap(), pSet->getDescriptorOffsets(helper.resourceOffset),
-                                     itResOffsetsMap->second, pDynamicItems, pTexture);
+                                     itResOffsetsMap->second, pDynamicItems);
             }
             const auto& [pInfoMap, sets] = itResOffsetsMap->second;
 
@@ -668,10 +686,12 @@ void Descriptor::Handler::allocateDescriptorSets(const Descriptor::Set::Resource
 
 void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bindingMap,
                                                const Descriptor::OffsetsMap& offsets, Set::resourceInfoMapSetsPair& pair,
-                                               const std::vector<Descriptor::Base*> pDynamicItems,
-                                               const std::shared_ptr<Texture::Base>& pTexture) const {
+                                               const std::vector<Descriptor::Base*> pDynamicItems) const {
     std::vector<std::vector<VkWriteDescriptorSet>> writesList(pair.second.size());
     assert(writesList.size() == pair.second.size());
+
+    auto itDynItm = pDynamicItems.begin();
+    auto itCmbSampMat = pDynamicItems.begin();
 
     for (const auto& [key, bindingInfo] : bindingMap) {
         // Perpare the set resource info map
@@ -713,40 +733,43 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
         } else if (std::visit(IsDynamic{}, bindingInfo.descType)) {
             // DYNAMIC
 
+            if (itDynItm == pDynamicItems.end() || bindingInfo.descType != (*itDynItm)->getDescriptorType()) {
+                assert(false && "Not enough dynamic items, or the items aren't the right type in the right order.");
+                exit(EXIT_FAILURE);
+            }
+
             itInfoMap->second.descCount = 1;
             itInfoMap->second.bufferInfos.resize(itInfoMap->second.uniqueDataSets);
+            (*itDynItm)->setDescriptorInfo(itInfoMap->second, 0);
 
-            bool found = false;
-            for (const auto& pItem : pDynamicItems) {
-                if (pItem->getDescriptorType() == bindingInfo.descType) {
-                    if (std::visit(IsUniformDynamic{}, bindingInfo.descType)) {
-                        auto sMsg = Descriptor::GetPerframeBufferWarning(bindingInfo.descType, pItem->BUFFER_INFO,
-                                                                         itInfoMap->second);
-                        if (sMsg.size()) shell().log(Shell::LogPriority::LOG_WARN, sMsg.c_str());
-                    } else if (std::visit(IsStorageBufferDynamic{}, bindingInfo.descType)) {
-                        assert(itInfoMap->second.bufferInfos.size() == 1);
-                    }
-
-                    pItem->setDescriptorInfo(itInfoMap->second, 0);
-                    found = true;
-                    break;
-                }
+            if (std::visit(IsUniformDynamic{}, (*itDynItm)->getDescriptorType())) {
+                auto sMsg =
+                    Descriptor::GetPerframeBufferWarning(bindingInfo.descType, (*itDynItm)->BUFFER_INFO, itInfoMap->second);
+                if (sMsg.size()) shell().log(Shell::LogPriority::LOG_WARN, sMsg.c_str());
+            } else if (std::visit(IsStorageBufferDynamic{}, bindingInfo.descType)) {
+                assert(itInfoMap->second.bufferInfos.size() == 1);
+            } else {
+                assert(false && "Unhandled dynamic uniform type");
+                exit(EXIT_FAILURE);
             }
-            assert(found);
+            itDynItm++;
 
         } else if (std::visit(IsCombinedSamplerMaterial{}, bindingInfo.descType)) {
             // MATERIAL SAMPLER
 
-            assert(pTexture != nullptr);
-            uint32_t offset = 0;
-            const auto textureId = std::string(bindingInfo.textureId);
-            if (textureId.size()) {
-                // There are multiple samplers
-                offset = std::stoul(textureId);
-                assert(offset < pTexture->samplers.size());
+            itCmbSampMat = std::find_if(itCmbSampMat, pDynamicItems.end(), [](const auto& pItem) {
+                return std::visit(IsMaterial{}, pItem->getDescriptorType());
+            });
+            if (itCmbSampMat == pDynamicItems.end() ||
+                static_cast<Material::Base*>(*itCmbSampMat)->getTexture() == nullptr ||
+                static_cast<Material::Base*>(*itCmbSampMat)->getTexture()->samplers.size() != 1) {
+                assert(false && "No material for the sampler");
+                exit(EXIT_FAILURE);
             }
-            itInfoMap->second.imageInfos.push_back(pTexture->samplers[offset].imgInfo);
+            itInfoMap->second.imageInfos.push_back(
+                static_cast<Material::Base*>(*itCmbSampMat)->getTexture()->samplers.at(0).imgInfo);
             itInfoMap->second.descCount = 1;
+            itCmbSampMat++;
 
         } else if (std::visit(IsPipelineImage{}, bindingInfo.descType) ||
                    std::visit(IsSwapchainStorageImage{}, bindingInfo.descType)) {
@@ -814,7 +837,7 @@ void Descriptor::Handler::updateBindData(const std::vector<std::string> textureI
                         isValidType |= std::visit(IsSwapchainStorageImage{}, bindingInfo.descType);
                         assert(isValidType);
                         assert(pSet->descriptorSetsMap_.size() == 1);
-                        for (auto& [resourceOffset, descriptorSets] : pSet->descriptorSetsMap_.at({0, 0})) {
+                        for (auto& [resourceOffset, descriptorSets] : pSet->descriptorSetsMap_.at({0, 0, 0, 0})) {
                             updateDescriptorSets(pSet->getBindingMap(), pSet->getDescriptorOffsets(resourceOffset),
                                                  descriptorSets, {});
                         }

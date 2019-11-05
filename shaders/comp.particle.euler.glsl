@@ -3,6 +3,33 @@
 
 #define _DS_PRTCL_EULER 0
 
+// DECLARATIONS
+vec3  getAcceleration();
+float getLifespan();
+vec3  getEmitterPosition();
+mat4  getEmitterBasis();
+float getDelta();
+float getVelocityLowerBound();
+float getVelocityUpperBound();
+
+const float PI = 3.14159265359;
+
+// // SPECIALIZATION CONSTANTS (This doesn't work for local size unfortunately)
+// layout (constant_id = 0) const uint _LOCAL_SIZE_X = 1000;
+
+// FLAGS
+const uint DEFAULT              = 0x00000001u;
+const uint FIRE                 = 0x00000002u;
+const uint SMOKE                = 0x00000004u;
+
+// PUSH CONSTANTS
+layout(push_constant) uniform PushConstantsBlock {
+    uint flags;
+} pushConstants;
+
+// SAMPLERS
+layout(set=_DS_PRTCL_EULER, binding=0) uniform sampler1D sampRandom;
+
 struct Particle {
     /**
      * data0[0]: position.x
@@ -25,55 +52,8 @@ struct Particle {
     vec4 data2;
 };
 
-const float PI = 3.14159265359;
-
-// // SPECIALIZATION CONSTANTS (This doesn't work for local size unfortunately)
-// layout (constant_id = 0) const uint _LOCAL_SIZE_X = 1000;
-
-// FLAGS
-const uint DEFAULT              = 0x00000001u;
-const uint FIRE                 = 0x00000002u;
-const uint SMOKE                = 0x00000004u;
-
-// PUSH CONSTANTS
-layout(push_constant) uniform PushConstantsBlock {
-    uint flags;
-} pushConstants;
-
-// UNIFORMS
-layout(set=_DS_PRTCL_EULER, binding=0) uniform ParticleFountain {
-    // Material::Base::DATA
-    vec3 color;             // Diffuse color for dielectrics, f0 for metallic
-    float opacity;          // Overall opacity
-    // 16
-    uint flags;             // Flags (general/material)
-    uint texFlags;          // Flags (texture)
-    float xRepeat;          // Texture xRepeat
-    float yRepeat;          // Texture yRepeat
-
-    // Material::Obj3d::DATA
-    mat4 model;
-
-    // Material::Particle::Fountain::DATA
-    // 0, 1, 2 : Particle acceleration (gravity)
-    // 3 :       Particle lifespan
-    vec4 data0;
-    // 0, 1, 2 : World position of the emitter.
-    // 3 :       Simulation time
-    vec4 data1;
-    mat4 emitterBasis;      // Rotation that rotates y axis to the direction of emitter
-    float minParticleSize;  // Minimum size of particle (used as default)
-    float maxParticleSize;  // Maximum size of particle
-    float delta;            // Elapsed time between frames
-    float velLB;            // Lower bound of the generated random velocity (euler)
-    float velUB;            // Upper bound of the generated random velocity (euler)
-} uniFountain;
-
-// SAMPLERS
-layout(set=_DS_PRTCL_EULER, binding=1) uniform sampler1D sampRandom;
-
 // STORAGE BUFFERS
-layout(set=_DS_PRTCL_EULER, binding=2, std140) buffer ParticleBuffer {
+layout(set=_DS_PRTCL_EULER, binding=1, std140) buffer ParticleBuffer {
     Particle particles[];
 };
 
@@ -91,10 +71,12 @@ vec3 randomInitialVelocity() {
     } else {
         float theta = mix(0.0, PI / 8.0, texelFetch(sampRandom, index, 0).r);
         float phi = mix(0.0, 2.0 * PI, texelFetch(sampRandom, index + 1, 0).r);
-        velocity = mix(uniFountain.velLB, uniFountain.velUB, texelFetch(sampRandom, index + 2, 0).r);
+        velocity = mix(getVelocityLowerBound(),
+            getVelocityUpperBound(),
+            texelFetch(sampRandom, index + 2, 0).r);
         v = vec3(sin(theta) * cos(phi), cos(theta), sin(theta) * sin(phi));
     }
-    v = normalize(mat3(uniFountain.emitterBasis) * v) * velocity;
+    v = normalize(mat3(getEmitterBasis()) * v) * velocity;
     return v;
 }
 
@@ -102,9 +84,9 @@ vec3 randomInitialPosition() {
     vec3 p;
     if ((pushConstants.flags & FIRE) > 0) {
         float offset = mix(-2.0, 2.0, texelFetch(sampRandom, int(gl_GlobalInvocationID.x), 0).r);
-        p = uniFountain.data0.xyx + vec3(offset, 0, 0);
+        p = getAcceleration() + vec3(offset, 0, 0);
     } else {
-        p = uniFountain.data1.xyz;
+        p = getEmitterPosition();
     }
     return p;
 }
@@ -114,24 +96,24 @@ float randomInitialRotationalVelocity() {
 }
 
 // LOCAL SIZE
-layout(local_size_x=512, local_size_y=1, local_size_z=1) in;
+layout(local_size_x=1, local_size_y=1, local_size_z=1) in;
 
 void main() {
     uint index = gl_GlobalInvocationID.x;
-    if (particles[index].data1[3] < 0 || particles[index].data1[3] > uniFountain.data0[3]) {
+    if (particles[index].data1[3] < 0 || particles[index].data1[3] > getLifespan()) {
         // The particle is past it's lifetime, recycle.
-        particles[index].data0.xyz = randomInitialPosition();                           // position
-        particles[index].data1.xyz = randomInitialVelocity();                           // veloctiy
-        particles[index].data2.xy = vec2(0.0, randomInitialRotationalVelocity());       // rotation
-        if (particles[index].data1[3] < 0)                                              // age
-            particles[index].data1[3] += uniFountain.delta;
+        particles[index].data0.xyz = randomInitialPosition();                       // position
+        particles[index].data1.xyz = randomInitialVelocity();                       // veloctiy
+        particles[index].data2.xy = vec2(0.0, randomInitialRotationalVelocity());   // rotation
+        if (particles[index].data1[3] < 0)                                          // age
+            particles[index].data1[3] += getDelta();
         else
-            particles[index].data1[3] += -uniFountain.data0[3] + uniFountain.delta;
+            particles[index].data1[3] += -getLifespan() + getDelta();
     } else {
-        particles[index].data0.xyz += particles[index].data1.xyz * uniFountain.delta;   // position
-        particles[index].data1.xyz += uniFountain.data0.xyz * uniFountain.delta;        // velocity
-        particles[index].data2.x = mod(particles[index].data2.x +                       // rotation
-            particles[index].data2.y * uniFountain.delta, 2.0 * PI);
-        particles[index].data1[3] += uniFountain.delta;                                 // age
+        particles[index].data0.xyz += particles[index].data1.xyz * getDelta();      // position
+        particles[index].data1.xyz += getAcceleration() * getDelta();               // velocity
+        particles[index].data2.x = mod(particles[index].data2.x +                   // rotation
+            particles[index].data2.y * getDelta(), 2.0 * PI);
+        particles[index].data1[3] += getDelta();                                    // age
     }
 }

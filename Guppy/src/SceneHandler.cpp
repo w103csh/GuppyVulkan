@@ -119,7 +119,7 @@ void Scene::Handler::init() {
             if (particles) {
                 planeInfo = {};
                 // planeInfo.pipelineType = PIPELINE::DEFERRED_MRT_WF_COLOR;
-                planeInfo.pipelineType = PIPELINE::PARTICLE_WAVE_DEFERRED;
+                planeInfo.pipelineType = PIPELINE::PRTCL_WAVE_DEFERRED;
                 planeInfo.selectable = true;
                 planeInfo.settings.geometryInfo.faceVertexColorsRGB = true;
                 // planeInfo.settings.indexVertices = false;

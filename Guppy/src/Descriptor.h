@@ -18,6 +18,7 @@ class Base : public virtual Buffer::Item, public Descriptor::Interface {
    public:
     void setDescriptorInfo(Set::ResourceInfo& info, const uint32_t index) const override;
     virtual_inline auto getDescriptorType() const { return descType_; }
+    virtual void update(const float time, const float elapsed, const uint32_t frameIndex) {}
 
    protected:
     Base(const DESCRIPTOR&& descType) : descType_(descType) {}

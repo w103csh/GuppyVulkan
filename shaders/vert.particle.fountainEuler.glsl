@@ -3,8 +3,14 @@
 
 #define _DS_UNI_PRTCL_FNTN 0
 
+// DECLARATIONS
+mat4  getModel();
+float getLifespan();
+float getMinParticleSize();
+float getMaxParticleSize();
+bool  isMesh();
+
 // FLAGS
-const uint IS_MESH      = 0x00010000u;
 const uint SMOKE        = 0x00000004u;
 
 // PUSH CONSTANTS
@@ -19,34 +25,6 @@ layout(set=_DS_UNI_PRTCL_FNTN, binding=0) uniform CameraDefaultPerspective {
     mat4 viewProjection;
     vec3 worldPosition;
 } camera;
-
-layout(set=_DS_UNI_PRTCL_FNTN, binding=1) uniform ParticleFountain {
-    // Material::Base::DATA
-    vec3 color;             // Diffuse color for dielectrics, f0 for metallic
-    float opacity;          // Overall opacity
-    // 16
-    uint flags;             // Flags (general/material)
-    uint texFlags;          // Flags (texture)
-    float xRepeat;          // Texture xRepeat
-    float yRepeat;          // Texture yRepeat
-
-    // Material::Obj3d::DATA
-    mat4 model;
-
-    // Material::Particle::Fountain::DATA
-    // 0, 1, 2 : Particle acceleration (gravity)
-    // 3 :       Particle lifespan
-    vec4 data0;
-    // 0, 1, 2 : World position of the emitter.
-    // 3 :       Simulation time
-    vec4 data1;
-    mat4 emitterBasis;      // Rotation that rotates y axis to the direction of emitter
-    float minParticleSize;  // Minimum size of particle (used as default)
-    float maxParticleSize;  // Maximum size of particle
-    float delta;            // Elapsed time between frames
-    float velLB;            // Lower bound of the generated random velocity (euler)
-    float velUB;            // Upper bound of the generated random velocity (euler)
-} uniFountain;
 
 // IN
 layout(location=0) in vec3 inPosition;
@@ -85,10 +63,10 @@ const vec3 offsets[] = vec3[](vec3(-0.5, -0.5, 0), vec3(0.5, -0.5, 0), vec3( 0.5
 const vec2 texCoords[] = vec2[](vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 0), vec2(1, 1), vec2(0, 1));
 
 void main() {
-    mat4 mViewModel = camera.view * uniFountain.model;
+    mat4 mViewModel = camera.view * getModel();
 
     // Mesh
-    if ((uniFountain.flags & IS_MESH) > 0) {
+    if (isMesh()) {
 
         float cs = cos(inData2.x);
         float sn = sin(inData2.x);
@@ -112,13 +90,13 @@ void main() {
     // Billboard-ed quad
     } else {
 
-        float agePct = inData1[3] / uniFountain.data0[3];
+        float agePct = inData1[3] / getLifespan();
 
         float particleSize;
         if ((pushConstants.flags & SMOKE) > 0) {
-            particleSize = mix(uniFountain.minParticleSize, uniFountain.maxParticleSize, agePct);
+            particleSize = mix(getMinParticleSize(), getMaxParticleSize(), agePct);
         } else {
-            particleSize = uniFountain.minParticleSize;
+            particleSize = getMinParticleSize();
         }
 
         if (inData1[3] >= 0.0) {

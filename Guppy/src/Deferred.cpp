@@ -406,6 +406,14 @@ const CreateInfo SSAO_FRAG_CREATE_INFO = {
     VK_SHADER_STAGE_FRAGMENT_BIT,
 };
 
+const CreateInfo MTR_POINT_FRAG_CREATE_INFO = {
+    SHADER::DEFERRED_MRT_POINT_FRAG,  //
+    "Deferred Multiple Render Target Point Fragment Shader",
+    "frag.point.deferred.mrt.glsl",
+    VK_SHADER_STAGE_FRAGMENT_BIT,
+    {SHADER_LINK::DEFAULT_MATERIAL},
+};
+
 }  // namespace Deferred
 }  // namespace Shader
 

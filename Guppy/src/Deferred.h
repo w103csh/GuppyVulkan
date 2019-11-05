@@ -104,6 +104,7 @@ extern const CreateInfo MRT_TEX_CS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_TEX_FRAG_CREATE_INFO;
 extern const CreateInfo MRT_COLOR_CS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_COLOR_FRAG_CREATE_INFO;
+extern const CreateInfo MTR_POINT_FRAG_CREATE_INFO;
 extern const CreateInfo SSAO_FRAG_CREATE_INFO;
 
 }  // namespace Deferred

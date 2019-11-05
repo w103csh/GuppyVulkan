@@ -102,7 +102,7 @@ enum class PUSH_CONSTANT {
     PBR,
     POST_PROCESS,
     DEFERRED,
-    PARTICLE_EULER,
+    PRTCL_EULER,
 };
 
 enum class INPUT_ACTION {
@@ -164,7 +164,9 @@ enum class STORAGE_BUFFER {
 };
 
 enum class STORAGE_BUFFER_DYNAMIC {
-    PARTICLE_EULER,
+    PRTCL_EULER,
+    PRTCL_POSTITION,
+    PRTCL_VELOCITY,
     //
     DONT_CARE,
 };
@@ -189,7 +191,7 @@ enum class UNIFORM {
     // GEOMETRY
     GEOMETRY_DEFAULT,
     // PARTICLE
-    PARTICLE_WAVE,
+    PRTCL_WAVE,
     //
     DONT_CARE,
 };
@@ -198,7 +200,9 @@ enum class UNIFORM_DYNAMIC {
     // MATERIAL
     MATERIAL_DEFAULT,
     MATERIAL_PBR,
-    MATERIAL_PARTICLE_FOUNTAIN,
+    MATERIAL_OBJ3D,
+    PRTCL_FOUNTAIN,
+    PRTCL_ATTRACTOR,
     //
     DONT_CARE,
 };
