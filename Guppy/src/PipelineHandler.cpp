@@ -85,11 +85,13 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
             case PIPELINE::TESSELLATION_BEZIER_4_DEFERRED:  insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::Bezier4Deferred>(std::ref(*this))}); break;
             case PIPELINE::TESSELLATION_TRIANGLE_DEFERRED:  insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::TriangleDeferred>(std::ref(*this))}); break;
             case PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED:    insertPair = pPipelines_.insert({type, std::make_unique<Geometry::Silhouette>(std::ref(*this))}); break;
-            case PIPELINE::PARTICLE_WAVE_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Particle::Wave>(std::ref(*this))}); break;
-            case PIPELINE::PARTICLE_FOUNTAIN_DEFERRED:      insertPair = pPipelines_.insert({type, std::make_unique<Particle::Fountain>(std::ref(*this))}); break;
-            case PIPELINE::PARTICLE_EULER_COMPUTE:          insertPair = pPipelines_.insert({type, std::make_unique<Particle::Euler>(std::ref(*this))}); break;
-            case PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED:insertPair = pPipelines_.insert({type, std::make_unique<Particle::FountainEuler>(std::ref(*this))}); break;
-            case PIPELINE::SHADOW_PARTICLE_FOUNTAIN_EULER:  insertPair = pPipelines_.insert({type, std::make_unique<Particle::ShadowFountainEuler>(std::ref(*this))}); break;
+            case PIPELINE::PRTCL_WAVE_DEFERRED:             insertPair = pPipelines_.insert({type, std::make_unique<Particle::Wave>(std::ref(*this))}); break;
+            case PIPELINE::PRTCL_FOUNTAIN_DEFERRED:         insertPair = pPipelines_.insert({type, std::make_unique<Particle::Fountain>(std::ref(*this))}); break;
+            case PIPELINE::PRTCL_EULER_COMPUTE:             insertPair = pPipelines_.insert({type, std::make_unique<Particle::Euler>(std::ref(*this))}); break;
+            case PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED:   insertPair = pPipelines_.insert({type, std::make_unique<Particle::FountainEuler>(std::ref(*this))}); break;
+            case PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER:       insertPair = pPipelines_.insert({type, std::make_unique<Particle::ShadowFountainEuler>(std::ref(*this))}); break;
+            case PIPELINE::PRTCL_ATTR_COMPUTE:              insertPair = pPipelines_.insert({type, std::make_unique<Particle::AttractorCompute>(std::ref(*this))}); break;
+            case PIPELINE::PRTCL_ATTR_PT_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Particle::AttractorPoint>(std::ref(*this))}); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on
@@ -177,7 +179,7 @@ std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
             case PUSH_CONSTANT::DEFAULT:                range.size = sizeof(Pipeline::Default::PushConstant); break;
             case PUSH_CONSTANT::POST_PROCESS:           range.size = sizeof(::Compute::PostProcess::PushConstant); break;
             case PUSH_CONSTANT::DEFERRED:               range.size = sizeof(::Deferred::PushConstant); break;
-            case PUSH_CONSTANT::PARTICLE_EULER:         range.size = sizeof(::Particle::Euler::PushConstant); break;
+            case PUSH_CONSTANT::PRTCL_EULER:            range.size = sizeof(::Particle::Euler::PushConstant); break;
             default: assert(false && "Unknown push constant"); exit(EXIT_FAILURE);
         }
         // clang-format on

@@ -2,9 +2,12 @@
 #define PARTICLE_HANDLER_H
 
 #include <memory>
+#include <unordered_set>
 #include <vector>
 
 #include "ConstantsAll.h"
+#include "Descriptor.h"
+#include "DescriptorManager.h"
 #include "Game.h"
 #include "Instance.h"
 #include "InstanceManager.h"
@@ -14,17 +17,17 @@
 
 namespace Particle {
 
-constexpr uint32_t NUM_PARTICLES_EULER_MIN = 512;
-
 class Handler : public Game::Handler {
     friend class Buffer::Base;
 
    private:
-    template <class TBufferType, class TBufferBaseType, typename TBufferCreateInfo, typename... TArgs>
+    template <class TBufferType, class TBufferBaseType, typename TBufferCreateInfo>
     auto &make(std::vector<TBufferBaseType> &pBuffers, TBufferCreateInfo *pCreateInfo,
-               const std::vector<std::shared_ptr<Material::Base>> &pMaterials, TArgs... args) {
-        pBuffers.emplace_back(
-            new TBufferType(std::ref(*this), static_cast<Buffer::index>(pBuffers.size()), pCreateInfo, pMaterials, args...));
+               const std::vector<std::shared_ptr<Material::Obj3d::Default>> &pObj3dMaterials,
+               std::vector<std::shared_ptr<Descriptor::Base>> &&pUniforms) {
+        pBuffers.emplace_back(new TBufferType(std::ref(*this), static_cast<Buffer::index>(pBuffers.size()), pCreateInfo,
+                                              pObj3dMaterials,
+                                              std::forward<std::vector<std::shared_ptr<Descriptor::Base>>>(pUniforms)));
         assert(pBuffers.back()->getOffset() == pBuffers.size() - 1);
 
         if (pBuffers.back()->getStatus() == STATUS::READY || pBuffers.back()->getStatus() & STATUS::PENDING_MATERIAL ||
@@ -46,43 +49,17 @@ class Handler : public Game::Handler {
     void frame() override;
 
     void create();
-    void startFountain(const StartInfo &info);
+    void startFountain(const uint32_t offset);
 
-    // Assume all isntance data derived from Fountain::Base for now.
-    template <typename TInstCreateInfo>
-    std::shared_ptr<Instance::Particle::Fountain::Base> &makeInstanceParticleFountain(TInstCreateInfo *pInfo) {
-        assert(pInfo != nullptr);
-        std::shared_ptr<Instance::Particle::Fountain::Base> &pInst = pInfo->pSharedData;
-        if (pInst == nullptr) {
-            // assert(pInfo->data.size());
-            instFntnMgr_.insert(shell().context().dev, pInfo);
-            pInst = instFntnMgr_.pItems.back();
+    inline void update(std::shared_ptr<Descriptor::Base> &pUniform, const int index = -1) {
+        if (pUniform->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_ATTRACTOR}) {
+            prtclAttrMgr_.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
+        } else if (pUniform->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_FOUNTAIN}) {
+            prtclFntnMgr_.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
+        } else {
+            assert(false && "Unhandled uniform type");
+            exit(EXIT_FAILURE);
         }
-        return pInst;
-    }
-
-    template <class TBufferType, typename TMaterialCreateInfo, typename TInstanceCreateInfo, typename TCreateInfo>
-    auto &makeBuffer(TCreateInfo *pCreateInfo, const uint32_t numberOfParticles,
-                     const std::vector<glm::mat4> &models = {glm::mat4{1.0f}}) {
-        // MATERIAL
-        std::vector<std::shared_ptr<Material::Base>> pMaterials;
-        for (const auto &model : models) {
-            TMaterialCreateInfo matInfo(pCreateInfo, model, shell().context().imageCount);
-            pMaterials.emplace_back(materialHandler().makeMaterial(&matInfo));
-        }
-        // INSTANCE
-        TInstanceCreateInfo instInfo(pCreateInfo, numberOfParticles);
-        // Assume all isntance data derived from Fountain::Base for now.
-        auto &pInstFntn = makeInstanceParticleFountain(&instInfo);
-
-        return make<TBufferType>(pBuffers_, pCreateInfo, pMaterials, pInstFntn);
-    }
-
-    inline void updateInstanceData(const ::Buffer::Info &info) { instFntnMgr_.updateData(shell().context().dev, info); }
-
-    template <typename TParticle>
-    inline void updateParticle(std::unique_ptr<TParticle> &pBuffer) {
-        instFntnMgr_.updateData(shell().context().dev, pBuffer->pInstanceData_->BUFFER_INFO);
     }
 
     void recordDraw(const PASS passType, const std::shared_ptr<Pipeline::BindData> &pPipelineBindData,
@@ -98,8 +75,14 @@ class Handler : public Game::Handler {
 
     // BUFFERS
     std::vector<std::unique_ptr<Particle::Buffer::Base>> pBuffers_;
+
+    // UNIFORM DYNAMIC
+    Descriptor::Manager<Descriptor::Base, UniformDynamic::Particle::Attractor::Base, std::shared_ptr> prtclAttrMgr_;
+    Descriptor::Manager<Descriptor::Base, UniformDynamic::Particle::Fountain::Base, std::shared_ptr> prtclFntnMgr_;
+
     // INSTANCE
     Instance::Manager<Instance::Particle::Fountain::Base, Instance::Particle::Fountain::Base> instFntnMgr_;
+    Instance::Manager<Instance::Particle::Vector4::Base, Instance::Particle::Vector4::Base> instVec4Mgr_;
     std::unique_ptr<Instance::Manager<Instance::Particle::FountainEuler::Base, Instance::Particle::FountainEuler::Base>>
         pInstFntnEulerMgr_;
     // LOADING

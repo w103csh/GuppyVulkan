@@ -3,6 +3,9 @@
 
 #define _DS_UNI_PRTCL_FNTN 0
 
+// DECLARATIONS
+mat4  getModel();
+
 // BINDINGS
 layout(set=_DS_UNI_PRTCL_FNTN, binding=0) uniform CameraDefaultPerspective {
     mat4 view;
@@ -10,20 +13,6 @@ layout(set=_DS_UNI_PRTCL_FNTN, binding=0) uniform CameraDefaultPerspective {
     mat4 viewProjection;
     vec3 worldPosition;
 } camera;
-
-layout(set=_DS_UNI_PRTCL_FNTN, binding=1) uniform ParticleFountain {
-    // Material::Base::DATA
-    vec3 color;             // Diffuse color for dielectrics, f0 for metallic
-    float opacity;          // Overall opacity
-    // 16
-    uint flags;             // Flags (general/material)
-    uint texFlags;          // Flags (texture)
-    float xRepeat;          // Texture xRepeat
-    float yRepeat;          // Texture yRepeat
-
-    // Material::Obj3d::DATA
-    mat4 model;
-} uniFountain;
 
 // IN
 layout(location=0) in vec3 inPosition;
@@ -65,6 +54,6 @@ void main() {
         inData0.x, inData0.y, inData0.z, 1
     );
 
-    mat4 mMVP = (camera.viewProjection * uniFountain.model) *  mRotAndTrans;
+    mat4 mMVP = (camera.viewProjection * getModel()) *  mRotAndTrans;
     gl_Position = mMVP * vec4(inPosition, 1.0);
 }

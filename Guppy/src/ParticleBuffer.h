@@ -17,7 +17,6 @@ namespace Instance {
 namespace Particle {
 
 // FOUNTAIN
-
 namespace Fountain {
 
 struct DATA {
@@ -29,10 +28,12 @@ struct DATA {
 class Base;
 
 struct CreateInfo : Instance::CreateInfo<DATA, Base> {
-    CreateInfo(const ::Particle::Fountain::CreateInfo* pCreateInfo, const uint32_t numberOfParticles) : pInfo(pCreateInfo) {
+    CreateInfo(const UniformDynamic::Particle::Fountain::CreateInfo* pCreateInfo, const uint32_t numberOfParticles)
+        : pInfo(pCreateInfo) {
+        countInRange = true;
         dataCount = numberOfParticles;
     }
-    const ::Particle::Fountain::CreateInfo* pInfo;
+    const UniformDynamic::Particle::Fountain::CreateInfo* pInfo;
 };
 
 class Base : public Buffer::DataItem<DATA>, public Instance::Base {
@@ -45,7 +46,6 @@ class Base : public Buffer::DataItem<DATA>, public Instance::Base {
 }  // namespace Fountain
 
 // FOUNTAIN (EULER)
-
 namespace FountainEuler {
 
 struct DATA {
@@ -74,10 +74,11 @@ struct DATA {
 class Base;
 
 struct CreateInfo : Instance::CreateInfo<DATA, Base> {
-    CreateInfo(const ::Particle::Fountain::CreateInfo* pCreateInfo, const uint32_t numberOfParticles) : pInfo(pCreateInfo) {
+    CreateInfo(const UniformDynamic::Particle::Fountain::CreateInfo* pCreateInfo, const uint32_t numberOfParticles)
+        : pInfo(pCreateInfo) {
         dataCount = numberOfParticles;
     }
-    const ::Particle::Fountain::CreateInfo* pInfo;
+    const UniformDynamic::Particle::Fountain::CreateInfo* pInfo;
 };
 
 class Base : public Buffer::DataItem<DATA>, public Instance::Base {
@@ -87,6 +88,40 @@ class Base : public Buffer::DataItem<DATA>, public Instance::Base {
 
 }  // namespace FountainEuler
 
+// VECTOR4
+namespace Vector4 {
+
+enum class TYPE {
+    ATTRACTOR_POSITION,
+    ATTRACTOR_VELOCITY,
+};
+
+struct DATA {
+    static void getInputDescriptions(Pipeline::CreateInfoResources& createInfoRes);
+    glm::vec4 data;
+};
+
+class Base;
+
+struct CreateInfo : Instance::CreateInfo<DATA, Base> {
+    CreateInfo(const TYPE&& type, const STORAGE_BUFFER_DYNAMIC&& descType, const glm::uvec3& numParticles)
+        : type(type), descType(descType), numParticles(numParticles) {
+        countInRange = true;
+        dataCount = numParticles.x * numParticles.y * numParticles.z;
+    }
+    TYPE type;
+    STORAGE_BUFFER_DYNAMIC descType;
+    glm::uvec3 numParticles;
+};
+
+class Base : public Buffer::DataItem<DATA>, public Instance::Base {
+   public:
+    const TYPE VECTOR_TYPE;
+    Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo);
+};
+
+}  // namespace Vector4
+
 }  // namespace Particle
 }  // namespace Instance
 
@@ -95,6 +130,12 @@ class Base : public Buffer::DataItem<DATA>, public Instance::Base {
 namespace Particle {
 class Handler;
 namespace Buffer {
+
+struct CreateInfo {
+    std::string name = "";
+    PIPELINE pipelineTypeGraphics = PIPELINE::ALL_ENUM;
+    PIPELINE pipelineTypeCompute = PIPELINE::ALL_ENUM;
+};
 
 // BASE
 
@@ -107,9 +148,9 @@ class Base : public NonCopyable, public Handlee<Handler> {
     const PIPELINE PIPELINE_TYPE_GRAPHICS;
     const PIPELINE PIPELINE_TYPE_SHADOW;
 
-    virtual void start(const StartInfo& info) = 0;
-    virtual void update(const float time, const float elapsed, const uint32_t frameIndex) = 0;
-    virtual bool shouldDraw(const InstanceInfo& instance) = 0;
+    void toggle();
+    virtual void update(const float time, const float elapsed, const uint32_t frameIndex);
+    bool shouldDraw();
 
     void prepare();
     void destroy();
@@ -118,7 +159,8 @@ class Base : public NonCopyable, public Handlee<Handler> {
     constexpr const auto& getStatus() const { return status_; }
     constexpr const auto& getInstances() const { return instances_; }
 
-    virtual const std::vector<Descriptor::Base*> getGraphicsDynDescItems(const InstanceInfo& instance) const = 0;
+    const std::vector<Descriptor::Base*> getSDynamicDataItems(const PIPELINE pipelineType,
+                                                              const InstanceInfo& instance) const;
 
     // TODO: These are directly copied from Mesh::Base. Changed getDescriptorSetBindData slightly.
     virtual void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
@@ -131,9 +173,13 @@ class Base : public NonCopyable, public Handlee<Handler> {
                                                               const Descriptor::Set::bindDataMap& map) const;
 
    protected:
-    Base(Particle::Handler& handler, const index offset, const ::Particle::Fountain::CreateInfo* pCreateInfo,
-         const std::vector<std::shared_ptr<Material::Base>>& pMaterials,
+    Base(Particle::Handler& handler, const index offset, const CreateInfo* pCreateInfo,
+         const std::vector<std::shared_ptr<Material::Obj3d::Default>>& pObj3dMaterials,
+         std::vector<std::shared_ptr<Descriptor::Base>>&& pUniforms,
          const PIPELINE&& pipelineTypeShadow = PIPELINE::ALL_ENUM);
+
+    inline std::shared_ptr<Descriptor::Base>& getTimedUniform() { return pUniforms_[timeUniformOffset_]; }
+    virtual_inline auto& getInstUniformOffsets() const { return instUniformOffsets_; }
 
     FlagBits status_;
 
@@ -143,55 +189,52 @@ class Base : public NonCopyable, public Handlee<Handler> {
     BufferResource vertexRes_;
     std::vector<InstanceInfo> instances_;
 
+    bool paused_;
+    std::vector<std::shared_ptr<Descriptor::Base>> pUniforms_;
+
    private:
     void loadBuffers();
 
     index offset_;
     std::unique_ptr<LoadingResource> pLdgRes_;
+
+    uint32_t timeUniformOffset_;
+    std::array<uint32_t, 2> instUniformOffsets_;
 };
 
 // FOUNTAIN
 
 class Fountain : public Base {
    public:
-    Fountain(Particle::Handler& handler, const index&& offset, const ::Particle::Fountain::CreateInfo* pCreateInfo,
-             const std::vector<std::shared_ptr<Material::Base>>& pMaterials,
-             std::shared_ptr<::Instance::Particle::Fountain::Base>& pInstFntn);
-
-    void start(const StartInfo& info) override;
-    void update(const float time, const float elapsed, const uint32_t frameIndex) override;
-    bool shouldDraw(const InstanceInfo& instance) override;
-
-    const std::vector<Descriptor::Base*> getGraphicsDynDescItems(const InstanceInfo& instance) const override {
-        return {instance.pMaterial.get(), pInstFntn_.get()};
-    }
+    Fountain(Particle::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo,
+             const std::vector<std::shared_ptr<Material::Obj3d::Default>>& pObj3dMaterials,
+             std::vector<std::shared_ptr<Descriptor::Base>>&& pUniforms);
 
     void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
               const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
               const uint8_t frameIndex) const override;
 
-   protected:
-    std::shared_ptr<::Instance::Particle::Fountain::Base> pInstFntn_;
+    void update(const float time, const float elapsed, const uint32_t frameIndex) override;
 };
 
 // EULER
 namespace Euler {
 
+struct CreateInfo : Buffer::CreateInfo {
+    Particle::Euler::PushConstant computeFlag = Particle::Euler::FLAG::FOUNTAIN;
+    glm::uvec3 localSize{1, 1, 1};
+    uint32_t firstInstanceBinding = 1;  // TODO: This was a lazy solution to the problem.
+};
+
 // BASE
 class Base : public Buffer::Base {
    public:
-    Base(Particle::Handler& handler, const index&& offset, const ::Particle::Fountain::CreateInfo* pCreateInfo,
-         const std::vector<std::shared_ptr<Material::Base>>& pMaterials,
-         std::shared_ptr<::Instance::Particle::FountainEuler::Base>& pInstFntn,
+    Base(Particle::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo,
+         const std::vector<std::shared_ptr<Material::Obj3d::Default>>& pObj3dMaterials,
+         std::vector<std::shared_ptr<Descriptor::Base>>&& pUniforms,
          const PIPELINE&& pipelineTypeShadow = PIPELINE::ALL_ENUM);
 
-    void start(const StartInfo& info) override;
-    void update(const float time, const float elapsed, const uint32_t frameIndex) override;
-    bool shouldDraw(const InstanceInfo& instance) override;
-
-    const std::vector<Descriptor::Base*> getGraphicsDynDescItems(const InstanceInfo& instance) const override {
-        return {instance.pMaterial.get(), pInstFntn_.get()};
-    }
+    const glm::uvec3 LOCAL_SIZE;
 
     void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
               const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
@@ -200,19 +243,17 @@ class Base : public Buffer::Base {
                   const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
                   const uint8_t frameIndex) const override;
 
-   protected:
-    std::shared_ptr<::Instance::Particle::FountainEuler::Base> pInstFntn_;
-
    private:
-    ::Particle::Euler::PushConstant pushConstant_;
-};  // namespace Euler
+    Particle::Euler::PushConstant pushConstant_;
+    uint32_t firstInstanceBinding_;
+};
 
-// FOUNTAIN
-class Torus : public Base {
+// TORUS
+class Torus : public Euler::Base {
    public:
-    Torus(Particle::Handler& handler, const index&& offset, const ::Particle::Fountain::CreateInfo* pCreateInfo,
-          const std::vector<std::shared_ptr<Material::Base>>& pMaterials,
-          std::shared_ptr<::Instance::Particle::FountainEuler::Base>& pInstFntn);
+    Torus(Particle::Handler& handler, const index&& offset, const Euler::CreateInfo* pCreateInfo,
+          const std::vector<std::shared_ptr<Material::Obj3d::Default>>& pObj3dMaterials,
+          std::vector<std::shared_ptr<Descriptor::Base>>&& pUniforms);
 };
 
 }  // namespace Euler

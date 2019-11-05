@@ -30,16 +30,19 @@ const CreateInfo DEFERRED_CREATE_INFO = {
 #ifndef VK_USE_PLATFORM_MACOS_MVK
         PIPELINE::DEFERRED_MRT_WF_COLOR,
 #endif
-        PIPELINE::PARTICLE_WAVE_DEFERRED,
-        PIPELINE::PARTICLE_FOUNTAIN_DEFERRED,
+        PIPELINE::PRTCL_WAVE_DEFERRED,
+        PIPELINE::PRTCL_FOUNTAIN_DEFERRED,
 #ifndef VK_USE_PLATFORM_MACOS_MVK
         // PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED,
         PIPELINE::TESSELLATION_TRIANGLE_DEFERRED,
 #endif
         PIPELINE::DEFERRED_MRT_TEX,
         // The two below are dependent on one another... Make this a thing?
-        PIPELINE::PARTICLE_EULER_COMPUTE,
-        PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED,
+        PIPELINE::PRTCL_EULER_COMPUTE,
+        PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED,
+        // The two below are dependent on one another... Make this a thing?
+        PIPELINE::PRTCL_ATTR_COMPUTE,
+        PIPELINE::PRTCL_ATTR_PT_DEFERRED,
         // PIPELINE::DEFERRED_SSAO,
         PIPELINE::DEFERRED_COMBINE,
     },
@@ -96,9 +99,14 @@ void Base::record(const uint8_t frameIndex) {
         vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
 
         // COMPUTE
-        {
-            auto& pPipelineBindData = pipelineBindDataList_.getValue(PIPELINE::PARTICLE_EULER_COMPUTE);
-            handler().particleHandler().recordDispatch(TYPE, pPipelineBindData, priCmd, frameIndex);
+        for (const auto& pPipelineBindData : pipelineBindDataList_.getValues()) {
+            switch (pPipelineBindData->type) {
+                case PIPELINE::PRTCL_EULER_COMPUTE:
+                case PIPELINE::PRTCL_ATTR_COMPUTE: {
+                    handler().particleHandler().recordDispatch(TYPE, pPipelineBindData, priCmd, frameIndex);
+                } break;
+                default:;
+            }
         }
 
         // SHADOW
@@ -148,8 +156,9 @@ void Base::record(const uint8_t frameIndex) {
                     // TODO: this definitely only needs to be recorded once per swapchain creation!!!
                     assert(doSSAO_ && false);
                 } break;
-                case PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED:
-                case PIPELINE::PARTICLE_FOUNTAIN_DEFERRED: {
+                case PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED:
+                case PIPELINE::PRTCL_ATTR_PT_DEFERRED:
+                case PIPELINE::PRTCL_FOUNTAIN_DEFERRED: {
                     handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
                     vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
                 } break;
@@ -271,7 +280,7 @@ void Base::createSubpassDescriptions() {
 
     uint32_t mrtPipelineCount = 0;
     for (const auto& [pipelineType, badData] : pipelineBindDataList_.getKeyOffsetMap()) {
-        if (pipelineType == PIPELINE::PARTICLE_EULER_COMPUTE) continue;
+        if (pipelineType == PIPELINE::PRTCL_EULER_COMPUTE) continue;
         if (pipelineType == PIPELINE::DEFERRED_SSAO && !doSSAO_) continue;
         mrtPipelineCount++;
     }
@@ -337,9 +346,10 @@ void Base::createDependencies() {
 
     uint32_t subpass = 0;
     for (const auto& [pipelineType, badData] : pipelineBindDataList_.getKeyOffsetMap()) {
-        if (pipelineType == PIPELINE::PARTICLE_EULER_COMPUTE) continue;
+        if (pipelineType == PIPELINE::PRTCL_EULER_COMPUTE) continue;
         if (pipelineType == PIPELINE::DEFERRED_SSAO && !doSSAO_) continue;
-        if (pipelineType == PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED) {
+        // TODO: How could this know which external subpass to wait on?
+        if (pipelineType == PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED || pipelineType == PIPELINE::PRTCL_ATTR_PT_DEFERRED) {
             // Dispatch writes into a storage buffer. Draw consumes that buffer as an instance vertex buffer.
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,

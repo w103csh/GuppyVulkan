@@ -67,8 +67,7 @@ struct DATA {
 
 class Base : public Descriptor::Base {
    public:
-    const STATUS& getStatus() const { return status_; }
-
+    virtual_inline STATUS getStatus() const { return status_; }
     inline bool hasTexture() const { return pTexture_ != nullptr; }
     virtual_inline const auto& getTexture() const { return pTexture_; }
     virtual_inline const auto& getRepeat() const { return repeat_; }
@@ -77,10 +76,10 @@ class Base : public Descriptor::Base {
     virtual void setFlags(FlagBits flags) = 0;
     // TODO: this isn't actually enforced anywhere. There should be an pure virtual function on Descriptor::Base
     // for getData() or something, and then this could be enforced in a setData function.
-    virtual void setTextureData(){};
+    virtual void setTextureData() {}
 
     // OBJ
-    virtual void setTinyobjData(const tinyobj::material_t& m){};
+    virtual void setTinyobjData(const tinyobj::material_t& m) {}
 
    protected:
     Base(const DESCRIPTOR&& descType, const CreateInfo* pCreateInfo);
@@ -118,6 +117,24 @@ struct CreateInfo : public Material::CreateInfo {
     float reflectionFactor = 0.85f;
 };
 
+constexpr void SetData(const CreateInfo* pCreateInfo, DATA* pData) {
+    pData->color = pCreateInfo->color;
+    pData->flags = pCreateInfo->flags;
+    pData->Ka = pCreateInfo->ambientCoeff;
+    pData->Ks = pCreateInfo->specularCoeff;
+    pData->opacity = pCreateInfo->opacity;
+    pData->shininess = pCreateInfo->shininess;
+    pData->eta = pCreateInfo->eta;
+    pData->reflectionFactor = pCreateInfo->reflectionFactor;
+}
+
+constexpr void SetTinyobjData(const tinyobj::material_t& m, DATA* pData) {
+    pData->shininess = m.shininess;
+    pData->Ka = {m.ambient[0], m.ambient[1], m.ambient[2]};
+    pData->color = {m.diffuse[0], m.diffuse[1], m.diffuse[2]};
+    pData->Ks = {m.specular[0], m.specular[1], m.specular[2]};
+}
+
 class Base : public Material::Base, public Buffer::DataItem<DATA> {
    public:
     Base(const Buffer::Info&& info, Default::DATA* pData, const Default::CreateInfo* pCreateInfo);
@@ -135,31 +152,45 @@ class Base : public Material::Base, public Buffer::DataItem<DATA> {
     void setData(const uint32_t index = 0) override { dirty = true; };
 };
 
-static void copyTinyobjData(const tinyobj::material_t& m, Default::CreateInfo& materialInfo) {
-    materialInfo.shininess = m.shininess;
-    materialInfo.ambientCoeff = {m.ambient[0], m.ambient[1], m.ambient[2]};
-    materialInfo.color = {m.diffuse[0], m.diffuse[1], m.diffuse[2]};
-    materialInfo.specularCoeff = {m.specular[0], m.specular[1], m.specular[2]};
-}
-
 }  // namespace Default
 
 // OBJ3D
 
 namespace Obj3d {
 
-struct DATA : public Material::DATA {
-    glm::mat4 model{1.0f};
-};
-
-struct CreateInfo : public Material::CreateInfo {
+struct DATA : public Material::Default::DATA {
     glm::mat4 model;
 };
 
-class Base : public ::Obj3d::AbstractBase, public Material::Base {
+struct CreateInfo : public Material::Default::CreateInfo {
+    glm::mat4 model{1.0f};
+};
+
+class Default : public ::Obj3d::AbstractBase, public Material::Base, public Buffer::DataItem<DATA> {
    public:
-    Base(const DESCRIPTOR&& descType, const CreateInfo* pCreateInfo)
-        : Material::Base(std::forward<const DESCRIPTOR>(descType), pCreateInfo) {}
+    Default(const Buffer::Info&& info, Default::DATA* pData, const CreateInfo* pCreateInfo)
+        : Buffer::Item(std::forward<const Buffer::Info>(info)),
+          Base(UNIFORM_DYNAMIC::MATERIAL_OBJ3D, pCreateInfo),
+          Buffer::DataItem<Default::DATA>(pData) {
+        SetData(pCreateInfo, pData_);
+        setTextureData();
+        pData_->model = pCreateInfo->model;
+        setData();
+    }
+
+    FlagBits getFlags() override { return pData_->flags; }
+    void setFlags(FlagBits flags) override {
+        pData_->flags = flags;
+        setData();
+    }
+
+    void setTextureData() override { status_ = SetDefaultTextureData(this, pData_); }
+    void setTinyobjData(const tinyobj::material_t& m) override {
+        SetTinyobjData(m, pData_);
+        setData();
+    }
+
+    const glm::mat4& model(const uint32_t index = 0) const override { return pData_->model; }
 };
 
 }  // namespace Obj3d

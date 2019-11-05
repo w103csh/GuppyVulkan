@@ -42,8 +42,7 @@ class Handler : public Game::Handler {
 
     // DESCRIPTOR
     void getBindData(const PIPELINE& pipelineType, Descriptor::Set::bindDataMap& bindDataMap,
-                     const std::vector<Descriptor::Base*> pDynamicItems = {},
-                     const std::shared_ptr<Texture::Base>& pTexture = nullptr);
+                     const std::vector<Descriptor::Base*> pDynamicItems = {});
     void updateBindData(const std::vector<std::string> textureIds);
 
    private:
@@ -72,8 +71,7 @@ class Handler : public Game::Handler {
     void allocateDescriptorSets(const Descriptor::Set::Resource& resource, std::vector<VkDescriptorSet>& descriptorSets);
 
     void updateDescriptorSets(const Descriptor::bindingMap& bindingMap, const Descriptor::OffsetsMap& offsets,
-                              Set::resourceInfoMapSetsPair& pair, const std::vector<Descriptor::Base*> pDynamicItems,
-                              const std::shared_ptr<Texture::Base>& pTexture = nullptr) const;
+                              Set::resourceInfoMapSetsPair& pair, const std::vector<Descriptor::Base*> pDynamicItems) const;
 
     VkWriteDescriptorSet getWrite(const Descriptor::bindingMapKeyValue& keyValue, const VkDescriptorSet& set) const;
     void getDynamicOffsets(const std::unique_ptr<Descriptor::Set::Base>& pSet, std::vector<uint32_t>& dynamicOffsets,

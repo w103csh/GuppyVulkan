@@ -6,6 +6,7 @@
 
 #include "BufferItem.h"
 #include "ConstantsAll.h"
+#include "Descriptor.h"
 #include "Instance.h"
 #include "Pipeline.h"
 
@@ -29,13 +30,22 @@ constexpr std::string_view RAND_1D_ID = "Particle Random 1D Texture";
 
 namespace Shader {
 namespace Particle {
-extern const CreateInfo WAVE_COLOR_VERT_DEFERRED_MRT_CREATE_INFO;
-extern const CreateInfo FOUNTAIN_PART_VERT_CREATE_INFO;
-extern const CreateInfo FOUNTAIN_PART_FRAG_DEFERRED_MRT_CREATE_INFO;
-extern const CreateInfo PARTICLE_EULER_CREATE_INFO;
-extern const CreateInfo FOUNTAIN_PART_EULER_VERT_CREATE_INFO;
-extern const CreateInfo SHADOW_FOUNTAIN_PART_EULER_VERT_CREATE_INFO;
+extern const CreateInfo WAVE_VERT_CREATE_INFO;
+extern const CreateInfo FOUNTAIN_VERT_CREATE_INFO;
+extern const CreateInfo FOUNTAIN_FRAG_DEFERRED_MRT_CREATE_INFO;
+// EULER
+extern const CreateInfo EULER_CREATE_INFO;
+extern const CreateInfo FOUNTAIN_EULER_VERT_CREATE_INFO;
+extern const CreateInfo SHDW_FOUNTAIN_EULER_VERT_CREATE_INFO;
+// ATTRACTOR
+extern const CreateInfo ATTR_COMP_CREATE_INFO;
+extern const CreateInfo ATTR_VERT_CREATE_INFO;
 }  // namespace Particle
+namespace Link {
+namespace Particle {
+extern const CreateInfo FOUNTAIN_CREATE_INFO;
+}  // namespace Particle
+}  // namespace Link
 }  // namespace Shader
 
 // UNIFORM
@@ -54,20 +64,27 @@ struct DATA {
 class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
    public:
     Base(const Buffer::Info&& info, DATA* pData, const Buffer::CreateInfo* pCreateInfo);
-    void update(const float time, const uint32_t frameIndex);
+    void update(const float time, const float elapsed, const uint32_t frameIndex) override;
 };
 }  // namespace Wave
 
 }  // namespace Particle
 }  // namespace Uniform
 
-// MATERIAL
+// UNIFORM DYNAMIC
 
-namespace Material {
+namespace UniformDynamic {
 namespace Particle {
+
+// FOUNTAIN
 namespace Fountain {
 
-struct DATA : public Material::Obj3d::DATA {
+enum class INSTANCE {
+    DEFAULT,
+    EULER,
+};
+
+struct DATA {
     glm::vec3 acceleration;              // Particle acceleration (gravity)
     float lifespan;                      // Particle lifespan
     glm::vec3 emitterPosition;           // World position of the emitter.
@@ -81,49 +98,68 @@ struct DATA : public Material::Obj3d::DATA {
     glm::vec3 _padding;
 };
 
-struct CreateInfo : public Material::Obj3d::CreateInfo {
-    CreateInfo(const ::Particle::Fountain::CreateInfo* pCreateInfo, const glm::mat4 m, const uint32_t imageCount)
-        : fntnInfo(*pCreateInfo) {
-        dataCount = imageCount;
-        pTexture = pCreateInfo->pTexture;
-        model = m;
-    }
-    ::Particle::Fountain::CreateInfo fntnInfo;
-    float velocityLowerBound = 1.25f;
-    float velocityUpperBound = 1.5f;
+struct CreateInfo : public ::Buffer::CreateInfo {
+    INSTANCE type = INSTANCE::DEFAULT;
+    glm::vec3 acceleration{0.0f, -0.05f, 0.0f};  // Particle acceleration (gravity)
+    float lifespan{5.5f};                        // Particle lifespan
+    glm::mat3 emitterBasis{1.0f};                // Rotation that rotates y axis to the direction of emitter
+    float minParticleSize = 1.0f;                // Minimum size of particle (used as default)
+    float maxParticleSize = 1.0f;                // Maximum size of particle
+    float velocityLowerBound = 1.25f;            // Lower bound of the generated random velocity (euler)
+    float velocityUpperBound = 1.5f;             // Upper bound of the generated random velocity (euler)
 };
 
-// TODO: The data here really should be separated from the material data. I made it one large dynamic uniform
-// because I didn't feel like testing multiple dynamic uniform types in the descriptor handler at the time.
-// Rarely would the fountain data need to updated at a similar interval as the material data...
-class Base : public Material::Obj3d::Base, public Buffer::PerFramebufferDataItem<DATA> {
+class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
    public:
     Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo);
 
-    FlagBits getFlags() override { return data_.flags; }
-    void setFlags(FlagBits flags) override { data_.flags = flags; }
+    const INSTANCE INSTANCE_TYPE;
 
-    void setTextureData() override { status_ = SetDefaultTextureData(this, &data_); }
+    // Descriptor::Base
+    void update(const float time, const float elapsed, const uint32_t frameIndex) override;
+
+    void reset();
 
     virtual_inline auto getDelta() const { return data_.delta; }
-    virtual_inline bool shouldDraw(const float lastTimeOfBirth) const {
-        return data_.delta >= 0.0 && data_.delta < (lastTimeOfBirth + data_.lifespan + 0.0001f);
-    }
-    virtual_inline bool shouldDrawEuler() const { return start_; }
-
-    const glm::mat4& model(const uint32_t index = 0) const override { return data_.model; }
-
-    void start();
-    void update(const float time, const float lastTimeOfBirth, const uint32_t frameIndex);
-    void updateEuler(const float elapsed, const uint32_t frameIndex);
-
-   private:
-    bool start_;
+    virtual_inline auto getLifespan() const { return data_.lifespan; }
 };
 
 }  // namespace Fountain
+
+// ATTRACTOR
+namespace Attractor {
+
+struct DATA {
+    glm::vec3 attractorPosition0;
+    float gravity0;
+    glm::vec3 attractorPosition1;
+    float gravity1;
+    float inverseMass;
+    float maxDistance;
+    alignas(8) float delta;
+    // rem 4
+};
+
+struct CreateInfo : public Buffer::CreateInfo {
+    glm::vec3 attractorPosition0{5.0f, 0.0f, 0.0f};
+    float gravity0 = 1000.0f;
+    glm::vec3 attractorPosition1{-5.0f, 0.0f, 0.0f};
+    float gravity1 = 1000.0f;
+    float inverseMass = 1.0f / 0.1f;
+    float maxDistance = 45.0f;
+};
+
+class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
+   public:
+    Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo);
+
+    void update(const float time, const float elapsed, const uint32_t frameIndex) override;
+};
+
+}  // namespace Attractor
+
 }  // namespace Particle
-}  // namespace Material
+}  // namespace UniformDynamic
 
 // DESCRIPTOR SET
 
@@ -133,6 +169,7 @@ namespace Particle {
 extern const CreateInfo WAVE_CREATE_INFO;
 extern const CreateInfo FOUNTAIN_CREATE_INFO;
 extern const CreateInfo EULER_CREATE_INFO;
+extern const CreateInfo ATTRACTOR_CREATE_INFO;
 }  // namespace Particle
 }  // namespace Set
 }  // namespace Descriptor
@@ -167,9 +204,7 @@ class Fountain : public Graphics {
 
 class Euler : public Compute {
    public:
-    const uint32_t LOCAL_SIZE_X;
     Euler(Handler& handler);
-    void getShaderStageInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
 class FountainEuler : public Graphics {
@@ -184,11 +219,24 @@ class FountainEuler : public Graphics {
 class ShadowFountainEuler : public Pipeline::Graphics {
    public:
     ShadowFountainEuler(Handler& handler);
-
-   private:
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
     void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
 };
+
+class AttractorCompute : public Pipeline::Compute {
+   public:
+    AttractorCompute(Handler& handler);
+};
+
+class AttractorPoint : public Pipeline::Graphics {
+   public:
+    const bool DO_BLEND;
+    const bool IS_DEFERRED;
+    AttractorPoint(Handler& handler, const bool doBlend = false, const bool isDeferred = true);
+    void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
+    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
+};
+
 }  // namespace Particle
 }  // namespace Pipeline
 

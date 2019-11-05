@@ -46,7 +46,7 @@ class Manager : public Buffer::Manager::Base<TBase, TDerived, TSmartPointer> {
 
    private:
     void setInfo(Buffer::Info &info) override {
-        if (std::visit(Descriptor::IsUniformDynamic{}, DESCRIPTOR_TYPE)) info.bufferInfo.offset = 0;
+        if (std::visit(Descriptor::IsDynamic{}, DESCRIPTOR_TYPE)) info.bufferInfo.offset = 0;
     }
 };
 

@@ -1,6 +1,7 @@
 #ifndef DESCRIPTOR_SET_H
 #define DESCRIPTOR_SET_H
 
+#include <array>
 #include <iterator>
 #include <map>
 #include <set>
@@ -20,6 +21,8 @@ class Handler;
 namespace Set {
 
 const uint32_t OFFSET_ALL = UINT32_MAX;
+
+using mapKey = std::array<uint32_t, 4>;
 
 class Base : public Handlee<Descriptor::Handler> {
     friend class Descriptor::Handler;
@@ -62,15 +65,11 @@ class Base : public Handlee<Descriptor::Handler> {
 
     /**
      * Key:
-     *  first: texture offset, otherwise 0
-     *  second: storage buffer dynamic offset, otherwise 0
+     *  Dynamic uniform/storage buffer offsets
      * Value:
      *  Resource offset map
-     *
-     * As you can see this is going to become a problem as the number of dynamic buffers increases. I am going to leave it
-     * for now, but I should change the data structure if it keeps getting worse.
      */
-    std::map<std::pair<uint32_t, uint32_t>, std::map<uint32_t, resourceInfoMapSetsPair>> descriptorSetsMap_;
+    std::map<mapKey, std::map<uint32_t, resourceInfoMapSetsPair>> descriptorSetsMap_;
 };
 
 }  // namespace Set

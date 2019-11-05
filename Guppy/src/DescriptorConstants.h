@@ -21,6 +21,7 @@ enum class DESCRIPTOR_SET {
     // DEFAULT
     UNIFORM_DEFAULT,
     UNIFORM_CAMERA_ONLY,
+    UNIFORM_CAM_MATOBJ3D,
     UNIFORM_OBJ3D,
     SAMPLER_DEFAULT,
     SAMPLER_CUBE_DEFAULT,
@@ -61,9 +62,10 @@ enum class DESCRIPTOR_SET {
     // GEOMETRY
     UNIFORM_GEOMETRY_DEFAULT,
     // PARTICLE
-    UNIFORM_PARTICLE_WAVE,
-    UNIFORM_PARTICLE_FOUNTAIN,
-    PARTICLE_EULER,
+    UNIFORM_PRTCL_WAVE,
+    UNIFORM_PRTCL_FOUNTAIN,
+    PRTCL_EULER,
+    PRTCL_ATTRACTOR,
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 
@@ -171,7 +173,7 @@ struct HassPerFramebufferData {
             case UNIFORM::LIGHT_POSITIONAL_PBR:
             case UNIFORM::LIGHT_POSITIONAL_SHADOW:
             case UNIFORM::LIGHT_SPOT_DEFAULT:
-            case UNIFORM::PARTICLE_WAVE:
+            case UNIFORM::PRTCL_WAVE:
                 return true;
             default:
                 return false;
@@ -179,7 +181,8 @@ struct HassPerFramebufferData {
     }
     bool operator()(const UNIFORM_DYNAMIC& type) const {
         switch (type) {
-            case UNIFORM_DYNAMIC::MATERIAL_PARTICLE_FOUNTAIN:
+            case UNIFORM_DYNAMIC::PRTCL_FOUNTAIN:
+            case UNIFORM_DYNAMIC::PRTCL_ATTRACTOR:
                 return true;
             default:
                 return false;
@@ -273,6 +276,14 @@ struct GetUniformDynamic {
     template <typename T> UNIFORM_DYNAMIC operator()(const T&) const { return UNIFORM_DYNAMIC::DONT_CARE; }
     UNIFORM_DYNAMIC operator()(const UNIFORM_DYNAMIC& type) const { return type; }
 };
+struct IsMaterial {
+    template <typename T> bool operator()(const T&) const { return false; }
+    bool operator()(const UNIFORM_DYNAMIC& type) const { return
+        type == UNIFORM_DYNAMIC::MATERIAL_DEFAULT ||
+        type == UNIFORM_DYNAMIC::MATERIAL_OBJ3D ||
+        type == UNIFORM_DYNAMIC::MATERIAL_PBR;
+    }
+};
 // INPUT ATTACHMENT
 struct IsInputAttachment {
     template <typename T> bool operator()(const T&) const { return false; }
@@ -345,6 +356,7 @@ using textReplaceTuples = std::vector<textReplaceTuple>;
 namespace Default {
 extern const CreateInfo UNIFORM_CREATE_INFO;
 extern const CreateInfo UNIFORM_CAMERA_ONLY_CREATE_INFO;
+extern const CreateInfo UNIFORM_CAM_MATOBJ3D_CREATE_INFO;
 extern const CreateInfo UNIFORM_OBJ3D_CREATE_INFO;
 extern const CreateInfo SAMPLER_CREATE_INFO;
 extern const CreateInfo CUBE_SAMPLER_CREATE_INFO;

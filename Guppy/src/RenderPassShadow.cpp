@@ -39,10 +39,10 @@ void Base::createAttachments() {
 
 void Base::createDependencies() {
     ::RenderPass::Base::createDependencies();
-    if (pipelineBindDataList_.hasKey(PIPELINE::SHADOW_PARTICLE_FOUNTAIN_EULER)) {
+    if (pipelineBindDataList_.hasKey(PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER)) {
         resources_.dependencies.push_back({
             VK_SUBPASS_EXTERNAL,
-            pipelineBindDataList_.getOffset(PIPELINE::SHADOW_PARTICLE_FOUNTAIN_EULER),
+            pipelineBindDataList_.getOffset(PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER),
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
             VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
             VK_ACCESS_SHADER_WRITE_BIT,
@@ -85,7 +85,7 @@ std::array<PIPELINE, 5> COLOR_LIST = {
     PIPELINE::DEFERRED_MRT_WF_COLOR,           //
     PIPELINE::TESSELLATION_TRIANGLE_DEFERRED,  //
     PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED,    //
-    // PIPELINE::PARTICLE_WAVE_DEFERRED,        //
+    // PIPELINE::PRTCL_WAVE_DEFERRED,        //
 };
 std::array<PIPELINE, 1> TEX_LIST = {
     PIPELINE::DEFERRED_MRT_TEX,
@@ -116,12 +116,12 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
         vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
 
         // PARTICLE
-        itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(),
-                                PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED);
+        itSurrogate =
+            std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED);
         if (itSurrogate != std::end(surrogatePipelineTypes) &&
-            pipelineBindDataList_.hasKey(PIPELINE::SHADOW_PARTICLE_FOUNTAIN_EULER)) {
-            handler().particleHandler().recordDraw(
-                TYPE, pipelineBindDataList_.getValue(PIPELINE::SHADOW_PARTICLE_FOUNTAIN_EULER), priCmd, frameIndex);
+            pipelineBindDataList_.hasKey(PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER)) {
+            handler().particleHandler().recordDraw(TYPE, pipelineBindDataList_.getValue(PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER),
+                                                   priCmd, frameIndex);
 
             surrogatePipelineTypes.erase(itSurrogate);
             vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
@@ -147,7 +147,7 @@ const CreateInfo DEFAULT_CREATE_INFO = {
     "Shadow Render Pass",
     {
         PIPELINE::SHADOW_COLOR,
-        // PIPELINE::SHADOW_PARTICLE_FOUNTAIN_EULER,
+        PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER,
         PIPELINE::SHADOW_TEX,
     },
     FLAG::DEPTH,  // This actually enables the depth test from overridePipelineCreateInfo. Not sure if I like this.

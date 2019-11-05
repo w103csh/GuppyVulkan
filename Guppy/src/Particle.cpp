@@ -11,43 +11,77 @@
 
 namespace Shader {
 namespace Particle {
-const CreateInfo WAVE_COLOR_VERT_DEFERRED_MRT_CREATE_INFO = {
-    SHADER::WAVE_COLOR_DEFERRED_MRT_VERT,            //
+const CreateInfo WAVE_VERT_CREATE_INFO = {
+    SHADER::PRTCL_WAVE_VERT,                         //
     "Particle Wave Color (Deferred) Vertex Shader",  //
-    "vert.color.deferred.mrt.wave.glsl",             //
+    "vert.particle.wave.glsl",                       //
     VK_SHADER_STAGE_VERTEX_BIT,                      //
 };
-const CreateInfo FOUNTAIN_PART_VERT_CREATE_INFO = {
-    SHADER::FOUNTAIN_PART_VERT,         //
+const CreateInfo FOUNTAIN_VERT_CREATE_INFO = {
+    SHADER::PRTCL_FOUNTAIN_VERT,        //
     "Particle Fountain Vertex Shader",  //
     "vert.particle.fountain.glsl",      //
     VK_SHADER_STAGE_VERTEX_BIT,         //
+    {
+        SHADER_LINK::DEFAULT_MATERIAL,
+        SHADER_LINK::PRTCL_FOUNTAIN,
+    },
 };
-const CreateInfo FOUNTAIN_PART_FRAG_DEFERRED_MRT_CREATE_INFO = {
-    SHADER::FOUNTAIN_PART_DEFERRED_MRT_FRAG,         //
+const CreateInfo FOUNTAIN_FRAG_DEFERRED_MRT_CREATE_INFO = {
+    SHADER::PRTCL_FOUNTAIN_DEFERRED_MRT_FRAG,        //
     "Particle Fountain (Deferred) Fragment Shader",  //
     "frag.particle.deferred.mrt.fountain.glsl",      //
     VK_SHADER_STAGE_FRAGMENT_BIT,                    //
+    {SHADER_LINK::DEFAULT_MATERIAL},
 };
-const CreateInfo PARTICLE_EULER_CREATE_INFO = {
-    SHADER::PARTICLE_EULER_COMP,      //
+// EULER
+const CreateInfo EULER_CREATE_INFO = {
+    SHADER::PRTCL_EULER_COMP,         //
     "Particle Euler Compute Shader",  //
     "comp.particle.euler.glsl",       //
     VK_SHADER_STAGE_COMPUTE_BIT,      //
+    {SHADER_LINK::PRTCL_FOUNTAIN},
 };
-const CreateInfo FOUNTAIN_PART_EULER_VERT_CREATE_INFO = {
-    SHADER::FOUNTAIN_PART_EULER_VERT,         //
+const CreateInfo FOUNTAIN_EULER_VERT_CREATE_INFO = {
+    SHADER::PRTCL_FOUNTAIN_EULER_VERT,        //
     "Particle Fountain Euler Vertex Shader",  //
     "vert.particle.fountainEuler.glsl",       //
     VK_SHADER_STAGE_VERTEX_BIT,               //
+    {
+        SHADER_LINK::DEFAULT_MATERIAL,
+        SHADER_LINK::PRTCL_FOUNTAIN,
+    },
 };
-const CreateInfo SHADOW_FOUNTAIN_PART_EULER_VERT_CREATE_INFO = {
-    SHADER::SHADOW_FOUNTAIN_PART_EULER_VERT,           //
+const CreateInfo SHDW_FOUNTAIN_EULER_VERT_CREATE_INFO = {
+    SHADER::PRTCL_SHDW_FOUNTAIN_EULER_VERT,            //
     "Particle Fountain Euler (Shadow) Vertex Shader",  //
     "vert.particle.fountainEuler.shadow.glsl",         //
     VK_SHADER_STAGE_VERTEX_BIT,                        //
+    {SHADER_LINK::DEFAULT_MATERIAL},
+};
+// ATTRACTOR
+const CreateInfo ATTR_COMP_CREATE_INFO = {
+    SHADER::PRTCL_ATTR_COMP,              //
+    "Particle Attractor Compute Shader",  //
+    "comp.particle.attractor.glsl",       //
+    VK_SHADER_STAGE_COMPUTE_BIT,          //
+};
+const CreateInfo ATTR_VERT_CREATE_INFO = {
+    SHADER::PRTCL_ATTR_VERT,             //
+    "Particle Attractor Vertex Shader",  //
+    "vert.particle.attractor.glsl",      //
+    VK_SHADER_STAGE_VERTEX_BIT,          //
+    {SHADER_LINK::DEFAULT_MATERIAL},
 };
 }  // namespace Particle
+namespace Link {
+namespace Particle {
+const CreateInfo FOUNTAIN_CREATE_INFO = {
+    SHADER_LINK::COLOR_FRAG,        //
+    "link.particle.fountain.glsl",  //
+};
+}  // namespace Particle
+}  // namespace Link
 }  // namespace Shader
 
 // UNIFORM
@@ -59,11 +93,11 @@ namespace Wave {
 Base::Base(const Buffer::Info&& info, DATA* pData, const Buffer::CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
       Buffer::PerFramebufferDataItem<DATA>(pData),
-      Descriptor::Base(UNIFORM::PARTICLE_WAVE) {
+      Descriptor::Base(UNIFORM::PRTCL_WAVE) {
     setData();
 }
 
-void Base::update(const float time, const uint32_t frameIndex) {
+void Base::update(const float time, const float, const uint32_t frameIndex) {
     data_.time = time;
     setData(frameIndex);
 }
@@ -72,64 +106,84 @@ void Base::update(const float time, const uint32_t frameIndex) {
 }  // namespace Particle
 }  // namespace Uniform
 
-// MATERIAL
+// UNIFORM DYNAMIC
 
-namespace Material {
+namespace UniformDynamic {
 namespace Particle {
+
+// FOUNTAIN
 namespace Fountain {
 
 Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Material::Obj3d::Base(UNIFORM_DYNAMIC::MATERIAL_PARTICLE_FOUNTAIN, pCreateInfo),
       Buffer::PerFramebufferDataItem<DATA>(pData),
-      start_(false) {
-    // Base
-    data_.color = pCreateInfo->color;
-    data_.flags = pCreateInfo->flags;
-    data_.opacity = pCreateInfo->opacity;
-    setTextureData();
-    // Obj3d
-    data_.model = pCreateInfo->model;
-    // Fountain
-    data_.acceleration = pCreateInfo->fntnInfo.acceleration;
-    data_.lifespan = pCreateInfo->fntnInfo.lifespan;
-    data_.emitterBasis = pCreateInfo->fntnInfo.emitterBasis;
-    data_.emitterPosition = pCreateInfo->fntnInfo.emitterBasis * glm::vec4(.0f, 0.0f, 0.0f, 1.0f);
-    data_.minParticleSize = pCreateInfo->fntnInfo.minParticleSize;
-    data_.maxParticleSize = pCreateInfo->fntnInfo.maxParticleSize;
+      Descriptor::Base(UNIFORM_DYNAMIC::PRTCL_FOUNTAIN),
+      INSTANCE_TYPE(pCreateInfo->type) {
+    data_.acceleration = pCreateInfo->acceleration;
+    data_.lifespan = pCreateInfo->lifespan;
+    data_.emitterBasis = pCreateInfo->emitterBasis;
+    data_.emitterPosition = pCreateInfo->emitterBasis * glm::vec4(.0f, 0.0f, 0.0f, 1.0f);
+    data_.minParticleSize = pCreateInfo->minParticleSize;
+    data_.maxParticleSize = pCreateInfo->maxParticleSize;
     data_.velocityLowerBound = pCreateInfo->velocityLowerBound;
     data_.velocityUpperBound = pCreateInfo->velocityUpperBound;
     setData();
 }
 
-void Base::start() { start_ = true; }
-
-void Base::update(const float time, const float lastTimeOfBirth, const uint32_t frameIndex) {
-    if (start_) {
-        data_.time = time;
-        // This should be 0.0f but it needs to be positive since its used as a flag as well.
-        data_.delta = 0.0000001f;
-        setData(frameIndex);
-        start_ = false;
-    } else if (data_.time >= 0.0f) {
-        data_.delta = time - data_.time;
-        if (data_.delta > (lastTimeOfBirth + data_.lifespan)) {
-            data_.delta = data_.time = ::Particle::BAD_TIME;
-        }
-        setData(frameIndex);
+void Base::update(const float time, const float elapsed, const uint32_t frameIndex) {
+    switch (INSTANCE_TYPE) {
+        case INSTANCE::DEFAULT: {
+            if (data_.time < 0.0) {
+                data_.time = time;
+                // This should be 0.0f but it needs to be positive since its used as a flag as well.
+                data_.delta = 0.0000001f;
+            } else {
+                data_.delta = time - data_.time;
+            }
+        } break;
+        case INSTANCE::EULER: {
+            data_.time = time;
+            data_.delta = elapsed;
+        } break;
+        default: {
+            assert(false && "Unhandled type");
+        } break;
     }
+    setData(frameIndex);
 }
 
-void Base::updateEuler(const float elapsed, const uint32_t frameIndex) {
-    if (start_) {
-        data_.delta = elapsed;
-        setData(frameIndex);
-    }
+void Base::reset() {
+    data_.delta = data_.time = ::Particle::BAD_TIME;
+    setData();
 }
 
 }  // namespace Fountain
+
+// ATTRACTOR
+namespace Attractor {
+
+Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),
+      Buffer::PerFramebufferDataItem<DATA>(pData),
+      Descriptor::Base(UNIFORM_DYNAMIC::PRTCL_ATTRACTOR) {
+    data_.attractorPosition0 = pCreateInfo->attractorPosition0;
+    data_.gravity0 = pCreateInfo->gravity0;
+    data_.attractorPosition1 = pCreateInfo->attractorPosition1;
+    data_.gravity1 = pCreateInfo->gravity1;
+    data_.inverseMass = pCreateInfo->inverseMass;
+    data_.delta = ::Particle::BAD_TIME;
+    data_.maxDistance = pCreateInfo->maxDistance;
+}
+
+void Base::update(const float time, const float elapsed, const uint32_t frameIndex) {
+    data_.delta = elapsed;
+    setData(frameIndex);
+}
+
+}  // namespace Attractor
+
 }  // namespace Particle
-}  // namespace Material
+}  // namespace UniformDynamic
 
 // DESCRIPTOR SET
 
@@ -138,29 +192,41 @@ namespace Set {
 namespace Particle {
 
 const CreateInfo WAVE_CREATE_INFO = {
-    DESCRIPTOR_SET::UNIFORM_PARTICLE_WAVE,
+    DESCRIPTOR_SET::UNIFORM_PRTCL_WAVE,
     "_DS_UNI_PRTCL_WV",
     {
-        {{0, 0}, {UNIFORM::PARTICLE_WAVE}},
+        {{0, 0}, {UNIFORM::PRTCL_WAVE}},
     },
 };
 
 const CreateInfo FOUNTAIN_CREATE_INFO = {
-    DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN,
+    DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN,
     "_DS_UNI_PRTCL_FNTN",
     {
         {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
-        {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_PARTICLE_FOUNTAIN}},
+        {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_OBJ3D}},
+        {{2, 0}, {UNIFORM_DYNAMIC::PRTCL_FOUNTAIN}},
     },
 };
 
 const CreateInfo EULER_CREATE_INFO = {
-    DESCRIPTOR_SET::PARTICLE_EULER,
+    DESCRIPTOR_SET::PRTCL_EULER,
     "_DS_PRTCL_EULER",
     {
-        {{0, 0}, {UNIFORM_DYNAMIC::MATERIAL_PARTICLE_FOUNTAIN}},
-        {{1, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Particle::RAND_1D_ID}},
-        {{2, 0}, {STORAGE_BUFFER_DYNAMIC::PARTICLE_EULER}},
+        {{0, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Particle::RAND_1D_ID}},
+        {{1, 0}, {STORAGE_BUFFER_DYNAMIC::PRTCL_EULER}},
+        // Macro replace will fail for the material, so the set must resolve to slot 0!!!
+        {{2, 0}, {UNIFORM_DYNAMIC::PRTCL_FOUNTAIN}},
+    },
+};
+
+const CreateInfo ATTRACTOR_CREATE_INFO = {
+    DESCRIPTOR_SET::PRTCL_ATTRACTOR,
+    "_DS_PRTCL_ATTR",
+    {
+        {{0, 0}, {UNIFORM_DYNAMIC::PRTCL_ATTRACTOR}},
+        {{1, 0}, {STORAGE_BUFFER_DYNAMIC::PRTCL_POSTITION}},
+        {{2, 0}, {STORAGE_BUFFER_DYNAMIC::PRTCL_VELOCITY}},
     },
 };
 
@@ -197,15 +263,15 @@ namespace Particle {
 
 // WAVE
 const CreateInfo WAVE_CREATE_INFO = {
-    PIPELINE::PARTICLE_WAVE_DEFERRED,
+    PIPELINE::PRTCL_WAVE_DEFERRED,
     "Particle Wave Color (Deferred) Pipeline",
     {
-        SHADER::WAVE_COLOR_DEFERRED_MRT_VERT,
+        SHADER::PRTCL_WAVE_VERT,
         SHADER::DEFERRED_MRT_COLOR_FRAG,
     },
     {
         DESCRIPTOR_SET::UNIFORM_DEFAULT,
-        DESCRIPTOR_SET::UNIFORM_PARTICLE_WAVE,
+        DESCRIPTOR_SET::UNIFORM_PRTCL_WAVE,
     },
 };
 Wave::Wave(Handler& handler, bool isDeferred) : Graphics(handler, &WAVE_CREATE_INFO), IS_DEFERRED(isDeferred) {}
@@ -225,14 +291,14 @@ void Wave::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
 
 // FOUNTAIN
 const CreateInfo FOUNTAIN_CREATE_INFO = {
-    PIPELINE::PARTICLE_FOUNTAIN_DEFERRED,
+    PIPELINE::PRTCL_FOUNTAIN_DEFERRED,
     "Particle Fountain (Deferred) Pipeline",
     {
-        SHADER::FOUNTAIN_PART_VERT,
-        SHADER::FOUNTAIN_PART_DEFERRED_MRT_FRAG,
+        SHADER::PRTCL_FOUNTAIN_VERT,
+        SHADER::PRTCL_FOUNTAIN_DEFERRED_MRT_FRAG,
     },
     {
-        DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN,
+        DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN,
         DESCRIPTOR_SET::SAMPLER_DEFAULT,
     },
 };
@@ -251,7 +317,6 @@ void Fountain::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 void Fountain::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-    Vertex::Color::getInputDescriptions(createInfoRes);
     Instance::Particle::Fountain::DATA::getInputDescriptions(createInfoRes);
     // bindings
     createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
@@ -274,51 +339,29 @@ void Fountain::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes)
 
 // EULER (COMPUTE)
 const Pipeline::CreateInfo EULER_CREATE_INFO = {
-    PIPELINE::PARTICLE_EULER_COMPUTE,
+    PIPELINE::PRTCL_EULER_COMPUTE,
     "Particle Euler Compute Pipeline",
-    {SHADER::PARTICLE_EULER_COMP},
-    {DESCRIPTOR_SET::PARTICLE_EULER},
+    {SHADER::PRTCL_EULER_COMP},
+    {DESCRIPTOR_SET::PRTCL_EULER},
     {},
-    {PUSH_CONSTANT::PARTICLE_EULER},
+    {PUSH_CONSTANT::PRTCL_EULER},
 };
-Euler::Euler(Pipeline::Handler& handler) : Compute(handler, &EULER_CREATE_INFO), LOCAL_SIZE_X(1024) {}
-
-void Euler::getShaderStageInfoResources(CreateInfoResources& createInfoRes) {
-    // This of course wouldn't work with the local_size stuff in glsl.
-
-    // createInfoRes.specializationMapEntries.push_back({{}});
-
-    //// Use specialization constants to set the local size x value for the shader.
-    // createInfoRes.specializationMapEntries.back().back().constantID = 0;
-    // createInfoRes.specializationMapEntries.back().back().offset = 0;
-    // createInfoRes.specializationMapEntries.back().back().size = sizeof(LOCAL_SIZE_X);
-
-    // createInfoRes.specializationInfo.push_back({});
-    // createInfoRes.specializationInfo.back().mapEntryCount =
-    //    static_cast<uint32_t>(createInfoRes.specializationMapEntries.back().size());
-    // createInfoRes.specializationInfo.back().pMapEntries = createInfoRes.specializationMapEntries.back().data();
-    // createInfoRes.specializationInfo.back().dataSize = sizeof(LOCAL_SIZE_X);
-    // createInfoRes.specializationInfo.back().pData = &LOCAL_SIZE_X;
-
-    // assert(createInfoRes.shaderStageInfos.size() == 1);
-    //// Add the specialization to the compute shader info.
-    // createInfoRes.shaderStageInfos.back().pSpecializationInfo = &createInfoRes.specializationInfo.back();
-}
+Euler::Euler(Pipeline::Handler& handler) : Compute(handler, &EULER_CREATE_INFO) {}
 
 // FOUNTAIN EULER
 const CreateInfo FOUNTAIN_EULER_CREATE_INFO = {
-    PIPELINE::PARTICLE_FOUNTAIN_EULER_DEFERRED,
+    PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED,
     "Particle Fountain Euler (Deferred) Pipeline",
     {
-        SHADER::FOUNTAIN_PART_EULER_VERT,
-        SHADER::FOUNTAIN_PART_DEFERRED_MRT_FRAG,
+        SHADER::PRTCL_FOUNTAIN_EULER_VERT,
+        SHADER::PRTCL_FOUNTAIN_DEFERRED_MRT_FRAG,
     },
     {
-        DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN,
+        DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN,
         DESCRIPTOR_SET::SAMPLER_DEFAULT,
     },
     {},
-    {PUSH_CONSTANT::PARTICLE_EULER},
+    {PUSH_CONSTANT::PRTCL_EULER},
 };
 FountainEuler::FountainEuler(Handler& handler, const bool doBlend, bool isDeferred)
     : Graphics(handler, &FOUNTAIN_EULER_CREATE_INFO), DO_BLEND(doBlend), IS_DEFERRED(isDeferred) {}
@@ -338,10 +381,10 @@ void FountainEuler::getInputAssemblyInfoResources(CreateInfoResources& createInf
 
 // SHADOW FOUNTAIN EULER
 const Pipeline::CreateInfo SHADOW_FOUNTAIN_EULER_CREATE_INFO = {
-    PIPELINE::SHADOW_PARTICLE_FOUNTAIN_EULER,
+    PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER,
     "Particle Fountain Euler (Shadow) Pipeline",
-    {SHADER::SHADOW_FOUNTAIN_PART_EULER_VERT, SHADER::SHADOW_FRAG},
-    {DESCRIPTOR_SET::UNIFORM_PARTICLE_FOUNTAIN},
+    {SHADER::PRTCL_SHDW_FOUNTAIN_EULER_VERT, SHADER::SHADOW_FRAG},
+    {DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN},
 };
 ShadowFountainEuler::ShadowFountainEuler(Pipeline::Handler& handler)
     : Graphics(handler, &SHADOW_FOUNTAIN_EULER_CREATE_INFO) {}
@@ -352,6 +395,57 @@ void ShadowFountainEuler::getInputAssemblyInfoResources(CreateInfoResources& cre
 
 void ShadowFountainEuler::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     GetShadowRasterizationStateInfoResources(createInfoRes);
+}
+
+// ATTRACTOR (COMPUTE)
+const Pipeline::CreateInfo ATTR_CREATE_INFO = {
+    PIPELINE::PRTCL_ATTR_COMPUTE,
+    "Particle Attractor Compute Pipeline",
+    {SHADER::PRTCL_ATTR_COMP},
+    {DESCRIPTOR_SET::PRTCL_ATTRACTOR},
+};
+AttractorCompute::AttractorCompute(Pipeline::Handler& handler) : Compute(handler, &ATTR_CREATE_INFO) {}
+
+// ATTRACTOR (POINT)
+const Pipeline::CreateInfo ATTR_PT_CREATE_INFO = {
+    PIPELINE::PRTCL_ATTR_PT_DEFERRED,
+    "Particle Attractor Point (Deferred) Pipeline",
+    {
+        SHADER::PRTCL_ATTR_VERT,
+        SHADER::DEFERRED_MRT_POINT_FRAG,
+    },
+    {DESCRIPTOR_SET::UNIFORM_CAM_MATOBJ3D},
+};
+AttractorPoint::AttractorPoint(Pipeline::Handler& handler, const bool doBlend, const bool isDeferred)
+    : Graphics(handler, &ATTR_PT_CREATE_INFO), DO_BLEND(doBlend), IS_DEFERRED(isDeferred) {}
+
+void AttractorPoint::getBlendInfoResources(CreateInfoResources& createInfoRes) {
+    if (IS_DEFERRED) {
+        if (DO_BLEND) assert(handler().shell().context().independentBlendEnabled);
+        Deferred::GetBlendInfoResources(createInfoRes, DO_BLEND);
+    } else {
+        Graphics::getBlendInfoResources(createInfoRes);
+    }
+}
+
+void AttractorPoint::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    Instance::Particle::Vector4::DATA::getInputDescriptions(createInfoRes);
+    // bindings
+    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
+    // attributes
+    createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
+        static_cast<uint32_t>(createInfoRes.attrDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
+    // topology
+    createInfoRes.inputAssemblyStateInfo = {};
+    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
+    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
+    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
 }
 
 }  // namespace Particle

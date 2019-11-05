@@ -58,7 +58,7 @@ Uniform::Handler::Handler(Game* pGame)
           {"Geomerty Wireframe", UNIFORM::GEOMETRY_DEFAULT, 1, "_U_GEOM_WF"},
           // PARTICLE
           Uniform::Manager<Particle::Wave::Base>  //
-          {"Particle Wave", UNIFORM::PARTICLE_WAVE, 3, "_U_PRTCL_WAVE"},
+          {"Particle Wave", UNIFORM::PRTCL_WAVE, 3, "_U_PRTCL_WAVE"},
           // STORAGE
           Uniform::Manager<Storage::PostProcess::Base>  //
           {"Storage Default", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
@@ -82,7 +82,7 @@ std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const
             case UNIFORM::DEFERRED_SSAO:                return uniDfrSSAOMgr().pItems;
             case UNIFORM::TESSELLATION_DEFAULT:         return uniTessDefMgr().pItems;
             case UNIFORM::GEOMETRY_DEFAULT:             return uniGeomDefMgr().pItems;
-            case UNIFORM::PARTICLE_WAVE:                return uniWaveMgr().pItems;
+            case UNIFORM::PRTCL_WAVE:                   return uniWaveMgr().pItems;
             case UNIFORM::SHADOW_DATA:                  return uniShdwDataMgr().pItems;
             default:                                    assert(false); exit(EXIT_FAILURE);
         }
@@ -210,6 +210,7 @@ void Uniform::Handler::createCameras() {
     // 0 (MAIN)
     {
         createInfo.aspect = static_cast<float>(settings().initial_width) / static_cast<float>(settings().initial_height);
+        // createInfo.center = glm::vec3{-0.5f, 2.0f, 1.0f};
         camDefPersMgr().insert(dev, &createInfo);
         mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
     }
