@@ -1,18 +1,18 @@
 
 #version 450
 
-#define _DS_UNI_PRTCL_FNTN 0
-
-// DECLARATIONS
-mat4  getModel();
+#define _DS_UNI_DEFCAM_DEFMAT_MX4 0
 
 // BINDINGS
-layout(set=_DS_UNI_PRTCL_FNTN, binding=0) uniform CameraDefaultPerspective {
+layout(set=_DS_UNI_DEFCAM_DEFMAT_MX4, binding=0) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
     mat4 viewProjection;
     vec3 worldPosition;
 } camera;
+layout(set=_DS_UNI_DEFCAM_DEFMAT_MX4, binding=2) uniform Matrix4 {
+    mat4 model;
+} uniMat4;
 
 // IN
 layout(location=0) in vec3 inPosition;
@@ -54,6 +54,6 @@ void main() {
         inData0.x, inData0.y, inData0.z, 1
     );
 
-    mat4 mMVP = (camera.viewProjection * getModel()) *  mRotAndTrans;
+    mat4 mMVP = (camera.viewProjection * uniMat4.model) *  mRotAndTrans;
     gl_Position = mMVP * vec4(inPosition, 1.0);
 }

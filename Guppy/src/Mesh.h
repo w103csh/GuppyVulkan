@@ -34,14 +34,6 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Obj3d::In
     friend class Descriptor::Handler;  // Reference (TODO: get rid of this)
 
    public:
-    typedef enum FLAG {
-        POLY = 0x00000001,
-        LINE = 0x00000002,
-        UNKNOWN = 0x00000003,
-        // THROUGH 0x00000008
-    } FLAG;
-
-    const FlagBits FLAGS;
     const bool MAPPABLE;
     const std::string NAME;
     const std::set<PASS> PASS_TYPES;
@@ -106,7 +98,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Obj3d::In
     virtual void destroy();
 
    protected:
-    Base(Mesh::Handler& handler, const index&& offset, const MESH&& type, const VERTEX&& vertexType, const FLAG&& flags,
+    Base(Mesh::Handler& handler, const index&& offset, const MESH&& type, const VERTEX&& vertexType,
          const std::string&& name, const CreateInfo* pCreateInfo, std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData,
          std::shared_ptr<Material::Base>& pMaterial);
     Base() = delete;
@@ -197,13 +189,9 @@ class Color : public Base {
     // This is the generic constructor...
     Color(Mesh::Handler& handler, const index&& offset, const GenericCreateInfo* pCreateInfo,
           std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial);
-    // Below are the base constructors.
     Color(Mesh::Handler& handler, const index&& offset, const std::string&& name, const CreateInfo* pCreateInfo,
           std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
           const MESH&& type = MESH::COLOR);
-    Color(Mesh::Handler& handler, const index&& offset, const FLAG&& flags, const std::string&& name,
-          const CreateInfo* pCreateInfo, std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData,
-          std::shared_ptr<Material::Base>& pMaterial, const MESH&& type = MESH::COLOR);
 
     std::vector<Vertex::Color> vertices_;
 };

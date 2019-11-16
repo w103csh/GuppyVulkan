@@ -132,6 +132,7 @@ extern const CreateInfo BLUEWATER_CREATE_INFO;
 extern const CreateInfo FIRE_CREATE_INFO;
 extern const CreateInfo SMOKE_CREATE_INFO;
 extern const CreateInfo STAR_CREATE_INFO;
+extern const CreateInfo FABRIC_BROWN_CREATE_INFO;
 extern const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO;
 extern const CreateInfo WOOD_CREATE_INFO;
 extern const CreateInfo MYBRICK_COLOR_CREATE_INFO;

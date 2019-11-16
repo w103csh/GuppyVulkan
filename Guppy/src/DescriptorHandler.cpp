@@ -7,6 +7,7 @@
 #include <utility>
 #include <variant>
 
+#include "Cloth.h"
 #include "Deferred.h"
 #include "Geometry.h"
 #include "Mesh.h"
@@ -33,6 +34,7 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
         switch (type) {
             case DESCRIPTOR_SET::UNIFORM_DEFAULT:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::UNIFORM_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_CAMERA_ONLY:                       pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::UNIFORM_CAMERA_ONLY_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4:                 pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::UNIFORM_DEFCAM_DEFMAT_MX4)); break;
             case DESCRIPTOR_SET::UNIFORM_CAM_MATOBJ3D:                      pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::UNIFORM_CAM_MATOBJ3D_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_OBJ3D:                             pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::UNIFORM_OBJ3D_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_DEFAULT:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::SAMPLER_CREATE_INFO)); break;
@@ -69,6 +71,8 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN:                    pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::FOUNTAIN_CREATE_INFO)); break;
             case DESCRIPTOR_SET::PRTCL_EULER:                               pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::EULER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::PRTCL_ATTRACTOR:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::ATTRACTOR_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::PRTCL_CLOTH:                               pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::CLOTH_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::PRTCL_CLOTH_NORM:                          pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::CLOTH_NORM_CREATE_INFO)); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on
@@ -733,9 +737,25 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
         } else if (std::visit(IsDynamic{}, bindingInfo.descType)) {
             // DYNAMIC
 
-            if (itDynItm == pDynamicItems.end() || bindingInfo.descType != (*itDynItm)->getDescriptorType()) {
-                assert(false && "Not enough dynamic items, or the items aren't the right type in the right order.");
-                exit(EXIT_FAILURE);
+            if (itDynItm == pDynamicItems.end() || (*itDynItm)->getDescriptorType() != bindingInfo.descType) {
+                if (itDynItm == pDynamicItems.begin()) {
+                    /**
+                     * This might lead to confusion in the future but I am going to do it now because its just taking up too
+                     * much of my time at the moment. Here I am only going advance the itDynItm pointer to the first hit
+                     * if it is at the beginning of the list. The reason this is necessary is because some draw buffers have
+                     * dynamic uniforms in different descriptor sets now. This is essentially trying to find the start of the
+                     * list for a specific descriptor set while still trying to enforce the ordering of the descriptors in
+                     * the pDynamicItems array. This should force the user to be aware of what they are doing when they
+                     * call getBindData, which is the whole point of forcing the ordering, but also allowing this to work
+                     * until a better solution is developed.
+                     */
+                    while (itDynItm != pDynamicItems.end() && (*itDynItm)->getDescriptorType() != bindingInfo.descType)
+                        itDynItm++;
+                }
+                if (itDynItm == pDynamicItems.end()) {
+                    assert(false && "Not enough dynamic items, or the items aren't the right type in the right order.");
+                    exit(EXIT_FAILURE);
+                }
             }
 
             itInfoMap->second.descCount = 1;
@@ -859,20 +879,28 @@ VkWriteDescriptorSet Descriptor::Handler::getWrite(const Descriptor::bindingMapK
     return write;
 }
 
+// TODO: This work can probably be done in the updateDescriptorSets loop.
 void Descriptor::Handler::getDynamicOffsets(const std::unique_ptr<Descriptor::Set::Base>& pSet,
                                             std::vector<uint32_t>& dynamicOffsets,
                                             const std::vector<Descriptor::Base*> pDynamicItems) {
+    auto itDynItm = pDynamicItems.begin();
     for (auto& [key, bindingInfo] : pSet->getBindingMap()) {
         if (std::visit(IsDynamic{}, bindingInfo.descType)) {
-            auto it = std::find_if(pDynamicItems.begin(), pDynamicItems.end(), [&bindingInfo](const auto& pItem) {
-                return pItem->getDescriptorType() == bindingInfo.descType;
-            });
-            if (it != pDynamicItems.end()) {
-                dynamicOffsets.push_back(static_cast<uint32_t>((*it)->BUFFER_INFO.memoryOffset));
-            } else {
-                assert(false && "Dynamic descriptor item is expected");
-                exit(EXIT_FAILURE);
+            if (itDynItm == pDynamicItems.end() || bindingInfo.descType != (*itDynItm)->getDescriptorType()) {
+                if (itDynItm == pDynamicItems.begin()) {
+                    /**
+                     *  IMPORTANT: See the comment in updateDescriptorSets!
+                     */
+                    while (itDynItm != pDynamicItems.end() && (*itDynItm)->getDescriptorType() != bindingInfo.descType)
+                        itDynItm++;
+                }
+                if (itDynItm == pDynamicItems.end()) {
+                    assert(false && "Not enough dynamic items, or the items aren't the right type in the right order.");
+                    exit(EXIT_FAILURE);
+                }
             }
+            dynamicOffsets.push_back(static_cast<uint32_t>((*itDynItm)->BUFFER_INFO.memoryOffset));
+            itDynItm++;
         }
     }
 }

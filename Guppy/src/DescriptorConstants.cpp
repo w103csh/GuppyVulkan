@@ -29,6 +29,7 @@ const std::set<DESCRIPTOR_SET> ALL = {
     // DEFAULT
     DESCRIPTOR_SET::UNIFORM_DEFAULT,
     DESCRIPTOR_SET::UNIFORM_CAMERA_ONLY,
+    DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4,
     DESCRIPTOR_SET::UNIFORM_CAM_MATOBJ3D,
     DESCRIPTOR_SET::UNIFORM_OBJ3D,
     DESCRIPTOR_SET::SAMPLER_DEFAULT,
@@ -72,6 +73,8 @@ const std::set<DESCRIPTOR_SET> ALL = {
     DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN,
     DESCRIPTOR_SET::PRTCL_EULER,
     DESCRIPTOR_SET::PRTCL_ATTRACTOR,
+    DESCRIPTOR_SET::PRTCL_CLOTH,
+    DESCRIPTOR_SET::PRTCL_CLOTH_NORM,
 };
 
 void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& write) const {
@@ -138,6 +141,16 @@ const CreateInfo UNIFORM_CAMERA_ONLY_CREATE_INFO = {
     },
 };
 
+const CreateInfo UNIFORM_DEFCAM_DEFMAT_MX4 = {
+    DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4,
+    "_DS_UNI_DEFCAM_DEFMAT_MX4",
+    {
+        {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
+        {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_DEFAULT}},
+        {{2, 0}, {UNIFORM_DYNAMIC::MATRIX_4}},
+    },
+};
+
 const CreateInfo UNIFORM_CAM_MATOBJ3D_CREATE_INFO = {
     DESCRIPTOR_SET::UNIFORM_CAM_MATOBJ3D,
     "_DS_UNI_CAM_MAT",
@@ -195,7 +208,7 @@ std::string GetPerframeBufferWarning(const DESCRIPTOR descType, const Buffer::In
         sMsg << "Descriptor with type (" << std::visit(Descriptor::GetDescriptorTypeString{}, descType);
         sMsg << ") has BUFFER_INFO count of (" << buffInfo.count;
         sMsg << ") and a uniqueDataSets count of (" << resInfo.uniqueDataSets << ").";
-        if (doAssert) assert(false);
+        if (doAssert) assert(false && "Did you mean to add the type to Descriptor::HassPerFramebufferData?");
         return sMsg.str();
     }
     return "";

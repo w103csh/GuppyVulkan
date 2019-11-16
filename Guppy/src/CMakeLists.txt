@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 2.8.11)
 set(SOURCE
     Camera.cpp
     Camera.h
+    Cloth.cpp
+    Cloth.h
     CommandHandler.cpp
     CommandHandler.h
     CMakeLists.txt
@@ -54,6 +56,7 @@ set(SOURCE
     SoundFmodHandler.h
     Storage.cpp
     Storage.h
+    StorageConstants.h
     Tessellation.cpp
     Tessellation.h
     Types.h
@@ -133,6 +136,7 @@ set(SOURCE
     Particle.h
     ParticleBuffer.cpp
     ParticleBuffer.h
+    ParticleConstants.cpp
     ParticleConstants.h
     ParticleHandler.cpp
     ParticleHandler.h

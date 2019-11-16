@@ -5,12 +5,11 @@
 
 // UNIFORMS
 layout(set=_DS_PRTCL_ATTR, binding=0) uniform ParticleAttractor {
-    /** Attractor
-     * data0[0-2]: position
-     * data0[3]: gravity
+    /**
+     * vec4[0-2]: position
+     * vec4[3]: gravity
      */
-    vec4 attrData0;
-    vec4 attrData1;
+    vec4 data[2];
     float inverseMass;
     float maxDistance;
     float delta;
@@ -33,14 +32,14 @@ void main() {
     vec3 p = positions[index].xyz;
 
     // Force from attractor #0
-    vec3 d = uniAttr.attrData0.xyz - p;
+    vec3 d = uniAttr.data[0].xyz - p;
     float dist = length(d);
-    vec3 force = (uniAttr.attrData0.w / dist) * normalize(d);
+    vec3 force = (uniAttr.data[0].w / dist) * normalize(d);
 
     // Force from attractor #1
-    d = uniAttr.attrData1.xyz - p;
+    d = uniAttr.data[1].xyz - p;
     dist = length(d);
-    force += (uniAttr.attrData1.w / dist) * normalize(d);
+    force += (uniAttr.data[1].w / dist) * normalize(d);
 
     // Reset particles that get too far from the attractors
     if(dist > uniAttr.maxDistance) {

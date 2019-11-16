@@ -18,9 +18,9 @@ namespace Instance {
 
 // BASE
 
-class Base : public Descriptor::Base {
+class Base : public virtual Buffer::Item {
    protected:
-    Base(const DESCRIPTOR&& descType) : Descriptor::Base(std::forward<const DESCRIPTOR>(descType)) {}
+    Base() {}
 };
 
 template <typename TDATA, typename TBase>

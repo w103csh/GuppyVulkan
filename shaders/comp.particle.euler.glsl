@@ -14,9 +14,6 @@ float getVelocityUpperBound();
 
 const float PI = 3.14159265359;
 
-// // SPECIALIZATION CONSTANTS (This doesn't work for local size unfortunately)
-// layout (constant_id = 0) const uint _LOCAL_SIZE_X = 1000;
-
 // FLAGS
 const uint DEFAULT              = 0x00000001u;
 const uint FIRE                 = 0x00000002u;

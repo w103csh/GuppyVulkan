@@ -31,14 +31,8 @@ layout(set=_DS_UNI_DEF, binding=1) uniform MaterialDefault {
     // 16
     vec3 Ks;                // Specular reflectivity
     float eta;              // Index of refraction
-    // 16
+    // 4
     float reflectionFactor; // Percentage of reflected light
-    float _padding0;
-    float _padding1;
-    float _padding2;
-
-    // OBJ3D
-    mat4 model;
 } material;
 
 vec3  getMaterialAmbient()          { return material.Ka; }
@@ -52,7 +46,6 @@ float getMaterialYRepeat()          { return material.yRepeat; }
 float getMaterialShininess()        { return material.shininess; }
 float getMaterialEta()              { return material.eta; }
 float getMaterialReflectionFactor() { return material.reflectionFactor; }
-mat4  getModel()                    { return material.model; }
 
 // FLAG CHECKS
 // MATERIAL 

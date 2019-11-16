@@ -10,7 +10,6 @@
 #include "Descriptor.h"
 
 namespace Uniform {
-
 namespace Default {
 
 // PROJECTOR
@@ -57,7 +56,25 @@ class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
 }  // namespace Fog
 
 }  // namespace Default
-
 }  // namespace Uniform
+
+namespace UniformDynamic {
+namespace Matrix4 {
+using DATA = glm::mat4;
+struct CreateInfo : ::Buffer::CreateInfo {
+    DATA data;
+};
+class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
+   public:
+    Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
+        : Buffer::Item(std::forward<const Buffer::Info>(info)),
+          Descriptor::Base(std::forward<const DESCRIPTOR>(UNIFORM_DYNAMIC::MATRIX_4)),
+          Buffer::PerFramebufferDataItem<DATA>(pData) {
+        data_ = pCreateInfo->data;
+        setData();
+    }
+};
+}  // namespace Matrix4
+}  // namespace UniformDynamic
 
 #endif  // !UNIFORM_H

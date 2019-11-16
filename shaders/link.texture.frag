@@ -90,6 +90,11 @@ void setTextureDefaults() {
     vec4 samp;
     sampCh1Cnt = sampCh2Cnt = sampCh3Cnt = sampCh4Cnt = 0;
     vec2 texCoord = vec2((fragTexCoord.x * xRepeat), (fragTexCoord.y * yRepeat));
+    if (!gl_FrontFacing) {
+        // This will only work correctly for repeat address!!! I barely use it atm
+        // so its fine for now.
+        texCoord.x *= -1.0;
+    }
 
     // COLOR (diffuse)
     if (getSample(texCoord, flags, TEX_COLOR, samp)) {

@@ -1,6 +1,7 @@
 
 #include "ShaderConstants.h"
 
+#include "Cloth.h"
 #include "Deferred.h"
 #include "Geometry.h"
 #include "PBR.h"
@@ -244,6 +245,9 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     {SHADER::PRTCL_SHDW_FOUNTAIN_EULER_VERT, Shader::Particle::SHDW_FOUNTAIN_EULER_VERT_CREATE_INFO},
     {SHADER::PRTCL_ATTR_COMP, Shader::Particle::ATTR_COMP_CREATE_INFO},
     {SHADER::PRTCL_ATTR_VERT, Shader::Particle::ATTR_VERT_CREATE_INFO},
+    {SHADER::PRTCL_CLOTH_COMP, Shader::Particle::CLOTH_COMP_CREATE_INFO},
+    {SHADER::PRTCL_CLOTH_NORM_COMP, Shader::Particle::CLOTH_NORM_COMP_CREATE_INFO},
+    {SHADER::PRTCL_CLOTH_VERT, Shader::Particle::CLOTH_VERT_CREATE_INFO},
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {

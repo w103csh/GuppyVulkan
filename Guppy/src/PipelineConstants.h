@@ -61,6 +61,9 @@ enum class PIPELINE : uint32_t {
     PRTCL_SHDW_FOUNTAIN_EULER,
     PRTCL_ATTR_COMPUTE,
     PRTCL_ATTR_PT_DEFERRED,
+    PRTCL_CLOTH_COMPUTE,
+    PRTCL_CLOTH_NORM_COMPUTE,
+    PRTCL_CLOTH_DEFERRED,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP
