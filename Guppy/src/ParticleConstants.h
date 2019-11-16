@@ -1,13 +1,8 @@
 #ifndef PARTICLE_CONSTANTS_H
 #define PARTICLE_CONSTANTS_H
 
-#include <glm/glm.hpp>
-#include <memory>
-#include <string>
-#include <utility>
-#include <vector>
-
-#include "PipelineConstants.h"
+#include "DescriptorConstants.h"
+#include "StorageConstants.h"
 
 // clang-format off
 namespace Descriptor { class Base; }
@@ -38,15 +33,19 @@ namespace Buffer {
 using index = uint32_t;
 constexpr index BAD_OFFSET = UINT32_MAX;
 
-struct InstanceInfo {
-    std::shared_ptr<Material::Obj3d::Default> pObj3dMaterial;
-    Descriptor::Set::bindDataMap computeDescSetBindDataMap;
-    Descriptor::Set::bindDataMap graphicsDescSetBindDataMap;
-    Descriptor::Set::bindDataMap shadowDescSetBindDataMap;
-};
-
 }  // namespace Buffer
 
 }  // namespace Particle
+
+namespace Storage {
+namespace Vector4 {
+struct CreateInfo;
+namespace Particle {
+namespace Attractor {
+void SetDataPosition(Descriptor::Base* pItem, Vector4::DATA*& pData, const CreateInfo* pCreateInfo);
+}  // namespace Attractor
+}  // namespace Particle
+}  // namespace Vector4
+}  // namespace Storage
 
 #endif  //! PARTICLE_CONSTANTS_H

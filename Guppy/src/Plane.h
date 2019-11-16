@@ -1,6 +1,7 @@
 #ifndef PLANE_H
 #define PLANE_H
 
+#include <memory>
 #include <vector>
 
 #include "ConstantsAll.h"
@@ -11,13 +12,14 @@ namespace Mesh {
 class Handler;
 namespace Plane {
 
-constexpr auto DEFAULT_DIMENSION = 1.0f;
 constexpr auto VERTEX_SIZE = 4;
 constexpr auto INDEX_SIZE = 6;
 
 struct Info {
     uint32_t horizontalDivisions = 1;
     uint32_t verticalDivisions = 1;
+    float width = 1.0f;
+    float height = 1.0f;
 };
 
 struct CreateInfo : public Mesh::CreateInfo {

@@ -3,7 +3,7 @@
 
 #define _DS_UNI_PRTCL_FNTN 0
 
-layout(set=_DS_UNI_PRTCL_FNTN, binding=2) uniform ParticleFountain {
+layout(set=_DS_UNI_PRTCL_FNTN, binding=0) uniform ParticleFountain {
     // 0, 1, 2 : Particle acceleration (gravity)
     // 3 :       Particle lifespan
     vec4 data0;

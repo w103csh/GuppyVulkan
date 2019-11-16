@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "ConstantsAll.h"
+#include "Cloth.h"
 #include "Descriptor.h"
 #include "DescriptorManager.h"
 #include "Game.h"
@@ -13,7 +14,9 @@
 #include "InstanceManager.h"
 #include "MaterialHandler.h"  // This is sketchy...
 #include "ParticleBuffer.h"
+#include "Storage.h"
 #include "Types.h"
+#include "Uniform.h"
 
 namespace Particle {
 
@@ -21,13 +24,12 @@ class Handler : public Game::Handler {
     friend class Buffer::Base;
 
    private:
-    template <class TBufferType, class TBufferBaseType, typename TBufferCreateInfo>
+    template <class TBufferType, class TBufferBaseType, typename TBufferCreateInfo, typename... TArgs>
     auto &make(std::vector<TBufferBaseType> &pBuffers, TBufferCreateInfo *pCreateInfo,
-               const std::vector<std::shared_ptr<Material::Obj3d::Default>> &pObj3dMaterials,
-               std::vector<std::shared_ptr<Descriptor::Base>> &&pUniforms) {
+               std::shared_ptr<Material::Base> &pMaterial,
+               const std::vector<std::shared_ptr<Descriptor::Base>> &pDescriptors, TArgs... args) {
         pBuffers.emplace_back(new TBufferType(std::ref(*this), static_cast<Buffer::index>(pBuffers.size()), pCreateInfo,
-                                              pObj3dMaterials,
-                                              std::forward<std::vector<std::shared_ptr<Descriptor::Base>>>(pUniforms)));
+                                              pMaterial, pDescriptors, args...));
         assert(pBuffers.back()->getOffset() == pBuffers.size() - 1);
 
         if (pBuffers.back()->getStatus() == STATUS::READY || pBuffers.back()->getStatus() & STATUS::PENDING_MATERIAL ||
@@ -53,9 +55,13 @@ class Handler : public Game::Handler {
 
     inline void update(std::shared_ptr<Descriptor::Base> &pUniform, const int index = -1) {
         if (pUniform->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_ATTRACTOR}) {
-            prtclAttrMgr_.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
+            prtclAttrMgr.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
         } else if (pUniform->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_FOUNTAIN}) {
-            prtclFntnMgr_.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
+            prtclFntnMgr.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
+        } else if (pUniform->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_CLOTH}) {
+            prtclClthMgr.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
+        } else if (pUniform->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::MATRIX_4}) {
+            mat4Mgr.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
         } else {
             assert(false && "Unhandled uniform type");
             exit(EXIT_FAILURE);
@@ -67,6 +73,12 @@ class Handler : public Game::Handler {
     void recordDispatch(const PASS passType, const std::shared_ptr<Pipeline::BindData> &pPipelineBindData,
                         const VkCommandBuffer &cmd, const uint8_t frameIndex);
 
+    Descriptor::Manager<Descriptor::Base, UniformDynamic::Particle::Attractor::Base, std::shared_ptr> prtclAttrMgr;
+    Descriptor::Manager<Descriptor::Base, UniformDynamic::Particle::Cloth::Base, std::shared_ptr> prtclClthMgr;
+    Descriptor::Manager<Descriptor::Base, UniformDynamic::Particle::Fountain::Base, std::shared_ptr> prtclFntnMgr;
+    Descriptor::Manager<Descriptor::Base, UniformDynamic::Matrix4::Base, std::shared_ptr> mat4Mgr;
+    Descriptor::Manager<Descriptor::Base, Storage::Vector4::Base, std::shared_ptr> vec4Mgr;
+
    private:
     void reset() override;
     inline bool hasInstFntnEulerMgr() const { return pInstFntnEulerMgr_ != nullptr; }
@@ -76,15 +88,11 @@ class Handler : public Game::Handler {
     // BUFFERS
     std::vector<std::unique_ptr<Particle::Buffer::Base>> pBuffers_;
 
-    // UNIFORM DYNAMIC
-    Descriptor::Manager<Descriptor::Base, UniformDynamic::Particle::Attractor::Base, std::shared_ptr> prtclAttrMgr_;
-    Descriptor::Manager<Descriptor::Base, UniformDynamic::Particle::Fountain::Base, std::shared_ptr> prtclFntnMgr_;
-
-    // INSTANCE
-    Instance::Manager<Instance::Particle::Fountain::Base, Instance::Particle::Fountain::Base> instFntnMgr_;
-    Instance::Manager<Instance::Particle::Vector4::Base, Instance::Particle::Vector4::Base> instVec4Mgr_;
-    std::unique_ptr<Instance::Manager<Instance::Particle::FountainEuler::Base, Instance::Particle::FountainEuler::Base>>
+    // INSTANCE DATA
+    Instance::Manager<Particle::Fountain::Base, Particle::Fountain::Base> instFntnMgr_;
+    std::unique_ptr<Descriptor::Manager<Descriptor::Base, Particle::FountainEuler::Base, std::shared_ptr>>
         pInstFntnEulerMgr_;
+
     // LOADING
     std::unordered_set<Particle::Buffer::index> ldgOffsets_;
 };

@@ -14,6 +14,7 @@ const std::string BLUEWATER_TEX_PATH = IMG_PATH + "bluewater.png";
 const std::string FIRE_TEX_PATH = IMG_PATH + "fire.png";
 const std::string SMOKE_TEX_PATH = IMG_PATH + "smoke.png";
 const std::string STAR_TEX_PATH = IMG_PATH + "star.png";
+const std::string FABRIC_BROWN_TEX_PATH = IMG_PATH + "fabric_brown.jpg";
 // WOOD
 const std::string WOOD_PATH = IMG_PATH + "Wood_007/";
 const std::string WOOD_007_DIFF_TEX_PATH = WOOD_PATH + "Wood_007_COLOR.jpg";
@@ -97,6 +98,13 @@ const CreateInfo SMOKE_CREATE_INFO = {
 const CreateInfo STAR_CREATE_INFO = {
     "Star Color Sampler",
     {{{Sampler::USAGE::COLOR, STAR_TEX_PATH}}},
+    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+};
+
+// FABRIC BROWN
+const CreateInfo FABRIC_BROWN_CREATE_INFO = {
+    "Fabric Brown Color Sampler",
+    {{{Sampler::USAGE::COLOR, FABRIC_BROWN_TEX_PATH}}},
     VK_IMAGE_VIEW_TYPE_2D_ARRAY,
 };
 

@@ -30,7 +30,7 @@ void addFaces(Base* pMesh, const Mesh::Geometry::Info& geoInfo) {
 }  // namespace
 
 std::vector<Face> Box::make(const Mesh::Geometry::Info& geoInfo) {
-    auto offset = Plane::DEFAULT_DIMENSION / 2.0f;
+    auto offset = 1.0f / 2.0f;
     std::vector<Face> faces;
 
     // front

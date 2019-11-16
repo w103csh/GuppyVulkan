@@ -26,12 +26,9 @@ std::vector<Face> Plane::make(const Plane::Info& planeInfo, const Mesh::Geometry
     assert(planeInfo.horizontalDivisions > 0);
     assert(planeInfo.verticalDivisions > 0);
 
-    float width, height;
-    width = height = Plane::DEFAULT_DIMENSION;
-
     // position
-    float _l = (width / 2 * -1), _r = _l + width;    // edge values
-    float _b = (height / 2 * -1), _t = _b + height;  // edge values
+    float _l = (planeInfo.width / 2 * -1), _r = _l + planeInfo.width;    // edge values
+    float _b = (planeInfo.height / 2 * -1), _t = _b + planeInfo.height;  // edge values
     float l = _l, r;
     float t = _t, b;
 

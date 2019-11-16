@@ -17,8 +17,13 @@ enum class PASS : uint32_t;
 
 using FlagBits = uint32_t;
 // Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)
+
+// INDEX TYPE
 using VB_INDEX_TYPE = uint32_t;
-constexpr VB_INDEX_TYPE BAD_VB_INDEX = UINT32_MAX;
+// This value is dependent on the type set in vkCmdBindIndexBuffer. There is a list of valid restart values in the
+// specification.
+constexpr VB_INDEX_TYPE VB_INDEX_PRIMITIVE_RESTART = 0xFFFFFFFF;
+constexpr VB_INDEX_TYPE BAD_VB_INDEX = VB_INDEX_PRIMITIVE_RESTART - 1;
 
 // TODO: make a data structure so this can be const in the handlers.
 template <typename TEnum, typename TType>
@@ -196,35 +201,41 @@ struct insertion_ordered_unique_keyvalue_list {
     void insert(TKey key, TValue value) {
         auto it = keyOffsetMap_.find(key);
         if (it == keyOffsetMap_.end()) {
-            auto insertPair = keyOffsetMap_.insert({key, static_cast<uint32_t>(list_.size())});
+            auto insertPair = keyOffsetMap_.insert({key, static_cast<uint32_t>(valueList_.size())});
             assert(insertPair.second);
-            list_.emplace_back(std::move(value));
+            valueList_.push_back(std::move(value));
+            keyList_.push_back(key);
         } else {
-            list_.at(it->second) = std::move(value);
+            valueList_.at(it->second) = std::move(value);
+            keyList_.at(it->second) = std::move(key);
         }
-        assert(keyOffsetMap_.size() == list_.size());
+        assert(keyOffsetMap_.size() == valueList_.size() && valueList_.size() == keyList_.size());
     }
     constexpr void clear() {
         keyOffsetMap_.clear();
-        list_.clear();
+        valueList_.clear();
+        keyList_.clear();
     }
     constexpr auto getOffset(const TKey key) const {
         auto it = keyOffsetMap_.find(key);  //
         return it == keyOffsetMap_.end() ? -1 : it->second;
     }
-    constexpr const auto &getValue(const TKey key) const { return list_.at(keyOffsetMap_.at(key)); }
+    constexpr const auto &getValue(const TKey key) const { return valueList_.at(keyOffsetMap_.at(key)); }
     constexpr bool hasKey(const TKey key) const { return keyOffsetMap_.count(key) > 0; }
-    constexpr const auto &getValue(const uint32_t offset) const { return list_.at(offset); }
+    constexpr const auto &getValue(const uint32_t offset) const { return valueList_.at(offset); }
+    constexpr const auto &getKey(const uint32_t offset) const { return keyList_.at(offset); }
     constexpr const auto &getKeyOffsetMap() const { return keyOffsetMap_; }
-    constexpr const auto &getValues() const { return list_; }
+    constexpr const auto &getValues() const { return valueList_; }
+    constexpr const auto &getKeys() const { return keyList_; }
     constexpr auto size() const {
-        assert(keyOffsetMap_.size() == list_.size());
-        return list_.size();
+        assert(keyOffsetMap_.size() == valueList_.size() && valueList_.size() == keyList_.size());
+        return valueList_.size();
     }
 
    private:
     std::map<TKey, uint32_t> keyOffsetMap_;
-    std::vector<TValue> list_;
+    std::vector<TValue> valueList_;
+    std::vector<TKey> keyList_;
 };
 
 #endif  //! TYPE_H

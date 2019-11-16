@@ -87,8 +87,14 @@ std::array<PIPELINE, 5> COLOR_LIST = {
     PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED,    //
     // PIPELINE::PRTCL_WAVE_DEFERRED,        //
 };
-std::array<PIPELINE, 1> TEX_LIST = {
+std::array<PIPELINE, 2> TEX_LIST = {
     PIPELINE::DEFERRED_MRT_TEX,
+    /**
+     * There are two reasons I can think of why cloth below won't work. First, the "mesh" for cloth is not stored in the
+     * scene, and I am not sure if its compatible but I would imagine it is. Secondly, there would need to be a triangle
+     * strip shadow pipeline.
+     */
+    // PIPELINE::PRTCL_CLOTH_DEFERRED,
 };
 }  // namespace
 
@@ -115,7 +121,7 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
 
         vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
 
-        // PARTICLE
+        // PRTCL_FOUNTAIN_EULER_DEFERRED
         itSurrogate =
             std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED);
         if (itSurrogate != std::end(surrogatePipelineTypes) &&

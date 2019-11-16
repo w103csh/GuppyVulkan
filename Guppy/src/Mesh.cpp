@@ -16,11 +16,10 @@
 // BASE
 
 Mesh::Base::Base(Mesh::Handler& handler, const index&& offset, const MESH&& type, const VERTEX&& vertexType,
-                 const FLAG&& flags, const std::string&& name, const CreateInfo* pCreateInfo,
+                 const std::string&& name, const CreateInfo* pCreateInfo,
                  std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
     : Handlee(handler),
       Obj3d::InstanceDraw(pInstanceData),
-      FLAGS(flags),
       MAPPABLE(pCreateInfo->mappable),
       NAME(name),
       PASS_TYPES(pCreateInfo->passTypes),
@@ -501,15 +500,16 @@ void Mesh::Base::destroy() {
 
 Mesh::Color::Color(Mesh::Handler& handler, const index&& offset, const GenericCreateInfo* pCreateInfo,
                    std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
-    : Base{handler,                                             //
-           std::forward<const index>(offset),                   //
-           std::forward<const MESH>(MESH::COLOR),               //
-           VERTEX::COLOR,                                       //
-           FLAG::POLY,                                          //
-           std::forward<const std::string>(pCreateInfo->name),  //
-           pCreateInfo,                                         //
-           pInstanceData,                                       //
-           pMaterial} {
+    : Base{
+          handler,
+          std::forward<const index>(offset),
+          std::forward<const MESH>(MESH::COLOR),
+          VERTEX::COLOR,
+          std::forward<const std::string>(pCreateInfo->name),
+          pCreateInfo,
+          pInstanceData,
+          pMaterial,
+      } {
     assert(vertices_.empty() && pCreateInfo->faces.size());
     if (pCreateInfo->settings.geometryInfo.smoothNormals) {
         unique_vertices_map_smoothing vertexMap = {};
@@ -524,62 +524,49 @@ Mesh::Color::Color(Mesh::Handler& handler, const index&& offset, const GenericCr
 Mesh::Color::Color(Mesh::Handler& handler, const index&& offset, const std::string&& name, const CreateInfo* pCreateInfo,
                    std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial,
                    const MESH&& type)
-    : Base{handler,                                //
-           std::forward<const index>(offset),      //
-           std::forward<const MESH>(type),         //
-           VERTEX::COLOR,                          //
-           FLAG::POLY,                             //
-           std::forward<const std::string>(name),  //
-           pCreateInfo,                            //
-           pInstanceData,                          //
-           pMaterial} {}
-
-Mesh::Color::Color(Mesh::Handler& handler, const index&& offset, const FLAG&& flags, const std::string&& name,
-                   const CreateInfo* pCreateInfo, std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData,
-                   std::shared_ptr<Material::Base>& pMaterial,
-                   const MESH&& type)
-    : Base{handler,                                //
-           std::forward<const index>(offset),      //
-           std::forward<const MESH>(type),         //
-           VERTEX::COLOR,                          //
-           std::forward<const FLAG>(flags),        //
-           std::forward<const std::string>(name),  //
-           pCreateInfo,                            //
-           pInstanceData,                          //
-           pMaterial} {}
+    : Base{
+          handler,
+          std::forward<const index>(offset),
+          std::forward<const MESH>(type),
+          VERTEX::COLOR,
+          std::forward<const std::string>(name),
+          pCreateInfo,
+          pInstanceData,
+          pMaterial,
+      } {}
 
 Mesh::Color::~Color() = default;
 
 // LINE
 
 Mesh::Line::Line(Mesh::Handler& handler, const index&& offset, const std::string&& name, const CreateInfo* pCreateInfo,
-                 std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData,
-                 std::shared_ptr<Material::Base>& pMaterial)
-    : Color{handler,                                //
-            std::forward<const index>(offset),      //
-            FLAG::LINE,                             //
-            std::forward<const std::string>(name),  //
-            pCreateInfo,                            //
-            pInstanceData,                          //
-            pMaterial,
-            MESH::LINE} {}
+                 std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
+    : Color{
+          handler,
+          std::forward<const index>(offset),
+          std::forward<const std::string>(name),
+          pCreateInfo,
+          pInstanceData,
+          pMaterial,
+          MESH::LINE,
+      } {}
 
 Mesh::Line::~Line() = default;
 
 // TEXTURE
 
 Mesh::Texture::Texture(Mesh::Handler& handler, const index&& offset, const std::string&& name, const CreateInfo* pCreateInfo,
-                       std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData,
-                       std::shared_ptr<Material::Base>& pMaterial)
-    : Base{handler,                                //
-           std::forward<const index>(offset),      //
-           MESH::TEXTURE,                          //
-           VERTEX::TEXTURE,                        //
-           FLAG::POLY,                             //
-           std::forward<const std::string>(name),  //
-           pCreateInfo,                            //
-           pInstanceData,                          //
-           pMaterial} {
+                       std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
+    : Base{
+          handler,
+          std::forward<const index>(offset),
+          MESH::TEXTURE,
+          VERTEX::TEXTURE,
+          std::forward<const std::string>(name),
+          pCreateInfo,
+          pInstanceData,
+          pMaterial,
+      } {
     // This is for the, hopefully, singular mesh that is a VERTEX::SCREEN_QUAD.
     if (PIPELINE_TYPE == PIPELINE::ALL_ENUM && PASS_TYPES.empty())
         assert(!pMaterial_->hasTexture());

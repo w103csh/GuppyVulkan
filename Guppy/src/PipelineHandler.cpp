@@ -1,6 +1,7 @@
 
 #include "PipelineHandler.h"
 
+#include "Cloth.h"
 #include "ConstantsAll.h"
 #include "Deferred.h"
 #include "Geometry.h"
@@ -92,6 +93,9 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
             case PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER:       insertPair = pPipelines_.insert({type, std::make_unique<Particle::ShadowFountainEuler>(std::ref(*this))}); break;
             case PIPELINE::PRTCL_ATTR_COMPUTE:              insertPair = pPipelines_.insert({type, std::make_unique<Particle::AttractorCompute>(std::ref(*this))}); break;
             case PIPELINE::PRTCL_ATTR_PT_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Particle::AttractorPoint>(std::ref(*this))}); break;
+            case PIPELINE::PRTCL_CLOTH_COMPUTE:             insertPair = pPipelines_.insert({type, std::make_unique<Particle::ClothCompute>(std::ref(*this))}); break;
+            case PIPELINE::PRTCL_CLOTH_NORM_COMPUTE:        insertPair = pPipelines_.insert({type, std::make_unique<Particle::ClothNormalCompute>(std::ref(*this))}); break;
+            case PIPELINE::PRTCL_CLOTH_DEFERRED:            insertPair = pPipelines_.insert({type, std::make_unique<Particle::Cloth>(std::ref(*this))}); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on

@@ -4,6 +4,7 @@
 #include "Deferred.h"
 #include "ParticleBuffer.h"
 #include "Shadow.h"
+#include "Storage.h"
 // HANDLERS
 #include "PipelineHandler.h"
 
@@ -22,10 +23,7 @@ const CreateInfo FOUNTAIN_VERT_CREATE_INFO = {
     "Particle Fountain Vertex Shader",  //
     "vert.particle.fountain.glsl",      //
     VK_SHADER_STAGE_VERTEX_BIT,         //
-    {
-        SHADER_LINK::DEFAULT_MATERIAL,
-        SHADER_LINK::PRTCL_FOUNTAIN,
-    },
+    {SHADER_LINK::PRTCL_FOUNTAIN},
 };
 const CreateInfo FOUNTAIN_FRAG_DEFERRED_MRT_CREATE_INFO = {
     SHADER::PRTCL_FOUNTAIN_DEFERRED_MRT_FRAG,        //
@@ -71,7 +69,6 @@ const CreateInfo ATTR_VERT_CREATE_INFO = {
     "Particle Attractor Vertex Shader",  //
     "vert.particle.attractor.glsl",      //
     VK_SHADER_STAGE_VERTEX_BIT,          //
-    {SHADER_LINK::DEFAULT_MATERIAL},
 };
 }  // namespace Particle
 namespace Link {
@@ -190,7 +187,6 @@ void Base::update(const float time, const float elapsed, const uint32_t frameInd
 namespace Descriptor {
 namespace Set {
 namespace Particle {
-
 const CreateInfo WAVE_CREATE_INFO = {
     DESCRIPTOR_SET::UNIFORM_PRTCL_WAVE,
     "_DS_UNI_PRTCL_WV",
@@ -198,38 +194,30 @@ const CreateInfo WAVE_CREATE_INFO = {
         {{0, 0}, {UNIFORM::PRTCL_WAVE}},
     },
 };
-
 const CreateInfo FOUNTAIN_CREATE_INFO = {
     DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN,
     "_DS_UNI_PRTCL_FNTN",
     {
-        {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
-        {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_OBJ3D}},
-        {{2, 0}, {UNIFORM_DYNAMIC::PRTCL_FOUNTAIN}},
+        {{0, 0}, {UNIFORM_DYNAMIC::PRTCL_FOUNTAIN}},
     },
 };
-
 const CreateInfo EULER_CREATE_INFO = {
     DESCRIPTOR_SET::PRTCL_EULER,
     "_DS_PRTCL_EULER",
     {
         {{0, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Particle::RAND_1D_ID}},
         {{1, 0}, {STORAGE_BUFFER_DYNAMIC::PRTCL_EULER}},
-        // Macro replace will fail for the material, so the set must resolve to slot 0!!!
-        {{2, 0}, {UNIFORM_DYNAMIC::PRTCL_FOUNTAIN}},
     },
 };
-
 const CreateInfo ATTRACTOR_CREATE_INFO = {
     DESCRIPTOR_SET::PRTCL_ATTRACTOR,
     "_DS_PRTCL_ATTR",
     {
         {{0, 0}, {UNIFORM_DYNAMIC::PRTCL_ATTRACTOR}},
-        {{1, 0}, {STORAGE_BUFFER_DYNAMIC::PRTCL_POSTITION}},
+        {{1, 0}, {STORAGE_BUFFER_DYNAMIC::PRTCL_POSITION}},
         {{2, 0}, {STORAGE_BUFFER_DYNAMIC::PRTCL_VELOCITY}},
     },
 };
-
 }  // namespace Particle
 }  // namespace Set
 }  // namespace Descriptor
@@ -242,7 +230,7 @@ void GetFountainEulerInputAssemblyInfoResources(CreateInfoResources& createInfoR
     createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
     Vertex::Color::getInputDescriptions(createInfoRes);
-    Instance::Particle::FountainEuler::DATA::getInputDescriptions(createInfoRes);
+    ::Particle::FountainEuler::DATA::getInputDescriptions(createInfoRes);
     // bindings
     createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
@@ -298,6 +286,7 @@ const CreateInfo FOUNTAIN_CREATE_INFO = {
         SHADER::PRTCL_FOUNTAIN_DEFERRED_MRT_FRAG,
     },
     {
+        DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4,
         DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN,
         DESCRIPTOR_SET::SAMPLER_DEFAULT,
     },
@@ -317,7 +306,7 @@ void Fountain::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 void Fountain::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-    Instance::Particle::Fountain::DATA::getInputDescriptions(createInfoRes);
+    ::Particle::Fountain::DATA::getInputDescriptions(createInfoRes);
     // bindings
     createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
@@ -342,7 +331,10 @@ const Pipeline::CreateInfo EULER_CREATE_INFO = {
     PIPELINE::PRTCL_EULER_COMPUTE,
     "Particle Euler Compute Pipeline",
     {SHADER::PRTCL_EULER_COMP},
-    {DESCRIPTOR_SET::PRTCL_EULER},
+    {
+        DESCRIPTOR_SET::PRTCL_EULER,
+        DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN,
+    },
     {},
     {PUSH_CONSTANT::PRTCL_EULER},
 };
@@ -357,6 +349,7 @@ const CreateInfo FOUNTAIN_EULER_CREATE_INFO = {
         SHADER::PRTCL_FOUNTAIN_DEFERRED_MRT_FRAG,
     },
     {
+        DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4,
         DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN,
         DESCRIPTOR_SET::SAMPLER_DEFAULT,
     },
@@ -384,7 +377,10 @@ const Pipeline::CreateInfo SHADOW_FOUNTAIN_EULER_CREATE_INFO = {
     PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER,
     "Particle Fountain Euler (Shadow) Pipeline",
     {SHADER::PRTCL_SHDW_FOUNTAIN_EULER_VERT, SHADER::SHADOW_FRAG},
-    {DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN},
+    {
+        DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4,
+        DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN,
+    },
 };
 ShadowFountainEuler::ShadowFountainEuler(Pipeline::Handler& handler)
     : Graphics(handler, &SHADOW_FOUNTAIN_EULER_CREATE_INFO) {}
@@ -414,7 +410,7 @@ const Pipeline::CreateInfo ATTR_PT_CREATE_INFO = {
         SHADER::PRTCL_ATTR_VERT,
         SHADER::DEFERRED_MRT_POINT_FRAG,
     },
-    {DESCRIPTOR_SET::UNIFORM_CAM_MATOBJ3D},
+    {DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4},
 };
 AttractorPoint::AttractorPoint(Pipeline::Handler& handler, const bool doBlend, const bool isDeferred)
     : Graphics(handler, &ATTR_PT_CREATE_INFO), DO_BLEND(doBlend), IS_DEFERRED(isDeferred) {}
@@ -431,7 +427,7 @@ void AttractorPoint::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 void AttractorPoint::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 
-    Instance::Particle::Vector4::DATA::getInputDescriptions(createInfoRes);
+    Storage::Vector4::GetInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_INSTANCE);
     // bindings
     createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();

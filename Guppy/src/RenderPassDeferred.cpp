@@ -37,14 +37,21 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         PIPELINE::TESSELLATION_TRIANGLE_DEFERRED,
 #endif
         PIPELINE::DEFERRED_MRT_TEX,
-        // The two below are dependent on one another... Make this a thing?
-        PIPELINE::PRTCL_EULER_COMPUTE,
         PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED,
-        // The two below are dependent on one another... Make this a thing?
-        PIPELINE::PRTCL_ATTR_COMPUTE,
         PIPELINE::PRTCL_ATTR_PT_DEFERRED,
+        PIPELINE::PRTCL_CLOTH_DEFERRED,
         // PIPELINE::DEFERRED_SSAO,
         PIPELINE::DEFERRED_COMBINE,
+        /**
+         * These compute passes have sister graphics passes earlier in the list. There should be some kind of validation, or
+         * potentially a data structure change so that this is more explicit. Also, its kind of misleading that these are at
+         * the end of the list when they will always be executed first, but the subpass dependency code is easier to debug
+         * with the indices being accurate for the graphics pass order.
+         */
+        PIPELINE::PRTCL_EULER_COMPUTE,
+        PIPELINE::PRTCL_ATTR_COMPUTE,
+        PIPELINE::PRTCL_CLOTH_COMPUTE,
+        PIPELINE::PRTCL_CLOTH_NORM_COMPUTE,
     },
     (FLAG::SWAPCHAIN | FLAG::DEPTH | /*FLAG::DEPTH_INPUT_ATTACHMENT |*/
      (::Deferred::DO_MSAA ? FLAG::MULTISAMPLE : FLAG::NONE)),
@@ -102,6 +109,8 @@ void Base::record(const uint8_t frameIndex) {
         for (const auto& pPipelineBindData : pipelineBindDataList_.getValues()) {
             switch (pPipelineBindData->type) {
                 case PIPELINE::PRTCL_EULER_COMPUTE:
+                case PIPELINE::PRTCL_CLOTH_COMPUTE:
+                case PIPELINE::PRTCL_CLOTH_NORM_COMPUTE:
                 case PIPELINE::PRTCL_ATTR_COMPUTE: {
                     handler().particleHandler().recordDispatch(TYPE, pPipelineBindData, priCmd, frameIndex);
                 } break;
@@ -145,12 +154,11 @@ void Base::record(const uint8_t frameIndex) {
             }
             // Draw
             switch (pPipelineBindData->type) {
-                case PIPELINE::DEFERRED_COMBINE: {
-                    // TODO: this definitely only needs to be recorded once per swapchain creation!!!
-                    handler().getScreenQuad()->draw(TYPE, pipelineBindDataList_.getValue(pPipelineBindData->type),
-                                                    getDescSetBindDataMap(pPipelineBindData->type).begin()->second, priCmd,
-                                                    frameIndex);
-                } break;
+                case PIPELINE::PRTCL_EULER_COMPUTE:
+                case PIPELINE::PRTCL_CLOTH_COMPUTE:
+                case PIPELINE::PRTCL_CLOTH_NORM_COMPUTE:
+                case PIPELINE::PRTCL_ATTR_COMPUTE:
+                    break;
                 case PIPELINE::DEFERRED_SSAO: {
                     // This hasn't been tested in a long time. Might work to just let through.
                     // TODO: this definitely only needs to be recorded once per swapchain creation!!!
@@ -158,7 +166,9 @@ void Base::record(const uint8_t frameIndex) {
                 } break;
                 case PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED:
                 case PIPELINE::PRTCL_ATTR_PT_DEFERRED:
+                case PIPELINE::PRTCL_CLOTH_DEFERRED:
                 case PIPELINE::PRTCL_FOUNTAIN_DEFERRED: {
+                    // PARTICLE GRAPHICS
                     handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
                     vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
                 } break;
@@ -167,6 +177,12 @@ void Base::record(const uint8_t frameIndex) {
                     auto& secCmd = data.secCmds[frameIndex];
                     pScene->record(TYPE, pPipelineBindData->type, pPipelineBindData, priCmd, secCmd, frameIndex);
                     vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+                } break;
+                case PIPELINE::DEFERRED_COMBINE: {
+                    // TODO: this definitely only needs to be recorded once per swapchain creation!!!
+                    handler().getScreenQuad()->draw(TYPE, pipelineBindDataList_.getValue(pPipelineBindData->type),
+                                                    getDescSetBindDataMap(pPipelineBindData->type).begin()->second, priCmd,
+                                                    frameIndex);
                 } break;
             }
         }
@@ -279,9 +295,15 @@ void Base::createSubpassDescriptions() {
     assert(inputAttachmentOffset_ == 1);  // Swapchain should be in 0
 
     uint32_t mrtPipelineCount = 0;
-    for (const auto& [pipelineType, badData] : pipelineBindDataList_.getKeyOffsetMap()) {
+    uint32_t compPipelineCount = 4;
+    for (const auto& pipelineType : pipelineBindDataList_.getKeys()) {
+        // TODO: I need a better way to generally identify if the type is for a compute pipeline
         if (pipelineType == PIPELINE::PRTCL_EULER_COMPUTE) continue;
+        if (pipelineType == PIPELINE::PRTCL_ATTR_COMPUTE) continue;
+        if (pipelineType == PIPELINE::PRTCL_CLOTH_COMPUTE) continue;
+        if (pipelineType == PIPELINE::PRTCL_CLOTH_NORM_COMPUTE) continue;
         if (pipelineType == PIPELINE::DEFERRED_SSAO && !doSSAO_) continue;
+        if (pipelineType == PIPELINE::DEFERRED_COMBINE) continue;
         mrtPipelineCount++;
     }
 
@@ -317,7 +339,7 @@ void Base::createSubpassDescriptions() {
     subpassDesc.pDepthStencilAttachment = nullptr;
     resources_.subpasses.push_back(subpassDesc);
 
-    assert(resources_.subpasses.size() == pipelineBindDataList_.size());
+    assert(resources_.subpasses.size() == pipelineBindDataList_.size() - compPipelineCount);
     combinePassIndex_ = static_cast<uint32_t>(pipelineBindDataList_.size() - 1);
 }
 
@@ -344,12 +366,20 @@ void Base::createDependencies() {
     //    VK_DEPENDENCY_BY_REGION_BIT,
     //};
 
-    uint32_t subpass = 0;
-    for (const auto& [pipelineType, badData] : pipelineBindDataList_.getKeyOffsetMap()) {
+    uint32_t subpass = 1;
+    for (uint32_t offset = subpass; offset < pipelineBindDataList_.size(); offset++) {
+        if (offset == 0) continue;
+        const auto& pipelineType = pipelineBindDataList_.getKey(subpass);
+        // TODO: I need a better way to generally identify if the type is for compute
+        if (pipelineType == PIPELINE::DEFERRED_COMBINE) continue;
         if (pipelineType == PIPELINE::PRTCL_EULER_COMPUTE) continue;
+        if (pipelineType == PIPELINE::PRTCL_ATTR_COMPUTE) continue;
+        if (pipelineType == PIPELINE::PRTCL_CLOTH_COMPUTE) continue;
+        if (pipelineType == PIPELINE::PRTCL_CLOTH_NORM_COMPUTE) continue;
         if (pipelineType == PIPELINE::DEFERRED_SSAO && !doSSAO_) continue;
         // TODO: How could this know which external subpass to wait on?
-        if (pipelineType == PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED || pipelineType == PIPELINE::PRTCL_ATTR_PT_DEFERRED) {
+        if (pipelineType == PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED || pipelineType == PIPELINE::PRTCL_ATTR_PT_DEFERRED ||
+            pipelineType == PIPELINE::PRTCL_CLOTH_DEFERRED) {
             // Dispatch writes into a storage buffer. Draw consumes that buffer as an instance vertex buffer.
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,
@@ -360,8 +390,8 @@ void Base::createDependencies() {
                 VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
             });
         }
-        depthDependency.srcSubpass = subpass;
-        depthDependency.dstSubpass = subpass + 1;
+        depthDependency.srcSubpass = subpass - 1;
+        depthDependency.dstSubpass = subpass;
         resources_.dependencies.push_back(depthDependency);
         subpass++;
     }
@@ -380,8 +410,15 @@ void Base::createDependencies() {
             VK_DEPENDENCY_BY_REGION_BIT,                    // dependencyFlags
         };
 
-        combineDependency.dstSubpass = static_cast<uint32_t>(resources_.subpasses.size() - 1);
-        for (subpass = 0; subpass < combinePassIndex_; subpass++) {
+        combineDependency.dstSubpass = pipelineBindDataList_.getOffset(PIPELINE::DEFERRED_COMBINE);
+        for (subpass = 0; subpass < pipelineBindDataList_.size(); subpass++) {
+            const auto& pipelineType = pipelineBindDataList_.getKey(subpass);
+            // TODO: I need a better way to generally identify if the type is for compute
+            if (pipelineType == PIPELINE::DEFERRED_COMBINE) continue;
+            if (pipelineType == PIPELINE::PRTCL_EULER_COMPUTE) continue;
+            if (pipelineType == PIPELINE::PRTCL_ATTR_COMPUTE) continue;
+            if (pipelineType == PIPELINE::PRTCL_CLOTH_COMPUTE) continue;
+            if (pipelineType == PIPELINE::PRTCL_CLOTH_NORM_COMPUTE) continue;
             combineDependency.srcSubpass = subpass;
             resources_.dependencies.push_back(combineDependency);
         }

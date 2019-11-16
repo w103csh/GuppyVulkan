@@ -1,16 +1,40 @@
 #ifndef STORAGE_H
 #define STORAGE_H
 
+#include <glm/glm.hpp>
+
 #include "BufferItem.h"
+#include "ConstantsAll.h"
 #include "Descriptor.h"
 
 namespace Storage {
 
-namespace PostProcess {
+// VECTOR4
+namespace Vector4 {
 
-// Offsets
-constexpr uint8_t AccumulatedLuminace = 0;
-constexpr uint8_t ImageSize = 1;
+void GetInputDescriptions(Pipeline::CreateInfoResources& createInfoRes, const VkVertexInputRate&& inputRate);
+
+class Base;
+struct CreateInfo : Buffer::CreateInfo {
+    CreateInfo(const glm::uvec3 localSize) : localSize(localSize) {
+        countInRange = true;
+        dataCount = localSize.x * localSize.y * localSize.z;
+    }
+    TYPE type = TYPE::DONT_CARE;
+    STORAGE_BUFFER_DYNAMIC descType = STORAGE_BUFFER_DYNAMIC::DONT_CARE;
+    glm::uvec3 localSize;
+};
+class Base : public Buffer::DataItem<DATA>, public Descriptor::Base {
+   public:
+    const TYPE VECTOR_TYPE;
+    Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo);
+
+    void set(const DATA& v, const VkDeviceSize index) { pData_[index] = v; }
+};
+
+}  // namespace Vector4
+
+namespace PostProcess {
 
 struct DATA {
     DATA();

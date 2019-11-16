@@ -16,7 +16,9 @@ namespace Obj3d {
  */
 class Instance : public Obj3d::Interface {
    public:
-    Instance(std::shared_ptr<::Instance::Obj3d::Base>& pInstObj3d) : pInstObj3d_(pInstObj3d) {}
+    Instance(std::shared_ptr<::Instance::Obj3d::Base>& pInstObj3d) : pInstObj3d_(pInstObj3d) {
+        assert(pInstObj3d_ != nullptr);
+    }
 
     inline uint32_t getModelCount() { return pInstObj3d_->BUFFER_INFO.count; }
     inline const Buffer::Info& getInstanceDataInfo() { return pInstObj3d_->BUFFER_INFO; }

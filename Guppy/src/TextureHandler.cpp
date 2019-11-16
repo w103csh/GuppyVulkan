@@ -39,6 +39,7 @@ void Texture::Handler::init() {
         &Texture::FIRE_CREATE_INFO,
         &Texture::SMOKE_CREATE_INFO,
         &Texture::STAR_CREATE_INFO,
+        &Texture::FABRIC_BROWN_CREATE_INFO,
         &Texture::MEDIEVAL_HOUSE_CREATE_INFO,
         &Texture::WOOD_CREATE_INFO,
         &Texture::MYBRICK_CREATE_INFO,

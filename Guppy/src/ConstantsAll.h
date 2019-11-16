@@ -20,6 +20,7 @@
 #include "RenderPassConstants.h"
 #include "SamplerConstants.h"
 #include "ShaderConstants.h"
+#include "StorageConstants.h"
 #include "TextureConstants.h"
 #include "UniformConstants.h"
 

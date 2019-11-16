@@ -113,6 +113,19 @@ static MODEL_FILE_TYPE getModelFileType(std::string s) {
     return MODEL_FILE_TYPE::UNKNOWN;
 }
 
+// This obviously doesn't work right
+template <typename T>
+constexpr int nearestOdd(T value, bool roundDown = true) {
+    static_assert(std::is_floating_point<T>::value, "value must be floating point type");
+    int result = std::lround(value);
+    if (result % 2 == 1)
+        return result;
+    else if (roundDown)
+        return result - 1;
+    else
+        return result + 1;
+}
+
 // The point of this is to turn the glm::lookAt into an affine transform for
 // the Object3d model.
 static glm::mat4 viewToWorld(glm::vec3 position, glm::vec3 focalPoint, glm::vec3 up) {

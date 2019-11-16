@@ -1,10 +1,9 @@
 
 #version 450
 
-#define _DS_UNI_PRTCL_FNTN 0
+#define _DS_UNI_DEFCAM_DEFMAT_MX4 0
 
 // DECLARATIONS
-mat4  getModel();
 vec3  getAcceleration();
 float getLifespan();
 vec3  getEmitterPosition();
@@ -12,12 +11,16 @@ float getDelta();
 float getMinParticleSize();
 
 // BINDINGS
-layout(set=_DS_UNI_PRTCL_FNTN, binding=0) uniform CameraDefaultPerspective {
+layout(set=_DS_UNI_DEFCAM_DEFMAT_MX4, binding=0) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
     mat4 viewProjection;
     vec3 worldPosition;
 } camera;
+layout(set=_DS_UNI_DEFCAM_DEFMAT_MX4, binding=2) uniform Matrix4 {
+    mat4 model;
+} uniMat4;
+
 
 // IN
 layout(location=0) in vec3 inVelocity;
@@ -36,7 +39,7 @@ const vec3 offsets[] = vec3[](vec3(-0.5, -0.5, 0), vec3(0.5, -0.5, 0), vec3( 0.5
 const vec2 texCoords[] = vec2[](vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 0), vec2(1, 1), vec2(0, 1));
 
 void main() {
-    mat4 mViewModel = camera.view * getModel();
+    mat4 mViewModel = camera.view * uniMat4.model;
 
     float t = getDelta() - inTimeOfBirth;
     if (t >= 0 && t < getLifespan()) {

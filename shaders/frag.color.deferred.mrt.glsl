@@ -5,8 +5,9 @@
 vec3 setColorDefaults();
 float getMaterialShininess();
 void geomShade(inout vec4 color);
+
 // IN
-layout(location=0) in vec3 fragPosition;
+layout(location=0) in vec3 inPosition;
 
 // OUT
 layout(location=0) out vec4 outPosition;
@@ -25,9 +26,15 @@ float opacity, height;
 void main() {
     setColorDefaults();
 
-	outPosition = vec4(fragPosition, 1.0);
-    // outNormal = vec4(n, 0.0);
-    outNormal = vec4(n, getMaterialShininess());
+	outPosition = vec4(inPosition, 1.0);
+    
+    outNormal = vec4(n, 0.0);
+    if (!gl_FrontFacing) {
+        outNormal *= -1.0;
+        // outTangent *= -1.0;
+        // outBinormal *= -1.0;
+    }
+    outNormal.w = getMaterialShininess();
 	outDiffuse = vec4(Kd, opacity);
 	outAmbient = vec4(Ka, 0.0);
 	outSpecular = vec4(Ks, 0.0);

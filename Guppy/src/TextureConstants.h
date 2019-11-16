@@ -47,6 +47,9 @@ extern const CreateInfo SMOKE_CREATE_INFO;
 constexpr std::string_view STAR_ID = "Star Texture";
 extern const CreateInfo STAR_CREATE_INFO;
 
+constexpr std::string_view FABRIC_BROWN_ID = "Fabric Brown Texture";
+extern const CreateInfo FABRIC_BROWN_CREATE_INFO;
+
 constexpr std::string_view MEDIEVAL_HOUSE_ID = "Medieval House Texture";
 extern const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO;
 

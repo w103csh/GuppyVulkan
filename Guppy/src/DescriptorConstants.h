@@ -21,6 +21,7 @@ enum class DESCRIPTOR_SET {
     // DEFAULT
     UNIFORM_DEFAULT,
     UNIFORM_CAMERA_ONLY,
+    UNIFORM_DEFCAM_DEFMAT_MX4,
     UNIFORM_CAM_MATOBJ3D,
     UNIFORM_OBJ3D,
     SAMPLER_DEFAULT,
@@ -66,6 +67,8 @@ enum class DESCRIPTOR_SET {
     UNIFORM_PRTCL_FOUNTAIN,
     PRTCL_EULER,
     PRTCL_ATTRACTOR,
+    PRTCL_CLOTH,
+    PRTCL_CLOTH_NORM,
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 
@@ -118,11 +121,16 @@ struct GetDescriptorTypeString {
 };
 struct GetVkBufferUsage {
     template <typename T> VkBufferUsageFlagBits operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
-    VkBufferUsageFlagBits operator()(const UNIFORM&                 ) const { return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; }
-    VkBufferUsageFlagBits operator()(const UNIFORM_DYNAMIC&         ) const { return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; }
-    VkBufferUsageFlagBits operator()(const STORAGE_IMAGE&           ) const { return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; }
-    VkBufferUsageFlagBits operator()(const STORAGE_BUFFER&          ) const { return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; }
-    VkBufferUsageFlagBits operator()(const STORAGE_BUFFER_DYNAMIC   ) const { return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; }
+    VkBufferUsageFlagBits operator()(const UNIFORM&                     ) const { return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; }
+    VkBufferUsageFlagBits operator()(const UNIFORM_DYNAMIC&             ) const { return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; }
+    VkBufferUsageFlagBits operator()(const STORAGE_IMAGE&               ) const { return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; }
+    VkBufferUsageFlagBits operator()(const STORAGE_BUFFER&              ) const { return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; }
+    VkBufferUsageFlagBits operator()(const STORAGE_BUFFER_DYNAMIC& type ) const {
+        switch (type) {
+            case STORAGE_BUFFER_DYNAMIC::VERTEX: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
+            default: return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+        }
+    }
 };
 struct GetVkDescriptorType {
     template <typename T> VkDescriptorType operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
@@ -137,6 +145,12 @@ struct GetVkDescriptorType {
 struct GetVkMemoryProperty {
     template <typename T> VkMemoryPropertyFlagBits operator()(const T& type) const {
         return VkMemoryPropertyFlagBits(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+    }
+    VkMemoryPropertyFlagBits operator()(const STORAGE_BUFFER_DYNAMIC& type) const {
+        switch (type) {
+            case STORAGE_BUFFER_DYNAMIC::VERTEX: return VkMemoryPropertyFlagBits(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            default: return VkMemoryPropertyFlagBits(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+        }
     }
 };
 struct HasOffsets {
@@ -183,6 +197,8 @@ struct HassPerFramebufferData {
         switch (type) {
             case UNIFORM_DYNAMIC::PRTCL_FOUNTAIN:
             case UNIFORM_DYNAMIC::PRTCL_ATTRACTOR:
+            case UNIFORM_DYNAMIC::PRTCL_CLOTH:
+            case UNIFORM_DYNAMIC::MATRIX_4:
                 return true;
             default:
                 return false;
@@ -356,6 +372,7 @@ using textReplaceTuples = std::vector<textReplaceTuple>;
 namespace Default {
 extern const CreateInfo UNIFORM_CREATE_INFO;
 extern const CreateInfo UNIFORM_CAMERA_ONLY_CREATE_INFO;
+extern const CreateInfo UNIFORM_DEFCAM_DEFMAT_MX4;
 extern const CreateInfo UNIFORM_CAM_MATOBJ3D_CREATE_INFO;
 extern const CreateInfo UNIFORM_OBJ3D_CREATE_INFO;
 extern const CreateInfo SAMPLER_CREATE_INFO;

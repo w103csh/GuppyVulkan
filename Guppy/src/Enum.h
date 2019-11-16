@@ -113,6 +113,8 @@ enum class INPUT_ACTION {
 };
 
 enum class MESH {
+    DONT_CARE = -1,
+    //
     COLOR = 0,
     LINE,
     TEXTURE,
@@ -165,10 +167,12 @@ enum class STORAGE_BUFFER {
 
 enum class STORAGE_BUFFER_DYNAMIC {
     PRTCL_EULER,
-    PRTCL_POSTITION,
+    PRTCL_POSITION,
     PRTCL_VELOCITY,
+    PRTCL_NORMAL,
     //
     DONT_CARE,
+    VERTEX,  // Buffer usage only
 };
 
 enum class UNIFORM {
@@ -201,8 +205,12 @@ enum class UNIFORM_DYNAMIC {
     MATERIAL_DEFAULT,
     MATERIAL_PBR,
     MATERIAL_OBJ3D,
+    // PARTICLE
     PRTCL_FOUNTAIN,
     PRTCL_ATTRACTOR,
+    PRTCL_CLOTH,
+    //
+    MATRIX_4,
     //
     DONT_CARE,
 };
