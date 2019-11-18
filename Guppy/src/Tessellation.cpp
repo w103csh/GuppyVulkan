@@ -10,8 +10,8 @@ namespace Tessellation {
 
 Default::Base::Base(const Buffer::Info&& info, DATA* pData)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Buffer::DataItem<DATA>(pData),
-      Descriptor::Base(UNIFORM::TESSELLATION_DEFAULT) {
+      Descriptor::Base(UNIFORM::TESSELLATION_DEFAULT),
+      Buffer::DataItem<DATA>(pData) {
     dirty = true;
 }
 

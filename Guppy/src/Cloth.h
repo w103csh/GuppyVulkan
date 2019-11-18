@@ -1,17 +1,19 @@
 #ifndef CLOTH_H
 #define CLOTH_H
 
+#include <array>
 #include <glm/glm.hpp>
 #include <memory>
-#include <vector>
 
 #include "ConstantsAll.h"
-#include "Geometry.h"
-#include "Mesh.h"
 #include "Obj3dDrawInst.h"
 #include "ParticleBuffer.h"
+#include "Pipeline.h"
 #include "Plane.h"
-#include "Storage.h"
+
+// clang-format off
+namespace Storage { namespace Vector4 { class Base; } }
+// clang-format on
 
 namespace Particle {
 namespace Cloth {
@@ -53,7 +55,7 @@ struct DATA {
     // rem 4
 };
 
-struct CreateInfo : public Buffer::CreateInfo {
+struct CreateInfo : Buffer::CreateInfo {
     glm::vec3 gravity{0.0f, -10.0f, 0.0f};
     float springK = 2000.0f;
     float mass = 0.1f;
@@ -65,7 +67,7 @@ class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA
    public:
     Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo);
 
-    void update(const float time, const float elapsed, const uint32_t frameIndex) override;
+    void updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) override;
 
    private:
     std::array<float, 3> deltas_;

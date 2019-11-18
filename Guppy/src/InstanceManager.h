@@ -34,6 +34,7 @@ class Manager : public Buffer::Manager::Base<TBase, TDerived, std::shared_ptr> {
               static_cast<VkMemoryPropertyFlagBits>(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT |
                                                     VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
                                                     VK_MEMORY_PROPERTY_HOST_COHERENT_BIT)) {}
+    virtual ~Manager() = default;
 
     const DESCRIPTOR DESCRIPTOR_TYPE;
 

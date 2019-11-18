@@ -79,7 +79,7 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shaderType, std::vector<const char *>
     for (const auto &pShader : pShaders) glsls.push_back(std::string(pShader));
 
     mvk::GLSLToSPIRVConverter glslConverter;
-    glslConverter.setGLSL(glsls);
+    glslConverter.setGLSLs(glsls);
     bool wasConverted = glslConverter.convert(shaderStage, false, false);
     if (wasConverted) {
         spirv = glslConverter.getSPIRV();

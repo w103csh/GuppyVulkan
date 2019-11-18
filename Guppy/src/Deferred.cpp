@@ -210,8 +210,8 @@ namespace Deferred {
 
 SSAO::SSAO(const Buffer::Info&& info, DATA* pData)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-      Buffer::DataItem<DATA>(pData),
-      Descriptor::Base(UNIFORM::DEFERRED_SSAO) {}
+      Descriptor::Base(UNIFORM::DEFERRED_SSAO),
+      Buffer::DataItem<DATA>(pData) {}
 
 void SSAO::init() {
     for (int i = 0; i < KERNEL_SIZE; i++) {

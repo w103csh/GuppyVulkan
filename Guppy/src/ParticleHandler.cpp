@@ -14,8 +14,8 @@ constexpr uint32_t NUM_PARTICLES_BLUEWATER = 8000;
 constexpr uint32_t NUM_PARTICLES_TORUS = 64;
 constexpr uint32_t NUM_PARTICLES_FIRE = 2000;
 constexpr uint32_t NUM_PARTICLES_SMOKE = 1000;
-constexpr glm::uvec3 NUM_PARTICLES_ATTR{50, 50, 50};
-constexpr uint32_t NUM_PARTICLES_ATTR_TOTAL = NUM_PARTICLES_ATTR.x * NUM_PARTICLES_ATTR.y * NUM_PARTICLES_ATTR.z;
+const glm::uvec3 NUM_PARTICLES_ATTR{50, 50, 50};
+const uint32_t NUM_PARTICLES_ATTR_TOTAL = NUM_PARTICLES_ATTR.x * NUM_PARTICLES_ATTR.y * NUM_PARTICLES_ATTR.z;
 }  // namespace
 
 Particle::Handler::Handler(Game* pGame)
@@ -75,7 +75,7 @@ void Particle::Handler::frame() {
     // WAVE
     {
         auto& wave = uniformHandler().uniWaveMgr().getTypedItem(0);
-        wave.update(shell().getCurrentTime<float>(), shell().getElapsedTime<float>(), frameIndex);
+        wave.updatePerFrame(shell().getCurrentTime<float>(), shell().getElapsedTime<float>(), frameIndex);
         uniformHandler().update(wave, static_cast<int>(frameIndex));
     }
 

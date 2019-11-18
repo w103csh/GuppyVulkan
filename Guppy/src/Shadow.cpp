@@ -115,8 +115,8 @@ namespace Shadow {
 
 Base::Base(const Buffer::Info&& info, DATA* pData)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Buffer::DataItem<DATA>(pData),
-      Descriptor::Base(UNIFORM::SHADOW_DATA) {
+      Descriptor::Base(UNIFORM::SHADOW_DATA),
+      Buffer::DataItem<DATA>(pData) {
     pData_->data[0] = static_cast<float>(OFFSET_WIDTH);
     pData_->data[1] = static_cast<float>(OFFSET_HEIGHT);
     pData_->data[2] = static_cast<float>(OFFSET_DEPTH);
@@ -132,8 +132,8 @@ namespace Shadow {
 
 Positional::Positional(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Buffer::PerFramebufferDataItem<DATA>(pData),
       Descriptor::Base(UNIFORM::LIGHT_POSITIONAL_SHADOW),
+      Buffer::PerFramebufferDataItem<DATA>(pData),
       proj_(pCreateInfo->proj) {
     update(pCreateInfo->mainCameraSpaceToWorldSpace);
 }

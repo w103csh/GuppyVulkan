@@ -89,12 +89,12 @@ namespace Particle {
 namespace Wave {
 Base::Base(const Buffer::Info&& info, DATA* pData, const Buffer::CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-      Buffer::PerFramebufferDataItem<DATA>(pData),
-      Descriptor::Base(UNIFORM::PRTCL_WAVE) {
+      Descriptor::Base(UNIFORM::PRTCL_WAVE),
+      Buffer::PerFramebufferDataItem<DATA>(pData) {
     setData();
 }
 
-void Base::update(const float time, const float, const uint32_t frameIndex) {
+void Base::updatePerFrame(const float time, const float, const uint32_t frameIndex) {
     data_.time = time;
     setData(frameIndex);
 }
@@ -113,8 +113,8 @@ namespace Fountain {
 
 Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Buffer::PerFramebufferDataItem<DATA>(pData),
       Descriptor::Base(UNIFORM_DYNAMIC::PRTCL_FOUNTAIN),
+      Buffer::PerFramebufferDataItem<DATA>(pData),
       INSTANCE_TYPE(pCreateInfo->type) {
     data_.acceleration = pCreateInfo->acceleration;
     data_.lifespan = pCreateInfo->lifespan;
@@ -127,7 +127,7 @@ Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo
     setData();
 }
 
-void Base::update(const float time, const float elapsed, const uint32_t frameIndex) {
+void Base::updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) {
     switch (INSTANCE_TYPE) {
         case INSTANCE::DEFAULT: {
             if (data_.time < 0.0) {
@@ -161,8 +161,8 @@ namespace Attractor {
 
 Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Buffer::PerFramebufferDataItem<DATA>(pData),
-      Descriptor::Base(UNIFORM_DYNAMIC::PRTCL_ATTRACTOR) {
+      Descriptor::Base(UNIFORM_DYNAMIC::PRTCL_ATTRACTOR),
+      Buffer::PerFramebufferDataItem<DATA>(pData) {
     data_.attractorPosition0 = pCreateInfo->attractorPosition0;
     data_.gravity0 = pCreateInfo->gravity0;
     data_.attractorPosition1 = pCreateInfo->attractorPosition1;
@@ -172,7 +172,7 @@ Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo
     data_.maxDistance = pCreateInfo->maxDistance;
 }
 
-void Base::update(const float time, const float elapsed, const uint32_t frameIndex) {
+void Base::updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) {
     data_.delta = elapsed;
     setData(frameIndex);
 }
