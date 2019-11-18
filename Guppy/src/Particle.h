@@ -64,7 +64,7 @@ struct DATA {
 class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
    public:
     Base(const Buffer::Info&& info, DATA* pData, const Buffer::CreateInfo* pCreateInfo);
-    void update(const float time, const float elapsed, const uint32_t frameIndex) override;
+    void updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) override;
 };
 }  // namespace Wave
 
@@ -116,7 +116,7 @@ class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA
     const INSTANCE INSTANCE_TYPE;
 
     // Descriptor::Base
-    void update(const float time, const float elapsed, const uint32_t frameIndex) override;
+    void updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) override;
 
     void reset();
 
@@ -153,7 +153,7 @@ class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA
    public:
     Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo);
 
-    void update(const float time, const float elapsed, const uint32_t frameIndex) override;
+    void updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) override;
 };
 
 }  // namespace Attractor

@@ -320,15 +320,16 @@ void Shell::createDev() {
     devInfo.ppEnabledExtensionNames = enabledExtensionNames.data();
 
     // Physical device extension featrues (For some reason using the name above doesn't always work)
-    void **pNext = &(const_cast<void *>(devInfo.pNext));
+    // void **pNext = &(const_cast<void *>(devInfo.pNext));
     if (ctx_.vertexAttributeDivisorEnabled) {
         assert(false);  // Never tested. Was using the name above sufficient?
-        *pNext = &phyDevProps.featVertAttrDiv;
-        pNext = &phyDevProps.featVertAttrDiv.pNext;
+        // *pNext = &phyDevProps.featVertAttrDiv;
+        // pNext = &phyDevProps.featVertAttrDiv.pNext;
     }
     if (ctx_.transformFeedbackEnabled) {
-        *pNext = &phyDevProps.featTransFback;
-        pNext = &phyDevProps.featTransFback.pNext;
+        assert(false);
+        // *pNext = &phyDevProps.featTransFback;
+        // pNext = &phyDevProps.featTransFback.pNext;
     }
 
     vk::assert_success(vkCreateDevice(ctx_.physicalDev, &devInfo, nullptr, &ctx_.dev));
@@ -731,7 +732,7 @@ void Shell::enumeratePhysicalDevs(uint32_t physicalDevCount) {
 
         // This could all be faster, but I doubt it will make a significant difference at any point.
         for (const auto &extInfo : deviceExtensionInfo_) {
-            auto &it =
+            auto it =
                 std::find_if(props.extensionProperties.begin(), props.extensionProperties.end(),
                              [&extInfo](const auto &extProp) { return strcmp(extInfo.name, extProp.extensionName) == 0; });
 

@@ -2,9 +2,8 @@
 #include "Cloth.h"
 
 #include "Deferred.h"
-#include "Helpers.h"
-#include "ParticleConstants.h"
 #include "Random.h"
+#include "Storage.h"
 // HANDLERS
 #include "DescriptorHandler.h"
 #include "ParticleHandler.h"
@@ -41,8 +40,8 @@ namespace Cloth {
 
 Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Buffer::PerFramebufferDataItem<DATA>(pData),
       Descriptor::Base(UNIFORM_DYNAMIC::PRTCL_CLOTH),
+      Buffer::PerFramebufferDataItem<DATA>(pData),
       deltas_{
           ::Particle::Cloth::INTERGRATION_STEP_PER_FRAME_IDEAL,
           ::Particle::Cloth::INTERGRATION_STEP_PER_FRAME_IDEAL,
@@ -65,7 +64,7 @@ Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo
 }
 
 //#include <iostream>
-void Base::update(const float time, const float elapsed, const uint32_t frameIndex) {
+void Base::updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) {
     // delta
     data_.delta = ::Particle::Cloth::INTERGRATION_STEP_PER_FRAME_IDEAL;
     // data_.delta = elapsed * ::Particle::Cloth::INTEGRATION_STEP_PER_FRAME_FACTOR;

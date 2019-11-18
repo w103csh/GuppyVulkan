@@ -136,7 +136,6 @@ set(SOURCE
     Particle.h
     ParticleBuffer.cpp
     ParticleBuffer.h
-    ParticleConstants.cpp
     ParticleConstants.h
     ParticleHandler.cpp
     ParticleHandler.h

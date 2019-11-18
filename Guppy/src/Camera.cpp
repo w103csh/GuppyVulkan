@@ -8,8 +8,8 @@
 
 Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData, const Perspective::CreateInfo *pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Buffer::PerFramebufferDataItem<DATA>(pData),
       Descriptor::Base(UNIFORM::CAMERA_PERSPECTIVE_DEFAULT),
+      Buffer::PerFramebufferDataItem<DATA>(pData),
       model_{1.0f},
       aspect_(pCreateInfo->aspect),
       far_(pCreateInfo->f),

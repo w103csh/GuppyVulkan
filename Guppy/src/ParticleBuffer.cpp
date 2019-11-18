@@ -140,10 +140,10 @@ Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCr
       texCoordRes_{},
       pDescriptors_(pDescriptors),
       descInstOffset_(BAD_OFFSET),
-      offset_(offset),
-      pLdgRes_(nullptr),
       pMaterial_(pMaterial),
-      descTimeOffset_(BAD_OFFSET) {
+      offset_(offset),
+      descTimeOffset_(BAD_OFFSET),
+      pLdgRes_(nullptr) {
     assert(!(COMPUTE_PIPELINE_TYPES.empty() && GRAPHICS_PIPELINE_TYPE == PIPELINE::ALL_ENUM));
 
     // TODO: better validation on these types
@@ -174,7 +174,7 @@ void Base::toggle() { paused_ = !paused_; }
 
 void Base::update(const float time, const float elapsed, const uint32_t frameIndex) {
     if (paused_) return;
-    getTimedUniform()->update(time, elapsed, frameIndex);
+    getTimedUniform()->updatePerFrame(time, elapsed, frameIndex);
     handler().update(getTimedUniform(), frameIndex);
 }
 
@@ -268,9 +268,10 @@ const std::vector<Descriptor::Base*> Base::getSDynamicDataItems(const PIPELINE p
                     // MATERIAL
                     pDescs.push_back(pMaterial_.get());
                 } else {
-                    auto it = std::find_if(pDescriptors_.begin(), pDescriptors_.end(), [&bindingInfo](const auto& pDesc) {
-                        return bindingInfo.descType == pDesc->getDescriptorType();
-                    });
+                    auto it = std::find_if(pDescriptors_.begin(), pDescriptors_.end(),
+                                           [& bindingInfo = bindingInfo](const auto& pDesc) {
+                                               return pDesc->getDescriptorType() == bindingInfo.descType;
+                                           });
                     if (it == pDescriptors_.end()) {
                         assert(false && "No data found for the descriptor type");
                         exit(EXIT_FAILURE);
@@ -354,9 +355,9 @@ void Fountain::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindDa
 
 void Fountain::update(const float time, const float elapsed, const uint32_t frameIndex) {
     if (paused_) return;
-    getTimedUniform()->update(time, elapsed, frameIndex);
+    getTimedUniform()->updatePerFrame(time, elapsed, frameIndex);
     auto lastTimeOfBirth = std::static_pointer_cast<Particle::Fountain::Base>(pInst_)->getLastTimeOfBirth();
-    auto& pTimedUniform = std::static_pointer_cast<UniformDynamic::Particle::Fountain::Base>(getTimedUniform());
+    const auto& pTimedUniform = std::static_pointer_cast<UniformDynamic::Particle::Fountain::Base>(getTimedUniform());
     if (pTimedUniform->getDelta() > (lastTimeOfBirth + pTimedUniform->getLifespan() + 0.0001f)) {
         pTimedUniform->reset();
         paused_ = true;
