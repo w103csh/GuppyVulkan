@@ -10,6 +10,7 @@
 #include "Descriptor.h"
 #include "DescriptorManager.h"
 #include "Game.h"
+#include "HeightFieldFluid.h"
 #include "Instance.h"
 #include "InstanceManager.h"
 #include "MaterialHandler.h"  // This is sketchy...
@@ -62,6 +63,8 @@ class Handler : public Game::Handler {
             prtclClthMgr.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
         } else if (pUniform->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::MATRIX_4}) {
             mat4Mgr.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
+        } else if (pUniform->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::HFF}) {
+            hffMgr.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
         } else {
             assert(false && "Unhandled uniform type");
             exit(EXIT_FAILURE);
@@ -78,6 +81,7 @@ class Handler : public Game::Handler {
     Descriptor::Manager<Descriptor::Base, UniformDynamic::Particle::Fountain::Base, std::shared_ptr> prtclFntnMgr;
     Descriptor::Manager<Descriptor::Base, UniformDynamic::Matrix4::Base, std::shared_ptr> mat4Mgr;
     Descriptor::Manager<Descriptor::Base, Storage::Vector4::Base, std::shared_ptr> vec4Mgr;
+    Descriptor::Manager<Descriptor::Base, UniformDynamic::HeightFieldFluid::Simulation::Base, std::shared_ptr> hffMgr;
 
    private:
     void reset() override;

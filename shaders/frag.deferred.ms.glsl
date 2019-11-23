@@ -45,6 +45,40 @@ vec4 resolve(const in subpassInputMS attachment) {
 	return result / float(NUM_SAMPLES);
 }
 
+
+layout(set=_DS_UNI_DFR_COMB, binding=5) uniform CameraDefaultPerspective {
+    mat4 view;
+    mat4 projection;
+    mat4 viewProjection;
+    vec3 worldPosition;
+} camera;
+const vec3 GLOBAL_LIGHT_s = normalize(vec3(0,1,1));
+const vec3 GLOBAL_LIGHT_L = vec3(0.6);
+const vec3 GLOBAL_LIGHT_La = vec3(0.05);
+vec3 blinnPhongDirectional(
+    const in vec3 s,            // direction to the light
+    const in vec3 norm,
+    const in vec3 v,
+    const in vec3 L,            // diffuse and specular light intensity
+    const in vec3 diff,
+    const in vec3 La,           // ambient light intesity
+    const in vec3 amb,
+    const in vec3 spec,
+    const in float shininess
+) {
+    vec3 Ka = La * amb;
+    vec3 Kd = vec3(0.0), Ks = vec3(0.0);
+    float sDotN = max(dot(s, norm), 0.0);
+    Kd = diff * sDotN;
+    if(sDotN > 0.0) {
+        // "h" is the halfway vector between "v" & "s" (Blinn)
+        vec3 h = normalize(v + s);
+        Ks = spec * pow(max(dot(h, norm), 0.0), shininess);
+    }
+
+    return La + L * (Kd + Ks);
+}
+
 #if _U_LGT_DEF_POS
 layout(set=_DS_UNI_DFR_COMB, binding=1) uniform LightDefaultPositional {
     vec3 position;  // Light position in eye coords.
@@ -346,6 +380,22 @@ void main() {
         return;
     }
 
+    vec3 globalLightNorm = normalize(mat3(camera.view) * GLOBAL_LIGHT_s);
+    outColor = vec4(
+        blinnPhongDirectional(
+           globalLightNorm,
+            norm.xyz,
+            v,
+            GLOBAL_LIGHT_L,
+            diff.rgb,
+            GLOBAL_LIGHT_La,
+            diff.rgb, // amb.rgb,
+            spec.rgb,
+            norm.w
+        ),
+        alpha
+    );
+
 #if _U_LGT_SHDW_POS
 
     // vec3 Ka = 0.9 * amb.rgb; // amb has no color
@@ -360,11 +410,11 @@ void main() {
         norm.w
     );
 
-    outColor = vec4((Ka + KdKs), alpha);
+    outColor += vec4((Ka + KdKs), alpha);
 
 #else
 
-    outColor = vec4(
+    outColor += vec4(
         blinnPhongPositional(
             pos.xyz,
             norm.xyz,

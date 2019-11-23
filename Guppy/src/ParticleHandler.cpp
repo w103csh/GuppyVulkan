@@ -1,7 +1,6 @@
 
 #include "ParticleHandler.h"
 
-#include "Cloth.h"
 #include "Shell.h"
 // HANDLER
 #include "MeshHandler.h"
@@ -25,6 +24,7 @@ Particle::Handler::Handler(Game* pGame)
       prtclFntnMgr{"Particle Fountain", UNIFORM_DYNAMIC::PRTCL_FOUNTAIN, 30, true, "_UD_PRTCL_ATTR"},
       mat4Mgr{"Matrix4 Data", UNIFORM_DYNAMIC::MATRIX_4, 30, true, "_UD_MAT4"},
       vec4Mgr{"Particle Vector4 Data", STORAGE_BUFFER_DYNAMIC::VERTEX, 1000000, false, "_UD_VEC4"},
+      hffMgr{"Height Field Fluid Data", UNIFORM_DYNAMIC::HFF, 3, true, "_UD_HFF"},
       doUpdate_(false),
       instFntnMgr_{"Particle Fountain Instance Data", 8000 * 5, false},
       pInstFntnEulerMgr_(nullptr) {}
@@ -37,6 +37,7 @@ void Particle::Handler::init() {
     prtclFntnMgr.init(shell().context());
     mat4Mgr.init(shell().context());
     vec4Mgr.init(shell().context());
+    hffMgr.init(shell().context());
     instFntnMgr_.init(shell().context());
     if (hasInstFntnEulerMgr()) pInstFntnEulerMgr_->init(shell().context());
 
@@ -114,7 +115,45 @@ void Particle::Handler::create() {
         uniformHandler().uniWaveMgr().insert(dev, &bufferInfo);
     }
 
-    bool suppress = false;
+    bool suppress = true;
+
+    // WATER
+    if (!suppress || true) {
+        pDescriptors.clear();
+
+        HeightFieldFluid::Info info = {100, 100, 100.0f};
+
+        // BUFFER
+        Buffer::HeightFieldFluid::CreateInfo buffHFFInfo = {};
+        buffHFFInfo.name = "Particle Cloth Buffer";
+        buffHFFInfo.localSize = {4, 4, 1};
+        buffHFFInfo.computePipelineTypes = {PIPELINE::HFF_COMPUTE};
+        buffHFFInfo.graphicsPipelineType = PIPELINE::HFF_CLMN_DEFERRED;
+        buffHFFInfo.info = info;
+
+        // HEIGHT FIELD FLUID
+        UniformDynamic::HeightFieldFluid::Simulation::CreateInfo hffInfo = {};
+        assert(shell().context().imageCount == 3);  // Potential imageCount problem
+        hffInfo.dataCount = shell().context().imageCount;
+        hffInfo.info = info;
+        hffInfo.c = 3.0f;
+        hffInfo.maxSlope = 4.0f;
+        hffMgr.insert(shell().context().dev, &hffInfo);
+        pDescriptors.push_back(hffMgr.pItems.back());
+
+        // MATERIAL
+        matInfo = {};
+        matInfo.color = COLOR_BLUE;
+        matInfo.shininess = 10;
+        auto& pMaterial = materialHandler().makeMaterial(&matInfo);
+
+        // MODELS
+        mdlInfo.data = glm::mat4(1.0f);
+        mat4Mgr.insert(shell().context().dev, &mdlInfo);
+        pDescriptors.push_back(mat4Mgr.pItems.back());
+
+        make<Buffer::HeightFieldFluid::Base>(pBuffers_, &buffHFFInfo, pMaterial, pDescriptors);
+    }
 
     // FOUNTAIN
     {
@@ -206,7 +245,7 @@ void Particle::Handler::create() {
                 make<Buffer::Euler::Torus>(pBuffers_, &partBuffEulerInfo, pMaterial, pDescriptors);
             }
             // FIRE
-            if (!suppress || true) {
+            if (!suppress || false) {
                 pDescriptors.clear();
 
                 // BUFFER
@@ -347,8 +386,8 @@ void Particle::Handler::create() {
 
         // PLANE INFO
         Mesh::Plane::Info planeInfo = {};
-        planeInfo.horizontalDivisions = 40;
-        planeInfo.verticalDivisions = 40;
+        planeInfo.horzDivs = 40;
+        planeInfo.vertDivs = 40;
         planeInfo.width = 4.0f;
         planeInfo.height = 3.0f;
 
@@ -360,6 +399,7 @@ void Particle::Handler::create() {
         clothInfo.gravity = {-20.0f, -10.0f, 2.0f};
         // clothInfo.springK = 1000;
         prtclClthMgr.insert(shell().context().dev, &clothInfo);
+        pDescriptors.push_back(prtclClthMgr.pItems.back());
 
         // INSTANCE
         Instance::Obj3d::CreateInfo instInfo = {};
@@ -381,15 +421,16 @@ void Particle::Handler::create() {
         prtclClothInfo.planeInfo = planeInfo;
         // prtclClothInfo.geometryInfo.doubleSided = true;
 
-        auto& pBuffer =
-            make<Buffer::Cloth::Base>(pBuffers_, &prtclClothInfo, pMaterial, {prtclClthMgr.pItems.back()}, pInstanceData);
+        make<Buffer::Cloth::Base>(pBuffers_, &prtclClothInfo, pMaterial, pDescriptors, pInstanceData);
     }
 
     // TODO: This is too simple.
     doUpdate_ = true;
 }
 
-void Particle::Handler::startFountain(const uint32_t offset) { pBuffers_.at(offset)->toggle(); }
+void Particle::Handler::startFountain(const uint32_t offset) {
+    if (offset < pBuffers_.size()) pBuffers_[offset]->toggle();
+}
 
 void Particle::Handler::recordDraw(const PASS passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                                    const VkCommandBuffer& cmd, const uint8_t frameIndex) {
@@ -444,6 +485,7 @@ void Particle::Handler::reset() {
     prtclClthMgr.destroy(shell().context().dev);
     prtclFntnMgr.destroy(shell().context().dev);
     mat4Mgr.destroy(shell().context().dev);
+    hffMgr.destroy(shell().context().dev);
     // INSTANCE
     instFntnMgr_.destroy(shell().context().dev);
     vec4Mgr.destroy(shell().context().dev);

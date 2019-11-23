@@ -643,4 +643,49 @@ void recordBarriers(const BarrierResource &resource, const VkCommandBuffer &cmd,
     );
 }
 
+void createBuffer(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps, const bool debugMarkersEnabled,
+                  const VkCommandBuffer &cmd, const VkBufferUsageFlagBits usage, const VkDeviceSize size,
+                  const std::string &&name, BufferResource &stgRes, BufferResource &buffRes, const void *data,
+                  const bool mappable) {
+    // STAGING RESOURCE
+    buffRes.memoryRequirements.size = helpers::createBuffer(
+        dev, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memProps, stgRes.buffer, stgRes.memory);
+
+    // FILL STAGING BUFFER ON DEVICE
+    void *pData;
+    vk::assert_success(vkMapMemory(dev, stgRes.memory, 0, buffRes.memoryRequirements.size, 0, &pData));
+    /*
+        You can now simply memcpy the vertex data to the mapped memory and unmap it again using vkUnmapMemory.
+        Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
+        of caching. It is also possible that writes to the buffer are not visible in the mapped memory yet. There
+        are two ways to deal with that problem:
+            - Use a memory heap that is host coherent, indicated with VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
+            - Call vkFlushMappedMemoryRanges to after writing to the mapped memory, and call
+              vkInvalidateMappedMemoryRanges before reading from the mapped memory
+        We went for the first approach, which ensures that the mapped memory always matches the contents of the
+        allocated memory. Do keep in mind that this may lead to slightly worse performance than explicit flushing,
+        but we'll see why that doesn't matter in the next chapter.
+    */
+    memcpy(pData, data, static_cast<size_t>(size));
+    vkUnmapMemory(dev, stgRes.memory);
+
+    // FAST VERTEX BUFFER
+    VkMemoryPropertyFlags memPropFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    if (mappable) memPropFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    helpers::createBuffer(dev, size,
+                          // TODO: probably don't need to check memory requirements again
+                          usage, memPropFlags, memProps, buffRes.buffer, buffRes.memory);
+
+    // COPY FROM STAGING TO FAST
+    helpers::copyBuffer(cmd, stgRes.buffer, buffRes.buffer, buffRes.memoryRequirements.size);
+
+    // Name the buffers for debugging
+    if (debugMarkersEnabled) {
+        std::string markerName = name + " buffer";
+        ext::DebugMarkerSetObjectName(dev, (uint64_t)buffRes.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
+                                      markerName.c_str());
+    }
+}
+
 }  // namespace helpers

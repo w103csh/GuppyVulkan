@@ -173,7 +173,8 @@ CreateInfo MakeSSAORandRotationTex() {
     uint32_t size = 4;
     uint32_t channels = 4;  // VK_FORMAT_R16G16B16A16_SFLOAT
 
-    float* pData = new float[static_cast<size_t>(channels) * static_cast<size_t>(size) * static_cast<size_t>(size)]();
+    float* pData = (float*)malloc(static_cast<size_t>(channels) * static_cast<size_t>(size) * static_cast<size_t>(size) *
+                                  sizeof(float));
     for (uint32_t i = 0; i < size * size; i++) {
         glm::vec3 v = Random::inst().uniformCircle();
         pData[i * channels + 0] = v.x;
@@ -251,6 +252,7 @@ const CreateInfo COMBINE_UNIFORM_CREATE_INFO = {
         {{2, 0}, {UNIFORM::LIGHT_SPOT_DEFAULT}},
         {{3, 0}, {UNIFORM::LIGHT_POSITIONAL_SHADOW}},
         {{4, 0}, {UNIFORM::SHADOW_DATA}},
+        {{5, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
     },
 };
 
@@ -349,7 +351,7 @@ const CreateInfo FRAG_CREATE_INFO = {
 };
 
 const CreateInfo FRAG_MS_CREATE_INFO = {
-    SHADER::DEFERRED_FRAG,
+    SHADER::DEFERRED_MS_FRAG,
     "Deferred Multi-Sample Fragment Shader",
     "frag.deferred.ms.glsl",
     VK_SHADER_STAGE_FRAGMENT_BIT,

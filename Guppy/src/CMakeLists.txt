@@ -25,6 +25,8 @@ set(SOURCE
     Guppy.cpp
     Guppy.h
     Handlee.h
+    HeightFieldFluid.cpp
+    HeightFieldFluid.h
     Helpers.cpp
     Helpers.h
     InputHandler.cpp

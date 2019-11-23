@@ -306,6 +306,11 @@ void globalDebugBarrierWriteToRead(BarrierResource &resource);
 void recordBarriers(const BarrierResource &resource, const VkCommandBuffer &cmd, const VkPipelineStageFlags srcStageMask,
                     const VkPipelineStageFlags dstStageMask, const VkDependencyFlags dependencyFlags = 0);
 
+void createBuffer(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps, const bool debugMarkersEnabled,
+                  const VkCommandBuffer &cmd, const VkBufferUsageFlagBits usage, const VkDeviceSize size,
+                  const std::string &&name, BufferResource &stgRes, BufferResource &buffRes, const void *data,
+                  const bool mappable = false);
+
 }  // namespace helpers
 
 #endif  // !HELPERS_H

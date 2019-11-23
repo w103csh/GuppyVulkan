@@ -211,6 +211,8 @@ enum class UNIFORM_DYNAMIC {
     PRTCL_CLOTH,
     //
     MATRIX_4,
+    // WATER
+    HFF,
     //
     DONT_CARE,
 };

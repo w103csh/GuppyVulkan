@@ -10,6 +10,7 @@
 #include "Cloth.h"
 #include "Deferred.h"
 #include "Geometry.h"
+#include "HeightFieldFluid.h"
 #include "Mesh.h"
 #include "Parallax.h"
 #include "Particle.h"
@@ -73,6 +74,8 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::PRTCL_ATTRACTOR:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::ATTRACTOR_CREATE_INFO)); break;
             case DESCRIPTOR_SET::PRTCL_CLOTH:                               pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::CLOTH_CREATE_INFO)); break;
             case DESCRIPTOR_SET::PRTCL_CLOTH_NORM:                          pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::CLOTH_NORM_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::HFF:                                       pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::HFF_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::HFF_CLMN:                                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::HFF_CLMN_CREATE_INFO)); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on

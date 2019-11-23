@@ -187,7 +187,7 @@ void Sampler::Base::determineImageTypes() {
                 break;
             case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
                 // Note: There are versions of 2D_ARRAY that can have a depth >= 1, but there are
-                // other condition and would result in VK_IMAGE_TYPE_3D.
+                // other conditions and would result in VK_IMAGE_TYPE_3D.
                 assert(extent.width >= 1 && extent.height >= 1 && extent.depth == 1 && arrayLayers >= 1);
                 imageType = VK_IMAGE_TYPE_2D;
                 break;

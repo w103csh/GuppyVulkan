@@ -59,7 +59,7 @@ void Descriptor::Set::Base::update(const uint32_t imageCount) {
                 assert(pTexture->PER_FRAMEBUFFER);
                 bindingInfo.uniqueDataSets = imageCount;
             }
-        } else if (std::visit(Descriptor::HassPerFramebufferData{}, bindingInfo.descType)) {
+        } else if (std::visit(Descriptor::HasPerFramebufferData{}, bindingInfo.descType)) {
             bindingInfo.uniqueDataSets = imageCount;
         }
         // Update the number of sets needed based on the highest number of unique

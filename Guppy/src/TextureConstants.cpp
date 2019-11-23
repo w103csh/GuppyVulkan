@@ -94,7 +94,7 @@ const CreateInfo SKYBOX_CREATE_INFO = {
 };
 
 CreateInfo MakeRandom1dTex(const std::string_view& textureId, const std::string_view& samplerId, const uint32_t bufSize) {
-    float* pData = new float[bufSize];
+    float* pData = (float*)malloc(bufSize * sizeof(float));
 
     for (uint32_t i = 0; i < bufSize; i++) {
         pData[i] = Random::inst().nextFloatZeroToOne();
