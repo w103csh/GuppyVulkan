@@ -211,6 +211,7 @@ void Uniform::Handler::createCameras() {
     {
         createInfo.aspect = static_cast<float>(settings().initial_width) / static_cast<float>(settings().initial_height);
         // createInfo.center = glm::vec3{-0.5f, 2.0f, 1.0f};
+        createInfo.eye = {4.0f, 6.0f, 4.0f};
         camDefPersMgr().insert(dev, &createInfo);
         mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
     }

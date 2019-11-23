@@ -23,8 +23,8 @@ void addFaces(Base* pMesh, const Plane::Info planeInfo, const Mesh::Geometry::In
 }  // namespace
 
 std::vector<Face> Plane::make(const Plane::Info& planeInfo, const Mesh::Geometry::Info& geoInfo) {
-    assert(planeInfo.horizontalDivisions > 0);
-    assert(planeInfo.verticalDivisions > 0);
+    assert(planeInfo.horzDivs > 0);
+    assert(planeInfo.vertDivs > 0);
 
     // position
     float _l = (planeInfo.width / 2 * -1), _r = _l + planeInfo.width;    // edge values
@@ -38,14 +38,14 @@ std::vector<Face> Plane::make(const Plane::Info& planeInfo, const Mesh::Geometry
 
     std::vector<Face> faces;
 
-    for (uint32_t horzDiv = 1; horzDiv <= planeInfo.horizontalDivisions; horzDiv++) {
-        ru = static_cast<float>(horzDiv) / static_cast<float>(planeInfo.horizontalDivisions);
+    for (uint32_t horzDiv = 1; horzDiv <= planeInfo.horzDivs; horzDiv++) {
+        ru = static_cast<float>(horzDiv) / static_cast<float>(planeInfo.horzDivs);
         r = glm::mix(_l, _r, ru);
         tv = 0.0f;
         t = _t;
 
-        for (uint32_t vertDiv = 1; vertDiv <= planeInfo.verticalDivisions; vertDiv++) {
-            bv = static_cast<float>(vertDiv) / static_cast<float>(planeInfo.verticalDivisions);
+        for (uint32_t vertDiv = 1; vertDiv <= planeInfo.vertDivs; vertDiv++) {
+            bv = static_cast<float>(vertDiv) / static_cast<float>(planeInfo.vertDivs);
             b = glm::mix(_t, _b, bv);
 
             // bottom left

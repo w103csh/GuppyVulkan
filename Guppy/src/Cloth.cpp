@@ -56,8 +56,8 @@ Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo
     data_.delta = ::Particle::Cloth::INTERGRATION_STEP_PER_FRAME_IDEAL;
     data_.inverseMass = 1.0f / data_.mass;
     // The algorithm doesn't expect divisions it expects number of row and columns.
-    data_.restLengthHoriz = pCreateInfo->planeInfo.width / pCreateInfo->planeInfo.horizontalDivisions;
-    data_.restLengthVert = pCreateInfo->planeInfo.height / pCreateInfo->planeInfo.verticalDivisions;
+    data_.restLengthHoriz = pCreateInfo->planeInfo.width / pCreateInfo->planeInfo.horzDivs;
+    data_.restLengthVert = pCreateInfo->planeInfo.height / pCreateInfo->planeInfo.vertDivs;
     data_.restLengthDiag =
         sqrtf(data_.restLengthHoriz * data_.restLengthHoriz + data_.restLengthVert * data_.restLengthVert);
     setData();
@@ -222,8 +222,8 @@ Base::Base(Particle::Handler& handler, const index&& offset, const CreateInfo* p
      * The algorithm doesn't expect divisions it expects number of row and columns, but I don't want to change the name of
      * the variable atm. This means that for the simplest shape to be made you need at least two rows and two columns.
      */
-    workgroupSize_.x = pCreateInfo->planeInfo.verticalDivisions;
-    workgroupSize_.y = pCreateInfo->planeInfo.horizontalDivisions;
+    workgroupSize_.x = pCreateInfo->planeInfo.vertDivs;
+    workgroupSize_.y = pCreateInfo->planeInfo.horzDivs;
     assert(workgroupSize_.y > 1 && workgroupSize_.x > 1);
     assert(pCreateInfo->planeInfo.width > 0.0f && pCreateInfo->planeInfo.height > 0.0f);
 
@@ -388,8 +388,7 @@ void Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>&
 }
 
 void Base::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                    const Descriptor::Set::BindData& descSetBindDataX, const VkCommandBuffer& cmd,
-                    const uint8_t frameIndex) const {
+                    const Descriptor::Set::BindData&, const VkCommandBuffer& cmd, const uint8_t frameIndex) const {
     assert(LOCAL_SIZE.z == 1 && workgroupSize_.z == 1);
 
     if (pPipelineBindData->type == PIPELINE::PRTCL_CLOTH_COMPUTE) {

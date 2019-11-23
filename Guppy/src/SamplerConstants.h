@@ -9,6 +9,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Constants.h"
+#include "Types.h"
 
 using stbi_uc = unsigned char;  // <stbi_image.h>
 
@@ -26,7 +27,7 @@ enum class SAMPLER {
 namespace Sampler {
 
 // clang-format off
-using USAGE = enum {
+using USAGE = enum : FlagBits {
     COLOR =         0x00000001,  // DIFFUSE
     HDR_LOG =       0x00000002,
     POSITION =      0x00000004,

@@ -29,7 +29,7 @@ void Scene::Handler::init() {
 
     const auto& ctx = shell().context();
 
-    bool suppress = false;
+    bool suppress = true;
     bool deferred = true;
     bool particles = true;
 
@@ -126,8 +126,8 @@ void Scene::Handler::init() {
                 planeInfo.settings.geometryInfo.doubleSided = true;
                 planeInfo.settings.geometryInfo.transform =
                     helpers::affine(glm::vec3{5.0f, 1.0f, 1.0f}, {4.0f, 2.0f, 2.0f}, -M_PI_2_FLT, CARDINAL_X);
-                planeInfo.planeInfo.horizontalDivisions = 200;
-                planeInfo.planeInfo.verticalDivisions = 1;
+                planeInfo.planeInfo.horzDivs = 200;
+                planeInfo.planeInfo.vertDivs = 1;
                 instObj3dInfo = {};
                 defMatInfo = {};
                 defMatInfo.color = {0.5f, 0.25f, 0.75f};

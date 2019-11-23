@@ -286,7 +286,8 @@ void Texture::Handler::makeTexture(std::shared_ptr<Texture::Base>& pTexture, Sam
          *	can/should use different queues based on staging and things.
          */
         helpers::transitionImageLayout(pTexture->pLdgRes->graphicsCmd, sampler.image, sampler.imgCreateInfo.format,
-                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                       std::visit(Descriptor::GetTextureImageLayout{}, pTexture->DESCRIPTOR_TYPE),
                                        VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
                                        sampler.imgCreateInfo.mipLevels, sampler.imgCreateInfo.arrayLayers);
     }

@@ -146,7 +146,10 @@ void Pipeline::Base::validatePipelineDescriptorSets() {
                             foundTexture = checkTextureStatus(textureIdWithSuffix);
                         } while (foundTexture);
                     }
-                    assert((foundTexture || i > 1) && "Couldn't find texture.");
+                    if (!(foundTexture || i > 1)) {
+                        std::string sMsg = "Could not find texture(s) \"" + textureId + "\" for descriptor set validation";
+                        handler().shell().log(Shell::LogPriority::LOG_WARN, sMsg.c_str());
+                    }
                 }
             }
         }

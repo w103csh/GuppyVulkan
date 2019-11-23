@@ -121,6 +121,7 @@ const Descriptor::Set::BindData& Mesh::Base::getDescriptorSetBindData(const PASS
 void Mesh::Base::loadBuffers() {
     assert(getVertexCount());
 
+    const auto& ctx = handler().shell().context();
     pLdgRes_ = handler().loadingHandler().createLoadingResources();
 
     VkBufferUsageFlagBits vertexUsage =
@@ -128,8 +129,8 @@ void Mesh::Base::loadBuffers() {
 
     // Vertex buffer
     BufferResource stgRes = {};
-    handler().createBuffer(pLdgRes_->transferCmd, vertexUsage, getVertexBufferSize(), NAME + " vertex", stgRes, vertexRes_,
-                           getVertexData(), MAPPABLE);
+    helpers::createBuffer(ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd, vertexUsage,
+                          getVertexBufferSize(), NAME + " vertex", stgRes, vertexRes_, getVertexData(), MAPPABLE);
     pLdgRes_->stgResources.push_back(std::move(stgRes));
 
     VkBufferUsageFlagBits indexUsage =
@@ -138,8 +139,8 @@ void Mesh::Base::loadBuffers() {
     // Index buffer
     if (getIndexCount()) {
         stgRes = {};
-        handler().createBuffer(pLdgRes_->transferCmd, indexUsage, getIndexBufferSize(), NAME + " index", stgRes, indexRes_,
-                               getIndexData(), MAPPABLE);
+        helpers::createBuffer(ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd, indexUsage,
+                              getIndexBufferSize(), NAME + " index", stgRes, indexRes_, getIndexData(), MAPPABLE);
         pLdgRes_->stgResources.push_back(std::move(stgRes));
     }
 
@@ -148,8 +149,9 @@ void Mesh::Base::loadBuffers() {
         // TODO: I should probably either create this buffer or the normal index buffer. If you
         // update this then you should also do this everywhere like "updateBuffers" for example.
         stgRes = {};
-        handler().createBuffer(pLdgRes_->transferCmd, indexUsage, getIndexBufferAdjSize(), NAME + " adjacency index", stgRes,
-                               indexAdjacencyRes_, indicesAdjaceny_.data(), MAPPABLE);
+        helpers::createBuffer(ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd, indexUsage,
+                              getIndexBufferAdjSize(), NAME + " adjacency index", stgRes, indexAdjacencyRes_,
+                              indicesAdjaceny_.data(), MAPPABLE);
         pLdgRes_->stgResources.push_back(std::move(stgRes));
     }
 }

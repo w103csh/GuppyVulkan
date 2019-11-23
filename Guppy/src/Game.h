@@ -148,10 +148,6 @@ class Game {
         virtual ~Handler() = default;
 
         virtual void reset() = 0;
-        // TODO: not sure about this being here...
-        virtual void createBuffer(const VkCommandBuffer &cmd, const VkBufferUsageFlagBits usage, const VkDeviceSize size,
-                                  const std::string &&name, BufferResource &stgRes, BufferResource &buffRes,
-                                  const void *data, const bool mappable = false);
 
         Game *pGame_;
     };

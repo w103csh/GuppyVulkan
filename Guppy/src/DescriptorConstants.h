@@ -69,6 +69,9 @@ enum class DESCRIPTOR_SET {
     PRTCL_ATTRACTOR,
     PRTCL_CLOTH,
     PRTCL_CLOTH_NORM,
+    // WATER
+    HFF,
+    HFF_CLMN,
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 
@@ -170,7 +173,7 @@ struct IsPipelineImage {
     bool operator()(const STORAGE_IMAGE& type) const { return type == STORAGE_IMAGE::PIPELINE; }
     bool operator()(const INPUT_ATTACHMENT&) const { return true; }
 };
-struct HassPerFramebufferData {
+struct HasPerFramebufferData {
     template <typename T> bool operator()(const T&) const { return false; }
     bool operator()(const STORAGE_BUFFER& type) const {
         switch (type) {
@@ -199,6 +202,7 @@ struct HassPerFramebufferData {
             case UNIFORM_DYNAMIC::PRTCL_ATTRACTOR:
             case UNIFORM_DYNAMIC::PRTCL_CLOTH:
             case UNIFORM_DYNAMIC::MATRIX_4:
+            case UNIFORM_DYNAMIC::HFF:
                 return true;
             default:
                 return false;

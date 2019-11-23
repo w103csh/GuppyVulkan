@@ -27,6 +27,7 @@ const CreateInfo DEFERRED_CREATE_INFO = {
 #endif
         PIPELINE::DEFERRED_MRT_LINE,
         PIPELINE::DEFERRED_MRT_COLOR,
+        PIPELINE::HFF_CLMN_DEFERRED,
 #ifndef VK_USE_PLATFORM_MACOS_MVK
         PIPELINE::DEFERRED_MRT_WF_COLOR,
 #endif
@@ -52,6 +53,7 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         PIPELINE::PRTCL_ATTR_COMPUTE,
         PIPELINE::PRTCL_CLOTH_COMPUTE,
         PIPELINE::PRTCL_CLOTH_NORM_COMPUTE,
+        PIPELINE::HFF_COMPUTE,
     },
     (FLAG::SWAPCHAIN | FLAG::DEPTH | /*FLAG::DEPTH_INPUT_ATTACHMENT |*/
      (::Deferred::DO_MSAA ? FLAG::MULTISAMPLE : FLAG::NONE)),
@@ -111,6 +113,7 @@ void Base::record(const uint8_t frameIndex) {
                 case PIPELINE::PRTCL_EULER_COMPUTE:
                 case PIPELINE::PRTCL_CLOTH_COMPUTE:
                 case PIPELINE::PRTCL_CLOTH_NORM_COMPUTE:
+                case PIPELINE::HFF_COMPUTE:
                 case PIPELINE::PRTCL_ATTR_COMPUTE: {
                     handler().particleHandler().recordDispatch(TYPE, pPipelineBindData, priCmd, frameIndex);
                 } break;
@@ -157,6 +160,7 @@ void Base::record(const uint8_t frameIndex) {
                 case PIPELINE::PRTCL_EULER_COMPUTE:
                 case PIPELINE::PRTCL_CLOTH_COMPUTE:
                 case PIPELINE::PRTCL_CLOTH_NORM_COMPUTE:
+                case PIPELINE::HFF_COMPUTE:
                 case PIPELINE::PRTCL_ATTR_COMPUTE:
                     break;
                 case PIPELINE::DEFERRED_SSAO: {
@@ -167,6 +171,7 @@ void Base::record(const uint8_t frameIndex) {
                 case PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED:
                 case PIPELINE::PRTCL_ATTR_PT_DEFERRED:
                 case PIPELINE::PRTCL_CLOTH_DEFERRED:
+                case PIPELINE::HFF_CLMN_DEFERRED:
                 case PIPELINE::PRTCL_FOUNTAIN_DEFERRED: {
                     // PARTICLE GRAPHICS
                     handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
@@ -295,13 +300,14 @@ void Base::createSubpassDescriptions() {
     assert(inputAttachmentOffset_ == 1);  // Swapchain should be in 0
 
     uint32_t mrtPipelineCount = 0;
-    uint32_t compPipelineCount = 4;
+    uint32_t compPipelineCount = 5;
     for (const auto& pipelineType : pipelineBindDataList_.getKeys()) {
         // TODO: I need a better way to generally identify if the type is for a compute pipeline
         if (pipelineType == PIPELINE::PRTCL_EULER_COMPUTE) continue;
         if (pipelineType == PIPELINE::PRTCL_ATTR_COMPUTE) continue;
         if (pipelineType == PIPELINE::PRTCL_CLOTH_COMPUTE) continue;
         if (pipelineType == PIPELINE::PRTCL_CLOTH_NORM_COMPUTE) continue;
+        if (pipelineType == PIPELINE::HFF_COMPUTE) continue;
         if (pipelineType == PIPELINE::DEFERRED_SSAO && !doSSAO_) continue;
         if (pipelineType == PIPELINE::DEFERRED_COMBINE) continue;
         mrtPipelineCount++;
@@ -376,10 +382,11 @@ void Base::createDependencies() {
         if (pipelineType == PIPELINE::PRTCL_ATTR_COMPUTE) continue;
         if (pipelineType == PIPELINE::PRTCL_CLOTH_COMPUTE) continue;
         if (pipelineType == PIPELINE::PRTCL_CLOTH_NORM_COMPUTE) continue;
+        if (pipelineType == PIPELINE::HFF_COMPUTE) continue;
         if (pipelineType == PIPELINE::DEFERRED_SSAO && !doSSAO_) continue;
         // TODO: How could this know which external subpass to wait on?
         if (pipelineType == PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED || pipelineType == PIPELINE::PRTCL_ATTR_PT_DEFERRED ||
-            pipelineType == PIPELINE::PRTCL_CLOTH_DEFERRED) {
+            pipelineType == PIPELINE::PRTCL_CLOTH_DEFERRED || pipelineType == PIPELINE::HFF_CLMN_DEFERRED) {
             // Dispatch writes into a storage buffer. Draw consumes that buffer as an instance vertex buffer.
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,
@@ -388,6 +395,19 @@ void Base::createDependencies() {
                 VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
                 VK_ACCESS_SHADER_WRITE_BIT,
                 VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
+                VK_DEPENDENCY_BY_REGION_BIT,
+            });
+        }
+        if (pipelineType == PIPELINE::HFF_CLMN_DEFERRED) {
+            // Dispatch writes into a storage buffer. Draw consumes that buffer as an instance vertex buffer.
+            resources_.dependencies.push_back({
+                VK_SUBPASS_EXTERNAL,
+                subpass,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
+                VK_ACCESS_SHADER_WRITE_BIT,
+                VK_ACCESS_SHADER_READ_BIT,
+                VK_DEPENDENCY_BY_REGION_BIT,
             });
         }
         depthDependency.srcSubpass = subpass - 1;
@@ -419,6 +439,7 @@ void Base::createDependencies() {
             if (pipelineType == PIPELINE::PRTCL_ATTR_COMPUTE) continue;
             if (pipelineType == PIPELINE::PRTCL_CLOTH_COMPUTE) continue;
             if (pipelineType == PIPELINE::PRTCL_CLOTH_NORM_COMPUTE) continue;
+            if (pipelineType == PIPELINE::HFF_COMPUTE) continue;
             combineDependency.srcSubpass = subpass;
             resources_.dependencies.push_back(combineDependency);
         }

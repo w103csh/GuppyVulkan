@@ -53,7 +53,7 @@ const CreateInfo MAP_2D_ARRAY_CREATE_INFO = {
 CreateInfo MakeOffsetTex() {
     uint32_t samples = SAMPLES_U * SAMPLES_V;
     uint32_t bufSize = OFFSET_WIDTH * OFFSET_HEIGHT * samples * 2;
-    float* pData = new float[bufSize];
+    float* pData = (float*)malloc(bufSize * sizeof(float));
 
     for (uint32_t i = 0; i < OFFSET_WIDTH; i++) {
         for (uint32_t j = 0; j < OFFSET_HEIGHT; j++) {

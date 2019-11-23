@@ -75,6 +75,9 @@ const std::set<DESCRIPTOR_SET> ALL = {
     DESCRIPTOR_SET::PRTCL_ATTRACTOR,
     DESCRIPTOR_SET::PRTCL_CLOTH,
     DESCRIPTOR_SET::PRTCL_CLOTH_NORM,
+    // WATER
+    DESCRIPTOR_SET::HFF,
+    DESCRIPTOR_SET::HFF_CLMN,
 };
 
 void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& write) const {
@@ -208,7 +211,7 @@ std::string GetPerframeBufferWarning(const DESCRIPTOR descType, const Buffer::In
         sMsg << "Descriptor with type (" << std::visit(Descriptor::GetDescriptorTypeString{}, descType);
         sMsg << ") has BUFFER_INFO count of (" << buffInfo.count;
         sMsg << ") and a uniqueDataSets count of (" << resInfo.uniqueDataSets << ").";
-        if (doAssert) assert(false && "Did you mean to add the type to Descriptor::HassPerFramebufferData?");
+        if (doAssert) assert(false && "Did you mean to add the type to Descriptor::HasPerFramebufferData?");
         return sMsg.str();
     }
     return "";

@@ -4,6 +4,7 @@
 #include "Cloth.h"
 #include "Deferred.h"
 #include "Geometry.h"
+#include "HeightFieldFluid.h"
 #include "PBR.h"
 #include "Parallax.h"
 #include "Particle.h"
@@ -248,6 +249,9 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     {SHADER::PRTCL_CLOTH_COMP, Shader::Particle::CLOTH_COMP_CREATE_INFO},
     {SHADER::PRTCL_CLOTH_NORM_COMP, Shader::Particle::CLOTH_NORM_COMP_CREATE_INFO},
     {SHADER::PRTCL_CLOTH_VERT, Shader::Particle::CLOTH_VERT_CREATE_INFO},
+    // WATER
+    {SHADER::HFF_COMP, Shader::HFF_COMP_CREATE_INFO},
+    {SHADER::HFF_CLMN_VERT, Shader::HFF_CLMN_VERT_CREATE_INFO},
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {

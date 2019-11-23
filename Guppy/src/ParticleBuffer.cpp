@@ -1,6 +1,7 @@
 
 #include "ParticleBuffer.h"
 
+#include "Helpers.h"
 #include "Material.h"
 #include "Random.h"
 #include "Torus.h"
@@ -151,6 +152,7 @@ Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCr
         assert(pDescriptors_[i] != nullptr && "Uniform data must be created");
         if (pDescriptors_[i]->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_FOUNTAIN} ||
             pDescriptors_[i]->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_ATTRACTOR} ||
+            pDescriptors_[i]->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::HFF} ||
             pDescriptors_[i]->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_CLOTH}) {
             if (descTimeOffset_ == BAD_OFFSET) {
                 descTimeOffset_ = i;
@@ -209,13 +211,14 @@ void Base::prepare() {
 void Base::loadBuffers() {
     assert(vertices_.size() || indices_.size() || texCoords_.size());
 
+    const auto& ctx = handler().shell().context();
     pLdgRes_ = handler().loadingHandler().createLoadingResources();
 
     // Vertex buffer
     BufferResource stgRes = {};
     if (vertices_.size()) {
-        handler().createBuffer(
-            pLdgRes_->transferCmd,
+        helpers::createBuffer(
+            ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd,
             static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT),
             sizeof(Vertex::Color) * vertices_.size(), NAME + " vertex", stgRes, vertexRes_, vertices_.data());
         pLdgRes_->stgResources.push_back(std::move(stgRes));
@@ -224,8 +227,8 @@ void Base::loadBuffers() {
     // Index buffer
     if (indices_.size()) {
         stgRes = {};
-        handler().createBuffer(
-            pLdgRes_->transferCmd,
+        helpers::createBuffer(
+            ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd,
             static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
             sizeof(VB_INDEX_TYPE) * indices_.size(), NAME + " index", stgRes, indexRes_, indices_.data());
         pLdgRes_->stgResources.push_back(std::move(stgRes));
@@ -234,8 +237,8 @@ void Base::loadBuffers() {
     // Texture coordinate buffer
     if (texCoords_.size()) {
         stgRes = {};
-        handler().createBuffer(
-            pLdgRes_->transferCmd,
+        helpers::createBuffer(
+            ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd,
             static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT),
             sizeof(glm::vec2) * texCoords_.size(), NAME + " tex coords", stgRes, texCoordRes_, texCoords_.data());
         pLdgRes_->stgResources.push_back(std::move(stgRes));
