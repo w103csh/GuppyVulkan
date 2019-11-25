@@ -204,7 +204,7 @@ namespace Shadow {
 
 // COLOR
 const Pipeline::CreateInfo COLOR_CREATE_INFO = {
-    PIPELINE::SHADOW_COLOR,
+    GRAPHICS::SHADOW_COLOR,
     "Shadow Color Pipeline",
     {SHADER::SHADOW_COLOR_VERT, SHADER::SHADOW_FRAG},
     {
@@ -219,7 +219,7 @@ void Color::getRasterizationStateInfoResources(CreateInfoResources& createInfoRe
 
 // TEXTURE
 const Pipeline::CreateInfo TEX_CREATE_INFO = {
-    PIPELINE::SHADOW_TEX,
+    GRAPHICS::SHADOW_TEX,
     "Shadow Texture Pipeline",
     {SHADER::SHADOW_TEX_VERT, SHADER::SHADOW_FRAG},
     {

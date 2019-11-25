@@ -308,7 +308,7 @@ namespace ScreenSpace {
 
 // DEFAULT
 const Pipeline::CreateInfo DEFAULT_CREATE_INFO = {
-    PIPELINE::SCREEN_SPACE_DEFAULT,
+    GRAPHICS::SCREEN_SPACE_DEFAULT,
     "Screen Space Default Pipeline",
     {SHADER::SCREEN_SPACE_VERT, SHADER::SCREEN_SPACE_FRAG},
     {
@@ -324,7 +324,7 @@ Default::Default(Pipeline::Handler& handler) : Graphics(handler, &DEFAULT_CREATE
 
 // HDR LOG
 const Pipeline::CreateInfo HDR_LOG_CREATE_INFO = {
-    PIPELINE::SCREEN_SPACE_HDR_LOG,
+    GRAPHICS::SCREEN_SPACE_HDR_LOG,
     "Screen Space HDR Log Pipeline",
     {SHADER::SCREEN_SPACE_VERT, SHADER::SCREEN_SPACE_HDR_LOG_FRAG},
     {
@@ -335,7 +335,7 @@ HdrLog::HdrLog(Pipeline::Handler& handler) : Graphics(handler, &HDR_LOG_CREATE_I
 
 // BRIGHT
 const Pipeline::CreateInfo BRIGHT_CREATE_INFO = {
-    PIPELINE::SCREEN_SPACE_BRIGHT,
+    GRAPHICS::SCREEN_SPACE_BRIGHT,
     "Screen Space Bright Pipeline",
     {SHADER::SCREEN_SPACE_VERT, SHADER::SCREEN_SPACE_FRAG},
     {
@@ -349,7 +349,7 @@ Bright::Bright(Pipeline::Handler& handler) : Graphics(handler, &BRIGHT_CREATE_IN
 
 // BLUR A
 const Pipeline::CreateInfo BLUR_A_CREATE_INFO = {
-    PIPELINE::SCREEN_SPACE_BLUR_A,
+    GRAPHICS::SCREEN_SPACE_BLUR_A,
     "Screen Space Blur A Pipeline",
     {SHADER::SCREEN_SPACE_VERT, SHADER::SCREEN_SPACE_BLUR_FRAG},
     {
@@ -363,7 +363,7 @@ BlurA::BlurA(Pipeline::Handler& handler) : Graphics(handler, &BLUR_A_CREATE_INFO
 
 // BLUR B
 const Pipeline::CreateInfo BLUR_B_CREATE_INFO = {
-    PIPELINE::SCREEN_SPACE_BLUR_B,
+    GRAPHICS::SCREEN_SPACE_BLUR_B,
     "Screen Space Blur B Pipeline",
     {SHADER::SCREEN_SPACE_VERT, SHADER::SCREEN_SPACE_BLUR_FRAG},
     {
@@ -375,9 +375,9 @@ const Pipeline::CreateInfo BLUR_B_CREATE_INFO = {
 };
 BlurB::BlurB(Pipeline::Handler& handler) : Graphics(handler, &BLUR_B_CREATE_INFO) {}
 
-// COMPUTE DEFAULT
+// DEFAULT (COMPUTE)
 const Pipeline::CreateInfo COMPUTE_DEFAULT_CREATE_INFO = {
-    PIPELINE::SCREEN_SPACE_COMPUTE_DEFAULT,
+    COMPUTE::SCREEN_SPACE_DEFAULT,
     "Screen Space Compute Default Pipeline",
     {SHADER::SCREEN_SPACE_COMP},
     {

@@ -28,6 +28,7 @@ layout(location=3) in mat4 inModel;
 layout(location=0) out vec3 outPosition;    // (camera space)
 layout(location=1) out vec3 outNormal;      // (camera space)
 layout(location=2) out vec4 outColor;
+layout(location=3) out flat uint outFlags;
 
 const float PI = 3.1415926535897932384626433832795;
 const float TAU = 2 * PI;
@@ -51,4 +52,5 @@ void main() {
     outPosition = (mViewModel * vec4(inPosition, 1.0)).xyz;
     outNormal = mNormal * normalize(n);
     outColor = inColor;
+    outFlags = 0x0u;
 }

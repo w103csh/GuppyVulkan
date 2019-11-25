@@ -180,7 +180,7 @@ void Compute::Base::destroy() {
 namespace Compute {
 
 const CreateInfo PostProcess::DEFAULT_CREATE_INFO = {
-    PIPELINE::SCREEN_SPACE_COMPUTE_DEFAULT,
+    COMPUTE::SCREEN_SPACE_DEFAULT,
     PASS::COMPUTE_POST_PROCESS,
     QUEUE::GRAPHICS,
     PASS::SAMPLER_DEFAULT,

@@ -107,8 +107,8 @@ namespace Buffer {
 struct CreateInfo {
     std::string name = "";
     glm::uvec3 localSize{1, 1, 1};
-    std::vector<PIPELINE> computePipelineTypes;
-    PIPELINE graphicsPipelineType = PIPELINE::ALL_ENUM;
+    std::vector<COMPUTE> computePipelineTypes;
+    GRAPHICS graphicsPipelineType = GRAPHICS::ALL_ENUM;
 };
 
 // BASE
@@ -119,9 +119,9 @@ class Base : public NonCopyable, public Handlee<Handler> {
 
     const std::string NAME;
     const glm::uvec3 LOCAL_SIZE;
-    const std::vector<PIPELINE> COMPUTE_PIPELINE_TYPES;
-    const PIPELINE GRAPHICS_PIPELINE_TYPE;
-    const PIPELINE SHADOW_PIPELINE_TYPE;
+    const std::vector<COMPUTE> COMPUTE_PIPELINE_TYPES;
+    const GRAPHICS GRAPHICS_PIPELINE_TYPE;
+    const GRAPHICS SHADOW_PIPELINE_TYPE;
 
     void toggle();
     virtual void update(const float time, const float elapsed, const uint32_t frameIndex);
@@ -157,7 +157,7 @@ class Base : public NonCopyable, public Handlee<Handler> {
    protected:
     Base(Particle::Handler& handler, const index offset, const CreateInfo* pCreateInfo,
          std::shared_ptr<Material::Base>& pMaterial, const std::vector<std::shared_ptr<Descriptor::Base>>& pDescriptors,
-         const PIPELINE&& shadowPipelineType = PIPELINE::ALL_ENUM);
+         const GRAPHICS&& shadowPipelineType = GRAPHICS::ALL_ENUM);
 
     inline std::shared_ptr<Descriptor::Base>& getTimedUniform() { return pDescriptors_[descTimeOffset_]; }
 
@@ -229,7 +229,7 @@ class Base : public Buffer::Base {
 
     Base(Particle::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo,
          std::shared_ptr<Material::Base>& pMaterial, const std::vector<std::shared_ptr<Descriptor::Base>>& pDescriptors,
-         const PIPELINE&& shadowPipelineType = PIPELINE::ALL_ENUM);
+         const GRAPHICS&& shadowPipelineType = GRAPHICS::ALL_ENUM);
 
     void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
               const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,

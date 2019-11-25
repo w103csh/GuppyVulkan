@@ -58,7 +58,7 @@ namespace Pipeline {
 namespace Parallax {
 
 const Pipeline::CreateInfo SIMPLE_CREATE_INFO = {
-    PIPELINE::PARALLAX_SIMPLE,
+    GRAPHICS::PARALLAX_SIMPLE,
     "Parallax Simple Pipeline",
     {SHADER::PARALLAX_VERT, SHADER::PARALLAX_SIMPLE_FRAG},
     {
@@ -68,7 +68,7 @@ const Pipeline::CreateInfo SIMPLE_CREATE_INFO = {
 };
 
 const Pipeline::CreateInfo STEEP_CREATE_INFO = {
-    PIPELINE::PARALLAX_STEEP,
+    GRAPHICS::PARALLAX_STEEP,
     "Parallax Steep Pipeline",
     {SHADER::PARALLAX_VERT, SHADER::PARALLAX_STEEP_FRAG},
     {

@@ -2,6 +2,7 @@
 #include "Pipeline.h"
 
 #include <algorithm>
+#include <variant>
 
 #include "ConstantsAll.h"
 #include "Instance.h"
@@ -89,7 +90,7 @@ Pipeline::Base::Base(Handler& handler, const VkPipelineBindPoint&& bindPoint, co
       descriptorOffsets_(pCreateInfo->uniformOffsets),
       isInitialized_(false),
       shaderTypes_(pCreateInfo->shaderTypes) {
-    assert(TYPE != PIPELINE::ALL_ENUM);
+    assert(!std::visit(IsAll{}, TYPE));
     for (const auto& type : PUSH_CONSTANT_TYPES) assert(type != PUSH_CONSTANT::DONT_CARE);
 }
 
@@ -332,6 +333,11 @@ void Pipeline::Base::destroy() {
 
 // COMPUTE
 
+Pipeline::Compute::Compute(Pipeline::Handler& handler, const Pipeline::CreateInfo* pCreateInfo)
+    : Base(handler, VK_PIPELINE_BIND_POINT_COMPUTE, pCreateInfo) {
+    assert(std::visit(IsCompute{}, TYPE));
+}
+
 void Pipeline::Compute::setInfo(CreateInfoResources& createInfoRes, VkGraphicsPipelineCreateInfo* pGraphicsInfo,
                                 VkComputePipelineCreateInfo* pComputeInfo) {
     // Gather info from derived classes...
@@ -348,6 +354,11 @@ void Pipeline::Compute::setInfo(CreateInfoResources& createInfoRes, VkGraphicsPi
 }
 
 //  GRAPHICS
+
+Pipeline::Graphics::Graphics(Pipeline::Handler& handler, const Pipeline::CreateInfo* pCreateInfo)
+    : Base(handler, VK_PIPELINE_BIND_POINT_GRAPHICS, pCreateInfo) {
+    assert(std::visit(IsGraphics{}, TYPE));
+}
 
 void Pipeline::Graphics::setInfo(CreateInfoResources& createInfoRes, VkGraphicsPipelineCreateInfo* pGraphicsInfo,
                                  VkComputePipelineCreateInfo* pComputeInfo) {

@@ -23,7 +23,7 @@ class Handler : public Game::Handler {
     inline void destroy() override { reset(); }
 
     // NOTE: this is not in order!!!
-    void getActivePassTypes(std::set<PASS>& types, const PIPELINE& pipelineTypeIn = PIPELINE::ALL_ENUM);
+    void getActivePassTypes(std::set<PASS>& types, const PIPELINE& pipelineTypeIn = GRAPHICS::ALL_ENUM);
     bool isActiveAndReady(const PASS& type) { return pComputeMap_.count(type) > 0; }
 
     void attachSwapchain();

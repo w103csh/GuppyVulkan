@@ -17,7 +17,7 @@ namespace {
 template <typename T>
 void getTypeFromMap(const T& map, const PIPELINE& pipelineTypeIn, std::set<PASS>& types) {
     for (const auto& [type, pCompute] : map) {
-        if (pipelineTypeIn == PIPELINE::ALL_ENUM || pCompute->PIPELINE_TYPE == pipelineTypeIn) {
+        if (pipelineTypeIn == PIPELINE{GRAPHICS::ALL_ENUM} || pCompute->PIPELINE_TYPE == pipelineTypeIn) {
             types.insert(pCompute->PASS_TYPE);
         }
     }

@@ -55,13 +55,7 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT:                      pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::MRT_UNIFORM_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_DEFERRED_SSAO:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SSAO_UNIFORM_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_DEFERRED_COMBINE:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::COMBINE_UNIFORM_CREATE_INFO)); break;
-            case DESCRIPTOR_SET::SAMPLER_DEFERRED_POS_NORM:                 pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::POS_NORM_SAMPLER_CREATE_INFO)); break;
-            case DESCRIPTOR_SET::SAMPLER_DEFERRED_POS:                      pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::POS_SAMPLER_CREATE_INFO)); break;
-            case DESCRIPTOR_SET::SAMPLER_DEFERRED_NORM:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::NORM_SAMPLER_CREATE_INFO)); break;
-            case DESCRIPTOR_SET::SAMPLER_DEFERRED_DIFFUSE:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::DIFFUSE_SAMPLER_CREATE_INFO)); break;
-            case DESCRIPTOR_SET::SAMPLER_DEFERRED_AMBIENT:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::AMBIENT_SAMPLER_CREATE_INFO)); break;
-            case DESCRIPTOR_SET::SAMPLER_DEFERRED_SPECULAR:                 pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SPECULAR_SAMPLER_CREATE_INFO)); break;
-            case DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SSAO_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SAMPLER_DEFERRED:                          pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO_RANDOM:              pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SSAO_RANDOM_SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_SHADOW:                            pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::UNIFORM_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_SHADOW:                            pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::SAMPLER_CREATE_INFO)); break;
@@ -237,14 +231,15 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
 
         for (const auto& [descriptorOffsets, passTypes] : descPipelineTypeKeyValue.second) {
             // Default offsets should never get here.
-            assert(!(descPipelineTypeKeyValue.first.second == PIPELINE::ALL_ENUM && passTypes == Uniform::PASS_ALL_SET));
+            assert(!(descPipelineTypeKeyValue.first.second == PIPELINE{GRAPHICS::ALL_ENUM} &&
+                     passTypes == Uniform::PASS_ALL_SET));
 
             pipelineTypes = {descPipelineTypeKeyValue.first.second};
 
             bool isAllEnum = false;
             // If pipeline type is ALL_ENUM the offsets come from a render pass(es), so ask
             // the render pass(es) what pipeline types are necessary.
-            if (*pipelineTypes.begin() == PIPELINE::ALL_ENUM) {
+            if (*pipelineTypes.begin() == PIPELINE{GRAPHICS::ALL_ENUM}) {
                 assert(passTypes != Uniform::PASS_ALL_SET);
 
                 // Set a flag so that later you know it came from ALL_ENUM, and remove
@@ -265,10 +260,10 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
              *      pipeline across all passes. They should be declared in the create info for
              *      the pipeline.
              *
-             *      PIPELINE::ALL_ENUM should NOT be used.
+             *      GRAPHICS::ALL_ENUM should NOT be used.
              *      PASS::ALL_ENUM is required.
              *
-             *      (ex: PIPELINE::TRI_LIST_COLOR, PASS::ALL_ENUM)
+             *      (ex: GRAPHICS::TRI_LIST_COLOR, PASS::ALL_ENUM)
              *
              *      TODO: add the create info stuff mentioned above, and validate the types.
              *
@@ -276,10 +271,10 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
              *      (or all pipelines) and a specfic pass (or multiple passes). They should
              *      be declared in the create info for the pass.
              *
-             *      PIPELINE::ALL_ENUM can be used.
+             *      GRAPHICS::ALL_ENUM can be used.
              *      PASS::ALL_ENUM should NOT be used.
              *
-             *      (ex: PIPELINE::ALL_ENUM, PASS::SAMPLER)
+             *      (ex: GRAPHICS::ALL_ENUM, PASS::SAMPLER)
              *
              *   Non-defaults should override any pipeline defaults, and pipeline defaults
              *   should override the main defaults declared in the OffsetsManager map.
@@ -413,7 +408,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
                                 if (tempSet.size()) {
                                     newLayoutResources.push_back({});
                                     newLayoutResources.back().pipelineTypes.insert(pipelineType);
-                                    if (isAllEnum) newLayoutResources.back().pipelineTypes.insert(PIPELINE::ALL_ENUM);
+                                    if (isAllEnum) newLayoutResources.back().pipelineTypes.insert(GRAPHICS::ALL_ENUM);
                                     newLayoutResources.back().offsets.insert(descType, descriptorOffsets);
                                     newLayoutResources.back().passTypes.merge(tempSet);
                                 }
@@ -457,7 +452,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
                         // Pipeline type. Add ALL_ENUM if that was the origin, so that better
                         // merging tests can be done.
                         pSet->resources_.back().pipelineTypes.insert(pipelineType);
-                        if (isAllEnum) pSet->resources_.back().pipelineTypes.insert(PIPELINE::ALL_ENUM);
+                        if (isAllEnum) pSet->resources_.back().pipelineTypes.insert(GRAPHICS::ALL_ENUM);
                         // Add/overwrite the offsets
                         pSet->resources_.back().offsets.insert(descType, descriptorOffsets);
                         // Pass types

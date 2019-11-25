@@ -36,6 +36,7 @@ using USAGE = enum : FlagBits {
     DEPTH =         0x00000020,
     SPECULAR =      0x00000100,
     DONT_CARE =     0x00000200,
+    FLAGS =         0x00000400,
     RANDOM =        0x00000400,
     ALPHA =         0x00001000,
     HEIGHT =        0x00010000,
@@ -134,6 +135,7 @@ extern const CreateInfo FIRE_CREATE_INFO;
 extern const CreateInfo SMOKE_CREATE_INFO;
 extern const CreateInfo STAR_CREATE_INFO;
 extern const CreateInfo FABRIC_BROWN_CREATE_INFO;
+extern const CreateInfo BRIGHT_MOON_CREATE_INFO;
 extern const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO;
 extern const CreateInfo WOOD_CREATE_INFO;
 extern const CreateInfo MYBRICK_COLOR_CREATE_INFO;

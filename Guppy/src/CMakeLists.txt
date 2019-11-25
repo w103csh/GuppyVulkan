@@ -56,6 +56,8 @@ set(SOURCE
     SoundHandler.h
     SoundFModHandler.cpp
     SoundFmodHandler.h
+    Stars.cpp
+    Stars.h
     Storage.cpp
     Storage.h
     StorageConstants.h

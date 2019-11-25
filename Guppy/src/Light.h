@@ -53,8 +53,32 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
 
 namespace Default {
 
-// POSITIONAL
+// DIRECTIONAL
+namespace Directional {
+struct DATA {
+    glm::vec3 direction{};            // Direction to the light (s) (camera space)
+    FlagBits flags{FLAG::SHOW};       //
+    alignas(16) glm::vec3 La{0.05f};  // Ambient light intensity
+    alignas(16) glm::vec3 L{0.6f};    // Diffuse and specular light intensity
+};
+struct CreateInfo : Buffer::CreateInfo {
+    glm::vec3 direction;
+};
+class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
+   public:
+    Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo);
 
+    void update(const glm::vec3 direction, const uint32_t frameIndex);
+
+    // FLAG
+    inline FlagBits getFlags() const { return data_.flags; }
+    inline void setFlags(const FlagBits &flags) { data_.flags = flags; }
+
+    glm::vec3 direction;  // (world space)
+};
+}  // namespace Directional
+
+// POSITIONAL
 namespace Positional {
 struct DATA {
     glm::vec3 position{};            // 12 (camera space)
@@ -70,11 +94,11 @@ class Base : public Light::Base<DATA> {
 
     void update(glm::vec3 &&position, const uint32_t frameIndex);
 
-    inline const glm::vec3 &getPosition() { return position; }
+    inline const glm::vec3 &getPosition() { return position_; }
 
     void transform(const glm::mat4 t, const uint32_t index = 0) override {
         Obj3d::AbstractBase::transform(t);
-        position = getWorldSpacePosition();
+        position_ = getWorldSpacePosition();
     }
 
     // FLAG
@@ -85,12 +109,11 @@ class Base : public Light::Base<DATA> {
     }
 
    private:
-    glm::vec3 position;  // (world space)
+    glm::vec3 position_;  // (world space)
 };
 }  // namespace Positional
 
 // SPOT
-
 namespace Spot {
 struct CreateInfo : public Light::CreateInfo {
     float cutoff = glm::radians(15.0f);
@@ -111,21 +134,21 @@ class Base : public Light::Base<DATA> {
     Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo);
     void transform(const glm::mat4 t, const uint32_t index = 0) override {
         Obj3d::AbstractBase::transform(t);
-        position = getWorldSpacePosition();
-        direction = getWorldSpaceDirection();
+        position_ = getWorldSpacePosition();
+        direction_ = getWorldSpaceDirection();
     }
 
     void update(glm::vec3 &&position, glm::vec3 &&direction, const uint32_t frameIndex);
 
-    inline const glm::vec3 &getDirection() { return direction; }
-    inline const glm::vec3 &getPosition() { return position; }
+    inline const glm::vec3 &getDirection() { return direction_; }
+    inline const glm::vec3 &getPosition() { return position_; }
 
     inline void setCutoff(float f) { data_.cutoff = f; }
     inline void setExponent(float f) { data_.exponent = f; }
 
    private:
-    glm::vec3 direction;  // (world space)
-    glm::vec3 position;   // (world space)
+    glm::vec3 direction_;  // (world space)
+    glm::vec3 position_;   // (world space)
 };
 }  // namespace Spot
 

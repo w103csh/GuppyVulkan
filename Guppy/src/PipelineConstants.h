@@ -17,7 +17,7 @@ enum class PASS : uint32_t;
 enum class SHADER;
 enum class VERTEX;
 
-enum class PIPELINE : uint32_t {
+enum class GRAPHICS : uint32_t {
     // DEFAULT
     TRI_LIST_COLOR = 0,
     LINE,
@@ -37,11 +37,11 @@ enum class PIPELINE : uint32_t {
     SCREEN_SPACE_BRIGHT,
     SCREEN_SPACE_BLUR_A,
     SCREEN_SPACE_BLUR_B,
-    SCREEN_SPACE_COMPUTE_DEFAULT,
     // DEFERRED
     DEFERRED_MRT_TEX,
     DEFERRED_MRT_COLOR,
     DEFERRED_MRT_WF_COLOR,
+    DEFERRED_MRT_PT,
     DEFERRED_MRT_LINE,
     DEFERRED_SSAO,
     DEFERRED_COMBINE,
@@ -56,24 +56,62 @@ enum class PIPELINE : uint32_t {
     // PARTICLE
     PRTCL_WAVE_DEFERRED,
     PRTCL_FOUNTAIN_DEFERRED,
-    PRTCL_EULER_COMPUTE,
     PRTCL_FOUNTAIN_EULER_DEFERRED,
     PRTCL_SHDW_FOUNTAIN_EULER,
-    PRTCL_ATTR_COMPUTE,
     PRTCL_ATTR_PT_DEFERRED,
-    PRTCL_CLOTH_COMPUTE,
-    PRTCL_CLOTH_NORM_COMPUTE,
     PRTCL_CLOTH_DEFERRED,
     // HEIGHT FLUID FIELD
-    HFF_COMPUTE,
     HFF_CLMN_DEFERRED,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
-    // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP
-    // in code file.
+    // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in code file.
+};
+
+enum class COMPUTE : uint32_t {
+    // SCREEN SPACE
+    SCREEN_SPACE_DEFAULT,
+    // PARTICLE
+    PRTCL_EULER,
+    PRTCL_ATTR,
+    PRTCL_CLOTH,
+    PRTCL_CLOTH_NORM,
+    // HEIGHT FLUID FIELD
+    HFF,
+    // Used to indicate bad data, and "all" in uniform offsets
+    ALL_ENUM = UINT32_MAX,
+    // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in code file.
 };
 
 namespace Pipeline {
+
+// clang-format off
+struct IsGraphics {
+    template <typename T>
+    bool operator()(const T&) const { return false; }
+    bool operator()(const GRAPHICS&) const { return true; }
+};
+struct GetGraphics {
+    template <typename T>
+    GRAPHICS operator()(const T&) const { return GRAPHICS::ALL_ENUM; }
+    GRAPHICS operator()(const GRAPHICS& type) const { return type; }
+};
+struct IsCompute {
+    template <typename T>
+    bool operator()(const T&) const { return false; }
+    bool operator()(const COMPUTE&) const { return true; }
+};
+struct GetCompute {
+    template <typename T>
+    COMPUTE operator()(const T&) const { return COMPUTE::ALL_ENUM; }
+    COMPUTE operator()(const COMPUTE& type) const { return type; }
+};
+struct IsAll {
+    template <typename T>
+    bool operator()(const T&) const { return false; }
+    bool operator()(const GRAPHICS& type) const { return type == GRAPHICS::ALL_ENUM; }
+    bool operator()(const COMPUTE&  type) const { return type == COMPUTE::ALL_ENUM; }
+};
+// clang-format on
 
 extern const std::vector<PIPELINE> ALL;
 extern const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP;

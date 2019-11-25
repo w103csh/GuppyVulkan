@@ -8,6 +8,7 @@ const uint PER_MATERIAL_COLOR       = 0x00000001u;
 const uint PER_VERTEX_COLOR         = 0x00000002u;
 const uint PER_TEXTURE_COLOR        = 0x00000004u;
 const uint MODE_TOON_SHADE          = 0x00000040u;
+const uint MODE_FLAT_SHADE          = 0x00000080u;
 const uint SKYBOX                   = 0x00000200u;
 const uint REFLECT                  = 0x00000400u;
 const uint REFRACT                  = 0x00000800u;
@@ -53,6 +54,7 @@ bool isPerMaterialColor()           { return (material.flags & PER_MATERIAL_COLO
 bool isPerVertexColor()             { return (material.flags & PER_VERTEX_COLOR) > 0; }
 bool isPerTextureColor()            { return (material.flags & PER_TEXTURE_COLOR) > 0; }
 bool isModeToonShade()              { return (material.flags & MODE_TOON_SHADE) > 0; }
+bool isModeFlatShade()              { return (material.flags & MODE_FLAT_SHADE) > 0; }
 bool isSkybox()                     { return (material.flags & SKYBOX) > 0; }
 bool isReflect()                    { return (material.flags & REFLECT) > 0; }
 bool isRefract()                    { return (material.flags & REFRACT) > 0; }

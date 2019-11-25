@@ -9,7 +9,6 @@
 
 #include "DescriptorConstants.h"
 
-enum class PIPELINE : uint32_t;
 enum class PASS : uint32_t;
 
 enum class SHADER {
@@ -46,6 +45,7 @@ enum class SHADER {
     DEFERRED_MRT_TEX_CS_VERT,
     DEFERRED_MRT_TEX_FRAG,
     DEFERRED_MRT_COLOR_CS_VERT,
+    DEFERRED_MRT_PT_CS_VERT,
     DEFERRED_MRT_COLOR_FRAG,
     DEFERRED_MRT_POINT_FRAG,
     DEFERRED_SSAO_FRAG,

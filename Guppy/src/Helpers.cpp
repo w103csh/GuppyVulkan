@@ -46,6 +46,27 @@ void macroReplace(const macroInfo &info, int itemCount, std::string &text) {
     helpers::replaceFirstOccurrence(std::get<1>(info), replaceStr, text);
 }
 
+glm::mat4 moveAndRotateTo(const glm::vec3 eye, const glm::vec3 center, const glm::vec3 up) {
+    auto const f(glm::normalize(eye - center));
+    auto const s(glm::normalize(cross(f, up)));
+    auto const u(glm::cross(s, f));
+
+    glm::mat4 Result(1.0f);
+    Result[0][0] = s.x;
+    Result[1][0] = s.y;
+    Result[2][0] = s.z;
+    Result[0][1] = u.x;
+    Result[1][1] = u.y;
+    Result[2][1] = u.z;
+    Result[0][2] = -f.x;
+    Result[1][2] = -f.y;
+    Result[2][2] = -f.z;
+    Result[3][0] = eye.x;
+    Result[3][1] = eye.y;
+    Result[3][2] = eye.z;
+    return Result;
+}
+
 // Normalized screen space transform (texture coord space) s,t,r : [0, 1]
 glm::mat4 getBias() {
     auto bias = glm::translate(glm::mat4{1.0f}, glm::vec3{0.5f, 0.5f, 0.0f});

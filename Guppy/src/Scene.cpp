@@ -2,6 +2,7 @@
 #include "Scene.h"
 
 #include <iterator>
+#include <variant>
 
 #include "Face.h"
 #include "RenderPass.h"
@@ -64,15 +65,16 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
                          const std::shared_ptr<Pipeline::BindData>& pPipelineBindData, const VkCommandBuffer& priCmd,
                          const VkCommandBuffer& secCmd, const uint8_t frameIndex,
                          const Descriptor::Set::BindData* pDescSetBindData) {
-    switch (pipelineType) {
-        case PIPELINE::DEFERRED_MRT_COLOR:
-        case PIPELINE::DEFERRED_MRT_WF_COLOR:
-        case PIPELINE::TESSELLATION_TRIANGLE_DEFERRED:
-        case PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED:
-        case PIPELINE::PRTCL_WAVE_DEFERRED:
-        case PIPELINE::PBR_COLOR:
-        case PIPELINE::CUBE:
-        case PIPELINE::TRI_LIST_COLOR: {
+    switch (std::visit(Pipeline::GetGraphics{}, pipelineType)) {
+        case GRAPHICS::DEFERRED_MRT_COLOR:
+        case GRAPHICS::DEFERRED_MRT_WF_COLOR:
+        case GRAPHICS::DEFERRED_MRT_PT:
+        case GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED:
+        case GRAPHICS::GEOMETRY_SILHOUETTE_DEFERRED:
+        case GRAPHICS::PRTCL_WAVE_DEFERRED:
+        case GRAPHICS::PBR_COLOR:
+        case GRAPHICS::CUBE:
+        case GRAPHICS::TRI_LIST_COLOR: {
             for (const auto& offset : colorOffsets_) {
                 auto& pMesh = handler().meshHandler().getColorMesh(offset);
                 if (pMesh->shouldDraw(passType, pipelineType)) {
@@ -94,12 +96,12 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
                 }
             }
         } break;
-        case PIPELINE::DEFERRED_MRT_TEX:
-        case PIPELINE::PARALLAX_SIMPLE:
-        case PIPELINE::PARALLAX_STEEP:
-        case PIPELINE::PBR_TEX:
-        case PIPELINE::BP_TEX_CULL_NONE:
-        case PIPELINE::TRI_LIST_TEX: {
+        case GRAPHICS::DEFERRED_MRT_TEX:
+        case GRAPHICS::PARALLAX_SIMPLE:
+        case GRAPHICS::PARALLAX_STEEP:
+        case GRAPHICS::PBR_TEX:
+        case GRAPHICS::BP_TEX_CULL_NONE:
+        case GRAPHICS::TRI_LIST_TEX: {
             for (const auto& offset : texOffsets_) {
                 auto& pMesh = handler().meshHandler().getTextureMesh(offset);
                 if (pMesh->shouldDraw(passType, pipelineType)) {
@@ -121,9 +123,9 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
                 }
             }
         } break;
-        case PIPELINE::DEFERRED_MRT_LINE:
-        case PIPELINE::TESSELLATION_BEZIER_4_DEFERRED:
-        case PIPELINE::LINE: {
+        case GRAPHICS::DEFERRED_MRT_LINE:
+        case GRAPHICS::TESSELLATION_BEZIER_4_DEFERRED:
+        case GRAPHICS::LINE: {
             for (const auto& offset : lineOffsets_) {
                 auto& pMesh = handler().meshHandler().getLineMesh(offset);
                 if (pMesh->shouldDraw(passType, pipelineType)) {

@@ -120,7 +120,7 @@ namespace Particle {
 
 // CLOTH (COMPUTE)
 const Pipeline::CreateInfo CLOTH_COMP_CREATE_INFO = {
-    PIPELINE::PRTCL_CLOTH_COMPUTE,
+    COMPUTE::PRTCL_CLOTH,
     "Particle Cloth Compute Pipeline",
     {SHADER::PRTCL_CLOTH_COMP},
     {DESCRIPTOR_SET::PRTCL_CLOTH},
@@ -129,7 +129,7 @@ ClothCompute::ClothCompute(Pipeline::Handler& handler) : Compute(handler, &CLOTH
 
 // CLOTH NORMAL (COMPUTE)
 const Pipeline::CreateInfo CLOTH_NORM_COMP_CREATE_INFO = {
-    PIPELINE::PRTCL_CLOTH_NORM_COMPUTE,
+    COMPUTE::PRTCL_CLOTH_NORM,
     "Particle Cloth Normal Compute Pipeline",
     {SHADER::PRTCL_CLOTH_NORM_COMP},
     {DESCRIPTOR_SET::PRTCL_CLOTH_NORM},
@@ -138,12 +138,9 @@ ClothNormalCompute::ClothNormalCompute(Pipeline::Handler& handler) : Compute(han
 
 // CLOTH
 const Pipeline::CreateInfo CLOTH_CREATE_INFO = {
-    PIPELINE::PRTCL_CLOTH_DEFERRED,
+    GRAPHICS::PRTCL_CLOTH_DEFERRED,
     "Particle Cloth (Deferred) Pipeline",
-    {
-        SHADER::PRTCL_CLOTH_VERT,
-        SHADER::DEFERRED_MRT_TEX_FRAG,
-    },
+    {SHADER::PRTCL_CLOTH_VERT, SHADER::DEFERRED_MRT_TEX_FRAG},
     {
         DESCRIPTOR_SET::UNIFORM_DEFAULT,
         DESCRIPTOR_SET::SAMPLER_DEFAULT,
@@ -213,7 +210,7 @@ namespace Cloth {
 Base::Base(Particle::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo,
            std::shared_ptr<Material::Base>& pMaterial, const std::vector<std::shared_ptr<Descriptor::Base>>& pDescriptors,
            std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData)
-    : Buffer::Base(handler, std::forward<const index>(offset), pCreateInfo, pMaterial, pDescriptors, PIPELINE::SHADOW_TEX),
+    : Buffer::Base(handler, std::forward<const index>(offset), pCreateInfo, pMaterial, pDescriptors, GRAPHICS::SHADOW_TEX),
       Obj3d::InstanceDraw(pInstanceData),
       pPosBuffs_{nullptr, nullptr},
       pVelBuffs_{nullptr, nullptr},
@@ -391,7 +388,7 @@ void Base::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindDa
                     const Descriptor::Set::BindData&, const VkCommandBuffer& cmd, const uint8_t frameIndex) const {
     assert(LOCAL_SIZE.z == 1 && workgroupSize_.z == 1);
 
-    if (pPipelineBindData->type == PIPELINE::PRTCL_CLOTH_COMPUTE) {
+    if (pPipelineBindData->type == PIPELINE{COMPUTE::PRTCL_CLOTH}) {
         // POSITION / VELOCITY
 
         auto* pDescSetBindData0 = &computeDescSetBindDataMaps_[0].at({passType});
@@ -428,7 +425,7 @@ void Base::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindDa
 
             std::swap(pDescSetBindData0, pDescSetBindData1);
         }
-    } else if (pPipelineBindData->type == PIPELINE::PRTCL_CLOTH_NORM_COMPUTE) {
+    } else if (pPipelineBindData->type == PIPELINE{COMPUTE::PRTCL_CLOTH_NORM}) {
         // NORMAL
 
         auto* pDescSetBindData = &computeDescSetBindDataMaps_[2].at({passType});
@@ -453,7 +450,7 @@ void Base::getComputeDescSetBindData() {
     std::vector<Descriptor::Base*> pDynamicItems;
 
     // CLOTH
-    assert(COMPUTE_PIPELINE_TYPES.at(0) == PIPELINE::PRTCL_CLOTH_COMPUTE);
+    assert(COMPUTE_PIPELINE_TYPES.at(0) == COMPUTE::PRTCL_CLOTH);
     for (const auto& pDesc : pDescriptors_) pDynamicItems.push_back(pDesc.get());
     // Read from pos/vel 0 write to pos/vel 1
     pDynamicItems.push_back(pPosBuffs_[0].get());
@@ -472,7 +469,7 @@ void Base::getComputeDescSetBindData() {
                                               pDynamicItems);
 
     // CLOTH NORMAL
-    assert(COMPUTE_PIPELINE_TYPES.at(1) == PIPELINE::PRTCL_CLOTH_NORM_COMPUTE && computeDescSetBindDataMaps_.size() == 2);
+    assert(COMPUTE_PIPELINE_TYPES.at(1) == COMPUTE::PRTCL_CLOTH_NORM && computeDescSetBindDataMaps_.size() == 2);
     pDynamicItems.clear();
     // Read from pos 0 write to norm
     pDynamicItems.push_back(pPosBuffs_[0].get());

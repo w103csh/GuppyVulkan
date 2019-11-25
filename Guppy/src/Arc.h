@@ -14,7 +14,7 @@ namespace Mesh {
 class Handler;
 
 struct ArcCreateInfo : public CreateInfo {
-    ArcCreateInfo() : CreateInfo{PIPELINE::TESSELLATION_BEZIER_4_DEFERRED, false} {};
+    ArcCreateInfo() : CreateInfo{GRAPHICS::TESSELLATION_BEZIER_4_DEFERRED, false} {};
     std::vector<Vertex::Color> controlPoints;
 };
 

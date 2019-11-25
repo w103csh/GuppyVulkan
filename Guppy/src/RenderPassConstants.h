@@ -16,7 +16,6 @@
 #include "Types.h"
 
 enum class DESCRIPTOR_SET;
-enum class PIPELINE : uint32_t;
 enum class SHADER;
 // clang-format off
 namespace Sampler { struct CreateInfo; }

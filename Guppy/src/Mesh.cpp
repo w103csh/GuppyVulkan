@@ -38,7 +38,7 @@ Mesh::Base::Base(Mesh::Handler& handler, const index&& offset, const MESH&& type
       offset_(offset)
 //
 {
-    if (PIPELINE_TYPE == PIPELINE::ALL_ENUM && PASS_TYPES.empty()) {
+    if (PIPELINE_TYPE == PIPELINE{GRAPHICS::ALL_ENUM} && PASS_TYPES.empty()) {
         /* The only mesh that should do this currently is actually a VERTEX::SCREEN_QUAD and there
          *  should only be one of them, but I don't feel like doing all the work to enforce everything.
          *  This type should also have no descriptor bind data or a material if I ever get around to
@@ -50,7 +50,7 @@ Mesh::Base::Base(Mesh::Handler& handler, const index&& offset, const MESH&& type
         assert(VERTEX_TYPE == VERTEX::TEXTURE);
     } else {
         assert(PASS_TYPES.size());
-        assert(PIPELINE_TYPE != PIPELINE::ALL_ENUM);
+        assert(!std::visit(Pipeline::IsAll{}, PIPELINE_TYPE));
         assert(Mesh::Base::handler().pipelineHandler().checkVertexPipelineMap(VERTEX_TYPE, PIPELINE_TYPE));
     }
     assert(pInstObj3d_ != nullptr);
@@ -69,7 +69,7 @@ void Mesh::Base::prepare() {
         // Submit vertex loading commands...
         handler().loadingHandler().loadSubmit(std::move(pLdgRes_));
         // Screen quad mesh only needs vertex/index buffers
-        if (PIPELINE_TYPE == PIPELINE::ALL_ENUM && PASS_TYPES.empty())
+        if (PIPELINE_TYPE == PIPELINE{GRAPHICS::ALL_ENUM} && PASS_TYPES.empty())
             status_ = STATUS::READY;
         else
             status_ = STATUS::PENDING_MATERIAL | STATUS::PENDING_PIPELINE;
@@ -96,7 +96,7 @@ void Mesh::Base::prepare() {
      */
     if (status_ == STATUS::READY) {
         // Screen quad mesh will not keep track of descriptor data.
-        if (PIPELINE_TYPE == PIPELINE::ALL_ENUM && PASS_TYPES.empty()) return;
+        if (PIPELINE_TYPE == PIPELINE{GRAPHICS::ALL_ENUM} && PASS_TYPES.empty()) return;
 
         handler().descriptorHandler().getBindData(PIPELINE_TYPE, descSetBindDataMap_, {pMaterial_.get()});
     } else {
@@ -570,7 +570,7 @@ Mesh::Texture::Texture(Mesh::Handler& handler, const index&& offset, const std::
           pMaterial,
       } {
     // This is for the, hopefully, singular mesh that is a VERTEX::SCREEN_QUAD.
-    if (PIPELINE_TYPE == PIPELINE::ALL_ENUM && PASS_TYPES.empty())
+    if (PIPELINE_TYPE == PIPELINE{GRAPHICS::ALL_ENUM} && PASS_TYPES.empty())
         assert(!pMaterial_->hasTexture());
     else
         assert(pMaterial_->hasTexture());

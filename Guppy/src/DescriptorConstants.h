@@ -11,7 +11,6 @@
 #include "Types.h"
 #include "UniformConstants.h"
 
-enum class PIPELINE : uint32_t;
 enum class PASS : uint32_t;
 // clang-format off
 namespace Buffer { struct Info; }
@@ -46,13 +45,7 @@ enum class DESCRIPTOR_SET {
     UNIFORM_DEFERRED_MRT,
     UNIFORM_DEFERRED_SSAO,
     UNIFORM_DEFERRED_COMBINE,
-    SAMPLER_DEFERRED_POS_NORM,
-    SAMPLER_DEFERRED_POS,
-    SAMPLER_DEFERRED_NORM,
-    SAMPLER_DEFERRED_DIFFUSE,
-    SAMPLER_DEFERRED_AMBIENT,
-    SAMPLER_DEFERRED_SPECULAR,
-    SAMPLER_DEFERRED_SSAO,
+    SAMPLER_DEFERRED,
     SAMPLER_DEFERRED_SSAO_RANDOM,
     // SHADOW
     UNIFORM_SHADOW,
@@ -186,6 +179,7 @@ struct HasPerFramebufferData {
     bool operator()(const UNIFORM& type) const {
         switch (type) {
             case UNIFORM::CAMERA_PERSPECTIVE_DEFAULT:
+            case UNIFORM::LIGHT_DIRECTIONAL_DEFAULT:
             case UNIFORM::LIGHT_POSITIONAL_DEFAULT:
             case UNIFORM::LIGHT_POSITIONAL_PBR:
             case UNIFORM::LIGHT_POSITIONAL_SHADOW:

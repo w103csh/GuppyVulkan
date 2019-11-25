@@ -31,6 +31,8 @@ Uniform::Handler::Handler(Game* pGame)
           Uniform::Manager<Camera::Default::Perspective::Base>  //
           {"Default Perspective Camera", UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, 9, "_U_CAM_DEF_PERS"},
           // LIGHT
+          Uniform::Manager<Light::Default::Directional::Base>  //
+          {"Default Directional Light", UNIFORM::LIGHT_DIRECTIONAL_DEFAULT, 3, "_U_LGT_DEF_DIR"},
           Uniform::Manager<Light::Default::Positional::Base>  //
           {"Default Positional Light", UNIFORM::LIGHT_POSITIONAL_DEFAULT, 40, "_U_LGT_DEF_POS"},
           Uniform::Manager<Light::PBR::Positional::Base>  //
@@ -72,6 +74,7 @@ std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const
     if (std::visit(Descriptor::IsUniform{}, type)) {
         switch (std::visit(Descriptor::GetUniform{}, type)) {
             case UNIFORM::CAMERA_PERSPECTIVE_DEFAULT:   return camDefPersMgr().pItems;
+            case UNIFORM::LIGHT_DIRECTIONAL_DEFAULT:    return lgtDefDirMgr().pItems;
             case UNIFORM::LIGHT_POSITIONAL_DEFAULT:     return lgtDefPosMgr().pItems;
             case UNIFORM::LIGHT_POSITIONAL_PBR:         return lgtPbrPosMgr().pItems;
             case UNIFORM::LIGHT_SPOT_DEFAULT:           return lgtDefSptMgr().pItems;
@@ -112,6 +115,7 @@ void Uniform::Handler::init() {
     // clang-format off
     uint8_t count = 0;
     camDefPersMgr().init(shell().context());    ++count;
+    lgtDefDirMgr().init(shell().context());     ++count;
     lgtDefPosMgr().init(shell().context());     ++count;
     lgtPbrPosMgr().init(shell().context());     ++count;
     lgtDefSptMgr().init(shell().context());     ++count;
@@ -134,6 +138,29 @@ void Uniform::Handler::init() {
     createTessellationData();
 }
 
+void Uniform::Handler::reset() {
+    const auto& dev = shell().context().dev;
+    // clang-format off
+    uint8_t count = 0;
+    camDefPersMgr().destroy(dev);   ++count;
+    lgtDefDirMgr().destroy(dev);    ++count;
+    lgtDefPosMgr().destroy(dev);    ++count;
+    lgtPbrPosMgr().destroy(dev);    ++count;
+    lgtDefSptMgr().destroy(dev);    ++count;
+    lgtShdwPosMgr().destroy(dev);   ++count;
+    uniDefFogMgr().destroy(dev);    ++count;
+    uniDefPrjMgr().destroy(dev);    ++count;
+    uniScrDefMgr().destroy(dev);    ++count;
+    uniDfrSSAOMgr().destroy(dev);   ++count;
+    uniShdwDataMgr().destroy(dev);  ++count;
+    uniTessDefMgr().destroy(dev);   ++count;
+    uniGeomDefMgr().destroy(dev);   ++count;
+    uniWaveMgr().destroy(dev);      ++count;
+    strPstPrcMgr().destroy(dev);    ++count;
+    assert(count == managers_.size());
+    // clang-format on
+}
+
 void Uniform::Handler::frame() {
     const auto frameIndex = passHandler().getFrameIndex();
 
@@ -141,6 +168,14 @@ void Uniform::Handler::frame() {
     auto& camera = getMainCamera();
     camera.update(shell().inputHandler().getPosDir(), shell().inputHandler().getLookDir(), frameIndex);
     update(camera, static_cast<int>(frameIndex));
+
+    // DEFAULT DIRECTIONAL
+    assert(lgtDefDirMgr().pItems.size() == 1);  // At the moment the shaders/offset manager are setup to handle one.
+    for (uint32_t i = 0; i < lgtDefDirMgr().pItems.size(); i++) {
+        auto& lgt = lgtDefDirMgr().getTypedItem(i);
+        lgt.update(camera.getCameraSpaceDirection(lgt.direction), frameIndex);
+        update(lgt, static_cast<int>(frameIndex));
+    }
 
     // DEFAULT POSITIONAL
     for (uint32_t i = 0; i < lgtDefPosMgr().pItems.size(); i++) {
@@ -175,28 +210,6 @@ void Uniform::Handler::frame() {
     auto& lgtShdwPos = lgtShdwPosMgr().getTypedItem(0);
     lgtShdwPos.update(camera.getCameraSpaceToWorldSpaceTransform(), frameIndex);
     update(lgtShdwPos, static_cast<int>(frameIndex));
-}
-
-void Uniform::Handler::reset() {
-    const auto& dev = shell().context().dev;
-    // clang-format off
-    uint8_t count = 0;
-    camDefPersMgr().destroy(dev);   ++count;
-    lgtDefPosMgr().destroy(dev);    ++count;
-    lgtPbrPosMgr().destroy(dev);    ++count;
-    lgtDefSptMgr().destroy(dev);    ++count;
-    lgtShdwPosMgr().destroy(dev);   ++count;
-    uniDefFogMgr().destroy(dev);    ++count;
-    uniDefPrjMgr().destroy(dev);    ++count;
-    uniScrDefMgr().destroy(dev);    ++count;
-    uniDfrSSAOMgr().destroy(dev);   ++count;
-    uniShdwDataMgr().destroy(dev);  ++count;
-    uniTessDefMgr().destroy(dev);   ++count;
-    uniGeomDefMgr().destroy(dev);   ++count;
-    uniWaveMgr().destroy(dev);      ++count;
-    strPstPrcMgr().destroy(dev);    ++count;
-    assert(count == managers_.size());
-    // clang-format on
 }
 
 void Uniform::Handler::createCameras() {
@@ -241,6 +254,14 @@ void Uniform::Handler::createCameras() {
 
 void Uniform::Handler::createLights() {
     const auto& dev = shell().context().dev;
+
+    // DIRECTIONAL
+    Light::Default::Directional::CreateInfo defDirInfo = {};
+    assert(shell().context().imageCount == 3);  // Potential imageCount problem
+    defDirInfo.dataCount = shell().context().imageCount;
+    // MOON
+    defDirInfo.direction = glm::normalize(glm::vec3(0, 0.5f, 1.0f));  // direction to the light (s) (world space)
+    lgtDefDirMgr().insert(dev, &defDirInfo);
 
     Light::CreateInfo lightCreateInfo = {};
 

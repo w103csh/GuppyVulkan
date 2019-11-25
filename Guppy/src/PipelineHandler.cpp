@@ -59,49 +59,58 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
     for (const auto& type : ALL) {
         assert(pPipelines_.count(type) == 0);
         std::pair<std::map<PIPELINE, std::unique_ptr<Pipeline::Base>>::iterator, bool> insertPair;
-        // clang-format off
-        switch (type) {
-            case PIPELINE::TRI_LIST_COLOR:                  insertPair = pPipelines_.insert({type, std::make_unique<Default::TriListColor>(std::ref(*this))}); break;
-            case PIPELINE::LINE:                            insertPair = pPipelines_.insert({type, std::make_unique<Default::Line>(std::ref(*this))}); break;
-            case PIPELINE::TRI_LIST_TEX:                    insertPair = pPipelines_.insert({type, std::make_unique<Default::TriListTexture>(std::ref(*this))}); break;
-            case PIPELINE::CUBE:                            insertPair = pPipelines_.insert({type, std::make_unique<Default::Cube>(std::ref(*this))}); break;
-            case PIPELINE::PBR_COLOR:                       insertPair = pPipelines_.insert({type, std::make_unique<PBR::Color>(std::ref(*this))}); break;
-            case PIPELINE::PBR_TEX:                         insertPair = pPipelines_.insert({type, std::make_unique<PBR::Texture>(std::ref(*this))}); break;
-            case PIPELINE::BP_TEX_CULL_NONE:                insertPair = pPipelines_.insert({type, std::make_unique<BP::TextureCullNone>(std::ref(*this))}); break;
-            case PIPELINE::PARALLAX_SIMPLE:                 insertPair = pPipelines_.insert({type, std::make_unique<Parallax::Simple>(std::ref(*this))}); break;
-            case PIPELINE::PARALLAX_STEEP:                  insertPair = pPipelines_.insert({type, std::make_unique<Parallax::Steep>(std::ref(*this))}); break;
-            case PIPELINE::SCREEN_SPACE_DEFAULT:            insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::Default>(std::ref(*this))}); break;
-            case PIPELINE::SCREEN_SPACE_HDR_LOG:            insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::HdrLog>(std::ref(*this))}); break;
-            case PIPELINE::SCREEN_SPACE_COMPUTE_DEFAULT:    insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::ComputeDefault>(std::ref(*this))}); break;
-            case PIPELINE::SCREEN_SPACE_BRIGHT:             insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::Bright>(std::ref(*this))}); break;
-            case PIPELINE::SCREEN_SPACE_BLUR_A:             insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::BlurA>(std::ref(*this))}); break;
-            case PIPELINE::SCREEN_SPACE_BLUR_B:             insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::BlurB>(std::ref(*this))}); break;
-            case PIPELINE::DEFERRED_MRT_TEX:                insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTTexture>(std::ref(*this))}); break;
-            case PIPELINE::DEFERRED_MRT_COLOR:              insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTColor>(std::ref(*this))}); break;
-            case PIPELINE::DEFERRED_MRT_WF_COLOR:           insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTColorWireframe>(std::ref(*this))}); break;
-            case PIPELINE::DEFERRED_MRT_LINE:               insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTLine>(std::ref(*this))}); break;
-            case PIPELINE::DEFERRED_COMBINE:                insertPair = pPipelines_.insert({type, std::make_unique<Deferred::Combine>(std::ref(*this))}); break;
-            case PIPELINE::DEFERRED_SSAO:                   insertPair = pPipelines_.insert({type, std::make_unique<Deferred::SSAO>(std::ref(*this))}); break;
-            case PIPELINE::SHADOW_COLOR:                    insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Color>(std::ref(*this))}); break;
-            case PIPELINE::SHADOW_TEX:                      insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Texture>(std::ref(*this))}); break;
-            case PIPELINE::TESSELLATION_BEZIER_4_DEFERRED:  insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::Bezier4Deferred>(std::ref(*this))}); break;
-            case PIPELINE::TESSELLATION_TRIANGLE_DEFERRED:  insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::TriangleDeferred>(std::ref(*this))}); break;
-            case PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED:    insertPair = pPipelines_.insert({type, std::make_unique<Geometry::Silhouette>(std::ref(*this))}); break;
-            case PIPELINE::PRTCL_WAVE_DEFERRED:             insertPair = pPipelines_.insert({type, std::make_unique<Particle::Wave>(std::ref(*this))}); break;
-            case PIPELINE::PRTCL_FOUNTAIN_DEFERRED:         insertPair = pPipelines_.insert({type, std::make_unique<Particle::Fountain>(std::ref(*this))}); break;
-            case PIPELINE::PRTCL_EULER_COMPUTE:             insertPair = pPipelines_.insert({type, std::make_unique<Particle::Euler>(std::ref(*this))}); break;
-            case PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED:   insertPair = pPipelines_.insert({type, std::make_unique<Particle::FountainEuler>(std::ref(*this))}); break;
-            case PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER:       insertPair = pPipelines_.insert({type, std::make_unique<Particle::ShadowFountainEuler>(std::ref(*this))}); break;
-            case PIPELINE::PRTCL_ATTR_COMPUTE:              insertPair = pPipelines_.insert({type, std::make_unique<Particle::AttractorCompute>(std::ref(*this))}); break;
-            case PIPELINE::PRTCL_ATTR_PT_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Particle::AttractorPoint>(std::ref(*this))}); break;
-            case PIPELINE::PRTCL_CLOTH_COMPUTE:             insertPair = pPipelines_.insert({type, std::make_unique<Particle::ClothCompute>(std::ref(*this))}); break;
-            case PIPELINE::PRTCL_CLOTH_NORM_COMPUTE:        insertPair = pPipelines_.insert({type, std::make_unique<Particle::ClothNormalCompute>(std::ref(*this))}); break;
-            case PIPELINE::PRTCL_CLOTH_DEFERRED:            insertPair = pPipelines_.insert({type, std::make_unique<Particle::Cloth>(std::ref(*this))}); break;
-            case PIPELINE::HFF_COMPUTE:                     insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluidCompute>(std::ref(*this))}); break;
-            case PIPELINE::HFF_CLMN_DEFERRED:               insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluidColumn>(std::ref(*this))}); break;
-            default: assert(false);  // add new pipelines here
+        if (std::visit(IsGraphics{}, type)) {
+            // clang-format off
+            switch (std::visit(GetGraphics{}, type)) {
+                case GRAPHICS::TRI_LIST_COLOR:                  insertPair = pPipelines_.insert({type, std::make_unique<Default::TriListColor>(std::ref(*this))}); break;
+                case GRAPHICS::LINE:                            insertPair = pPipelines_.insert({type, std::make_unique<Default::Line>(std::ref(*this))}); break;
+                case GRAPHICS::TRI_LIST_TEX:                    insertPair = pPipelines_.insert({type, std::make_unique<Default::TriListTexture>(std::ref(*this))}); break;
+                case GRAPHICS::CUBE:                            insertPair = pPipelines_.insert({type, std::make_unique<Default::Cube>(std::ref(*this))}); break;
+                case GRAPHICS::PBR_COLOR:                       insertPair = pPipelines_.insert({type, std::make_unique<PBR::Color>(std::ref(*this))}); break;
+                case GRAPHICS::PBR_TEX:                         insertPair = pPipelines_.insert({type, std::make_unique<PBR::Texture>(std::ref(*this))}); break;
+                case GRAPHICS::BP_TEX_CULL_NONE:                insertPair = pPipelines_.insert({type, std::make_unique<BP::TextureCullNone>(std::ref(*this))}); break;
+                case GRAPHICS::PARALLAX_SIMPLE:                 insertPair = pPipelines_.insert({type, std::make_unique<Parallax::Simple>(std::ref(*this))}); break;
+                case GRAPHICS::PARALLAX_STEEP:                  insertPair = pPipelines_.insert({type, std::make_unique<Parallax::Steep>(std::ref(*this))}); break;
+                case GRAPHICS::SCREEN_SPACE_DEFAULT:            insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::Default>(std::ref(*this))}); break;
+                case GRAPHICS::SCREEN_SPACE_HDR_LOG:            insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::HdrLog>(std::ref(*this))}); break;
+                case GRAPHICS::SCREEN_SPACE_BRIGHT:             insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::Bright>(std::ref(*this))}); break;
+                case GRAPHICS::SCREEN_SPACE_BLUR_A:             insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::BlurA>(std::ref(*this))}); break;
+                case GRAPHICS::SCREEN_SPACE_BLUR_B:             insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::BlurB>(std::ref(*this))}); break;
+                case GRAPHICS::DEFERRED_MRT_TEX:                insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTTexture>(std::ref(*this))}); break;
+                case GRAPHICS::DEFERRED_MRT_COLOR:              insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTColor>(std::ref(*this))}); break;
+                case GRAPHICS::DEFERRED_MRT_WF_COLOR:           insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTColorWireframe>(std::ref(*this))}); break;
+                case GRAPHICS::DEFERRED_MRT_PT:                 insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTPoint>(std::ref(*this))}); break;
+                case GRAPHICS::DEFERRED_MRT_LINE:               insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTLine>(std::ref(*this))}); break;
+                case GRAPHICS::DEFERRED_COMBINE:                insertPair = pPipelines_.insert({type, std::make_unique<Deferred::Combine>(std::ref(*this))}); break;
+                case GRAPHICS::DEFERRED_SSAO:                   insertPair = pPipelines_.insert({type, std::make_unique<Deferred::SSAO>(std::ref(*this))}); break;
+                case GRAPHICS::SHADOW_COLOR:                    insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Color>(std::ref(*this))}); break;
+                case GRAPHICS::SHADOW_TEX:                      insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Texture>(std::ref(*this))}); break;
+                case GRAPHICS::TESSELLATION_BEZIER_4_DEFERRED:  insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::Bezier4Deferred>(std::ref(*this))}); break;
+                case GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED:  insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::TriangleDeferred>(std::ref(*this))}); break;
+                case GRAPHICS::GEOMETRY_SILHOUETTE_DEFERRED:    insertPair = pPipelines_.insert({type, std::make_unique<Geometry::Silhouette>(std::ref(*this))}); break;
+                case GRAPHICS::PRTCL_WAVE_DEFERRED:             insertPair = pPipelines_.insert({type, std::make_unique<Particle::Wave>(std::ref(*this))}); break;
+                case GRAPHICS::PRTCL_FOUNTAIN_DEFERRED:         insertPair = pPipelines_.insert({type, std::make_unique<Particle::Fountain>(std::ref(*this))}); break;
+                case GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED:   insertPair = pPipelines_.insert({type, std::make_unique<Particle::FountainEuler>(std::ref(*this))}); break;
+                case GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER:       insertPair = pPipelines_.insert({type, std::make_unique<Particle::ShadowFountainEuler>(std::ref(*this))}); break;
+                case GRAPHICS::PRTCL_ATTR_PT_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Particle::AttractorPoint>(std::ref(*this))}); break;
+                case GRAPHICS::PRTCL_CLOTH_DEFERRED:            insertPair = pPipelines_.insert({type, std::make_unique<Particle::Cloth>(std::ref(*this))}); break;
+                case GRAPHICS::HFF_CLMN_DEFERRED:               insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluidColumn>(std::ref(*this))}); break;
+                default: assert(false);  // add new pipelines here
+            }
+            // clang-format on
+        } else if (std::visit(IsCompute{}, type)) {
+            // clang-format off
+            switch (std::visit(GetCompute{}, type)) {
+                case COMPUTE::SCREEN_SPACE_DEFAULT:    insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::ComputeDefault>(std::ref(*this))}); break;
+                case COMPUTE::PRTCL_EULER:             insertPair = pPipelines_.insert({type, std::make_unique<Particle::Euler>(std::ref(*this))}); break;
+                case COMPUTE::PRTCL_ATTR:              insertPair = pPipelines_.insert({type, std::make_unique<Particle::AttractorCompute>(std::ref(*this))}); break;
+                case COMPUTE::PRTCL_CLOTH:             insertPair = pPipelines_.insert({type, std::make_unique<Particle::ClothCompute>(std::ref(*this))}); break;
+                case COMPUTE::PRTCL_CLOTH_NORM:        insertPair = pPipelines_.insert({type, std::make_unique<Particle::ClothNormalCompute>(std::ref(*this))}); break;
+                case COMPUTE::HFF:                     insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluidCompute>(std::ref(*this))}); break;
+                default: assert(false);  // add new pipelines here
+            }
+            // clang-format on
         }
-        // clang-format on
         assert(insertPair.second);
         assert(insertPair.first->second != nullptr);
         assert(insertPair.first->first == type && insertPair.first->second->TYPE == type);

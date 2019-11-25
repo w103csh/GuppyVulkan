@@ -21,6 +21,7 @@ layout(location=3) in mat4 inModel;
 layout(location=0) out vec3 outPosition;    // (camera space)
 layout(location=1) out vec3 outNormal;      // (camera space)
 layout(location=2) out vec4 outColor;
+layout(location=3) out flat uint outFlags;
 
 void main() {
     vec4 pos = inModel * vec4(inPosition, 1.0);
@@ -32,5 +33,6 @@ void main() {
 
     outPosition = (mViewModel * vec4(inPosition, 1.0)).xyz;
     outNormal = mNormal * normalize(inNormal);
+    outFlags = 0x0u;
     outColor = inColor;
 }

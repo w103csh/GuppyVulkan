@@ -12,8 +12,11 @@
 
 #include "Enum.h"
 
-enum class PIPELINE : uint32_t;
 enum class PASS : uint32_t;
+enum class GRAPHICS : uint32_t;
+enum class COMPUTE : uint32_t;
+
+using PIPELINE = std::variant<GRAPHICS, COMPUTE>;
 
 using FlagBits = uint32_t;
 // Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)

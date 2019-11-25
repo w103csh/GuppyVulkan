@@ -112,25 +112,25 @@ const CreateInfo DEFAULT_CREATE_INFO = {
     "Default Render Pass",
     {
         // Order of the subpasses
-        PIPELINE::TRI_LIST_COLOR,  //
-        PIPELINE::PBR_COLOR,
-        PIPELINE::LINE,
-        PIPELINE::TRI_LIST_TEX,
-        PIPELINE::PARALLAX_SIMPLE,
-        PIPELINE::PARALLAX_STEEP,
+        GRAPHICS::TRI_LIST_COLOR,  //
+        GRAPHICS::PBR_COLOR,
+        GRAPHICS::LINE,
+        GRAPHICS::TRI_LIST_TEX,
+        GRAPHICS::PARALLAX_SIMPLE,
+        GRAPHICS::PARALLAX_STEEP,
         /* This needs to come second becuase it has transparent textures.
          *  It looks to be like its blending where the transparent edges meet
          *  the fragment behind it. In the case I was seeing when BP_TEX_CULL_NONE
          *  came before the ground plane pass it was blending the black clear color.
          */
-        PIPELINE::BP_TEX_CULL_NONE,
-        PIPELINE::PBR_TEX,
+        GRAPHICS::BP_TEX_CULL_NONE,
+        GRAPHICS::PBR_TEX,
         /* TODO: come up with a clever way to render the skybox last.
          *   Some of the logic in cube.vert requires the skybox to be rendered
          *   last in order for it to be efficient (This is why gl_Position takes
          *   .xyww swizzle so that it defaults the z value to 1.0 in depth tests).
          */
-        PIPELINE::CUBE,
+        GRAPHICS::CUBE,
     },
 };
 
@@ -140,15 +140,15 @@ const CreateInfo SAMPLER_DEFAULT_CREATE_INFO = {
     "Sampler Default Render Pass",
     {
         // Order of the subpasses
-        PIPELINE::TRI_LIST_COLOR,  //
-        PIPELINE::PBR_COLOR,
-        PIPELINE::LINE,
-        PIPELINE::TRI_LIST_TEX,
-        PIPELINE::PARALLAX_SIMPLE,
-        PIPELINE::PARALLAX_STEEP,
-        PIPELINE::BP_TEX_CULL_NONE,
-        PIPELINE::PBR_TEX,
-        PIPELINE::CUBE,
+        GRAPHICS::TRI_LIST_COLOR,  //
+        GRAPHICS::PBR_COLOR,
+        GRAPHICS::LINE,
+        GRAPHICS::TRI_LIST_TEX,
+        GRAPHICS::PARALLAX_SIMPLE,
+        GRAPHICS::PARALLAX_STEEP,
+        GRAPHICS::BP_TEX_CULL_NONE,
+        GRAPHICS::PBR_TEX,
+        GRAPHICS::CUBE,
     },
     (FLAG::SWAPCHAIN | FLAG::DEPTH | FLAG::MULTISAMPLE),
     {std::string(DEFAULT_2D_TEXTURE_ID)},
@@ -163,7 +163,7 @@ const CreateInfo PROJECT_CREATE_INFO = {
     PASS::SAMPLER_PROJECT,
     "Project Render Pass",
     {
-        PIPELINE::TRI_LIST_COLOR,
+        GRAPHICS::TRI_LIST_COLOR,
     },
     FLAG::DEPTH,
     {std::string(PROJECT_2D_ARRAY_TEXTURE_ID)},
@@ -172,8 +172,8 @@ const CreateInfo PROJECT_CREATE_INFO = {
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
     {
-        {{UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, PIPELINE::ALL_ENUM}, {1}},
-        //{{UNIFORM::LIGHT_SPOT_DEFAULT, PIPELINE::ALL_ENUM}, {1}},
+        {{UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, GRAPHICS::ALL_ENUM}, {1}},
+        //{{UNIFORM::LIGHT_SPOT_DEFAULT, GRAPHICS::ALL_ENUM}, {1}},
     },
 };
 

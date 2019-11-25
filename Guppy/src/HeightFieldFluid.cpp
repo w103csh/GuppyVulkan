@@ -100,7 +100,7 @@ namespace Pipeline {
 
 // HEIGHT FIELD FLUID (COMPUTE)
 const Pipeline::CreateInfo HFF_COMP_CREATE_INFO = {
-    PIPELINE::HFF_COMPUTE,
+    COMPUTE::HFF,
     "Height Fluid Field Compute Pipeline",
     {SHADER::HFF_COMP},
     {DESCRIPTOR_SET::HFF},
@@ -109,7 +109,7 @@ HeightFieldFluidCompute::HeightFieldFluidCompute(Pipeline::Handler& handler) : C
 
 // HEIGHT FIELD FLUID (COLUMN)
 const Pipeline::CreateInfo HFF_CLMN_CREATE_INFO = {
-    PIPELINE::HFF_CLMN_DEFERRED,
+    GRAPHICS::HFF_CLMN_DEFERRED,
     "Height Field Fluid Columns (Deferred) Pipeline",
     {SHADER::HFF_CLMN_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
     {DESCRIPTOR_SET::HFF_CLMN},

@@ -22,6 +22,7 @@ layout(location=PATCH_CONTROL_POINTS*1) in vec4 inColor[];
 layout(location=0) out vec3 outPosition;
 layout(location=1) out vec3 outNormal;
 layout(location=2) out vec4 outColor;
+layout(location=3) out flat uint outFlags;
 
 void main() {
     float u = gl_TessCoord.x;
@@ -49,4 +50,5 @@ void main() {
     // outNormal = gl_TessCoord[2]*inNormal[0] + gl_TessCoord[0]*inNormal[1] + gl_TessCoord[1]*inNormal[2];
     outNormal = inNormal[0];
     outColor = inColor[0];
+    outFlags = 0x1u;
 }

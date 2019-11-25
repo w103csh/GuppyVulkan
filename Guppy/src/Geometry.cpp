@@ -79,7 +79,7 @@ namespace Pipeline {
 namespace Geometry {
 
 const Pipeline::CreateInfo SILHOUETTE_CREATE_INFO = {
-    PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED,
+    GRAPHICS::GEOMETRY_SILHOUETTE_DEFERRED,
     "Tessellation Bezier 4 Control Point (Deferred) Pipeline",
     {
         SHADER::DEFERRED_MRT_COLOR_CS_VERT,

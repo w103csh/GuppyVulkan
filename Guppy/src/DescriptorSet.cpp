@@ -79,7 +79,7 @@ void Descriptor::Set::Base::updateOffsets(const Uniform::offsetsMap offsetsMap, 
 
     bool foundPassAll = false;
     // Check for render pass specific offsets.
-    searchOffsetsMap = offsetsMap.find({descType, PIPELINE::ALL_ENUM});
+    searchOffsetsMap = offsetsMap.find({descType, GRAPHICS::ALL_ENUM});
     assert(searchOffsetsMap != offsetsMap.end());
     for (const auto& [offsets, passTypes] : searchOffsetsMap->second) {
         if (passTypes.find(PASS::ALL_ENUM) != passTypes.end()) {
@@ -150,7 +150,7 @@ void Descriptor::Set::Base::findResourceSimilar(std::vector<Resource>::iterator&
         tempSet.clear();
         if (it->offsets.map().size() != 1) continue;
         if (it->pipelineTypes.count(piplineType)) continue;
-        if (it->pipelineTypes.count(PIPELINE::ALL_ENUM) == 0) continue;
+        if (it->pipelineTypes.count(GRAPHICS::ALL_ENUM) == 0) continue;
         std::set_difference(passTypes.begin(), passTypes.end(), it->passTypes.begin(), it->passTypes.end(),
                             std::inserter(tempSet, tempSet.begin()));
         if (tempSet.size() >= passTypes.size()) continue;

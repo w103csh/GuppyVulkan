@@ -35,7 +35,7 @@ struct Settings {
 };
 
 struct CreateInfo {
-    PIPELINE pipelineType = PIPELINE::ALL_ENUM;
+    PIPELINE pipelineType = GRAPHICS::ALL_ENUM;
     bool selectable = true;
     bool mappable = false;
     Settings settings = {};

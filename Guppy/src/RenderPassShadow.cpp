@@ -39,10 +39,10 @@ void Base::createAttachments() {
 
 void Base::createDependencies() {
     ::RenderPass::Base::createDependencies();
-    if (pipelineBindDataList_.hasKey(PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER)) {
+    if (pipelineBindDataList_.hasKey(GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER)) {
         resources_.dependencies.push_back({
             VK_SUBPASS_EXTERNAL,
-            pipelineBindDataList_.getOffset(PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER),
+            pipelineBindDataList_.getOffset(GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER),
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
             VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
             VK_ACCESS_SHADER_WRITE_BIT,
@@ -81,20 +81,20 @@ void Base::createFramebuffers() {
 
 namespace {
 std::array<PIPELINE, 5> COLOR_LIST = {
-    PIPELINE::DEFERRED_MRT_COLOR,              //
-    PIPELINE::DEFERRED_MRT_WF_COLOR,           //
-    PIPELINE::TESSELLATION_TRIANGLE_DEFERRED,  //
-    PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED,    //
-    // PIPELINE::PRTCL_WAVE_DEFERRED,        //
+    GRAPHICS::DEFERRED_MRT_COLOR,              //
+    GRAPHICS::DEFERRED_MRT_WF_COLOR,           //
+    GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED,  //
+    GRAPHICS::GEOMETRY_SILHOUETTE_DEFERRED,    //
+    // GRAPHICS::PRTCL_WAVE_DEFERRED,        //
 };
 std::array<PIPELINE, 2> TEX_LIST = {
-    PIPELINE::DEFERRED_MRT_TEX,
+    GRAPHICS::DEFERRED_MRT_TEX,
     /**
      * There are two reasons I can think of why cloth below won't work. First, the "mesh" for cloth is not stored in the
      * scene, and I am not sure if its compatible but I would imagine it is. Secondly, there would need to be a triangle
      * strip shadow pipeline.
      */
-    // PIPELINE::PRTCL_CLOTH_DEFERRED,
+    // GRAPHICS::PRTCL_CLOTH_DEFERRED,
 };
 }  // namespace
 
@@ -113,8 +113,8 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
         for (const auto& pipelineType : COLOR_LIST) {
             itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), pipelineType);
             if (itSurrogate != surrogatePipelineTypes.end()) {
-                pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(PIPELINE::SHADOW_COLOR),
-                               priCmd, secCmd, frameIndex, &getDescSetBindDataMap(PIPELINE::SHADOW_COLOR).begin()->second);
+                pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(GRAPHICS::SHADOW_COLOR),
+                               priCmd, secCmd, frameIndex, &getDescSetBindDataMap(GRAPHICS::SHADOW_COLOR).begin()->second);
                 surrogatePipelineTypes.erase(itSurrogate);
             }
         }
@@ -122,11 +122,11 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
         vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
 
         // PRTCL_FOUNTAIN_EULER_DEFERRED
-        itSurrogate =
-            std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED);
+        itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(),
+                                PIPELINE{GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED});
         if (itSurrogate != std::end(surrogatePipelineTypes) &&
-            pipelineBindDataList_.hasKey(PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER)) {
-            handler().particleHandler().recordDraw(TYPE, pipelineBindDataList_.getValue(PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER),
+            pipelineBindDataList_.hasKey(GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER)) {
+            handler().particleHandler().recordDraw(TYPE, pipelineBindDataList_.getValue(GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER),
                                                    priCmd, frameIndex);
 
             surrogatePipelineTypes.erase(itSurrogate);
@@ -137,8 +137,8 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
         for (const auto& pipelineType : TEX_LIST) {
             itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), pipelineType);
             if (itSurrogate != surrogatePipelineTypes.end()) {
-                pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(PIPELINE::SHADOW_TEX), priCmd,
-                               secCmd, frameIndex, &getDescSetBindDataMap(PIPELINE::SHADOW_TEX).begin()->second);
+                pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(GRAPHICS::SHADOW_TEX), priCmd,
+                               secCmd, frameIndex, &getDescSetBindDataMap(GRAPHICS::SHADOW_TEX).begin()->second);
                 surrogatePipelineTypes.erase(itSurrogate);
             }
         }
@@ -152,9 +152,9 @@ const CreateInfo DEFAULT_CREATE_INFO = {
     PASS::SHADOW,
     "Shadow Render Pass",
     {
-        PIPELINE::SHADOW_COLOR,
-        PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER,
-        PIPELINE::SHADOW_TEX,
+        GRAPHICS::SHADOW_COLOR,
+        GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER,
+        GRAPHICS::SHADOW_TEX,
     },
     FLAG::DEPTH,  // This actually enables the depth test from overridePipelineCreateInfo. Not sure if I like this.
     {
@@ -165,7 +165,7 @@ const CreateInfo DEFAULT_CREATE_INFO = {
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
     {
-        {{UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, PIPELINE::ALL_ENUM}, {2}},
+        {{UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, GRAPHICS::ALL_ENUM}, {2}},
     },
 };
 Default::Default(Handler& handler, const index&& offset)

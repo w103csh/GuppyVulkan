@@ -112,7 +112,7 @@ const CreateInfo MATERIAL_CREATE_INFO = {
 //  PIPELINE
 
 const Pipeline::CreateInfo COLOR_CREATE_INFO = {
-    PIPELINE::PBR_COLOR,
+    GRAPHICS::PBR_COLOR,
     "PBR Color Pipeline",
     {SHADER::COLOR_VERT, SHADER::PBR_COLOR_FRAG},
     {DESCRIPTOR_SET::UNIFORM_PBR},
@@ -121,7 +121,7 @@ const Pipeline::CreateInfo COLOR_CREATE_INFO = {
 Pipeline::PBR::Color::Color(Pipeline::Handler& handler) : Graphics(handler, &COLOR_CREATE_INFO) {}
 
 const Pipeline::CreateInfo TEX_CREATE_INFO = {
-    PIPELINE::PBR_TEX,
+    GRAPHICS::PBR_TEX,
     "PBR Texture Pipeline",
     {SHADER::TEX_VERT, SHADER::PBR_TEX_FRAG},
     {

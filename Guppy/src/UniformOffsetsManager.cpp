@@ -15,6 +15,7 @@ const std::map<DESCRIPTOR, offsets> DEFAULT_OFFSETS_MAP = {
     // CAMERA
     {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, DEFAULT_SINGLE_SET},
     // LIGHT
+    {UNIFORM::LIGHT_DIRECTIONAL_DEFAULT, DEFAULT_SINGLE_SET},
     {UNIFORM::LIGHT_POSITIONAL_DEFAULT, DEFAULT_ALL_SET},
     {UNIFORM::LIGHT_SPOT_DEFAULT, DEFAULT_ALL_SET},
     {UNIFORM::LIGHT_POSITIONAL_PBR, DEFAULT_ALL_SET},
@@ -47,7 +48,7 @@ void Uniform::OffsetsManager::initializeMap() {
         assert(std::visit(Descriptor::HasOffsets{}, descType));
         assert(offsets.size());
 
-        const offsetsMapKey& key = std::make_pair(descType, PIPELINE::ALL_ENUM);
+        const offsetsMapKey& key = std::make_pair(descType, GRAPHICS::ALL_ENUM);
         assert(offsetsMap_.count(key) == 0);
         offsetsMap_.insert({std::move(key), {{offsets, PASS_ALL_SET}}});
     }
@@ -60,7 +61,7 @@ void Uniform::OffsetsManager::validateAddType(const offsetsMap& map, const ADD_T
         const auto& offsetPassMap = keyValue1.second;
         switch (addType) {
             case ADD_TYPE::Pipeline:
-                assert(descPplnPair.second != PIPELINE::ALL_ENUM);
+                assert(!std::visit(Pipeline::IsAll{}, descPplnPair.second));
                 break;
             case ADD_TYPE::RenderPass:
                 break;

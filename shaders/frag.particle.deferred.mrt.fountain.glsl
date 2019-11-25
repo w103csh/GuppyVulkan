@@ -11,14 +11,16 @@ float getMaterialXRepeat();
 float getMaterialYRepeat();
 bool  isPerTextureColor();
 bool  isMesh();
+bool isModeFlatShade();
 
 layout(set=_DS_SMP_DEF, binding=0) uniform sampler2DArray sampParticle;
 
 // IN
-layout(location=0) in vec3 inPosition;        // camera space
-layout(location=1) in vec3 inNormal;          // camera space
+layout(location=0) in vec3 inPosition;        // (camera space)
+layout(location=1) in vec3 inNormal;          // (camera space)
 layout(location=3) in vec2 inTexCoord;
 layout(location=4) in float inTransparency;
+layout(location=5) in flat uint inFlags;
 
 // OUT
 layout(location=0) out vec4 outPosition;
@@ -26,6 +28,7 @@ layout(location=1) out vec4 outNormal;
 layout(location=2) out vec4 outDiffuse;
 layout(location=3) out vec4 outAmbient;
 layout(location=4) out vec4 outSpecular;
+layout(location=5) out uint outFlags;
 
 void main() {
     vec3 Kd, Ks, Ka;
@@ -70,4 +73,5 @@ void main() {
         outSpecular = vec4(0.9, 0.9, 0.9, alpha);
     else
         outSpecular = vec4(Ks, alpha);
+    outFlags = inFlags | (isModeFlatShade() ? 0x1u : 0x0u);
 }

@@ -21,6 +21,7 @@ class Handler : public Game::Handler {
     ~Handler();
 
     void init() override;
+    void frame() override;
     inline void destroy() override {
         reset();
         cleanup();

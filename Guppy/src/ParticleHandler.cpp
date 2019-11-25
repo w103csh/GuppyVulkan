@@ -115,7 +115,7 @@ void Particle::Handler::create() {
         uniformHandler().uniWaveMgr().insert(dev, &bufferInfo);
     }
 
-    bool suppress = true;
+    bool suppress = false;
 
     // WATER
     if (!suppress || true) {
@@ -127,8 +127,8 @@ void Particle::Handler::create() {
         Buffer::HeightFieldFluid::CreateInfo buffHFFInfo = {};
         buffHFFInfo.name = "Particle Cloth Buffer";
         buffHFFInfo.localSize = {4, 4, 1};
-        buffHFFInfo.computePipelineTypes = {PIPELINE::HFF_COMPUTE};
-        buffHFFInfo.graphicsPipelineType = PIPELINE::HFF_CLMN_DEFERRED;
+        buffHFFInfo.computePipelineTypes = {COMPUTE::HFF};
+        buffHFFInfo.graphicsPipelineType = GRAPHICS::HFF_CLMN_DEFERRED;
         buffHFFInfo.info = info;
 
         // HEIGHT FIELD FLUID
@@ -164,7 +164,7 @@ void Particle::Handler::create() {
             // BUFFER
             partBuffInfo = {};
             partBuffInfo.name = "Bluewater Fountain Particle Buffer";
-            partBuffInfo.graphicsPipelineType = PIPELINE::PRTCL_FOUNTAIN_DEFERRED;
+            partBuffInfo.graphicsPipelineType = GRAPHICS::PRTCL_FOUNTAIN_DEFERRED;
 
             // MATERIALS
             matInfo = {};
@@ -208,8 +208,8 @@ void Particle::Handler::create() {
                 partBuffEulerInfo.vertexType = Particle::Buffer::Euler::VERTEX::MESH;
                 partBuffEulerInfo.name = "Torus Particle Buffer";
                 partBuffEulerInfo.computeFlag = Particle::Euler::FLAG::FOUNTAIN;
-                partBuffEulerInfo.computePipelineTypes = {PIPELINE::PRTCL_EULER_COMPUTE};
-                partBuffEulerInfo.graphicsPipelineType = PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED;
+                partBuffEulerInfo.computePipelineTypes = {COMPUTE::PRTCL_EULER};
+                partBuffEulerInfo.graphicsPipelineType = GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED;
 
                 // MATERIALS
                 matInfo = {};
@@ -253,8 +253,8 @@ void Particle::Handler::create() {
                 partBuffEulerInfo.vertexType = Particle::Buffer::Euler::VERTEX::BILLBOARD;
                 partBuffEulerInfo.name = "Fire Euler Particle Buffer";
                 partBuffEulerInfo.computeFlag = Particle::Euler::FLAG::FIRE;
-                partBuffEulerInfo.computePipelineTypes = {PIPELINE::PRTCL_EULER_COMPUTE};
-                partBuffEulerInfo.graphicsPipelineType = PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED;
+                partBuffEulerInfo.computePipelineTypes = {COMPUTE::PRTCL_EULER};
+                partBuffEulerInfo.graphicsPipelineType = GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED;
 
                 // MATERIALS
                 matInfo = {};
@@ -294,8 +294,8 @@ void Particle::Handler::create() {
                 partBuffEulerInfo.vertexType = Particle::Buffer::Euler::VERTEX::BILLBOARD;
                 partBuffEulerInfo.name = "Smoke Euler Particle Buffer";
                 partBuffEulerInfo.computeFlag = Particle::Euler::FLAG::SMOKE;
-                partBuffEulerInfo.computePipelineTypes = {PIPELINE::PRTCL_EULER_COMPUTE};
-                partBuffEulerInfo.graphicsPipelineType = PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED;
+                partBuffEulerInfo.computePipelineTypes = {COMPUTE::PRTCL_EULER};
+                partBuffEulerInfo.graphicsPipelineType = GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED;
 
                 // MATERIALS
                 matInfo = {};
@@ -337,8 +337,8 @@ void Particle::Handler::create() {
                 partBuffEulerInfo.computeFlag = Particle::Euler::FLAG::NONE;
                 partBuffEulerInfo.localSize.x = 1000;
                 partBuffEulerInfo.firstInstanceBinding = 0;
-                partBuffEulerInfo.computePipelineTypes = {PIPELINE::PRTCL_ATTR_COMPUTE};
-                partBuffEulerInfo.graphicsPipelineType = PIPELINE::PRTCL_ATTR_PT_DEFERRED;
+                partBuffEulerInfo.computePipelineTypes = {COMPUTE::PRTCL_ATTR};
+                partBuffEulerInfo.graphicsPipelineType = GRAPHICS::PRTCL_ATTR_PT_DEFERRED;
 
                 // MATERIALS
                 matInfo = {};
@@ -416,8 +416,8 @@ void Particle::Handler::create() {
         Buffer::Cloth::CreateInfo prtclClothInfo = {};
         prtclClothInfo.name = "Particle Cloth Buffer";
         prtclClothInfo.localSize = {10, 10, 1};
-        prtclClothInfo.computePipelineTypes = {PIPELINE::PRTCL_CLOTH_COMPUTE, PIPELINE::PRTCL_CLOTH_NORM_COMPUTE};
-        prtclClothInfo.graphicsPipelineType = PIPELINE::PRTCL_CLOTH_DEFERRED;
+        prtclClothInfo.computePipelineTypes = {COMPUTE::PRTCL_CLOTH, COMPUTE::PRTCL_CLOTH_NORM};
+        prtclClothInfo.graphicsPipelineType = GRAPHICS::PRTCL_CLOTH_DEFERRED;
         prtclClothInfo.planeInfo = planeInfo;
         // prtclClothInfo.geometryInfo.doubleSided = true;
 
@@ -436,7 +436,7 @@ void Particle::Handler::recordDraw(const PASS passType, const std::shared_ptr<Pi
                                    const VkCommandBuffer& cmd, const uint8_t frameIndex) {
     // TODO: This is slow.
     for (const auto& pBuffer : pBuffers_) {
-        if (pBuffer->GRAPHICS_PIPELINE_TYPE == pPipelineBindData->type) {
+        if (PIPELINE{pBuffer->GRAPHICS_PIPELINE_TYPE} == pPipelineBindData->type) {
             if (pBuffer->getStatus() == STATUS::READY) {
                 if (pBuffer->shouldDraw()) {
                     pBuffer->draw(passType, pPipelineBindData,
@@ -445,7 +445,7 @@ void Particle::Handler::recordDraw(const PASS passType, const std::shared_ptr<Pi
                 }
             }
         }
-        if (pBuffer->SHADOW_PIPELINE_TYPE == pPipelineBindData->type) {
+        if (PIPELINE{pBuffer->SHADOW_PIPELINE_TYPE} == pPipelineBindData->type) {
             if (pBuffer->getStatus() == STATUS::READY) {
                 if (pBuffer->shouldDraw()) {
                     pBuffer->draw(passType, pPipelineBindData,
@@ -462,7 +462,7 @@ void Particle::Handler::recordDispatch(const PASS passType, const std::shared_pt
     // TODO: This is slow.
     for (const auto& pBuffer : pBuffers_) {
         for (auto i = 0; i < pBuffer->COMPUTE_PIPELINE_TYPES.size(); i++) {
-            if (pBuffer->COMPUTE_PIPELINE_TYPES[i] == pPipelineBindData->type) {
+            if (PIPELINE{pBuffer->COMPUTE_PIPELINE_TYPES[i]} == pPipelineBindData->type) {
                 if (pBuffer->getStatus() == STATUS::READY) {
                     if (pBuffer->shouldDraw()) {
                         pBuffer->dispatch(
