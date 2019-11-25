@@ -44,6 +44,9 @@ extern const CreateInfo AMBIENT_2D_CREATE_INFO;
 const std::string_view SPECULAR_2D_ID = "Deferred 2D Specular Texture";
 extern const CreateInfo SPECULAR_2D_CREATE_INFO;
 
+const std::string_view FLAGS_2D_ID = "Deferred 2D Flags Texture";
+extern const CreateInfo FLAGS_2D_CREATE_INFO;
+
 const std::string_view SSAO_2D_ID = "Deferred 2D SSAO Texture";
 extern const CreateInfo SSAO_2D_CREATE_INFO;
 
@@ -77,15 +80,9 @@ namespace Set {
 namespace Deferred {
 
 extern const CreateInfo MRT_UNIFORM_CREATE_INFO;
-extern const CreateInfo SSAO_UNIFORM_CREATE_INFO;
 extern const CreateInfo COMBINE_UNIFORM_CREATE_INFO;
-extern const CreateInfo POS_NORM_SAMPLER_CREATE_INFO;
-extern const CreateInfo POS_SAMPLER_CREATE_INFO;
-extern const CreateInfo NORM_SAMPLER_CREATE_INFO;
-extern const CreateInfo DIFFUSE_SAMPLER_CREATE_INFO;
-extern const CreateInfo AMBIENT_SAMPLER_CREATE_INFO;
-extern const CreateInfo SPECULAR_SAMPLER_CREATE_INFO;
-extern const CreateInfo SSAO_SAMPLER_CREATE_INFO;
+extern const CreateInfo SSAO_UNIFORM_CREATE_INFO;
+extern const CreateInfo SAMPLER_CREATE_INFO;
 extern const CreateInfo SSAO_RANDOM_SAMPLER_CREATE_INFO;
 
 }  // namespace Deferred
@@ -103,6 +100,7 @@ extern const CreateInfo MRT_TEX_WS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_TEX_CS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_TEX_FRAG_CREATE_INFO;
 extern const CreateInfo MRT_COLOR_CS_VERT_CREATE_INFO;
+extern const CreateInfo MRT_PT_CS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_COLOR_FRAG_CREATE_INFO;
 extern const CreateInfo MTR_POINT_FRAG_CREATE_INFO;
 extern const CreateInfo SSAO_FRAG_CREATE_INFO;
@@ -149,6 +147,14 @@ class MRTColorWireframe : public MRTColor {
    public:
     MRTColorWireframe(Handler& handler);
     void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
+};
+
+// MRT (POINT)
+class MRTPoint : public Graphics {
+   public:
+    MRTPoint(Handler& handler);
+    void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
+    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
 // MRT (LINE)

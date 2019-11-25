@@ -2,6 +2,7 @@
 #include "SceneHandler.h"
 
 #include <algorithm>
+#include <glm/gtc/matrix_transform.hpp>
 
 #include "Arc.h"
 #include "Axes.h"
@@ -9,6 +10,7 @@
 #include "Model.h"
 #include "Plane.h"
 #include "Shell.h"
+#include "Stars.h"
 #include "Torus.h"
 // HANDLERS
 #include "InputHandler.h"
@@ -18,6 +20,7 @@
 // Remove me after pass dependent things are not longer in the scene.
 #include "RenderPassHandler.h"
 #include "TextureHandler.h"
+#include "UniformHandler.h"
 
 Scene::Handler::Handler(Game* pGame) : Game::Handler(pGame), activeSceneIndex_() {}
 
@@ -50,7 +53,7 @@ void Scene::Handler::init() {
         // ORIGIN AXES
         if (!suppress || false) {
             axesInfo = {};
-            axesInfo.pipelineType = PIPELINE::DEFERRED_MRT_LINE;
+            axesInfo.pipelineType = GRAPHICS::DEFERRED_MRT_LINE;
             axesInfo.lineSize = 500.f;
             axesInfo.showNegative = true;
             instObj3dInfo = {};
@@ -63,7 +66,7 @@ void Scene::Handler::init() {
         // GROUND PLANE (COLOR)
         if (!suppress || true) {
             planeInfo = {};
-            planeInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
+            planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
             planeInfo.selectable = false;
             instObj3dInfo = {};
             instObj3dInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
@@ -81,7 +84,7 @@ void Scene::Handler::init() {
         // GROUND PLANE (TEXTURE)
         if (!suppress && false) {
             planeInfo = {};
-            planeInfo.pipelineType = PIPELINE::DEFERRED_MRT_TEX;
+            planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
             planeInfo.selectable = false;
             instObj3dInfo = {};
             instObj3dInfo.data.push_back({helpers::affine(glm::vec3{500.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
@@ -97,10 +100,42 @@ void Scene::Handler::init() {
             groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
         }
 
+        // STARS
+        if (!suppress || true) {
+            meshInfo = {};
+            meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_PT;
+            instObj3dInfo = {};
+            instObj3dInfo.data.push_back({helpers::affine(glm::vec3(1000.0f))});
+            defMatInfo = {};
+            defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
+            pScene->starsOffset_ =
+                meshHandler().makeColorMesh<Mesh::Stars>(&meshInfo, &defMatInfo, &instObj3dInfo)->getOffset();
+            pScene->addMeshIndex(MESH::COLOR, pScene->starsOffset_);
+        }
+
+        // MOON
+        if (!suppress || true) {
+            planeInfo = {};
+            planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
+            planeInfo.planeInfo.width = 150.0f;
+            planeInfo.planeInfo.height = 150.0f;
+
+            instObj3dInfo = {};
+            instObj3dInfo.data.push_back({helpers::moveAndRotateTo(
+                uniformHandler().lgtDefDirMgr().getTypedItem(0).direction * 1000.0f, glm::vec3(), UP_VECTOR)});
+
+            defMatInfo = {};
+            defMatInfo.flags |= Material::FLAG::MODE_FLAT_SHADE;
+            defMatInfo.pTexture = textureHandler().getTexture(Texture::BRIGHT_MOON_ID);
+            pScene->moonOffset_ =
+                meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&planeInfo, &defMatInfo, &instObj3dInfo)->getOffset();
+            pScene->addMeshIndex(MESH::TEXTURE, pScene->moonOffset_);
+        }
+
         // PLAIN OLD NON-TRANSFORMED PLANE (TEXTURE)
         if (!suppress && false) {
             planeInfo = {};
-            planeInfo.pipelineType = PIPELINE::DEFERRED_MRT_TEX;
+            planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
             planeInfo.selectable = true;
             planeInfo.settings.geometryInfo.doubleSided = true;
             instObj3dInfo = {};
@@ -118,8 +153,8 @@ void Scene::Handler::init() {
         if (!suppress || false) {
             if (particles) {
                 planeInfo = {};
-                // planeInfo.pipelineType = PIPELINE::DEFERRED_MRT_WF_COLOR;
-                planeInfo.pipelineType = PIPELINE::PRTCL_WAVE_DEFERRED;
+                // planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_WF_COLOR;
+                planeInfo.pipelineType = GRAPHICS::PRTCL_WAVE_DEFERRED;
                 planeInfo.selectable = true;
                 planeInfo.settings.geometryInfo.faceVertexColorsRGB = true;
                 // planeInfo.settings.indexVertices = false;
@@ -145,9 +180,9 @@ void Scene::Handler::init() {
             defMatInfo = {};
             defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
 
-            // PIPELINE::TRI_LIST_COLOR is the default
+            // GRAPHICS::TRI_LIST_COLOR is the default
             colorInfo.name = "Tessellated Triangle Test";
-            colorInfo.pipelineType = PIPELINE::TESSELLATION_TRIANGLE_DEFERRED;
+            colorInfo.pipelineType = GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED;
 
             colorInfo.faces.push_back({});
             colorInfo.faces.back()[0].position = {0.5, 2.0f, 0.0f};
@@ -164,7 +199,7 @@ void Scene::Handler::init() {
         // BURNT ORANGE TORUS
         if (!suppress && false) {
             torusInfo = {};
-            torusInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
+            torusInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
             // INSTANCE
             instObj3dInfo = {};
             instObj3dInfo.data.push_back({helpers::affine(glm::vec3{0.07f}, glm::vec3{-1.0f, 2.0f, -1.0f})});
@@ -184,9 +219,9 @@ void Scene::Handler::init() {
             modelInfo.async = false;
             modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
             modelInfo.modelPath = ICOSAHEDRON_MODEL_PATH;
-            modelInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
+            modelInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
             // This doesn't work right... Need to learn about cubic bezier trianlges/surfaces.
-            // modelInfo.pipelineType = PIPELINE::TESSELLATION_TRIANGLE_DEFERRED;
+            // modelInfo.pipelineType = GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED;
             modelInfo.selectable = true;
             modelInfo.settings.geometryInfo.smoothNormals = false;
             modelInfo.settings.geometryInfo.faceVertexColorsRGB = true;
@@ -206,9 +241,10 @@ void Scene::Handler::init() {
             arcInfo = {};
             instObj3dInfo = {};
             defMatInfo = {};
-            defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
+            defMatInfo.color = {0.2f, 0.4f, 0.8f};
+            // defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
 
-            // PIPELINE::DEFERRED_BEZIER_4 is the default
+            // GRAPHICS::DEFERRED_BEZIER_4 is the default
             arcInfo.controlPoints.push_back({{2.0f, 1.0f, 0.0f}});                  // p0 (start)
             arcInfo.controlPoints.push_back({{2.0f, 1.0f, 2.0f * (2.0f / 3.0f)}});  // p1
             arcInfo.controlPoints.push_back({{2.0f * (2.0f / 3.0f), 1.0f, 2.0f}});  // p2
@@ -229,7 +265,7 @@ void Scene::Handler::init() {
         if (!suppress || false) {
             if (true) {
                 meshInfo = {};
-                meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
+                meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
                 instObj3dInfo = {};
                 instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, M_PI_2_FLT,
                                                               glm::vec3{1.0f, 0.0f, 1.0f})});
@@ -244,7 +280,7 @@ void Scene::Handler::init() {
             }
             if (true && ctx.geometryShadingEnabled) {
                 meshInfo = {};
-                meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_WF_COLOR;
+                meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_WF_COLOR;
                 instObj3dInfo = {};
                 instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{-2.0f, 0.0f, -2.0f}, M_PI_2_FLT,
                                                               glm::vec3{1.0f, 0.0f, 1.0f})});
@@ -259,7 +295,7 @@ void Scene::Handler::init() {
             }
             if (true) {
                 meshInfo = {};
-                meshInfo.pipelineType = PIPELINE::DEFERRED_MRT_TEX;
+                meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
                 instObj3dInfo = {};
                 instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{-3.5f, 0.0f, 0.5f}, M_PI_2_FLT,
                                                               glm::vec3{1.0f, 0.0f, 1.0f})});
@@ -280,10 +316,10 @@ void Scene::Handler::init() {
             // MODEL
             modelInfo = {};
             if (false && ctx.geometryShadingEnabled) {
-                modelInfo.pipelineType = PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED;
+                modelInfo.pipelineType = GRAPHICS::GEOMETRY_SILHOUETTE_DEFERRED;
                 modelInfo.settings.needAdjacenyList = true;
             } else {
-                modelInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
+                modelInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
             }
             modelInfo.async = false;
             modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
@@ -311,7 +347,7 @@ void Scene::Handler::init() {
             modelInfo.settings.geometryInfo.smoothNormals = true;
             instObj3dInfo = {};
             instObj3dInfo.data.push_back({helpers::affine(glm::vec3{0.07f}, {}, -M_PI_2_FLT, CARDINAL_X)});
-            modelInfo.pipelineType = PIPELINE::DEFERRED_MRT_COLOR;
+            modelInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
             defMatInfo = {};
             defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
             // defMatInfo.ambientCoeff = {0.8f, 0.3f, 0.0f};
@@ -328,7 +364,7 @@ void Scene::Handler::init() {
         // MEDIEVAL HOUSE (TRI_COLOR_TEX)
         if (!suppress && false) {
             modelInfo = {};
-            modelInfo.pipelineType = PIPELINE::DEFERRED_MRT_TEX;
+            modelInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
             modelInfo.async = false;
             modelInfo.modelPath = MED_H_MODEL_PATH;
             modelInfo.settings.geometryInfo.smoothNormals = false;
@@ -379,7 +415,7 @@ void Scene::Handler::init() {
         // GROUND PLANE (TEXTURE)
         if (!suppress || false) {
             planeInfo = {};
-            planeInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+            planeInfo.pipelineType = GRAPHICS::TRI_LIST_TEX;
             planeInfo.selectable = false;
             instObj3dInfo = {};
             instObj3dInfo.data.push_back({helpers::affine(glm::vec3{500.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
@@ -398,7 +434,7 @@ void Scene::Handler::init() {
         // GROUND PLANE (COLOR)
         if (!suppress && false) {
             planeInfo = {};
-            planeInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+            planeInfo.pipelineType = GRAPHICS::TRI_LIST_COLOR;
             planeInfo.selectable = false;
             instObj3dInfo = {};
             instObj3dInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
@@ -414,7 +450,7 @@ void Scene::Handler::init() {
         // PLAIN OLD NON-TRANSFORMED PLANE (TEXTURE)
         if (!suppress && false) {
             planeInfo = {};
-            planeInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+            planeInfo.pipelineType = GRAPHICS::TRI_LIST_TEX;
             planeInfo.selectable = true;
             instObj3dInfo = {};
             defMatInfo = {};
@@ -431,7 +467,7 @@ void Scene::Handler::init() {
             // TODO: these types of checks are not great. The active passes should be able to change at runtime.
             if (std::find(activePassTypes.begin(), activePassTypes.end(), PASS::SAMPLER_PROJECT) != activePassTypes.end()) {
                 planeInfo = {};
-                planeInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+                planeInfo.pipelineType = GRAPHICS::TRI_LIST_TEX;
                 planeInfo.selectable = false;
                 instObj3dInfo = {};
                 instObj3dInfo.data.push_back({helpers::affine(glm::vec3{2.0f}, glm::vec3{0.5f, 3.0f, 0.5f})});
@@ -453,7 +489,7 @@ void Scene::Handler::init() {
         // SKYBOX
         if (!suppress || false) {
             meshInfo = {};
-            meshInfo.pipelineType = PIPELINE::CUBE;
+            meshInfo.pipelineType = GRAPHICS::CUBE;
             meshInfo.selectable = false;
             meshInfo.settings.geometryInfo.reverseFaceWinding = true;
             instObj3dInfo = {};
@@ -466,11 +502,21 @@ void Scene::Handler::init() {
         }
 
         // BOX (TEXTURE)
-        if (!suppress || false) {
+        if (!suppress && false) {
+            /**
+             * THIS NO LONGER WORKS BECAUSE OF CHANGES MADE TO THE DYNAMIC UNIFORM BIND DATA RETRIEVAL PROCESS.
+             *
+             *  This is because DESCRIPTOR_SET::SAMPLER_PARALLAX uses two COMBINED_SAMPLER::MATERIAL's in the set
+             * create info. This doesn't really make sense and was a bad workaround at the time. The real fix for this
+             * problem is to completely decouple textures from materials once and for all. The coupling was a bad assumption
+             * made from my time working at Autodesk about how materials and textures should have a 1 to 1 relationship. This
+             * is obvisouly not the case.
+             */
+
             meshInfo = {};
-            // meshInfo.pipelineType = PIPELINE::PARALLAX_SIMPLE;
-            meshInfo.pipelineType = PIPELINE::PARALLAX_STEEP;
-            // meshInfo.pipelineType = PIPELINE::PBR_TEX;
+            // meshInfo.pipelineType = GRAPHICS::PARALLAX_SIMPLE;
+            meshInfo.pipelineType = GRAPHICS::PARALLAX_STEEP;
+            // meshInfo.pipelineType = GRAPHICS::PBR_TEX;
             instObj3dInfo = {};
             instObj3dInfo.data.push_back(
                 {helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
@@ -487,7 +533,7 @@ void Scene::Handler::init() {
         // BOX (PBR_TEX)
         if (!suppress || false) {
             meshInfo = {};
-            meshInfo.pipelineType = PIPELINE::PBR_TEX;
+            meshInfo.pipelineType = GRAPHICS::PBR_TEX;
             // meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{1.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f,
             // 0.0f, 1.0f});
             instObj3dInfo = {};
@@ -508,7 +554,7 @@ void Scene::Handler::init() {
         // BOX (PBR_COLOR)
         if (!suppress || false) {
             meshInfo = {};
-            meshInfo.pipelineType = PIPELINE::PBR_COLOR;
+            meshInfo.pipelineType = GRAPHICS::PBR_COLOR;
             // meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{2.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f,
             // 0.0f, 1.0f});
             instObj3dInfo = {};
@@ -526,7 +572,7 @@ void Scene::Handler::init() {
         // BOX (TRI_LIST_COLOR)
         if (!suppress || false) {
             meshInfo = {};
-            meshInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+            meshInfo.pipelineType = GRAPHICS::TRI_LIST_COLOR;
             // meshInfo.model = helpers::affine(glm::vec3{1.0f}, glm::vec3{5.0f, 0.0f, 3.5f}, M_PI_2_FLT, glm::vec3{-1.0f,
             // 0.0f, 1.0f});
             // meshInfo.model =
@@ -560,7 +606,7 @@ void Scene::Handler::init() {
                 defMatInfo.eta = 0.94f;
                 defMatInfo.reflectionFactor = 0.1f;
             }
-            meshInfo.pipelineType = PIPELINE::CUBE;
+            meshInfo.pipelineType = GRAPHICS::CUBE;
             defMatInfo.pTexture = textureHandler().getTexture(Texture::SKYBOX_ID);
             auto offset = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &instObj3dInfo)->getOffset();
             pScene->addMeshIndex(MESH::COLOR, offset);
@@ -578,7 +624,7 @@ void Scene::Handler::init() {
             instObj3dInfo.data.push_back({helpers::affine(glm::vec3{0.07f})});
             // MATERIAL
             if (false) {
-                modelInfo.pipelineType = PIPELINE::PBR_COLOR;
+                modelInfo.pipelineType = GRAPHICS::PBR_COLOR;
                 pbrMatInfo = {};
                 pbrMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::METAL;
                 pbrMatInfo.color = {0.8f, 0.3f, 0.0f};
@@ -586,7 +632,7 @@ void Scene::Handler::init() {
                 auto offset = modelHandler().makeColorModel(&modelInfo, &pbrMatInfo, &instObj3dInfo)->getOffset();
                 pScene->addModelIndex(offset);
             } else if (true) {
-                modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+                modelInfo.pipelineType = GRAPHICS::TRI_LIST_COLOR;
                 defMatInfo = {};
                 defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
                 defMatInfo.ambientCoeff = {0.8f, 0.3f, 0.0f};
@@ -598,7 +644,7 @@ void Scene::Handler::init() {
                 auto offset = modelHandler().makeColorModel(&modelInfo, &defMatInfo, &instObj3dInfo)->getOffset();
                 pScene->addModelIndex(offset);
             } else {
-                modelInfo.pipelineType = PIPELINE::CUBE;
+                modelInfo.pipelineType = GRAPHICS::CUBE;
                 defMatInfo = {};
                 pbrMatInfo.color = {0.8f, 0.3f, 0.0f};
                 defMatInfo.flags |= Material::FLAG::REFLECT;
@@ -619,7 +665,7 @@ void Scene::Handler::init() {
             modelInfo.settings.geometryInfo.smoothNormals = false;
             instObj3dInfo = {};
             // defInstInfo.data.push_back({helpers::affine(glm::vec3{0.07f})});
-            modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+            modelInfo.pipelineType = GRAPHICS::TRI_LIST_COLOR;
             defMatInfo = {};
             defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
             // defMatInfo.ambientCoeff = {0.8f, 0.3f, 0.0f};
@@ -637,7 +683,7 @@ void Scene::Handler::init() {
         if (!suppress || false) {
             // MODEL
             modelInfo = {};
-            modelInfo.pipelineType = PIPELINE::BP_TEX_CULL_NONE;
+            modelInfo.pipelineType = GRAPHICS::BP_TEX_CULL_NONE;
             modelInfo.async = false;
             // modelInfo.callback = [groundPlane_bbmm](auto pModel) {};
             modelInfo.settings.doVisualHelper = false;
@@ -681,7 +727,7 @@ void Scene::Handler::init() {
         if (!suppress || false) {
             // MODEL
             modelInfo = {};
-            modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+            modelInfo.pipelineType = GRAPHICS::TRI_LIST_TEX;
             modelInfo.async = false;
             modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
             modelInfo.settings.doVisualHelper = true;
@@ -717,7 +763,7 @@ void Scene::Handler::init() {
         // MEDIEVAL HOUSE (TRI_COLOR_TEX)
         if (!suppress || false) {
             modelInfo = {};
-            modelInfo.pipelineType = PIPELINE::TRI_LIST_TEX;
+            modelInfo.pipelineType = GRAPHICS::TRI_LIST_TEX;
             modelInfo.async = false;
             modelInfo.modelPath = MED_H_MODEL_PATH;
             modelInfo.settings.geometryInfo.smoothNormals = false;
@@ -741,7 +787,7 @@ void Scene::Handler::init() {
         // MEDIEVAL HOUSE (PBR_TEX)
         if (!suppress || false) {
             modelInfo = {};
-            modelInfo.pipelineType = PIPELINE::PBR_TEX;
+            modelInfo.pipelineType = GRAPHICS::PBR_TEX;
             modelInfo.async = true;
             modelInfo.modelPath = MED_H_MODEL_PATH;
             modelInfo.settings.geometryInfo.smoothNormals = false;
@@ -769,7 +815,7 @@ void Scene::Handler::init() {
         if (!suppress || false) {
             // MODEL
             modelInfo = {};
-            modelInfo.pipelineType = PIPELINE::TRI_LIST_COLOR;
+            modelInfo.pipelineType = GRAPHICS::TRI_LIST_COLOR;
             modelInfo.async = true;
             modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
             modelInfo.modelPath = PIG_MODEL_PATH;
@@ -788,6 +834,29 @@ void Scene::Handler::init() {
 
     if (particles) {
         particleHandler().create();
+    }
+}
+
+void Scene::Handler::frame() {
+    auto& pScene = pScenes_.at(activeSceneIndex_);
+    const auto elapsed = shell().getElapsedTime<float>();
+
+    if (false) {
+        const float timeInterval = 4800.0f;
+
+        // STARS
+        auto& stars = meshHandler().getColorMesh(pScene->starsOffset_);
+        auto starsRot = glm::rotate(glm::mat4(1.0f), glm::pi<float>() / ((timeInterval * 4.0f) / elapsed), -CARDINAL_X);
+        stars->transform(starsRot);
+        meshHandler().updateMesh(stars);
+
+        // MOON
+        auto& moonLight = uniformHandler().lgtDefDirMgr().getTypedItem(0);
+        auto& moon = meshHandler().getTextureMesh(pScene->moonOffset_);
+        auto moonRot = glm::rotate(glm::mat4(1.0f), glm::pi<float>() / (timeInterval / elapsed), -CARDINAL_X);
+        moonLight.direction = glm::mat3(moonRot) * moonLight.direction;
+        moon->transform(moonRot);
+        meshHandler().updateMesh(moon);
     }
 }
 

@@ -25,6 +25,7 @@ layout(location=1) out vec3 outNormal;      // (world space)
 layout(location=2) out vec3 outTangent;     // (world space)
 layout(location=3) out vec3 outBinormal;    // (world space)
 layout(location=4) out vec2 outTexCoord;
+layout(location=5) out flat uint outFlags;
 
 void main() {
     vec4 pos = inModel * vec4(inPosition, 1.0);
@@ -38,4 +39,5 @@ void main() {
     outBinormal = mNormal * normalize(inBinormal);
 
     outTexCoord = inTexCoord;
+    outFlags = 0x0u;
 }

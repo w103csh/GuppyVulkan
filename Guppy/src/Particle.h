@@ -216,14 +216,14 @@ class FountainEuler : public Graphics {
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
-class ShadowFountainEuler : public Pipeline::Graphics {
+class ShadowFountainEuler : public Graphics {
    public:
     ShadowFountainEuler(Handler& handler);
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
     void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
-class AttractorCompute : public Pipeline::Compute {
+class AttractorCompute : public Compute {
    public:
     AttractorCompute(Handler& handler);
 };

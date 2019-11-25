@@ -21,39 +21,40 @@ const CreateInfo DEFERRED_CREATE_INFO = {
     PASS::DEFERRED,
     "Deferred Render Pass",
     {
+        GRAPHICS::DEFERRED_MRT_PT,
 // TODO: make tess/geom pipeline/mesh optional based on the context flags.
 #ifndef VK_USE_PLATFORM_MACOS_MVK
-        PIPELINE::TESSELLATION_BEZIER_4_DEFERRED,
+        GRAPHICS::TESSELLATION_BEZIER_4_DEFERRED,
 #endif
-        PIPELINE::DEFERRED_MRT_LINE,
-        PIPELINE::DEFERRED_MRT_COLOR,
-        PIPELINE::HFF_CLMN_DEFERRED,
+        GRAPHICS::DEFERRED_MRT_LINE,
+        GRAPHICS::DEFERRED_MRT_COLOR,
+        GRAPHICS::HFF_CLMN_DEFERRED,
 #ifndef VK_USE_PLATFORM_MACOS_MVK
-        PIPELINE::DEFERRED_MRT_WF_COLOR,
+        GRAPHICS::DEFERRED_MRT_WF_COLOR,
 #endif
-        PIPELINE::PRTCL_WAVE_DEFERRED,
-        PIPELINE::PRTCL_FOUNTAIN_DEFERRED,
+        GRAPHICS::PRTCL_WAVE_DEFERRED,
+        GRAPHICS::PRTCL_FOUNTAIN_DEFERRED,
 #ifndef VK_USE_PLATFORM_MACOS_MVK
-        // PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED,
-        PIPELINE::TESSELLATION_TRIANGLE_DEFERRED,
+        // GRAPHICS::GEOMETRY_SILHOUETTE_DEFERRED,
+        GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED,
 #endif
-        PIPELINE::DEFERRED_MRT_TEX,
-        PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED,
-        PIPELINE::PRTCL_ATTR_PT_DEFERRED,
-        PIPELINE::PRTCL_CLOTH_DEFERRED,
-        // PIPELINE::DEFERRED_SSAO,
-        PIPELINE::DEFERRED_COMBINE,
+        GRAPHICS::DEFERRED_MRT_TEX,
+        GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED,
+        GRAPHICS::PRTCL_ATTR_PT_DEFERRED,
+        GRAPHICS::PRTCL_CLOTH_DEFERRED,
+        // GRAPHICS::DEFERRED_SSAO,
+        GRAPHICS::DEFERRED_COMBINE,
         /**
          * These compute passes have sister graphics passes earlier in the list. There should be some kind of validation, or
          * potentially a data structure change so that this is more explicit. Also, its kind of misleading that these are at
          * the end of the list when they will always be executed first, but the subpass dependency code is easier to debug
          * with the indices being accurate for the graphics pass order.
          */
-        PIPELINE::PRTCL_EULER_COMPUTE,
-        PIPELINE::PRTCL_ATTR_COMPUTE,
-        PIPELINE::PRTCL_CLOTH_COMPUTE,
-        PIPELINE::PRTCL_CLOTH_NORM_COMPUTE,
-        PIPELINE::HFF_COMPUTE,
+        COMPUTE::PRTCL_EULER,
+        COMPUTE::PRTCL_ATTR,
+        COMPUTE::PRTCL_CLOTH,
+        COMPUTE::PRTCL_CLOTH_NORM,
+        COMPUTE::HFF,
     },
     (FLAG::SWAPCHAIN | FLAG::DEPTH | /*FLAG::DEPTH_INPUT_ATTACHMENT |*/
      (::Deferred::DO_MSAA ? FLAG::MULTISAMPLE : FLAG::NONE)),
@@ -109,15 +110,8 @@ void Base::record(const uint8_t frameIndex) {
 
         // COMPUTE
         for (const auto& pPipelineBindData : pipelineBindDataList_.getValues()) {
-            switch (pPipelineBindData->type) {
-                case PIPELINE::PRTCL_EULER_COMPUTE:
-                case PIPELINE::PRTCL_CLOTH_COMPUTE:
-                case PIPELINE::PRTCL_CLOTH_NORM_COMPUTE:
-                case PIPELINE::HFF_COMPUTE:
-                case PIPELINE::PRTCL_ATTR_COMPUTE: {
-                    handler().particleHandler().recordDispatch(TYPE, pPipelineBindData, priCmd, frameIndex);
-                } break;
-                default:;
+            if (std::visit(Pipeline::IsCompute{}, pPipelineBindData->type)) {
+                handler().particleHandler().recordDispatch(TYPE, pPipelineBindData, priCmd, frameIndex);
             }
         }
 
@@ -137,58 +131,56 @@ void Base::record(const uint8_t frameIndex) {
         auto& pScene = handler().sceneHandler().getActiveScene();
 
         for (const auto& pPipelineBindData : pipelineBindDataList_.getValues()) {
-            // Push constant
-            switch (pPipelineBindData->type) {
-                case PIPELINE::TESSELLATION_TRIANGLE_DEFERRED:
-                case PIPELINE::GEOMETRY_SILHOUETTE_DEFERRED:
-                case PIPELINE::TESSELLATION_BEZIER_4_DEFERRED:
-                case PIPELINE::DEFERRED_MRT_COLOR:
-                case PIPELINE::DEFERRED_MRT_LINE: {
-                    ::Deferred::PushConstant pushConstant = {::Deferred::PASS_FLAG::NONE};
-                    vkCmdPushConstants(priCmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
-                                       static_cast<uint32_t>(sizeof(::Deferred::PushConstant)), &pushConstant);
-                } break;
-                case PIPELINE::DEFERRED_MRT_WF_COLOR: {
-                    ::Deferred::PushConstant pushConstant = {::Deferred::PASS_FLAG::WIREFRAME};
-                    vkCmdPushConstants(priCmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
-                                       static_cast<uint32_t>(sizeof(::Deferred::PushConstant)), &pushConstant);
-                } break;
-                default:;
-            }
-            // Draw
-            switch (pPipelineBindData->type) {
-                case PIPELINE::PRTCL_EULER_COMPUTE:
-                case PIPELINE::PRTCL_CLOTH_COMPUTE:
-                case PIPELINE::PRTCL_CLOTH_NORM_COMPUTE:
-                case PIPELINE::HFF_COMPUTE:
-                case PIPELINE::PRTCL_ATTR_COMPUTE:
-                    break;
-                case PIPELINE::DEFERRED_SSAO: {
-                    // This hasn't been tested in a long time. Might work to just let through.
-                    // TODO: this definitely only needs to be recorded once per swapchain creation!!!
-                    assert(doSSAO_ && false);
-                } break;
-                case PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED:
-                case PIPELINE::PRTCL_ATTR_PT_DEFERRED:
-                case PIPELINE::PRTCL_CLOTH_DEFERRED:
-                case PIPELINE::HFF_CLMN_DEFERRED:
-                case PIPELINE::PRTCL_FOUNTAIN_DEFERRED: {
-                    // PARTICLE GRAPHICS
-                    handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
-                    vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
-                } break;
-                default: {
-                    // MRT PASSES
-                    auto& secCmd = data.secCmds[frameIndex];
-                    pScene->record(TYPE, pPipelineBindData->type, pPipelineBindData, priCmd, secCmd, frameIndex);
-                    vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
-                } break;
-                case PIPELINE::DEFERRED_COMBINE: {
-                    // TODO: this definitely only needs to be recorded once per swapchain creation!!!
-                    handler().getScreenQuad()->draw(TYPE, pipelineBindDataList_.getValue(pPipelineBindData->type),
-                                                    getDescSetBindDataMap(pPipelineBindData->type).begin()->second, priCmd,
-                                                    frameIndex);
-                } break;
+            if (std::visit(Pipeline::IsGraphics{}, pPipelineBindData->type)) {
+                auto graphicsType = std::visit(Pipeline::GetGraphics{}, pPipelineBindData->type);
+                // Push constant
+                switch (graphicsType) {
+                    case GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED:
+                    case GRAPHICS::GEOMETRY_SILHOUETTE_DEFERRED:
+                    case GRAPHICS::TESSELLATION_BEZIER_4_DEFERRED:
+                    case GRAPHICS::DEFERRED_MRT_COLOR:
+                    case GRAPHICS::DEFERRED_MRT_PT:
+                    case GRAPHICS::DEFERRED_MRT_LINE: {
+                        ::Deferred::PushConstant pushConstant = {::Deferred::PASS_FLAG::NONE};
+                        vkCmdPushConstants(priCmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                                           static_cast<uint32_t>(sizeof(::Deferred::PushConstant)), &pushConstant);
+                    } break;
+                    case GRAPHICS::DEFERRED_MRT_WF_COLOR: {
+                        ::Deferred::PushConstant pushConstant = {::Deferred::PASS_FLAG::WIREFRAME};
+                        vkCmdPushConstants(priCmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                                           static_cast<uint32_t>(sizeof(::Deferred::PushConstant)), &pushConstant);
+                    } break;
+                    default:;
+                }
+                // Draw
+                switch (graphicsType) {
+                    case GRAPHICS::DEFERRED_SSAO: {
+                        // This hasn't been tested in a long time. Might work to just let through.
+                        // TODO: this definitely only needs to be recorded once per swapchain creation!!!
+                        assert(doSSAO_ && false);
+                    } break;
+                    case GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED:
+                    case GRAPHICS::PRTCL_ATTR_PT_DEFERRED:
+                    case GRAPHICS::PRTCL_CLOTH_DEFERRED:
+                    case GRAPHICS::HFF_CLMN_DEFERRED:
+                    case GRAPHICS::PRTCL_FOUNTAIN_DEFERRED: {
+                        // PARTICLE GRAPHICS
+                        handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
+                        vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+                    } break;
+                    default: {
+                        // MRT PASSES
+                        auto& secCmd = data.secCmds[frameIndex];
+                        pScene->record(TYPE, pPipelineBindData->type, pPipelineBindData, priCmd, secCmd, frameIndex);
+                        vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+                    } break;
+                    case GRAPHICS::DEFERRED_COMBINE: {
+                        // TODO: this definitely only needs to be recorded once per swapchain creation!!!
+                        handler().getScreenQuad()->draw(TYPE, pipelineBindDataList_.getValue(pPipelineBindData->type),
+                                                        getDescSetBindDataMap(pPipelineBindData->type).begin()->second,
+                                                        priCmd, frameIndex);
+                    } break;
+                }
             }
         }
 
@@ -234,6 +226,7 @@ void Base::createAttachments() {
         {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
     resources_.attachments.push_back(attachment);
     auto pTexture = handler().textureHandler().getTexture(Texture::Deferred::POS_2D_ID);
+    assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
     resources_.inputAttachments.push_back(
@@ -244,6 +237,7 @@ void Base::createAttachments() {
         {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
     resources_.attachments.push_back(attachment);
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::NORM_2D_ID);
+    assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
     resources_.inputAttachments.push_back(
@@ -254,6 +248,7 @@ void Base::createAttachments() {
         {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
     resources_.attachments.push_back(attachment);
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::DIFFUSE_2D_ID);
+    assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
     resources_.inputAttachments.push_back(
@@ -264,6 +259,7 @@ void Base::createAttachments() {
         {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
     resources_.attachments.push_back(attachment);
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::AMBIENT_2D_ID);
+    assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
     resources_.inputAttachments.push_back(
@@ -274,6 +270,18 @@ void Base::createAttachments() {
         {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
     resources_.attachments.push_back(attachment);
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::SPECULAR_2D_ID);
+    assert(pTexture != nullptr);
+    resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
+    assert(resources_.attachments.back().samples == getSamples());
+    resources_.inputAttachments.push_back(
+        {resources_.colorAttachments.back().attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
+
+    // FLAGS
+    resources_.colorAttachments.push_back(
+        {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
+    resources_.attachments.push_back(attachment);
+    pTexture = handler().textureHandler().getTexture(Texture::Deferred::FLAGS_2D_ID);
+    assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
     resources_.inputAttachments.push_back(
@@ -287,10 +295,11 @@ void Base::createAttachments() {
             {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
         resources_.attachments.push_back(attachment);
         pTexture = handler().textureHandler().getTexture(Texture::Deferred::SSAO_2D_ID);
+        assert(pTexture != nullptr);
         resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
-        assert(resources_.colorAttachments.size() == 7);
+        assert(resources_.colorAttachments.size() == 8);
     } else {
-        assert(resources_.colorAttachments.size() == 6);
+        assert(resources_.colorAttachments.size() == 7);
     }
 }
 
@@ -300,17 +309,16 @@ void Base::createSubpassDescriptions() {
     assert(inputAttachmentOffset_ == 1);  // Swapchain should be in 0
 
     uint32_t mrtPipelineCount = 0;
-    uint32_t compPipelineCount = 5;
+    uint32_t compPipelineCount = 0;
     for (const auto& pipelineType : pipelineBindDataList_.getKeys()) {
-        // TODO: I need a better way to generally identify if the type is for a compute pipeline
-        if (pipelineType == PIPELINE::PRTCL_EULER_COMPUTE) continue;
-        if (pipelineType == PIPELINE::PRTCL_ATTR_COMPUTE) continue;
-        if (pipelineType == PIPELINE::PRTCL_CLOTH_COMPUTE) continue;
-        if (pipelineType == PIPELINE::PRTCL_CLOTH_NORM_COMPUTE) continue;
-        if (pipelineType == PIPELINE::HFF_COMPUTE) continue;
-        if (pipelineType == PIPELINE::DEFERRED_SSAO && !doSSAO_) continue;
-        if (pipelineType == PIPELINE::DEFERRED_COMBINE) continue;
-        mrtPipelineCount++;
+        if (std::visit(Pipeline::IsCompute{}, pipelineType))
+            compPipelineCount++;
+        else if (pipelineType == PIPELINE{GRAPHICS::DEFERRED_SSAO} && !doSSAO_)
+            continue;
+        else if (pipelineType == PIPELINE{GRAPHICS::DEFERRED_COMBINE})
+            continue;
+        else
+            mrtPipelineCount++;
     }
 
     // MRT
@@ -376,17 +384,13 @@ void Base::createDependencies() {
     for (uint32_t offset = subpass; offset < pipelineBindDataList_.size(); offset++) {
         if (offset == 0) continue;
         const auto& pipelineType = pipelineBindDataList_.getKey(subpass);
-        // TODO: I need a better way to generally identify if the type is for compute
-        if (pipelineType == PIPELINE::DEFERRED_COMBINE) continue;
-        if (pipelineType == PIPELINE::PRTCL_EULER_COMPUTE) continue;
-        if (pipelineType == PIPELINE::PRTCL_ATTR_COMPUTE) continue;
-        if (pipelineType == PIPELINE::PRTCL_CLOTH_COMPUTE) continue;
-        if (pipelineType == PIPELINE::PRTCL_CLOTH_NORM_COMPUTE) continue;
-        if (pipelineType == PIPELINE::HFF_COMPUTE) continue;
-        if (pipelineType == PIPELINE::DEFERRED_SSAO && !doSSAO_) continue;
+        if (std::visit(Pipeline::IsCompute{}, pipelineType)) continue;
+        if (pipelineType == PIPELINE{GRAPHICS::DEFERRED_SSAO} && !doSSAO_) continue;
         // TODO: How could this know which external subpass to wait on?
-        if (pipelineType == PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED || pipelineType == PIPELINE::PRTCL_ATTR_PT_DEFERRED ||
-            pipelineType == PIPELINE::PRTCL_CLOTH_DEFERRED || pipelineType == PIPELINE::HFF_CLMN_DEFERRED) {
+        if (pipelineType == PIPELINE{GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED} ||
+            pipelineType == PIPELINE{GRAPHICS::PRTCL_ATTR_PT_DEFERRED} ||
+            pipelineType == PIPELINE{GRAPHICS::PRTCL_CLOTH_DEFERRED} ||
+            pipelineType == PIPELINE{GRAPHICS::HFF_CLMN_DEFERRED}) {
             // Dispatch writes into a storage buffer. Draw consumes that buffer as an instance vertex buffer.
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,
@@ -398,7 +402,7 @@ void Base::createDependencies() {
                 VK_DEPENDENCY_BY_REGION_BIT,
             });
         }
-        if (pipelineType == PIPELINE::HFF_CLMN_DEFERRED) {
+        if (pipelineType == PIPELINE{GRAPHICS::HFF_CLMN_DEFERRED}) {
             // Dispatch writes into a storage buffer. Draw consumes that buffer as an instance vertex buffer.
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,
@@ -430,16 +434,10 @@ void Base::createDependencies() {
             VK_DEPENDENCY_BY_REGION_BIT,                    // dependencyFlags
         };
 
-        combineDependency.dstSubpass = pipelineBindDataList_.getOffset(PIPELINE::DEFERRED_COMBINE);
+        combineDependency.dstSubpass = pipelineBindDataList_.getOffset(PIPELINE{GRAPHICS::DEFERRED_COMBINE});
         for (subpass = 0; subpass < pipelineBindDataList_.size(); subpass++) {
             const auto& pipelineType = pipelineBindDataList_.getKey(subpass);
-            // TODO: I need a better way to generally identify if the type is for compute
-            if (pipelineType == PIPELINE::DEFERRED_COMBINE) continue;
-            if (pipelineType == PIPELINE::PRTCL_EULER_COMPUTE) continue;
-            if (pipelineType == PIPELINE::PRTCL_ATTR_COMPUTE) continue;
-            if (pipelineType == PIPELINE::PRTCL_CLOTH_COMPUTE) continue;
-            if (pipelineType == PIPELINE::PRTCL_CLOTH_NORM_COMPUTE) continue;
-            if (pipelineType == PIPELINE::HFF_COMPUTE) continue;
+            if (std::visit(Pipeline::IsCompute{}, pipelineType)) continue;
             combineDependency.srcSubpass = subpass;
             resources_.dependencies.push_back(combineDependency);
         }
@@ -451,10 +449,10 @@ void Base::updateClearValues() {
     RenderPass::Base::updateClearValues();
     // Position
     clearValues_.push_back({});
-    clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
+    clearValues_.back().color = VkClearColorValue{0.0f, 0.0f, 0.0f, 0.0f};
     // Normal
     clearValues_.push_back({});
-    clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
+    clearValues_.back().color = VkClearColorValue{0.0f, 0.0f, 0.0f, 0.0f};
     // Diffuse
     clearValues_.push_back({});
     clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
@@ -464,6 +462,9 @@ void Base::updateClearValues() {
     // Specular
     clearValues_.push_back({});
     clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
+    // Flags
+    clearValues_.push_back({});
+    clearValues_.back().color = VkClearColorValue{0u, 0u, 0u, 0u};
     // SSAO
     if (doSSAO_) {
         clearValues_.push_back({});
@@ -535,6 +536,11 @@ void Base::createFramebuffers() {
 
         // SPECULAR
         pTexture = handler().textureHandler().getTexture(Texture::Deferred::SPECULAR_2D_ID);
+        attachmentViews.push_back(pTexture->samplers[0].layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL).view);
+        assert(attachmentViews.back() != VK_NULL_HANDLE);
+
+        // FLAGS
+        pTexture = handler().textureHandler().getTexture(Texture::Deferred::FLAGS_2D_ID);
         attachmentViews.push_back(pTexture->samplers[0].layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL).view);
         assert(attachmentViews.back() != VK_NULL_HANDLE);
 

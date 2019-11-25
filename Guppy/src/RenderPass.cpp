@@ -324,7 +324,7 @@ void RenderPass::Base::createBeginInfo() {
         inheritInfo_ = {};
         inheritInfo_.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
         inheritInfo_.renderPass = pass;
-        inheritInfo_.subpass = getSubpassId(PIPELINE::TRI_LIST_TEX);
+        inheritInfo_.subpass = getSubpassId(GRAPHICS::TRI_LIST_TEX);
         // Validation layer: Cannot set inherited occlusionQueryEnable in vkBeginCommandBuffer() when device does not
         // support inheritedQueries.
         inheritInfo_.occlusionQueryEnable = VK_FALSE;  // TODO: not sure

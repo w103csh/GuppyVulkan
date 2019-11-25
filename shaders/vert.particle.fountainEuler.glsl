@@ -53,10 +53,11 @@ layout(location=4) in vec4 inData1;
 layout(location=5) in vec4 inData2;
 
 // OUT
-layout(location=0) out vec3 outPosition;        // camera space
-layout(location=1) out vec3 outNormal;          // camera space
+layout(location=0) out vec3 outPosition;        // (camera space)
+layout(location=1) out vec3 outNormal;          // (camera space)
 layout(location=3) out vec2 outTexCoord;
 layout(location=4) out float outTransparency;
+layout(location=5) out flat uint outFlags;
 
 // Offsets to the position in camera coordinates for each vertex of the particle's quad
 const vec3 offsets[] = vec3[](vec3(-0.5, -0.5, 0), vec3(0.5, -0.5, 0), vec3( 0.5, 0.5, 0),
@@ -111,6 +112,8 @@ void main() {
         outTexCoord = texCoords[gl_VertexIndex];
         outNormal = vec3(0.0, 0.0, 1.0);
     }
+
+    outFlags = 0x0u;
 
     gl_Position = camera.projection * vec4(outPosition, 1.0);
 }

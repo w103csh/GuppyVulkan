@@ -104,8 +104,7 @@ class Compute : public Base {
                  VkComputePipelineCreateInfo *pComputeInfo) override final;
 
    protected:
-    Compute(Pipeline::Handler &handler, const Pipeline::CreateInfo *pCreateInfo)
-        : Base(handler, VK_PIPELINE_BIND_POINT_COMPUTE, pCreateInfo) {}
+    Compute(Pipeline::Handler &handler, const Pipeline::CreateInfo *pCreateInfo);
 };
 
 // GRAPHICS
@@ -116,8 +115,7 @@ class Graphics : public Base {
                  VkComputePipelineCreateInfo *pComputeInfo) override final;
 
    protected:
-    Graphics(Pipeline::Handler &handler, const Pipeline::CreateInfo *pCreateInfo)
-        : Base(handler, VK_PIPELINE_BIND_POINT_GRAPHICS, pCreateInfo) {}
+    Graphics(Pipeline::Handler &handler, const Pipeline::CreateInfo *pCreateInfo);
 
     // INFOS
     virtual void getBlendInfoResources(CreateInfoResources &createInfoRes);

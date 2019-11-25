@@ -95,6 +95,19 @@ const CreateInfo SPECULAR_2D_CREATE_INFO = {
     VK_FORMAT_R8G8B8A8_UNORM,
 };
 
+const CreateInfo FLAGS_2D_CREATE_INFO = {
+    "Deferred 2D Flag Sampler",
+    {{{::Sampler::USAGE::FLAGS}}},
+    VK_IMAGE_VIEW_TYPE_2D,
+    BAD_EXTENT_3D,
+    {false, true, 1.0f, ::Deferred::DO_MSAA},
+    0,
+    SAMPLER::DEFAULT,
+    (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT),
+    {{false, false}, 1},
+    VK_FORMAT_R8_UINT,
+};
+
 const CreateInfo SSAO_2D_CREATE_INFO = {
     "Deferred 2D SSAO Sampler",
     {{{::Sampler::USAGE::COLOR}}},  // COLOR ???
@@ -156,6 +169,14 @@ const CreateInfo AMBIENT_2D_CREATE_INFO = {
 const CreateInfo SPECULAR_2D_CREATE_INFO = {
     std::string(SPECULAR_2D_ID),  //
     {Sampler::Deferred::SPECULAR_2D_CREATE_INFO},
+    false,
+    false,
+    INPUT_ATTACHMENT::DONT_CARE,
+};
+
+const CreateInfo FLAGS_2D_CREATE_INFO = {
+    std::string(FLAGS_2D_ID),  //
+    {Sampler::Deferred::FLAGS_2D_CREATE_INFO},
     false,
     false,
     INPUT_ATTACHMENT::DONT_CARE,
@@ -248,11 +269,11 @@ const CreateInfo COMBINE_UNIFORM_CREATE_INFO = {
     "_DS_UNI_DFR_COMB",
     {
         {{0, 0}, {UNIFORM::FOG_DEFAULT}},
-        {{1, 0}, {UNIFORM::LIGHT_POSITIONAL_DEFAULT}},
-        {{2, 0}, {UNIFORM::LIGHT_SPOT_DEFAULT}},
-        {{3, 0}, {UNIFORM::LIGHT_POSITIONAL_SHADOW}},
-        {{4, 0}, {UNIFORM::SHADOW_DATA}},
-        {{5, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
+        {{1, 0}, {UNIFORM::LIGHT_DIRECTIONAL_DEFAULT}},
+        {{2, 0}, {UNIFORM::LIGHT_POSITIONAL_DEFAULT}},
+        {{3, 0}, {UNIFORM::LIGHT_SPOT_DEFAULT}},
+        {{4, 0}, {UNIFORM::LIGHT_POSITIONAL_SHADOW}},
+        {{5, 0}, {UNIFORM::SHADOW_DATA}},
     },
 };
 
@@ -265,60 +286,19 @@ const CreateInfo SSAO_UNIFORM_CREATE_INFO = {
     },
 };
 
-const CreateInfo POS_NORM_SAMPLER_CREATE_INFO = {
-    DESCRIPTOR_SET::SAMPLER_DEFERRED_POS_NORM,
-    "_DS_SMP_DFR_POS_NORM",
+const CreateInfo SAMPLER_CREATE_INFO = {
+    DESCRIPTOR_SET::SAMPLER_DEFERRED,
+    "_DS_SMP_DFR",
     {
-        {{0, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Deferred::POS_NORM_2D_ARRAY_ID}},
-    },
-};
-
-const CreateInfo POS_SAMPLER_CREATE_INFO = {
-    DESCRIPTOR_SET::SAMPLER_DEFERRED_POS,
-    "_DS_SMP_DFR_POS",
-    {
-        //{{0, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Deferred::POS_2D_ID}},
         {{0, 0}, {INPUT_ATTACHMENT::POSITION, Texture::Deferred::POS_2D_ID}},
+        //{{0, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Deferred::POS_NORM_2D_ARRAY_ID}},
+        {{1, 0}, {INPUT_ATTACHMENT::NORMAL, Texture::Deferred::NORM_2D_ID}},
+        {{2, 0}, {INPUT_ATTACHMENT::COLOR, Texture::Deferred::DIFFUSE_2D_ID}},
+        {{3, 0}, {INPUT_ATTACHMENT::COLOR, Texture::Deferred::AMBIENT_2D_ID}},
+        {{4, 0}, {INPUT_ATTACHMENT::COLOR, Texture::Deferred::SPECULAR_2D_ID}},
+        {{5, 0}, {INPUT_ATTACHMENT::FLAGS, Texture::Deferred::FLAGS_2D_ID}},
+        //{{{6, 0}, {INPUT_ATTACHMENT::SSAO, Texture::Deferred::SSAO_2D_ID}}},
     },
-};
-
-const CreateInfo NORM_SAMPLER_CREATE_INFO = {
-    DESCRIPTOR_SET::SAMPLER_DEFERRED_NORM,
-    "_DS_SMP_DFR_NORM",
-    {
-        //{{0, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Deferred::NORM_2D_ID}},
-        {{0, 0}, {INPUT_ATTACHMENT::NORMAL, Texture::Deferred::NORM_2D_ID}},
-    },
-};
-
-const CreateInfo DIFFUSE_SAMPLER_CREATE_INFO = {
-    DESCRIPTOR_SET::SAMPLER_DEFERRED_DIFFUSE,
-    "_DS_SMP_DFR_DIFF",
-    {
-        {{0, 0}, {INPUT_ATTACHMENT::COLOR, Texture::Deferred::DIFFUSE_2D_ID}},
-    },
-};
-
-const CreateInfo AMBIENT_SAMPLER_CREATE_INFO = {
-    DESCRIPTOR_SET::SAMPLER_DEFERRED_AMBIENT,
-    "_DS_SMP_DFR_AMB",
-    {
-        {{0, 0}, {INPUT_ATTACHMENT::COLOR, Texture::Deferred::AMBIENT_2D_ID}},
-    },
-};
-
-const CreateInfo SPECULAR_SAMPLER_CREATE_INFO = {
-    DESCRIPTOR_SET::SAMPLER_DEFERRED_SPECULAR,
-    "_DS_SMP_DFR_SPEC",
-    {
-        {{0, 0}, {INPUT_ATTACHMENT::COLOR, Texture::Deferred::SPECULAR_2D_ID}},
-    },
-};
-
-const CreateInfo SSAO_SAMPLER_CREATE_INFO = {
-    DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO,
-    "_DS_SMP_DFR_SSAO",
-    {{{0, 0}, {INPUT_ATTACHMENT::SSAO, Texture::Deferred::SSAO_2D_ID}}},
 };
 
 const CreateInfo SSAO_RANDOM_SAMPLER_CREATE_INFO = {
@@ -389,6 +369,13 @@ const CreateInfo MRT_COLOR_CS_VERT_CREATE_INFO = {
     VK_SHADER_STAGE_VERTEX_BIT,
 };
 
+const CreateInfo MRT_PT_CS_VERT_CREATE_INFO = {
+    SHADER::DEFERRED_MRT_PT_CS_VERT,
+    "Deferred Multiple Render Target Point Camera Space Vertex Shader",
+    "vert.point.deferred.mrt.cs.glsl",
+    VK_SHADER_STAGE_VERTEX_BIT,
+};
+
 const CreateInfo MRT_COLOR_FRAG_CREATE_INFO = {
     SHADER::DEFERRED_MRT_COLOR_FRAG,
     "Deferred Multiple Render Target Color Fragment Shader",
@@ -424,13 +411,17 @@ namespace Deferred {
 
 void GetBlendInfoResources(CreateInfoResources& createInfoRes, bool blend) {
     // Blend disabled
-    VkPipelineColorBlendAttachmentState state = {VK_FALSE};
-    state.colorWriteMask =
+    VkPipelineColorBlendAttachmentState noBlendRGBA = {VK_FALSE};
+    noBlendRGBA.colorWriteMask =
         VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    VkPipelineColorBlendAttachmentState noBlendR = {VK_FALSE};
+    noBlendR.colorWriteMask = VK_COLOR_COMPONENT_R_BIT;
 
     if (!blend) {
         // Position/Normal/Diffuse/Ambient/Specular
-        createInfoRes.blendAttachmentStates.assign(5, state);
+        createInfoRes.blendAttachmentStates.assign(5, noBlendRGBA);
+        // Flags
+        createInfoRes.blendAttachmentStates.push_back(noBlendR);
 
         createInfoRes.colorBlendStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr};
         createInfoRes.colorBlendStateInfo.attachmentCount =
@@ -439,40 +430,43 @@ void GetBlendInfoResources(CreateInfoResources& createInfoRes, bool blend) {
         createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
 
     } else {
-        // Position/Normal (blend disabled)
-        createInfoRes.blendAttachmentStates.assign(2, state);
+        // Position/Normal
+        createInfoRes.blendAttachmentStates.assign(2, noBlendRGBA);
 
-        state.blendEnable = VK_TRUE;
+        VkPipelineColorBlendAttachmentState blendRGBA = {VK_TRUE};
+        blendRGBA.colorWriteMask =
+            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
         if (true) {
             // This one makes the most sense to me. I found the other two online.
-            state.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-            state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-            state.colorBlendOp = VK_BLEND_OP_ADD;
-            state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-            state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-            state.alphaBlendOp = VK_BLEND_OP_ADD;
+            blendRGBA.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            blendRGBA.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            blendRGBA.colorBlendOp = VK_BLEND_OP_ADD;
+            blendRGBA.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            blendRGBA.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+            blendRGBA.alphaBlendOp = VK_BLEND_OP_ADD;
         } else if (false) {
             // Additive blending
-            state.colorBlendOp = VK_BLEND_OP_ADD;
-            state.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-            state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
-            state.alphaBlendOp = VK_BLEND_OP_ADD;
-            state.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-            state.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+            blendRGBA.colorBlendOp = VK_BLEND_OP_ADD;
+            blendRGBA.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            blendRGBA.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            blendRGBA.alphaBlendOp = VK_BLEND_OP_ADD;
+            blendRGBA.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
+            blendRGBA.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
         } else {
             // Premulitplied alpha
-            state.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-            state.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-            state.colorBlendOp = VK_BLEND_OP_ADD;
-            state.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-            state.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-            state.alphaBlendOp = VK_BLEND_OP_ADD;
+            blendRGBA.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
+            blendRGBA.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
+            blendRGBA.colorBlendOp = VK_BLEND_OP_ADD;
+            blendRGBA.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
+            blendRGBA.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
+            blendRGBA.alphaBlendOp = VK_BLEND_OP_ADD;
         }
-
-        // Diffuse/Ambient/Specular (blend enabled)
-        createInfoRes.blendAttachmentStates.push_back(state);
-        createInfoRes.blendAttachmentStates.push_back(state);
-        createInfoRes.blendAttachmentStates.push_back(state);
+        // Diffuse/Ambient/Specular
+        createInfoRes.blendAttachmentStates.push_back(blendRGBA);
+        createInfoRes.blendAttachmentStates.push_back(blendRGBA);
+        createInfoRes.blendAttachmentStates.push_back(blendRGBA);
+        // Flags
+        createInfoRes.blendAttachmentStates.push_back(noBlendR);
 
         createInfoRes.colorBlendStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr};
         createInfoRes.colorBlendStateInfo.attachmentCount =
@@ -484,7 +478,7 @@ void GetBlendInfoResources(CreateInfoResources& createInfoRes, bool blend) {
 
 // MRT (TEXTURE)
 const Pipeline::CreateInfo MRT_TEX_CREATE_INFO = {
-    PIPELINE::DEFERRED_MRT_TEX,
+    GRAPHICS::DEFERRED_MRT_TEX,
     "Deferred Multiple Render Target Texture Pipeline",
     {
         // SHADER::DEFERRED_MRT_TEX_WS_VERT,
@@ -513,13 +507,10 @@ void MRTTexture::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 
 // MRT (COLOR)
 const Pipeline::CreateInfo MRT_COLOR_CREATE_INFO = {
-    PIPELINE::DEFERRED_MRT_COLOR,
+    GRAPHICS::DEFERRED_MRT_COLOR,
     "Deferred Multiple Render Target Color Pipeline",
     {SHADER::DEFERRED_MRT_COLOR_CS_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
-    {
-        DESCRIPTOR_SET::UNIFORM_DEFAULT,
-        // DESCRIPTOR_SET::SAMPLER_DEFAULT,
-    },
+    {DESCRIPTOR_SET::UNIFORM_DEFAULT},
     {},
     {PUSH_CONSTANT::DEFERRED},
 };
@@ -532,7 +523,7 @@ void MRTColor::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 
 // MRT (COLOR WIREFRAME)
 const Pipeline::CreateInfo MRT_COLOR_WF_CREATE_INFO = {
-    PIPELINE::DEFERRED_MRT_WF_COLOR,
+    GRAPHICS::DEFERRED_MRT_WF_COLOR,
     "Deferred Multiple Render Target Color Wireframe Pipeline",
     {
         SHADER::DEFERRED_MRT_COLOR_CS_VERT,
@@ -553,15 +544,30 @@ void MRTColorWireframe::getRasterizationStateInfoResources(CreateInfoResources& 
     createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_NONE;
 }
 
+// MRT (POINT)
+const Pipeline::CreateInfo MRT_PT_CREATE_INFO = {
+    GRAPHICS::DEFERRED_MRT_PT,
+    "Deferred Multiple Render Target Point Pipeline",
+    {SHADER::DEFERRED_MRT_PT_CS_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
+    {DESCRIPTOR_SET::UNIFORM_DEFAULT},
+    {},
+    {PUSH_CONSTANT::DEFERRED},
+};
+MRTPoint::MRTPoint(Pipeline::Handler& handler) : Graphics(handler, &MRT_PT_CREATE_INFO) {}
+
+void MRTPoint::getBlendInfoResources(CreateInfoResources& createInfoRes) { GetBlendInfoResources(createInfoRes); }
+
+void MRTPoint::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    GetDefaultColorInputAssemblyInfoResources(createInfoRes);
+    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+}
+
 // MRT (LINE)
 const Pipeline::CreateInfo MRT_LINE_CREATE_INFO = {
-    PIPELINE::DEFERRED_MRT_LINE,
+    GRAPHICS::DEFERRED_MRT_LINE,
     "Deferred Multiple Render Target Line Pipeline",
     {SHADER::DEFERRED_MRT_COLOR_CS_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
-    {
-        DESCRIPTOR_SET::UNIFORM_DEFAULT,
-        // DESCRIPTOR_SET::SAMPLER_DEFAULT,
-    },
+    {DESCRIPTOR_SET::UNIFORM_DEFAULT},
     {},
     {PUSH_CONSTANT::DEFERRED},
 };
@@ -578,37 +584,27 @@ void MRTLine::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) 
 
 // SSAO
 const Pipeline::CreateInfo AO_CREATE_INFO = {
-    PIPELINE::DEFERRED_SSAO,
+    GRAPHICS::DEFERRED_SSAO,
     "Deferred SSAO Pipeline",
     {SHADER::DEFERRED_VERT, SHADER::DEFERRED_SSAO_FRAG},
     {
         DESCRIPTOR_SET::UNIFORM_DEFERRED_SSAO,
         DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO_RANDOM,
-        DESCRIPTOR_SET::SAMPLER_DEFERRED_POS,
-        DESCRIPTOR_SET::SAMPLER_DEFERRED_NORM,
+        DESCRIPTOR_SET::SAMPLER_DEFERRED,
     },
 };
 SSAO::SSAO(Pipeline::Handler& handler) : Graphics(handler, &AO_CREATE_INFO) {}
 
 // COMBINE
 const Pipeline::CreateInfo COMBINE_CREATE_INFO = {
-    PIPELINE::DEFERRED_COMBINE,
+    GRAPHICS::DEFERRED_COMBINE,
     "Deferred Combine Pipeline",
-    {
-        SHADER::DEFERRED_VERT,
-        SHADER::DEFERRED_MS_FRAG,
-    },
+    {SHADER::DEFERRED_VERT, SHADER::DEFERRED_MS_FRAG},
     {
         DESCRIPTOR_SET::UNIFORM_DEFERRED_COMBINE,  //
         DESCRIPTOR_SET::SAMPLER_SHADOW,            //
         DESCRIPTOR_SET::SAMPLER_SHADOW_OFFSET,
-        // DESCRIPTOR_SET::SAMPLER_DEFERRED_POS_NORM,
-        DESCRIPTOR_SET::SAMPLER_DEFERRED_POS,      //
-        DESCRIPTOR_SET::SAMPLER_DEFERRED_NORM,     //
-        DESCRIPTOR_SET::SAMPLER_DEFERRED_DIFFUSE,  //
-        DESCRIPTOR_SET::SAMPLER_DEFERRED_AMBIENT,  //
-        DESCRIPTOR_SET::SAMPLER_DEFERRED_SPECULAR,
-        // DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO,
+        DESCRIPTOR_SET::SAMPLER_DEFERRED,
     },
 };
 Combine::Combine(Pipeline::Handler& handler) : Graphics(handler, &COMBINE_CREATE_INFO), doMSAA_(::Deferred::DO_MSAA) {}

@@ -31,6 +31,16 @@ class Random : public Singleton<Random> {
         return result;
     }
 
+    glm::vec3 uniformSphere() {
+        glm::vec3 result;
+        float theta = nextFloatZeroToOne() * glm::two_pi<float>();
+        float phi = nextFloatZeroToOne() * glm::two_pi<float>();
+        result.x = cos(theta) * sin(phi);
+        result.y = sin(theta) * sin(phi);
+        result.z = cos(phi);
+        return result;
+    }
+
     glm::vec3 uniformCircle() {
         glm::vec3 result(0.0f);
         float x = nextFloatZeroToOne();

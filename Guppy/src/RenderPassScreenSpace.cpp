@@ -19,7 +19,7 @@ const CreateInfo CREATE_INFO = {
     PASS::SCREEN_SPACE,
     "Screen Space Swapchain Render Pass",
     {
-        PIPELINE::SCREEN_SPACE_DEFAULT,
+        GRAPHICS::SCREEN_SPACE_DEFAULT,
     },
     FLAG::SWAPCHAIN,
     {},
@@ -191,7 +191,7 @@ const CreateInfo BRIGHT_CREATE_INFO = {
     PASS::SCREEN_SPACE_BRIGHT,
     "Screen Space Bright Render Pass",
     {
-        PIPELINE::SCREEN_SPACE_BRIGHT,
+        GRAPHICS::SCREEN_SPACE_BRIGHT,
     },
     FLAG::SWAPCHAIN,
     {std::string(Texture::ScreenSpace::BLUR_A_2D_TEXTURE_ID)},
@@ -208,7 +208,7 @@ const CreateInfo BLUR_A_CREATE_INFO = {
     PASS::SCREEN_SPACE_BLUR_A,
     "Screen Space Blur A Render Pass",
     {
-        PIPELINE::SCREEN_SPACE_BLUR_A,
+        GRAPHICS::SCREEN_SPACE_BLUR_A,
     },
     FLAG::SWAPCHAIN,
     {std::string(Texture::ScreenSpace::BLUR_B_2D_TEXTURE_ID)},
@@ -225,7 +225,7 @@ const CreateInfo BLUR_B_CREATE_INFO = {
     PASS::SCREEN_SPACE_BLUR_B,
     "Screen Space Blur B Render Pass",
     {
-        PIPELINE::SCREEN_SPACE_BLUR_B,
+        GRAPHICS::SCREEN_SPACE_BLUR_B,
     },
     FLAG::SWAPCHAIN,
     {std::string(Texture::ScreenSpace::BLUR_A_2D_TEXTURE_ID)},
@@ -243,7 +243,7 @@ const CreateInfo HDR_LOG_CREATE_INFO = {
     PASS::SCREEN_SPACE_HDR_LOG,
     "Screen Space HDR Log Render Pass",
     {
-        PIPELINE::SCREEN_SPACE_HDR_LOG,
+        GRAPHICS::SCREEN_SPACE_HDR_LOG,
     },
     FLAG::SWAPCHAIN,
     {std::string(Texture::ScreenSpace::HDR_LOG_2D_TEXTURE_ID)},

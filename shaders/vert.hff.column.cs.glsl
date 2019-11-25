@@ -29,9 +29,10 @@ layout(location=0) in vec3 inPosition;
 layout(location=1) in ivec2 inImageOffset;
 
 // OUT
-layout(location=0) out vec3 outPosition;        // camera space
-layout(location=1) out vec3 outNormal;          // camera space
+layout(location=0) out vec3 outPosition;        // (camera space)
+layout(location=1) out vec3 outNormal;          // (camera space)
 layout(location=2) out vec4 outColor;
+layout(location=3) out flat uint outFlags;
 
 void main() {
     mat4 mViewModel = camera.view * matrix4.model;
@@ -140,6 +141,7 @@ void main() {
 
     outPosition = (mViewModel * vec4(outPosition, 1.0)).xyz;
     outNormal = mat3(mViewModel) * outNormal;
+    outFlags = 0x0u;
     outColor = vec4(1,0,0,1);
 
     gl_Position = camera.projection * vec4(outPosition, 1.0);

@@ -251,7 +251,7 @@ namespace Particle {
 
 // WAVE
 const CreateInfo WAVE_CREATE_INFO = {
-    PIPELINE::PRTCL_WAVE_DEFERRED,
+    GRAPHICS::PRTCL_WAVE_DEFERRED,
     "Particle Wave Color (Deferred) Pipeline",
     {
         SHADER::PRTCL_WAVE_VERT,
@@ -279,7 +279,7 @@ void Wave::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
 
 // FOUNTAIN
 const CreateInfo FOUNTAIN_CREATE_INFO = {
-    PIPELINE::PRTCL_FOUNTAIN_DEFERRED,
+    GRAPHICS::PRTCL_FOUNTAIN_DEFERRED,
     "Particle Fountain (Deferred) Pipeline",
     {
         SHADER::PRTCL_FOUNTAIN_VERT,
@@ -328,7 +328,7 @@ void Fountain::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes)
 
 // EULER (COMPUTE)
 const Pipeline::CreateInfo EULER_CREATE_INFO = {
-    PIPELINE::PRTCL_EULER_COMPUTE,
+    COMPUTE::PRTCL_EULER,
     "Particle Euler Compute Pipeline",
     {SHADER::PRTCL_EULER_COMP},
     {
@@ -342,7 +342,7 @@ Euler::Euler(Pipeline::Handler& handler) : Compute(handler, &EULER_CREATE_INFO) 
 
 // FOUNTAIN EULER
 const CreateInfo FOUNTAIN_EULER_CREATE_INFO = {
-    PIPELINE::PRTCL_FOUNTAIN_EULER_DEFERRED,
+    GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED,
     "Particle Fountain Euler (Deferred) Pipeline",
     {
         SHADER::PRTCL_FOUNTAIN_EULER_VERT,
@@ -374,7 +374,7 @@ void FountainEuler::getInputAssemblyInfoResources(CreateInfoResources& createInf
 
 // SHADOW FOUNTAIN EULER
 const Pipeline::CreateInfo SHADOW_FOUNTAIN_EULER_CREATE_INFO = {
-    PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER,
+    GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER,
     "Particle Fountain Euler (Shadow) Pipeline",
     {SHADER::PRTCL_SHDW_FOUNTAIN_EULER_VERT, SHADER::SHADOW_FRAG},
     {
@@ -395,7 +395,7 @@ void ShadowFountainEuler::getRasterizationStateInfoResources(CreateInfoResources
 
 // ATTRACTOR (COMPUTE)
 const Pipeline::CreateInfo ATTR_CREATE_INFO = {
-    PIPELINE::PRTCL_ATTR_COMPUTE,
+    COMPUTE::PRTCL_ATTR,
     "Particle Attractor Compute Pipeline",
     {SHADER::PRTCL_ATTR_COMP},
     {DESCRIPTOR_SET::PRTCL_ATTRACTOR},
@@ -404,12 +404,9 @@ AttractorCompute::AttractorCompute(Pipeline::Handler& handler) : Compute(handler
 
 // ATTRACTOR (POINT)
 const Pipeline::CreateInfo ATTR_PT_CREATE_INFO = {
-    PIPELINE::PRTCL_ATTR_PT_DEFERRED,
+    GRAPHICS::PRTCL_ATTR_PT_DEFERRED,
     "Particle Attractor Point (Deferred) Pipeline",
-    {
-        SHADER::PRTCL_ATTR_VERT,
-        SHADER::DEFERRED_MRT_POINT_FRAG,
-    },
+    {SHADER::PRTCL_ATTR_VERT, SHADER::DEFERRED_MRT_POINT_FRAG},
     {DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4},
 };
 AttractorPoint::AttractorPoint(Pipeline::Handler& handler, const bool doBlend, const bool isDeferred)

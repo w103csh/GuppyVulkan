@@ -126,7 +126,7 @@ namespace Buffer {
 
 Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCreateInfo,
            std::shared_ptr<Material::Base>& pMaterial, const std::vector<std::shared_ptr<Descriptor::Base>>& pDescriptors,
-           const PIPELINE&& shadowPipelineType)
+           const GRAPHICS&& shadowPipelineType)
     : Handlee(handler),
       NAME(pCreateInfo->name),
       LOCAL_SIZE(pCreateInfo->localSize),
@@ -145,7 +145,8 @@ Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCr
       offset_(offset),
       descTimeOffset_(BAD_OFFSET),
       pLdgRes_(nullptr) {
-    assert(!(COMPUTE_PIPELINE_TYPES.empty() && GRAPHICS_PIPELINE_TYPE == PIPELINE::ALL_ENUM));
+    for (const auto& type : COMPUTE_PIPELINE_TYPES) assert(type != COMPUTE::ALL_ENUM);
+    assert(!(COMPUTE_PIPELINE_TYPES.empty() && GRAPHICS_PIPELINE_TYPE == GRAPHICS::ALL_ENUM));
 
     // TODO: better validation on these types
     for (uint32_t i = 0; i < static_cast<uint32_t>(pDescriptors_.size()); i++) {
@@ -201,8 +202,8 @@ void Base::prepare() {
     // TODO: see comment in Mesh::Base::prepare about descriptors.
     if (status_ == STATUS::READY) {
         if (COMPUTE_PIPELINE_TYPES.size()) getComputeDescSetBindData();
-        if (GRAPHICS_PIPELINE_TYPE != PIPELINE::ALL_ENUM) getGraphicsDescSetBindData();
-        if (SHADOW_PIPELINE_TYPE != PIPELINE::ALL_ENUM) getShadowDescSetBindData();
+        if (GRAPHICS_PIPELINE_TYPE != GRAPHICS::ALL_ENUM) getGraphicsDescSetBindData();
+        if (SHADOW_PIPELINE_TYPE != GRAPHICS::ALL_ENUM) getShadowDescSetBindData();
     } else {
         handler().ldgOffsets_.insert(getOffset());
     }
@@ -374,9 +375,9 @@ namespace Euler {
 
 Base::Base(Particle::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo,
            std::shared_ptr<Material::Base>& pMaterial, const std::vector<std::shared_ptr<Descriptor::Base>>& pDescriptors,
-           const PIPELINE&& shadowPipelineType)
+           const GRAPHICS&& shadowPipelineType)
     : Buffer::Base(handler, std::forward<const index>(offset), pCreateInfo, pMaterial, pDescriptors,
-                   std::forward<const PIPELINE>(shadowPipelineType)),
+                   std::forward<const GRAPHICS>(shadowPipelineType)),
       VERTEX_TYPE(pCreateInfo->vertexType),
       pushConstant_(pCreateInfo->computeFlag),
       firstInstanceBinding_(pCreateInfo->firstInstanceBinding) {
@@ -393,7 +394,8 @@ void Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>&
 
     vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
-    if (pPipelineBindData->type != PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER && pushConstant_ != Particle::Euler::FLAG::NONE) {
+    if (pPipelineBindData->type != PIPELINE{GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER} &&
+        pushConstant_ != Particle::Euler::FLAG::NONE) {
         vkCmdPushConstants(cmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
                            static_cast<uint32_t>(sizeof(pushConstant_)), &pushConstant_);
     }
@@ -478,7 +480,7 @@ void Base::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindDa
 Torus::Torus(Particle::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo,
              std::shared_ptr<Material::Base>& pMaterial, const std::vector<std::shared_ptr<Descriptor::Base>>& pDescriptors)
     : Euler::Base(handler, std::forward<const index>(offset), pCreateInfo, pMaterial, pDescriptors,
-                  PIPELINE::PRTCL_SHDW_FOUNTAIN_EULER) {
+                  GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER) {
     Mesh::Torus::Info torusInfo = {};
     Mesh::Torus::make(torusInfo, vertices_, indices_);
     assert(VERTEX_TYPE == VERTEX::MESH);

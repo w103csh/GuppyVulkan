@@ -6,13 +6,9 @@
 #define _DS_SMP_SHDW 0
 #define _DS_SMP_SHDW_OFF 0
 // ATTACHMENTS
-#define _DS_SMP_DFR_POS 0
-#define _DS_SMP_DFR_NORM 0
-#define _DS_SMP_DFR_DIFF 0
-#define _DS_SMP_DFR_AMB 0
-#define _DS_SMP_DFR_SPEC 0
-// #define _DS_SMP_DFR_SSAO 0
+#define _DS_SMP_DFR 0
 // UNIFORM ARRAY SIZES
+#define _U_LGT_DEF_DIR 0
 #define _U_LGT_DEF_POS 0
 #define _U_LGT_DEF_SPT 0
 #define _U_LGT_SHDW_POS 0
@@ -23,12 +19,13 @@ layout(constant_id = 0) const int NUM_SAMPLES = 8;
 layout(set=_DS_SMP_SHDW, binding=0) uniform sampler2DArrayShadow sampShadow;
 layout(set=_DS_SMP_SHDW_OFF, binding=0) uniform sampler3D sampShadowOffset;
 
-layout(input_attachment_index=2, set=_DS_SMP_DFR_POS,   binding=0) uniform subpassInputMS posInput;
-layout(input_attachment_index=3, set=_DS_SMP_DFR_NORM,  binding=0) uniform subpassInputMS normInput;
-layout(input_attachment_index=4, set=_DS_SMP_DFR_DIFF,  binding=0) uniform subpassInputMS diffInput;
-layout(input_attachment_index=5, set=_DS_SMP_DFR_AMB,   binding=0) uniform subpassInputMS ambInput;
-layout(input_attachment_index=6, set=_DS_SMP_DFR_SPEC,  binding=0) uniform subpassInputMS specInput;
-// layout(input_attachment_index=7, set=_DS_SMP_DFR_SSAO,  binding=0) uniform subpassInput ssaoDataInput;
+layout(input_attachment_index=2, set=_DS_SMP_DFR, binding=0) uniform subpassInputMS posInput;
+layout(input_attachment_index=3, set=_DS_SMP_DFR, binding=1) uniform subpassInputMS normInput;
+layout(input_attachment_index=4, set=_DS_SMP_DFR, binding=2) uniform subpassInputMS diffInput;
+layout(input_attachment_index=5, set=_DS_SMP_DFR, binding=3) uniform subpassInputMS ambInput;
+layout(input_attachment_index=6, set=_DS_SMP_DFR, binding=4) uniform subpassInputMS specInput;
+layout(input_attachment_index=7, set=_DS_SMP_DFR, binding=5) uniform usubpassInputMS flagsInput;
+// layout(input_attachment_index=8, set=_DS_SMP_DFR, binding=6) uniform subpassInputMS ssaoDataInput;
 
 // IN
 layout(location=0) in vec2 inTexCoord;
@@ -45,42 +42,48 @@ vec4 resolve(const in subpassInputMS attachment) {
 	return result / float(NUM_SAMPLES);
 }
 
-
-layout(set=_DS_UNI_DFR_COMB, binding=5) uniform CameraDefaultPerspective {
-    mat4 view;
-    mat4 projection;
-    mat4 viewProjection;
-    vec3 worldPosition;
-} camera;
-const vec3 GLOBAL_LIGHT_s = normalize(vec3(0,1,1));
-const vec3 GLOBAL_LIGHT_L = vec3(0.6);
-const vec3 GLOBAL_LIGHT_La = vec3(0.05);
-vec3 blinnPhongDirectional(
-    const in vec3 s,            // direction to the light
+#if _U_LGT_DEF_DIR
+layout(set=_DS_UNI_DFR_COMB, binding=1) uniform LightDefaultDirectional {
+    vec3 direction; // Direction to the light (s) (camera space)
+    uint flags;
+    vec3 La;        // Ambient light intesity
+    vec3 L;         // Diffuse and specular light intensity
+} lgtDir[_U_LGT_DEF_DIR];
+vec3 globalDirectionalLight(
     const in vec3 norm,
     const in vec3 v,
-    const in vec3 L,            // diffuse and specular light intensity
     const in vec3 diff,
-    const in vec3 La,           // ambient light intesity
     const in vec3 amb,
     const in vec3 spec,
     const in float shininess
 ) {
-    vec3 Ka = La * amb;
+    // Just do a basic blinn-phong shade for now.
+    vec3 Ka = lgtDir[0].La * amb;
     vec3 Kd = vec3(0.0), Ks = vec3(0.0);
-    float sDotN = max(dot(s, norm), 0.0);
+    float sDotN = max(dot(lgtDir[0].direction, norm), 0.0);
     Kd = diff * sDotN;
     if(sDotN > 0.0) {
         // "h" is the halfway vector between "v" & "s" (Blinn)
-        vec3 h = normalize(v + s);
+        vec3 h = normalize(v + lgtDir[0].direction);
         Ks = spec * pow(max(dot(h, norm), 0.0), shininess);
     }
-
-    return La + L * (Kd + Ks);
+    return Ka + lgtDir[0].L * (Kd + Ks);
 }
+#else
+vec3 globalDirectionalLight(
+    const in vec3 norm,
+    const in vec3 v,
+    const in vec3 diff,
+    const in vec3 amb,
+    const in vec3 spec,
+    const in float shininess
+) {
+    return vec3(0);
+}
+#endif
 
 #if _U_LGT_DEF_POS
-layout(set=_DS_UNI_DFR_COMB, binding=1) uniform LightDefaultPositional {
+layout(set=_DS_UNI_DFR_COMB, binding=2) uniform LightDefaultPositional {
     vec3 position;  // Light position in eye coords.
     uint flags;
     // 16
@@ -127,7 +130,7 @@ vec3 blinnPhongPositional(
 #endif
 
 #if _U_LGT_DEF_SPT
-layout(set=_DS_UNI_DFR_COMB, binding=2) uniform LightDefaultSpot {
+layout(set=_DS_UNI_DFR_COMB, binding=3) uniform LightDefaultSpot {
     vec3 position;
     uint flags;
     // 16
@@ -183,10 +186,10 @@ vec3 blinnPhongSpot(
 #endif
 
 #if _U_LGT_SHDW_POS
-layout(set=_DS_UNI_DFR_COMB, binding=3) uniform LightShadowPositional {
+layout(set=_DS_UNI_DFR_COMB, binding=4) uniform LightShadowPositional {
     mat4 proj;
 } lgtShadowPos[_U_LGT_SHDW_POS];
-layout(set=_DS_UNI_DFR_COMB, binding=4) uniform ShadowDefault {
+layout(set=_DS_UNI_DFR_COMB, binding=5) uniform ShadowDefault {
     vec4 data;
 } shadowData;
 
@@ -369,6 +372,7 @@ void main() {
     vec4 diff = subpassLoad(diffInput, gl_SampleID);
     vec4 amb = subpassLoad(ambInput, gl_SampleID);
     vec4 spec = subpassLoad(specInput, gl_SampleID);
+    uint flags = subpassLoad(flagsInput, gl_SampleID).r;
     // float ssaoData = subpassLoad(ssaoDataInput)[0];
 
     // Using the opacity at this point causes a blend with the background color...
@@ -380,20 +384,19 @@ void main() {
         return;
     }
 
-    vec3 globalLightNorm = normalize(mat3(camera.view) * GLOBAL_LIGHT_s);
-    outColor = vec4(
-        blinnPhongDirectional(
-           globalLightNorm,
-            norm.xyz,
-            v,
-            GLOBAL_LIGHT_L,
-            diff.rgb,
-            GLOBAL_LIGHT_La,
-            diff.rgb, // amb.rgb,
-            spec.rgb,
-            norm.w
-        ),
-        alpha
+    if (flags > 0) {
+        outColor = vec4(diff.rgb, alpha);
+        return;
+    }
+
+    vec3 color = globalDirectionalLight(
+        norm.xyz,
+        v,
+        diff.rgb,
+        // Ambient colors are all grey atm, so using the ambient makes its look bad.
+        diff.rgb, // amb.rgb, 
+        spec.rgb,
+        norm.w
     );
 
 #if _U_LGT_SHDW_POS
@@ -410,31 +413,30 @@ void main() {
         norm.w
     );
 
-    outColor += vec4((Ka + KdKs), alpha);
+    color += (Ka + KdKs);
 
 #else
 
-    outColor += vec4(
-        blinnPhongPositional(
-            pos.xyz,
-            norm.xyz,
-            v,
-            diff.rgb,
-            amb.rgb,
-            spec.rgb,
-            norm.w
-            )
-        + blinnPhongSpot(
-            pos.xyz,
-            norm.xyz,
-            v,
-            diff.rgb,
-            amb.rgb,
-            spec.rgb,
-            norm.w
-            )
-        , alpha
+    color += blinnPhongPositional(
+        pos.xyz,
+        norm.xyz,
+        v,
+        diff.rgb,
+        amb.rgb,
+        spec.rgb,
+        norm.w
+        );
+    color += blinnPhongSpot(
+        pos.xyz,
+        norm.xyz,
+        v,
+        diff.rgb,
+        amb.rgb,
+        spec.rgb,
+        norm.w
     );
 
 #endif
+
+    outColor = vec4(color, alpha);
 }

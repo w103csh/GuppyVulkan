@@ -122,7 +122,7 @@ void RenderPass::Handler::init() {
     // Indicate to the Mesh construction validation that this is a special
     // mesh because I don't want to do a bunch of work atm.
     {
-        planeInfo.pipelineType = PIPELINE::ALL_ENUM;
+        planeInfo.pipelineType = GRAPHICS::ALL_ENUM;
         planeInfo.passTypes.clear();
     }
     planeInfo.selectable = false;
@@ -167,7 +167,7 @@ void RenderPass::Handler::getActivePassTypes(std::set<PASS>& types, const PIPELI
     // This is obviously to slow if ever used for anything meaningful.
     for (const auto& [passType, offset] : activeTypeOffsetPairs_) {
         if (passType == PASS::IMGUI) continue;
-        if (pipelineTypeIn == PIPELINE::ALL_ENUM) {
+        if (pipelineTypeIn == PIPELINE{GRAPHICS::ALL_ENUM}) {
             types.insert(pPasses_[offset]->TYPE);
         } else {
             for (const auto& pipelineType : pPasses_[offset]->getPipelineTypes())

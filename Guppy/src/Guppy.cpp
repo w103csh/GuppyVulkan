@@ -179,6 +179,7 @@ void Guppy::onFrame(float framePred) {
     // shell().log(Shell::LOG_DEBUG, std::to_string(shell().getCurrentTime()).c_str());
     handlers_.pPass->acquireBackBuffer();
     // PRE-DRAW
+    handlers_.pScene->frame();
     handlers_.pUniform->frame();
     handlers_.pParticle->frame();
     handlers_.pUI->frame();

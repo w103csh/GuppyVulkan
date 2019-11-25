@@ -7,7 +7,6 @@
 
 #include "Types.h"
 
-enum class PIPELINE : uint32_t;
 enum class PASS : uint32_t;
 
 namespace Uniform {

@@ -23,7 +23,7 @@ class Handler : public Game::Handler {
 
     constexpr const auto& getPasses() { return pPasses_; }
     // NOTE: this is not in order!!!
-    void getActivePassTypes(std::set<PASS>& types, const PIPELINE& pipelineTypeIn = PIPELINE::ALL_ENUM);
+    void getActivePassTypes(std::set<PASS>& types, const PIPELINE& pipelineTypeIn = GRAPHICS::ALL_ENUM);
 
     void init() override;
     void frame() override;

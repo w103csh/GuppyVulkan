@@ -126,13 +126,15 @@ constexpr int nearestOdd(T value, bool roundDown = true) {
         return result + 1;
 }
 
+glm::mat4 moveAndRotateTo(const glm::vec3 eye, const glm::vec3 center, const glm::vec3 up);
+
 // The point of this is to turn the glm::lookAt into an affine transform for
 // the Object3d model.
 static glm::mat4 viewToWorld(glm::vec3 position, glm::vec3 focalPoint, glm::vec3 up) {
-    /*  This assumes the up vector is a cardinal x, y, or z vector. glm::lookAt constructs
-        a matrix where the direction from position to focal point is assign to the 3rd row (or
-        z row). Here we shift the result to match the up vector.
-    */
+    /**
+     * This assumes the up vector is a cardinal x, y, or z vector. glm::lookAt constructs a matrix where the direction from
+     * position to focal point is assigned to the 3rd row (or z row). Here we shift the result to match the up vector.
+     */
     auto m = glm::inverse(glm::lookAt(position, focalPoint, up));
 
     // glm::vec3 const f(glm::normalize(focalPoint - position));

@@ -29,6 +29,7 @@ using FLAG = enum : FlagBits {
     MODE_LAMERTIAN =            0x00000010,
     MODE_BLINN_PHONG =          0x00000020,
     MODE_TOON_SHADE =           0x00000040,
+    MODE_FLAT_SHADE =           0x00000080,
     //
     HIDE =                      0x00000100,
     SKYBOX =                    0x00000200,

@@ -3,4 +3,4 @@
 
 #include "Face.h"
 
-Mesh::GenericCreateInfo::GenericCreateInfo() : CreateInfo{PIPELINE::TRI_LIST_COLOR}, name("Generic Color Mesh") {}
+Mesh::GenericCreateInfo::GenericCreateInfo() : CreateInfo{GRAPHICS::TRI_LIST_COLOR}, name("Generic Color Mesh") {}

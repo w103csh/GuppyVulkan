@@ -60,6 +60,12 @@ const CreateInfo FABRIC_BROWN_CREATE_INFO = {
     {Sampler::FABRIC_BROWN_CREATE_INFO},
 };
 
+// BRIGHT MOON
+const CreateInfo BRIGHT_MOON_CREATE_INFO = {
+    std::string(BRIGHT_MOON_ID),
+    {Sampler::BRIGHT_MOON_CREATE_INFO},
+};
+
 // MEDIEVAL HOUSE
 const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO = {
     std::string(MEDIEVAL_HOUSE_ID),

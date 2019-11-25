@@ -41,7 +41,7 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
 
     inline glm::vec3 getCameraSpaceDirection(const glm::vec3 &d = FORWARD_VECTOR) const {
         // TODO: deal with model_...
-        glm::vec3 direction = data_.view * glm::vec4(d, 0.0f);
+        glm::vec3 direction = glm::mat3(data_.view) * d;
         return glm::normalize(direction);
     }
 

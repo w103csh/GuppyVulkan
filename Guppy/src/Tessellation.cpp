@@ -87,7 +87,7 @@ void Base::getTesselationInfoResources(CreateInfoResources& createInfoRes) {
 
 // BEZIER 4
 const Pipeline::CreateInfo BEZIER_4_CREATE_INFO = {
-    PIPELINE::TESSELLATION_BEZIER_4_DEFERRED,
+    GRAPHICS::TESSELLATION_BEZIER_4_DEFERRED,
     "Tessellation Bezier 4 Control Point (Deferred) Pipeline",
     {
         SHADER::TESS_COLOR_VERT,
@@ -106,7 +106,7 @@ Bezier4Deferred::Bezier4Deferred(Handler& handler) : Base(handler, &BEZIER_4_CRE
 
 // TRIANGLE
 const Pipeline::CreateInfo TRIANGLE_DEFERRED_CREATE_INFO = {
-    PIPELINE::TESSELLATION_TRIANGLE_DEFERRED,
+    GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED,
     "Tessellation Triangle (Deferred) Pipeline",
     {
         SHADER::TESS_COLOR_VERT,

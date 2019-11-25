@@ -26,6 +26,7 @@ layout(location=PATCH_CONTROL_POINTS*1) in vec4 inColor[];
 layout(location=0) out vec3 outPosition;
 layout(location=1) out vec3 outNormal;
 layout(location=2) out vec4 outColor;
+layout(location=3) out flat uint outFlags;
 
 vec2 interpolate2D(vec2 v0, vec2 v1, vec2 v2) {
     return vec2(gl_TessCoord.x) * v0 + vec2(gl_TessCoord.y) * v1 + vec2(gl_TessCoord.z) * v2;
@@ -108,4 +109,6 @@ void main() {
         outColor = vec4(interpolate3D(inColor[0].xyz, inColor[1].xyz, inColor[2].xyz), 1.0);
 
     }
+
+    outFlags = 0x0u;
 }
