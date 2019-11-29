@@ -332,6 +332,7 @@ Base::Base(Particle::Handler& handler, const index&& offset, const CreateInfo* p
 
     status_ |= STATUS::PENDING_BUFFERS;
     paused_ = false;
+    draw_ = true;
 }
 
 void Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,

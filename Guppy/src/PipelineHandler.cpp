@@ -94,19 +94,22 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
                 case GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER:       insertPair = pPipelines_.insert({type, std::make_unique<Particle::ShadowFountainEuler>(std::ref(*this))}); break;
                 case GRAPHICS::PRTCL_ATTR_PT_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Particle::AttractorPoint>(std::ref(*this))}); break;
                 case GRAPHICS::PRTCL_CLOTH_DEFERRED:            insertPair = pPipelines_.insert({type, std::make_unique<Particle::Cloth>(std::ref(*this))}); break;
-                case GRAPHICS::HFF_CLMN_DEFERRED:               insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluidColumn>(std::ref(*this))}); break;
+                case GRAPHICS::HFF_CLMN_DEFERRED:               insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluid::Column>(std::ref(*this))}); break;
+                case GRAPHICS::HFF_WF_DEFERRED:                 insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluid::Wireframe>(std::ref(*this))}); break;
+                case GRAPHICS::HFF_OCEAN_DEFERRED:              insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluid::Ocean>(std::ref(*this))}); break;
                 default: assert(false);  // add new pipelines here
             }
             // clang-format on
         } else if (std::visit(IsCompute{}, type)) {
             // clang-format off
             switch (std::visit(GetCompute{}, type)) {
-                case COMPUTE::SCREEN_SPACE_DEFAULT:    insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::ComputeDefault>(std::ref(*this))}); break;
-                case COMPUTE::PRTCL_EULER:             insertPair = pPipelines_.insert({type, std::make_unique<Particle::Euler>(std::ref(*this))}); break;
-                case COMPUTE::PRTCL_ATTR:              insertPair = pPipelines_.insert({type, std::make_unique<Particle::AttractorCompute>(std::ref(*this))}); break;
-                case COMPUTE::PRTCL_CLOTH:             insertPair = pPipelines_.insert({type, std::make_unique<Particle::ClothCompute>(std::ref(*this))}); break;
-                case COMPUTE::PRTCL_CLOTH_NORM:        insertPair = pPipelines_.insert({type, std::make_unique<Particle::ClothNormalCompute>(std::ref(*this))}); break;
-                case COMPUTE::HFF:                     insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluidCompute>(std::ref(*this))}); break;
+                case COMPUTE::SCREEN_SPACE_DEFAULT:     insertPair = pPipelines_.insert({type, std::make_unique<ScreenSpace::ComputeDefault>(std::ref(*this))}); break;
+                case COMPUTE::PRTCL_EULER:              insertPair = pPipelines_.insert({type, std::make_unique<Particle::Euler>(std::ref(*this))}); break;
+                case COMPUTE::PRTCL_ATTR:               insertPair = pPipelines_.insert({type, std::make_unique<Particle::AttractorCompute>(std::ref(*this))}); break;
+                case COMPUTE::PRTCL_CLOTH:              insertPair = pPipelines_.insert({type, std::make_unique<Particle::ClothCompute>(std::ref(*this))}); break;
+                case COMPUTE::PRTCL_CLOTH_NORM:         insertPair = pPipelines_.insert({type, std::make_unique<Particle::ClothNormalCompute>(std::ref(*this))}); break;
+                case COMPUTE::HFF_HGHT:                 insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluid::Height>(std::ref(*this))}); break;
+                case COMPUTE::HFF_NORM:                 insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluid::Normal>(std::ref(*this))}); break;
                 default: assert(false);  // add new pipelines here
             }
             // clang-format on
@@ -192,10 +195,11 @@ std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
 
         // clang-format off
         switch (type) {
-            case PUSH_CONSTANT::DEFAULT:                range.size = sizeof(Pipeline::Default::PushConstant); break;
-            case PUSH_CONSTANT::POST_PROCESS:           range.size = sizeof(::Compute::PostProcess::PushConstant); break;
-            case PUSH_CONSTANT::DEFERRED:               range.size = sizeof(::Deferred::PushConstant); break;
-            case PUSH_CONSTANT::PRTCL_EULER:            range.size = sizeof(::Particle::Euler::PushConstant); break;
+            case PUSH_CONSTANT::DEFAULT:        range.size = sizeof(Pipeline::Default::PushConstant); break;
+            case PUSH_CONSTANT::POST_PROCESS:   range.size = sizeof(::Compute::PostProcess::PushConstant); break;
+            case PUSH_CONSTANT::DEFERRED:       range.size = sizeof(::Deferred::PushConstant); break;
+            case PUSH_CONSTANT::PRTCL_EULER:    range.size = sizeof(::Particle::Euler::PushConstant); break;
+            case PUSH_CONSTANT::HFF_COLUMN:     range.size = sizeof(HeightFieldFluid::Column::PushConstant); break;
             default: assert(false && "Unknown push constant"); exit(EXIT_FAILURE);
         }
         // clang-format on

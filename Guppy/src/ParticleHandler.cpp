@@ -115,7 +115,7 @@ void Particle::Handler::create() {
         uniformHandler().uniWaveMgr().insert(dev, &bufferInfo);
     }
 
-    bool suppress = false;
+    bool suppress = true;
 
     // WATER
     if (!suppress || true) {
@@ -124,11 +124,15 @@ void Particle::Handler::create() {
         HeightFieldFluid::Info info = {100, 100, 100.0f};
 
         // BUFFER
-        Buffer::HeightFieldFluid::CreateInfo buffHFFInfo = {};
+        HeightFieldFluid::CreateInfo buffHFFInfo = {};
         buffHFFInfo.name = "Particle Cloth Buffer";
         buffHFFInfo.localSize = {4, 4, 1};
-        buffHFFInfo.computePipelineTypes = {COMPUTE::HFF};
-        buffHFFInfo.graphicsPipelineType = GRAPHICS::HFF_CLMN_DEFERRED;
+        buffHFFInfo.computePipelineTypes = {COMPUTE::HFF_HGHT, COMPUTE::HFF_NORM};
+        buffHFFInfo.graphicsPipelineTypes = {
+            GRAPHICS::HFF_OCEAN_DEFERRED,
+            GRAPHICS::HFF_CLMN_DEFERRED,
+            GRAPHICS::HFF_WF_DEFERRED,
+        };
         buffHFFInfo.info = info;
 
         // HEIGHT FIELD FLUID
@@ -136,23 +140,30 @@ void Particle::Handler::create() {
         assert(shell().context().imageCount == 3);  // Potential imageCount problem
         hffInfo.dataCount = shell().context().imageCount;
         hffInfo.info = info;
-        hffInfo.c = 3.0f;
+        hffInfo.c = 2.0f;
         hffInfo.maxSlope = 4.0f;
         hffMgr.insert(shell().context().dev, &hffInfo);
         pDescriptors.push_back(hffMgr.pItems.back());
 
         // MATERIAL
         matInfo = {};
+        // matInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
         matInfo.color = COLOR_BLUE;
         matInfo.shininess = 10;
         auto& pMaterial = materialHandler().makeMaterial(&matInfo);
 
-        // MODELS
-        mdlInfo.data = glm::mat4(1.0f);
-        mat4Mgr.insert(shell().context().dev, &mdlInfo);
-        pDescriptors.push_back(mat4Mgr.pItems.back());
+        // INSTANCE
+        Instance::Obj3d::CreateInfo instInfo = {};
+        // instInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{1.0f, 2.0f, 1.0f})});
+        auto& pInstanceData = meshHandler().makeInstanceObj3d(&instInfo);
 
-        make<Buffer::HeightFieldFluid::Base>(pBuffers_, &buffHFFInfo, pMaterial, pDescriptors);
+        // NORMAL
+        Storage::Vector4::CreateInfo vec4Info({info.M, info.N, 1});
+        vec4Info.descType = STORAGE_BUFFER_DYNAMIC::NORMAL;
+        vec4Mgr.insert(shell().context().dev, &vec4Info);
+        pDescriptors.push_back(vec4Mgr.pItems.back());
+
+        make<HeightFieldFluid::Buffer>(pBuffers_, &buffHFFInfo, pMaterial, pDescriptors, pInstanceData);
     }
 
     // FOUNTAIN
@@ -164,7 +175,7 @@ void Particle::Handler::create() {
             // BUFFER
             partBuffInfo = {};
             partBuffInfo.name = "Bluewater Fountain Particle Buffer";
-            partBuffInfo.graphicsPipelineType = GRAPHICS::PRTCL_FOUNTAIN_DEFERRED;
+            partBuffInfo.graphicsPipelineTypes = {GRAPHICS::PRTCL_FOUNTAIN_DEFERRED};
 
             // MATERIALS
             matInfo = {};
@@ -209,7 +220,7 @@ void Particle::Handler::create() {
                 partBuffEulerInfo.name = "Torus Particle Buffer";
                 partBuffEulerInfo.computeFlag = Particle::Euler::FLAG::FOUNTAIN;
                 partBuffEulerInfo.computePipelineTypes = {COMPUTE::PRTCL_EULER};
-                partBuffEulerInfo.graphicsPipelineType = GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED;
+                partBuffEulerInfo.graphicsPipelineTypes = {GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED};
 
                 // MATERIALS
                 matInfo = {};
@@ -254,7 +265,7 @@ void Particle::Handler::create() {
                 partBuffEulerInfo.name = "Fire Euler Particle Buffer";
                 partBuffEulerInfo.computeFlag = Particle::Euler::FLAG::FIRE;
                 partBuffEulerInfo.computePipelineTypes = {COMPUTE::PRTCL_EULER};
-                partBuffEulerInfo.graphicsPipelineType = GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED;
+                partBuffEulerInfo.graphicsPipelineTypes = {GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED};
 
                 // MATERIALS
                 matInfo = {};
@@ -295,7 +306,7 @@ void Particle::Handler::create() {
                 partBuffEulerInfo.name = "Smoke Euler Particle Buffer";
                 partBuffEulerInfo.computeFlag = Particle::Euler::FLAG::SMOKE;
                 partBuffEulerInfo.computePipelineTypes = {COMPUTE::PRTCL_EULER};
-                partBuffEulerInfo.graphicsPipelineType = GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED;
+                partBuffEulerInfo.graphicsPipelineTypes = {GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED};
 
                 // MATERIALS
                 matInfo = {};
@@ -338,7 +349,7 @@ void Particle::Handler::create() {
                 partBuffEulerInfo.localSize.x = 1000;
                 partBuffEulerInfo.firstInstanceBinding = 0;
                 partBuffEulerInfo.computePipelineTypes = {COMPUTE::PRTCL_ATTR};
-                partBuffEulerInfo.graphicsPipelineType = GRAPHICS::PRTCL_ATTR_PT_DEFERRED;
+                partBuffEulerInfo.graphicsPipelineTypes = {GRAPHICS::PRTCL_ATTR_PT_DEFERRED};
 
                 // MATERIALS
                 matInfo = {};
@@ -417,7 +428,7 @@ void Particle::Handler::create() {
         prtclClothInfo.name = "Particle Cloth Buffer";
         prtclClothInfo.localSize = {10, 10, 1};
         prtclClothInfo.computePipelineTypes = {COMPUTE::PRTCL_CLOTH, COMPUTE::PRTCL_CLOTH_NORM};
-        prtclClothInfo.graphicsPipelineType = GRAPHICS::PRTCL_CLOTH_DEFERRED;
+        prtclClothInfo.graphicsPipelineTypes = {GRAPHICS::PRTCL_CLOTH_DEFERRED};
         prtclClothInfo.planeInfo = planeInfo;
         // prtclClothInfo.geometryInfo.doubleSided = true;
 
@@ -436,12 +447,15 @@ void Particle::Handler::recordDraw(const PASS passType, const std::shared_ptr<Pi
                                    const VkCommandBuffer& cmd, const uint8_t frameIndex) {
     // TODO: This is slow.
     for (const auto& pBuffer : pBuffers_) {
-        if (PIPELINE{pBuffer->GRAPHICS_PIPELINE_TYPE} == pPipelineBindData->type) {
-            if (pBuffer->getStatus() == STATUS::READY) {
-                if (pBuffer->shouldDraw()) {
-                    pBuffer->draw(passType, pPipelineBindData,
-                                  pBuffer->getDescriptorSetBindData(passType, pBuffer->getGraphicsDescSetBindDataMap()), cmd,
-                                  frameIndex);
+        for (auto i = 0; i < pBuffer->GRAPHICS_PIPELINE_TYPES.size(); i++) {
+            if (PIPELINE{pBuffer->GRAPHICS_PIPELINE_TYPES[i]} == pPipelineBindData->type) {
+                if (pBuffer->getStatus() == STATUS::READY) {
+                    if (pBuffer->shouldDraw()) {
+                        pBuffer->draw(
+                            passType, pPipelineBindData,
+                            pBuffer->getDescriptorSetBindData(passType, pBuffer->getGraphicsDescSetBindDataMaps()[i]), cmd,
+                            frameIndex);
+                    }
                 }
             }
         }
@@ -464,7 +478,7 @@ void Particle::Handler::recordDispatch(const PASS passType, const std::shared_pt
         for (auto i = 0; i < pBuffer->COMPUTE_PIPELINE_TYPES.size(); i++) {
             if (PIPELINE{pBuffer->COMPUTE_PIPELINE_TYPES[i]} == pPipelineBindData->type) {
                 if (pBuffer->getStatus() == STATUS::READY) {
-                    if (pBuffer->shouldDraw()) {
+                    if (pBuffer->shouldDispatch()) {
                         pBuffer->dispatch(
                             passType, pPipelineBindData,
                             pBuffer->getDescriptorSetBindData(passType, pBuffer->getComputeDescSetBindDataMaps()[i]), cmd,
@@ -480,15 +494,13 @@ void Particle::Handler::reset() {
     // BUFFER
     for (auto& pBuffer : pBuffers_) pBuffer->destroy();
     pBuffers_.clear();
-    // UNIFORM DYNAMIC
     prtclAttrMgr.destroy(shell().context().dev);
     prtclClthMgr.destroy(shell().context().dev);
     prtclFntnMgr.destroy(shell().context().dev);
     mat4Mgr.destroy(shell().context().dev);
-    hffMgr.destroy(shell().context().dev);
-    // INSTANCE
-    instFntnMgr_.destroy(shell().context().dev);
     vec4Mgr.destroy(shell().context().dev);
+    hffMgr.destroy(shell().context().dev);
+    instFntnMgr_.destroy(shell().context().dev);
     if (pInstFntnEulerMgr_ == nullptr && shell().context().computeShadingEnabled) {
         pInstFntnEulerMgr_ =
             std::make_unique<Descriptor::Manager<Descriptor::Base, Particle::FountainEuler::Base, std::shared_ptr>>(

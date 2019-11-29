@@ -5,6 +5,10 @@
 #include <string>
 #include <vector>
 #include <vulkan/vulkan.h>
+#define DIAGNOSE false
+#if DIAGNOSE
+#include <iostream>
+#endif
 
 #include "BufferItem.h"
 #include "Helpers.h"
@@ -95,10 +99,19 @@ class Base {
         createBuffer(ctx);
     }
 
+#if DIAGNOSE
+    void diagnose(const Buffer::Info &info) const {
+        std::cout << info.bufferInfo.buffer << std::endl;  //
+    }
+#else
+    void diagnose(const Buffer::Info &info) const {}
+#endif
+
     template <typename TCreateInfo>
     void insert(const VkDevice &dev, TCreateInfo *pCreateInfo) {
         assert(pItems.size() < MAX_SIZE);
         auto info = fill(dev, std::vector<typename TDerived::DATA>(pCreateInfo->dataCount), pCreateInfo->countInRange);
+        diagnose(info);
         pItems.emplace_back(new TDerived(std::move(info), get(info), pCreateInfo));
         if (pCreateInfo == nullptr || pCreateInfo->update) updateData(dev, pItems.back()->BUFFER_INFO);
     }
@@ -107,6 +120,7 @@ class Base {
                 const std::vector<typename TDerived::DATA> &data = std::vector<typename TDerived::DATA>(1)) {
         assert(pItems.size() < MAX_SIZE);
         auto info = fill(dev, data, false);
+        diagnose(info);
         pItems.emplace_back(new TDerived(std::move(info), get(info)));
         if (update) updateData(dev, pItems.back()->BUFFER_INFO);
     }

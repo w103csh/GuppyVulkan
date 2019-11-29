@@ -62,6 +62,8 @@ enum class GRAPHICS : uint32_t {
     PRTCL_CLOTH_DEFERRED,
     // HEIGHT FLUID FIELD
     HFF_CLMN_DEFERRED,
+    HFF_WF_DEFERRED,
+    HFF_OCEAN_DEFERRED,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in code file.
@@ -76,7 +78,8 @@ enum class COMPUTE : uint32_t {
     PRTCL_CLOTH,
     PRTCL_CLOTH_NORM,
     // HEIGHT FLUID FIELD
-    HFF,
+    HFF_HGHT,
+    HFF_NORM,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in code file.

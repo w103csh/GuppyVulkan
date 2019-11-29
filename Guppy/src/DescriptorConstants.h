@@ -64,7 +64,7 @@ enum class DESCRIPTOR_SET {
     PRTCL_CLOTH_NORM,
     // WATER
     HFF,
-    HFF_CLMN,
+    HFF_DEF,
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 

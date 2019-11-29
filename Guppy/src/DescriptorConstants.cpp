@@ -71,7 +71,7 @@ const std::set<DESCRIPTOR_SET> ALL = {
     DESCRIPTOR_SET::PRTCL_CLOTH_NORM,
     // WATER
     DESCRIPTOR_SET::HFF,
-    DESCRIPTOR_SET::HFF_CLMN,
+    DESCRIPTOR_SET::HFF_DEF,
 };
 
 void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& write) const {

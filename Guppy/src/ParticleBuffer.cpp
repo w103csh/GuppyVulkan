@@ -131,10 +131,12 @@ Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCr
       NAME(pCreateInfo->name),
       LOCAL_SIZE(pCreateInfo->localSize),
       COMPUTE_PIPELINE_TYPES(pCreateInfo->computePipelineTypes),
-      GRAPHICS_PIPELINE_TYPE(pCreateInfo->graphicsPipelineType),
+      GRAPHICS_PIPELINE_TYPES(pCreateInfo->graphicsPipelineTypes),
       SHADOW_PIPELINE_TYPE(shadowPipelineType),
       status_(STATUS::READY),
+      draw_(false),
       paused_(true),
+      doPausedUpdate_(false),
       workgroupSize_(1, 1, 1),
       indexRes_{},
       vertexRes_{},
@@ -146,7 +148,8 @@ Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCr
       descTimeOffset_(BAD_OFFSET),
       pLdgRes_(nullptr) {
     for (const auto& type : COMPUTE_PIPELINE_TYPES) assert(type != COMPUTE::ALL_ENUM);
-    assert(!(COMPUTE_PIPELINE_TYPES.empty() && GRAPHICS_PIPELINE_TYPE == GRAPHICS::ALL_ENUM));
+    for (const auto& type : GRAPHICS_PIPELINE_TYPES) assert(type != GRAPHICS::ALL_ENUM);
+    assert(!(COMPUTE_PIPELINE_TYPES.empty() && GRAPHICS_PIPELINE_TYPES.empty()));
 
     // TODO: better validation on these types
     for (uint32_t i = 0; i < static_cast<uint32_t>(pDescriptors_.size()); i++) {
@@ -173,15 +176,15 @@ Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCr
     if (pMaterial_ != nullptr) status_ |= STATUS::PENDING_MATERIAL;
 }
 
-void Base::toggle() { paused_ = !paused_; }
-
 void Base::update(const float time, const float elapsed, const uint32_t frameIndex) {
-    if (paused_) return;
+    if (doPausedUpdate_) {
+        getTimedUniform()->updatePerFrame(time, elapsed, Descriptor::PAUSED_UPDATE);
+        doPausedUpdate_ = false;
+    }
+    if (paused_ || !draw_) return;  // Don't update when not drawing for now.
     getTimedUniform()->updatePerFrame(time, elapsed, frameIndex);
     handler().update(getTimedUniform(), frameIndex);
 }
-
-bool Base::shouldDraw() { return status_ == STATUS::READY && !paused_; }
 
 void Base::prepare() {
     if (status_ & STATUS::PENDING_BUFFERS) {
@@ -190,7 +193,7 @@ void Base::prepare() {
         handler().loadingHandler().loadSubmit(std::move(pLdgRes_));
         status_ ^= STATUS::PENDING_BUFFERS;
     } else if (vertexRes_.buffer == VK_NULL_HANDLE && indexRes_.buffer == VK_NULL_HANDLE) {
-        assert(vertices_.empty() && indices_.empty() && "Did you mean to set the status to PENDING_BUFFERS?");
+        //assert(vertices_.empty() && indices_.empty() && "Did you mean to set the status to PENDING_BUFFERS?");
     }
 
     if (status_ & STATUS::PENDING_MATERIAL) {
@@ -202,7 +205,7 @@ void Base::prepare() {
     // TODO: see comment in Mesh::Base::prepare about descriptors.
     if (status_ == STATUS::READY) {
         if (COMPUTE_PIPELINE_TYPES.size()) getComputeDescSetBindData();
-        if (GRAPHICS_PIPELINE_TYPE != GRAPHICS::ALL_ENUM) getGraphicsDescSetBindData();
+        if (GRAPHICS_PIPELINE_TYPES.size()) getGraphicsDescSetBindData();
         if (SHADOW_PIPELINE_TYPE != GRAPHICS::ALL_ENUM) getShadowDescSetBindData();
     } else {
         handler().ldgOffsets_.insert(getOffset());
@@ -305,8 +308,11 @@ void Base::getComputeDescSetBindData() {
 }
 
 void Base::getGraphicsDescSetBindData() {
-    handler().descriptorHandler().getBindData(GRAPHICS_PIPELINE_TYPE, graphicsDescSetBindDataMap_,
-                                              getSDynamicDataItems(GRAPHICS_PIPELINE_TYPE));
+    for (const auto& pipelineType : GRAPHICS_PIPELINE_TYPES) {
+        graphicsDescSetBindDataMaps_.emplace_back();
+        handler().descriptorHandler().getBindData(pipelineType, graphicsDescSetBindDataMaps_.back(),
+                                                  getSDynamicDataItems(pipelineType));
+    }
 }
 
 void Base::getShadowDescSetBindData() {
@@ -437,8 +443,8 @@ void Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>&
     } else {
         assert(VERTEX_TYPE != VERTEX::MESH);
 
-        // TODO: The point type should really just use the typical instance obj3d and per vertex rate for the position data.
-        // Right now the position data is per instance, but that is something to do when time permits.
+        // TODO: The point type should really just use the typical instance obj3d and per vertex rate for the position
+        // data. Right now the position data is per instance, but that is something to do when time permits.
         uint32_t vertexCount = VERTEX_TYPE == VERTEX::BILLBOARD ? 6 : 1;
 
         // Draw a billboarded quad which does not require a vertex bind

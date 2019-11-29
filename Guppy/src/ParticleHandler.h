@@ -54,6 +54,13 @@ class Handler : public Game::Handler {
     void create();
     void startFountain(const uint32_t offset);
 
+    inline void toggleDraw() {
+        for (auto &pBuffer : pBuffers_) pBuffer->toggleDraw();
+    }
+    inline void togglePause() {
+        for (auto &pBuffer : pBuffers_) pBuffer->togglePause();
+    }
+
     inline void update(std::shared_ptr<Descriptor::Base> &pUniform, const int index = -1) {
         if (pUniform->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_ATTRACTOR}) {
             prtclAttrMgr.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);

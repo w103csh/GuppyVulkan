@@ -3,8 +3,6 @@
 
 #define _DS_PRTCL_CLTH_NRM 0
 
-layout(local_size_x = 10, local_size_y = 10) in;
-
 // STORAGE BUFFERS
 layout(set=_DS_PRTCL_CLTH_NRM, binding=0) buffer readonly Positions {
     vec4 positions[];

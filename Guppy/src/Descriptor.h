@@ -9,6 +9,8 @@
 
 namespace Descriptor {
 
+constexpr uint32_t PAUSED_UPDATE = UINT32_MAX;
+
 class Interface {
    public:
     virtual void setDescriptorInfo(Set::ResourceInfo& info, const uint32_t index) const = 0;

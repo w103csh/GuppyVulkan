@@ -81,9 +81,6 @@ class Base : public Material::Base, public Buffer::DataItem<DATA> {
     void setTinyobjData(const tinyobj::material_t &m) override;
 
     void setRoughness(float r);
-
-   private:
-    inline void setData(const uint32_t index = 0) override { dirty = true; };
 };
 
 }  // namespace PBR

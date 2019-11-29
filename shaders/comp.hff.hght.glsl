@@ -3,16 +3,16 @@
 
 #define _DS_HFF 0
 
-layout(set=_DS_HFF, binding=3) uniform Simulation {
+layout(set=_DS_HFF, binding=2) uniform Simulation {
     float c2;        // wave speed
-    float h;         // column width/height
+    float h;         // distance between heights
     float h2;        // h squared
     float dt;        // time delta
     float maxSlope;  // clamped sloped to prevent numerical explosion
     int read, write;
     int mMinus1, nMinus1;
 } sim;
-layout(set=_DS_HFF, binding=4, r32f) uniform image3D imgHeightField;
+layout(set=_DS_HFF, binding=3, r32f) uniform image3D imgHeightField;
 
 const int VELOCITY_LAYER = 2;
 const int DISPLACE_LAYER = 3;
