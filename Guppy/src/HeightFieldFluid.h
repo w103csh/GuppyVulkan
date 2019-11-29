@@ -6,10 +6,15 @@
 #include <vulkan/vulkan.h>
 
 #include "ConstantsAll.h"
+#include "Obj3dDrawInst.h"
 #include "ParticleBuffer.h"
 #include "Pipeline.h"
 #include "Plane.h"
 #include "Texture.h"
+
+// clang-format off
+namespace Particle { class Handler; }
+// clang-format on
 
 namespace HeightFieldFluid {
 struct Info {
@@ -19,11 +24,18 @@ struct Info {
     // necessary.
     float lengthM = 1.0f;
 };
+struct VertexData {
+    static void getInputDescriptions(Pipeline::CreateInfoResources& createInfoRes, const VkVertexInputRate&& inputRate);
+    glm::vec3 position;
+    glm::ivec2 imageOffset;
+};
 }  // namespace HeightFieldFluid
 
 // SHADER
 namespace Shader {
 extern const CreateInfo HFF_COMP_CREATE_INFO;
+extern const CreateInfo HFF_NORM_COMP_CREATE_INFO;
+extern const CreateInfo HFF_VERT_CREATE_INFO;
 extern const CreateInfo HFF_CLMN_VERT_CREATE_INFO;
 }  // namespace Shader
 
@@ -39,7 +51,7 @@ namespace HeightFieldFluid {
 namespace Simulation {
 struct DATA {
     float c2;        // wave speed
-    float h;         // column width/height
+    float h;         // distance between heights (column height/width)
     float h2;        // h squared
     float dt;        // time delta
     float maxSlope;  // clamped sloped to prevent numerical explosion
@@ -69,53 +81,78 @@ class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA
 namespace Descriptor {
 namespace Set {
 extern const CreateInfo HFF_CREATE_INFO;
-extern const CreateInfo HFF_CLMN_CREATE_INFO;
+extern const CreateInfo HFF_DEF_CREATE_INFO;
 }  // namespace Set
 }  // namespace Descriptor
 
 // PIPELINE
 namespace Pipeline {
-
 class Handler;
+namespace HeightFieldFluid {
 
-class HeightFieldFluidCompute : public Compute {
+class Height : public Pipeline::Compute {
    public:
-    HeightFieldFluidCompute(Handler& handler);
+    Height(Handler& handler);
 };
 
-class HeightFieldFluidColumn : public Graphics {
+class Normal : public Pipeline::Compute {
    public:
-    struct InstanceData {
-        glm::vec3 position;
-        glm::ivec2 imageOffset;
-    };
+    Normal(Handler& handler);
+};
+
+class Column : public Graphics {
+   public:
+    using PushConstant = glm::mat4;
 
     const bool DO_BLEND;
     const bool IS_DEFERRED;
 
-    HeightFieldFluidColumn(Handler& handler);
+    Column(Handler& handler);
 
    private:
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
+class Wireframe : public Graphics {
+   public:
+    const bool DO_BLEND;
+    const bool IS_DEFERRED;
+
+    Wireframe(Handler& handler);
+
+   private:
+    void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
+    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
+};
+
+class Ocean : public Graphics {
+   public:
+    const bool DO_BLEND;
+    const bool IS_DEFERRED;
+
+    Ocean(Handler& handler);
+
+   private:
+    void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
+    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
+};
+
+}  // namespace HeightFieldFluid
 }  // namespace Pipeline
 
 // BUFFER
-namespace Particle {
-class Handler;
-namespace Buffer {
 namespace HeightFieldFluid {
 
-struct CreateInfo : Buffer::CreateInfo {
+struct CreateInfo : Particle::Buffer::CreateInfo {
     ::HeightFieldFluid::Info info;
 };
 
-class Base : public Buffer::Base {
+class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
    public:
-    Base(Handler& handler, const index&& offset, const CreateInfo* pCreateInfo, std::shared_ptr<Material::Base>& pMaterial,
-         const std::vector<std::shared_ptr<Descriptor::Base>>& pDescriptors);
+    Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offset, const CreateInfo* pCreateInfo,
+           std::shared_ptr<Material::Base>& pMaterial, const std::vector<std::shared_ptr<Descriptor::Base>>& pDescriptors,
+           std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData);
 
     virtual void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                       const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
@@ -124,17 +161,20 @@ class Base : public Buffer::Base {
                   const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
                   const uint8_t frameIndex) const override;
 
-    void init();
-
    private:
-    std::vector<Pipeline::HeightFieldFluidColumn::InstanceData> columnData_;
-    BufferResource columnRes_;
+    void loadBuffers() override;
+    void destroy() override;
 
-    std::unique_ptr<LoadingResource> pLdgRes2_;
+    uint32_t normalOffset_;
+
+    std::vector<VertexData> verticesHFF_;
+    BufferResource verticesHFFRes_;
+    std::vector<VB_INDEX_TYPE> indicesWF_;
+    BufferResource indexWFRes_;
+
+    GRAPHICS drawMode_;
 };
 
 }  // namespace HeightFieldFluid
-}  // namespace Buffer
-}  // namespace Particle
 
 #endif  // !HEIGHT_FIELD_FLUID_H

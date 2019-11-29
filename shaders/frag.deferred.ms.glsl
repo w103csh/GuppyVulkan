@@ -398,6 +398,8 @@ void main() {
         spec.rgb,
         norm.w
     );
+    // outColor = vec4(color, alpha);
+    // return;
 
 #if _U_LGT_SHDW_POS
 

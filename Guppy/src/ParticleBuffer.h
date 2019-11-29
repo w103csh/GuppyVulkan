@@ -108,7 +108,7 @@ struct CreateInfo {
     std::string name = "";
     glm::uvec3 localSize{1, 1, 1};
     std::vector<COMPUTE> computePipelineTypes;
-    GRAPHICS graphicsPipelineType = GRAPHICS::ALL_ENUM;
+    std::vector<GRAPHICS> graphicsPipelineTypes;
 };
 
 // BASE
@@ -120,15 +120,25 @@ class Base : public NonCopyable, public Handlee<Handler> {
     const std::string NAME;
     const glm::uvec3 LOCAL_SIZE;
     const std::vector<COMPUTE> COMPUTE_PIPELINE_TYPES;
-    const GRAPHICS GRAPHICS_PIPELINE_TYPE;
+    const std::vector<GRAPHICS> GRAPHICS_PIPELINE_TYPES;
     const GRAPHICS SHADOW_PIPELINE_TYPE;
 
-    void toggle();
+    inline void toggle() {
+        toggleDraw();
+        togglePause();
+    }
+    inline void toggleDraw() { draw_ = !draw_; }
+    inline void togglePause() {
+        paused_ = !paused_;
+        if (paused_) doPausedUpdate_ = true;
+    }
+    inline bool shouldDraw() const { return status_ == STATUS::READY && draw_; }
+    inline bool shouldDispatch() const { return status_ == STATUS::READY && !paused_; }
+
     virtual void update(const float time, const float elapsed, const uint32_t frameIndex);
-    bool shouldDraw();
 
     void prepare();
-    void destroy();
+    virtual void destroy();
 
     constexpr const auto& getOffset() const { return offset_; }
     constexpr const auto& getStatus() const { return status_; }
@@ -148,7 +158,7 @@ class Base : public NonCopyable, public Handlee<Handler> {
     virtual_inline const auto& getComputeDescSetBindDataMaps() const { return computeDescSetBindDataMaps_; }
     virtual void getComputeDescSetBindData();
 
-    virtual_inline const auto& getGraphicsDescSetBindDataMap() const { return graphicsDescSetBindDataMap_; }
+    virtual_inline const auto& getGraphicsDescSetBindDataMaps() const { return graphicsDescSetBindDataMaps_; }
     virtual void getGraphicsDescSetBindData();
 
     virtual_inline const auto& getShadowDescSetBindDataMap() const { return shadowDescSetBindDataMap_; }
@@ -162,7 +172,11 @@ class Base : public NonCopyable, public Handlee<Handler> {
     inline std::shared_ptr<Descriptor::Base>& getTimedUniform() { return pDescriptors_[descTimeOffset_]; }
 
     FlagBits status_;
+
+    bool draw_;
     bool paused_;
+    bool doPausedUpdate_;
+
     glm::uvec3 workgroupSize_;
 
     std::vector<VB_INDEX_TYPE> indices_;
@@ -177,15 +191,16 @@ class Base : public NonCopyable, public Handlee<Handler> {
 
     std::shared_ptr<Material::Base> pMaterial_;
     std::vector<Descriptor::Set::bindDataMap> computeDescSetBindDataMaps_;
-    Descriptor::Set::bindDataMap graphicsDescSetBindDataMap_;
+    std::vector<Descriptor::Set::bindDataMap> graphicsDescSetBindDataMaps_;
     Descriptor::Set::bindDataMap shadowDescSetBindDataMap_;
 
+    std::unique_ptr<LoadingResource> pLdgRes_;
+
    private:
-    void loadBuffers();
+    virtual void loadBuffers();
 
     index offset_;
     uint32_t descTimeOffset_;
-    std::unique_ptr<LoadingResource> pLdgRes_;
 };
 
 // FOUNTAIN

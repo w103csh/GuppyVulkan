@@ -1,28 +1,30 @@
 
 #version 450
 
-#define _DS_HFF_CLMN 0
+#define _DS_HFF_DEF 0
 
 // BINDINGS
-layout(set=_DS_HFF_CLMN, binding=0) uniform CameraDefaultPerspective {
+layout(set=_DS_HFF_DEF, binding=0) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
     mat4 viewProjection;
     vec3 worldPosition;
 } camera;
-layout(set=_DS_HFF_CLMN, binding=2) uniform Matrix4 {
-    mat4 model;
-} matrix4;
-layout(set=_DS_HFF_CLMN, binding=3) uniform Simulation {
+layout(set=_DS_HFF_DEF, binding=2) uniform Simulation {
     float c2;        // wave speed
-    float h;         // column width/height
+    float h;         // distance between heights
     float h2;        // h squared
     float dt;        // time delta
     float maxSlope;  // clamped sloped to prevent numerical explosion
     int read, write;
     int mMinus1, nMinus1;
 } sim;
-layout(set=_DS_HFF_CLMN, binding=4, r32f) uniform readonly image3D imgHeightField;
+layout(set=_DS_HFF_DEF, binding=3, r32f) uniform readonly image3D imgHeightField;
+
+// PUSH CONSTANTS
+layout(push_constant) uniform PushBlock {
+    mat4 model;
+} pc;
 
 // IN
 layout(location=0) in vec3 inPosition;
@@ -35,11 +37,9 @@ layout(location=2) out vec4 outColor;
 layout(location=3) out flat uint outFlags;
 
 void main() {
-    mat4 mViewModel = camera.view * matrix4.model;
+    mat4 mViewModel = camera.view * pc.model;
 
     outPosition = inPosition;
-
-    ivec3 size = imageSize(imgHeightField);
 
     const float _h = sim.h * 0.5f; 
 

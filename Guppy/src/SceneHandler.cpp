@@ -35,8 +35,9 @@ void Scene::Handler::init() {
     bool suppress = true;
     bool deferred = true;
     bool particles = true;
+    bool makeFaceSelectionMesh = false;
 
-    auto& pScene = makeScene(true, (!suppress && false));
+    auto& pScene = makeScene(true, makeFaceSelectionMesh);
 
     if (deferred) {
         Mesh::ArcCreateInfo arcInfo;
@@ -58,7 +59,7 @@ void Scene::Handler::init() {
             axesInfo.showNegative = true;
             instObj3dInfo = {};
             defMatInfo = {};
-            defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
+            defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR | Material::FLAG::MODE_FLAT_SHADE;
             auto offset = meshHandler().makeLineMesh<Mesh::Axes>(&axesInfo, &defMatInfo, &instObj3dInfo)->getOffset();
             pScene->addMeshIndex(MESH::LINE, offset);
         }

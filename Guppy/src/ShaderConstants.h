@@ -75,7 +75,9 @@ enum class SHADER {
     PRTCL_CLOTH_NORM_COMP,
     PRTCL_CLOTH_VERT,
     // WATER
-    HFF_COMP,
+    HFF_HGHT_COMP,
+    HFF_NORM_COMP,
+    HFF_VERT,
     HFF_CLMN_VERT,
     // Add new to SHADER_ALL and SHADER_LINK_MAP.
 };

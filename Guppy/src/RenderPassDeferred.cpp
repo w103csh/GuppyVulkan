@@ -29,6 +29,8 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         GRAPHICS::DEFERRED_MRT_LINE,
         GRAPHICS::DEFERRED_MRT_COLOR,
         GRAPHICS::HFF_CLMN_DEFERRED,
+        GRAPHICS::HFF_WF_DEFERRED,
+        GRAPHICS::HFF_OCEAN_DEFERRED,
 #ifndef VK_USE_PLATFORM_MACOS_MVK
         GRAPHICS::DEFERRED_MRT_WF_COLOR,
 #endif
@@ -54,7 +56,8 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         COMPUTE::PRTCL_ATTR,
         COMPUTE::PRTCL_CLOTH,
         COMPUTE::PRTCL_CLOTH_NORM,
-        COMPUTE::HFF,
+        COMPUTE::HFF_HGHT,
+        COMPUTE::HFF_NORM,
     },
     (FLAG::SWAPCHAIN | FLAG::DEPTH | /*FLAG::DEPTH_INPUT_ATTACHMENT |*/
      (::Deferred::DO_MSAA ? FLAG::MULTISAMPLE : FLAG::NONE)),
@@ -163,6 +166,8 @@ void Base::record(const uint8_t frameIndex) {
                     case GRAPHICS::PRTCL_ATTR_PT_DEFERRED:
                     case GRAPHICS::PRTCL_CLOTH_DEFERRED:
                     case GRAPHICS::HFF_CLMN_DEFERRED:
+                    case GRAPHICS::HFF_WF_DEFERRED:
+                    case GRAPHICS::HFF_OCEAN_DEFERRED:
                     case GRAPHICS::PRTCL_FOUNTAIN_DEFERRED: {
                         // PARTICLE GRAPHICS
                         handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
@@ -390,8 +395,8 @@ void Base::createDependencies() {
         if (pipelineType == PIPELINE{GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED} ||
             pipelineType == PIPELINE{GRAPHICS::PRTCL_ATTR_PT_DEFERRED} ||
             pipelineType == PIPELINE{GRAPHICS::PRTCL_CLOTH_DEFERRED} ||
-            pipelineType == PIPELINE{GRAPHICS::HFF_CLMN_DEFERRED}) {
-            // Dispatch writes into a storage buffer. Draw consumes that buffer as an instance vertex buffer.
+            pipelineType == PIPELINE{GRAPHICS::HFF_OCEAN_DEFERRED}) {
+            // Dispatch writes into a storage buffer. Draw consumes that buffer as a vertex buffer.
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,
                 subpass,
@@ -402,8 +407,8 @@ void Base::createDependencies() {
                 VK_DEPENDENCY_BY_REGION_BIT,
             });
         }
-        if (pipelineType == PIPELINE{GRAPHICS::HFF_CLMN_DEFERRED}) {
-            // Dispatch writes into a storage buffer. Draw consumes that buffer as an instance vertex buffer.
+        if (pipelineType == PIPELINE{GRAPHICS::HFF_CLMN_DEFERRED} || pipelineType == PIPELINE{GRAPHICS::HFF_WF_DEFERRED}) {
+            // Dispatch writes into a storage buffer. Draw consumes that buffer as a shader object.
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,
                 subpass,

@@ -18,7 +18,8 @@ void Selection::Manager::makeFace() {
     if (pFaceInfo_ == nullptr) assert(false && "I did not handle this");
 
     Mesh::CreateInfo meshInfo = {};
-    meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_LINE;  // GRAPHICS::LINE;
+    // meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_LINE;
+    meshInfo.pipelineType = GRAPHICS::LINE;
     meshInfo.mappable = true;
     Instance::Obj3d::CreateInfo instInfo = {};
     Material::Default::CreateInfo matInfo = {};

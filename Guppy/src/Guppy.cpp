@@ -208,33 +208,33 @@ void Guppy::onKey(GAME_KEY key) {
         case GAME_KEY::KEY_SPACE:
             // sim_paused_ = !sim_paused_;
             break;
-        case GAME_KEY::KEY_F:
-            // sim_fade_ = !sim_fade_;
-            break;
-            // case GAME_KEY::KEY_1: {
+        case GAME_KEY::KEY_F: {
+        } break;
+        case GAME_KEY::KEY_1: {
             //    Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
             //        if (posLights.size() > 1) {
             //            auto& light = posLights[1];
             //            light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_X * -2.0f)));
             //        }
             //    });
-            //} break;
-            // case GAME_KEY::KEY_2: {
+        } break;
+        case GAME_KEY::KEY_2: {
             //    Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
             //        if (posLights.size() > 1) {
             //            auto& light = posLights[1];
             //            light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_X * 2.0f)));
             //        }
             //    });
-            //} break;
-            // case GAME_KEY::KEY_3: {
+        } break;
+        case GAME_KEY::KEY_3: {
             //    Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
             //        if (posLights.size() > 1) {
             //            auto& light = posLights[1];
             //            light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Z * 2.0f)));
             //        }
             //    });
-            //} break;
+            handlers_.pUniform->createVisualHelpers();
+        } break;
         case GAME_KEY::KEY_4: {
             // Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
             //    if (posLights.size() > 1) {
@@ -242,7 +242,7 @@ void Guppy::onKey(GAME_KEY key) {
             //        light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Z * -2.0f)));
             //    }
             //});
-            handlers_.pUniform->createVisualHelpers();
+            handlers_.pParticle->toggleDraw();
         } break;
         case GAME_KEY::KEY_5: {
             // Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
@@ -251,6 +251,7 @@ void Guppy::onKey(GAME_KEY key) {
             //        light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Y * 2.0f)));
             //    }
             //});
+            handlers_.pParticle->togglePause();
         } break;
         case GAME_KEY::KEY_6: {
             // Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
@@ -272,7 +273,6 @@ void Guppy::onKey(GAME_KEY key) {
                 // shell().soundHandler().pause(Sound::TYPE::OCEAN_WAVES);
                 shell().soundHandler().stop(Sound::TYPE::OCEAN_WAVES);
             }
-
         } break;
         case GAME_KEY::KEY_7: {
             // Shader::Handler::defaultUniformAction([](auto& defUBO) {
@@ -289,12 +289,12 @@ void Guppy::onKey(GAME_KEY key) {
             //    }
             //    // defUBO_.shaderData.fog.maxDistance += 10.0f;
             //});
-            handlers_.pParticle->startFountain(0);
-            handlers_.pParticle->startFountain(1);
-            handlers_.pParticle->startFountain(2);
-            handlers_.pParticle->startFountain(3);
-            handlers_.pParticle->startFountain(4);
-            handlers_.pParticle->startFountain(5);
+            //handlers_.pParticle->startFountain(0);
+            //handlers_.pParticle->startFountain(1);
+            //handlers_.pParticle->startFountain(2);
+            //handlers_.pParticle->startFountain(3);
+            //handlers_.pParticle->startFountain(4);
+            //handlers_.pParticle->startFountain(5);
         } break;
         case GAME_KEY::KEY_8: {
             auto& light = handlers_.pUniform->getDefPosLight();

@@ -103,6 +103,7 @@ enum class PUSH_CONSTANT {
     POST_PROCESS,
     DEFERRED,
     PRTCL_EULER,
+    HFF_COLUMN,
 };
 
 enum class INPUT_ACTION {
@@ -170,6 +171,8 @@ enum class STORAGE_BUFFER_DYNAMIC {
     PRTCL_POSITION,
     PRTCL_VELOCITY,
     PRTCL_NORMAL,
+    //
+    NORMAL,
     //
     DONT_CARE,
     VERTEX,  // Buffer usage only
