@@ -36,10 +36,17 @@ void Scene::Handler::init() {
 
     const auto& ctx = shell().context();
 
+#if VK_USE_PLATFORM_MACOS_MVK
+    bool suppress = false;
+    bool deferred = false;
+    bool particles = false;
+    bool makeFaceSelectionMesh = false;
+#else
     bool suppress = true;
     bool deferred = true;
     bool particles = true;
     bool makeFaceSelectionMesh = false;
+#endif
 
     auto& pScene = makeScene(true, makeFaceSelectionMesh);
 

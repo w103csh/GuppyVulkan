@@ -29,7 +29,7 @@ namespace {
 
 // clang-format off
 const std::vector<PASS> DEFAULT = {
-#if false
+#if VK_USE_PLATFORM_MACOS_MVK || false
 #if DO_PROJECTOR
     PASS::SAMPLER_PROJECT,
 #endif

@@ -16,6 +16,7 @@
 #endif
 
 #include "BufferItem.h"
+#include "Extensions.h"
 #include "Helpers.h"
 #include "Shell.h"
 

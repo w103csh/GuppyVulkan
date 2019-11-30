@@ -112,10 +112,10 @@ After `CMake` has successfully setup the build files there are flags to turn off
 
 > **Note: The latest known working commit of the [dear imgui library](https://github.com/ocornut/imgui) repo can be found in `current_versions.json`.**
 
-#### MoltenVK (macOS only)
+#### MoltenVK (required for macOS only)
 
 This repository has a required dependency (macOS only) on the
-[MoltenVK repository](https://github.com/w103csh/MoltenVK/commits/master) that I forked.
+[MoltenVK repository](https://github.com/KhronosGroup/MoltenVK.git).
 You have to clone the repository and build its `Packaging (macOS)` product before
 building this repository. The MotenVK repository is required because it
 contains a glsl to spir-v converter that the engine uses for hot swapping shaders during

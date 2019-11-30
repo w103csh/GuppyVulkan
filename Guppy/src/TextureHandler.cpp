@@ -109,6 +109,18 @@ void Texture::Handler::reset() {
 }
 
 std::shared_ptr<Texture::Base>& Texture::Handler::make(const Texture::CreateInfo* pCreateInfo) {
+    for (const auto& samplerCreateInfo : pCreateInfo->samplerCreateInfos) {
+        /**
+         * This assert here is for the MoltenVK limitation:
+         *  error 'MTLTextureDescriptor has width (...) greater than the maximum allowed size of 16384.'
+         * I would imagine there is a similar limitation for height, but I have not hit the problem yet.
+         */
+        if (!helpers::compExtent3D(samplerCreateInfo.extent, BAD_EXTENT_3D) && samplerCreateInfo.extent.width > 16384) {
+            assert(false);
+            exit(EXIT_FAILURE);
+        }
+    }
+
     // Using the name as an ID for now, so make sure its unique.
     for (const auto& pTexture : pTextures_) {
         assert(pTexture->NAME.compare(pCreateInfo->name) != 0);
