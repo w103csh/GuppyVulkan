@@ -87,7 +87,7 @@ static void sample_platform_thread_cond_wait(sample_platform_thread_cond *pCond,
 static void sample_platform_thread_cond_broadcast(sample_platform_thread_cond *pCond) { WakeAllConditionVariable(pCond); }
 #else  // defined(_WIN32)
 
-#error The "sample_platform.h" file must be modified for this OS.
+#error The "sample_common.h" file must be modified for this OS.
 
 // NOTE: In order to support another OS, an #elif needs to be added (above the
 // "#else // defined(_WIN32)") for that OS, and OS-specific versions of the

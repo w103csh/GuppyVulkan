@@ -1,4 +1,7 @@
 /*
+ * Modifications copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * -------------------------------
+ * 
  * Vulkan Samples
  *
  * Copyright (C) 2015-2016 Valve Corporation

@@ -1,4 +1,7 @@
 /*
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ * 
  *  This is really like a PCH file. I should make one.
  *
  *  Non-constants files should include this, and not constants files. Constants

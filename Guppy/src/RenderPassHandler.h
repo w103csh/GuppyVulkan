@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ */
+
 #ifndef RENDER_PASS_HANDLER_H
 #define RENDER_PASS_HANDLER_H
 

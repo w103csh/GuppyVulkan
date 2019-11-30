@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ */
+
 #ifndef HEIGHT_FIELD_FLUID_H
 #define HEIGHT_FIELD_FLUID_H
 

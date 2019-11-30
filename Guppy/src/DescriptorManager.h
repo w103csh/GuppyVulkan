@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ */
+
 #ifndef BUFFER_MANAGER_DESCRIPTOR_H
 #define BUFFER_MANAGER_DESCRIPTOR_H
 

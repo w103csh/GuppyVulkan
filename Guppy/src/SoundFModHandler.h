@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ */
 
 #ifdef USE_FMOD
 #ifndef SOUND_FMOD_HANDLER_H

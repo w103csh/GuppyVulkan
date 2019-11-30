@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ */
+
 #ifdef USE_XINPUT
 #ifndef XINPUT_HELPER_H
 #define XINPUT_HELPER_H

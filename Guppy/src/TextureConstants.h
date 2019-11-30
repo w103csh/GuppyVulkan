@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ */
 
 #ifndef TEXTURE_CONSTANTS_H
 #define TEXTURE_CONSTANTS_H

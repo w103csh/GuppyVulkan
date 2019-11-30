@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ */
 
 #ifndef SOUND_HANDLER_H
 #define SOUND_HANDLER_H

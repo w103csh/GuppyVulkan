@@ -35,7 +35,7 @@ set(SOURCE
     Light.h
     LoadingHandler.cpp
     LoadingHandler.h
-    main.cpp
+    Main.cpp
     Material.cpp
     Material.h
     MaterialHandler.cpp
