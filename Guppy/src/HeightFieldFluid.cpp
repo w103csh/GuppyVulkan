@@ -404,7 +404,7 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
                                                 static_cast<size_t>(workgroupSize_.y) - 1);
         indices_.resize(numIndices);
 
-        size_t index = 0, indexWF = 0;
+        size_t index = 0;
         for (uint32_t row = 0; row < workgroupSize_.y - 1; row++) {
             for (uint32_t col = 0; col < workgroupSize_.x; col++) {
                 // Triangle strip indices (surface)

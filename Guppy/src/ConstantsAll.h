@@ -13,6 +13,7 @@
 
 #include "Constants.h"
 #include "Enum.h"
+#include "Extensions.h"
 #include "Types.h"
 
 #include "DescriptorConstants.h"

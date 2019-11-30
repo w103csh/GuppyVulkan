@@ -148,9 +148,9 @@ Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCr
       pDescriptors_(pDescriptors),
       descInstOffset_(BAD_OFFSET),
       pMaterial_(pMaterial),
+      pLdgRes_(nullptr),
       offset_(offset),
-      descTimeOffset_(BAD_OFFSET),
-      pLdgRes_(nullptr) {
+      descTimeOffset_(BAD_OFFSET) {
     for (const auto& type : COMPUTE_PIPELINE_TYPES) assert(type != COMPUTE::ALL_ENUM);
     for (const auto& type : GRAPHICS_PIPELINE_TYPES) assert(type != GRAPHICS::ALL_ENUM);
     assert(!(COMPUTE_PIPELINE_TYPES.empty() && GRAPHICS_PIPELINE_TYPES.empty()));
@@ -197,7 +197,7 @@ void Base::prepare() {
         handler().loadingHandler().loadSubmit(std::move(pLdgRes_));
         status_ ^= STATUS::PENDING_BUFFERS;
     } else if (vertexRes_.buffer == VK_NULL_HANDLE && indexRes_.buffer == VK_NULL_HANDLE) {
-        //assert(vertices_.empty() && indices_.empty() && "Did you mean to set the status to PENDING_BUFFERS?");
+        assert(vertices_.empty() && indices_.empty() && "Did you mean to set the status to PENDING_BUFFERS?");
     }
 
     if (status_ & STATUS::PENDING_MATERIAL) {

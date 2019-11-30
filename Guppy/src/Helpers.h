@@ -30,7 +30,6 @@
 #include <utility>
 
 #include "ConstantsAll.h"
-#include "Extensions.h"  // This is here for convenience
 
 namespace vk {
 inline VkResult assert_success(VkResult res) {

@@ -13,7 +13,7 @@
 #include "UniformHandler.h"
 
 namespace {
-constexpr uint32_t NUM_PARTICLES_BLUEWATER = 8000;
+constexpr uint32_t NUM_PARTICLES_BLUEWATER = 4000;
 constexpr uint32_t NUM_PARTICLES_TORUS = 64;
 constexpr uint32_t NUM_PARTICLES_FIRE = 2000;
 constexpr uint32_t NUM_PARTICLES_SMOKE = 1000;
