@@ -1,6 +1,8 @@
 
 #include "HeightFieldFluid.h"
 
+#include <cmath>
+
 #include "Deferred.h"
 #include "Random.h"
 // HANDLERS
@@ -284,42 +286,12 @@ void Ocean::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
 }  // namespace HeightFieldFluid
 }  // namespace Pipeline
 
-Texture::CreateInfo MakeHeightFieldFluidTex(const HeightFieldFluid::Info info) {
-    /**
-     * u (water column height 0)
-     * u (water column height 1)
-     * v (velocity)
-     * r (displacement)
-     */
-    uint32_t numLayers = 6;
-
-    float* pData = (float*)calloc(static_cast<size_t>(info.M) * static_cast<size_t>(info.N) * static_cast<size_t>(numLayers),
-                                  sizeof(float));
-
-    for (uint32_t i = 0; i < info.N; i++) {
-        for (uint32_t j = 0; j < info.M; j++) {
-            // pData[(i * info.M) + j] = Random::inst().nextFloatZeroToOne();
-            if (i == 6 || j == 6) {
-                pData[(i * info.M) + j] = 2.0f;
-            } else if (i == 5 || j == 5) {
-                pData[(i * info.M) + j] = 1.66f;
-            } else if (i == 7 || j == 7) {
-                pData[(i * info.M) + j] = 1.66f;
-            } else if (i == 4 || j == 4) {
-                pData[(i * info.M) + j] = 1.33f;
-            } else if (i == 8 || j == 8) {
-                pData[(i * info.M) + j] = 1.33f;
-            } else {
-                pData[(i * info.M) + j] = 1.0f;
-            }
-        }
-    }
-
+Texture::CreateInfo MakeHeightFieldFluidTex(stbi_uc* pData, VkExtent3D extent) {
     Sampler::CreateInfo sampInfo = {
         "HFF Sampler",
         {{{::Sampler::USAGE::HEIGHT}}},
         VK_IMAGE_VIEW_TYPE_3D,
-        {info.M, info.N, numLayers},
+        extent,
         {},
         0,
         SAMPLER::DEFAULT,
@@ -330,8 +302,7 @@ Texture::CreateInfo MakeHeightFieldFluidTex(const HeightFieldFluid::Info info) {
         sizeof(float),
     };
 
-    sampInfo.layersInfo.infos.front().pPixel = (stbi_uc*)pData;
-
+    sampInfo.layersInfo.infos.front().pPixel = pData;
     return {std::string(Texture::HFF_ID), {sampInfo}, false, false, STORAGE_IMAGE::DONT_CARE};
 }
 
@@ -355,54 +326,72 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
     workgroupSize_.y = pCreateInfo->info.N;
     assert(workgroupSize_.y > 1 && workgroupSize_.x > 1);
 
-    // HEIGHT FIELD IMAGE
-    auto texInfo = MakeHeightFieldFluidTex(pCreateInfo->info);
-    handler.textureHandler().make(&texInfo);
+    /**
+     * Height field image layers
+     *  u (water column height 0)
+     *  u (water column height 1)
+     *  v (velocity)
+     *  r (displacement)
+     */
+    uint32_t numImgLayers = 4, idx;
+    size_t numHeights = static_cast<size_t>(workgroupSize_.x) * static_cast<size_t>(workgroupSize_.y);
 
-    // VERTEX
-    {
-        verticesHFF_.reserve(static_cast<size_t>(workgroupSize_.x) * static_cast<size_t>(workgroupSize_.y));
+    float* pData = (float*)calloc(numHeights * static_cast<size_t>(numImgLayers), sizeof(float));
+    verticesHFF_.reserve(numHeights);
 
-        float dx, dz, z;
-        float left = pCreateInfo->info.lengthM * 0.5f;
-        float right = left * -1.0f;
-        float top = (pCreateInfo->info.lengthM / static_cast<float>(workgroupSize_.x - 1)) * (workgroupSize_.y - 1) * 0.5f;
-        float bottom = top * -1.0f;
+    float dx, dz, z;
+    float left = pCreateInfo->info.lengthM * 0.5f;
+    float right = left * -1.0f;
+    float top = (pCreateInfo->info.lengthM / static_cast<float>(workgroupSize_.x - 1)) * (workgroupSize_.y - 1) * 0.5f;
+    float bottom = top * -1.0f;
 
-        for (uint32_t j = 0; j < workgroupSize_.y; j++) {
-            dz = static_cast<float>(j) / static_cast<float>(workgroupSize_.y - 1);
-            z = glm::mix(top, bottom, dz);
+    for (uint32_t j = 0; j < workgroupSize_.y; j++) {
+        dz = static_cast<float>(j) / static_cast<float>(workgroupSize_.y - 1);
+        z = glm::mix(top, bottom, dz);
 
-            for (uint32_t i = 0; i < workgroupSize_.x; i++) {
-                dx = static_cast<float>(i) / static_cast<float>(workgroupSize_.x - 1);
+        for (uint32_t i = 0; i < workgroupSize_.x; i++) {
+            dx = static_cast<float>(i) / static_cast<float>(workgroupSize_.x - 1);
+            auto x = glm::mix(left, right, dx);
 
-                verticesHFF_.push_back({
-                    // position
-                    {
-                        glm::mix(left, right, dx),  // x
-                        0.0f,                       // y
-                        z,                          // z
-                    },
-                    // image offset
-                    {static_cast<int>(i), static_cast<int>(j)},
-                });
-            }
-        }
+            // VERTEX
+            verticesHFF_.push_back({
+                // position
+                {x, 0.0f, z},
+                // image offset
+                {static_cast<int>(i), static_cast<int>(j)},
+            });
 
-        // Test to make sure "h" is the same in both directions.
-        {
-            auto x0 = verticesHFF_[1].position.x - verticesHFF_[0].position.x;
-            auto x1 = verticesHFF_[workgroupSize_.x - 1].position.x - verticesHFF_[workgroupSize_.x - 2].position.x;
-            assert(glm::epsilonEqual(x0, x1, 0.00001f));
-            if (workgroupSize_.y > 1) {
-                auto z0 = verticesHFF_[0].position.z - verticesHFF_[workgroupSize_.x].position.z;
-                auto z1 = verticesHFF_[workgroupSize_.x - 2].position.z -
-                          verticesHFF_[static_cast<size_t>(workgroupSize_.x - 2) + static_cast<size_t>(workgroupSize_.x)]
-                              .position.z;
-                assert(glm::epsilonEqual(z0, z1, 0.000001f));
-            }
+            // HEIGHT
+            idx = (i * pCreateInfo->info.M) + j;
+            // if (i == 6 || j == 6) {
+            //    pData[(i * info.M) + j] = 2.0f;
+            //}
+            pData[idx] = ((cos(static_cast<float>(0.1f * x)) *  //
+                           sin(static_cast<float>(0.3f * z)))   //
+                          / 1.0f /* glm::two_pi<float>()*/);
+            pData[idx] += (2.0f * cos(static_cast<float>(0.01f * x))) *  //
+                          (glm::pi<float>() + (2.0f * sin(static_cast<float>(0.01f * z))));
+            pData[idx] += pow(glm::one_over_pi<float>(), 3) * (1.0f - Random::inst().nextFloatZeroToOne());
         }
     }
+
+    // Test to make sure "h" is the same in both directions.
+    {
+        auto x0 = verticesHFF_[1].position.x - verticesHFF_[0].position.x;
+        auto x1 = verticesHFF_[workgroupSize_.x - 1].position.x - verticesHFF_[workgroupSize_.x - 2].position.x;
+        assert(glm::epsilonEqual(x0, x1, 0.00001f));
+        if (workgroupSize_.y > 1) {
+            auto z0 = verticesHFF_[0].position.z - verticesHFF_[workgroupSize_.x].position.z;
+            auto z1 =
+                verticesHFF_[workgroupSize_.x - 2].position.z -
+                verticesHFF_[static_cast<size_t>(workgroupSize_.x - 2) + static_cast<size_t>(workgroupSize_.x)].position.z;
+            assert(glm::epsilonEqual(z0, z1, 0.000001f));
+        }
+    }
+
+    // IMAGE
+    auto texInfo = MakeHeightFieldFluidTex((stbi_uc*)pData, {pCreateInfo->info.M, pCreateInfo->info.N, numImgLayers});
+    handler.textureHandler().make(&texInfo);
 
     // INDEX
     {

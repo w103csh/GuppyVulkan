@@ -260,7 +260,7 @@ void Uniform::Handler::createLights() {
     assert(shell().context().imageCount == 3);  // Potential imageCount problem
     defDirInfo.dataCount = shell().context().imageCount;
     // MOON
-    defDirInfo.direction = glm::normalize(glm::vec3(0, 0.5f, 1.0f));  // direction to the light (s) (world space)
+    defDirInfo.direction = glm::normalize(glm::vec3(0, 1.0f, 1.0f));  // direction to the light (s) (world space)
     lgtDefDirMgr().insert(dev, &defDirInfo);
 
     Light::CreateInfo lightCreateInfo = {};
