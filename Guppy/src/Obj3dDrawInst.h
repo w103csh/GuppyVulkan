@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ */
+
 #ifndef OBJ_DRAW_INST_3D_H
 #define OBJ_DRAW_INST_3D_H
 

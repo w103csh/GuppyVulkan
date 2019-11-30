@@ -1,10 +1,9 @@
 /*
-    Physically-based Rendering Shader
-
-    This comes from the cookbook, and is a physically-based reflection
-    model. I will try to fill this out more once I can do more work on
-    the math.
-*/
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ * 
+ * Physically-based Rendering Shader
+ */
 
 #ifndef PBR_H
 #define PBR_H

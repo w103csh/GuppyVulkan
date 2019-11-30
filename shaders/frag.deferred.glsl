@@ -1,4 +1,9 @@
-#version 450
+/*
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ */
+ 
+ #version 450
 
 // UNIFORMS
 #define _DS_UNI_DFR_COMB 0

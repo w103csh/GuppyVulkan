@@ -1,6 +1,9 @@
+/*
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ */
 
 #version 450
-#extension GL_ARB_separate_shader_objects : enable
 
 // DECLARATIONS
 vec3 blinnPhongShade();

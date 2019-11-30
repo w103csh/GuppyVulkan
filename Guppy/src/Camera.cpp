@@ -1,3 +1,7 @@
+/*
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ */
 
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_access.hpp>

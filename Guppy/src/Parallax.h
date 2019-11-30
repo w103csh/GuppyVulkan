@@ -1,8 +1,9 @@
 /*
-    Parallax Shader
-
-    This comes from the cookbook.
-*/
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ * 
+ * Parallax Shader
+ */
 
 #ifndef PARALLAX_H
 #define PARALLAX_H

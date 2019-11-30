@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ */
+
 #ifndef SELECTION_MANAGER_H
 #define SELECTION_MANAGER_H
 

@@ -1,3 +1,8 @@
+/*
+ * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * All Rights Reserved
+ */
+
 #ifndef LDG_RESOURCE_HANDLER_H
 #define LDG_RESOURCE_HANDLER_H
 
