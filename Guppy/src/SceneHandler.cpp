@@ -70,7 +70,9 @@ void Scene::Handler::init() {
             planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
             planeInfo.selectable = false;
             instObj3dInfo = {};
-            instObj3dInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
+            // instObj3dInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
+            instObj3dInfo.data.push_back(
+                {helpers::affine(glm::vec3{2000.0f}, {0.0f, -4.0f, 0.0f}, -M_PI_2_FLT, CARDINAL_X)});
             defMatInfo = {};
             defMatInfo.shininess = Material::SHININESS::EGGSHELL;
             // defMatInfo.color = {0.0f, 1.0f, 0.0f};

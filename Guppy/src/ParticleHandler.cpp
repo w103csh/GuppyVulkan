@@ -140,7 +140,7 @@ void Particle::Handler::create() {
         assert(shell().context().imageCount == 3);  // Potential imageCount problem
         hffInfo.dataCount = shell().context().imageCount;
         hffInfo.info = info;
-        hffInfo.c = 2.0f;
+        hffInfo.c = 4.0f;
         hffInfo.maxSlope = 4.0f;
         hffMgr.insert(shell().context().dev, &hffInfo);
         pDescriptors.push_back(hffMgr.pItems.back());
