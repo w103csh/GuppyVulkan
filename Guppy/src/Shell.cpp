@@ -50,6 +50,7 @@ Shell::Shell(Game &game, Handlers &&handlers)
       deviceExtensionInfo_{
           {VK_KHR_SWAPCHAIN_EXTENSION_NAME, true, true},
           {VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false, settings_.try_debug_markers},
+          {VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false, settings_.try_debug_markers},
           {VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME, false, false},
           {VK_EXT_TRANSFORM_FEEDBACK_EXTENSION_NAME, false, false},
       },
@@ -59,11 +60,26 @@ Shell::Shell(Game &game, Handlers &&handlers)
       ctx_(),
       gameTick_(1.0f / settings_.ticks_per_second),
       gameTime_(gameTick_),
-      debugReportCallback_(VK_NULL_HANDLE),
       debugUtilsMessenger_(VK_NULL_HANDLE) {
-    if (settings_.validate) {  // require "standard" validation layers
-        instanceLayers_.push_back("VK_LAYER_LUNARG_standard_validation");
-        instanceExtensions_.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+    /**
+     * Leaving this validation layer code in but I am going to start using vkconfig.exe instead. It does everything
+     * the layer code here already did but better. You can read about it here
+     * https://vulkan.lunarg.com/doc/sdk/1.1.126.0/windows/vkconfig.html in case you forget how to use it. I feel like if
+     * LunarG made the app then they are probably willing to maintain it which is easier than figuring out how the layers
+     * will change over time. Its also configurable through the UI so it really is a nice little thing to use.
+     *
+     * Things to note:
+     *
+     * - They aparently removed the verbose oject tracking when they moved towards VK_LAYER_KHRONOS_validation from
+     * VK_LAYER_LUNARG_standard_validation which is a huge bummer.
+     *
+     * - If I set the info flag for VK_LAYER_KHRONOS_validation I was not recieving the same messages as enabling it
+     * programmatically. Fortunately, the message were only for device extension enabling which is not super useful, or has
+     * not been thus far. It does make we wonder if there are other messages I am potentially missing though.
+     */
+    if (settings_.validate_verbose) assert(settings_.validate);
+    if (settings_.validate) {
+        instanceLayers_.push_back("VK_LAYER_KHRONOS_validation");
         instanceExtensions_.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 }
@@ -95,52 +111,28 @@ void Shell::destroy() {
 void Shell::initVk() {
     initInstance();
 
-    if (settings_.validate) {
-        ext::CreateInstanceEXTs(ctx_.instance);
-        initDebugReport();
-        initValidationMessenger();
-    }
+    ext::CreateInstanceEXTs(ctx_.instance, settings_.validate);
+    initDebugUtilsMessenger();
 
     initPhysicalDev();
 }
 
 void Shell::cleanupVk() {
-    if (settings_.validate) ext::vkDestroyDebugReportCallbackEXT(ctx_.instance, debugReportCallback_, nullptr);
     if (settings_.validate) ext::vkDestroyDebugUtilsMessengerEXT(ctx_.instance, debugUtilsMessenger_, nullptr);
-
     destroyInstance();
-}
-
-bool Shell::debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t object,
-                                size_t location, int32_t msgCode, const char *layerPrefix, const char *msg) {
-    LogPriority prio = LogPriority::LOG_WARN;
-    if (flags & VK_DEBUG_REPORT_ERROR_BIT_EXT)
-        prio = LogPriority::LOG_ERR;
-    else if (flags & (VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT))
-        prio = LogPriority::LOG_WARN;
-    else if (flags & VK_DEBUG_REPORT_INFORMATION_BIT_EXT)
-        prio = LogPriority::LOG_INFO;
-    else if (flags & VK_DEBUG_REPORT_DEBUG_BIT_EXT)
-        prio = LogPriority::LOG_DEBUG;
-
-    std::stringstream ss;
-    ss << layerPrefix << ": " << msg;
-
-    log(prio, ss.str().c_str());
-
-    return false;
 }
 
 void Shell::assertAllInstanceLayers() const {
     // Check if all instance layers required are present
-    for (const auto &layer_name : instanceLayers_) {
-        auto it = std::find_if(layerProps_.begin(), layerProps_.end(), [&layer_name](auto layer_prop) {
-            return std::strcmp(layer_prop.properties.layerName, layer_name) == 0;
+    for (const auto &layerName : instanceLayers_) {
+        auto it = std::find_if(layerProps_.begin(), layerProps_.end(), [&layerName](auto layer_prop) {
+            return std::strcmp(layer_prop.properties.layerName, layerName) == 0;
         });
         if (it == layerProps_.end()) {
             std::stringstream ss;
-            ss << "instance layer " << layer_name << " is missing";
-            throw std::runtime_error(ss.str());
+            ss << "instance layer " << layerName << " is missing";
+            log(LogPriority::LOG_WARN, ss.str().c_str());
+            assert(false);
         }
     }
 }
@@ -213,36 +205,25 @@ void Shell::initInstance() {
     assert(res == VK_SUCCESS);
 }
 
-void Shell::initDebugReport() {
-    if (!settings_.validate) return;
-
-    VkDebugReportCallbackCreateInfoEXT debugReportInfo = {};
-    debugReportInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-
-    debugReportInfo.flags =
-        VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT | VK_DEBUG_REPORT_ERROR_BIT_EXT;
-    if (settings_.validate_verbose) {
-        debugReportInfo.flags = VK_DEBUG_REPORT_INFORMATION_BIT_EXT | VK_DEBUG_REPORT_DEBUG_BIT_EXT;
-    }
-
-    debugReportInfo.pfnCallback = debugReportCallback;
-    debugReportInfo.pUserData = reinterpret_cast<void *>(this);
-
-    ext::vkCreateDebugReportCallbackEXT(ctx_.instance, &debugReportInfo, nullptr, &debugReportCallback_);
-}
-
-void Shell::initValidationMessenger() {
+void Shell::initDebugUtilsMessenger() {
     if (!settings_.validate) return;
 
     VkDebugUtilsMessengerCreateInfoEXT debugInfo = {};
     debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+
     debugInfo.messageSeverity =
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;  // | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
-    debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-                            VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-    debugInfo.pfnUserCallback = events::debugCallback;
-    debugInfo.pUserData = nullptr;  // Optional
+        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+    debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+
+    if (settings_.validate_verbose) {
+        debugInfo.messageSeverity |=
+            VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+        debugInfo.messageType |=
+            VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+    }
+
+    debugInfo.pfnUserCallback = events::DebugUtilsMessenger;
+    debugInfo.pUserData = this;
 
     vk::assert_success(ext::vkCreateDebugUtilsMessengerEXT(ctx_.instance, &debugInfo, nullptr, &debugUtilsMessenger_));
 }

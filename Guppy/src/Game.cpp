@@ -45,7 +45,7 @@ Game::Settings::Settings()
       ticks_per_second(30),
       vsync(true),
       animate(true),
-      validate(true),
+      validate(false),
       validate_verbose(false),
       no_tick(false),
       no_render(false),

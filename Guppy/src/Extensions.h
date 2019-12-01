@@ -39,6 +39,7 @@ inline void DebugMessage(std::string type, const VkResult& result, const char* n
     else
         std::cout << "setObjectName failed for: " << name << " | VkResult" << result << " returned" << std::endl;
 }
+
 static void CreateDeviceEXTs(const Shell::Context& ctx) {
     // TODO: If retrieval of the function pointers fail the flags should be updated.
     if (ctx.debugMarkersEnabled) {
@@ -67,10 +68,9 @@ static void CreateDeviceEXTs(const Shell::Context& ctx) {
          * with the shader book I'm reading. As I was doing this it was becoming increasingly clear that this was going to be
          * difficult due to the lack of working examples I could find online. That is when I stumbled upon this blog post by
          * a Khronos employee: http://jason-blog.jlekstrand.net/2018/10/transform-feedback-is-terrible-so-why.html. After
-         * reading this I will take his adivce and implement the update on gpu using compute shaders, but I am going to leave
-         * this code here because I liked the changes I made to the extensions code in this file, and the Shell/Settings
-         * code elsewhere. Also, it should be a good reminder to not just following things to blindly and use the tools I
-         * have learned.
+         * reading this I will take his adivce and implement the update on the gpu using compute shaders, but I am going to
+         * leave this code here because I liked the changes I made to the extensions code in this file, and the
+         * Shell/Settings code elsewhere. Also, it should be a good reminder to not just following things blindly.
          */
 
         vkCmdBindTransformFeedbackBuffers =
@@ -81,21 +81,16 @@ static void CreateDeviceEXTs(const Shell::Context& ctx) {
     }
 }
 
-static void CreateInstanceEXTs(const VkInstance& instance) {
-    // Report callback
-    vkCreateDebugReportCallbackEXT =
-        (PFN_vkCreateDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugReportCallbackEXT");
-    assert(vkCreateDebugReportCallbackEXT != VK_NULL_HANDLE);
-    vkDestroyDebugReportCallbackEXT =
-        (PFN_vkDestroyDebugReportCallbackEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugReportCallbackEXT");
-    assert(vkDestroyDebugReportCallbackEXT != VK_NULL_HANDLE);
-    // Utils messenger
-    vkCreateDebugUtilsMessengerEXT =
-        (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-    assert(vkCreateDebugUtilsMessengerEXT != VK_NULL_HANDLE);
-    vkDestroyDebugUtilsMessengerEXT =
-        (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-    assert(vkDestroyDebugUtilsMessengerEXT != VK_NULL_HANDLE);
+static void CreateInstanceEXTs(const VkInstance& instance, bool validate) {
+    if (validate) {
+        // Utils messenger
+        vkCreateDebugUtilsMessengerEXT =
+            (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+        assert(vkCreateDebugUtilsMessengerEXT != VK_NULL_HANDLE);
+        vkDestroyDebugUtilsMessengerEXT =
+            (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+        assert(vkDestroyDebugUtilsMessengerEXT != VK_NULL_HANDLE);
+    }
 
     // TODO: log VK_ERROR_EXTENSION_NOT_PRESENT message.
 }

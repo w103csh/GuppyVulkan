@@ -30,16 +30,12 @@
 #include <vulkan/vulkan.h>
 
 #include "Game.h"
+#include "Types.h"
 
 // clang-format off
 namespace Input { class Handler; }
 namespace Sound { class Handler; }
 // clang-format on
-
-// structure for comparing char arrays
-struct less_str {
-    bool operator()(char const *a, char const *b) const { return std::strcmp(a, b) < 0; }
-};
 
 class Shell {
    public:
@@ -245,16 +241,6 @@ class Shell {
     const Handlers handlers_;
 
    private:
-    bool debugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType, uint64_t object,
-                             size_t location, int32_t msgCode, const char *layerPrefix, const char *msg);
-    static VKAPI_ATTR VkBool32 VKAPI_CALL debugReportCallback(VkDebugReportFlagsEXT flags,
-                                                              VkDebugReportObjectTypeEXT objType, uint64_t object,
-                                                              size_t location, int32_t msgCode, const char *layerPrefix,
-                                                              const char *msg, void *userData) {
-        Shell *shell = reinterpret_cast<Shell *>(userData);
-        return shell->debugReportCallback(flags, objType, object, location, msgCode, layerPrefix, msg);
-    }
-
     void assertAllInstanceLayers() const;
     void assertAllInstanceExtensions() const;
 
@@ -267,11 +253,10 @@ class Shell {
 
     // called by initVk
     void enumerateInstanceLayerExtensionProperties(LayerProperties &layerProps);  // *
-    void initValidationMessenger();                                               // *
     virtual PFN_vkGetInstanceProcAddr loadVk() = 0;
     virtual VkBool32 canPresent(VkPhysicalDevice phy, uint32_t queueFamily) = 0;
     void initInstance();
-    void initDebugReport();
+    void initDebugUtilsMessenger();
     void initPhysicalDev();
 
     // called by enumerateInstanceLayerExtensionProperties
@@ -321,7 +306,6 @@ class Shell {
     const float gameTick_;
     float gameTime_;
 
-    VkDebugReportCallbackEXT debugReportCallback_;
     VkDebugUtilsMessengerEXT debugUtilsMessenger_;
 };
 

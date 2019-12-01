@@ -37,6 +37,11 @@ constexpr VB_INDEX_TYPE BAD_VB_INDEX = VB_INDEX_PRIMITIVE_RESTART - 1;
 template <typename TEnum, typename TType>
 using enumPointerTypeMap = std::map<TEnum, std::unique_ptr<TType>>;
 
+// Structure for comparing char arrays
+struct less_str {
+    bool operator()(char const *a, char const *b) const { return std::strcmp(a, b) < 0; }
+};
+
 namespace Pipeline {
 struct CreateInfoResources {
     // BLENDING
