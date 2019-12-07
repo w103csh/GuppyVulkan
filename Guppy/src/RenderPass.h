@@ -19,6 +19,7 @@
 #include "Texture.h"
 
 // clang-format off
+namespace Descriptor { class Base; }
 namespace Pipeline { class Graphics; }
 // clang-format on
 
@@ -48,7 +49,7 @@ class Base : public Handlee<RenderPass::Handler> {
     void createTarget();
     void overridePipelineCreateInfo(const PIPELINE &type, Pipeline::CreateInfoResources &createInfoRes);
     virtual void record(const uint8_t frameIndex);
-    virtual void update();
+    virtual void update(const std::vector<Descriptor::Base *> pDynamicItems = {});
     constexpr auto getStatus() const { return status_; }
 
     // PRIMARY
@@ -130,9 +131,9 @@ class Base : public Handlee<RenderPass::Handler> {
     virtual void createPass();
     virtual void createBeginInfo();
     virtual void updateBeginInfo();  // TODO: what should this be?
-    virtual void createViewport();
-    VkRect2D scissor_;
-    VkViewport viewport_;
+    virtual void createViewports();
+    std::vector<VkRect2D> scissors_;
+    std::vector<VkViewport> viewports_;
     VkRenderPassBeginInfo beginInfo_;
 
     // SUBPASS

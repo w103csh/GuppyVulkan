@@ -9,15 +9,22 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.h>
 
+#include "Constants.h"
 #include "BufferItem.h"
 #include "Helpers.h"
 #include "Obj3d.h"
 #include "Uniform.h"
 
 namespace Camera {
-namespace Default {
+
+// Vulkan clip space has inverted Y and half Z.
+constexpr glm::mat4 VULKAN_CLIP_MAT4 = glm::mat4{1.0f, 0.0f,  0.0f, 0.0f,   //
+                                                 0.0f, -1.0f, 0.0f, 0.0f,   //
+                                                 0.0f, 0.0f,  0.5f, 0.0f,   //
+                                                 0.0f, 0.0f,  0.5f, 1.0f};  //
 
 namespace Perspective {
+namespace Default {
 
 struct CreateInfo : public Buffer::CreateInfo {
     float aspect = (16.0f / 9.0f);
@@ -79,7 +86,6 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
 
     virtual_inline const auto &getMVP() const { return data_.viewProjection; }
     virtual_inline const auto &getMV() const { return data_.view; }
-    virtual_inline const auto &getClip() const { return clip_; }
 
     void setAspect(float aspect);
     void update(const glm::vec3 &pos_dir, const glm::vec3 &look_dir, const uint32_t frameIndex);
@@ -90,12 +96,11 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
 
     // This should be the only way to set the projection data. Also,
     // this is not actually the projection matrix!!!
-    inline void setProjectionData() { data_.projection = clip_ * proj_; }
+    inline void setProjectionData() { data_.projection = VULKAN_CLIP_MAT4 * proj_; }
 
     inline const glm::mat4 &model(const uint32_t index = 0) const override { return model_; }
     glm::mat4 model_;
 
-    glm::mat4 clip_;
     // projection
     float aspect_;
     float far_;
@@ -108,8 +113,9 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
     glm::vec3 center_;
 };
 
-}  // namespace Perspective
 }  // namespace Default
+
+}  // namespace Perspective
 }  // namespace Camera
 
 #endif  // !CAMERA_H

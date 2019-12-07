@@ -574,8 +574,8 @@ void Pipeline::Graphics::getDepthInfoResources(CreateInfoResources& createInfoRe
     // createInfoRes.depthStencilStateInfo.depthWriteEnable = handler().settings().include_depth;
     createInfoRes.depthStencilStateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
     createInfoRes.depthStencilStateInfo.depthBoundsTestEnable = VK_FALSE;
-    createInfoRes.depthStencilStateInfo.minDepthBounds = 0;
-    createInfoRes.depthStencilStateInfo.maxDepthBounds = 2.0f;
+    createInfoRes.depthStencilStateInfo.minDepthBounds = 0.0f;
+    createInfoRes.depthStencilStateInfo.maxDepthBounds = 1.0f;
     createInfoRes.depthStencilStateInfo.stencilTestEnable = VK_FALSE;
     createInfoRes.depthStencilStateInfo.front = {};
     createInfoRes.depthStencilStateInfo.back = {};

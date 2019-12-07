@@ -13,6 +13,8 @@
 #include "MeshHandler.h"
 #include "PipelineHandler.h"
 #include "RenderPassHandler.h"
+#include "SceneHandler.h"
+#include "TextureHandler.h"
 
 namespace {
 
@@ -32,7 +34,7 @@ Uniform::Handler::Handler(Game* pGame)
     : Game::Handler(pGame),
       managers_{
           // CAMERA
-          Uniform::Manager<Camera::Default::Perspective::Base>  //
+          Uniform::Manager<Camera::Perspective::Default::Base>  //
           {"Default Perspective Camera", UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, 9, "_U_CAM_DEF_PERS"},
           // LIGHT
           Uniform::Manager<Light::Default::Directional::Base>  //
@@ -43,8 +45,10 @@ Uniform::Handler::Handler(Game* pGame)
           {"PBR Positional Light", UNIFORM::LIGHT_POSITIONAL_PBR, 40, "_U_LGT_PBR_POS"},
           Uniform::Manager<Light::Default::Spot::Base>  //
           {"Default Spot Light", UNIFORM::LIGHT_SPOT_DEFAULT, 20, "_U_LGT_DEF_SPT"},
-          Uniform::Manager<Light::Shadow::Positional>  //
-          {"Shadow Positional Light", UNIFORM::LIGHT_POSITIONAL_SHADOW, 20, "_U_LGT_SHDW_POS"},
+          Uniform::Manager<Light::Shadow::Positional::Base>  //
+          {"Shadow Positional Light", UNIFORM::LIGHT_POSITIONAL_SHADOW, 3, "_U_LGT_SHDW_POS"},
+          Uniform::Manager<Light::Shadow::Cube::Base>  //
+          {"Shadow Cube Light", UNIFORM::LIGHT_CUBE_SHADOW, 9, "_U_LGT_SHDW_CUBE"},
           // MISCELLANEOUS
           Uniform::Manager<Default::Fog::Base>  //
           {"Default Fog", UNIFORM::FOG_DEFAULT, 5, "_U_DEF_FOG"},
@@ -83,6 +87,7 @@ std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const
             case UNIFORM::LIGHT_POSITIONAL_PBR:         return lgtPbrPosMgr().pItems;
             case UNIFORM::LIGHT_SPOT_DEFAULT:           return lgtDefSptMgr().pItems;
             case UNIFORM::LIGHT_POSITIONAL_SHADOW:      return lgtShdwPosMgr().pItems;
+            case UNIFORM::LIGHT_CUBE_SHADOW:            return lgtShdwCubeMgr().pItems;
             case UNIFORM::FOG_DEFAULT:                  return uniDefFogMgr().pItems;
             case UNIFORM::PROJECTOR_DEFAULT:            return uniDefPrjMgr().pItems;
             case UNIFORM::SCREEN_SPACE_DEFAULT:         return uniScrDefMgr().pItems;
@@ -124,6 +129,7 @@ void Uniform::Handler::init() {
     lgtPbrPosMgr().init(shell().context());     ++count;
     lgtDefSptMgr().init(shell().context());     ++count;
     lgtShdwPosMgr().init(shell().context());    ++count;
+    lgtShdwCubeMgr().init(shell().context());    ++count;
     uniDefFogMgr().init(shell().context());     ++count;
     uniDefPrjMgr().init(shell().context());     ++count;
     uniScrDefMgr().init(shell().context());     ++count;
@@ -152,6 +158,7 @@ void Uniform::Handler::reset() {
     lgtPbrPosMgr().destroy(dev);    ++count;
     lgtDefSptMgr().destroy(dev);    ++count;
     lgtShdwPosMgr().destroy(dev);   ++count;
+    lgtShdwCubeMgr().destroy(dev);   ++count;
     uniDefFogMgr().destroy(dev);    ++count;
     uniDefPrjMgr().destroy(dev);    ++count;
     uniScrDefMgr().destroy(dev);    ++count;
@@ -210,16 +217,64 @@ void Uniform::Handler::frame() {
     computeData.reset(frameIndex);
     update(computeData, static_cast<int>(frameIndex));
 
-    // SHADOW POSITIONAL
-    auto& lgtShdwPos = lgtShdwPosMgr().getTypedItem(0);
-    lgtShdwPos.update(camera.getCameraSpaceToWorldSpaceTransform(), frameIndex);
-    update(lgtShdwPos, static_cast<int>(frameIndex));
+    // SHADOW
+    {
+        auto cameraToWorld = camera.getCameraSpaceToWorldSpaceTransform();
+        // POSITIONAL
+        if (false) {
+            auto& lgtShdwPos = lgtShdwPosMgr().getTypedItem(0);
+            lgtShdwPos.update(cameraToWorld, frameIndex);
+            update(lgtShdwPos, static_cast<int>(frameIndex));
+        }
+        // CUBE
+        if (true) {
+            auto& pScene = sceneHandler().getActiveScene();
+            const auto elapsed = shell().getElapsedTime<float>();
+
+            const auto RotateLight = [this, frameIndex = frameIndex](
+                                         const glm::mat4& mRot, std::unique_ptr<Mesh::Line>& pIndicator,
+                                         Light::Shadow::Cube::Base& lgtShdwCube, const uint32_t index) {
+                auto newPos = glm::vec3(mRot * glm::vec4(lgtShdwCube.getPosition(), 1.0f));
+                // Light
+                lgtShdwCube.setPosition(newPos, frameIndex);
+                update(lgtShdwCube, static_cast<int>(frameIndex));
+                // Indicator
+                pIndicator->transform(glm::translate(glm::mat4(1.0f), newPos - pIndicator->getWorldSpacePosition({}, index)),
+                                      index);
+                meshHandler().updateInstanceData(pIndicator->getInstanceDataInfo());
+            };
+
+            for (uint32_t i = 0; i < static_cast<uint32_t>(lgtShdwCubeMgr().pItems.size()); i++) {
+                auto& lgtShdwCube = lgtShdwCubeMgr().getTypedItem(i);
+                auto& pIndicator = meshHandler().getLineMesh(pScene->posLgtCubeShdwOffset);
+
+                if (i == 0 && true) {
+                    // 0 initial position: {-0.0f, 0.5f, -2.0f}
+                    auto mRot = glm::rotate(glm::mat4(1.0f), (elapsed / 2.0f) * glm::two_pi<float>(),
+                                            CARDINAL_Y + glm::vec3(-0.0f, 0.5f, -2.0f));
+                    RotateLight(mRot, pIndicator, lgtShdwCube, i);
+                } else if (i == 1 && true) {
+                    // 1 initial position: {-4.0f, 3.5f, 5.0f}
+                    auto mRot = glm::rotate(glm::mat4(1.0f), (elapsed / 25.0f) * glm::two_pi<float>(), CARDINAL_Y);
+                    RotateLight(mRot, pIndicator, lgtShdwCube, i);
+                } else if (i == 2 && false) {
+                    // 2 initial position: {-2.0f, -2.5f, -4.3f}
+                    auto mRot = glm::rotate(glm::mat4(1.0f), (elapsed / 15.0f) * glm::two_pi<float>(), CARDINAL_Y);
+                    RotateLight(mRot, pIndicator, lgtShdwCube, i);
+                }
+
+                // Update camera space state
+                lgtShdwCube.update(camera.getCameraSpacePosition(lgtShdwCube.getPosition()), frameIndex);
+                update(lgtShdwCube, static_cast<int>(frameIndex));
+            }
+        }
+    }
 }
 
 void Uniform::Handler::createCameras() {
     const auto& dev = shell().context().dev;
 
-    Camera::Default::Perspective::CreateInfo createInfo = {};
+    Camera::Perspective::Default::CreateInfo createInfo = {};
 
     assert(shell().context().imageCount == 3);  // Potential imageCount problem
     createInfo.dataCount = shell().context().imageCount;
@@ -273,22 +328,24 @@ void Uniform::Handler::createLights() {
     lightCreateInfo.dataCount = shell().context().imageCount;
 
     // POSITIONAL
-    // (TODO: these being seperately created is really dumb!!! If this is
-    // necessary there should be one set of positional lights, and multiple data buffers
-    // for the one set...)
-    // lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(20.5f, 10.5f, -23.5f));
-    lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), camDefPersMgr().getTypedItem(2).getWorldSpacePosition());
-    lgtDefPosMgr().insert(dev, &lightCreateInfo);
-    lgtPbrPosMgr().insert(dev, &lightCreateInfo);
-    lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), {-2.5f, 4.5f, -1.5f});
-    lgtDefPosMgr().insert(dev, &lightCreateInfo);
-    lgtPbrPosMgr().insert(dev, &lightCreateInfo);
-    lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-20.0f, 5.0f, -6.0f));
-    lgtDefPosMgr().insert(dev, &lightCreateInfo);
-    lgtPbrPosMgr().insert(dev, &lightCreateInfo);
-    lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-100.0f, 10.0f, 100.0f));
-    lgtDefPosMgr().insert(dev, &lightCreateInfo);
-    lgtPbrPosMgr().insert(dev, &lightCreateInfo);
+    if (true) {
+        // (TODO: these being seperately created is really dumb!!! If this is
+        // necessary there should be one set of positional lights, and multiple data buffers
+        // for the one set...)
+        // lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(20.5f, 10.5f, -23.5f));
+        lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), camDefPersMgr().getTypedItem(2).getWorldSpacePosition());
+        lgtDefPosMgr().insert(dev, &lightCreateInfo);
+        lgtPbrPosMgr().insert(dev, &lightCreateInfo);
+        lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), {-2.5f, 4.5f, -1.5f});
+        lgtDefPosMgr().insert(dev, &lightCreateInfo);
+        lgtPbrPosMgr().insert(dev, &lightCreateInfo);
+        lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-20.0f, 5.0f, -6.0f));
+        lgtDefPosMgr().insert(dev, &lightCreateInfo);
+        lgtPbrPosMgr().insert(dev, &lightCreateInfo);
+        lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-100.0f, 10.0f, 100.0f));
+        lgtDefPosMgr().insert(dev, &lightCreateInfo);
+        lgtPbrPosMgr().insert(dev, &lightCreateInfo);
+    }
 
     //// Bloom test
     // createInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(-7.0f, 4.0f, 2.5f));
@@ -302,26 +359,56 @@ void Uniform::Handler::createLights() {
     // lgtPbrPosMgr().insert(dev, &createInfo);
 
     // SPOT
-    Light::Default::Spot::CreateInfo spotCreateInfo = {};
-    spotCreateInfo.dataCount = shell().context().imageCount;
-    spotCreateInfo.exponent = glm::radians(25.0f);
-    spotCreateInfo.exponent = 25.0f;
-    spotCreateInfo.model = helpers::viewToWorld({0.0f, 4.5f, 1.0f}, {0.0f, 0.0f, -1.5f}, UP_VECTOR);
-    lgtDefSptMgr().insert(dev, &spotCreateInfo);
+    if (true) {
+        Light::Default::Spot::CreateInfo spotCreateInfo = {};
+        spotCreateInfo.dataCount = shell().context().imageCount;
+        spotCreateInfo.exponent = glm::radians(25.0f);
+        spotCreateInfo.exponent = 25.0f;
+        spotCreateInfo.model = helpers::viewToWorld({0.0f, 4.5f, 1.0f}, {0.0f, 0.0f, -1.5f}, UP_VECTOR);
+        lgtDefSptMgr().insert(dev, &spotCreateInfo);
+    }
 
     // SHADOW
     {
-        uint32_t shadowCamIndex = 2;
-        assert(shadowCamIndex == 2);  // sister assert for camera
+        // POSITIONAL
+        if (false) {
+            uint32_t shadowCamIndex = 2;
+            assert(shadowCamIndex == 2);  // sister assert for camera
 
-        auto& camera = camDefPersMgr().getTypedItem(shadowCamIndex);
+            auto& camera = camDefPersMgr().getTypedItem(shadowCamIndex);
 
-        Light::Shadow::CreateInfo lightShadowCreateInfo = {};
-        lightShadowCreateInfo.dataCount = shell().context().imageCount;
-        lightShadowCreateInfo.proj = helpers::getBias() * camera.getMVP();
-        lightShadowCreateInfo.mainCameraSpaceToWorldSpace = getMainCamera().getCameraSpaceToWorldSpaceTransform();
+            Light::Shadow::Positional::CreateInfo lightShadowCreateInfo = {};
+            lightShadowCreateInfo.dataCount = shell().context().imageCount;
+            lightShadowCreateInfo.proj = helpers::getBias() * camera.getMVP();
+            lightShadowCreateInfo.mainCameraSpaceToWorldSpace = getMainCamera().getCameraSpaceToWorldSpaceTransform();
 
-        lgtShdwPosMgr().insert(dev, &lightShadowCreateInfo);
+            lgtShdwPosMgr().insert(dev, &lightShadowCreateInfo);
+        }
+
+        // CUBE
+        if (true) {
+            Light::Shadow::Cube::CreateInfo cubeInfo = {};
+
+            assert(shell().context().imageCount == 3);  // Potential imageCount problem
+            cubeInfo.dataCount = shell().context().imageCount;
+            cubeInfo.n = 0.1f;
+            cubeInfo.f = 20.0f;
+
+            cubeInfo.position = {-0.0f, 0.5f, -2.0f};
+            lgtShdwCubeMgr().insert(dev, &cubeInfo);
+
+            cubeInfo.position = {-4.0f, 3.5f, 5.0f};
+            lgtShdwCubeMgr().insert(dev, &cubeInfo);
+
+            // cubeInfo.La *= 0.5;
+            // cubeInfo.L *= 0.5;
+            // cubeInfo.position = {3.3f, -4.5f, -3.3f};
+            // lgtShdwCubeMgr().insert(dev, &cubeInfo);
+
+            auto shdwCubMapInfo =
+                Texture::Shadow::MakeCubeMapArrayTex(512, static_cast<uint32_t>(lgtShdwCubeMgr().pItems.size()));
+            textureHandler().make(&shdwCubMapInfo);
+        }
     }
 }
 
@@ -343,7 +430,7 @@ void Uniform::Handler::createMiscellaneous() {
 
         auto view = glm::lookAt(eye, center, UP_VECTOR);
         // Don't forget to use the vulkan clip transform.
-        auto proj = getMainCamera().getClip() * glm::perspective(glm::radians(30.0f), 1.0f, 0.2f, 1000.0f);
+        auto proj = Camera::VULKAN_CLIP_MAT4 * glm::perspective(glm::radians(30.0f), 1.0f, 0.2f, 1000.0f);
 
         auto projector = helpers::getBias() * proj * view;
         uniDefPrjMgr().insert(dev, true, {{projector}});

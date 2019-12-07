@@ -21,7 +21,7 @@ class Base : public RenderPass::Base {
 
     void init() override;
     void record(const uint8_t frameIndex) override;
-    void update() override;
+    void update(const std::vector<Descriptor::Base*> pDynamicItems = {}) override;
 
    private:
     void createAttachments() override;

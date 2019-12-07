@@ -198,11 +198,11 @@ void Base::record(const uint8_t frameIndex) {
     // vk::assert_success(vkEndCommandBuffer(data.priCmds[frameIndex]));
 }
 
-void Base::update() {
+void Base::update(const std::vector<Descriptor::Base*> pDynamicItems) {
     // Check the mesh status.
     if (handler().getScreenQuad()->getStatus() == STATUS::READY) {
         status_ ^= STATUS::PENDING_MESH;
-        RenderPass::Base::update();
+        RenderPass::Base::update(pDynamicItems);
     }
 }
 

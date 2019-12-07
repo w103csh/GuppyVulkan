@@ -24,8 +24,8 @@ constexpr float K_X_MOVE_FACT = 2.0f;
 constexpr float K_Y_MOVE_FACT = 2.0f;
 constexpr float K_Z_MOVE_FACT = 2.0f;
 // look
-constexpr float M_X_LOOK_FACT = 0.1f;
-constexpr float M_Y_LOOK_FACT = -0.1f;
+constexpr float M_X_LOOK_FACT = 0.3f;
+constexpr float M_Y_LOOK_FACT = -0.3f;
 
 }  // namespace
 

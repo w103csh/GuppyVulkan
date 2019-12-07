@@ -254,6 +254,11 @@ static glm::vec3 triangleNormal(const glm::vec3 &a, const glm::vec3 &b, const gl
 
 static glm::vec3 positionOnLine(const glm::vec3 &a, const glm::vec3 &b, float t) { return a + ((b - a) * t); }
 
+static glm::vec2 pointOnCircle(const glm::vec2 origin, float radius, float angle) {
+    assert(false);  // never tested
+    return {origin.x + radius * cos(angle), origin.y + radius * sin(angle)};
+}
+
 void makeTriangleAdjacenyList(const std::vector<VB_INDEX_TYPE> &indices, std::vector<VB_INDEX_TYPE> &indiciesAdjacency);
 
 static void destroyCommandBuffers(const VkDevice &dev, const VkCommandPool &pool, std::vector<VkCommandBuffer> &cmds) {

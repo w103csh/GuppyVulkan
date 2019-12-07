@@ -5,6 +5,7 @@
 
 #include "RenderPass.h"
 
+#include "Descriptor.h"
 #include "Helpers.h"
 #include "Shell.h"
 // HANDLERS
@@ -29,8 +30,6 @@ RenderPass::Base::Base(RenderPass::Handler& handler, const uint32_t&& offset, co
           usesDepth(),
           VK_SAMPLE_COUNT_FLAG_BITS_MAX_ENUM,
       },
-      scissor_{},
-      viewport_{},
       beginInfo_{},
       // SECONDARY
       inheritInfo_{},
@@ -183,7 +182,7 @@ void RenderPass::Base::createTarget() {
 
     // RENDER PASS
     createCommandBuffers();
-    createViewport();
+    createViewports();
     updateBeginInfo();
 
     // SYNC
@@ -249,7 +248,7 @@ void RenderPass::Base::record(const uint8_t frameIndex) {
     // vk::assert_success(vkEndCommandBuffer(priCmd));
 }
 
-void RenderPass::Base::update() {
+void RenderPass::Base::update(const std::vector<Descriptor::Base*> pDynamicItems) {
     assert(status_ & STATUS::PENDING_PIPELINE);
 
     bool isReady = true;
@@ -268,7 +267,7 @@ void RenderPass::Base::update() {
                 assert(it.second);
 
                 // Get or make descriptor bind data.
-                handler().descriptorHandler().getBindData(pipelineType, it.first->second);
+                handler().descriptorHandler().getBindData(pipelineType, it.first->second, pDynamicItems);
                 assert(it.first->second.size());
             }
         }
@@ -290,8 +289,8 @@ void RenderPass::Base::beginPass(const VkCommandBuffer& cmd, const uint8_t frame
     // ext::DebugMarkerBegin(primaryCmd, "Render x scene", glm::vec4(0.2f, 0.3f, 0.4f, 1.0f));
     vkCmdBeginRenderPass(cmd, &beginInfo_, subpassContents);
     // Frame commands
-    vkCmdSetScissor(cmd, 0, 1, &scissor_);
-    vkCmdSetViewport(cmd, 0, 1, &viewport_);
+    vkCmdSetScissor(cmd, 0, static_cast<uint32_t>(scissors_.size()), scissors_.data());
+    vkCmdSetViewport(cmd, 0, static_cast<uint32_t>(viewports_.size()), viewports_.data());
 }
 
 void RenderPass::Base::endPass(const VkCommandBuffer& cmd) const {
@@ -647,17 +646,21 @@ void RenderPass::Base::createFramebuffers() {
     }
 }
 
-void RenderPass::Base::createViewport() {
+void RenderPass::Base::createViewports() {
     // VIEWPORT
-    viewport_.x = 0.0f;
-    viewport_.y = 0.0f;
-    viewport_.width = static_cast<float>(extent_.width);
-    viewport_.height = static_cast<float>(extent_.height);
-    viewport_.minDepth = 0.0f;
-    viewport_.maxDepth = 1.0f;
+    viewports_.clear();
+    viewports_.emplace_back();
+    viewports_.back().x = 0.0f;
+    viewports_.back().y = 0.0f;
+    viewports_.back().width = static_cast<float>(extent_.width);
+    viewports_.back().height = static_cast<float>(extent_.height);
+    viewports_.back().minDepth = 0.0f;
+    viewports_.back().maxDepth = 1.0f;
     // SCISSOR
-    scissor_.offset = {0, 0};
-    scissor_.extent = extent_;
+    scissors_.clear();
+    scissors_.emplace_back();
+    scissors_.back().offset = {0, 0};
+    scissors_.back().extent = extent_;
 }
 
 void RenderPass::Base::updateBeginInfo() {
@@ -702,8 +705,8 @@ void RenderPass::Base::beginSecondary(const uint8_t frameIndex) {
     vkResetCommandBuffer(secCmd, 0);
     vk::assert_success(vkBeginCommandBuffer(secCmd, &secCmdBeginInfo_));
     // FRAME COMMANDS
-    vkCmdSetScissor(secCmd, 0, 1, &scissor_);
-    vkCmdSetViewport(secCmd, 0, 1, &viewport_);
+    vkCmdSetScissor(secCmd, 0, static_cast<uint32_t>(scissors_.size()), scissors_.data());
+    vkCmdSetViewport(secCmd, 0, static_cast<uint32_t>(viewports_.size()), viewports_.data());
 
     secCmdFlag_ = true;
 }

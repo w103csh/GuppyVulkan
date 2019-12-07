@@ -44,8 +44,9 @@ class Base : public Handlee<Scene::Handler> {
     void destroy();
 
     // TODO: move these
-    uint32_t moonOffset_;
-    uint32_t starsOffset_;
+    uint32_t moonOffset;
+    uint32_t starsOffset;
+    uint32_t posLgtCubeShdwOffset;
 
    private:
     std::set<Mesh::index> colorOffsets_;

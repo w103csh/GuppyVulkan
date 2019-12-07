@@ -63,7 +63,7 @@ void Scene::Handler::init() {
         Obj3d::BoundingBoxMinMax groundPlane_bbmm;
 
         // ORIGIN AXES
-        if (!suppress || false) {
+        if (!suppress || true) {
             axesInfo = {};
             axesInfo.pipelineType = GRAPHICS::DEFERRED_MRT_LINE;
             axesInfo.lineSize = 500.f;
@@ -76,7 +76,7 @@ void Scene::Handler::init() {
         }
 
         // GROUND PLANE (COLOR)
-        if (!suppress || true) {
+        if (!suppress && false) {
             planeInfo = {};
             planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
             planeInfo.selectable = false;
@@ -114,6 +114,40 @@ void Scene::Handler::init() {
             groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
         }
 
+        // SHADOW BOX
+        if (!suppress || true) {
+            meshInfo = {};
+            meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
+            meshInfo.selectable = false;
+            meshInfo.settings.geometryInfo.doubleSided = true;
+            instObj3dInfo = {};
+            instObj3dInfo.data.push_back({helpers::affine(glm::vec3(20.0f), glm::vec3(-0.0f, 0.5f, -2.0f))});
+            defMatInfo = {};
+            defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+            defMatInfo.color = {0.8f, 0.8f, 0.85f};
+            auto& pGroundPlane = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &instObj3dInfo);
+            auto offset = pGroundPlane->getOffset();
+            pScene->addMeshIndex(MESH::COLOR, offset);
+        }
+
+        // SHADOW LIGHT INDICATORS
+        if (!suppress || true) {
+            axesInfo = {};
+            axesInfo.pipelineType = GRAPHICS::DEFERRED_MRT_LINE;
+            axesInfo.lineSize = 1.0f;
+            axesInfo.showNegative = true;
+            instObj3dInfo = {};
+            for (uint32_t i = 0; i < static_cast<uint32_t>(uniformHandler().lgtShdwCubeMgr().pItems.size()); i++) {
+                instObj3dInfo.data.push_back(
+                    {helpers::affine(glm::vec3(0.5f), uniformHandler().lgtShdwCubeMgr().getTypedItem(i).getPosition())});
+            }
+            defMatInfo = {};
+            defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR | Material::FLAG::MODE_FLAT_SHADE;
+            pScene->posLgtCubeShdwOffset =
+                meshHandler().makeLineMesh<Mesh::Axes>(&axesInfo, &defMatInfo, &instObj3dInfo)->getOffset();
+            pScene->addMeshIndex(MESH::LINE, pScene->posLgtCubeShdwOffset);
+        }
+
         // STARS
         if (!suppress || true) {
             meshInfo = {};
@@ -122,9 +156,9 @@ void Scene::Handler::init() {
             instObj3dInfo.data.push_back({helpers::affine(glm::vec3(1000.0f))});
             defMatInfo = {};
             defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
-            pScene->starsOffset_ =
+            pScene->starsOffset =
                 meshHandler().makeColorMesh<Mesh::Stars>(&meshInfo, &defMatInfo, &instObj3dInfo)->getOffset();
-            pScene->addMeshIndex(MESH::COLOR, pScene->starsOffset_);
+            pScene->addMeshIndex(MESH::COLOR, pScene->starsOffset);
         }
 
         // MOON
@@ -141,9 +175,9 @@ void Scene::Handler::init() {
             defMatInfo = {};
             defMatInfo.flags |= Material::FLAG::MODE_FLAT_SHADE;
             defMatInfo.pTexture = textureHandler().getTexture(Texture::BRIGHT_MOON_ID);
-            pScene->moonOffset_ =
+            pScene->moonOffset =
                 meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&planeInfo, &defMatInfo, &instObj3dInfo)->getOffset();
-            pScene->addMeshIndex(MESH::TEXTURE, pScene->moonOffset_);
+            pScene->addMeshIndex(MESH::TEXTURE, pScene->moonOffset);
         }
 
         // PLAIN OLD NON-TRANSFORMED PLANE (TEXTURE)
@@ -276,23 +310,37 @@ void Scene::Handler::init() {
         }
 
         // BOX
-        if (!suppress || false) {
+        if (!suppress || true) {
             if (true) {
                 meshInfo = {};
                 meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
                 instObj3dInfo = {};
-                instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, M_PI_2_FLT,
-                                                              glm::vec3{1.0f, 0.0f, 1.0f})});
+                bool shadowTest = true;
+                if (shadowTest) {
+                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{-2.0f, 0.0f, 1.5f})});
+                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.5f}, glm::vec3{-2.0f, 0.0f, -2.5f})});
+                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{0.6f}, glm::vec3{0.0f, 2.0f, 0.0f})});
+                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.6f}, glm::vec3{0.0f, 3.0f, -3.5f})});
+
+                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{0.3f}, glm::vec3{5.0f, 5.0f, 0.0f})});
+                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{2.0f}, glm::vec3{7.0f, -1.0f, -0.4f})});
+                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.6f}, glm::vec3{1.0f, -4.0f, 6.5f})});
+                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{0.4f}, glm::vec3{3.0f, -5.0f, -4.5f})});
+                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.2f}, glm::vec3{-3.0f, 5.0f, -1.5f})});
+                } else {
+                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, M_PI_2_FLT,
+                                                                  glm::vec3{1.0f, 0.0f, 1.0f})});
+                }
                 defMatInfo = {};
                 defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
                 defMatInfo.color = {0.0f, 0.0f, 1.0f};
                 auto& boxColor = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &instObj3dInfo);
                 auto offset = boxColor->getOffset();
                 pScene->addMeshIndex(MESH::COLOR, offset);
-                boxColor->putOnTop(groundPlane_bbmm);
+                if (!shadowTest) boxColor->putOnTop(groundPlane_bbmm);
                 meshHandler().updateMesh(boxColor);
             }
-            if (true && ctx.geometryShadingEnabled) {
+            if (false && ctx.geometryShadingEnabled) {
                 meshInfo = {};
                 meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_WF_COLOR;
                 instObj3dInfo = {};
@@ -307,7 +355,7 @@ void Scene::Handler::init() {
                 boxColor->putOnTop(groundPlane_bbmm);
                 meshHandler().updateMesh(boxColor);
             }
-            if (true) {
+            if (false) {
                 meshInfo = {};
                 meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
                 instObj3dInfo = {};
@@ -859,14 +907,14 @@ void Scene::Handler::frame() {
         const float timeInterval = 4800.0f;
 
         // STARS
-        auto& stars = meshHandler().getColorMesh(pScene->starsOffset_);
+        auto& stars = meshHandler().getColorMesh(pScene->starsOffset);
         auto starsRot = glm::rotate(glm::mat4(1.0f), glm::pi<float>() / ((timeInterval * 4.0f) / elapsed), -CARDINAL_X);
         stars->transform(starsRot);
         meshHandler().updateMesh(stars);
 
         // MOON
         auto& moonLight = uniformHandler().lgtDefDirMgr().getTypedItem(0);
-        auto& moon = meshHandler().getTextureMesh(pScene->moonOffset_);
+        auto& moon = meshHandler().getTextureMesh(pScene->moonOffset);
         auto moonRot = glm::rotate(glm::mat4(1.0f), glm::pi<float>() / (timeInterval / elapsed), -CARDINAL_X);
         moonLight.direction = glm::mat3(moonRot) * moonLight.direction;
         moon->transform(moonRot);
