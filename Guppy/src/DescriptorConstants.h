@@ -52,7 +52,8 @@ enum class DESCRIPTOR_SET {
     SAMPLER_DEFERRED,
     SAMPLER_DEFERRED_SSAO_RANDOM,
     // SHADOW
-    UNIFORM_SHADOW,
+    SHADOW_CUBE_UNIFORM_ONLY,
+    SHADOW_CUBE_ALL,
     SAMPLER_SHADOW,
     SAMPLER_SHADOW_OFFSET,
     // TESSELLATION
@@ -187,6 +188,7 @@ struct HasPerFramebufferData {
             case UNIFORM::LIGHT_POSITIONAL_DEFAULT:
             case UNIFORM::LIGHT_POSITIONAL_PBR:
             case UNIFORM::LIGHT_POSITIONAL_SHADOW:
+            case UNIFORM::LIGHT_CUBE_SHADOW:
             case UNIFORM::LIGHT_SPOT_DEFAULT:
             case UNIFORM::PRTCL_WAVE:
                 return true;

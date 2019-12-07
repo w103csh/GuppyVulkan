@@ -61,7 +61,8 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::UNIFORM_DEFERRED_COMBINE:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::COMBINE_UNIFORM_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_DEFERRED:                          pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO_RANDOM:              pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SSAO_RANDOM_SAMPLER_CREATE_INFO)); break;
-            case DESCRIPTOR_SET::UNIFORM_SHADOW:                            pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::UNIFORM_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::CUBE_UNIFORM_ONLY_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::SHADOW_CUBE_ALL:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::CUBE_ALL_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_SHADOW:                            pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_SHADOW_OFFSET:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::SAMPLER_OFFSET_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_TESSELLATION_DEFAULT:              pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Tessellation::DEFAULT_CREATE_INFO)); break;

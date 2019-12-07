@@ -301,6 +301,7 @@ void Shell::createDev() {
     deviceFeatures.geometryShader = ctx_.geometryShadingEnabled;
     deviceFeatures.fillModeNonSolid = ctx_.wireframeShadingEnabled;
     deviceFeatures.independentBlend = ctx_.independentBlendEnabled;
+    deviceFeatures.imageCubeArray = ctx_.independentBlendEnabled;
 
     // Phyiscal device extensions names
     auto &phyDevProps = ctx_.physicalDevProps[ctx_.physicalDevIndex];
@@ -955,6 +956,10 @@ void Shell::determineDeviceFeatureSupport(const PhysicalDeviceProperties &props)
     ctx_.independentBlendEnabled = props.features.independentBlend && settings_.try_independent_blend;
     if (settings_.try_independent_blend && !ctx_.independentBlendEnabled)  //
         log(LogPriority::LOG_WARN, "cannot enable independent attachment blending");
+    // image cube arrays
+    ctx_.imageCubeArrayEnabled = props.features.imageCubeArray && settings_.try_image_cube_array;
+    if (settings_.try_image_cube_array && !ctx_.imageCubeArrayEnabled)  //
+        log(LogPriority::LOG_WARN, "cannot enable image cube arrays");
 }
 
 void Shell::determineSampleCount(const PhysicalDeviceProperties &props) {

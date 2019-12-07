@@ -26,7 +26,7 @@ class Base : public RenderPass::Base {
     Base(Handler& handler, const index&& offset, const CreateInfo* pCreateInfo);
 
     virtual void init() override;
-    void update() override;
+    void update(const std::vector<Descriptor::Base*> pDynamicItems = {}) override;
     void record(const uint8_t frameIndex) override;
 
    private:

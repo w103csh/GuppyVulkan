@@ -10,7 +10,12 @@
 #include "ConstantsAll.h"
 #include "InputHandler.h"
 
-Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData, const Perspective::CreateInfo *pCreateInfo)
+namespace Camera {
+namespace Perspective {
+
+namespace Default {
+
+Base::Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
       Descriptor::Base(UNIFORM::CAMERA_PERSPECTIVE_DEFAULT),
       Buffer::PerFramebufferDataItem<DATA>(pData),
@@ -23,16 +28,11 @@ Camera::Default::Perspective::Base::Base(const Buffer::Info &&info, DATA *pData,
       center_(pCreateInfo->center) {
     data_.view = glm::lookAt(pCreateInfo->eye, pCreateInfo->center, UP_VECTOR);
     proj_ = glm::perspective(pCreateInfo->fov, pCreateInfo->aspect, near_, far_);
-    // Vulkan clip space has inverted Y and half Z.
-    clip_ = glm::mat4{1.0f, 0.0f,  0.0f, 0.0f,   //
-                      0.0f, -1.0f, 0.0f, 0.0f,   //
-                      0.0f, 0.0f,  0.5f, 0.0f,   //
-                      0.0f, 0.0f,  0.5f, 1.0f};  //
     setProjectionData();
     update();
 }
 
-Ray Camera::Default::Perspective::Base::getRay(glm::vec2 &&position, const VkExtent2D &extent, float distance) {
+Ray Base::getRay(glm::vec2 &&position, const VkExtent2D &extent, float distance) {
     /*  Viewport appears to take x, y, w, h where:
             w, y - lower left
             w, h - width and height
@@ -64,28 +64,27 @@ Ray Camera::Default::Perspective::Base::getRay(glm::vec2 &&position, const VkExt
     return {e, d, d - e, directionUnit};
 }
 
-void Camera::Default::Perspective::Base::setAspect(float aspect) {
+void Base::setAspect(float aspect) {
     aspect_ = aspect;
     proj_ = glm::perspective(fov_, aspect_, near_, far_);
     setProjectionData();
     update();
 }
 
-void Camera::Default::Perspective::Base::update(const glm::vec3 &pos_dir, const glm::vec3 &look_dir,
-                                                const uint32_t frameIndex) {
+void Base::update(const glm::vec3 &pos_dir, const glm::vec3 &look_dir, const uint32_t frameIndex) {
     // bool wasUpdate = updateView(pos_dir, look_dir);  // This is triple buffered so just update always for now.
     updateView(pos_dir, look_dir);
     update(frameIndex);
 }
 
-void Camera::Default::Perspective::Base::update(const uint32_t frameIndex) {
+void Base::update(const uint32_t frameIndex) {
     data_.view = data_.view * model_;
     data_.viewProjection = data_.projection * data_.view;
     data_.worldPosition = getWorldSpacePosition();
     setData(frameIndex);
 }
 
-bool Camera::Default::Perspective::Base::updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
+bool Base::updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
     bool update_pos = !glm::all(glm::equal(pos_dir, glm::vec3()));
     bool update_look = !glm::all(glm::equal(look_dir, glm::vec3()));
     // If there is nothing to update then return ...
@@ -116,3 +115,8 @@ bool Camera::Default::Perspective::Base::updateView(const glm::vec3 &pos_dir, co
 
     return true;
 }
+
+}  // namespace Default
+
+}  // namespace Perspective
+}  // namespace Camera

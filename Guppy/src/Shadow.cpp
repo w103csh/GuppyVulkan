@@ -5,6 +5,7 @@
 
 #include "Shadow.h"
 
+#include "Camera.h"
 #include "Random.h"
 
 namespace {
@@ -24,10 +25,7 @@ namespace Shadow {
 const CreateInfo MAP_2D_ARRAY_CREATE_INFO = {
     "Shadow 2D Array Map Sampler",
     {
-        {
-            {::Sampler::USAGE::DEPTH, "", true, true},
-            //{::Sampler::USAGE::NORMAL, "", true, false},
-        },
+        {{::Sampler::USAGE::DEPTH, "", true, true}},
         true,
         true,
     },
@@ -53,6 +51,23 @@ const CreateInfo MAP_2D_ARRAY_CREATE_INFO = {
     false,
     COMBINED_SAMPLER::PIPELINE_DEPTH,
 };
+
+CreateInfo MakeCubeMapArrayTex(const uint32_t size, const uint32_t numMaps) {
+    const Sampler::LayerInfo layerInfo = {::Sampler::USAGE::DEPTH};
+    Sampler::CreateInfo sampInfo = {
+        "Shadow Map Cube Array Sampler",
+        {{}, true, true},
+        VK_IMAGE_VIEW_TYPE_CUBE_ARRAY,
+        {size, size, 1},
+        {},
+        VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+        SAMPLER::CLAMP_TO_BORDER_DEPTH,
+        // SAMPLER::CLAMP_TO_BORDER_DEPTH_PCF,
+        (VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
+    };
+    sampInfo.layersInfo.infos.assign(static_cast<size_t>(numMaps) * 6, layerInfo);
+    return {std::string(MAP_CUBE_ARRAY_ID), {sampInfo}, false, false, COMBINED_SAMPLER::PIPELINE_DEPTH};
+}
 
 CreateInfo MakeOffsetTex() {
     uint32_t samples = SAMPLES_U * SAMPLES_V;
@@ -134,7 +149,9 @@ Base::Base(const Buffer::Info&& info, DATA* pData)
 namespace Light {
 namespace Shadow {
 
-Positional::Positional(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
+namespace Positional {
+
+Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
       Descriptor::Base(UNIFORM::LIGHT_POSITIONAL_SHADOW),
       Buffer::PerFramebufferDataItem<DATA>(pData),
@@ -142,10 +159,59 @@ Positional::Positional(const Buffer::Info&& info, DATA* pData, const CreateInfo*
     update(pCreateInfo->mainCameraSpaceToWorldSpace);
 }
 
-void Positional::update(const glm::mat4& m, const uint32_t frameIndex) {
+void Base::update(const glm::mat4& m, const uint32_t frameIndex) {
     data_.proj = proj_ * m;
     setData(frameIndex);
 }
+
+}  // namespace Positional
+
+namespace Cube {
+
+Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),
+      Descriptor::Base(UNIFORM::LIGHT_CUBE_SHADOW),
+      Buffer::PerFramebufferDataItem<DATA>(pData),
+      near_(pCreateInfo->n) {
+    data_.flags = pCreateInfo->flags;
+    data_.L = pCreateInfo->L;
+    data_.La = pCreateInfo->La;
+    data_.data0.w = pCreateInfo->f;
+    proj_ = glm::perspective(glm::half_pi<float>(), 1.0f, near_, data_.data0.w);
+    setPosition(glm::vec3(pCreateInfo->position));
+}
+
+void Base::setPosition(const glm::vec3 position, const uint32_t frameIndex) {
+    // position
+    data_.data0.x = position.x;
+    data_.data0.y = position.y;
+    data_.data0.z = position.z;
+    // views
+    setViews();
+    // view projections
+    for (uint32_t i = 0; i < LAYERS; i++) {
+        data_.viewProjs[i] = proj_ * views_[i];  // * model_; Use the model?
+    }
+    setData(frameIndex);
+}
+
+void Base::update(glm::vec3&& position, const uint32_t frameIndex) {
+    data_.cameraPosition = position;
+    setData(frameIndex);
+}
+
+void Base::setViews() {
+    const glm::vec3 position = glm::vec3(data_.data0);
+    // cube map view transforms
+    views_[0] = glm::lookAt(position, position + CARDINAL_X, -CARDINAL_Y);
+    views_[1] = glm::lookAt(position, position - CARDINAL_X, -CARDINAL_Y);
+    views_[2] = glm::lookAt(position, position + CARDINAL_Y, CARDINAL_Z);
+    views_[3] = glm::lookAt(position, position - CARDINAL_Y, -CARDINAL_Z);
+    views_[4] = glm::lookAt(position, position + CARDINAL_Z, -CARDINAL_Y);
+    views_[5] = glm::lookAt(position, position - CARDINAL_Z, -CARDINAL_Y);
+}
+
+}  // namespace Cube
 
 }  // namespace Shadow
 }  // namespace Light
@@ -154,11 +220,19 @@ namespace Descriptor {
 namespace Set {
 namespace Shadow {
 
-const CreateInfo UNIFORM_CREATE_INFO = {
-    DESCRIPTOR_SET::UNIFORM_SHADOW,
-    "_DS_UNI_SHDW",
+const CreateInfo CUBE_UNIFORM_ONLY_CREATE_INFO = {
+    DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY,
+    "_DS_SHDW_CUBE_UNI_ONLY",
+    {{{0, 0}, {UNIFORM::LIGHT_CUBE_SHADOW}}},
+};
+
+const CreateInfo CUBE_ALL_CREATE_INFO = {
+    DESCRIPTOR_SET::SHADOW_CUBE_ALL,
+    "_DS_SHDW_CUBE_ALL",
     {
-        {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
+        {{0, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Shadow::MAP_CUBE_ARRAY_ID}},
+        {{1, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Shadow::OFFSET_2D_ID}},
+        {{2, 0}, {UNIFORM::LIGHT_CUBE_SHADOW}},
     },
 };
 
@@ -185,7 +259,7 @@ void GetShadowRasterizationStateInfoResources(Pipeline::CreateInfoResources& cre
     createInfoRes.rasterizationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     createInfoRes.rasterizationStateInfo.lineWidth = 1.0f;
     createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_FILL;
-    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_FRONT_BIT;  // This worked great !!!
+    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_BACK_BIT;  // VK_CULL_MODE_FRONT_BIT;
     createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
     /* If depthClampEnable is set to VK_TRUE, then fragments that are beyond the near and far
      *  planes are clamped to them as opposed to discarding them. This is useful in some special
@@ -198,7 +272,7 @@ void GetShadowRasterizationStateInfoResources(Pipeline::CreateInfoResources& cre
      *  success came from setting the cullMode to VK_CULL_MODE_FRONT_BIT which eliminated almost all of
      *  the "shadow acne".
      */
-    createInfoRes.rasterizationStateInfo.depthBiasEnable = VK_TRUE;
+    createInfoRes.rasterizationStateInfo.depthBiasEnable = VK_FALSE;
     createInfoRes.rasterizationStateInfo.depthBiasConstantFactor = 0.0f;
     createInfoRes.rasterizationStateInfo.depthBiasClamp = 0.0f;
     createInfoRes.rasterizationStateInfo.depthBiasSlopeFactor = 0.0f;
@@ -210,10 +284,12 @@ namespace Shadow {
 const Pipeline::CreateInfo COLOR_CREATE_INFO = {
     GRAPHICS::SHADOW_COLOR,
     "Shadow Color Pipeline",
-    {SHADER::SHADOW_COLOR_VERT, SHADER::SHADOW_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_SHADOW,
+        SHADER::SHADOW_COLOR_VERT,
+        SHADER::SHADOW_CUBE_GEOM,
+        SHADER::SHADOW_FRAG,
     },
+    {DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY},
 };
 Color::Color(Pipeline::Handler& handler) : Graphics(handler, &COLOR_CREATE_INFO) {}
 
@@ -225,10 +301,12 @@ void Color::getRasterizationStateInfoResources(CreateInfoResources& createInfoRe
 const Pipeline::CreateInfo TEX_CREATE_INFO = {
     GRAPHICS::SHADOW_TEX,
     "Shadow Texture Pipeline",
-    {SHADER::SHADOW_TEX_VERT, SHADER::SHADOW_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_SHADOW,
+        SHADER::SHADOW_TEX_VERT,
+        SHADER::SHADOW_CUBE_GEOM,
+        SHADER::SHADOW_FRAG,
     },
+    {DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY},
 };
 Texture::Texture(Pipeline::Handler& handler) : Graphics(handler, &TEX_CREATE_INFO) {}
 

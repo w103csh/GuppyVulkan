@@ -152,56 +152,62 @@ void Sampler::Base::determineImageTypes() {
     const auto& arrayLayers = imgCreateInfo.arrayLayers;
     const auto& extent = imgCreateInfo.extent;
     const auto& samples = imgCreateInfo.samples;
-    auto& imageType = imgCreateInfo.imageType;
+    const auto& flags = imgCreateInfo.flags;
 
     if (imageViewType == VK_IMAGE_VIEW_TYPE_MAX_ENUM) {
         // If imageViewType is not set then determine one.
         if (extent.width >= 1 && extent.height == 1 && arrayLayers == 1) {
             imageViewType = VK_IMAGE_VIEW_TYPE_1D;
-            imageType = VK_IMAGE_TYPE_1D;
+            imgCreateInfo.imageType = VK_IMAGE_TYPE_1D;
         } else if (extent.width >= 1 && extent.height == 1 && arrayLayers > 1) {
             imageViewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
-            imageType = VK_IMAGE_TYPE_1D;
+            imgCreateInfo.imageType = VK_IMAGE_TYPE_1D;
         } else if (extent.width >= 1 && extent.height >= 1 && arrayLayers == 1) {
             imageViewType = VK_IMAGE_VIEW_TYPE_2D;
-            imageType = VK_IMAGE_TYPE_2D;
+            imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
         } else if (extent.width >= 1 && extent.width == extent.height && arrayLayers == 6) {
             imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
-            imageType = VK_IMAGE_TYPE_2D;
+            imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
         } else if (extent.width >= 1 && extent.height >= 1 && arrayLayers > 1) {
             imageViewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-            imageType = VK_IMAGE_TYPE_2D;
+            imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
         }
     } else {
         // If imageViewType is set then validate it.
         switch (imageViewType) {
             case VK_IMAGE_VIEW_TYPE_1D:
                 assert(extent.width >= 1 && extent.height == 1 && extent.depth == 1 && arrayLayers >= 1);
-                imageType = VK_IMAGE_TYPE_1D;
+                imgCreateInfo.imageType = VK_IMAGE_TYPE_1D;
                 break;
             case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
                 assert(extent.width >= 1 && extent.height == 1 && extent.depth == 1 && arrayLayers >= 1);
-                imageType = VK_IMAGE_TYPE_1D;
+                imgCreateInfo.imageType = VK_IMAGE_TYPE_1D;
                 break;
             case VK_IMAGE_VIEW_TYPE_2D:
                 // Note: There are versions of 2D that can have a depth >= 1, but there are other
                 // conditions and would result in VK_IMAGE_TYPE_3D.
                 assert(extent.width >= 1 && extent.height >= 1 && extent.depth == 1 && arrayLayers >= 1);
-                imageType = VK_IMAGE_TYPE_2D;
+                imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
                 break;
             case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
                 // Note: There are versions of 2D_ARRAY that can have a depth >= 1, but there are
                 // other conditions and would result in VK_IMAGE_TYPE_3D.
                 assert(extent.width >= 1 && extent.height >= 1 && extent.depth == 1 && arrayLayers >= 1);
-                imageType = VK_IMAGE_TYPE_2D;
+                imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
                 break;
             case VK_IMAGE_VIEW_TYPE_CUBE:
                 assert(extent.width >= 1 && extent.width == extent.height && extent.depth == 1 && arrayLayers >= 6);
-                imageType = VK_IMAGE_TYPE_2D;
+                imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
                 break;
             case VK_IMAGE_VIEW_TYPE_3D:
                 assert(extent.width >= 1 && extent.height >= 1 && extent.depth >= 1 && arrayLayers == 1 && samples == 1);
-                imageType = VK_IMAGE_TYPE_3D;
+                imgCreateInfo.imageType = VK_IMAGE_TYPE_3D;
+                break;
+            case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
+                assert(extent.width >= 1 && extent.height == extent.width && extent.depth == 1 &&
+                       (arrayLayers > 0 && arrayLayers % 6 == 0) && samples == 1 &&
+                       ((flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) > 0));
+                imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
                 break;
             default:
                 assert(false && "Unhandled image view type");

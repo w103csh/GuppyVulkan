@@ -24,6 +24,7 @@ const std::map<DESCRIPTOR, offsets> DEFAULT_OFFSETS_MAP = {
     {UNIFORM::LIGHT_SPOT_DEFAULT, DEFAULT_ALL_SET},
     {UNIFORM::LIGHT_POSITIONAL_PBR, DEFAULT_ALL_SET},
     {UNIFORM::LIGHT_POSITIONAL_SHADOW, DEFAULT_ALL_SET},
+    {UNIFORM::LIGHT_CUBE_SHADOW, DEFAULT_ALL_SET},
     // MISC
     {UNIFORM::FOG_DEFAULT, DEFAULT_SINGLE_SET},
     {UNIFORM::PROJECTOR_DEFAULT, DEFAULT_SINGLE_SET},
@@ -54,7 +55,7 @@ void Uniform::OffsetsManager::initializeMap() {
 
         const offsetsMapKey& key = std::make_pair(descType, GRAPHICS::ALL_ENUM);
         assert(offsetsMap_.count(key) == 0);
-        offsetsMap_.insert({std::move(key), {{offsets, PASS_ALL_SET}}});
+        offsetsMap_.insert({key, {{offsets, PASS_ALL_SET}}});
     }
 }
 

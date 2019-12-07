@@ -30,6 +30,9 @@ struct UBOTag {
 Scene::Base::Base(Scene::Handler& handler, const index offset, bool makeFaceSelection)
     : Handlee(handler),
       OFFSET(offset),
+      moonOffset(Mesh::BAD_OFFSET),
+      starsOffset(Mesh::BAD_OFFSET),
+      posLgtCubeShdwOffset(Mesh::BAD_OFFSET),
       pSelectionManager_(std::make_unique<Selection::Manager>(handler, makeFaceSelection)) {}
 
 Scene::Base::~Base() = default;

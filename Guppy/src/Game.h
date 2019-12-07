@@ -86,6 +86,7 @@ class Game {
         bool try_wireframe_shading;
         bool try_debug_markers;
         bool try_independent_blend;
+        bool try_image_cube_array;
         bool enable_sample_shading;
         bool enable_double_clicks;
         bool enable_directory_listener;

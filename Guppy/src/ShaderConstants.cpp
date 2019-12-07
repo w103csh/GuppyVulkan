@@ -232,6 +232,7 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     // SHADOW
     {SHADER::SHADOW_COLOR_VERT, Shader::Shadow::COLOR_VERT_CREATE_INFO},
     {SHADER::SHADOW_TEX_VERT, Shader::Shadow::TEX_VERT_CREATE_INFO},
+    {SHADER::SHADOW_CUBE_GEOM, Shader::Shadow::CUBE_GEOM_CREATE_INFO},
     {SHADER::SHADOW_FRAG, Shader::Shadow::FRAG_CREATE_INFO},
     // TESSELLATION
     {SHADER::TESS_COLOR_VERT, Shader::Tessellation::COLOR_VERT_CREATE_INFO},

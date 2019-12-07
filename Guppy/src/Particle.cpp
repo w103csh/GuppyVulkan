@@ -380,10 +380,15 @@ void FountainEuler::getInputAssemblyInfoResources(CreateInfoResources& createInf
 const Pipeline::CreateInfo SHADOW_FOUNTAIN_EULER_CREATE_INFO = {
     GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER,
     "Particle Fountain Euler (Shadow) Pipeline",
-    {SHADER::PRTCL_SHDW_FOUNTAIN_EULER_VERT, SHADER::SHADOW_FRAG},
+    {
+        SHADER::PRTCL_SHDW_FOUNTAIN_EULER_VERT,
+        SHADER::SHADOW_CUBE_GEOM,
+        SHADER::SHADOW_FRAG,
+    },
     {
         DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4,
         DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN,
+        DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY,
     },
 };
 ShadowFountainEuler::ShadowFountainEuler(Pipeline::Handler& handler)

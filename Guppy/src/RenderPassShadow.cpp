@@ -7,6 +7,7 @@
 
 #include <array>
 
+#include "Camera.h"
 #include "ConstantsAll.h"
 #include "Shadow.h"
 // HANDLERS
@@ -16,6 +17,7 @@
 #include "RenderPassHandler.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
+#include "UniformHandler.h"
 
 namespace RenderPass {
 namespace Shadow {
@@ -67,12 +69,13 @@ void Base::createFramebuffers() {
     createInfo.renderPass = pass;
     createInfo.width = extent_.width;
     createInfo.height = extent_.height;
-    createInfo.layers = 1;
+    createInfo.layers = pTextures_[0]->samplers[0].imgCreateInfo.arrayLayers;
 
     for (uint8_t frameIndex = 0; frameIndex < attachmentViewsList.size(); frameIndex++) {
         auto& attachmentViews = attachmentViewsList[frameIndex];
 
-        attachmentViews.push_back(pTextures_[0]->samplers[0].layerResourceMap.at(0).view);
+        assert(pTextures_[0]->samplers[0].layerResourceMap.size() == 1);
+        attachmentViews.push_back(pTextures_[0]->samplers[0].layerResourceMap.begin()->second.view);
         assert(attachmentViews.back() != VK_NULL_HANDLE);
 
         createInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
@@ -162,14 +165,7 @@ const CreateInfo DEFAULT_CREATE_INFO = {
     },
     FLAG::DEPTH,  // This actually enables the depth test from overridePipelineCreateInfo. Not sure if I like this.
     {
-        std::string(Texture::Shadow::MAP_2D_ARRAY_ID),
-    },
-    {},
-    {},
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    {
-        {{UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, GRAPHICS::ALL_ENUM}, {2}},
+        std::string(Texture::Shadow::MAP_CUBE_ARRAY_ID),
     },
 };
 Default::Default(Handler& handler, const index&& offset)
