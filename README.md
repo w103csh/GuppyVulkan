@@ -44,13 +44,13 @@ Recently in my experimenting with Vulkan pipelines/passes/shaders I decided to s
     * Lines
   * Particles (compute)
     * Fountains (euler integration)
-      * Recyclable with parameterized position/acceleration/rotation
+      * Recyclable with parameterized position/velociity/acceleration/rotation
         * Billboarded quads
         * Meshes (click image for video link)
 
           [![](https://i9.ytimg.com/vi/57DorBKAc1Q/mq2.jpg?sqp=CLOxsu8F&rs=AOn4CLCtfXqjZzL7Q7O-HL0PFFpt48gvAg)](https://youtu.be/57DorBKAc1Q "Guppy - recyclable particle fountain meshes with shadows")
     * Attractors (euler integration)
-      * Recyclable parameterized position/acceleration/rotation (click image for video link)
+      * Recyclable parameterized position/velocity/acceleration (click image for video link)
 
         [![](https://i9.ytimg.com/vi/sWfPW5PMsjg/mq1.jpg?sqp=CNCzsu8F&rs=AOn4CLCXV0PGaxp0QLecu-EcB35j2FFSEw)](https://youtu.be/sWfPW5PMsjg "Guppy - 125000 particles affected by two gravity attractors demo")
     * Cloth (euler integration)
