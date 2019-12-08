@@ -416,7 +416,9 @@ void Shell::destroySwapchain() {
     ctx_.surface = VK_NULL_HANDLE;
 }
 
-void Shell::onKey(GAME_KEY key) {
+void Shell::onButton(const GameButtonBits buttons) { game_.onButton(buttons); }
+
+void Shell::onKey(const GAME_KEY key) {
     switch (key) {
         case GAME_KEY::KEY_MINUS: {
             if (framesPerSecondLimit > 1) framesPerSecondLimit--;

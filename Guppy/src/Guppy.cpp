@@ -21,6 +21,7 @@
 
 #include <algorithm>
 #include <functional>
+#include <queue>
 
 #include "ConstantsAll.h"
 #include "Game.h"
@@ -214,7 +215,7 @@ void Guppy::onFrame(float framePred) {
     handlers_.pPass->updateFrameIndex();
 }
 
-void Guppy::onKey(GAME_KEY key) {
+void Guppy::onKey(const GAME_KEY key) {
     switch (key) {
         case GAME_KEY::KEY_MINUS:
         case GAME_KEY::KEY_EQUALS:
@@ -253,7 +254,7 @@ void Guppy::onKey(GAME_KEY key) {
             //            light.transform(helpers::affine(glm::vec3(1.0f), (CARDINAL_Z * 2.0f)));
             //        }
             //    });
-            handlers_.pUniform->createVisualHelpers();
+            // handlers_.pUniform->createVisualHelpers();
         } break;
         case GAME_KEY::KEY_4: {
             // Shader::Handler::defaultLightsAction([](auto& posLights, auto& spotLights) {
@@ -309,12 +310,12 @@ void Guppy::onKey(GAME_KEY key) {
             //    }
             //    // defUBO_.shaderData.fog.maxDistance += 10.0f;
             //});
-            //handlers_.pParticle->startFountain(0);
-            //handlers_.pParticle->startFountain(1);
-            //handlers_.pParticle->startFountain(2);
-            //handlers_.pParticle->startFountain(3);
-            //handlers_.pParticle->startFountain(4);
-            //handlers_.pParticle->startFountain(5);
+            // handlers_.pParticle->startFountain(0);
+            // handlers_.pParticle->startFountain(1);
+            // handlers_.pParticle->startFountain(2);
+            // handlers_.pParticle->startFountain(3);
+            // handlers_.pParticle->startFountain(4);
+            // handlers_.pParticle->startFountain(5);
         } break;
         case GAME_KEY::KEY_8: {
             auto& light = handlers_.pUniform->getDefPosLight();
@@ -358,6 +359,26 @@ void Guppy::onKey(GAME_KEY key) {
         } break;
         default:
             break;
+    }
+}
+
+void Guppy::onButton(const GameButtonBits buttons) {
+    if (buttons & GAME_BUTTON::A) {
+        static std::queue<glm::vec3> accels(
+            {{-20.0f, -10.0f, 2.0f}, {20.0f, -10.0f, -2.0f}, {2.0f, -10.0f, 20.0f}, {-2.0f, -10.0f, -20.0f}});
+        static bool flip = true;
+
+        auto pCloth = std::static_pointer_cast<UniformDynamic::Particle::Cloth::Base>(
+            handlers_.pParticle->prtclClthMgr.pItems.front());
+        if (flip) {
+            auto a = accels.front();
+            pCloth->setAcceleration(a);
+            accels.pop();
+            accels.push(a);
+        } else {
+            pCloth->setAcceleration();
+        }
+        flip = !flip;
     }
 }
 

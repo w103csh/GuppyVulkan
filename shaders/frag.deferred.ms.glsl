@@ -284,9 +284,9 @@ void main() {
         return;
     }
 
-    vec3 color = vec3(0);
+    vec3 color;
     if (false) {
-        vec3 color = globalDirectionalLight(
+        color = globalDirectionalLight(
             norm.xyz,
             v,
             diff.rgb,

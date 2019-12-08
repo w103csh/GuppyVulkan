@@ -49,7 +49,8 @@ class Guppy : public Game {
     void onFrame(float framePred) override;
 
     // INPUT
-    void onKey(GAME_KEY key) override;
+    void onButton(const GameButtonBits buttons) override;
+    void onKey(const GAME_KEY key) override;
     void onMouse(const MouseInput& input) override;
 
    private:

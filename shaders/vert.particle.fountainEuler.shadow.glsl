@@ -58,6 +58,5 @@ void main() {
         inData0.x, inData0.y, inData0.z, 1
     );
 
-    mat4 mMVP = (camera.viewProjection * uniMat4.model) *  mRotAndTrans;
-    gl_Position = mMVP * vec4(inPosition, 1.0);
+    gl_Position = (uniMat4.model *  mRotAndTrans) * vec4(inPosition, 1.0);
 }

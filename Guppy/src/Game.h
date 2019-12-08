@@ -108,8 +108,9 @@ class Game {
     // LIFECYCLE
     virtual void onTick() {}
     virtual void onFrame(float framePred) {}
-    virtual void onKey(GAME_KEY key) {}               // TODO: bad design
-    virtual void onMouse(const MouseInput &input) {}  // TODO: bad design & misleading name
+    virtual void onButton(const GameButtonBits buttons) {}  // TODO: bad design
+    virtual void onKey(const GAME_KEY key) {}               // TODO: bad design
+    virtual void onMouse(const MouseInput &input) {}        // TODO: bad design & misleading name
 
     // HANDLER
     struct Handlers {
