@@ -231,33 +231,39 @@ void Uniform::Handler::frame() {
             auto& pScene = sceneHandler().getActiveScene();
             const auto elapsed = shell().getElapsedTime<float>();
 
-            const auto RotateLight = [this, frameIndex = frameIndex](
-                                         const glm::mat4& mRot, std::unique_ptr<Mesh::Line>& pIndicator,
-                                         Light::Shadow::Cube::Base& lgtShdwCube, const uint32_t index) {
+            const auto RotateLight = [this, frameIndex = frameIndex](const glm::mat4& mRot, Mesh::Line* pIndicator,
+                                                                     Light::Shadow::Cube::Base& lgtShdwCube,
+                                                                     const uint32_t index) {
                 auto newPos = glm::vec3(mRot * glm::vec4(lgtShdwCube.getPosition(), 1.0f));
                 // Light
                 lgtShdwCube.setPosition(newPos, frameIndex);
                 update(lgtShdwCube, static_cast<int>(frameIndex));
                 // Indicator
-                pIndicator->transform(glm::translate(glm::mat4(1.0f), newPos - pIndicator->getWorldSpacePosition({}, index)),
-                                      index);
-                meshHandler().updateInstanceData(pIndicator->getInstanceDataInfo());
+                if (pIndicator) {
+                    pIndicator->transform(
+                        glm::translate(glm::mat4(1.0f), newPos - pIndicator->getWorldSpacePosition({}, index)), index);
+                    meshHandler().updateInstanceData(pIndicator->getInstanceDataInfo());
+                }
             };
+
+            bool rotate = false;
 
             for (uint32_t i = 0; i < static_cast<uint32_t>(lgtShdwCubeMgr().pItems.size()); i++) {
                 auto& lgtShdwCube = lgtShdwCubeMgr().getTypedItem(i);
-                auto& pIndicator = meshHandler().getLineMesh(pScene->posLgtCubeShdwOffset);
+                Mesh::Line* pIndicator = (pScene->posLgtCubeShdwOffset != Mesh::BAD_OFFSET)
+                                             ? meshHandler().getLineMesh(pScene->posLgtCubeShdwOffset).get()
+                                             : nullptr;
 
-                if (i == 0 && true) {
+                if (i == 0 && rotate) {
                     // 0 initial position: {-0.0f, 0.5f, -2.0f}
                     auto mRot = glm::rotate(glm::mat4(1.0f), (elapsed / 2.0f) * glm::two_pi<float>(),
                                             CARDINAL_Y + glm::vec3(-0.0f, 0.5f, -2.0f));
                     RotateLight(mRot, pIndicator, lgtShdwCube, i);
-                } else if (i == 1 && true) {
+                } else if (i == 1 && rotate) {
                     // 1 initial position: {-4.0f, 3.5f, 5.0f}
                     auto mRot = glm::rotate(glm::mat4(1.0f), (elapsed / 25.0f) * glm::two_pi<float>(), CARDINAL_Y);
                     RotateLight(mRot, pIndicator, lgtShdwCube, i);
-                } else if (i == 2 && false) {
+                } else if (i == 2 && rotate) {
                     // 2 initial position: {-2.0f, -2.5f, -4.3f}
                     auto mRot = glm::rotate(glm::mat4(1.0f), (elapsed / 15.0f) * glm::two_pi<float>(), CARDINAL_Y);
                     RotateLight(mRot, pIndicator, lgtShdwCube, i);
@@ -394,8 +400,8 @@ void Uniform::Handler::createLights() {
             cubeInfo.n = 0.1f;
             cubeInfo.f = 20.0f;
 
-            cubeInfo.position = {-0.0f, 0.5f, -2.0f};
-            lgtShdwCubeMgr().insert(dev, &cubeInfo);
+            // cubeInfo.position = {-0.0f, 0.5f, -2.0f};
+            // lgtShdwCubeMgr().insert(dev, &cubeInfo);
 
             cubeInfo.position = {-4.0f, 3.5f, 5.0f};
             lgtShdwCubeMgr().insert(dev, &cubeInfo);

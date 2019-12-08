@@ -192,6 +192,8 @@ void Input::Handler::update(const double elapsed) {
         }
         lookDir_ += glm::vec3{cntlr.thumbRNorm.x, cntlr.thumbRNorm.y, 0.0f} * static_cast<float>(elapsed) * 8.0f;
         posDir_ += glm::vec3{cntlr.thumbLNorm.x, 0.0f, cntlr.thumbLNorm.y} * static_cast<float>(elapsed) * 2.5f;
+        if (cntlr.hasChanges() && cntlr.getPrevState().Gamepad.wButtons)
+            pShell_->onButton(cntlr.getCurrState().Gamepad.wButtons);
     }
 #endif  // USE_XINPUT
 }

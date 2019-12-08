@@ -235,7 +235,7 @@ void Particle::Handler::create() {
                 auto& pMaterial = materialHandler().makeMaterial(&matInfo);
 
                 // MODELS
-                mdlInfo.data = helpers::affine(glm::vec3{0.07f}, glm::vec3{-1.0f, 0.2f, -1.0f});
+                mdlInfo.data = helpers::affine(glm::vec3{0.25f}, glm::vec3{0.0f, -3.5f, 0.0f});
                 mat4Mgr.insert(shell().context().dev, &mdlInfo);
                 pDescriptors.push_back(mat4Mgr.pItems.back());
 
@@ -343,7 +343,7 @@ void Particle::Handler::create() {
                 make<Buffer::Euler::Base>(pBuffers_, &partBuffEulerInfo, pMaterial, pDescriptors);
             }
             // ATTRACTOR
-            if (!suppress || false) {
+            if (!suppress || true) {
                 pDescriptors.clear();
 
                 partBuffEulerInfo = {};
@@ -404,14 +404,15 @@ void Particle::Handler::create() {
         planeInfo.horzDivs = 40;
         planeInfo.vertDivs = 40;
         planeInfo.width = 4.0f;
-        planeInfo.height = 3.0f;
+        planeInfo.height = 4.0f * (216.0f / 250.f);
 
         // UNIFORMS
         UniformDynamic::Particle::Cloth::CreateInfo clothInfo = {};
         assert(shell().context().imageCount == 3);  // Potential imageCount problem
         clothInfo.dataCount = shell().context().imageCount;
         clothInfo.planeInfo = planeInfo;
-        clothInfo.gravity = {-20.0f, -10.0f, 2.0f};
+        // clothInfo.gravity = {-20.0f, -10.0f, 2.0f};
+        clothInfo.gravity = {0.0f, -9.0f, 0.0f};
         // clothInfo.springK = 1000;
         prtclClthMgr.insert(shell().context().dev, &clothInfo);
         pDescriptors.push_back(prtclClthMgr.pItems.back());

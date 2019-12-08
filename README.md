@@ -44,16 +44,17 @@ Recently in my experimenting with Vulkan pipelines/passes/shaders I decided to s
     * Lines
   * Particles (compute)
     * Fountains
-      * Recyclable with parameterized position/acceleration/rotation (euler integration).
+      * Recyclable with parameterized position/acceleration/rotation (euler integration)
         * Billboarded quads
-        * Meshes  [![video]({https://i9.ytimg.com/vi/57DorBKAc1Q/mq2.jpg?sqp=CP3Rse8F&rs=AOn4CLDXIeQ9RV6h9qcm5v-IwzsW-bKZ9g})]({https://youtu.be/57DorBKAc1Q} "Guppy - recyclable particle fountain meshes with shadows")
+        * Meshes - [video demo]({https://youtu.be/57DorBKAc1Q} "Guppy - recyclable particle fountain meshes with shadows")
     * Attractors
-      * Recyclable parameterized position/acceleration/rotation (euler integration).
+      * Recyclable parameterized position/acceleration/rotation (euler integration) -[video demo]({https://youtu.be/sWfPW5PMsjg} "Guppy - 125000 particles affected by two gravity attractors") 
     * Cloth
+      * Spring lattice - [video demo]({https://youtu.be/AQdR3c39388} "Guppy - Cloth shader demo (compute particle spring lattice)")
     * Height field fluids
   * Shadows
     * ~~One direction with PCF softening~~ removed in favor of below. Hopefully have a better solution soon.
-    * Point lights that generate a depth cube map array (geometry) [video](https://youtu.be/ri3ZodRF7VY)
+    * Point lights that generate a depth cube map array (geometry) - [video demo]({https://youtu.be/ri3ZodRF7VY} "Guppy - Point lights with shadow cube maps demo")
 * Both
   * Materials
   * Instanced drawing

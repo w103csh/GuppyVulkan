@@ -166,7 +166,8 @@ class Shell {
     virtual void watchDirectory(const std::string &directory,
                                 const std::function<void(std::string)> callback) = 0;  // TODO: think this through
 
-    void onKey(GAME_KEY key);
+    void onButton(const GameButtonBits buttons);
+    void onKey(const GAME_KEY key);
     inline void onMouse(const MouseInput &input) { game_.onMouse(input); }  // TODO: think this through
 
     // SWAPCHAIN

@@ -81,9 +81,9 @@ void Base::updatePerFrame(const float time, const float elapsed, const uint32_t 
     // std::cout << data_.delta << std::endl;
 
     // acceleration
-    auto rand = 1.0f - (Random::inst().nextFloatZeroToOne() * 1.0f);
+    // auto rand = 1.0f - (Random::inst().nextFloatZeroToOne() * 1.0f);
     data_.gravity = acceleration_;
-    data_.gravity *= rand;
+    // data_.gravity *= rand;
     setData(frameIndex);
 }
 
@@ -239,11 +239,12 @@ Base::Base(Particle::Handler& handler, const index&& offset, const CreateInfo* p
     float left = right * -1.0f;
     float top = pCreateInfo->planeInfo.height * 0.5f;
     float bottom = top * -1.0f;
+    float aspect = pCreateInfo->planeInfo.height / pCreateInfo->planeInfo.width;
 
     for (uint32_t i = 0; i < workgroupSize_.x; i++) {
         dy = static_cast<float>(i) / static_cast<float>(workgroupSize_.x - 1);
         y = glm::mix(top, bottom, dy);
-        t = 0.0f + dy;
+        t = glm::mix(0.0f, aspect, dy);
 
         for (uint32_t j = 0; j < workgroupSize_.y; j++) {
             dx = static_cast<float>(j) / static_cast<float>(workgroupSize_.y - 1);

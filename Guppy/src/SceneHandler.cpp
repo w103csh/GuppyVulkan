@@ -63,7 +63,7 @@ void Scene::Handler::init() {
         Obj3d::BoundingBoxMinMax groundPlane_bbmm;
 
         // ORIGIN AXES
-        if (!suppress || true) {
+        if (!suppress || false) {
             axesInfo = {};
             axesInfo.pipelineType = GRAPHICS::DEFERRED_MRT_LINE;
             axesInfo.lineSize = 500.f;
@@ -76,7 +76,7 @@ void Scene::Handler::init() {
         }
 
         // GROUND PLANE (COLOR)
-        if (!suppress && false) {
+        if (!suppress || false) {
             planeInfo = {};
             planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
             planeInfo.selectable = false;
@@ -85,9 +85,10 @@ void Scene::Handler::init() {
             instObj3dInfo.data.push_back(
                 {helpers::affine(glm::vec3{2000.0f}, {0.0f, -4.0f, 0.0f}, -M_PI_2_FLT, CARDINAL_X)});
             defMatInfo = {};
-            defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+            defMatInfo.shininess = Material::SHININESS::MILDLY_SHINY;
             // defMatInfo.color = {0.0f, 1.0f, 0.0f};
-            defMatInfo.color = {0.4f, 0.4f, 0.45f};
+            defMatInfo.color = {0.8f, 0.8f, 0.85f};
+            // defMatInfo.color = {194.0f / 255.0f, 207.0f / 255.0f, 134.0f / 255.0f};
             auto& pGroundPlane = meshHandler().makeColorMesh<Mesh::Plane::Color>(&planeInfo, &defMatInfo, &instObj3dInfo);
             // auto& pGroundPlane = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &defInstInfo);
             auto offset = pGroundPlane->getOffset();
@@ -115,7 +116,7 @@ void Scene::Handler::init() {
         }
 
         // SHADOW BOX
-        if (!suppress || true) {
+        if (!suppress || false) {
             meshInfo = {};
             meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
             meshInfo.selectable = false;
@@ -131,7 +132,7 @@ void Scene::Handler::init() {
         }
 
         // SHADOW LIGHT INDICATORS
-        if (!suppress || true) {
+        if (!suppress || false) {
             axesInfo = {};
             axesInfo.pipelineType = GRAPHICS::DEFERRED_MRT_LINE;
             axesInfo.lineSize = 1.0f;
@@ -310,12 +311,12 @@ void Scene::Handler::init() {
         }
 
         // BOX
-        if (!suppress || true) {
+        if (!suppress || false) {
             if (true) {
                 meshInfo = {};
                 meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
                 instObj3dInfo = {};
-                bool shadowTest = true;
+                bool shadowTest = false;
                 if (shadowTest) {
                     instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{-2.0f, 0.0f, 1.5f})});
                     instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.5f}, glm::vec3{-2.0f, 0.0f, -2.5f})});
@@ -340,7 +341,7 @@ void Scene::Handler::init() {
                 if (!shadowTest) boxColor->putOnTop(groundPlane_bbmm);
                 meshHandler().updateMesh(boxColor);
             }
-            if (false && ctx.geometryShadingEnabled) {
+            if (true && ctx.geometryShadingEnabled) {
                 meshInfo = {};
                 meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_WF_COLOR;
                 instObj3dInfo = {};
@@ -355,7 +356,7 @@ void Scene::Handler::init() {
                 boxColor->putOnTop(groundPlane_bbmm);
                 meshHandler().updateMesh(boxColor);
             }
-            if (false) {
+            if (true) {
                 meshInfo = {};
                 meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
                 instObj3dInfo = {};

@@ -72,11 +72,12 @@ class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA
    public:
     Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo);
 
+    virtual_inline void setAcceleration(glm::vec3 a = {0.0f, -9.0f, 0.0f}) { acceleration_ = a; }
     void updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) override;
 
    private:
     std::array<float, 3> deltas_;
-    const glm::vec3 acceleration_;
+    glm::vec3 acceleration_;
 };
 
 }  // namespace Cloth
