@@ -49,7 +49,7 @@ Recently in my experimenting with Vulkan pipelines/passes/shaders I decided to s
     * Height field fluids
   * Shadows
     * ~~One direction with PCF softening~~ removed in favor of below. Hopefully have a better solution soon.
-    * Point lights that generate a depth cube map array (geometry) [demo](https://youtu.be/ri3ZodRF7VY)
+    * Point lights that generate a depth cube map array (geometry) [video](https://youtu.be/ri3ZodRF7VY)
 * Both
   * Materials
   * Instanced drawing
