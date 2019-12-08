@@ -43,18 +43,26 @@ Recently in my experimenting with Vulkan pipelines/passes/shaders I decided to s
   * Tessellation
     * Lines
   * Particles (compute)
-    * Fountains
-      * Recyclable with parameterized position/acceleration/rotation (euler integration)
+    * Fountains (euler integration)
+      * Recyclable with parameterized position/acceleration/rotation
         * Billboarded quads
-        * Meshes - [video demo]({https://youtu.be/57DorBKAc1Q} "Guppy - recyclable particle fountain meshes with shadows")
-    * Attractors
-      * Recyclable parameterized position/acceleration/rotation (euler integration) -[video demo]({https://youtu.be/sWfPW5PMsjg} "Guppy - 125000 particles affected by two gravity attractors") 
-    * Cloth
-      * Spring lattice - [video demo]({https://youtu.be/AQdR3c39388} "Guppy - Cloth shader demo (compute particle spring lattice)")
+        * Meshes (click image for video link)
+
+          [![](https://i9.ytimg.com/vi/57DorBKAc1Q/mq2.jpg?sqp=CLOxsu8F&rs=AOn4CLCtfXqjZzL7Q7O-HL0PFFpt48gvAg)](https://youtu.be/57DorBKAc1Q "Guppy - recyclable particle fountain meshes with shadows")
+    * Attractors (euler integration)
+      * Recyclable parameterized position/acceleration/rotation (click image for video link)
+
+        [![](https://i9.ytimg.com/vi/sWfPW5PMsjg/mq1.jpg?sqp=CNCzsu8F&rs=AOn4CLCXV0PGaxp0QLecu-EcB35j2FFSEw)](https://youtu.be/sWfPW5PMsjg "Guppy - 125000 particles affected by two gravity attractors demo")
+    * Cloth (euler integration)
+      * Spring lattice (click image for video link)
+
+        [![](https://i9.ytimg.com/vi/AQdR3c39388/mq1.jpg?sqp=CJOysu8F&rs=AOn4CLAeHc3EWQ_phPrkFAAldl-19pRm4A)](https://youtu.be/AQdR3c39388 "Guppy - Cloth shader demo (compute particle spring lattice)")
     * Height field fluids
   * Shadows
     * ~~One direction with PCF softening~~ removed in favor of below. Hopefully have a better solution soon.
-    * Point lights that generate a depth cube map array (geometry) - [video demo]({https://youtu.be/ri3ZodRF7VY} "Guppy - Point lights with shadow cube maps demo")
+    * Point lights that generate a dynamice depth cube map array using geometry shader (click image for video link)
+
+      [![](https://i9.ytimg.com/vi/ri3ZodRF7VY/mq2.jpg?sqp=CPCzsu8F&rs=AOn4CLD3r_d1udaNVHO7Jrio8xC7n7riZw)](https://youtu.be/ri3ZodRF7VY "Guppy - Point lights with shadow cube maps demo")
 * Both
   * Materials
   * Instanced drawing
