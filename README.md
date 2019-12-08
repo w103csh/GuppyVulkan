@@ -44,7 +44,11 @@ Recently in my experimenting with Vulkan pipelines/passes/shaders I decided to s
     * Lines
   * Particles (compute)
     * Fountains
+      * Recyclable with parameterized position/acceleration/rotation (euler integration).
+        * Billboarded quads
+        * Meshes  [![video]({https://i9.ytimg.com/vi/57DorBKAc1Q/mq2.jpg?sqp=CP3Rse8F&rs=AOn4CLDXIeQ9RV6h9qcm5v-IwzsW-bKZ9g})]({https://youtu.be/57DorBKAc1Q} "Guppy - recyclable particle fountain meshes with shadows")
     * Attractors
+      * Recyclable parameterized position/acceleration/rotation (euler integration).
     * Cloth
     * Height field fluids
   * Shadows
