@@ -1,65 +1,62 @@
 # Guppy (Vulkan)
-  - This repository is a basic game engine using Vulkan C++. It borrows heavily from
-    the [Vulkan Samples repository](https://github.com/LunarG/VulkanSamples),
-    which was used as a starting point - more specifically the
-    [Hologram example therein](https://github.com/LunarG/VulkanSamples/tree/master/Sample-Programs/Hologram),
-    but it has been expanded upon pretty dramatically at this point.
-  <!-- - Run the following script to obtain a short description of all or a 
-    specific sample:
-    `$ API-Samples/get-short-descripts.sh`
-  - Run the following script to obtain a more detailed description of all
-    samples with a long description set:
-    `$ API-Samples/get-descripts.sh` -->
+  This repository is test ground for a basic game engine using Vulkan C++. The repository was based off a sample in the [LunarG VulkanSamples repository](https://github.com/LunarG/VulkanSamples), specifically the [Hologram sample](https://github.com/LunarG/VulkanSamples/tree/master/Sample-Programs/Hologram). Very little from the sample remains except for some cross platform code, and CMake build files.
 
-<!-- ## CI Build Status
-| Platform | Build Status |
-|:--------:|:------------:|
-| Linux/Android | [![Build Status](https://travis-ci.org/LunarG/VulkanSamples.svg?branch=master)](https://travis-ci.org/LunarG/VulkanSamples) |
-| Windows | [![Build status](https://ci.appveyor.com/api/projects/status/c5l2y9nk7wve9xvu/branch/master?svg=true)](https://ci.appveyor.com/project/karl-lunarg/vulkansamples/branch/master) |
-
-## Structure
-
-Vulkan Samples
- - The Vulkan Samples repo is a set of source and data files in a specific
-    directory hierarchy:
-      - API-Samples - Samples that demonstrate the use of various aspects of the
-        Vulkan API
-      - Vulkan Tutorial - Steps you through the process of creating a simple Vulkan application, learning the basics along the way. This [Vulkan Tutorial link](https://vulkan.lunarg.com/doc/sdk/latest/windows/tutorial/html/index.html) allows you to view the Vulkan Tutorial on LunarXchange as well. 
-      - Sample-Programs - Samples that are more functional and go deeper than simple API use.
-      - Layer-Samples - Samples that are implemented as layers.  The Overlay layer sample is deprecated and does not build.
-	  
-## Sample progression
-  - In general, the samples are not interrelated, but there is a progression
-      among some of the samples that lead to drawing a cube.  Start with the
-      instance sample, then enumerate-adv, device, initcommandbuffer, initswapchain, initdepthbuffer,
-      inituniformbuffer, descriptor_pipeline_layouts, initrenderpass, initshaders,
-      initframebuffers, vertexbuffer, allocdescriptorsets, initpipeline, and they
-      culminate in the drawcube sample.  Each sample uses utility routines from
-      the code from previous samples to get to the point to show something new.
-      The drawtexturedcube sample takes all of the drawcube code and adds texturing.
-
-## Contributing
-  Refer to the README.contrib file for specific info regarding contributing to
-  the Vulkan samples creation effort.
-
-## Contact Information
-* [Tony Barbour](mailto:tony@lunarg.com)
-* [Mark Lobodzinski](mailto:mark@lunarg.com)
-
-## Information for Developing or Contributing:
-
-Please see the [CONTRIBUTING.md](CONTRIBUTING.md) file in this repository for more details. -->
+  The main focus of the code herein has been on the rendering side, but some other tiny features have been added along the way as well. There is a list of things you can find inside the repo below. 
 
 ## How to Build and Run
+[BUILD.md](BUILD.md) has directions for building and running the code.
 
-[BUILD.md](BUILD.md) includes directions for building all components as well as running validation tests and demo applications.
+## Features
+* Windows build
+  * Native & [GLFW](https://www.glfw.org/) window/input support
+  * Directory listener for recompiling/loading shaders on file change at runtime.
+* macOS build ([MoltenVK](https://github.com/KhronosGroup/MoltenVK))
+  * [GLFW](https://www.glfw.org/) window/input support
+  * Directory listener for recompiling/loading loading shaders on file change at runtime.
+* [Dear ImGui](https://github.com/ocornut/imgui) integration
+* [FMOD](https://www.fmod.com/) integration
+* [XInput](https://docs.microsoft.com/en-us/windows/win32/xinput/xinput-game-controller-apis-portal) integration
+* [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h) for image loading
+* [tinyobjloader](https://github.com/syoyo/tinyobjloader) for mesh loading with material support
+* Basic CPU selection
+* Other things I'm forgetting...
 
-<!-- ## License
-This work is released as open source under a Apache-style license.  See LICENSE.txt for full license.
+## Rendering
+Recently in my experimenting with Vulkan pipelines/passes/shaders I decided to switch from forward shading to deferred. Below you can see a list of things I have implemented and which pipeline they were developed for. Ideally I would have enough time to make shaders for parity between all the pipelines, but there is only so much time in the day (ray tracing pipelines are coming soon hopefully!). I have tried to start making demo videos for some of the more interesting pipelines/shaders. More to come soon...
 
-See COPYRIGHT.txt for a full list of licenses used in this repository.
+> **Note: The demo videos were taken on a MacBook Pro running Bootcamp Windows drivers using a Radeon Pro 560X at 1920x1080 in debug mode. Optimization has not been the goal of this project. The focus has been learning the math, and gaining a thorough understanding of the Vulkan API.**
 
-## Acknowledgements
-While this project has been developed primarily by LunarG, Inc., there are many other
-companies and individuals making this possible: Valve Corporation, funding
-project development; Google providing significant contributions to the samples. -->
+* Forward shading
+  * Multi-sampling and resolve attachments
+  * PBR (Physically based rendering)
+  * Fog
+  * Positional lights
+  * Parallax texture mapping
+  * Normal (bump) mapping
+  * Offscreen render to texture
+    * Subsequent pass (same frame) use projective texture mapping onto geometry in the main scene.
+    * Screen space post-processing (compute)
+      * Gaussian blurring (glow)
+      * HDR w/ bloom (doesn't work well)
+* Deferred shading
+  * Multi-sampling for output attachment passes, and resolve attachment for combine/screenspace pass with "by region" dependency.
+  * Tessellation
+    * Lines
+  * Particles (compute)
+    * Fountains
+    * Attractors
+    * Cloth
+    * Height field fluids
+  * Shadows
+    * ~~One direction with PCF softening~~ removed in favor of below. Hopefully have a better solution soon.
+    * Point lights that generate a depth cube map array (geometry) [demo](https://youtu.be/ri3ZodRF7VY)
+* Both
+  * Materials
+  * Instanced drawing
+  * Triple buffering
+  * Blinn Phong
+  * Directional lights
+  * Spot lights
+
+## Contact Information
+* [Colin Hughes](mailto:colin.s.hughes@gmail.com)
