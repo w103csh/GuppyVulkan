@@ -95,6 +95,11 @@ class Handler : public Game::Handler {
     Descriptor::Manager<Descriptor::Base, Storage::Vector4::Base, std::shared_ptr> vec4Mgr;
     Descriptor::Manager<Descriptor::Base, UniformDynamic::HeightFieldFluid::Simulation::Base, std::shared_ptr> hffMgr;
 
+    auto &getBuffer(const Buffer::index offset) { return pBuffers_.at(offset); }
+
+    // TODO: move these
+    Buffer::index waterOffset;
+
    private:
     void reset() override;
     inline bool hasInstFntnEulerMgr() const { return pInstFntnEulerMgr_ != nullptr; }

@@ -321,7 +321,7 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
       Obj3d::InstanceDraw(pInstanceData),
       normalOffset_(Particle::Buffer::BAD_OFFSET),
       indexWFRes_{},
-      drawMode_(GRAPHICS::HFF_OCEAN_DEFERRED) {
+      drawMode(GRAPHICS::HFF_OCEAN_DEFERRED) {
     for (uint32_t i = 0; i < static_cast<uint32_t>(pDescriptors_.size()); i++)
         if (pDescriptors[i]->getDescriptorType() == DESCRIPTOR{STORAGE_BUFFER_DYNAMIC::NORMAL}) normalOffset_ = i;
     assert(normalOffset_ != Particle::Buffer::BAD_OFFSET);
@@ -375,7 +375,8 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
                           / 1.0f /* glm::two_pi<float>()*/);
             pData[idx] += (2.0f * cos(static_cast<float>(0.01f * x))) *  //
                           (glm::pi<float>() + (2.0f * sin(static_cast<float>(0.01f * z))));
-            pData[idx] += pow(glm::one_over_pi<float>(), 3) * (1.0f - Random::inst().nextFloatZeroToOne());
+            pData[idx] += pow(glm::one_over_pi<float>(), 2) * (1.0f - Random::inst().nextFloatZeroToOne());
+            pData[idx] -= 4.0f;  // offset everything back toward level
         }
     }
 
@@ -426,7 +427,7 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
 
     status_ |= STATUS::PENDING_BUFFERS;
     draw_ = true;
-    paused_ = false;
+    paused_ = true;
 }
 
 void Buffer::loadBuffers() {
@@ -473,14 +474,21 @@ void Buffer::destroy() {
     }
 }
 
+// bool Buffer::shouldDispatch() const {
+//    Particle::Buffer::shouldDispatch();
+//    if (status_ != STATUS::READY) return false;
+//    if (drawMode == GRAPHICS::HFF_OCEAN_DEFERRED) return true;
+//    return !paused_;
+//}
+
 void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                   const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
                   const uint8_t frameIndex) const {
-    if (pPipelineBindData->type != PIPELINE{drawMode_}) return;
+    if (pPipelineBindData->type != PIPELINE{drawMode}) return;
 
     auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
 
-    switch (drawMode_) {
+    switch (drawMode) {
         case GRAPHICS::HFF_CLMN_DEFERRED: {
             vkCmdPushConstants(cmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
                                static_cast<uint32_t>(sizeof(Pipeline::HeightFieldFluid::Column::PushConstant)),
@@ -491,7 +499,7 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
                                     descSetBindData.descriptorSets[setIndex].data(),
                                     static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
                                     descSetBindData.dynamicOffsets.data());
-            const VkBuffer buffers[] = {vertexRes_.buffer};
+            const VkBuffer buffers[] = {verticesHFFRes_.buffer};
             const VkDeviceSize offsets[] = {0};
             vkCmdBindVertexBuffers(cmd, 0, 1, buffers, offsets);
             vkCmdDraw(cmd, 36, workgroupSize_.x * workgroupSize_.y, 0, 0);
@@ -569,6 +577,7 @@ void Buffer::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::Bind
 
     switch (std::visit(Pipeline::GetCompute{}, pPipelineBindData->type)) {
         case COMPUTE::HFF_HGHT: {
+            // if (!paused_) {
             vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
             vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
@@ -592,6 +601,7 @@ void Buffer::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::Bind
                                  1,                                     // memoryBarrierCount
                                  &memoryBarrier,                        // pMemoryBarriers
                                  0, nullptr, 0, nullptr);
+            // }
         } break;
         case COMPUTE::HFF_NORM: {
             vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);

@@ -11,7 +11,12 @@ Light::Default::Directional::Base::Base(const Buffer::Info &&info, DATA *pData, 
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
       Descriptor::Base(UNIFORM::LIGHT_DIRECTIONAL_DEFAULT),
       Buffer::PerFramebufferDataItem<DATA>(pData),
-      direction(pCreateInfo->direction) {}
+      direction(pCreateInfo->direction) {
+    data_.flags = pCreateInfo->flags;
+    data_.La = pCreateInfo->La;
+    data_.L = pCreateInfo->L;
+    setData();
+}
 
 void Light::Default::Directional::Base::update(const glm::vec3 direction, const uint32_t frameIndex) {
     data_.direction = direction;

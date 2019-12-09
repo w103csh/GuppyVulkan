@@ -29,6 +29,7 @@ Particle::Handler::Handler(Game* pGame)
       mat4Mgr{"Matrix4 Data", UNIFORM_DYNAMIC::MATRIX_4, 30, true, "_UD_MAT4"},
       vec4Mgr{"Particle Vector4 Data", STORAGE_BUFFER_DYNAMIC::VERTEX, 1000000, false, "_UD_VEC4"},
       hffMgr{"Height Field Fluid Data", UNIFORM_DYNAMIC::HFF, 3, true, "_UD_HFF"},
+      waterOffset(Buffer::BAD_OFFSET),
       doUpdate_(false),
       instFntnMgr_{"Particle Fountain Instance Data", 8000 * 5, false},
       pInstFntnEulerMgr_(nullptr) {}
@@ -122,7 +123,7 @@ void Particle::Handler::create() {
     bool suppress = true;
 
     // WATER
-    if (!suppress || false) {
+    if (!suppress || true) {
         pDescriptors.clear();
 
         HeightFieldFluid::Info info = {100, 100, 100.0f};
@@ -168,6 +169,7 @@ void Particle::Handler::create() {
         pDescriptors.push_back(vec4Mgr.pItems.back());
 
         make<HeightFieldFluid::Buffer>(pBuffers_, &buffHFFInfo, pMaterial, pDescriptors, pInstanceData);
+        waterOffset = static_cast<uint32_t>(pBuffers_.size() - 1);
     }
 
     // FOUNTAIN

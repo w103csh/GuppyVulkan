@@ -12,15 +12,13 @@
 #include "UIHandler.h"
 
 class Face;
+class Game;
 
 namespace UI {
 
 class ImGuiHandler : public UI::Handler {
    public:
-    ImGuiHandler(Game* pGame)
-        : UI::Handler(pGame),  //
-          showDemoWindow_(false),
-          showSelectionInfoWindow_(false) {}
+    ImGuiHandler(Game* pGame);
 
     void frame() override;
     void draw(const VkCommandBuffer& cmd, const uint8_t frameIndex) override;
@@ -28,6 +26,7 @@ class ImGuiHandler : public UI::Handler {
     // Application main menu (TODO: move this to a UI class)
     void appMainMenuBar();
     void menuFile();
+    void menuWater();
     void menuShowWindows();
     void showSelectionInfoWindow(bool* p_open);
 
@@ -36,6 +35,9 @@ class ImGuiHandler : public UI::Handler {
 
     bool showDemoWindow_;
     bool showSelectionInfoWindow_;
+    bool waterColumns_;
+    bool waterWireframe_;
+    bool waterFlat_;
 };
 
 }  // namespace UI

@@ -138,7 +138,7 @@ class Base : public NonCopyable, public Handlee<Handler> {
         if (paused_) doPausedUpdate_ = true;
     }
     inline bool shouldDraw() const { return status_ == STATUS::READY && draw_; }
-    inline bool shouldDispatch() const { return status_ == STATUS::READY && !paused_; }
+    virtual inline bool shouldDispatch() const { return status_ == STATUS::READY && !paused_; }
 
     virtual void update(const float time, const float elapsed, const uint32_t frameIndex);
 
@@ -147,6 +147,8 @@ class Base : public NonCopyable, public Handlee<Handler> {
 
     constexpr const auto& getOffset() const { return offset_; }
     constexpr const auto& getStatus() const { return status_; }
+    constexpr const auto& getPaused() const { return paused_; }
+    constexpr const auto& getDraw() const { return draw_; }
 
     const std::vector<Descriptor::Base*> getSDynamicDataItems(const PIPELINE pipelineType) const;
 

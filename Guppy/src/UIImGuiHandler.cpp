@@ -12,12 +12,22 @@
 
 #include "Face.h"
 #include "Helpers.h"
+#include "HeightFieldFluid.h"
 // HANDLERS
 #include "CommandHandler.h"
 #include "DescriptorHandler.h"
+#include "ParticleHandler.h"
 #include "PipelineHandler.h"
 #include "RenderPassHandler.h"
 #include "SceneHandler.h"
+
+UI::ImGuiHandler::ImGuiHandler(Game* pGame)
+    : UI::Handler(pGame),  //
+      showDemoWindow_(false),
+      showSelectionInfoWindow_(false),
+      waterColumns_(false),
+      waterWireframe_(false),
+      waterFlat_(false) {}
 
 void UI::ImGuiHandler::frame() {
     // Start the Dear ImGui frame
@@ -58,6 +68,10 @@ void UI::ImGuiHandler::appMainMenuBar() {
             }
             ImGui::EndMenu();
         }
+        if (ImGui::BeginMenu("Water")) {
+            menuWater();
+            ImGui::EndMenu();
+        }
         if (ImGui::BeginMenu("Show Windows")) {
             menuShowWindows();
             ImGui::EndMenu();
@@ -95,6 +109,44 @@ void UI::ImGuiHandler::menuFile() {
     }
     if (ImGui::MenuItem("Quit", "Alt+F4")) {
         shell().quit();
+    }
+}
+
+void UI::ImGuiHandler::menuWater() {
+    auto pWater = static_cast<HeightFieldFluid::Buffer*>(particleHandler().getBuffer(particleHandler().waterOffset).get());
+    waterColumns_ = false;
+    waterWireframe_ = false;
+    waterFlat_ = false;
+    switch (pWater->drawMode) {
+        case GRAPHICS::HFF_CLMN_DEFERRED:
+            waterColumns_ = true;
+            break;
+        case GRAPHICS::HFF_WF_DEFERRED:
+            waterWireframe_ = true;
+            break;
+        case GRAPHICS::HFF_OCEAN_DEFERRED:
+            waterFlat_ = true;
+            break;
+    }
+    if (ImGui::MenuItem("Columns", nullptr, &waterColumns_)) {
+        pWater->drawMode = GRAPHICS::HFF_CLMN_DEFERRED;
+    }
+    if (ImGui::MenuItem("Wireframe", nullptr, &waterWireframe_)) {
+        pWater->drawMode = GRAPHICS::HFF_WF_DEFERRED;
+    }
+    if (ImGui::MenuItem("Flat", nullptr, &waterFlat_)) {
+        pWater->drawMode = GRAPHICS::HFF_OCEAN_DEFERRED;
+    }
+
+    ImGui::Separator();
+
+    static bool draw = pWater->getDraw();
+    if (ImGui::Checkbox("Draw", &draw)) {
+        pWater->toggleDraw();
+    }
+    static bool pause = pWater->getPaused();
+    if (ImGui::Checkbox("Pause", &pause)) {
+        pWater->togglePause();
     }
 }
 

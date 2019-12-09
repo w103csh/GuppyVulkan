@@ -159,12 +159,16 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
            std::shared_ptr<Material::Base>& pMaterial, const std::vector<std::shared_ptr<Descriptor::Base>>& pDescriptors,
            std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData);
 
+    // bool shouldDispatch() const override;
+
     virtual void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                       const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
                       const uint8_t frameIndex) const override;
     void dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                   const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
                   const uint8_t frameIndex) const override;
+
+    GRAPHICS drawMode;
 
    private:
     void loadBuffers() override;
@@ -176,8 +180,6 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
     BufferResource verticesHFFRes_;
     std::vector<VB_INDEX_TYPE> indicesWF_;
     BufferResource indexWFRes_;
-
-    GRAPHICS drawMode_;
 };
 
 }  // namespace HeightFieldFluid
