@@ -46,23 +46,27 @@ Recently in my experimenting with Vulkan pipelines/passes/shaders I decided to s
     * Fountains (euler integration)
       * Recyclable with parameterized position/velociity/acceleration/rotation
         * Billboarded quads
-        * Meshes (click image for video link)
+        * Meshes - *click image for video link*
 
-          [![](https://i9.ytimg.com/vi/57DorBKAc1Q/mq2.jpg?sqp=CLOxsu8F&rs=AOn4CLCtfXqjZzL7Q7O-HL0PFFpt48gvAg)](https://youtu.be/57DorBKAc1Q "Guppy - recyclable particle fountain meshes with shadows")
+          [![parictleMeshes](https://user-images.githubusercontent.com/5341766/70402048-40026b80-19ef-11ea-835a-1ff9ddfd35b4.jpg)](https://youtu.be/57DorBKAc1Q "Guppy - recyclable particle fountain meshes with shadows")
     * Attractors (euler integration)
-      * Recyclable parameterized position/velocity/acceleration (click image for video link)
-
-        [![](https://i9.ytimg.com/vi/sWfPW5PMsjg/mq1.jpg?sqp=CNCzsu8F&rs=AOn4CLCXV0PGaxp0QLecu-EcB35j2FFSEw)](https://youtu.be/sWfPW5PMsjg "Guppy - 125000 particles affected by two gravity attractors demo")
+      * Recyclable parameterized position/velocity/acceleration - *click image for video link*
+      
+        [![attractors](https://user-images.githubusercontent.com/5341766/70402018-2b25d800-19ef-11ea-9d6a-d610aa8d9ce6.jpg)](https://youtu.be/sWfPW5PMsjg "Guppy - 125000 particles affected by two gravity attractors demo")
     * Cloth (euler integration)
-      * Spring lattice (click image for video link)
+      * Spring lattice - *click image for video link*
 
-        [![](https://i9.ytimg.com/vi/AQdR3c39388/mq1.jpg?sqp=CJOysu8F&rs=AOn4CLAeHc3EWQ_phPrkFAAldl-19pRm4A)](https://youtu.be/AQdR3c39388 "Guppy - Cloth shader demo (compute particle spring lattice)")
-    * Height field fluids
+        [![cloth](https://user-images.githubusercontent.com/5341766/70402032-324ce600-19ef-11ea-921b-d0eef1b32d73.jpg)](https://youtu.be/AQdR3c39388 "Guppy - Cloth shader demo (compute particle spring lattice)")
+    * Height field fluids - *click image for video link*
+
+        [![hff](https://user-images.githubusercontent.com/5341766/70402036-3b3db780-19ef-11ea-9885-eb30c486db25.jpg)](https://youtu.be/j3vdii2Hkyc "Guppy - Height field fluid demo")
+        
+        The color shaders used in the video are for debugging purposes like making sure normal generation is working correctly, and the simulation is stable and pausable. A proper color shader with reflection/refraction/noise is hopefully coming soon...
   * Shadows
     * ~~One direction with PCF softening~~ removed in favor of below. Hopefully have a better solution soon.
-    * Point lights that generate a dynamice depth cube map array using geometry shader (click image for video link)
+    * Point lights that generate a dynamice depth cube map array using geometry shader - *click image for video link*
 
-      [![](https://i9.ytimg.com/vi/ri3ZodRF7VY/mq2.jpg?sqp=CPCzsu8F&rs=AOn4CLD3r_d1udaNVHO7Jrio8xC7n7riZw)](https://youtu.be/ri3ZodRF7VY "Guppy - Point lights with shadow cube maps demo")
+      [![shadowCubeMap](https://user-images.githubusercontent.com/5341766/70402055-42fd5c00-19ef-11ea-9721-f3dab508e86f.jpg)](https://youtu.be/ri3ZodRF7VY "Guppy - Point lights with shadow cube maps demo")
 * Both
   * Materials
   * Instanced drawing

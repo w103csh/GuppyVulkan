@@ -183,6 +183,7 @@ Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCr
 void Base::update(const float time, const float elapsed, const uint32_t frameIndex) {
     if (doPausedUpdate_) {
         getTimedUniform()->updatePerFrame(time, elapsed, Descriptor::PAUSED_UPDATE);
+        handler().update(getTimedUniform());
         doPausedUpdate_ = false;
     }
     if (paused_ || !draw_) return;  // Don't update when not drawing for now.

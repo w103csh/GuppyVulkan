@@ -123,7 +123,7 @@ void Base::record(const uint8_t frameIndex) {
         }
 
         // SHADOW
-        {
+        if (false) {
             const auto& pPass = handler().getPass(dependentTypeOffsetPairs_[0].second);
             assert(pPass->TYPE == PASS::SHADOW);
             std::vector<PIPELINE> pipelineTypes;

@@ -61,13 +61,16 @@ namespace Default {
 // DIRECTIONAL
 namespace Directional {
 struct DATA {
-    glm::vec3 direction{};            // Direction to the light (s) (camera space)
-    FlagBits flags{FLAG::SHOW};       //
-    alignas(16) glm::vec3 La{0.05f};  // Ambient light intensity
-    alignas(16) glm::vec3 L{0.6f};    // Diffuse and specular light intensity
+    glm::vec3 direction{};     // Direction to the light (s) (camera space)
+    FlagBits flags;            //
+    alignas(16) glm::vec3 La;  // Ambient light intensity
+    alignas(16) glm::vec3 L;   // Diffuse and specular light intensity
 };
 struct CreateInfo : Buffer::CreateInfo {
-    glm::vec3 direction;
+    glm::vec3 direction;         // Direction to the light (s) (world space)
+    FlagBits flags{FLAG::SHOW};  //
+    glm::vec3 La{0.05f};         // Ambient light intensity
+    glm::vec3 L{0.6f};           // Diffuse and specular light intensity
 };
 class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
    public:
