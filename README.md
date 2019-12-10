@@ -64,7 +64,7 @@ Recently in my experimenting with Vulkan pipelines/passes/shaders I decided to s
         The color shaders used in the video are for debugging purposes like making sure normal generation is working correctly, and the simulation is stable and pausable. A proper color shader with reflection/refraction/noise is hopefully coming soon...
   * Shadows
     * ~~One direction with PCF softening~~ removed in favor of below. Hopefully have a better solution soon.
-    * Point lights that generate a dynamice depth cube map array using geometry shader - *click image for video link*
+    * Point lights that generate a dynamic depth cube map array using geometry shader - *click image for video link*
 
       [![shadowCubeMap](https://user-images.githubusercontent.com/5341766/70402055-42fd5c00-19ef-11ea-9721-f3dab508e86f.jpg)](https://youtu.be/ri3ZodRF7VY "Guppy - Point lights with shadow cube maps demo")
 * Both
