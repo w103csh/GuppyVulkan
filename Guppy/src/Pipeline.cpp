@@ -296,11 +296,11 @@ const std::shared_ptr<Pipeline::BindData>& Pipeline::Base::getBindData(const PAS
                 if (itBindData->first.count(passType) == 0) return itBindData->second;
                 // The bind data is compatible so extract the bind data, update the key with the new pass type, and
                 // add the extracted element back into the map.
-                assert(false);
                 auto nh = bindDataMap_.extract(itBindData->first);
                 nh.key().insert(passType);
-                // auto& key = nh.key();
-                return bindDataMap_.insert(std::move(nh)).node.mapped();
+                auto inserted_return_type = bindDataMap_.insert(std::move(nh));
+                assert(inserted_return_type.inserted);
+                return inserted_return_type.position->second;
             }
         }
     }
@@ -599,9 +599,17 @@ void Pipeline::Default::Line::getInputAssemblyInfoResources(CreateInfoResources&
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 }
 
+//  POINT
+void Pipeline::Default::Point::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    GetDefaultColorInputAssemblyInfoResources(createInfoRes);
+    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+}
+
 // CUBE
 void Pipeline::Default::Cube::getDepthInfoResources(CreateInfoResources& createInfoRes) {
     Graphics::getDepthInfoResources(createInfoRes);
+    // This causes the non-skybox reflect/refact options to not work correctly. Unfortunately, you need to make two shaders
+    // if you want it to work right !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
     createInfoRes.depthStencilStateInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
 }
 
@@ -609,4 +617,38 @@ void Pipeline::Default::Cube::getDepthInfoResources(CreateInfoResources& createI
 void Pipeline::BP::TextureCullNone::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     Graphics::getRasterizationStateInfoResources(createInfoRes);
     createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_NONE;
+}
+
+// CUBE MAP
+std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapColor(Pipeline::Handler& handler) {
+    CreateInfo info = TRI_LIST_COLOR_CREATE_INFO;
+    info.name = "Cube Map Color";
+    info.type = GRAPHICS::CUBE_MAP_COLOR;
+    info.shaderTypes = {SHADER::CUBE_MAP_COLOR_VERT, SHADER::CUBE_MAP_COLOR_GEOM, SHADER::COLOR_FRAG};
+    info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
+    return std::make_unique<TriListColor>(handler, &info);
+}
+std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapLine(Pipeline::Handler& handler) {
+    CreateInfo info = LINE_CREATE_INFO;
+    info.name = "Cube Map Line";
+    info.type = GRAPHICS::CUBE_MAP_LINE;
+    info.shaderTypes = {SHADER::CUBE_MAP_COLOR_VERT, SHADER::CUBE_MAP_COLOR_GEOM, SHADER::LINE_FRAG};
+    info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
+    return std::make_unique<Line>(handler, &info);
+}
+std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapPoint(Pipeline::Handler& handler) {
+    CreateInfo info = POINT_CREATE_INFO;
+    info.name = "Cube Map Point";
+    info.type = GRAPHICS::CUBE_MAP_PT;
+    info.shaderTypes = {SHADER::CUBE_MAP_PT_VERT, SHADER::CUBE_MAP_PT_GEOM, SHADER::LINE_FRAG};
+    info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
+    return std::make_unique<Point>(handler, &info);
+}
+std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapTexture(Pipeline::Handler& handler) {
+    CreateInfo info = TRI_LIST_TEX_CREATE_INFO;
+    info.name = "Cube Map Texture";
+    info.type = GRAPHICS::CUBE_MAP_TEX;
+    info.shaderTypes = {SHADER::CUBE_MAP_TEX_VERT, SHADER::CUBE_MAP_TEX_GEOM, SHADER::TEX_FRAG};
+    info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
+    return std::make_unique<TriListTexture>(handler, &info);
 }

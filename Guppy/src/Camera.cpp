@@ -118,5 +118,32 @@ bool Base::updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir) {
 
 }  // namespace Default
 
+namespace CubeMap {
+
+Base::Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo)
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),
+      Descriptor::Base(UNIFORM::LIGHT_CUBE_SHADOW),
+      Buffer::PerFramebufferDataItem<DATA>(pData),
+      near_(pCreateInfo->n),
+      far_(pCreateInfo->f) {
+    model_ = glm::translate(glm::mat4(1.0f), pCreateInfo->position);
+    data_.proj = glm::perspective(glm::half_pi<float>(), 1.0f, near_, far_);
+    setViews();
+    setData();
+}
+
+void Base::setViews() {
+    const glm::vec3 position = getWorldSpacePosition();
+    // cube map view transforms
+    data_.views[0] = glm::lookAt(position, position + CARDINAL_X, -CARDINAL_Y);
+    data_.views[1] = glm::lookAt(position, position - CARDINAL_X, -CARDINAL_Y);
+    data_.views[2] = glm::lookAt(position, position + CARDINAL_Y, CARDINAL_Z);
+    data_.views[3] = glm::lookAt(position, position - CARDINAL_Y, -CARDINAL_Z);
+    data_.views[4] = glm::lookAt(position, position + CARDINAL_Z, -CARDINAL_Y);
+    data_.views[5] = glm::lookAt(position, position - CARDINAL_Z, -CARDINAL_Y);
+}
+
+}  // namespace CubeMap
+
 }  // namespace Perspective
 }  // namespace Camera

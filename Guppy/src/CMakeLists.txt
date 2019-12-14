@@ -45,6 +45,8 @@ set(SOURCE
     PBR.cpp
     PBR.h
     Random.h
+    RenderPassCubeMap.cpp
+    RenderPassCubeMap.h
     Scene.cpp
     Scene.h
     SceneHandler.cpp

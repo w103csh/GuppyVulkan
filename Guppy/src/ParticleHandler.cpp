@@ -123,7 +123,7 @@ void Particle::Handler::create() {
     bool suppress = true;
 
     // WATER
-    if (!suppress || true) {
+    if (!suppress || false) {
         pDescriptors.clear();
 
         HeightFieldFluid::Info info = {100, 100, 100.0f};

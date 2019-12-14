@@ -130,4 +130,46 @@ CreateInfo MakeRandom1dTex(const std::string_view& textureId, const std::string_
     return {std::string(textureId), {sampInfo}, false};
 }
 
+CreateInfo MakeCubeMapTex(const std::string_view id, const SAMPLER type, const uint32_t size, const uint32_t numMaps) {
+    assert(numMaps);
+
+    Sampler::CreateInfo sampInfo = {
+        std::string(id) + " Sampler",
+        {{}, true, true},
+        numMaps > 1 ? VK_IMAGE_VIEW_TYPE_CUBE_ARRAY : VK_IMAGE_VIEW_TYPE_CUBE,
+        {size, size, 1},
+        {},
+        VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+        type,
+        VK_IMAGE_USAGE_SAMPLED_BIT,
+    };
+
+    Sampler::LayerInfo layerInfo = {};
+    DESCRIPTOR descType = COMBINED_SAMPLER::DONT_CARE;
+    switch (type) {
+        case SAMPLER::CLAMP_TO_BORDER_DEPTH:
+        case SAMPLER::CLAMP_TO_BORDER_DEPTH_PCF: {
+            sampInfo.imageViewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;  // force this always?
+            sampInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            layerInfo.type = Sampler::USAGE::DEPTH;
+            descType = COMBINED_SAMPLER::PIPELINE_DEPTH;
+        } break;
+        case SAMPLER::DEFAULT:
+        case SAMPLER::CUBE:
+        case SAMPLER::CLAMP_TO_BORDER:
+        case SAMPLER::CLAMP_TO_EDGE:
+        case SAMPLER::DEFAULT_NEAREST: {
+            sampInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            layerInfo.type = Sampler::USAGE::COLOR;
+        } break;
+        default: {
+            assert(false);
+            exit(EXIT_FAILURE);
+        } break;
+    }
+    sampInfo.layersInfo.infos.assign(static_cast<size_t>(numMaps) * 6, layerInfo);
+
+    return {std::string(id), {sampInfo}, false, false, descType};
+}
+
 }  // namespace Texture

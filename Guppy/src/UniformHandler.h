@@ -64,7 +64,69 @@ class Manager : public ManagerType<TDerived> {
 // HANDLER
 
 class Handler : public Game::Handler {
+    // clang-format off
+   public:
+    virtual_inline auto& camPersDefMgr() { return std::get<Uniform::Manager<Camera::Perspective::Default::Base>>(managers_[0]);};
+    virtual_inline auto& camPersCubeMgr() { return std::get<Uniform::Manager<Camera::Perspective::CubeMap::Base>>(managers_[1]);};
+    virtual_inline auto& lgtDefDirMgr() { return std::get<Uniform::Manager<Light::Default::Directional::Base>>(managers_[2]);};
+    virtual_inline auto& lgtDefPosMgr() { return std::get<Uniform::Manager<Light::Default::Positional::Base>>(managers_[3]);};
+    virtual_inline auto& lgtPbrPosMgr() { return std::get<Uniform::Manager<Light::PBR::Positional::Base>>(managers_[4]);};
+    virtual_inline auto& lgtDefSptMgr() { return std::get<Uniform::Manager<Light::Default::Spot::Base>>(managers_[5]);};
+    virtual_inline auto& lgtShdwPosMgr() { return std::get<Uniform::Manager<Light::Shadow::Positional::Base>>(managers_[6]);};
+    virtual_inline auto& lgtShdwCubeMgr() { return std::get<Uniform::Manager<Light::Shadow::Cube::Base>>(managers_[7]);};
+    virtual_inline auto& uniDefFogMgr() { return std::get<Uniform::Manager<Default::Fog::Base>>(managers_[8]);};
+    virtual_inline auto& uniDefPrjMgr() { return std::get<Uniform::Manager<Default::Projector::Base>>(managers_[9]);};
+    virtual_inline auto& uniScrDefMgr() { return std::get<Uniform::Manager<ScreenSpace::Default>>(managers_[10]);};
+    virtual_inline auto& uniDfrSSAOMgr() { return std::get<Uniform::Manager<Deferred::SSAO>>(managers_[11]);};
+    virtual_inline auto& uniShdwDataMgr() { return std::get<Uniform::Manager<Shadow::Base>>(managers_[12]);};
+    virtual_inline auto& uniTessDefMgr() { return std::get<Uniform::Manager<Tessellation::Default::Base>>(managers_[13]);};
+    virtual_inline auto& uniGeomDefMgr() { return std::get<Uniform::Manager<Geometry::Default::Base>>(managers_[14]);};
+    virtual_inline auto& uniWaveMgr() { return std::get<Uniform::Manager<Particle::Wave::Base>>(managers_[15]);};
+    virtual_inline auto& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[16]);};
+    
    private:
+    template <class T> virtual_inline Manager<T>& getManager() { assert(false); }
+    template <> virtual_inline Manager<Camera::Perspective::Default::Base>& getManager() { return camPersDefMgr(); }
+    template <> virtual_inline Manager<Camera::Perspective::CubeMap::Base>& getManager() { return camPersCubeMgr(); }
+    template <> virtual_inline Manager<Light::Default::Directional::Base>& getManager() { return lgtDefDirMgr(); }
+    template <> virtual_inline Manager<Light::Default::Positional::Base>& getManager() { return lgtDefPosMgr(); }
+    template <> virtual_inline Manager<Light::PBR::Positional::Base>& getManager() { return lgtPbrPosMgr(); }
+    template <> virtual_inline Manager<Light::Default::Spot::Base>& getManager() { return lgtDefSptMgr(); }
+    template <> virtual_inline Manager<Light::Shadow::Positional::Base>& getManager() { return lgtShdwPosMgr(); }
+    template <> virtual_inline Manager<Light::Shadow::Cube::Base>& getManager() { return lgtShdwCubeMgr(); }
+    template <> virtual_inline Manager<Default::Fog::Base>& getManager() { return uniDefFogMgr(); }
+    template <> virtual_inline Manager<Default::Projector::Base>& getManager() { return uniDefPrjMgr(); }
+    template <> virtual_inline Manager<ScreenSpace::Default>& getManager() { return uniScrDefMgr(); }
+    template <> virtual_inline Manager<Deferred::SSAO>& getManager() { return uniDfrSSAOMgr(); }
+    template <> virtual_inline Manager<Shadow::Base>& getManager() { return uniShdwDataMgr(); }
+    template <> virtual_inline Manager<Tessellation::Default::Base>& getManager() { return uniTessDefMgr(); }
+    template <> virtual_inline Manager<Geometry::Default::Base>& getManager() { return uniGeomDefMgr(); }
+    template <> virtual_inline Manager<Particle::Wave::Base>& getManager() { return uniWaveMgr(); }
+    template <> virtual_inline Manager<Storage::PostProcess::Base>& getManager() { return strPstPrcMgr(); }
+    // clang-format on
+
+    // BUFFER MANAGERS
+    using Manager = std::variant<                     //
+        Manager<Camera::Perspective::Default::Base>,  //
+        Manager<Camera::Perspective::CubeMap::Base>,  //
+        Manager<Light::Default::Directional::Base>,   //
+        Manager<Light::Default::Positional::Base>,    //
+        Manager<Light::PBR::Positional::Base>,        //
+        Manager<Light::Default::Spot::Base>,          //
+        Manager<Light::Shadow::Positional::Base>,     //
+        Manager<Light::Shadow::Cube::Base>,           //
+        Manager<Default::Fog::Base>,                  //
+        Manager<Default::Projector::Base>,            //
+        Manager<ScreenSpace::Default>,                //
+        Manager<Deferred::SSAO>,                      //
+        Manager<Shadow::Base>,                        //
+        Manager<Tessellation::Default::Base>,         //
+        Manager<Geometry::Default::Base>,             //
+        Manager<Particle::Wave::Base>,                //
+        Manager<Storage::PostProcess::Base>           //
+        >;
+    std::array<Manager, 17> managers_;
+
     std::vector<std::unique_ptr<Descriptor::Base>>& getItems(const DESCRIPTOR& type);
 
    public:
@@ -84,7 +146,7 @@ class Handler : public Game::Handler {
 
     // MAIN CAMERA
     inline Camera::Perspective::Default::Base& getMainCamera() {
-        return std::ref(*(Camera::Perspective::Default::Base*)(camDefPersMgr().pItems[mainCameraOffset_].get()));
+        return std::ref(*(Camera::Perspective::Default::Base*)(camPersDefMgr().pItems[mainCameraOffset_].get()));
     }
 
     // FIRST LIGHT
@@ -119,70 +181,10 @@ class Handler : public Game::Handler {
     std::set<uint32_t> getBindingOffsets(const std::vector<ItemPointer<Descriptor::Base>>& pItems,
                                          const Uniform::offsets& offsets) const;
 
-    // clang-format off
-   public:
-    inline Manager<Camera::Perspective::Default::Base>& camDefPersMgr() { return std::get<Uniform::Manager<Camera::Perspective::Default::Base>>(managers_[0]);};
-    inline Manager<Light::Default::Directional::Base>& lgtDefDirMgr() { return std::get<Uniform::Manager<Light::Default::Directional::Base>>(managers_[1]);};
-    inline Manager<Light::Default::Positional::Base>& lgtDefPosMgr() { return std::get<Uniform::Manager<Light::Default::Positional::Base>>(managers_[2]);};
-    inline Manager<Light::PBR::Positional::Base>& lgtPbrPosMgr() { return std::get<Uniform::Manager<Light::PBR::Positional::Base>>(managers_[3]);};
-    inline Manager<Light::Default::Spot::Base>& lgtDefSptMgr() { return std::get<Uniform::Manager<Light::Default::Spot::Base>>(managers_[4]);};
-    inline Manager<Light::Shadow::Positional::Base>& lgtShdwPosMgr() { return std::get<Uniform::Manager<Light::Shadow::Positional::Base>>(managers_[5]);};
-    inline Manager<Light::Shadow::Cube::Base>& lgtShdwCubeMgr() { return std::get<Uniform::Manager<Light::Shadow::Cube::Base>>(managers_[6]);};
-    inline Manager<Default::Fog::Base>& uniDefFogMgr() { return std::get<Uniform::Manager<Default::Fog::Base>>(managers_[7]);};
-    inline Manager<Default::Projector::Base>& uniDefPrjMgr() { return std::get<Uniform::Manager<Default::Projector::Base>>(managers_[8]);};
-    inline Manager<ScreenSpace::Default>& uniScrDefMgr() { return std::get<Uniform::Manager<ScreenSpace::Default>>(managers_[9]);};
-    inline Manager<Deferred::SSAO>& uniDfrSSAOMgr() { return std::get<Uniform::Manager<Deferred::SSAO>>(managers_[10]);};
-    inline Manager<Shadow::Base>& uniShdwDataMgr() { return std::get<Uniform::Manager<Shadow::Base>>(managers_[11]);};
-    inline Manager<Tessellation::Default::Base>& uniTessDefMgr() { return std::get<Uniform::Manager<Tessellation::Default::Base>>(managers_[12]);};
-    inline Manager<Geometry::Default::Base>& uniGeomDefMgr() { return std::get<Uniform::Manager<Geometry::Default::Base>>(managers_[13]);};
-    inline Manager<Particle::Wave::Base>& uniWaveMgr() { return std::get<Uniform::Manager<Particle::Wave::Base>>(managers_[14]);};
-    inline Manager<Storage::PostProcess::Base>& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[15]);};
-    
-   private:
-    template <class T> inline Manager<T>& getManager() { assert(false); }
-    template <> inline Manager<Camera::Perspective::Default::Base>& getManager() { return camDefPersMgr(); }
-    template <> inline Manager<Light::Default::Directional::Base>& getManager() { return lgtDefDirMgr(); }
-    template <> inline Manager<Light::Default::Positional::Base>& getManager() { return lgtDefPosMgr(); }
-    template <> inline Manager<Light::PBR::Positional::Base>& getManager() { return lgtPbrPosMgr(); }
-    template <> inline Manager<Light::Default::Spot::Base>& getManager() { return lgtDefSptMgr(); }
-    template <> inline Manager<Light::Shadow::Positional::Base>& getManager() { return lgtShdwPosMgr(); }
-    template <> inline Manager<Light::Shadow::Cube::Base>& getManager() { return lgtShdwCubeMgr(); }
-    template <> inline Manager<Default::Fog::Base>& getManager() { return uniDefFogMgr(); }
-    template <> inline Manager<Default::Projector::Base>& getManager() { return uniDefPrjMgr(); }
-    template <> inline Manager<ScreenSpace::Default>& getManager() { return uniScrDefMgr(); }
-    template <> inline Manager<Deferred::SSAO>& getManager() { return uniDfrSSAOMgr(); }
-    template <> inline Manager<Shadow::Base>& getManager() { return uniShdwDataMgr(); }
-    template <> inline Manager<Tessellation::Default::Base>& getManager() { return uniTessDefMgr(); }
-    template <> inline Manager<Geometry::Default::Base>& getManager() { return uniGeomDefMgr(); }
-    template <> inline Manager<Particle::Wave::Base>& getManager() { return uniWaveMgr(); }
-    template <> inline Manager<Storage::PostProcess::Base>& getManager() { return strPstPrcMgr(); }
-    // clang-format on
-
     void createCameras();
     void createLights();
     void createMiscellaneous();
     void createTessellationData();
-
-    // BUFFER MANAGERS
-    using Manager = std::variant<                     //
-        Manager<Camera::Perspective::Default::Base>,  //
-        Manager<Light::Default::Directional::Base>,   //
-        Manager<Light::Default::Positional::Base>,    //
-        Manager<Light::PBR::Positional::Base>,        //
-        Manager<Light::Default::Spot::Base>,          //
-        Manager<Light::Shadow::Positional::Base>,     //
-        Manager<Light::Shadow::Cube::Base>,           //
-        Manager<Default::Fog::Base>,                  //
-        Manager<Default::Projector::Base>,            //
-        Manager<ScreenSpace::Default>,                //
-        Manager<Deferred::SSAO>,                      //
-        Manager<Shadow::Base>,                        //
-        Manager<Tessellation::Default::Base>,         //
-        Manager<Geometry::Default::Base>,             //
-        Manager<Particle::Wave::Base>,                //
-        Manager<Storage::PostProcess::Base>           //
-        >;
-    std::array<Manager, 16> managers_;
 
     // DESCRIPTOR
     OffsetsManager offsetsManager_;

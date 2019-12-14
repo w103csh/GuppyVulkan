@@ -48,9 +48,10 @@ namespace Sampler {
 
 // STATUE
 const CreateInfo STATUE_CREATE_INFO = {
-    "Statue Color Sampler",                        //
-    {{{Sampler::USAGE::COLOR, STATUE_TEX_PATH}}},  //
-    VK_IMAGE_VIEW_TYPE_2D,                         //
+    "Statue Color Sampler",
+    {{{Sampler::USAGE::COLOR, STATUE_TEX_PATH}}},
+    // VK_IMAGE_VIEW_TYPE_2D,
+    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
     BAD_EXTENT_3D,
     {},
     0,

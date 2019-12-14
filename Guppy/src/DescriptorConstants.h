@@ -30,6 +30,7 @@ enum class DESCRIPTOR_SET {
     SAMPLER_DEFAULT,
     SAMPLER_CUBE_DEFAULT,
     PROJECTOR_DEFAULT,
+    CAMERA_CUBE_MAP,
     // PBR
     UNIFORM_PBR,
     // PARALLAX
@@ -184,6 +185,7 @@ struct HasPerFramebufferData {
     bool operator()(const UNIFORM& type) const {
         switch (type) {
             case UNIFORM::CAMERA_PERSPECTIVE_DEFAULT:
+            case UNIFORM::CAMERA_PERSPECTIVE_CUBE_MAP:
             case UNIFORM::LIGHT_DIRECTIONAL_DEFAULT:
             case UNIFORM::LIGHT_POSITIONAL_DEFAULT:
             case UNIFORM::LIGHT_POSITIONAL_PBR:
@@ -382,6 +384,7 @@ extern const CreateInfo UNIFORM_OBJ3D_CREATE_INFO;
 extern const CreateInfo SAMPLER_CREATE_INFO;
 extern const CreateInfo CUBE_SAMPLER_CREATE_INFO;
 extern const CreateInfo PROJECTOR_SAMPLER_CREATE_INFO;
+extern const CreateInfo CAM_CUBE_CREATE_INFO;
 }  // namespace Default
 
 }  // namespace Set

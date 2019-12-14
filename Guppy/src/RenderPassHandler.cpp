@@ -8,6 +8,7 @@
 #include <algorithm>
 
 #include "Plane.h"
+#include "RenderPassCubeMap.h"
 #include "RenderPassDeferred.h"
 #ifdef USE_DEBUG_UI
 #include "RenderPassImGui.h"
@@ -64,6 +65,7 @@ RenderPass::Handler::Handler(Game* pGame)
             case PASS::SCREEN_SPACE_BLUR_B:     pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::BlurB>  (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
             case PASS::DEFERRED:                pPasses_.emplace_back(std::make_unique<RenderPass::Deferred::Base>      (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
             case PASS::SHADOW:                  pPasses_.emplace_back(std::make_unique<RenderPass::Shadow::Default>     (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
+            case PASS::SKYBOX_NIGHT:            pPasses_.emplace_back(std::make_unique<RenderPass::CubeMap::SkyboxNight>(std::ref(*this), static_cast<index>(pPasses_.size()))); break;
             case PASS::IMGUI:
 #ifdef USE_DEBUG_UI
                                                 pPasses_.emplace_back(std::make_unique<RenderPass::ImGui>(              std::ref(*this), static_cast<index>(pPasses_.size())));

@@ -29,6 +29,7 @@ const std::set<PASS> ALL = {
     PASS::SCREEN_SPACE_BLUR_B,
     PASS::DEFERRED,
     PASS::SHADOW,
+    PASS::SKYBOX_NIGHT,
 #ifdef USE_DEBUG_UI
     PASS::IMGUI,
 #endif

@@ -18,8 +18,10 @@ vec4 gammaCorrect(const in vec3 color, const in float opacity);
 
 layout(set=_DS_CBE_DEF, binding=0) uniform samplerCube sampCube;
 // IN
-layout(location=0) in vec3 fragWorldPositionReflecionDir;   // (world space)
-layout(location=1) in vec3 fragRefractDir;                  // (world space)
+layout(location=0) in vec3 inWorldPositionReflecionDir; // (world space)
+layout(location=1) in vec3 inRefractDir;                // (world space)
+layout(location=2) in vec3 inPosition;                  // (camera space)
+layout(location=3) in vec3 inNormal;                    // (camera space)
 // OUT
 layout(location=0) out vec4 outColor;
 
@@ -27,7 +29,7 @@ layout(location=0) out vec4 outColor;
 vec3    Kd;
 
 void main() {
-    vec3 sampCubeColor = texture(sampCube, fragWorldPositionReflecionDir).rgb;
+    vec3 sampCubeColor = texture(sampCube, inWorldPositionReflecionDir).rgb;
     if (isSkybox()) {
         outColor = gammaCorrect(sampCubeColor, getMaterialOpacity());
     } else  {
@@ -35,7 +37,7 @@ void main() {
         if (isReflect())
             baseColor = getMaterialColor();
         if (isRefract())
-            baseColor = texture(sampCube, fragRefractDir).rgb;
+            baseColor = texture(sampCube, inRefractDir).rgb;
 
         /** Things to try if I ever come back to this:
         *       - Fresnel

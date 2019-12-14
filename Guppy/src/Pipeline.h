@@ -119,9 +119,9 @@ class Graphics : public Base {
     void setInfo(CreateInfoResources &createInfoRes, VkGraphicsPipelineCreateInfo *pGraphicsInfo,
                  VkComputePipelineCreateInfo *pComputeInfo) override final;
 
-   protected:
     Graphics(Pipeline::Handler &handler, const Pipeline::CreateInfo *pCreateInfo);
 
+   protected:
     // INFOS
     virtual void getBlendInfoResources(CreateInfoResources &createInfoRes);
     virtual void getDepthInfoResources(CreateInfoResources &createInfoRes);
@@ -140,12 +140,23 @@ namespace Default {
 class TriListColor : public Graphics {
    public:
     TriListColor(Pipeline::Handler &handler) : Graphics(handler, &TRI_LIST_COLOR_CREATE_INFO) {}
+    TriListColor(Pipeline::Handler &handler, const CreateInfo *pCreateInfo) : Graphics(handler, pCreateInfo) {}
 };
 
 // LINE
 class Line : public Graphics {
    public:
     Line(Pipeline::Handler &handler) : Graphics(handler, &LINE_CREATE_INFO) {}
+    Line(Pipeline::Handler &handler, const CreateInfo *pCreateInfo) : Graphics(handler, pCreateInfo) {}
+    // INFOS
+    void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
+};
+
+// POINT
+class Point : public Graphics {
+   public:
+    Point(Pipeline::Handler &handler) : Graphics(handler, &POINT_CREATE_INFO) {}
+    Point(Pipeline::Handler &handler, const CreateInfo *pCreateInfo) : Graphics(handler, pCreateInfo) {}
     // INFOS
     void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes) override;
 };
@@ -154,6 +165,7 @@ class Line : public Graphics {
 class TriListTexture : public Graphics {
    public:
     TriListTexture(Pipeline::Handler &handler) : Graphics(handler, &TRI_LIST_TEX_CREATE_INFO) {}
+    TriListTexture(Pipeline::Handler &handler, const CreateInfo *pCreateInfo) : Graphics(handler, pCreateInfo) {}
 };
 
 // CUBE
@@ -163,6 +175,12 @@ class Cube : public Graphics {
     // INFOS
     void getDepthInfoResources(CreateInfoResources &createInfoRes) override;
 };
+
+// CUBE MAP
+std::unique_ptr<Pipeline::Base> MakeCubeMapColor(Pipeline::Handler &handler);
+std::unique_ptr<Pipeline::Base> MakeCubeMapLine(Pipeline::Handler &handler);
+std::unique_ptr<Pipeline::Base> MakeCubeMapPoint(Pipeline::Handler &handler);
+std::unique_ptr<Pipeline::Base> MakeCubeMapTexture(Pipeline::Handler &handler);
 
 }  // namespace Default
 

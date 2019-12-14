@@ -68,8 +68,13 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
             switch (std::visit(GetGraphics{}, type)) {
                 case GRAPHICS::TRI_LIST_COLOR:                  insertPair = pPipelines_.insert({type, std::make_unique<Default::TriListColor>(std::ref(*this))}); break;
                 case GRAPHICS::LINE:                            insertPair = pPipelines_.insert({type, std::make_unique<Default::Line>(std::ref(*this))}); break;
+                case GRAPHICS::POINT:                           insertPair = pPipelines_.insert({type, std::make_unique<Default::Point>(std::ref(*this))}); break;
                 case GRAPHICS::TRI_LIST_TEX:                    insertPair = pPipelines_.insert({type, std::make_unique<Default::TriListTexture>(std::ref(*this))}); break;
                 case GRAPHICS::CUBE:                            insertPair = pPipelines_.insert({type, std::make_unique<Default::Cube>(std::ref(*this))}); break;
+                case GRAPHICS::CUBE_MAP_COLOR:                  insertPair = pPipelines_.insert({type, Default::MakeCubeMapColor(std::ref(*this))}); break;
+                case GRAPHICS::CUBE_MAP_LINE:                   insertPair = pPipelines_.insert({type, Default::MakeCubeMapLine(std::ref(*this))}); break;
+                case GRAPHICS::CUBE_MAP_PT:                     insertPair = pPipelines_.insert({type, Default::MakeCubeMapPoint(std::ref(*this))}); break;
+                case GRAPHICS::CUBE_MAP_TEX:                    insertPair = pPipelines_.insert({type, Default::MakeCubeMapTexture(std::ref(*this))}); break;
                 case GRAPHICS::PBR_COLOR:                       insertPair = pPipelines_.insert({type, std::make_unique<PBR::Color>(std::ref(*this))}); break;
                 case GRAPHICS::PBR_TEX:                         insertPair = pPipelines_.insert({type, std::make_unique<PBR::Texture>(std::ref(*this))}); break;
                 case GRAPHICS::BP_TEX_CULL_NONE:                insertPair = pPipelines_.insert({type, std::make_unique<BP::TextureCullNone>(std::ref(*this))}); break;
@@ -85,6 +90,7 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
                 case GRAPHICS::DEFERRED_MRT_WF_COLOR:           insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTColorWireframe>(std::ref(*this))}); break;
                 case GRAPHICS::DEFERRED_MRT_PT:                 insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTPoint>(std::ref(*this))}); break;
                 case GRAPHICS::DEFERRED_MRT_LINE:               insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTLine>(std::ref(*this))}); break;
+                case GRAPHICS::DEFERRED_MRT_COLOR_RFL_RFR:      insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTColorReflectRefract>(std::ref(*this))}); break;
                 case GRAPHICS::DEFERRED_COMBINE:                insertPair = pPipelines_.insert({type, std::make_unique<Deferred::Combine>(std::ref(*this))}); break;
                 case GRAPHICS::DEFERRED_SSAO:                   insertPair = pPipelines_.insert({type, std::make_unique<Deferred::SSAO>(std::ref(*this))}); break;
                 case GRAPHICS::SHADOW_COLOR:                    insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Color>(std::ref(*this))}); break;
