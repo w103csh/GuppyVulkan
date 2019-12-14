@@ -166,6 +166,8 @@ enum class PASS : uint32_t {  // TODO: make this a bitmask
     DEFERRED,
     // SHADOW
     SHADOW,
+    //
+    SKYBOX_NIGHT,
     // Used to indicate "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
 };
@@ -206,6 +208,7 @@ enum class STORAGE_BUFFER_DYNAMIC {
 enum class UNIFORM {
     // CAMERA
     CAMERA_PERSPECTIVE_DEFAULT,
+    CAMERA_PERSPECTIVE_CUBE_MAP,
     // LIGHT
     LIGHT_DIRECTIONAL_DEFAULT,
     LIGHT_POSITIONAL_DEFAULT,

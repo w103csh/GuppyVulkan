@@ -26,7 +26,7 @@ struct Info {
     bool doubleSided = false;
     bool faceVertexColorsRGB = false;
     bool reverseFaceWinding = false;
-    bool smoothNormals = true;
+    bool smoothNormals = false;
     glm::mat4 transform{1.0f};
 };
 }  // namespace Geometry

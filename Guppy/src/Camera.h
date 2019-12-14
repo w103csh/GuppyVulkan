@@ -24,6 +24,7 @@ constexpr glm::mat4 VULKAN_CLIP_MAT4 = glm::mat4{1.0f, 0.0f,  0.0f, 0.0f,   //
                                                  0.0f, 0.0f,  0.5f, 1.0f};  //
 
 namespace Perspective {
+
 namespace Default {
 
 struct CreateInfo : public Buffer::CreateInfo {
@@ -114,6 +115,36 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
 };
 
 }  // namespace Default
+
+namespace CubeMap {
+
+constexpr uint32_t LAYERS = 6;
+
+struct CreateInfo : public Buffer::CreateInfo {
+    glm::vec3 position{0.0f, 0.0f, 0.0f};  // (world space)
+    float n = 0.1f;                        // near distance
+    float f = 2000.0f;                     // far distance
+};
+
+struct DATA {
+    std::array<glm::mat4, LAYERS> views;
+    glm::mat4 proj;
+};
+
+class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
+   public:
+    Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo);
+
+   private:
+    void setViews();
+    inline const glm::mat4 &model(const uint32_t index = 0) const override { return model_; }
+
+    float near_;
+    float far_;
+    glm::mat4 model_;
+};
+
+}  // namespace CubeMap
 
 }  // namespace Perspective
 }  // namespace Camera

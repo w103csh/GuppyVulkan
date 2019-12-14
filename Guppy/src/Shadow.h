@@ -23,7 +23,6 @@ const std::string_view MAP_2D_ARRAY_ID = "Shadow 2D Array Map Texture";
 extern const CreateInfo MAP_2D_ARRAY_CREATE_INFO;
 
 const std::string_view MAP_CUBE_ARRAY_ID = "Shadow Map Cube Array Texture";
-CreateInfo MakeCubeMapArrayTex(const uint32_t size, const uint32_t numMaps);
 
 const std::string_view OFFSET_2D_ID = "Shadow Offset 2D Texture";
 CreateInfo MakeOffsetTex();

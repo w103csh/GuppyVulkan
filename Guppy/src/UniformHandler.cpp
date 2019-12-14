@@ -36,6 +36,8 @@ Uniform::Handler::Handler(Game* pGame)
           // CAMERA
           Uniform::Manager<Camera::Perspective::Default::Base>  //
           {"Default Perspective Camera", UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, 9, "_U_CAM_DEF_PERS"},
+          Uniform::Manager<Camera::Perspective::CubeMap::Base>  //
+          {"Default Perspective Cube Map Camera", UNIFORM::CAMERA_PERSPECTIVE_CUBE_MAP, 3, "_U_CAM_PERS_CUBE"},
           // LIGHT
           Uniform::Manager<Light::Default::Directional::Base>  //
           {"Default Directional Light", UNIFORM::LIGHT_DIRECTIONAL_DEFAULT, 3, "_U_LGT_DEF_DIR"},
@@ -81,7 +83,8 @@ std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const
     // clang-format off
     if (std::visit(Descriptor::IsUniform{}, type)) {
         switch (std::visit(Descriptor::GetUniform{}, type)) {
-            case UNIFORM::CAMERA_PERSPECTIVE_DEFAULT:   return camDefPersMgr().pItems;
+            case UNIFORM::CAMERA_PERSPECTIVE_DEFAULT:   return camPersDefMgr().pItems;
+            case UNIFORM::CAMERA_PERSPECTIVE_CUBE_MAP:  return camPersCubeMgr().pItems;
             case UNIFORM::LIGHT_DIRECTIONAL_DEFAULT:    return lgtDefDirMgr().pItems;
             case UNIFORM::LIGHT_POSITIONAL_DEFAULT:     return lgtDefPosMgr().pItems;
             case UNIFORM::LIGHT_POSITIONAL_PBR:         return lgtPbrPosMgr().pItems;
@@ -123,13 +126,14 @@ void Uniform::Handler::init() {
 
     // clang-format off
     uint8_t count = 0;
-    camDefPersMgr().init(shell().context());    ++count;
+    camPersDefMgr().init(shell().context());    ++count;
+    camPersCubeMgr().init(shell().context());   ++count;
     lgtDefDirMgr().init(shell().context());     ++count;
     lgtDefPosMgr().init(shell().context());     ++count;
     lgtPbrPosMgr().init(shell().context());     ++count;
     lgtDefSptMgr().init(shell().context());     ++count;
     lgtShdwPosMgr().init(shell().context());    ++count;
-    lgtShdwCubeMgr().init(shell().context());    ++count;
+    lgtShdwCubeMgr().init(shell().context());   ++count;
     uniDefFogMgr().init(shell().context());     ++count;
     uniDefPrjMgr().init(shell().context());     ++count;
     uniScrDefMgr().init(shell().context());     ++count;
@@ -152,13 +156,14 @@ void Uniform::Handler::reset() {
     const auto& dev = shell().context().dev;
     // clang-format off
     uint8_t count = 0;
-    camDefPersMgr().destroy(dev);   ++count;
+    camPersDefMgr().destroy(dev);   ++count;
+    camPersCubeMgr().destroy(dev);  ++count;
     lgtDefDirMgr().destroy(dev);    ++count;
     lgtDefPosMgr().destroy(dev);    ++count;
     lgtPbrPosMgr().destroy(dev);    ++count;
     lgtDefSptMgr().destroy(dev);    ++count;
     lgtShdwPosMgr().destroy(dev);   ++count;
-    lgtShdwCubeMgr().destroy(dev);   ++count;
+    lgtShdwCubeMgr().destroy(dev);  ++count;
     uniDefFogMgr().destroy(dev);    ++count;
     uniDefPrjMgr().destroy(dev);    ++count;
     uniScrDefMgr().destroy(dev);    ++count;
@@ -280,41 +285,51 @@ void Uniform::Handler::frame() {
 void Uniform::Handler::createCameras() {
     const auto& dev = shell().context().dev;
 
-    Camera::Perspective::Default::CreateInfo createInfo = {};
+    Camera::Perspective::Default::CreateInfo defInfo = {};
 
     assert(shell().context().imageCount == 3);  // Potential imageCount problem
-    createInfo.dataCount = shell().context().imageCount;
+    defInfo.dataCount = shell().context().imageCount;
 
     // 0 (MAIN)
     {
-        createInfo.aspect = static_cast<float>(settings().initial_width) / static_cast<float>(settings().initial_height);
+        defInfo.aspect = static_cast<float>(settings().initial_width) / static_cast<float>(settings().initial_height);
         // createInfo.center = glm::vec3{-0.5f, 2.0f, 1.0f};
-        createInfo.eye = {4.0f, 6.0f, 4.0f};
-        camDefPersMgr().insert(dev, &createInfo);
-        mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
+        defInfo.eye = {4.0f, 6.0f, 4.0f};
+        camPersDefMgr().insert(dev, &defInfo);
+        mainCameraOffset_ = camPersDefMgr().pItems.size() - 1;
     }
 
     // 1 (PROJECTOR)
     {
-        createInfo.eye = {2.0f, -2.0f, 4.0f};
-        camDefPersMgr().insert(dev, &createInfo);
+        defInfo.eye = {2.0f, -2.0f, 4.0f};
+        camPersDefMgr().insert(dev, &defInfo);
         // mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
     }
 
     // 2 (SHADOW)
     {
-        assert(camDefPersMgr().pItems.size() == 2);  // sister assert for lights
+        assert(camPersDefMgr().pItems.size() == 2);  // sister assert for lights
 
-        createInfo.eye = {5.0f, 10.5f, 0.0f};
-        createInfo.center = {-2.0f, 0.0f, 0.0f};
-        createInfo.n = 1.0f;
-        createInfo.f = 21.0f;
+        defInfo.eye = {5.0f, 10.5f, 0.0f};
+        defInfo.center = {-2.0f, 0.0f, 0.0f};
+        defInfo.n = 1.0f;
+        defInfo.f = 21.0f;
         // createInfo.fov = 180.0f;
-        camDefPersMgr().insert(dev, &createInfo);
+        camPersDefMgr().insert(dev, &defInfo);
         // mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
     }
 
-    assert(mainCameraOffset_ < camDefPersMgr().pItems.size());
+    assert(mainCameraOffset_ < camPersDefMgr().pItems.size());
+
+    // CUBE MAP
+    {
+        Camera::Perspective::CubeMap::CreateInfo cubeInfo = {};
+        assert(shell().context().imageCount == 3);  // Potential imageCount problem
+        cubeInfo.dataCount = shell().context().imageCount;
+
+        // 0
+        camPersCubeMgr().insert(dev, &cubeInfo);
+    }
 }
 
 void Uniform::Handler::createLights() {
@@ -339,7 +354,7 @@ void Uniform::Handler::createLights() {
         // necessary there should be one set of positional lights, and multiple data buffers
         // for the one set...)
         // lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), glm::vec3(20.5f, 10.5f, -23.5f));
-        lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), camDefPersMgr().getTypedItem(2).getWorldSpacePosition());
+        lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), camPersDefMgr().getTypedItem(2).getWorldSpacePosition());
         lgtDefPosMgr().insert(dev, &lightCreateInfo);
         lgtPbrPosMgr().insert(dev, &lightCreateInfo);
         lightCreateInfo.model = helpers::affine(glm::vec3(1.0f), {-2.5f, 4.5f, -1.5f});
@@ -381,7 +396,7 @@ void Uniform::Handler::createLights() {
             uint32_t shadowCamIndex = 2;
             assert(shadowCamIndex == 2);  // sister assert for camera
 
-            auto& camera = camDefPersMgr().getTypedItem(shadowCamIndex);
+            auto& camera = camPersDefMgr().getTypedItem(shadowCamIndex);
 
             Light::Shadow::Positional::CreateInfo lightShadowCreateInfo = {};
             lightShadowCreateInfo.dataCount = shell().context().imageCount;
@@ -400,8 +415,8 @@ void Uniform::Handler::createLights() {
             cubeInfo.n = 0.1f;
             cubeInfo.f = 20.0f;
 
-            // cubeInfo.position = {-0.0f, 0.5f, -2.0f};
-            // lgtShdwCubeMgr().insert(dev, &cubeInfo);
+            cubeInfo.position = {-0.0f, 0.5f, -2.0f};
+            lgtShdwCubeMgr().insert(dev, &cubeInfo);
 
             cubeInfo.position = {-4.0f, 3.5f, 5.0f};
             lgtShdwCubeMgr().insert(dev, &cubeInfo);
@@ -411,8 +426,8 @@ void Uniform::Handler::createLights() {
             // cubeInfo.position = {3.3f, -4.5f, -3.3f};
             // lgtShdwCubeMgr().insert(dev, &cubeInfo);
 
-            auto shdwCubMapInfo =
-                Texture::Shadow::MakeCubeMapArrayTex(512, static_cast<uint32_t>(lgtShdwCubeMgr().pItems.size()));
+            auto shdwCubMapInfo = Texture::MakeCubeMapTex(Texture::Shadow::MAP_CUBE_ARRAY_ID, SAMPLER::CLAMP_TO_BORDER_DEPTH,
+                                                          512, static_cast<uint32_t>(lgtShdwCubeMgr().pItems.size()));
             textureHandler().make(&shdwCubMapInfo);
         }
     }

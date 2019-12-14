@@ -63,7 +63,7 @@ void Scene::Handler::init() {
         Obj3d::BoundingBoxMinMax groundPlane_bbmm;
 
         // ORIGIN AXES
-        if (!suppress || false) {
+        if (!suppress || true) {
             axesInfo = {};
             axesInfo.pipelineType = GRAPHICS::DEFERRED_MRT_LINE;
             axesInfo.lineSize = 500.f;
@@ -85,7 +85,7 @@ void Scene::Handler::init() {
             instObj3dInfo.data.push_back(
                 {helpers::affine(glm::vec3{2000.0f}, {0.0f, -4.0f, 0.0f}, -M_PI_2_FLT, CARDINAL_X)});
             defMatInfo = {};
-            defMatInfo.shininess = Material::SHININESS::MILDLY_SHINY;
+            defMatInfo.shininess = Material::SHININESS_MILDLY_SHINY;
             // defMatInfo.color = {0.0f, 1.0f, 0.0f};
             defMatInfo.color = {0.8f, 0.8f, 0.85f};
             // defMatInfo.color = {194.0f / 255.0f, 207.0f / 255.0f, 134.0f / 255.0f};
@@ -107,7 +107,7 @@ void Scene::Handler::init() {
             defMatInfo.pTexture = textureHandler().getTexture(Texture::HARDWOOD_ID);
             defMatInfo.repeat = 800.0f;
             defMatInfo.specularCoeff *= 0.5f;
-            defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+            defMatInfo.shininess = Material::SHININESS_EGGSHELL;
             auto& pGroundPlane =
                 meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&planeInfo, &defMatInfo, &instObj3dInfo);
             auto offset = pGroundPlane->getOffset();
@@ -124,7 +124,7 @@ void Scene::Handler::init() {
             instObj3dInfo = {};
             instObj3dInfo.data.push_back({helpers::affine(glm::vec3(20.0f), glm::vec3(-0.0f, 0.5f, -2.0f))});
             defMatInfo = {};
-            defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+            defMatInfo.shininess = Material::SHININESS_EGGSHELL;
             defMatInfo.color = {0.8f, 0.8f, 0.85f};
             auto& pGroundPlane = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &instObj3dInfo);
             auto offset = pGroundPlane->getOffset();
@@ -132,7 +132,7 @@ void Scene::Handler::init() {
         }
 
         // SHADOW LIGHT INDICATORS
-        if (!suppress || false) {
+        if (!suppress || true) {
             axesInfo = {};
             axesInfo.pipelineType = GRAPHICS::DEFERRED_MRT_LINE;
             axesInfo.lineSize = 1.0f;
@@ -152,7 +152,8 @@ void Scene::Handler::init() {
         // STARS
         if (!suppress || true) {
             meshInfo = {};
-            meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_PT;
+            // meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_PT;
+            meshInfo.pipelineType = GRAPHICS::CUBE_MAP_PT;
             instObj3dInfo = {};
             instObj3dInfo.data.push_back({helpers::affine(glm::vec3(1000.0f))});
             defMatInfo = {};
@@ -165,13 +166,14 @@ void Scene::Handler::init() {
         // MOON
         if (!suppress || true) {
             planeInfo = {};
-            planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
+            // planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
+            planeInfo.pipelineType = GRAPHICS::CUBE_MAP_TEX;
             planeInfo.planeInfo.width = 150.0f;
             planeInfo.planeInfo.height = 150.0f;
 
             instObj3dInfo = {};
             instObj3dInfo.data.push_back({helpers::moveAndRotateTo(
-                uniformHandler().lgtDefDirMgr().getTypedItem(0).direction * 1000.0f, glm::vec3(), UP_VECTOR)});
+                uniformHandler().lgtDefDirMgr().getTypedItem(0).direction * 1000.0f, {}, UP_VECTOR)});
 
             defMatInfo = {};
             defMatInfo.flags |= Material::FLAG::MODE_FLAT_SHADE;
@@ -179,6 +181,13 @@ void Scene::Handler::init() {
             pScene->moonOffset =
                 meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&planeInfo, &defMatInfo, &instObj3dInfo)->getOffset();
             pScene->addMeshIndex(MESH::TEXTURE, pScene->moonOffset);
+
+            meshHandler().getTextureMesh(pScene->moonOffset)->getFaceCount();
+
+            planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
+            auto offset =
+                meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&planeInfo, &defMatInfo, &instObj3dInfo)->getOffset();
+            pScene->addMeshIndex(MESH::TEXTURE, offset);
         }
 
         // PLAIN OLD NON-TRANSFORMED PLANE (TEXTURE)
@@ -311,23 +320,34 @@ void Scene::Handler::init() {
         }
 
         // BOX
-        if (!suppress || false) {
-            if (true) {
+        if (!suppress || true) {
+            if (false) {
                 meshInfo = {};
                 meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
                 instObj3dInfo = {};
-                bool shadowTest = false;
+                bool shadowTest = true;
+                // float factorScale = 150.0f, factorTranslate = 100.0f;
+                float factorScale = 1.0f, factorTranslate = 1.0f;
                 if (shadowTest) {
-                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{-2.0f, 0.0f, 1.5f})});
-                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.5f}, glm::vec3{-2.0f, 0.0f, -2.5f})});
-                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{0.6f}, glm::vec3{0.0f, 2.0f, 0.0f})});
-                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.6f}, glm::vec3{0.0f, 3.0f, -3.5f})});
+                    instObj3dInfo.data.push_back(
+                        {helpers::affine(factorScale * glm::vec3{1.0f}, factorTranslate * glm::vec3{-2.0f, 0.0f, 1.5f})});
+                    instObj3dInfo.data.push_back(
+                        {helpers::affine(factorScale * glm::vec3{1.5f}, factorTranslate * glm::vec3{-2.0f, 0.0f, -2.5f})});
+                    instObj3dInfo.data.push_back(
+                        {helpers::affine(factorScale * glm::vec3{0.6f}, factorTranslate * glm::vec3{0.0f, 2.0f, 0.0f})});
+                    instObj3dInfo.data.push_back(
+                        {helpers::affine(factorScale * glm::vec3{1.6f}, factorTranslate * glm::vec3{0.0f, 3.0f, -3.5f})});
 
-                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{0.3f}, glm::vec3{5.0f, 5.0f, 0.0f})});
-                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{2.0f}, glm::vec3{7.0f, -1.0f, -0.4f})});
-                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.6f}, glm::vec3{1.0f, -4.0f, 6.5f})});
-                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{0.4f}, glm::vec3{3.0f, -5.0f, -4.5f})});
-                    instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.2f}, glm::vec3{-3.0f, 5.0f, -1.5f})});
+                    instObj3dInfo.data.push_back(
+                        {helpers::affine(factorScale * glm::vec3{0.3f}, factorTranslate * glm::vec3{5.0f, 5.0f, 0.0f})});
+                    instObj3dInfo.data.push_back(
+                        {helpers::affine(factorScale * glm::vec3{2.0f}, factorTranslate * glm::vec3{7.0f, -1.0f, -0.4f})});
+                    instObj3dInfo.data.push_back(
+                        {helpers::affine(factorScale * glm::vec3{1.6f}, factorTranslate * glm::vec3{1.0f, -4.0f, 6.5f})});
+                    instObj3dInfo.data.push_back(
+                        {helpers::affine(factorScale * glm::vec3{0.4f}, factorTranslate * glm::vec3{3.0f, -5.0f, -4.5f})});
+                    instObj3dInfo.data.push_back(
+                        {helpers::affine(factorScale * glm::vec3{1.2f}, factorTranslate * glm::vec3{-3.0f, 5.0f, -1.5f})});
                 } else {
                     instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, 0.0f}, M_PI_2_FLT,
                                                                   glm::vec3{1.0f, 0.0f, 1.0f})});
@@ -338,10 +358,12 @@ void Scene::Handler::init() {
                 auto& boxColor = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &instObj3dInfo);
                 auto offset = boxColor->getOffset();
                 pScene->addMeshIndex(MESH::COLOR, offset);
-                if (!shadowTest) boxColor->putOnTop(groundPlane_bbmm);
-                meshHandler().updateMesh(boxColor);
+                if (!shadowTest) {
+                    boxColor->putOnTop(groundPlane_bbmm);
+                    meshHandler().updateMesh(boxColor);
+                }
             }
-            if (true && ctx.geometryShadingEnabled) {
+            if (false && ctx.geometryShadingEnabled) {
                 meshInfo = {};
                 meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_WF_COLOR;
                 instObj3dInfo = {};
@@ -356,21 +378,52 @@ void Scene::Handler::init() {
                 boxColor->putOnTop(groundPlane_bbmm);
                 meshHandler().updateMesh(boxColor);
             }
+            // SKYBOX NIGHT
             if (true) {
                 meshInfo = {};
-                meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
+                // meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
+                meshInfo.pipelineType = GRAPHICS::CUBE_MAP_TEX;
+                meshInfo.settings.geometryInfo.doubleSided = true;
                 instObj3dInfo = {};
-                instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{-3.5f, 0.0f, 0.5f}, M_PI_2_FLT,
-                                                              glm::vec3{1.0f, 0.0f, 1.0f})});
+                // instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{-3.5f, 0.0f, 0.5f}, M_PI_2_FLT,
+                //                                              glm::vec3{1.0f, 0.0f, 1.0f})});
+                instObj3dInfo.data.push_back({helpers::affine(glm::vec3{900.0f})});
                 defMatInfo = {};
-                defMatInfo.flags = Material::FLAG::PER_TEXTURE_COLOR;
-                defMatInfo.pTexture = textureHandler().getTexture(Texture::VULKAN_ID);
-                defMatInfo.color = {0.0f, 1.0f, 1.0f};
+                defMatInfo.flags = Material::FLAG::PER_TEXTURE_COLOR | Material::FLAG::MODE_FLAT_SHADE;
+                defMatInfo.pTexture = textureHandler().getTexture(Texture::STATUE_ID);
                 auto& boxColor = meshHandler().makeTextureMesh<Mesh::Box::Texture>(&meshInfo, &defMatInfo, &instObj3dInfo);
                 auto offset = boxColor->getOffset();
+                pScene->moonOffset = offset;
                 pScene->addMeshIndex(MESH::TEXTURE, offset);
-                boxColor->putOnTop(groundPlane_bbmm);
-                meshHandler().updateMesh(boxColor);
+
+                meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
+                offset =
+                    meshHandler().makeTextureMesh<Mesh::Box::Texture>(&meshInfo, &defMatInfo, &instObj3dInfo)->getOffset();
+                pScene->addMeshIndex(MESH::TEXTURE, offset);
+                // boxColor->putOnTop(groundPlane_bbmm);
+                // meshHandler().updateMesh(boxColor);
+            }
+            // (CUBE)
+            if (true) {
+                meshInfo = {};
+                meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR_RFL_RFR;
+
+                instObj3dInfo = {};
+                // instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 7.0f, 0.0f}, M_PI_2_FLT,
+                //                                              glm::vec3{1.0f, 0.0f, 1.0f})});
+                instObj3dInfo.data.push_back({helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 1.0f, -1.0f})});
+
+                defMatInfo = {};
+                // defMatInfo.color = {0x2E / 255.0f, 0x40 / 255.0f, 0x53 / 255.0f};
+                defMatInfo.color = COLOR_RED;
+                defMatInfo.reflectionFactor = 0.85f;
+                defMatInfo.flags |= Material::FLAG::REFLECT | Material::FLAG::REFRACT;
+                defMatInfo.pTexture = textureHandler().getTexture(Texture::SKYBOX_NIGHT_ID);
+                defMatInfo.flags |= Material::FLAG::MODE_FLAT_SHADE;
+
+                auto offset =
+                    meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &instObj3dInfo)->getOffset();
+                pScene->addMeshIndex(MESH::COLOR, offset);
             }
         }
 
@@ -486,7 +539,7 @@ void Scene::Handler::init() {
             defMatInfo.pTexture = textureHandler().getTexture(Texture::HARDWOOD_ID);
             defMatInfo.repeat = 800.0f;
             defMatInfo.specularCoeff *= 0.5f;
-            defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+            defMatInfo.shininess = Material::SHININESS_EGGSHELL;
             auto& pGroundPlane =
                 meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&planeInfo, &defMatInfo, &instObj3dInfo);
             auto offset = pGroundPlane->getOffset();
@@ -502,7 +555,7 @@ void Scene::Handler::init() {
             instObj3dInfo = {};
             instObj3dInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
             defMatInfo = {};
-            defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+            defMatInfo.shininess = Material::SHININESS_EGGSHELL;
             defMatInfo.color = {0.5f, 0.5f, 0.5f};
             auto& pGroundPlane = meshHandler().makeColorMesh<Mesh::Plane::Color>(&planeInfo, &defMatInfo, &instObj3dInfo);
             auto offset = pGroundPlane->getOffset();
@@ -539,7 +592,7 @@ void Scene::Handler::init() {
                 // defInstInfo.data.push_back(
                 //    {helpers::affine(glm::vec3{2.0f}, glm::vec3{4.5f, -5.0f, 13.5f}, -M_PI_2_FLT, CARDINAL_Z)});
                 defMatInfo = {};
-                defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+                defMatInfo.shininess = Material::SHININESS_EGGSHELL;
                 defMatInfo.pTexture = textureHandler().getTexture(RenderPass::PROJECT_2D_ARRAY_TEXTURE_ID);
                 defMatInfo.color = {0.5f, 0.5f, 0.5f};
                 auto offset = meshHandler()
@@ -585,7 +638,7 @@ void Scene::Handler::init() {
                 {helpers::affine(glm::vec3{1.0f}, glm::vec3{0.0f, 0.0f, -3.5f}, M_PI_2_FLT, glm::vec3{1.0f, 0.0f, 1.0f})});
             defMatInfo = {};
             defMatInfo.pTexture = textureHandler().getTexture(Texture::MYBRICK_ID);
-            defMatInfo.shininess = Material::SHININESS::EGGSHELL;
+            defMatInfo.shininess = Material::SHININESS_EGGSHELL;
             auto& boxTexture1 = meshHandler().makeTextureMesh<Mesh::Box::Texture>(&meshInfo, &defMatInfo, &instObj3dInfo);
             auto offset = boxTexture1->getOffset();
             pScene->addMeshIndex(MESH::TEXTURE, offset);

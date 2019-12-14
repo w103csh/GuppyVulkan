@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <array>
+#include <glm/gtc/epsilon.hpp>
 #include <unordered_map>
 
 #include "Helpers.h"
@@ -100,9 +101,18 @@ class Face {
                     //    vertices_[i].tangent = r * glm::vec4(vertices_[i].tangent, 0.0f);
                     //}
 
-                    vertex.normal += vertices_[i].normal;
-                    vertex.tangent += vertices_[i].tangent;
-                    vertex.binormal += vertices_[i].binormal;
+                    if (std::is_same<TMap, unique_vertices_map_non_smoothing>::value) {
+                        assert(glm::all(glm::epsilonEqual(vertex.normal, vertices_[i].normal, glm::epsilon<float>())));
+                        // assert(glm::all(glm::epsilonEqual(vertex.tangent, vertices_[i].tangent,
+                        // glm::vec3(glm::epsilon<float>())))); assert(glm::all(glm::epsilonEqual(vertex.binormal,
+                        // vertices_[i].binormal, glm::vec3(glm::epsilon<float>()))));
+                    } else if (std::is_same<TMap, unique_vertices_map_smoothing>::value) {
+                        vertex.normal += vertices_[i].normal;
+                        vertex.tangent += vertices_[i].tangent;
+                        vertex.binormal += vertices_[i].binormal;
+                    } else {
+                        assert(false && "Unhandled case");
+                    }
 
                     // If the vertex already exists in the current mesh then use the existing index.
                     if (mOffset == meshOffset &&

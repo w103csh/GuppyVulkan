@@ -45,6 +45,7 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::SAMPLER_DEFAULT:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT:                      pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::CUBE_SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::PROJECTOR_DEFAULT:                         pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::PROJECTOR_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::CAMERA_CUBE_MAP:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Default::CAM_CUBE_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_PBR:                               pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::PBR::UNIFORM_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_PARALLAX:                          pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Parallax::UNIFORM_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_PARALLAX:                          pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Parallax::SAMPLER_CREATE_INFO)); break;

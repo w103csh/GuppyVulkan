@@ -391,19 +391,30 @@ const CreateInfo MRT_COLOR_FRAG_CREATE_INFO = {
     },
 };
 
-const CreateInfo SSAO_FRAG_CREATE_INFO = {
-    SHADER::DEFERRED_MRT_COLOR_FRAG,
-    "Deferred SSAO Fragment Shader",
-    "frag.deferred.ssao.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
-};
-
 const CreateInfo MTR_POINT_FRAG_CREATE_INFO = {
     SHADER::DEFERRED_MRT_POINT_FRAG,  //
     "Deferred Multiple Render Target Point Fragment Shader",
     "frag.point.deferred.mrt.glsl",
     VK_SHADER_STAGE_FRAGMENT_BIT,
     {SHADER_LINK::DEFAULT_MATERIAL},
+};
+
+const CreateInfo MTR_COLOR_REF_REF_FRAG_CREATE_INFO = {
+    SHADER::DEFERRED_MRT_COLOR_RFL_RFR_FRAG,
+    "Deferred Multiple Render Target Cube Fragment Shader",
+    "frag.reflect.refract.deferred.mrt.glsl",
+    VK_SHADER_STAGE_FRAGMENT_BIT,
+    {
+        SHADER_LINK::DEFAULT_MATERIAL,
+        SHADER_LINK::UTILITY_FRAG,
+    },
+};
+
+const CreateInfo SSAO_FRAG_CREATE_INFO = {
+    SHADER::DEFERRED_MRT_COLOR_FRAG,
+    "Deferred SSAO Fragment Shader",
+    "frag.deferred.ssao.glsl",
+    VK_SHADER_STAGE_FRAGMENT_BIT,
 };
 
 }  // namespace Deferred
@@ -583,6 +594,25 @@ void MRTLine::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 void MRTLine::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     GetDefaultColorInputAssemblyInfoResources(createInfoRes);
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+}
+
+// MRT (CUBE)
+const Pipeline::CreateInfo MRT_COLOR_RFL_RFR_CREATE_INFO = {
+    GRAPHICS::DEFERRED_MRT_COLOR_RFL_RFR,
+    "Deferred Multiple Render Target Color Reflect Refract Pipeline",
+    {SHADER::COLOR_VERT, SHADER::DEFERRED_MRT_COLOR_RFL_RFR_FRAG},
+    {
+        DESCRIPTOR_SET::UNIFORM_DEFAULT,
+        DESCRIPTOR_SET::SAMPLER_DEFAULT,
+    },
+    {},
+    {PUSH_CONSTANT::DEFERRED},
+};
+MRTColorReflectRefract::MRTColorReflectRefract(Pipeline::Handler& handler)
+    : Graphics(handler, &MRT_COLOR_RFL_RFR_CREATE_INFO) {}
+
+void MRTColorReflectRefract::getBlendInfoResources(CreateInfoResources& createInfoRes) {
+    GetBlendInfoResources(createInfoRes);  //
 }
 
 // SSAO

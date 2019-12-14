@@ -108,6 +108,7 @@ extern const CreateInfo MRT_COLOR_CS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_PT_CS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_COLOR_FRAG_CREATE_INFO;
 extern const CreateInfo MTR_POINT_FRAG_CREATE_INFO;
+extern const CreateInfo MTR_COLOR_REF_REF_FRAG_CREATE_INFO;
 extern const CreateInfo SSAO_FRAG_CREATE_INFO;
 
 }  // namespace Deferred
@@ -124,6 +125,8 @@ void GetBlendInfoResources(CreateInfoResources& createInfoRes, bool blend = fals
 class MRTTexture : public Graphics {
    public:
     MRTTexture(Handler& handler);
+
+   private:
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
 
     // protected:
@@ -141,16 +144,20 @@ class MRTTexture : public Graphics {
 class MRTColor : public Graphics {
    public:
     MRTColor(Handler& handler);
-    void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
 
    protected:
     MRTColor(Handler& handler, const CreateInfo* pCreateInfo);
+
+   private:
+    void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
 // MRT (COLOR WIREFRAME)
 class MRTColorWireframe : public MRTColor {
    public:
     MRTColorWireframe(Handler& handler);
+
+   private:
     void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
@@ -158,6 +165,8 @@ class MRTColorWireframe : public MRTColor {
 class MRTPoint : public Graphics {
    public:
     MRTPoint(Handler& handler);
+
+   private:
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
 };
@@ -166,8 +175,19 @@ class MRTPoint : public Graphics {
 class MRTLine : public Graphics {
    public:
     MRTLine(Handler& handler);
+
+   private:
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
+};
+
+// MRT (COLOR REFLECT REFRACT)
+class MRTColorReflectRefract : public Graphics {
+   public:
+    MRTColorReflectRefract(Handler& handler);
+
+   private:
+    void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
 // SSAO
@@ -180,6 +200,8 @@ class SSAO : public Graphics {
 class Combine : public Graphics {
    public:
     Combine(Handler& handler);
+
+   private:
     void init() override;
     void getShaderStageInfoResources(CreateInfoResources& createInfoRes) override;
 

@@ -31,6 +31,7 @@ void Texture::Handler::init() {
 
     auto ssaoRandTexCreateInfo = Deferred::MakeSSAORandRotationTex();
     auto shadowOffsetTexCreateInfo = Shadow::MakeOffsetTex();
+    auto skyboxNightTexCreateInfo = Texture::MakeCubeMapTex(Texture::SKYBOX_NIGHT_ID, SAMPLER::DEFAULT_NEAREST, 1024);
 
     // Transition storage images. I can't think of a better time to do this. Its
     // not great but oh well.
@@ -72,6 +73,7 @@ void Texture::Handler::init() {
         &ssaoRandTexCreateInfo,
         &Texture::Shadow::MAP_2D_ARRAY_CREATE_INFO,
         &shadowOffsetTexCreateInfo,
+        &skyboxNightTexCreateInfo,
     };
 
     // I think this does not get set properly, so I am not sure where the texture generation

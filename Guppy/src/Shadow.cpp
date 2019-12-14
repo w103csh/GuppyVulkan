@@ -52,23 +52,6 @@ const CreateInfo MAP_2D_ARRAY_CREATE_INFO = {
     COMBINED_SAMPLER::PIPELINE_DEPTH,
 };
 
-CreateInfo MakeCubeMapArrayTex(const uint32_t size, const uint32_t numMaps) {
-    const Sampler::LayerInfo layerInfo = {::Sampler::USAGE::DEPTH};
-    Sampler::CreateInfo sampInfo = {
-        "Shadow Map Cube Array Sampler",
-        {{}, true, true},
-        VK_IMAGE_VIEW_TYPE_CUBE_ARRAY,
-        {size, size, 1},
-        {},
-        VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
-        SAMPLER::CLAMP_TO_BORDER_DEPTH,
-        // SAMPLER::CLAMP_TO_BORDER_DEPTH_PCF,
-        (VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
-    };
-    sampInfo.layersInfo.infos.assign(static_cast<size_t>(numMaps) * 6, layerInfo);
-    return {std::string(MAP_CUBE_ARRAY_ID), {sampInfo}, false, false, COMBINED_SAMPLER::PIPELINE_DEPTH};
-}
-
 CreateInfo MakeOffsetTex() {
     uint32_t samples = SAMPLES_U * SAMPLES_V;
     uint32_t bufSize = OFFSET_WIDTH * OFFSET_HEIGHT * samples * 2;

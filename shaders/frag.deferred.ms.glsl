@@ -285,7 +285,7 @@ void main() {
     }
 
     vec3 color;
-    if (true) {
+    if (false) {
         color = globalDirectionalLight(
             norm.xyz,
             v,

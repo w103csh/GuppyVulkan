@@ -6,6 +6,7 @@
 #version 450
 
 // DECLARATIONS
+bool isModeFlatShade();
 vec3 blinnPhongShade();
 vec3 setTextureDefaults();
 vec3 texCoordShade();
@@ -32,8 +33,11 @@ vec3 transform(vec3 v) { return TBN * v; }
 
 void main() {
     setTextureDefaults();
-
-    if (TEX_COORD_SHADE) {
+    
+    if (isModeFlatShade()) {
+        outColor = vec4(Kd, opacity);
+        // outColor = vec4(fragNormal, 1.0);
+    } else if (TEX_COORD_SHADE) {
         outColor = gammaCorrect(texCoordShade(), 1.0);
     } else {
         // return;

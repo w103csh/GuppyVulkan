@@ -26,8 +26,13 @@ enum class GRAPHICS : uint32_t {
     // DEFAULT
     TRI_LIST_COLOR = 0,
     LINE,
+    POINT,
     TRI_LIST_TEX,
     CUBE,
+    CUBE_MAP_COLOR,
+    CUBE_MAP_LINE,
+    CUBE_MAP_PT,
+    CUBE_MAP_TEX,
     // PBR
     PBR_COLOR,
     PBR_TEX,
@@ -48,6 +53,7 @@ enum class GRAPHICS : uint32_t {
     DEFERRED_MRT_WF_COLOR,
     DEFERRED_MRT_PT,
     DEFERRED_MRT_LINE,
+    DEFERRED_MRT_COLOR_RFL_RFR,
     DEFERRED_SSAO,
     DEFERRED_COMBINE,
     // SHADOW
@@ -159,6 +165,7 @@ struct PushConstant {
 };
 extern const Pipeline::CreateInfo TRI_LIST_COLOR_CREATE_INFO;
 extern const Pipeline::CreateInfo LINE_CREATE_INFO;
+extern const Pipeline::CreateInfo POINT_CREATE_INFO;
 extern const Pipeline::CreateInfo TRI_LIST_TEX_CREATE_INFO;
 extern const Pipeline::CreateInfo CUBE_CREATE_INFO;
 }  // namespace Default

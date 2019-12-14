@@ -18,12 +18,6 @@
 namespace Material {
 
 // clang-format off
-enum SHININESS {
-    EGGSHELL =      10,
-    MILDLY_SHINY =  100,
-    GLOSSY =        1000,
-    MIRROR_LIKE =   10000,
-};
 using FLAG = enum : FlagBits {
     PER_MATERIAL_COLOR =        0x00000001,
     PER_VERTEX_COLOR =          0x00000002,
@@ -47,6 +41,19 @@ using FLAG = enum : FlagBits {
     BITS_MAX_ENUM =             0x7FFFFFFF
 };
 // clang-format on
+
+// Values for shininess
+constexpr float SHININESS_EGGSHELL = 10.0f;
+constexpr float SHININESS_MILDLY_SHINY = 100.0f;
+constexpr float SHININESS_GLOSSY = 1000.0f;
+constexpr float SHININESS_MIRROR_LIKE = 10000.0f;
+
+// Values for index of refraction
+constexpr float REFRACT_ETA_AIR = 1.0003f;
+constexpr float REFRACT_ETA_WATER = 1.333f;
+constexpr float REFRACT_ETA_CROWN_GLASS = 1.517f;
+constexpr float REFRACT_ETA_DENSE_FLINT_GLASS = 1.655f;
+constexpr float REFRACT_ETA_DIAMOND = 2.417f;
 
 struct CreateInfo : public Buffer::CreateInfo {
     std::shared_ptr<Texture::Base> pTexture = nullptr;
@@ -106,7 +113,7 @@ namespace Default {
 
 struct DATA : public Material::DATA {
     glm::vec3 Ka{0.1f};
-    float shininess = SHININESS::MILDLY_SHINY;
+    float shininess = SHININESS_MILDLY_SHINY;
     // 16
     glm::vec3 Ks{0.9f};
     float eta = 0.94f;
@@ -117,8 +124,8 @@ struct DATA : public Material::DATA {
 struct CreateInfo : public Material::CreateInfo {
     glm::vec3 ambientCoeff{0.1f};
     glm::vec3 specularCoeff{0.9f};
-    float shininess = SHININESS::MILDLY_SHINY;
-    float eta = 0.94f;
+    float shininess = SHININESS_MILDLY_SHINY;
+    float eta = REFRACT_ETA_CROWN_GLASS;
     float reflectionFactor = 0.85f;
 };
 
