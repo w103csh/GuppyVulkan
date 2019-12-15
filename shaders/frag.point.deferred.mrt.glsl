@@ -7,11 +7,9 @@
 
 // DECLARATIONS
 vec3  getMaterialColor();
-bool isModeFlatShade();
 
 // IN
-layout(location=0) in vec3 inPosition;        // (camera space)
-layout(location=1) in flat uint inFlags;
+layout(location=0) in vec3 inPosition;          // (world space)
 // OUT
 layout(location=0) out vec4 outPosition;
 layout(location=1) out vec4 outNormal;
@@ -26,5 +24,5 @@ void main() {
     outNormal = vec4(0);
     outAmbient = vec4(0);
     outSpecular = vec4(0);
-    outFlags = inFlags | (isModeFlatShade() ? 0x1u : 0x0u);
+    outFlags = 0x01u;
 }

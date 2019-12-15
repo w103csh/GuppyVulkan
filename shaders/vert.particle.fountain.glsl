@@ -44,14 +44,12 @@ const vec3 offsets[] = vec3[](vec3(-0.5, -0.5, 0), vec3(0.5, -0.5, 0), vec3( 0.5
 const vec2 texCoords[] = vec2[](vec2(0, 0), vec2(1, 0), vec2(1, 1), vec2(0, 0), vec2(1, 1), vec2(0, 1));
 
 void main() {
-    mat4 mViewModel = camera.view * uniMat4.model;
-
     float t = getDelta() - inTimeOfBirth;
     if (t >= 0 && t < getLifespan()) {
         vec3 pos = getEmitterPosition() +
             (inVelocity * t) +
             (getAcceleration() * t * t);
-        outPosition = (mViewModel * vec4(pos, 1.0)).xyz +
+        outPosition = (camera.view * uniMat4.model * vec4(pos, 1.0)).xyz +
             (offsets[gl_VertexIndex] * getMinParticleSize());
         outTransparency = mix(1.0, 0.0, t / getLifespan());
     } else {
@@ -62,7 +60,7 @@ void main() {
 
     outNormal = vec3(0.0, 0.0, 1.0);
     outTexCoord = texCoords[gl_VertexIndex];
-    outFlags = 0x0u;
+    outFlags = 0x02u;
 
     gl_Position = camera.projection * vec4(outPosition, 1.0);
 }

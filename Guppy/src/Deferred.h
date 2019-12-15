@@ -105,7 +105,6 @@ extern const CreateInfo MRT_TEX_WS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_TEX_CS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_TEX_FRAG_CREATE_INFO;
 extern const CreateInfo MRT_COLOR_CS_VERT_CREATE_INFO;
-extern const CreateInfo MRT_PT_CS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_COLOR_FRAG_CREATE_INFO;
 extern const CreateInfo MTR_POINT_FRAG_CREATE_INFO;
 extern const CreateInfo MTR_COLOR_REF_REF_FRAG_CREATE_INFO;

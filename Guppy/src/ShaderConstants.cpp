@@ -98,44 +98,65 @@ const CreateInfo POINT_VERT_CREATE_INFO = {
     VK_SHADER_STAGE_VERTEX_BIT,
 };
 
-const CreateInfo CUBE_MAP_COLOR_VERT_CREATE_INFO = {
-    SHADER::CUBE_MAP_COLOR_GEOM,
-    "Cube Map Color Vertex Shader",
-    "color.cube.vert",
+const CreateInfo VERT_COLOR_CREATE_INFO = {
+    SHADER::VERT_COLOR,
+    "Vertex Color Shader",
+    "vert.color.glsl",
     VK_SHADER_STAGE_VERTEX_BIT,
 };
 
-const CreateInfo CUBE_MAP_PT_VERT_CREATE_INFO = {
-    SHADER::CUBE_MAP_PT_VERT,
-    "Cube Map Point Vertex Shader",
-    "point.cube.vert",
+const CreateInfo VERT_PT_CREATE_INFO = {
+    SHADER::VERT_POINT,
+    "Vertex Point Shader",
+    "vert.point.glsl",
     VK_SHADER_STAGE_VERTEX_BIT,
 };
 
-const CreateInfo CUBE_MAP_TEX_VERT_CREATE_INFO = {
-    SHADER::CUBE_MAP_TEX_VERT,
-    "Cube Map Texture Vertex Shader",
-    "texture.cube.vert",
+const CreateInfo VERT_TEX_CREATE_INFO = {
+    SHADER::VERT_TEX,
+    "Vertex Texture Shader",
+    "vert.texture.glsl",
     VK_SHADER_STAGE_VERTEX_BIT,
 };
 
-const CreateInfo COLOR_GEOM_CREATE_INFO = {
-    SHADER::CUBE_MAP_COLOR_GEOM,
-    "Cube Map Color Geometry Shader",
+const CreateInfo VERT_COLOR_CUBE_MAP_CREATE_INFO = {
+    SHADER::VERT_COLOR_CUBE_MAP,
+    "Vertex Color Cube Map Shader",
+    "vert.color.cube.glsl",
+    VK_SHADER_STAGE_VERTEX_BIT,
+};
+
+const CreateInfo VERT_PT_CUBE_MAP_CREATE_INFO = {
+    SHADER::VERT_PT_CUBE_MAP,
+    "Vertex Point Cube Map Shader",
+    "vert.point.cube.glsl",
+    VK_SHADER_STAGE_VERTEX_BIT,
+};
+
+const CreateInfo VERT_TEX_CUBE_MAP_CREATE_INFO = {
+    SHADER::VERT_TEX_CUBE_MAP,
+    "Vertex Texture Cube Map Shader",
+    "vert.texture.cube.glsl",
+    VK_SHADER_STAGE_VERTEX_BIT,
+};
+
+const CreateInfo GEOM_COLOR_CREATE_INFO = {
+    SHADER::GEOM_COLOR_CUBE_MAP,
+    "Geometry Color Cube Map Shader",
     "geom.color.cube.glsl",
     VK_SHADER_STAGE_GEOMETRY_BIT,
 };
 
-const CreateInfo PT_GEOM_CREATE_INFO = {
-    SHADER::CUBE_MAP_PT_GEOM,
-    "Cube Map Point Geometry Shader",
+const CreateInfo GEOM_PT_CREATE_INFO = {
+    SHADER::GEOM_PT_CUBE_MAP,
+    "Geometry Point Cube Map Shader",
     "geom.point.cube.glsl",
     VK_SHADER_STAGE_GEOMETRY_BIT,
 };
 
-const CreateInfo TEX_GEOM_CREATE_INFO = {
-    SHADER::CUBE_MAP_TEX_GEOM,
-    "Cube Map Texture Geometry Shader",
+const CreateInfo GEOM_TEX_CREATE_INFO = {
+    SHADER::GEOM_TEX_CUBE_MAP,
+    "Geometry Texture Cube Map Shader",
     "geom.texture.cube.glsl",
     VK_SHADER_STAGE_GEOMETRY_BIT,
 };
@@ -246,16 +267,23 @@ const CreateInfo TRIANGLE_TESE_CREATE_INFO = {
 const std::map<SHADER, Shader::CreateInfo> ALL = {
     // DEFAULT
     {SHADER::COLOR_VERT, Shader::COLOR_VERT_CREATE_INFO},
+    {SHADER::POINT_VERT, Shader::POINT_VERT_CREATE_INFO},
     {SHADER::COLOR_FRAG, Shader::COLOR_FRAG_CREATE_INFO},
     {SHADER::LINE_FRAG, Shader::LINE_FRAG_CREATE_INFO},
-    {SHADER::POINT_VERT, Shader::POINT_VERT_CREATE_INFO},
     {SHADER::TEX_VERT, Shader::TEX_VERT_CREATE_INFO},
     {SHADER::TEX_FRAG, Shader::TEX_FRAG_CREATE_INFO},
     {SHADER::CUBE_VERT, Shader::CUBE_VERT_CREATE_INFO},
     {SHADER::CUBE_FRAG, Shader::CUBE_FRAG_CREATE_INFO},
-    {SHADER::CUBE_MAP_COLOR_VERT, Shader::CUBE_MAP_COLOR_VERT_CREATE_INFO},
-    {SHADER::CUBE_MAP_PT_VERT, Shader::CUBE_MAP_PT_VERT_CREATE_INFO},
-    {SHADER::CUBE_MAP_TEX_VERT, Shader::CUBE_MAP_TEX_VERT_CREATE_INFO},
+    // Faster versions
+    {SHADER::VERT_COLOR, Shader::VERT_COLOR_CREATE_INFO},
+    {SHADER::VERT_POINT, Shader::VERT_PT_CREATE_INFO},
+    {SHADER::VERT_TEX, Shader::VERT_TEX_CREATE_INFO},
+    {SHADER::VERT_COLOR_CUBE_MAP, Shader::VERT_COLOR_CUBE_MAP_CREATE_INFO},
+    {SHADER::VERT_PT_CUBE_MAP, Shader::VERT_PT_CUBE_MAP_CREATE_INFO},
+    {SHADER::VERT_TEX_CUBE_MAP, Shader::VERT_TEX_CUBE_MAP_CREATE_INFO},
+    {SHADER::GEOM_COLOR_CUBE_MAP, Shader::GEOM_COLOR_CREATE_INFO},
+    {SHADER::GEOM_PT_CUBE_MAP, Shader::GEOM_PT_CREATE_INFO},
+    {SHADER::GEOM_TEX_CUBE_MAP, Shader::GEOM_TEX_CREATE_INFO},
     // PBR
     {SHADER::PBR_COLOR_FRAG, Shader::PBR::COLOR_FRAG_CREATE_INFO},
     {SHADER::PBR_TEX_FRAG, Shader::PBR::TEX_FRAG_CREATE_INFO},
@@ -274,11 +302,9 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     {SHADER::DEFERRED_VERT, Shader::Deferred::VERT_CREATE_INFO},
     {SHADER::DEFERRED_FRAG, Shader::Deferred::FRAG_CREATE_INFO},
     {SHADER::DEFERRED_MS_FRAG, Shader::Deferred::FRAG_MS_CREATE_INFO},
-    {SHADER::DEFERRED_MRT_TEX_WS_VERT, Shader::Deferred::MRT_TEX_WS_VERT_CREATE_INFO},
     {SHADER::DEFERRED_MRT_TEX_CS_VERT, Shader::Deferred::MRT_TEX_CS_VERT_CREATE_INFO},
     {SHADER::DEFERRED_MRT_TEX_FRAG, Shader::Deferred::MRT_TEX_FRAG_CREATE_INFO},
     {SHADER::DEFERRED_MRT_COLOR_CS_VERT, Shader::Deferred::MRT_COLOR_CS_VERT_CREATE_INFO},
-    {SHADER::DEFERRED_MRT_PT_CS_VERT, Shader::Deferred::MRT_PT_CS_VERT_CREATE_INFO},
     {SHADER::DEFERRED_MRT_COLOR_FRAG, Shader::Deferred::MRT_COLOR_FRAG_CREATE_INFO},
     {SHADER::DEFERRED_MRT_POINT_FRAG, Shader::Deferred::MTR_POINT_FRAG_CREATE_INFO},
     {SHADER::DEFERRED_MRT_COLOR_RFL_RFR_FRAG, Shader::Deferred::MTR_COLOR_REF_REF_FRAG_CREATE_INFO},
@@ -297,9 +323,6 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     // GEOMETRY
     {SHADER::WIREFRAME_GEOM, Shader::Geometry::WIREFRAME_CREATE_INFO},
     {SHADER::SILHOUETTE_GEOM, Shader::Geometry::SILHOUETTE_CREATE_INFO},
-    {SHADER::CUBE_MAP_COLOR_GEOM, Shader::COLOR_GEOM_CREATE_INFO},
-    {SHADER::CUBE_MAP_PT_GEOM, Shader::PT_GEOM_CREATE_INFO},
-    {SHADER::CUBE_MAP_TEX_GEOM, Shader::TEX_GEOM_CREATE_INFO},
     // PARTICLE
     {SHADER::PRTCL_WAVE_VERT, Shader::Particle::WAVE_VERT_CREATE_INFO},
     {SHADER::PRTCL_FOUNTAIN_VERT, Shader::Particle::FOUNTAIN_VERT_CREATE_INFO},

@@ -77,7 +77,10 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         // std::string(Texture::Deferred::AMBIENT_2D_ID),
         // std::string(Texture::Deferred::SPECULAR_2D_ID),
     },
-    {PASS::SHADOW, PASS::SKYBOX_NIGHT},
+    {
+        PASS::SHADOW,
+        PASS::SKYBOX_NIGHT,
+    },
 };
 
 Base::Base(RenderPass::Handler& handler, const index&& offset)

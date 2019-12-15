@@ -32,27 +32,16 @@ layout(location=2) in vec4 inNormal;
 layout(location=3) in mat4 inModel;
 
 // OUT
-layout(location=0) out vec3 outPosition;        // (camera space)
-layout(location=1) out vec3 outNormal;          // (camera space)
+layout(location=0) out vec3 outPosition;        // (world space)
+layout(location=1) out vec3 outNormal;          // (world space)
 layout(location=2) out vec4 outColor;
-layout(location=3) out flat uint outFlags;
 
 void main() {
-    mat4 mViewModel = camera.view * inModel;
-    // mat3 mNormal = transpose(inverse(mat3(mViewModel)));
-
+    // Position
     outPosition = inPosition;
-
     outPosition.y += imageLoad(imgHeightField, ivec3(inImageOffset, sim.write)).r;
-
-    outPosition = (mViewModel * vec4(outPosition, 1.0)).xyz;
-    // outNormal = normalize(mNormal * inNormal.xyz);
-    outNormal = normalize(mat3(mViewModel) * inNormal.xyz);
-    outFlags = 0x0u;
-    // if (gl_VertexIndex == 0)
-    //     outColor = vec4(0,1,0,1);
-    // else
-    //     outColor = vec4(1,0,0,1);
-
-    gl_Position = camera.projection * vec4(outPosition, 1.0);
+    outPosition = (inModel * vec4(outPosition, 1.0)).xyz;
+    gl_Position = camera.viewProjection * vec4(outPosition, 1.0);
+    // Normal
+    outNormal = normalize(mat3(inModel) * inNormal.xyz); // normal matrix ??
 }

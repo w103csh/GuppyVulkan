@@ -30,17 +30,14 @@ layout(location=4) out vec3 outBinormal;    // (camera space)
 layout(location=5) out flat uint outFlags;
 
 void main() {
-    vec4 pos = inModel * vec4(inPosition, 1.0);
-    
-    gl_Position = camera.viewProjection * pos;
-
-    mat4 mViewModel = camera.view * inModel;
-    mat3 mNormal = transpose(inverse(mat3(mViewModel)));
-
-    outPosition = (mViewModel * vec4(inPosition, 1.0)).xyz;
+    // Position
+    outPosition = (inModel * vec4(inPosition, 1.0)).xyz;
+    gl_Position = camera.viewProjection * vec4(outPosition, 1.0);
+    // Normal
+    mat3 mNormal = mat3(inModel); // normal matrix ??
     outNormal = mNormal * normalize(inNormal);
     outTangent = mNormal * normalize(vec3(0,0,1));
     outBinormal = mNormal * normalize(vec3(0,0,1));
+    // Texture coordinate
     outTexCoord = inTexCoord;
-    outFlags = 0x0u;
 }

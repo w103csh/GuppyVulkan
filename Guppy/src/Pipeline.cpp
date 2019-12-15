@@ -624,7 +624,7 @@ std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapColor(Pipeline::Ha
     CreateInfo info = TRI_LIST_COLOR_CREATE_INFO;
     info.name = "Cube Map Color";
     info.type = GRAPHICS::CUBE_MAP_COLOR;
-    info.shaderTypes = {SHADER::CUBE_MAP_COLOR_VERT, SHADER::CUBE_MAP_COLOR_GEOM, SHADER::COLOR_FRAG};
+    info.shaderTypes = {SHADER::VERT_COLOR_CUBE_MAP, SHADER::GEOM_COLOR_CUBE_MAP, SHADER::COLOR_FRAG};
     info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
     return std::make_unique<TriListColor>(handler, &info);
 }
@@ -632,7 +632,7 @@ std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapLine(Pipeline::Han
     CreateInfo info = LINE_CREATE_INFO;
     info.name = "Cube Map Line";
     info.type = GRAPHICS::CUBE_MAP_LINE;
-    info.shaderTypes = {SHADER::CUBE_MAP_COLOR_VERT, SHADER::CUBE_MAP_COLOR_GEOM, SHADER::LINE_FRAG};
+    info.shaderTypes = {SHADER::VERT_COLOR_CUBE_MAP, SHADER::GEOM_COLOR_CUBE_MAP, SHADER::LINE_FRAG};
     info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
     return std::make_unique<Line>(handler, &info);
 }
@@ -640,7 +640,7 @@ std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapPoint(Pipeline::Ha
     CreateInfo info = POINT_CREATE_INFO;
     info.name = "Cube Map Point";
     info.type = GRAPHICS::CUBE_MAP_PT;
-    info.shaderTypes = {SHADER::CUBE_MAP_PT_VERT, SHADER::CUBE_MAP_PT_GEOM, SHADER::LINE_FRAG};
+    info.shaderTypes = {SHADER::VERT_PT_CUBE_MAP, SHADER::GEOM_PT_CUBE_MAP, SHADER::LINE_FRAG};
     info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
     return std::make_unique<Point>(handler, &info);
 }
@@ -648,7 +648,7 @@ std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapTexture(Pipeline::
     CreateInfo info = TRI_LIST_TEX_CREATE_INFO;
     info.name = "Cube Map Texture";
     info.type = GRAPHICS::CUBE_MAP_TEX;
-    info.shaderTypes = {SHADER::CUBE_MAP_TEX_VERT, SHADER::CUBE_MAP_TEX_GEOM, SHADER::TEX_FRAG};
+    info.shaderTypes = {SHADER::VERT_TEX_CUBE_MAP, SHADER::GEOM_TEX_CUBE_MAP, SHADER::TEX_FRAG};
     info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
     return std::make_unique<TriListTexture>(handler, &info);
 }

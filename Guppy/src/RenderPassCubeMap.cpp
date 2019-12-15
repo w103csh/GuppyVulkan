@@ -105,7 +105,7 @@ void SkyboxNight::record(const uint8_t frameIndex, const VkCommandBuffer& priCmd
         std::vector<PIPELINE>::iterator itSurrogate;
 
         // POINT
-        {
+        if (true) {
             const auto& pStars = handler().meshHandler().getColorMesh(pScene->starsOffset);
             pStars->draw(TYPE, pipelineBindDataList_.getValue(pStars->PIPELINE_TYPE), priCmd, frameIndex);
         }
@@ -113,7 +113,7 @@ void SkyboxNight::record(const uint8_t frameIndex, const VkCommandBuffer& priCmd
         vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
 
         // TEXTURE
-        {
+        if (true) {
             const auto& pMoon = handler().meshHandler().getTextureMesh(pScene->moonOffset);
             pMoon->draw(TYPE, pipelineBindDataList_.getValue(pMoon->PIPELINE_TYPE), priCmd, frameIndex);
         }

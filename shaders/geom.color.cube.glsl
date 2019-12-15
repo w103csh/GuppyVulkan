@@ -7,7 +7,6 @@
 
 #define _DS_CAM_CUBE 0
 
-// BINDINGS
 const int CUBE_LAYERS = 6;
 layout(set=_DS_CAM_CUBE, binding=0) uniform CameraCube {
     mat4 views[CUBE_LAYERS];
@@ -16,12 +15,12 @@ layout(set=_DS_CAM_CUBE, binding=0) uniform CameraCube {
 
 // IN
 layout(triangles) in;
-layout(location=1) in vec3 inNormal[];
-layout(location=2) in vec4 inColor[];
+layout(location=0) in vec3 inNormal[];
+layout(location=1) in vec4 inColor[];
 // OUT
 layout(triangle_strip, max_vertices=3*CUBE_LAYERS) out;
-layout(location=0) out vec3 outPosition;
-layout(location=1) out vec3 outNormal;
+layout(location=0) out vec3 outPosition;    // (world space)
+layout(location=1) out vec3 outNormal;      // (world space)
 layout(location=2) out vec4 outColor;
 
 void main() {
@@ -29,14 +28,13 @@ void main() {
     for (layer = 0; layer < CUBE_LAYERS; layer++) {
         gl_Layer = layer;
         for (i = 0; i < gl_in.length(); i++) {
-
-            outPosition = (camera.views[layer] * vec4(gl_in[i].gl_Position.xyz, 1.0)).xyz;
-            gl_Position = camera.proj * vec4(outPosition, 1.0);
-
-            outNormal = normalize(mat3(camera.views[layer]) * inNormal[i]);
-            
+            // Position
+            outPosition = gl_in[i].gl_Position.xyz;
+            gl_Position = camera.proj * camera.views[layer] * vec4(outPosition, 1.0);
+            // Normal
+            outNormal = inNormal[i];
+            // Color
             outColor = inColor[i];
-
             EmitVertex();
         }
         EndPrimitive();

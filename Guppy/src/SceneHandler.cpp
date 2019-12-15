@@ -63,7 +63,7 @@ void Scene::Handler::init() {
         Obj3d::BoundingBoxMinMax groundPlane_bbmm;
 
         // ORIGIN AXES
-        if (!suppress || true) {
+        if (!suppress || false) {
             axesInfo = {};
             axesInfo.pipelineType = GRAPHICS::DEFERRED_MRT_LINE;
             axesInfo.lineSize = 500.f;
@@ -81,9 +81,9 @@ void Scene::Handler::init() {
             planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
             planeInfo.selectable = false;
             instObj3dInfo = {};
-            // instObj3dInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
-            instObj3dInfo.data.push_back(
-                {helpers::affine(glm::vec3{2000.0f}, {0.0f, -4.0f, 0.0f}, -M_PI_2_FLT, CARDINAL_X)});
+            instObj3dInfo.data.push_back({helpers::affine(glm::vec3{2000.0f}, {}, -M_PI_2_FLT, CARDINAL_X)});
+            // instObj3dInfo.data.push_back(
+            //    {helpers::affine(glm::vec3{2000.0f}, {0.0f, -4.0f, 0.0f}, -M_PI_2_FLT, CARDINAL_X)});
             defMatInfo = {};
             defMatInfo.shininess = Material::SHININESS_MILDLY_SHINY;
             // defMatInfo.color = {0.0f, 1.0f, 0.0f};
@@ -157,7 +157,7 @@ void Scene::Handler::init() {
             instObj3dInfo = {};
             instObj3dInfo.data.push_back({helpers::affine(glm::vec3(1000.0f))});
             defMatInfo = {};
-            defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
+            defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR | Material::FLAG::MODE_FLAT_SHADE;
             pScene->starsOffset =
                 meshHandler().makeColorMesh<Mesh::Stars>(&meshInfo, &defMatInfo, &instObj3dInfo)->getOffset();
             pScene->addMeshIndex(MESH::COLOR, pScene->starsOffset);
@@ -184,10 +184,10 @@ void Scene::Handler::init() {
 
             meshHandler().getTextureMesh(pScene->moonOffset)->getFaceCount();
 
-            planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
-            auto offset =
-                meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&planeInfo, &defMatInfo, &instObj3dInfo)->getOffset();
-            pScene->addMeshIndex(MESH::TEXTURE, offset);
+            // planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
+            // auto offset =
+            //    meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&planeInfo, &defMatInfo, &instObj3dInfo)->getOffset();
+            // pScene->addMeshIndex(MESH::TEXTURE, offset);
         }
 
         // PLAIN OLD NON-TRANSFORMED PLANE (TEXTURE)
@@ -233,7 +233,7 @@ void Scene::Handler::init() {
         }
 
         // TRIANGLE
-        if ((!suppress || false) && ctx.tessellationShadingEnabled) {
+        if ((!suppress && false) && ctx.tessellationShadingEnabled) {
             instObj3dInfo = {};
             defMatInfo = {};
             defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
@@ -299,6 +299,7 @@ void Scene::Handler::init() {
             arcInfo = {};
             instObj3dInfo = {};
             defMatInfo = {};
+            defMatInfo.flags |= Material::FLAG::MODE_FLAT_SHADE;
             defMatInfo.color = {0.2f, 0.4f, 0.8f};
             // defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
 
@@ -320,7 +321,7 @@ void Scene::Handler::init() {
         }
 
         // BOX
-        if (!suppress || true) {
+        if (!suppress || false) {
             if (false) {
                 meshInfo = {};
                 meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
@@ -363,7 +364,7 @@ void Scene::Handler::init() {
                     meshHandler().updateMesh(boxColor);
                 }
             }
-            if (false && ctx.geometryShadingEnabled) {
+            if (true && ctx.geometryShadingEnabled) {
                 meshInfo = {};
                 meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_WF_COLOR;
                 instObj3dInfo = {};
@@ -379,7 +380,7 @@ void Scene::Handler::init() {
                 meshHandler().updateMesh(boxColor);
             }
             // SKYBOX NIGHT
-            if (true) {
+            if (false) {
                 meshInfo = {};
                 // meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
                 meshInfo.pipelineType = GRAPHICS::CUBE_MAP_TEX;
@@ -403,8 +404,8 @@ void Scene::Handler::init() {
                 // boxColor->putOnTop(groundPlane_bbmm);
                 // meshHandler().updateMesh(boxColor);
             }
-            // (CUBE)
-            if (true) {
+            // REFLECT REFRACT
+            if (false) {
                 meshInfo = {};
                 meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR_RFL_RFR;
 
