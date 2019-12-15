@@ -13,7 +13,6 @@ void geomShade(inout vec4 color);
 
 // IN
 layout(location=0) in vec3 inPosition;
-layout(location=3) in flat uint inFlags;
 
 // OUT
 layout(location=0) out vec4 outPosition;
@@ -45,7 +44,7 @@ void main() {
 	outDiffuse = vec4(Kd, opacity);
 	outAmbient = vec4(Ka, 0.0);
 	outSpecular = vec4(Ks, 0.0);
-    outFlags = inFlags | (isModeFlatShade() ? 0x1u : 0x0u);
+    outFlags = isModeFlatShade() ? 0x01u : 0x00u;
 
     geomShade(outDiffuse);
 }

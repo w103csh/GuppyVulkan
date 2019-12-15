@@ -29,32 +29,23 @@ layout(location=2) in vec4 inColor;
 layout(location=3) in mat4 inModel;
 
 // OUT
-layout(location=0) out vec3 outPosition;    // (camera space)
-layout(location=1) out vec3 outNormal;      // (camera space)
+layout(location=0) out vec3 outPosition;    // (world space)
+layout(location=1) out vec3 outNormal;      // (world space)
 layout(location=2) out vec4 outColor;
-layout(location=3) out flat uint outFlags;
 
 const float PI = 3.1415926535897932384626433832795;
 const float TAU = 2 * PI;
 
 void main() {
-    vec4 pos = inModel * vec4(inPosition, 1.0);
-
-    // Wave
-    float u = (TAU / uniWave.freq) * (pos.x - (uniWave.velocity * uniWave.time));
-    // float u = (TAU / 2.5) * (pos.x - (1.0 * uniWave.time));
-    
-    pos.y += uniWave.amp * sin(u);
-    vec3 n = vec3(0.0);
-    n.xy = vec2(cos(u), 1.0);
-    
-    gl_Position = camera.viewProjection * pos;
-
-    mat4 mViewModel = camera.view * inModel;
-    mat3 mNormal = transpose(inverse(mat3(mViewModel)));
-
-    outPosition = (mViewModel * vec4(inPosition, 1.0)).xyz;
-    outNormal = mNormal * normalize(n);
+    // Position
+    outPosition = (inModel * vec4(inPosition, 1.0)).xyz;
+    float u = (TAU / uniWave.freq) * (outPosition.x - (uniWave.velocity * uniWave.time));
+    outPosition.y += uniWave.amp * sin(u);
+    gl_Position = camera.viewProjection * vec4(outPosition, 1.0);
+    // Normal
+    outNormal = vec3(0);
+    outNormal.xy = vec2(cos(u), 1.0);
+    outNormal = normalize(mat3(inModel) * inNormal); // normal matrix ??
+    // Color
     outColor = inColor;
-    outFlags = 0x0u;
 }

@@ -123,7 +123,7 @@ void Particle::Handler::create() {
     bool suppress = true;
 
     // WATER
-    if (!suppress || false) {
+    if (!suppress || true) {
         pDescriptors.clear();
 
         HeightFieldFluid::Info info = {100, 100, 100.0f};
@@ -345,7 +345,7 @@ void Particle::Handler::create() {
                 make<Buffer::Euler::Base>(pBuffers_, &partBuffEulerInfo, pMaterial, pDescriptors);
             }
             // ATTRACTOR
-            if (!suppress || true) {
+            if (!suppress || false) {
                 pDescriptors.clear();
 
                 partBuffEulerInfo = {};

@@ -340,13 +340,6 @@ const CreateInfo FRAG_MS_CREATE_INFO = {
     VK_SHADER_STAGE_FRAGMENT_BIT,
 };
 
-const CreateInfo MRT_TEX_WS_VERT_CREATE_INFO = {
-    SHADER::DEFERRED_MRT_TEX_WS_VERT,
-    "Deferred Multiple Render Target Texture World Space Vertex Shader",
-    "vert.texture.deferred.mrt.ws.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
-};
-
 const CreateInfo MRT_TEX_CS_VERT_CREATE_INFO = {
     SHADER::DEFERRED_MRT_TEX_CS_VERT,
     "Deferred Multiple Render Target Texture Camera Space Vertex Shader",
@@ -369,13 +362,6 @@ const CreateInfo MRT_COLOR_CS_VERT_CREATE_INFO = {
     SHADER::DEFERRED_MRT_COLOR_CS_VERT,
     "Deferred Multiple Render Target Color Camera Space Vertex Shader",
     "vert.color.deferred.mrt.cs.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
-};
-
-const CreateInfo MRT_PT_CS_VERT_CREATE_INFO = {
-    SHADER::DEFERRED_MRT_PT_CS_VERT,
-    "Deferred Multiple Render Target Point Camera Space Vertex Shader",
-    "vert.point.deferred.mrt.cs.glsl",
     VK_SHADER_STAGE_VERTEX_BIT,
 };
 
@@ -495,8 +481,7 @@ const Pipeline::CreateInfo MRT_TEX_CREATE_INFO = {
     GRAPHICS::DEFERRED_MRT_TEX,
     "Deferred Multiple Render Target Texture Pipeline",
     {
-        // SHADER::DEFERRED_MRT_TEX_WS_VERT,
-        SHADER::DEFERRED_MRT_TEX_CS_VERT,
+        SHADER::VERT_TEX,
         SHADER::DEFERRED_MRT_TEX_FRAG,
     },
     {
@@ -523,7 +508,7 @@ void MRTTexture::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 const Pipeline::CreateInfo MRT_COLOR_CREATE_INFO = {
     GRAPHICS::DEFERRED_MRT_COLOR,
     "Deferred Multiple Render Target Color Pipeline",
-    {SHADER::DEFERRED_MRT_COLOR_CS_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
+    {SHADER::VERT_COLOR, SHADER::DEFERRED_MRT_COLOR_FRAG},
     {DESCRIPTOR_SET::UNIFORM_DEFAULT},
     {},
     {PUSH_CONSTANT::DEFERRED},
@@ -540,7 +525,7 @@ const Pipeline::CreateInfo MRT_COLOR_WF_CREATE_INFO = {
     GRAPHICS::DEFERRED_MRT_WF_COLOR,
     "Deferred Multiple Render Target Color Wireframe Pipeline",
     {
-        SHADER::DEFERRED_MRT_COLOR_CS_VERT,
+        SHADER::VERT_COLOR,
         // SHADER::WIREFRAME_GEOM,
         SHADER::DEFERRED_MRT_COLOR_FRAG,
     },
@@ -562,7 +547,7 @@ void MRTColorWireframe::getRasterizationStateInfoResources(CreateInfoResources& 
 const Pipeline::CreateInfo MRT_PT_CREATE_INFO = {
     GRAPHICS::DEFERRED_MRT_PT,
     "Deferred Multiple Render Target Point Pipeline",
-    {SHADER::DEFERRED_MRT_PT_CS_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
+    {SHADER::VERT_POINT, SHADER::DEFERRED_MRT_COLOR_FRAG},
     {DESCRIPTOR_SET::UNIFORM_DEFAULT},
     {},
     {PUSH_CONSTANT::DEFERRED},
@@ -580,7 +565,7 @@ void MRTPoint::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes)
 const Pipeline::CreateInfo MRT_LINE_CREATE_INFO = {
     GRAPHICS::DEFERRED_MRT_LINE,
     "Deferred Multiple Render Target Line Pipeline",
-    {SHADER::DEFERRED_MRT_COLOR_CS_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
+    {SHADER::VERT_COLOR, SHADER::DEFERRED_MRT_COLOR_FRAG},
     {DESCRIPTOR_SET::UNIFORM_DEFAULT},
     {},
     {PUSH_CONSTANT::DEFERRED},
@@ -600,7 +585,7 @@ void MRTLine::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) 
 const Pipeline::CreateInfo MRT_COLOR_RFL_RFR_CREATE_INFO = {
     GRAPHICS::DEFERRED_MRT_COLOR_RFL_RFR,
     "Deferred Multiple Render Target Color Reflect Refract Pipeline",
-    {SHADER::COLOR_VERT, SHADER::DEFERRED_MRT_COLOR_RFL_RFR_FRAG},
+    {SHADER::VERT_COLOR, SHADER::DEFERRED_MRT_COLOR_RFL_RFR_FRAG},
     {
         DESCRIPTOR_SET::UNIFORM_DEFAULT,
         DESCRIPTOR_SET::SAMPLER_DEFAULT,

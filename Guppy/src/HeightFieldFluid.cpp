@@ -56,13 +56,13 @@ const CreateInfo HFF_NORM_COMP_CREATE_INFO = {
 const CreateInfo HFF_VERT_CREATE_INFO = {
     SHADER::HFF_VERT,
     "Height Field Fluid Vertex Shader",
-    "vert.hff.cs.glsl",
+    "vert.hff.glsl",
     VK_SHADER_STAGE_VERTEX_BIT,
 };
 const CreateInfo HFF_CLMN_VERT_CREATE_INFO = {
     SHADER::HFF_CLMN_VERT,
     "Height Field Fluid Column Vertex Shader",
-    "vert.hff.column.cs.glsl",
+    "vert.hff.column.glsl",
     VK_SHADER_STAGE_VERTEX_BIT,
 };
 }  // namespace Shader

@@ -47,7 +47,7 @@ const CreateInfo EULER_CREATE_INFO = {
 const CreateInfo FOUNTAIN_EULER_VERT_CREATE_INFO = {
     SHADER::PRTCL_FOUNTAIN_EULER_VERT,        //
     "Particle Fountain Euler Vertex Shader",  //
-    "vert.particle.fountainEuler.glsl",       //
+    "vert.particle.fountain.euler.glsl",      //
     VK_SHADER_STAGE_VERTEX_BIT,               //
     {
         SHADER_LINK::DEFAULT_MATERIAL,

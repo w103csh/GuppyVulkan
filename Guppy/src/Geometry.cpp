@@ -86,6 +86,7 @@ const Pipeline::CreateInfo SILHOUETTE_CREATE_INFO = {
     GRAPHICS::GEOMETRY_SILHOUETTE_DEFERRED,
     "Tessellation Bezier 4 Control Point (Deferred) Pipeline",
     {
+        // This probably won't work right anymore because of the position attachment change
         SHADER::DEFERRED_MRT_COLOR_CS_VERT,
         SHADER::SILHOUETTE_GEOM,
         SHADER::DEFERRED_MRT_COLOR_FRAG,

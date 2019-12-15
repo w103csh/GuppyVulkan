@@ -13,7 +13,11 @@
 #define _U_LGT_DEF_SPT 0
 #define _U_LGT_SHDW_CUBE 0
 
+// LIGHT FLAGS
 const uint LIGHT_SHOW       = 0x00000001u;
+// INPUT ATTACHMENT FLAGS
+const uint IA_FLAT_SHADE    = 0x01u;
+const uint IA_CAMERA_SPACE  = 0x02u;
 
 layout(constant_id = 0) const int NUM_SAMPLES = 8;
 
@@ -32,7 +36,7 @@ layout(input_attachment_index=3, set=_DS_SMP_DFR, binding=1) uniform subpassInpu
 layout(input_attachment_index=4, set=_DS_SMP_DFR, binding=2) uniform subpassInputMS diffInput;
 layout(input_attachment_index=5, set=_DS_SMP_DFR, binding=3) uniform subpassInputMS ambInput;
 layout(input_attachment_index=6, set=_DS_SMP_DFR, binding=4) uniform subpassInputMS specInput;
-layout(input_attachment_index=7, set=_DS_SMP_DFR, binding=5) uniform usubpassInputMS flagsInput;
+layout(input_attachment_index=7, set=_DS_SMP_DFR, binding=5) uniform usubpassInputMS flagInput;
 // layout(input_attachment_index=8, set=_DS_SMP_DFR, binding=6) uniform subpassInputMS ssaoDataInput;
 
 // IN
@@ -159,8 +163,9 @@ int determineCubeFace(const vec3 v) {
 }
 
 vec3 blinnPhongCubeShadow(
-    const vec3 pos,
-    const vec3 norm,
+    const vec3 posWS,
+    const vec3 posCS,
+    const vec3 normCS,
     const vec3 v,
     const vec3 diff,
     const vec3 spec,
@@ -168,27 +173,26 @@ vec3 blinnPhongCubeShadow(
     ) {
 
     vec3 color = vec3(0.0);
-    vec3 worldPos = (inverse(camera.view) * vec4(pos, 1.0)).xyz;
 
     for (int i = 0; i < lgtShdwCube.length(); i++) {
         if ((lgtShdwCube[i].flags & LIGHT_SHOW) > 0) {
 
-            float dist = distance(pos, lgtShdwCube[i].cameraPosition);
+            float dist = distance(posCS, lgtShdwCube[i].cameraPosition);
             if (dist > lgtShdwCube[i].data0.w)
                 continue;
 
-            vec3 s = normalize(lgtShdwCube[i].cameraPosition - pos);
+            vec3 s = normalize(lgtShdwCube[i].cameraPosition - posCS);
 
-            float sDotN = max(dot(s, norm), 0.0);
+            float sDotN = max(dot(s, normCS), 0.0);
             vec3 Kd = diff * sDotN;
 
             vec3 Ks = vec3(0.0);
             if(sDotN > 0.0) {
                 vec3 h = normalize(v + s);
-                Ks = spec * pow(max(dot(h, norm), 0.0), shininess);
+                Ks = spec * pow(max(dot(h, normCS), 0.0), shininess);
             }
 
-            vec4 texCoord = vec4(worldPos - lgtShdwCube[i].data0.xyz, i);
+            vec4 texCoord = vec4(posWS - lgtShdwCube[i].data0.xyz, i);
             int face = determineCubeFace(texCoord.xyz);
             // if (face == 0) {
             //     // color = vec3(1, 0, 0);
@@ -241,7 +245,7 @@ vec3 blinnPhongCubeShadow(
              *  pz = maxDepth - minDepth
              */
 
-            vec4 clipPos = lgtShdwCube[i].viewProj[face] * vec4(worldPos, 1.0);
+            vec4 clipPos = lgtShdwCube[i].viewProj[face] * vec4(posWS, 1.0);
             // Skipping the other calculations to get the right compare value here. It really should come from
             // zf = pz × zd + oz described in the comment above. The 0.0001f is to remove shadow acne caused by
             // false positives from the precision in the compare calculation.
@@ -261,39 +265,54 @@ vec3 blinnPhongCubeShadow(
 #endif
 
 void main() {
-    vec4 pos = subpassLoad(posInput, gl_SampleID);
-    vec3 v = normalize(-pos.xyz);
-    vec4 norm = subpassLoad(normInput, gl_SampleID);
-    vec4 diff = subpassLoad(diffInput, gl_SampleID);
-    vec4 amb = subpassLoad(ambInput, gl_SampleID);
-    vec4 spec = subpassLoad(specInput, gl_SampleID);
-    uint flags = subpassLoad(flagsInput, gl_SampleID).r;
-    // float ssaoData = subpassLoad(ssaoDataInput)[0];
+    const uint flagInput_ = subpassLoad(flagInput, gl_SampleID).r;
+    const vec4 diffInput_ = subpassLoad(diffInput, gl_SampleID);
 
     // Using the opacity at this point causes a blend with the background color...
-    float alpha = true ? 1.0 : diff.a;
+    float alpha = true ? 1.0 : diffInput_.a;
 
-    // Using the 4th component of posInput as a flag to flat shade.
-    if (pos.w < 0.0) {
-        outColor = vec4(diff.rgb, alpha);
+    // Flat shade
+    if ((flagInput_ & IA_FLAT_SHADE) > 0) {
+        outColor = vec4(diffInput_.rgb, alpha);
         return;
     }
 
-    if (flags > 0) {
-        outColor = vec4(diff.rgb, alpha);
-        return;
+    const vec4 posInput_ = subpassLoad(posInput, gl_SampleID);      // world space position
+    const vec4 normInput_ = subpassLoad(normInput, gl_SampleID);    // world space position
+    const vec4 ambInput_ = subpassLoad(ambInput, gl_SampleID);
+    const vec4 specInput_ = subpassLoad(specInput, gl_SampleID);
+    // float ssaoData = subpassLoad(ssaoDataInput)[0];
+
+    vec3 posWS,     // world space position
+        posCS,      // camera space position
+        normWS,     // world space normal
+        normCS;     // camera space normal      
+
+    if ((flagInput_ & IA_CAMERA_SPACE) > 0) {
+        posCS = posInput_.xyz;
+        normCS = normInput_.xyz;
+        mat4 viewModel = inverse(camera.view);
+        posWS = (viewModel * vec4(posCS, 1.0)).xyz;
+        normWS = mat3(viewModel) * normCS;
+    } else {
+        posWS = posInput_.xyz;
+        normWS = normInput_.xyz;
+        posCS = (camera.view * vec4(posWS, 1.0)).xyz;
+        normCS = mat3(camera.view) * normWS;
     }
+
+    vec3 v = normalize(-posCS.xyz); // camera space direction to camera
 
     vec3 color;
-    if (false) {
+    if (true) {
         color = globalDirectionalLight(
-            norm.xyz,
+            normCS.xyz,
             v,
-            diff.rgb,
+            diffInput_.rgb,
             // Ambient colors are all grey atm, so using the ambient makes its look bad.
-            diff.rgb, // amb.rgb, 
-            spec.rgb,
-            norm.w
+            diffInput_.rgb, // ambInput_.rgb, 
+            specInput_.rgb,
+            normInput_.w
         );
         // outColor = vec4(color, alpha);
         // return;
@@ -304,14 +323,15 @@ void main() {
 #if _U_LGT_SHDW_CUBE
 
     float La = 0.2;
-    vec3 Ka = La * mix(amb.rgb, diff.rgb, 0.5); // amb has no color
+    vec3 Ka = La * mix(ambInput_.rgb, diffInput_.rgb, 0.5); // ambInput_ has no color
     vec3 KdKs = blinnPhongCubeShadow(
-        pos.xyz,
-        norm.xyz,
+        posWS,
+        posCS,
+        normCS,
         v,
-        diff.rgb,
-        spec.rgb,
-        norm.w
+        diffInput_.rgb,
+        specInput_.rgb,
+        normInput_.w
     );
 
     color += (Ka + KdKs);
@@ -319,13 +339,13 @@ void main() {
 #elif _U_LGT_DEF_SPT
 
     color += blinnPhongSpot(
-        pos.xyz,
-        norm.xyz,
+        posCS,
+        normCS,
         v,
-        diff.rgb,
-        amb.rgb,
-        spec.rgb,
-        norm.w
+        diffInput_.rgb,
+        ambInput_.rgb,
+        specInput_.rgb,
+        normInput_.w
     );
 
 #endif

@@ -7,7 +7,6 @@
 
 #define _DS_UNI_DEF 0
 
-// BINDINGS
 layout(set=_DS_UNI_DEF, binding=0) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
@@ -20,13 +19,18 @@ layout(location=0) in vec3 inPosition;
 layout(location=1) in vec3 inNormal;
 layout(location=2) in vec4 inColor;
 layout(location=3) in mat4 inModel;
-// OUT
-layout(location=1) out vec3 outNormal;      // (world space)
-layout(location=2) out vec4 outColor;
 
-void main() { inModel;
-    outNormal = normalize(mat3(inModel) * inNormal);
-    outColor = inColor;
+// OUT
+layout(location=0) out vec3 outNormal;      // (world space)
+layout(location=1) out vec4 outColor;
+
+void main() {
+    // Position
     gl_Position = inModel * vec4(inPosition, 1.0);
-    gl_PointSize = inNormal.x;
+    // Normal
+    outNormal = normalize(mat3(inModel) * inNormal); // normal matrix ??
+    // Color
+    outColor = inColor;
+    // Point size
+    gl_PointSize = inNormal.x; // using x component of inNormal for point size
 }

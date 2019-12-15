@@ -29,12 +29,12 @@ layout(set=_DS_UNI_DEFCAM_DEFMAT_MX4, binding=2) uniform Matrix4 {
 layout(location=0) in vec4 inData;
 
 // OUT
-layout(location=0) out vec3 outPosition;        // (camera space)
-layout(location=1) out flat uint outFlags;
+layout(location=0) out vec3 outPosition;        // (world space)
 
 void main() {
-    outPosition = ((camera.view * uniMat4.model) * vec4(inData.xyz, 1.0)).xyz;
-    outFlags = 0x1u;
-    gl_Position = camera.projection * vec4(outPosition, 1.0);
+    // Position
+    outPosition = (uniMat4.model * vec4(inData.xyz, 1.0)).xyz;
+    gl_Position = camera.viewProjection * vec4(outPosition, 1.0);
+    // Point size
     gl_PointSize = 1.0;
 }

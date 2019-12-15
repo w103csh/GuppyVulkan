@@ -31,7 +31,7 @@ const CreateInfo CLOTH_NORM_COMP_CREATE_INFO = {
 const CreateInfo CLOTH_VERT_CREATE_INFO = {
     SHADER::PRTCL_CLOTH_VERT,        //
     "Particle Cloth Vertex Shader",  //
-    "vert.cloth.cs.glsl",            //
+    "vert.particle.cloth.glsl",      //
     VK_SHADER_STAGE_VERTEX_BIT,      //
 };
 }  // namespace Particle

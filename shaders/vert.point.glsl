@@ -21,14 +21,18 @@ layout(location=2) in vec4 inColor;
 layout(location=3) in mat4 inModel;
 
 // OUT
-layout(location=0) out vec3 outNormal;      // (world space)
-layout(location=1) out vec4 outColor;
+layout(location=0) out vec3 outPosition;    // (world space)
+layout(location=1) out vec3 outNormal;      // (world space)
+layout(location=2) out vec4 outColor;
 
 void main() {
     // Position
-    gl_Position = inModel * vec4(inPosition, 1.0);
+    outPosition = (inModel * vec4(inPosition, 1.0)).xyz;
+    gl_Position = camera.viewProjection * vec4(outPosition, 1.0);
     // Normal
     outNormal = normalize(mat3(inModel) * inNormal); // normal matrix ??
     // Color
     outColor = inColor;
+    // Point size
+    gl_PointSize = inNormal.x; // using x component of inNormal for point size
 }
