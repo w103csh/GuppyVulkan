@@ -111,7 +111,7 @@ struct OffsetsMap {
 
 // VISITORS
 // clang-format off
-struct GetDescriptorTypeString {
+struct GetTypeString {
     template <typename T> std::string operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
     std::string operator()(const UNIFORM& type)                 const { return std::string("UNIFORM "               + std::to_string(static_cast<int>(type))); }
     std::string operator()(const UNIFORM_DYNAMIC& type)         const { return std::string("UNIFORM_DYNAMIC "       + std::to_string(static_cast<int>(type))); }

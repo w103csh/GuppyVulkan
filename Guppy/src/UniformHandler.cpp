@@ -6,6 +6,7 @@
 #include "UniformHandler.h"
 
 #include <glm/glm.hpp>
+#include <sstream>
 
 #include "Shell.h"
 // HANDLERS
@@ -340,7 +341,7 @@ void Uniform::Handler::createLights() {
     assert(shell().context().imageCount == 3);  // Potential imageCount problem
     defDirInfo.dataCount = shell().context().imageCount;
     // MOON
-    defDirInfo.direction = glm::normalize(glm::vec3(0, 1.0f, 1.0f));  // direction to the light (s) (world space)
+    defDirInfo.direction = glm::normalize(glm::vec3(0, 0.1f, 1.0f));  // direction to the light(s) (world space)
     lgtDefDirMgr().insert(dev, &defDirInfo);
 
     Light::CreateInfo lightCreateInfo = {};
@@ -610,7 +611,8 @@ void Uniform::Handler::getWriteInfos(const DESCRIPTOR& descType, const Uniform::
     }
 }
 
-void Uniform::Handler::shaderTextReplace(const Descriptor::Set::textReplaceTuples& replaceTuples, std::string& text) const {
+void Uniform::Handler::shaderTextReplace(const Descriptor::Set::textReplaceTuples& replaceTuples,
+                                         const std::string_view& fileName, std::string& text) const {
     for (const auto& macroIdPrefix : MACRO_ID_PREFIXES) {
         auto replaceInfo = helpers::getMacroReplaceInfo(macroIdPrefix, text);
         for (auto& info : replaceInfo) {
@@ -628,7 +630,12 @@ void Uniform::Handler::shaderTextReplace(const Descriptor::Set::textReplaceTuple
                             itemCount = static_cast<int>(getDescriptorCount(pItems, search->second));
                         }
                     }
-                    assert(itemCount != -1);
+                    if (itemCount == -1) {
+                        std::stringstream ss;
+                        ss << "Could not find text to replace for: \"" << std::visit(Descriptor::GetTypeString{}, descType)
+                           << "\" in file: \"" << fileName << "\".";
+                        shell().log(Shell::LogPriority::LOG_WARN, ss.str().c_str());
+                    }
                     // TODO: not sure about below anymore. It was written a long time ago at this point.
                     auto reqCount = std::get<3>(info);
                     if (reqCount > 0) {

@@ -620,35 +620,67 @@ void Pipeline::BP::TextureCullNone::getRasterizationStateInfoResources(CreateInf
 }
 
 // CUBE MAP
+
+// COLOR
 std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapColor(Pipeline::Handler& handler) {
     CreateInfo info = TRI_LIST_COLOR_CREATE_INFO;
     info.name = "Cube Map Color";
     info.type = GRAPHICS::CUBE_MAP_COLOR;
     info.shaderTypes = {SHADER::VERT_COLOR_CUBE_MAP, SHADER::GEOM_COLOR_CUBE_MAP, SHADER::COLOR_FRAG};
     info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
-    return std::make_unique<TriListColor>(handler, &info);
+    return std::make_unique<TriListColorCube>(handler, &info);
 }
+Pipeline::Default::TriListColorCube::TriListColorCube(Pipeline::Handler& handler, const CreateInfo* pCreateInfo)
+    : TriListColor(handler, pCreateInfo) {}
+void Pipeline::Default::TriListColorCube::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+    TriListColor::getRasterizationStateInfoResources(createInfoRes);
+    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+}
+
+// LINE
 std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapLine(Pipeline::Handler& handler) {
     CreateInfo info = LINE_CREATE_INFO;
     info.name = "Cube Map Line";
     info.type = GRAPHICS::CUBE_MAP_LINE;
     info.shaderTypes = {SHADER::VERT_COLOR_CUBE_MAP, SHADER::GEOM_COLOR_CUBE_MAP, SHADER::LINE_FRAG};
     info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
-    return std::make_unique<Line>(handler, &info);
+    return std::make_unique<LineCube>(handler, &info);
 }
+Pipeline::Default::LineCube::LineCube(Pipeline::Handler& handler, const CreateInfo* pCreateInfo)
+    : Line(handler, pCreateInfo) {}
+void Pipeline::Default::LineCube::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+    Line::getRasterizationStateInfoResources(createInfoRes);
+    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+}
+
+// POINT
 std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapPoint(Pipeline::Handler& handler) {
     CreateInfo info = POINT_CREATE_INFO;
     info.name = "Cube Map Point";
     info.type = GRAPHICS::CUBE_MAP_PT;
     info.shaderTypes = {SHADER::VERT_PT_CUBE_MAP, SHADER::GEOM_PT_CUBE_MAP, SHADER::LINE_FRAG};
     info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
-    return std::make_unique<Point>(handler, &info);
+    return std::make_unique<PointCube>(handler, &info);
 }
+Pipeline::Default::PointCube::PointCube(Pipeline::Handler& handler, const CreateInfo* pCreateInfo)
+    : Point(handler, pCreateInfo) {}
+void Pipeline::Default::PointCube::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+    Point::getRasterizationStateInfoResources(createInfoRes);
+    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+}
+
+// TEXTURE
 std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapTexture(Pipeline::Handler& handler) {
     CreateInfo info = TRI_LIST_TEX_CREATE_INFO;
     info.name = "Cube Map Texture";
     info.type = GRAPHICS::CUBE_MAP_TEX;
     info.shaderTypes = {SHADER::VERT_TEX_CUBE_MAP, SHADER::GEOM_TEX_CUBE_MAP, SHADER::TEX_FRAG};
     info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
-    return std::make_unique<TriListTexture>(handler, &info);
+    return std::make_unique<TriListTextureCube>(handler, &info);
+}
+Pipeline::Default::TriListTextureCube::TriListTextureCube(Pipeline::Handler& handler, const CreateInfo* pCreateInfo)
+    : TriListTexture(handler, pCreateInfo) {}
+void Pipeline::Default::TriListTextureCube::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+    TriListTexture::getRasterizationStateInfoResources(createInfoRes);
+    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
 }

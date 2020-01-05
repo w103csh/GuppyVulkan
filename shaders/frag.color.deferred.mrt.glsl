@@ -32,8 +32,8 @@ float opacity, height;
 void main() {
     setColorDefaults();
 
-	outPosition = vec4(inPosition, 1.0);
-    
+    outPosition = vec4(inPosition, 1.0);
+
     outNormal = vec4(n, 0.0);
     if (!gl_FrontFacing) {
         outNormal *= -1.0;
@@ -41,9 +41,9 @@ void main() {
         // outBinormal *= -1.0;
     }
     outNormal.w = getMaterialShininess();
-	outDiffuse = vec4(Kd, opacity);
-	outAmbient = vec4(Ka, 0.0);
-	outSpecular = vec4(Ks, 0.0);
+    outDiffuse = vec4(Kd, opacity);
+    outAmbient = vec4(Ka, 0.0);
+    outSpecular = vec4(Ks, 0.0);
     outFlags = isModeFlatShade() ? 0x01u : 0x00u;
 
     geomShade(outDiffuse);

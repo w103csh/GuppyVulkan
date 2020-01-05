@@ -155,6 +155,7 @@ void Particle::Handler::create() {
         // matInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
         matInfo.color = COLOR_BLUE;
         matInfo.shininess = 10;
+        matInfo.pTexture = textureHandler().getTexture(Texture::SKYBOX_NIGHT_ID);
         auto& pMaterial = materialHandler().makeMaterial(&matInfo);
 
         // INSTANCE

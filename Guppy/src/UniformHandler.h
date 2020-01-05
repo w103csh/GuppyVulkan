@@ -11,6 +11,7 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -156,7 +157,8 @@ class Handler : public Game::Handler {
     }
 
     // SHADER
-    void shaderTextReplace(const Descriptor::Set::textReplaceTuples& replaceTuples, std::string& text) const;
+    void shaderTextReplace(const Descriptor::Set::textReplaceTuples& replaceTuples, const std::string_view& fileName,
+                           std::string& text) const;
 
     template <typename T>
     inline T& getUniform(const DESCRIPTOR& type, const index& index) {

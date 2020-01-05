@@ -9,6 +9,7 @@
 #include <map>
 #include <set>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vulkan/vulkan.h>
 
@@ -36,6 +37,7 @@ enum class SHADER {
     VERT_COLOR_CUBE_MAP,
     VERT_PT_CUBE_MAP,
     VERT_TEX_CUBE_MAP,
+    VERT_SKYBOX,
     GEOM_COLOR_CUBE_MAP,
     GEOM_PT_CUBE_MAP,
     GEOM_TEX_CUBE_MAP,
@@ -63,6 +65,7 @@ enum class SHADER {
     DEFERRED_MRT_COLOR_FRAG,
     DEFERRED_MRT_POINT_FRAG,
     DEFERRED_MRT_COLOR_RFL_RFR_FRAG,
+    DEFERRED_MRT_SKYBOX_FRAG,
     DEFERRED_SSAO_FRAG,
     // SHADOW
     SHADOW_COLOR_VERT,
@@ -121,7 +124,7 @@ const std::string BASE_DIRNAME = "shaders/";
 struct CreateInfo {
     SHADER type;
     std::string name;
-    std::string fileName;
+    std::string_view fileName;
     VkShaderStageFlagBits stage;
     std::set<SHADER_LINK> linkTypes;
 };
@@ -136,7 +139,7 @@ namespace Link {
 
 struct CreateInfo {
     SHADER_LINK type;
-    std::string fileName;
+    std::string_view fileName;
 };
 
 }  // namespace Link

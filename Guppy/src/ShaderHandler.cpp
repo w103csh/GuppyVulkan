@@ -61,7 +61,8 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
     // Return or assert on fail
     if (!success) {
         if (doAssert) {
-            if (!success) shell().log(Shell::LogPriority::LOG_ERR, ("Error compiling: " + createInfo.fileName).c_str());
+            if (!success)
+                shell().log(Shell::LogPriority::LOG_ERR, ("Error compiling: " + std::string(createInfo.fileName)).c_str());
             assert(success);
         } else {
             return false;
@@ -99,21 +100,23 @@ std::vector<std::string> Shader::Handler::loadText(const infoMapKeyValue& keyVal
 
     // main shader text
     if (shaderTexts_.count(std::get<0>(keyValue.first)) == 0) {
-        shaderTexts_[std::get<0>(keyValue.first)] = FileLoader::readFile(BASE_DIRNAME + createInfo.fileName);
+        shaderTexts_[std::get<0>(keyValue.first)] = FileLoader::readFile(BASE_DIRNAME + std::string(createInfo.fileName));
     }
     texts.push_back(shaderTexts_.at(std::get<0>(keyValue.first)));
     textReplace(keyValue.second.first, texts.back());
-    uniformHandler().shaderTextReplace(keyValue.second.first, texts.back());
+    uniformHandler().shaderTextReplace(keyValue.second.first, Shader::ALL.at(std::get<0>(keyValue.first)).fileName,
+                                       texts.back());
 
     // link shader text
     for (const auto& linkShaderType : createInfo.linkTypes) {
         const auto& linkCreateInfo = LINK_ALL.at(linkShaderType);
         if (shaderLinkTexts_.count(linkShaderType) == 0) {
-            shaderLinkTexts_[linkShaderType] = FileLoader::readFile(BASE_DIRNAME + linkCreateInfo.fileName);
+            shaderLinkTexts_[linkShaderType] = FileLoader::readFile(BASE_DIRNAME + std::string(linkCreateInfo.fileName));
         }
         texts.push_back(shaderLinkTexts_.at(linkShaderType));
         textReplace(keyValue.second.first, texts.back());
-        uniformHandler().shaderTextReplace(keyValue.second.first, texts.back());
+        uniformHandler().shaderTextReplace(keyValue.second.first, Shader::LINK_ALL.at(linkShaderType).fileName,
+                                           texts.back());
     }
     return texts;
 }

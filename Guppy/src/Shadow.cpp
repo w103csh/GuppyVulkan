@@ -242,15 +242,26 @@ void GetShadowRasterizationStateInfoResources(Pipeline::CreateInfoResources& cre
     createInfoRes.rasterizationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
     createInfoRes.rasterizationStateInfo.lineWidth = 1.0f;
     createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_FILL;
-    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_BACK_BIT;  // VK_CULL_MODE_FRONT_BIT;
-    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
-    /* If depthClampEnable is set to VK_TRUE, then fragments that are beyond the near and far
+    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+    /**
+     * THIS SETTING IS SPECIFICALLY FOR RENDER TO CUBE MAP TEXTURE LOOKUP/CAMERA CREATION !!!
+     *
+     * Setting clockwise here allow a couple of things to happen for a specific reason. In order to the cube map view
+     * matrices to play nicely with the GLSL texture lookup functions I had to switch from a left-handed coordinate system to
+     * a right-handed one (I think...). But because all of my pipelines, and camera's and face winding were setup for a
+     * left-handed system it was easier to just reverse the winding here as the final piece of making it all work correctly.
+     * There might be a simpler solution, but I couldn't find one at the time.
+     */
+    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    /**
+     * If depthClampEnable is set to VK_TRUE, then fragments that are beyond the near and far
      *  planes are clamped to them as opposed to discarding them. This is useful in some special
      *  cases like shadow maps. Using this requires enabling a GPU feature.
      */
     createInfoRes.rasterizationStateInfo.depthClampEnable = VK_FALSE;
     createInfoRes.rasterizationStateInfo.rasterizerDiscardEnable = VK_FALSE;
-    /* I've seen literally no results with changing the constant factor. I probably just dont understand
+    /**
+     *I've seen literally no results with changing the constant factor. I probably just dont understand
      *  how it works. The slope factor on the other hand seemed to help tremendously. Ultimately the most
      *  success came from setting the cullMode to VK_CULL_MODE_FRONT_BIT which eliminated almost all of
      *  the "shadow acne".

@@ -17,7 +17,7 @@ Stars::Stars(Handler& handler, const index&& offset, CreateInfo* pCreateInfo,
         vertices_.push_back({
             // position
             Random::inst().uniformSphere(),
-            {0.6f + Random::inst().nextFloatZeroToOne(),  // point size
+            {0.0f,  // point size (TODO: figure out how to get variable point sizes in a cube map)
              0.0f, 0.0f},
             // color
             COLOR_WHITE,

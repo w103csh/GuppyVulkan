@@ -6,6 +6,7 @@
 #ifndef RANDOM_H
 #define RANDOM_H
 
+#include <cmath>
 #include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
 #include <random>
@@ -38,8 +39,12 @@ class Random : public Singleton<Random> {
 
     glm::vec3 uniformSphere() {
         glm::vec3 result;
-        float theta = nextFloatZeroToOne() * glm::two_pi<float>();
-        float phi = nextFloatZeroToOne() * glm::two_pi<float>();
+        // I found this here http://mathworld.wolfram.com/SpherePointPicking.html
+        // after seeing bunches of points at the poles.
+        const auto u = nextFloatZeroToOne();
+        const auto v = nextFloatZeroToOne();
+        const auto theta = glm::two_pi<float>() * u;
+        const auto phi = acos(2.0f * v - 1.0f);
         result.x = cos(theta) * sin(phi);
         result.y = sin(theta) * sin(phi);
         result.z = cos(phi);

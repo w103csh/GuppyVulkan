@@ -250,8 +250,15 @@ void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes
 const Pipeline::CreateInfo HFF_OCEAN_CREATE_INFO = {
     GRAPHICS::HFF_OCEAN_DEFERRED,
     "Height Field Fluid Ocean (Deferred) Pipeline",
-    {SHADER::HFF_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
-    {DESCRIPTOR_SET::HFF_DEF},
+    {
+        SHADER::HFF_VERT,
+         SHADER::DEFERRED_MRT_COLOR_RFL_RFR_FRAG,
+        //SHADER::DEFERRED_MRT_COLOR_FRAG,
+    },
+    {
+        DESCRIPTOR_SET::HFF_DEF,
+        DESCRIPTOR_SET::SAMPLER_DEFAULT,
+    },
 };
 Ocean::Ocean(Pipeline::Handler& handler) : Graphics(handler, &HFF_OCEAN_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
 
