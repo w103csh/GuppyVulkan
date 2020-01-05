@@ -106,8 +106,9 @@ extern const CreateInfo MRT_TEX_CS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_TEX_FRAG_CREATE_INFO;
 extern const CreateInfo MRT_COLOR_CS_VERT_CREATE_INFO;
 extern const CreateInfo MRT_COLOR_FRAG_CREATE_INFO;
-extern const CreateInfo MTR_POINT_FRAG_CREATE_INFO;
-extern const CreateInfo MTR_COLOR_REF_REF_FRAG_CREATE_INFO;
+extern const CreateInfo MRT_POINT_FRAG_CREATE_INFO;
+extern const CreateInfo MRT_COLOR_REF_REF_FRAG_CREATE_INFO;
+extern const CreateInfo MRT_SKYBOX_FRAG_CREATE_INFO;
 extern const CreateInfo SSAO_FRAG_CREATE_INFO;
 
 }  // namespace Deferred
@@ -184,6 +185,15 @@ class MRTLine : public Graphics {
 class MRTColorReflectRefract : public Graphics {
    public:
     MRTColorReflectRefract(Handler& handler);
+
+   private:
+    void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
+};
+
+// MRT (SKYBOX)
+class MRTSkybox : public Graphics {
+   public:
+    MRTSkybox(Handler& handler);
 
    private:
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;

@@ -21,7 +21,7 @@
 #include "MeshHandler.h"
 #include "ModelHandler.h"
 #include "ParticleHandler.h"
-// Remove me after pass dependent things are not longer in the scene.
+// Remove me after pass dependent things are no longer in the scene.
 #include "RenderPassHandler.h"
 #include "TextureHandler.h"
 #include "UniformHandler.h"
@@ -63,7 +63,7 @@ void Scene::Handler::init() {
         Obj3d::BoundingBoxMinMax groundPlane_bbmm;
 
         // ORIGIN AXES
-        if (!suppress || false) {
+        if (!suppress || true) {
             axesInfo = {};
             axesInfo.pipelineType = GRAPHICS::DEFERRED_MRT_LINE;
             axesInfo.lineSize = 500.f;
@@ -181,13 +181,20 @@ void Scene::Handler::init() {
             pScene->moonOffset =
                 meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&planeInfo, &defMatInfo, &instObj3dInfo)->getOffset();
             pScene->addMeshIndex(MESH::TEXTURE, pScene->moonOffset);
+        }
 
-            meshHandler().getTextureMesh(pScene->moonOffset)->getFaceCount();
-
-            // planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
-            // auto offset =
-            //    meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&planeInfo, &defMatInfo, &instObj3dInfo)->getOffset();
-            // pScene->addMeshIndex(MESH::TEXTURE, offset);
+        // SKYBOX
+        if (!suppress || true) {
+            meshInfo = {};
+            meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_SKYBOX;
+            meshInfo.selectable = false;
+            meshInfo.settings.geometryInfo.reverseFaceWinding = true;
+            instObj3dInfo = {};
+            defMatInfo = {};
+            defMatInfo.pTexture = textureHandler().getTexture(Texture::SKYBOX_NIGHT_ID);
+            auto& skybox = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &instObj3dInfo);
+            auto offset = skybox->getOffset();
+            pScene->addMeshIndex(MESH::COLOR, offset);
         }
 
         // PLAIN OLD NON-TRANSFORMED PLANE (TEXTURE)
@@ -322,7 +329,7 @@ void Scene::Handler::init() {
 
         // BOX
         if (!suppress || false) {
-            if (false) {
+            if (true) {
                 meshInfo = {};
                 meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
                 instObj3dInfo = {};
@@ -364,7 +371,7 @@ void Scene::Handler::init() {
                     meshHandler().updateMesh(boxColor);
                 }
             }
-            if (true && ctx.geometryShadingEnabled) {
+            if (false && ctx.geometryShadingEnabled) {
                 meshInfo = {};
                 meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_WF_COLOR;
                 instObj3dInfo = {};

@@ -91,6 +91,7 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
                 case GRAPHICS::DEFERRED_MRT_PT:                 insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTPoint>(std::ref(*this))}); break;
                 case GRAPHICS::DEFERRED_MRT_LINE:               insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTLine>(std::ref(*this))}); break;
                 case GRAPHICS::DEFERRED_MRT_COLOR_RFL_RFR:      insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTColorReflectRefract>(std::ref(*this))}); break;
+                case GRAPHICS::DEFERRED_MRT_SKYBOX:             insertPair = pPipelines_.insert({type, std::make_unique<Deferred::MRTSkybox>(std::ref(*this))}); break;
                 case GRAPHICS::DEFERRED_COMBINE:                insertPair = pPipelines_.insert({type, std::make_unique<Deferred::Combine>(std::ref(*this))}); break;
                 case GRAPHICS::DEFERRED_SSAO:                   insertPair = pPipelines_.insert({type, std::make_unique<Deferred::SSAO>(std::ref(*this))}); break;
                 case GRAPHICS::SHADOW_COLOR:                    insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Color>(std::ref(*this))}); break;

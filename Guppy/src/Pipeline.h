@@ -177,10 +177,35 @@ class Cube : public Graphics {
 };
 
 // CUBE MAP
+
+// COLOR
 std::unique_ptr<Pipeline::Base> MakeCubeMapColor(Pipeline::Handler &handler);
+class TriListColorCube : public TriListColor {
+   public:
+    TriListColorCube(Pipeline::Handler &handler, const CreateInfo *pCreateInfo);
+    void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes) override;
+};
+// LINE
 std::unique_ptr<Pipeline::Base> MakeCubeMapLine(Pipeline::Handler &handler);
+class LineCube : public Line {
+   public:
+    LineCube(Pipeline::Handler &handler, const CreateInfo *pCreateInfo);
+    void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes) override;
+};
+// POINT
 std::unique_ptr<Pipeline::Base> MakeCubeMapPoint(Pipeline::Handler &handler);
+class PointCube : public Point {
+   public:
+    PointCube(Pipeline::Handler &handler, const CreateInfo *pCreateInfo);
+    void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes) override;
+};
+// TEXTURE
 std::unique_ptr<Pipeline::Base> MakeCubeMapTexture(Pipeline::Handler &handler);
+class TriListTextureCube : public TriListTexture {
+   public:
+    TriListTextureCube(Pipeline::Handler &handler, const CreateInfo *pCreateInfo);
+    void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes) override;
+};
 
 }  // namespace Default
 

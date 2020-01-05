@@ -24,7 +24,7 @@
 ## Rendering
 Recently in my experimenting with Vulkan pipelines/passes/shaders I decided to switch from forward shading to deferred. Below you can see a list of things I have implemented and which pipeline they were developed for. Ideally I would have enough time to make shaders for parity between all the pipelines, but there is only so much time in the day (ray tracing pipelines are coming soon hopefully!). I have tried to start making demo videos for some of the more interesting pipelines/shaders. More to come soon...
 
-> **Note: The demo videos were taken on a MacBook Pro running Bootcamp Windows drivers using a Radeon Pro 560X at 1920x1080 in debug mode. Optimization has not been the goal of this project. The focus has been learning the math, and gaining a thorough understanding of the Vulkan API.**
+> **Note: The demo videos were taken on a MacBook Pro running Bootcamp Windows drivers using a Radeon Pro 560X at 1920x1080 in debug mode. The focus has been learning the math, and gaining a thorough understanding of the Vulkan API.**
 
 * Forward shading
   * Multi-sampling and resolve attachments

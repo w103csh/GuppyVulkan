@@ -47,6 +47,7 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED,
 #endif
         GRAPHICS::DEFERRED_MRT_TEX,
+        GRAPHICS::DEFERRED_MRT_SKYBOX,
         GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED,
         GRAPHICS::PRTCL_ATTR_PT_DEFERRED,
         GRAPHICS::PRTCL_CLOTH_DEFERRED,
@@ -435,7 +436,8 @@ void Base::createDependencies() {
                 VK_DEPENDENCY_BY_REGION_BIT,
             });
         }
-        if (pipelineType == PIPELINE{GRAPHICS::DEFERRED_MRT_COLOR_RFL_RFR}) {
+        if (pipelineType == PIPELINE{GRAPHICS::DEFERRED_MRT_COLOR_RFL_RFR} ||
+            pipelineType == PIPELINE{GRAPHICS::DEFERRED_MRT_SKYBOX}) {
             // Dispatch writes into a storage buffer. Draw consumes that buffer as a shader object.
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,

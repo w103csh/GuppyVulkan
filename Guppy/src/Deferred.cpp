@@ -377,7 +377,7 @@ const CreateInfo MRT_COLOR_FRAG_CREATE_INFO = {
     },
 };
 
-const CreateInfo MTR_POINT_FRAG_CREATE_INFO = {
+const CreateInfo MRT_POINT_FRAG_CREATE_INFO = {
     SHADER::DEFERRED_MRT_POINT_FRAG,  //
     "Deferred Multiple Render Target Point Fragment Shader",
     "frag.point.deferred.mrt.glsl",
@@ -385,7 +385,7 @@ const CreateInfo MTR_POINT_FRAG_CREATE_INFO = {
     {SHADER_LINK::DEFAULT_MATERIAL},
 };
 
-const CreateInfo MTR_COLOR_REF_REF_FRAG_CREATE_INFO = {
+const CreateInfo MRT_COLOR_REF_REF_FRAG_CREATE_INFO = {
     SHADER::DEFERRED_MRT_COLOR_RFL_RFR_FRAG,
     "Deferred Multiple Render Target Cube Fragment Shader",
     "frag.reflect.refract.deferred.mrt.glsl",
@@ -396,8 +396,15 @@ const CreateInfo MTR_COLOR_REF_REF_FRAG_CREATE_INFO = {
     },
 };
 
+const CreateInfo MRT_SKYBOX_FRAG_CREATE_INFO = {
+    SHADER::DEFERRED_MRT_SKYBOX_FRAG,
+    "Deferred Multiple Render Target Skybox Fragment Shader",
+    "frag.skybox.deferred.mrt.glsl",
+    VK_SHADER_STAGE_FRAGMENT_BIT,
+};
+
 const CreateInfo SSAO_FRAG_CREATE_INFO = {
-    SHADER::DEFERRED_MRT_COLOR_FRAG,
+    SHADER::DEFERRED_SSAO_FRAG,
     "Deferred SSAO Fragment Shader",
     "frag.deferred.ssao.glsl",
     VK_SHADER_STAGE_FRAGMENT_BIT,
@@ -581,7 +588,7 @@ void MRTLine::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) 
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 }
 
-// MRT (CUBE)
+// MRT (COLOR REFLECT REFRACT)
 const Pipeline::CreateInfo MRT_COLOR_RFL_RFR_CREATE_INFO = {
     GRAPHICS::DEFERRED_MRT_COLOR_RFL_RFR,
     "Deferred Multiple Render Target Color Reflect Refract Pipeline",
@@ -597,6 +604,22 @@ MRTColorReflectRefract::MRTColorReflectRefract(Pipeline::Handler& handler)
     : Graphics(handler, &MRT_COLOR_RFL_RFR_CREATE_INFO) {}
 
 void MRTColorReflectRefract::getBlendInfoResources(CreateInfoResources& createInfoRes) {
+    GetBlendInfoResources(createInfoRes);  //
+}
+
+// MRT (SKYBOX)
+const Pipeline::CreateInfo MRT_SKYBOX_CREATE_INFO = {
+    GRAPHICS::DEFERRED_MRT_SKYBOX,
+    "Deferred Multiple Render Target Skybox Pipeline",
+    {SHADER::VERT_SKYBOX, SHADER::DEFERRED_MRT_SKYBOX_FRAG},
+    {
+        DESCRIPTOR_SET::UNIFORM_DEFAULT,
+        DESCRIPTOR_SET::SAMPLER_DEFAULT,
+    },
+};
+MRTSkybox::MRTSkybox(Pipeline::Handler& handler) : Graphics(handler, &MRT_SKYBOX_CREATE_INFO) {}
+
+void MRTSkybox::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     GetBlendInfoResources(createInfoRes);  //
 }
 
