@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -98,6 +98,12 @@ enum class SHADER {
     HFF_NORM_COMP,
     HFF_VERT,
     HFF_CLMN_VERT,
+    // FFT
+    FFT_ONE_COMP,
+    // OCEAN
+    OCEAN_DISP_COMP,
+    OCEAN_FFT_COMP,
+    OCEAN_VERT,
     // Add new to SHADER_ALL and SHADER_LINK_MAP.
 };
 
@@ -109,6 +115,7 @@ enum class SHADER_LINK {
     UTILITY_FRAG,
     BLINN_PHONG,
     DEFAULT_MATERIAL,
+    HELPERS,
     PBR_FRAG,
     PBR_MATERIAL,
     GEOMETRY_FRAG,

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -71,6 +71,10 @@ enum class DESCRIPTOR_SET {
     // WATER
     HFF,
     HFF_DEF,
+    // FFT
+    FFT_DEFAULT,
+    // OCEAN
+    OCEAN_DEFAULT,
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 
@@ -205,6 +209,7 @@ struct HasPerFramebufferData {
             case UNIFORM_DYNAMIC::PRTCL_CLOTH:
             case UNIFORM_DYNAMIC::MATRIX_4:
             case UNIFORM_DYNAMIC::HFF:
+            case UNIFORM_DYNAMIC::OCEAN:
                 return true;
             default:
                 return false;

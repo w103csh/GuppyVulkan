@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -67,7 +67,7 @@ struct LayerInfo {
     bool makeImageView = false;  // Flag for this layer
     bool makeSampler = false;    // Flag for this layer
     std::vector<combineInfo> combineInfos;
-    stbi_uc* pPixel = nullptr;
+    void* pPixel = nullptr;
 };
 
 struct LayersInfo {

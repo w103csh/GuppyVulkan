@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -13,9 +13,11 @@
 
 #include "Cloth.h"
 #include "Deferred.h"
+#include "FFT.h"
 #include "Geometry.h"
 #include "HeightFieldFluid.h"
 #include "Mesh.h"
+#include "Ocean.h"
 #include "Parallax.h"
 #include "Particle.h"
 #include "PBR.h"
@@ -76,6 +78,8 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::PRTCL_CLOTH_NORM:                          pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::CLOTH_NORM_CREATE_INFO)); break;
             case DESCRIPTOR_SET::HFF:                                       pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::HFF_CREATE_INFO)); break;
             case DESCRIPTOR_SET::HFF_DEF:                                   pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::HFF_DEF_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::FFT_DEFAULT:                               pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::FFT_DEFAULT_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::OCEAN_DEFAULT:                             pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::OCEAN_DEFAULT_CREATE_INFO)); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on

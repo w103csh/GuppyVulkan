@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -161,6 +161,7 @@ Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCr
         if (pDescriptors_[i]->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_FOUNTAIN} ||
             pDescriptors_[i]->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_ATTRACTOR} ||
             pDescriptors_[i]->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::HFF} ||
+            pDescriptors_[i]->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::OCEAN} ||
             pDescriptors_[i]->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_CLOTH}) {
             if (descTimeOffset_ == BAD_OFFSET) {
                 descTimeOffset_ = i;

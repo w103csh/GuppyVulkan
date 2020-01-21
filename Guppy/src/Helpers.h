@@ -1,5 +1,5 @@
 /*
- * Modifications copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Modifications copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  * -------------------------------
  * Copyright (C) 2016 Google, Inc.
@@ -141,6 +141,12 @@ constexpr int nearestOdd(T value, bool roundDown = true) {
         return result - 1;
     else
         return result + 1;
+}
+
+template <typename T>
+constexpr bool isPowerOfTwo(const T value) {
+    static_assert(std::is_integral<T>::value, "value must be an integral type");
+    return (value != 0) && ((value & (value - 1)) == 0);
 }
 
 glm::mat4 moveAndRotateTo(const glm::vec3 eye, const glm::vec3 center, const glm::vec3 up);

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -327,7 +327,8 @@ Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, c
                     // combineInfo { path, number of channels, combine offset }
                     auto offset = (i * sampler.NUM_CHANNELS) + std::get<2>(combineInfo);
                     auto combineOffset = i * std::get<1>(combineInfo);
-                    std::memcpy(sampler.pPixels.back() + offset, pCombinePixels + combineOffset, std::get<1>(combineInfo));
+                    std::memcpy(((stbi_uc*)sampler.pPixels.back()) + offset, pCombinePixels + combineOffset,
+                                std::get<1>(combineInfo));
                 }
             }
         }

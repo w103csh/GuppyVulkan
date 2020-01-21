@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -29,6 +29,7 @@ Particle::Handler::Handler(Game* pGame)
       mat4Mgr{"Matrix4 Data", UNIFORM_DYNAMIC::MATRIX_4, 30, true, "_UD_MAT4"},
       vec4Mgr{"Particle Vector4 Data", STORAGE_BUFFER_DYNAMIC::VERTEX, 1000000, false, "_UD_VEC4"},
       hffMgr{"Height Field Fluid Data", UNIFORM_DYNAMIC::HFF, 3, true, "_UD_HFF"},
+      ocnMgr{"Ocean Simulation Data", UNIFORM_DYNAMIC::OCEAN, 3, true, "_UD_OCEAN"},
       waterOffset(Buffer::BAD_OFFSET),
       doUpdate_(false),
       instFntnMgr_{"Particle Fountain Instance Data", 8000 * 5, false},
@@ -43,6 +44,7 @@ void Particle::Handler::init() {
     mat4Mgr.init(shell().context());
     vec4Mgr.init(shell().context());
     hffMgr.init(shell().context());
+    ocnMgr.init(shell().context());
     instFntnMgr_.init(shell().context());
     if (hasInstFntnEulerMgr()) pInstFntnEulerMgr_->init(shell().context());
 
@@ -122,15 +124,64 @@ void Particle::Handler::create() {
 
     bool suppress = true;
 
-    // WATER
+    // OCEAN
     if (!suppress || true) {
+        ::Ocean::SurfaceCreateInfo info = {};
+        info.l = 0.001f;  // TODO: try this with 1 like the paper says.
+
+        // BUFFER
+        Ocean::CreateInfo buffOcnInfo = {};
+        buffOcnInfo.name = "Ocean Surface Buffer";
+        buffOcnInfo.localSize = {4, 4, 1};
+        buffOcnInfo.computePipelineTypes = {
+            // COMPUTE::FFT_ONE,
+            COMPUTE::OCEAN_DISP,
+            COMPUTE::OCEAN_FFT,
+        };
+        buffOcnInfo.graphicsPipelineTypes = {
+            GRAPHICS::OCEAN_WF_DEFERRED,
+        };
+        buffOcnInfo.info = info;
+
+        // OCEAN
+        UniformDynamic::Ocean::Simulation::CreateInfo simInfo = {};
+        assert(shell().context().imageCount == 3);  // Potential imageCount problem
+        simInfo.dataCount = shell().context().imageCount;
+        simInfo.info = info;
+        ocnMgr.insert(shell().context().dev, &simInfo);
+        pDescriptors.push_back(ocnMgr.pItems.back());
+
+        // MATERIAL
+        matInfo = {};
+        // matInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
+        matInfo.color = COLOR_BLUE;
+        matInfo.shininess = 10;
+        // matInfo.pTexture = textureHandler().getTexture(Texture::SKYBOX_NIGHT_ID);
+        auto& pMaterial = materialHandler().makeMaterial(&matInfo);
+
+        // INSTANCE
+        Instance::Obj3d::CreateInfo instInfo = {};
+        auto& pInstanceData = meshHandler().makeInstanceObj3d(&instInfo);
+
+        // NORMAL
+        Storage::Vector4::CreateInfo vec4Info({info.N, info.M, 1});
+        vec4Info.descType = STORAGE_BUFFER_DYNAMIC::NORMAL;
+        vec4Mgr.insert(shell().context().dev, &vec4Info);
+        pDescriptors.push_back(vec4Mgr.pItems.back());
+
+        make<Ocean::Buffer>(pBuffers_, &buffOcnInfo, pMaterial, pDescriptors, pInstanceData);
+        waterOffset = static_cast<uint32_t>(pBuffers_.size() - 1);
+    }
+
+    // WATER
+    if (!suppress || false) {
         pDescriptors.clear();
 
         HeightFieldFluid::Info info = {100, 100, 100.0f};
 
         // BUFFER
         HeightFieldFluid::CreateInfo buffHFFInfo = {};
-        buffHFFInfo.name = "Particle Cloth Buffer";
+        buffHFFInfo.name = "Height Field Fluid Buffer";
         buffHFFInfo.localSize = {4, 4, 1};
         buffHFFInfo.computePipelineTypes = {COMPUTE::HFF_HGHT, COMPUTE::HFF_NORM};
         buffHFFInfo.graphicsPipelineTypes = {
@@ -508,6 +559,7 @@ void Particle::Handler::reset() {
     mat4Mgr.destroy(shell().context().dev);
     vec4Mgr.destroy(shell().context().dev);
     hffMgr.destroy(shell().context().dev);
+    ocnMgr.destroy(shell().context().dev);
     instFntnMgr_.destroy(shell().context().dev);
     if (pInstFntnEulerMgr_ == nullptr && shell().context().computeShadingEnabled) {
         pInstFntnEulerMgr_ =

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -76,6 +76,8 @@ enum class GRAPHICS : uint32_t {
     HFF_CLMN_DEFERRED,
     HFF_WF_DEFERRED,
     HFF_OCEAN_DEFERRED,
+    // OCEAN
+    OCEAN_WF_DEFERRED,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in code file.
@@ -92,6 +94,11 @@ enum class COMPUTE : uint32_t {
     // HEIGHT FLUID FIELD
     HFF_HGHT,
     HFF_NORM,
+    // FFT
+    FFT_ONE,
+    // OCEAN
+    OCEAN_DISP,
+    OCEAN_FFT,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in code file.

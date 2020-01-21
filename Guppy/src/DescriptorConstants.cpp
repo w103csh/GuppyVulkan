@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -78,6 +78,10 @@ const std::set<DESCRIPTOR_SET> ALL = {
     // WATER
     DESCRIPTOR_SET::HFF,
     DESCRIPTOR_SET::HFF_DEF,
+    // FFT
+    DESCRIPTOR_SET::FFT_DEFAULT,
+    // OCEAN
+    DESCRIPTOR_SET::OCEAN_DEFAULT,
 };
 
 void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& write) const {

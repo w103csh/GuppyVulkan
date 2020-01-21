@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -95,12 +95,12 @@ namespace Pipeline {
 class Handler;
 namespace HeightFieldFluid {
 
-class Height : public Pipeline::Compute {
+class Height : public Compute {
    public:
     Height(Handler& handler);
 };
 
-class Normal : public Pipeline::Compute {
+class Normal : public Compute {
    public:
     Normal(Handler& handler);
 };

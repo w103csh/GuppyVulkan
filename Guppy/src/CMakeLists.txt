@@ -18,6 +18,8 @@ set(SOURCE
     Face.h
     FileLoader.cpp
     FileLoader.h
+    FFT.cpp
+    FFT.h
     Game.cpp
     Game.h
     Geometry.cpp
@@ -40,6 +42,8 @@ set(SOURCE
     Material.h
     MaterialHandler.cpp
     MaterialHandler.h
+    Ocean.cpp
+    Ocean.h
     Parallax.cpp
     Parallax.h
     PBR.cpp
