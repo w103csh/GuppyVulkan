@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -7,8 +7,10 @@
 
 #include "Cloth.h"
 #include "Deferred.h"
+#include "FFT.h"
 #include "Geometry.h"
 #include "HeightFieldFluid.h"
+#include "Ocean.h"
 #include "PBR.h"
 #include "Parallax.h"
 #include "Particle.h"
@@ -202,6 +204,11 @@ const CreateInfo DEFAULT_MATERIAL_CREATE_INFO = {
     "link.default.material.glsl",   //
 };
 
+const CreateInfo HELPERS_CREATE_INFO = {
+    SHADER_LINK::HELPERS,  //
+    "link.helpers.glsl",   //
+};
+
 }  // namespace Link
 
 namespace Tessellation {
@@ -349,6 +356,12 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     {SHADER::HFF_NORM_COMP, Shader::HFF_NORM_COMP_CREATE_INFO},
     {SHADER::HFF_VERT, Shader::HFF_VERT_CREATE_INFO},
     {SHADER::HFF_CLMN_VERT, Shader::HFF_CLMN_VERT_CREATE_INFO},
+    // FFT
+    {SHADER::FFT_ONE_COMP, Shader::FFT_ONE_COMP_CREATE_INFO},
+    // OCEAN
+    {SHADER::OCEAN_DISP_COMP, Shader::Ocean::DISP_COMP_CREATE_INFO},
+    {SHADER::OCEAN_FFT_COMP, Shader::Ocean::FFT_COMP_CREATE_INFO},
+    {SHADER::OCEAN_VERT, Shader::Ocean::VERT_CREATE_INFO},
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {
@@ -359,6 +372,7 @@ const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {
     {SHADER_LINK::UTILITY_FRAG, Shader::Link::UTILITY_FRAG_CREATE_INFO},
     {SHADER_LINK::BLINN_PHONG, Shader::Link::BLINN_PHONG_CREATE_INFO},
     {SHADER_LINK::DEFAULT_MATERIAL, Shader::Link::DEFAULT_MATERIAL_CREATE_INFO},
+    {SHADER_LINK::HELPERS, Shader::Link::HELPERS_CREATE_INFO},
     // PBR
     {SHADER_LINK::PBR_FRAG, Shader::Link::PBR::FRAG_CREATE_INFO},
     {SHADER_LINK::PBR_MATERIAL, Shader::Link::PBR::MATERIAL_CREATE_INFO},
@@ -467,6 +481,10 @@ const std::map<SHADER, std::set<SHADER_LINK>> LINK_MAP = {
     {SHADER::PRTCL_ATTR_VERT,
      {
          SHADER_LINK::DEFAULT_MATERIAL,
+     }},
+    {SHADER::FFT_ONE_COMP,
+     {
+         SHADER_LINK::HELPERS,
      }},
 };
 

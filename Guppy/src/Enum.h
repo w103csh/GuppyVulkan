@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -246,6 +246,7 @@ enum class UNIFORM_DYNAMIC {
     MATRIX_4,
     // WATER
     HFF,
+    OCEAN,
     //
     DONT_CARE,
 };

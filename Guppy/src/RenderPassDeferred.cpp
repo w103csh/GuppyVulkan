@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -37,6 +37,7 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         GRAPHICS::HFF_CLMN_DEFERRED,
         GRAPHICS::HFF_WF_DEFERRED,
         GRAPHICS::HFF_OCEAN_DEFERRED,
+        GRAPHICS::OCEAN_WF_DEFERRED,
 #ifndef VK_USE_PLATFORM_MACOS_MVK
         GRAPHICS::DEFERRED_MRT_WF_COLOR,
 #endif
@@ -65,6 +66,8 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         COMPUTE::PRTCL_CLOTH_NORM,
         COMPUTE::HFF_HGHT,
         COMPUTE::HFF_NORM,
+        COMPUTE::OCEAN_DISP,
+        COMPUTE::OCEAN_FFT,
     },
     (FLAG::SWAPCHAIN | FLAG::DEPTH | /*FLAG::DEPTH_INPUT_ATTACHMENT |*/
      (::Deferred::DO_MSAA ? FLAG::MULTISAMPLE : FLAG::NONE)),
@@ -185,6 +188,7 @@ void Base::record(const uint8_t frameIndex) {
                     case GRAPHICS::HFF_CLMN_DEFERRED:
                     case GRAPHICS::HFF_WF_DEFERRED:
                     case GRAPHICS::HFF_OCEAN_DEFERRED:
+                    case GRAPHICS::OCEAN_WF_DEFERRED:
                     case GRAPHICS::PRTCL_FOUNTAIN_DEFERRED: {
                         // PARTICLE GRAPHICS
                         handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
@@ -424,7 +428,8 @@ void Base::createDependencies() {
                 VK_DEPENDENCY_BY_REGION_BIT,
             });
         }
-        if (pipelineType == PIPELINE{GRAPHICS::HFF_CLMN_DEFERRED} || pipelineType == PIPELINE{GRAPHICS::HFF_WF_DEFERRED}) {
+        if (pipelineType == PIPELINE{GRAPHICS::HFF_CLMN_DEFERRED} || pipelineType == PIPELINE{GRAPHICS::HFF_WF_DEFERRED} ||
+            pipelineType == PIPELINE{GRAPHICS::OCEAN_WF_DEFERRED}) {
             // Dispatch writes into a storage buffer. Draw consumes that buffer as a shader object.
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,

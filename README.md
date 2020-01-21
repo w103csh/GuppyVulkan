@@ -1,7 +1,7 @@
 # Guppy (Vulkan)
-  This repository is test ground for a basic game engine using Vulkan C++. The repository was based off a sample in the [LunarG VulkanSamples repository](https://github.com/LunarG/VulkanSamples), specifically the [Hologram sample](https://github.com/LunarG/VulkanSamples/tree/master/Sample-Programs/Hologram). Very little from the sample remains except for some cross platform code, and CMake build files.
+  This repository is a test ground for a basic game engine using the [Vulkan API](https://www.khronos.org/vulkan/). The repository was based off a sample in the [LunarG VulkanSamples repository](https://github.com/LunarG/VulkanSamples), specifically the [Hologram sample](https://github.com/LunarG/VulkanSamples/tree/master/Sample-Programs/Hologram). Very little from the sample remains except for some cross platform code, and CMake build files.
 
-  The main focus of the code herein has been on the rendering side, but some other tiny features have been added along the way as well. There is a list of things you can find inside the repo below. 
+  The main focus of the code herein has been on the rendering side, but some other tiny features have been added along the way as well. There is a list of some of the things you can find inside the repo below. 
 
 ## How to Build and Run
 [BUILD.md](BUILD.md) has directions for building and running the code.

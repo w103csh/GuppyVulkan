@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -12,6 +12,8 @@
 
 #include "ConstantsAll.h"
 #include "Deferred.h"
+#include "FFT.h"
+#include "Ocean.h"
 #include "ScreenSpace.h"
 #include "Shadow.h"
 #include "Shell.h"
@@ -32,6 +34,7 @@ void Texture::Handler::init() {
     auto ssaoRandTexCreateInfo = Deferred::MakeSSAORandRotationTex();
     auto shadowOffsetTexCreateInfo = Shadow::MakeOffsetTex();
     auto skyboxNightTexCreateInfo = Texture::MakeCubeMapTex(Texture::SKYBOX_NIGHT_ID, SAMPLER::DEFAULT_NEAREST, 1024);
+    auto fftTestTexCreateInfo = Texture::FFT::MakeTestTex();
 
     // Transition storage images. I can't think of a better time to do this. Its
     // not great but oh well.
@@ -74,6 +77,7 @@ void Texture::Handler::init() {
         &Texture::Shadow::MAP_2D_ARRAY_CREATE_INFO,
         &shadowOffsetTexCreateInfo,
         &skyboxNightTexCreateInfo,
+        &fftTestTexCreateInfo,
     };
 
     // I think this does not get set properly, so I am not sure where the texture generation

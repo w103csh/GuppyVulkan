@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -63,6 +63,10 @@ const std::vector<PIPELINE> ALL = {
     GRAPHICS::HFF_CLMN_DEFERRED,
     GRAPHICS::HFF_WF_DEFERRED,
     GRAPHICS::HFF_OCEAN_DEFERRED,
+    COMPUTE::FFT_ONE,
+    COMPUTE::OCEAN_DISP,
+    COMPUTE::OCEAN_FFT,
+    GRAPHICS::OCEAN_WF_DEFERRED,
 };
 
 const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
@@ -132,6 +136,10 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
             GRAPHICS::HFF_CLMN_DEFERRED,
             GRAPHICS::HFF_WF_DEFERRED,
             GRAPHICS::HFF_OCEAN_DEFERRED,
+            COMPUTE::FFT_ONE,
+            COMPUTE::OCEAN_DISP,
+            COMPUTE::OCEAN_FFT,
+            GRAPHICS::OCEAN_WF_DEFERRED,
         },
     },
 };

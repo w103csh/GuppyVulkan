@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -8,10 +8,12 @@
 #include "Cloth.h"
 #include "ConstantsAll.h"
 #include "Deferred.h"
+#include "FFT.h"
 #include "Geometry.h"
 #include "HeightFieldFluid.h"
 #include "Material.h"
 #include "Mesh.h"
+#include "Ocean.h"
 #include "Parallax.h"
 #include "Particle.h"
 #include "PBR.h"
@@ -108,6 +110,7 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
                 case GRAPHICS::HFF_CLMN_DEFERRED:               insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluid::Column>(std::ref(*this))}); break;
                 case GRAPHICS::HFF_WF_DEFERRED:                 insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluid::Wireframe>(std::ref(*this))}); break;
                 case GRAPHICS::HFF_OCEAN_DEFERRED:              insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluid::Ocean>(std::ref(*this))}); break;
+                case GRAPHICS::OCEAN_WF_DEFERRED:               insertPair = pPipelines_.insert({type, std::make_unique<Ocean::Wireframe>(std::ref(*this))}); break;
                 default: assert(false);  // add new pipelines here
             }
             // clang-format on
@@ -121,6 +124,9 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
                 case COMPUTE::PRTCL_CLOTH_NORM:         insertPair = pPipelines_.insert({type, std::make_unique<Particle::ClothNormalCompute>(std::ref(*this))}); break;
                 case COMPUTE::HFF_HGHT:                 insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluid::Height>(std::ref(*this))}); break;
                 case COMPUTE::HFF_NORM:                 insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluid::Normal>(std::ref(*this))}); break;
+                case COMPUTE::FFT_ONE:                  insertPair = pPipelines_.insert({type, std::make_unique<FFT::OneComponent>(std::ref(*this))}); break;
+                case COMPUTE::OCEAN_DISP:               insertPair = pPipelines_.insert({type, std::make_unique<Ocean::Dispersion>(std::ref(*this))}); break;
+                case COMPUTE::OCEAN_FFT:                insertPair = pPipelines_.insert({type, std::make_unique<Ocean::FFT>(std::ref(*this))}); break;
                 default: assert(false);  // add new pipelines here
             }
             // clang-format on

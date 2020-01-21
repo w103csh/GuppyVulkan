@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -146,25 +146,25 @@ namespace Pipeline {
 namespace HeightFieldFluid {
 
 // HEIGHT (COMPUTE)
-const Pipeline::CreateInfo HFF_COMP_CREATE_INFO = {
+const CreateInfo HFF_COMP_CREATE_INFO = {
     COMPUTE::HFF_HGHT,
     "Height Fluid Field Compute Pipeline",
     {SHADER::HFF_HGHT_COMP},
     {DESCRIPTOR_SET::HFF},
 };
-Height::Height(Pipeline::Handler& handler) : Pipeline::Compute(handler, &HFF_COMP_CREATE_INFO) {}
+Height::Height(Handler& handler) : Compute(handler, &HFF_COMP_CREATE_INFO) {}
 
 // NORMAL (COMPUTE)
-const Pipeline::CreateInfo HFF_NORM_COMP_CREATE_INFO = {
+const CreateInfo HFF_NORM_COMP_CREATE_INFO = {
     COMPUTE::HFF_NORM,
     "Height Fluid Field Normal Compute Pipeline",
     {SHADER::HFF_NORM_COMP},
     {DESCRIPTOR_SET::HFF},
 };
-Normal::Normal(Pipeline::Handler& handler) : Pipeline::Compute(handler, &HFF_NORM_COMP_CREATE_INFO) {}
+Normal::Normal(Handler& handler) : Compute(handler, &HFF_NORM_COMP_CREATE_INFO) {}
 
 // COLUMN
-const Pipeline::CreateInfo HFF_CLMN_CREATE_INFO = {
+const CreateInfo HFF_CLMN_CREATE_INFO = {
     GRAPHICS::HFF_CLMN_DEFERRED,
     "Height Field Fluid Column (Deferred) Pipeline",
     {SHADER::HFF_CLMN_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
@@ -172,7 +172,7 @@ const Pipeline::CreateInfo HFF_CLMN_CREATE_INFO = {
     {},
     {PUSH_CONSTANT::HFF_COLUMN},
 };
-Column::Column(Pipeline::Handler& handler) : Graphics(handler, &HFF_CLMN_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
+Column::Column(Handler& handler) : Graphics(handler, &HFF_CLMN_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
 
 void Column::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     if (IS_DEFERRED) {
@@ -205,14 +205,13 @@ void Column::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
 }
 
 // WIREFRAME
-const Pipeline::CreateInfo HFF_WF_CREATE_INFO = {
+const CreateInfo HFF_WF_CREATE_INFO = {
     GRAPHICS::HFF_WF_DEFERRED,
     "Height Field Fluid Wireframe (Deferred) Pipeline",
     {SHADER::HFF_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
     {DESCRIPTOR_SET::HFF_DEF},
 };
-Wireframe::Wireframe(Pipeline::Handler& handler)
-    : Graphics(handler, &HFF_WF_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
+Wireframe::Wireframe(Handler& handler) : Graphics(handler, &HFF_WF_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
 
 void Wireframe::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     if (IS_DEFERRED) {
@@ -247,20 +246,19 @@ void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes
 }
 
 // OCEAN
-const Pipeline::CreateInfo HFF_OCEAN_CREATE_INFO = {
+const CreateInfo HFF_OCEAN_CREATE_INFO = {
     GRAPHICS::HFF_OCEAN_DEFERRED,
     "Height Field Fluid Ocean (Deferred) Pipeline",
     {
-        SHADER::HFF_VERT,
-         SHADER::DEFERRED_MRT_COLOR_RFL_RFR_FRAG,
-        //SHADER::DEFERRED_MRT_COLOR_FRAG,
+        SHADER::HFF_VERT, SHADER::DEFERRED_MRT_COLOR_RFL_RFR_FRAG,
+        // SHADER::DEFERRED_MRT_COLOR_FRAG,
     },
     {
         DESCRIPTOR_SET::HFF_DEF,
         DESCRIPTOR_SET::SAMPLER_DEFAULT,
     },
 };
-Ocean::Ocean(Pipeline::Handler& handler) : Graphics(handler, &HFF_OCEAN_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
+Ocean::Ocean(Handler& handler) : Graphics(handler, &HFF_OCEAN_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
 
 void Ocean::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     if (IS_DEFERRED) {
@@ -335,7 +333,7 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
 
     workgroupSize_.x = pCreateInfo->info.M;
     workgroupSize_.y = pCreateInfo->info.N;
-    assert(workgroupSize_.y > 1 && workgroupSize_.x > 1);
+    assert(workgroupSize_.x > 1 && workgroupSize_.y > 1);
 
     /**
      * Height field image layers
