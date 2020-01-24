@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -109,10 +109,20 @@ class Bezier4Deferred : public Base {
     Bezier4Deferred(Handler& handler);
 };
 
-// TRIANGLE (DEFERRED)
-class TriangleDeferred : public Base {
+// PHONG TRIANGLE COLOR (DEFERRED)
+class PhongTriColorDeferred : public Base {
    public:
-    TriangleDeferred(Handler& handler);
+    PhongTriColorDeferred(Handler& handler);
+
+   protected:
+    PhongTriColorDeferred(Pipeline::Handler& handler, const CreateInfo* pCreateInfo) : Base(handler, pCreateInfo, 3) {}
+};
+
+// PHONG TRIANGLE COLOR WIREFRAME (DEFERRED)
+std::unique_ptr<Pipeline::Base> MakePhongTriColorWireframeDeferred(Pipeline::Handler& handler);
+class PhongTriColorWireframeDeferred : public PhongTriColorDeferred {
+   public:
+    PhongTriColorWireframeDeferred(Handler& handler, const CreateInfo* pCreateInfo);
     void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
 };
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -88,11 +88,12 @@ void Base::createFramebuffers() {
 
 namespace {
 std::array<PIPELINE, 5> COLOR_LIST = {
-    GRAPHICS::DEFERRED_MRT_COLOR,              //
-    GRAPHICS::DEFERRED_MRT_WF_COLOR,           //
-    GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED,  //
-    GRAPHICS::GEOMETRY_SILHOUETTE_DEFERRED,    //
-    // GRAPHICS::PRTCL_WAVE_DEFERRED,        //
+    GRAPHICS::DEFERRED_MRT_COLOR,                //
+    GRAPHICS::DEFERRED_MRT_WF_COLOR,             //
+    GRAPHICS::TESS_PHONG_TRI_COLOR_DEFERRED,     //
+    GRAPHICS::TESS_PHONG_TRI_COLOR_WF_DEFERRED,  //
+    GRAPHICS::GEOMETRY_SILHOUETTE_DEFERRED,      //
+    // GRAPHICS::PRTCL_WAVE_DEFERRED,               //
 };
 std::array<PIPELINE, 2> TEX_LIST = {
     GRAPHICS::DEFERRED_MRT_TEX,

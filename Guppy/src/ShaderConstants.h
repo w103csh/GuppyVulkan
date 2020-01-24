@@ -76,8 +76,8 @@ enum class SHADER {
     TESS_COLOR_VERT,
     BEZIER_4_TESC,
     BEZIER_4_TESE,
-    TRIANGLE_TESC,
-    TRIANGLE_TESE,
+    PHONG_TRI_COLOR_TESC,
+    PHONG_TRI_COLOR_TESE,
     // GEOMETRY
     WIREFRAME_GEOM,
     SILHOUETTE_GEOM,
@@ -167,8 +167,8 @@ namespace Tessellation {
 extern const CreateInfo COLOR_VERT_CREATE_INFO;
 extern const CreateInfo BEZIER_4_TESC_CREATE_INFO;
 extern const CreateInfo BEZIER_4_TESE_CREATE_INFO;
-extern const CreateInfo TRIANGLE_TESC_CREATE_INFO;
-extern const CreateInfo TRIANGLE_TESE_CREATE_INFO;
+extern const CreateInfo PHONG_TRI_COLOR_TESC_CREATE_INFO;
+extern const CreateInfo PHONG_TRI_COLOR_TESE_CREATE_INFO;
 }  // namespace Tessellation
 
 }  // namespace Shader

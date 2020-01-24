@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -78,7 +78,8 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
         case GRAPHICS::DEFERRED_MRT_PT:
         case GRAPHICS::DEFERRED_MRT_COLOR_RFL_RFR:
         case GRAPHICS::DEFERRED_MRT_SKYBOX:
-        case GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED:
+        case GRAPHICS::TESS_PHONG_TRI_COLOR_DEFERRED:
+        case GRAPHICS::TESS_PHONG_TRI_COLOR_WF_DEFERRED:
         case GRAPHICS::GEOMETRY_SILHOUETTE_DEFERRED:
         case GRAPHICS::PRTCL_WAVE_DEFERRED:
         case GRAPHICS::PBR_COLOR:
@@ -133,7 +134,7 @@ void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
             }
         } break;
         case GRAPHICS::DEFERRED_MRT_LINE:
-        case GRAPHICS::TESSELLATION_BEZIER_4_DEFERRED:
+        case GRAPHICS::TESS_BEZIER_4_DEFERRED:
         case GRAPHICS::LINE: {
             for (const auto& offset : lineOffsets_) {
                 auto& pMesh = handler().meshHandler().getLineMesh(offset);

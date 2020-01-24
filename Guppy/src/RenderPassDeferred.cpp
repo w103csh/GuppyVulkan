@@ -29,7 +29,7 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         GRAPHICS::DEFERRED_MRT_PT,
 // TODO: make tess/geom pipeline/mesh optional based on the context flags.
 #ifndef VK_USE_PLATFORM_MACOS_MVK
-        GRAPHICS::TESSELLATION_BEZIER_4_DEFERRED,
+        GRAPHICS::TESS_BEZIER_4_DEFERRED,
 #endif
         GRAPHICS::DEFERRED_MRT_LINE,
         GRAPHICS::DEFERRED_MRT_COLOR,
@@ -45,7 +45,8 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         GRAPHICS::PRTCL_FOUNTAIN_DEFERRED,
 #ifndef VK_USE_PLATFORM_MACOS_MVK
         // GRAPHICS::GEOMETRY_SILHOUETTE_DEFERRED,
-        GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED,
+        GRAPHICS::TESS_PHONG_TRI_COLOR_DEFERRED,
+        GRAPHICS::TESS_PHONG_TRI_COLOR_WF_DEFERRED,
 #endif
         GRAPHICS::DEFERRED_MRT_TEX,
         GRAPHICS::DEFERRED_MRT_SKYBOX,
@@ -158,9 +159,10 @@ void Base::record(const uint8_t frameIndex) {
                 auto graphicsType = std::visit(Pipeline::GetGraphics{}, pPipelineBindData->type);
                 // Push constant
                 switch (graphicsType) {
-                    case GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED:
                     case GRAPHICS::GEOMETRY_SILHOUETTE_DEFERRED:
-                    case GRAPHICS::TESSELLATION_BEZIER_4_DEFERRED:
+                    case GRAPHICS::TESS_BEZIER_4_DEFERRED:
+                    case GRAPHICS::TESS_PHONG_TRI_COLOR_DEFERRED:
+                    case GRAPHICS::TESS_PHONG_TRI_COLOR_WF_DEFERRED:
                     case GRAPHICS::DEFERRED_MRT_COLOR:
                     case GRAPHICS::DEFERRED_MRT_PT:
                     case GRAPHICS::DEFERRED_MRT_LINE: {
