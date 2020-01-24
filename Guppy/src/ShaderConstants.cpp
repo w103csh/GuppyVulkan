@@ -231,16 +231,16 @@ const CreateInfo BEZIER_4_TESE_CREATE_INFO = {
     "tese.bezier4.glsl",
     VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
 };
-const CreateInfo TRIANGLE_TESC_CREATE_INFO = {
-    SHADER::TRIANGLE_TESC,
-    "Triangle Tesselation Control Shader",
-    "tesc.triangle.glsl",
+const CreateInfo PHONG_TRI_COLOR_TESC_CREATE_INFO = {
+    SHADER::PHONG_TRI_COLOR_TESC,
+    "Phong Tesselation Triangle Color Control Shader",
+    "tesc.phong.triangle.color.glsl",
     VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
 };
-const CreateInfo TRIANGLE_TESE_CREATE_INFO = {
-    SHADER::TRIANGLE_TESE,
-    "Triangle Tesselation Evaluation Shader",
-    "tese.triangle.glsl",
+const CreateInfo PHONG_TRI_COLOR_TESE_CREATE_INFO = {
+    SHADER::PHONG_TRI_COLOR_TESE,  //
+    "Phong Tesselation Triangle Color Evaluation Shader",
+    "tese.phong.triangle.color.glsl",
     VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
 };
 
@@ -334,8 +334,8 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     {SHADER::TESS_COLOR_VERT, Shader::Tessellation::COLOR_VERT_CREATE_INFO},
     {SHADER::BEZIER_4_TESC, Shader::Tessellation::BEZIER_4_TESC_CREATE_INFO},
     {SHADER::BEZIER_4_TESE, Shader::Tessellation::BEZIER_4_TESE_CREATE_INFO},
-    {SHADER::TRIANGLE_TESC, Shader::Tessellation::TRIANGLE_TESC_CREATE_INFO},
-    {SHADER::TRIANGLE_TESE, Shader::Tessellation::TRIANGLE_TESE_CREATE_INFO},
+    {SHADER::PHONG_TRI_COLOR_TESC, Shader::Tessellation::PHONG_TRI_COLOR_TESC_CREATE_INFO},
+    {SHADER::PHONG_TRI_COLOR_TESE, Shader::Tessellation::PHONG_TRI_COLOR_TESE_CREATE_INFO},
     // GEOMETRY
     {SHADER::WIREFRAME_GEOM, Shader::Geometry::WIREFRAME_CREATE_INFO},
     {SHADER::SILHOUETTE_GEOM, Shader::Geometry::SILHOUETTE_CREATE_INFO},

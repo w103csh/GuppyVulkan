@@ -30,7 +30,7 @@ struct SurfaceCreateInfo {
           l(1.0f),
           A(2e-5f),
           L() {
-        L = (V * V) / 9.81f;
+        L = (V * V) / g;
     }
     float Lx;         // grid size (meters)
     float Lz;         // grid size (meters)

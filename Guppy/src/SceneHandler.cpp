@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -247,7 +247,7 @@ void Scene::Handler::init() {
 
             // GRAPHICS::TRI_LIST_COLOR is the default
             colorInfo.name = "Tessellated Triangle Test";
-            colorInfo.pipelineType = GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED;
+            colorInfo.pipelineType = GRAPHICS::TESS_PHONG_TRI_COLOR_WF_DEFERRED;
 
             colorInfo.faces.push_back({});
             colorInfo.faces.back()[0].position = {0.5, 2.0f, 0.0f};
@@ -284,11 +284,11 @@ void Scene::Handler::init() {
             modelInfo.async = false;
             modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };
             modelInfo.modelPath = ICOSAHEDRON_MODEL_PATH;
-            modelInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
+            // modelInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
             // This doesn't work right... Need to learn about cubic bezier trianlges/surfaces.
-            // modelInfo.pipelineType = GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED;
+            modelInfo.pipelineType = GRAPHICS::TESS_PHONG_TRI_COLOR_DEFERRED;
             modelInfo.selectable = true;
-            modelInfo.settings.geometryInfo.smoothNormals = false;
+            modelInfo.settings.geometryInfo.smoothNormals = true;
             modelInfo.settings.geometryInfo.faceVertexColorsRGB = true;
 
             instObj3dInfo = {};
@@ -297,8 +297,20 @@ void Scene::Handler::init() {
             defMatInfo = {};
             defMatInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
 
+            modelInfo.settings.geometryInfo.smoothNormals = true;
             auto offset = modelHandler().makeColorModel(&modelInfo, &defMatInfo, &instObj3dInfo)->getOffset();
             pScene->addModelIndex(offset);
+
+            // second one
+            {
+                modelInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
+                instObj3dInfo = {};
+                instObj3dInfo.data.push_back({helpers::affine(glm::vec3{2.0f}, {-1.0, 0.0, 0.0}, -M_PI_2_FLT, CARDINAL_X)});
+
+                modelInfo.settings.geometryInfo.smoothNormals = false;
+                offset = modelHandler().makeColorModel(&modelInfo, &defMatInfo, &instObj3dInfo)->getOffset();
+                pScene->addModelIndex(offset);
+            }
         }
 
         // ARC

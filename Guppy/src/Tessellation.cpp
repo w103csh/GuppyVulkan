@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -91,7 +91,7 @@ void Base::getTesselationInfoResources(CreateInfoResources& createInfoRes) {
 
 // BEZIER 4
 const Pipeline::CreateInfo BEZIER_4_CREATE_INFO = {
-    GRAPHICS::TESSELLATION_BEZIER_4_DEFERRED,
+    GRAPHICS::TESS_BEZIER_4_DEFERRED,
     "Tessellation Bezier 4 Control Point (Deferred) Pipeline",
     {
         SHADER::TESS_COLOR_VERT,
@@ -108,14 +108,14 @@ const Pipeline::CreateInfo BEZIER_4_CREATE_INFO = {
 };
 Bezier4Deferred::Bezier4Deferred(Handler& handler) : Base(handler, &BEZIER_4_CREATE_INFO, 4) {}
 
-// TRIANGLE
-const Pipeline::CreateInfo TRIANGLE_DEFERRED_CREATE_INFO = {
-    GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED,
-    "Tessellation Triangle (Deferred) Pipeline",
+// PHONG TRIANGLE (DEFERRED)
+const Pipeline::CreateInfo PHONG_TRI_DEFERRED_CREATE_INFO = {
+    GRAPHICS::TESS_PHONG_TRI_COLOR_DEFERRED,
+    "Tessellation Phong Triangle Color (Deferred) Pipeline",
     {
         SHADER::TESS_COLOR_VERT,
-        SHADER::TRIANGLE_TESC,
-        SHADER::TRIANGLE_TESE,
+        SHADER::PHONG_TRI_COLOR_TESC,
+        SHADER::PHONG_TRI_COLOR_TESE,
         SHADER::DEFERRED_MRT_COLOR_FRAG,
     },
     {
@@ -127,13 +127,22 @@ const Pipeline::CreateInfo TRIANGLE_DEFERRED_CREATE_INFO = {
     },
     {PUSH_CONSTANT::DEFERRED},
 };
-TriangleDeferred::TriangleDeferred(Handler& handler) : Base(handler, &TRIANGLE_DEFERRED_CREATE_INFO, 6) {}
+// PHONG TRIANGLE COLOR (DEFERRED)
+PhongTriColorDeferred::PhongTriColorDeferred(Handler& handler) : Base(handler, &PHONG_TRI_DEFERRED_CREATE_INFO, 3) {}
 
-void TriangleDeferred::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+// PHONG TRIANGLE COLOR WIREFRAME (DEFERRED)
+std::unique_ptr<Pipeline::Base> MakePhongTriColorWireframeDeferred(Pipeline::Handler& handler) {
+    CreateInfo info = PHONG_TRI_DEFERRED_CREATE_INFO;
+    info.name = "Tessellation Phong Triangle Color Wireframe (Deferred) Pipeline";
+    info.type = GRAPHICS::TESS_PHONG_TRI_COLOR_WF_DEFERRED;
+    return std::make_unique<PhongTriColorWireframeDeferred>(handler, &info);
+}
+PhongTriColorWireframeDeferred::PhongTriColorWireframeDeferred(Handler& handler, const CreateInfo* pCreateInfo)
+    : PhongTriColorDeferred(handler, pCreateInfo) {}
+
+void PhongTriColorWireframeDeferred::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     Base::getRasterizationStateInfoResources(createInfoRes);
     createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_LINE;
-    // createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_NONE;
-    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
 }
 
 }  // namespace Tessellation

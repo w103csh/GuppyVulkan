@@ -98,8 +98,9 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
                 case GRAPHICS::DEFERRED_SSAO:                   insertPair = pPipelines_.insert({type, std::make_unique<Deferred::SSAO>(std::ref(*this))}); break;
                 case GRAPHICS::SHADOW_COLOR:                    insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Color>(std::ref(*this))}); break;
                 case GRAPHICS::SHADOW_TEX:                      insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Texture>(std::ref(*this))}); break;
-                case GRAPHICS::TESSELLATION_BEZIER_4_DEFERRED:  insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::Bezier4Deferred>(std::ref(*this))}); break;
-                case GRAPHICS::TESSELLATION_TRIANGLE_DEFERRED:  insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::TriangleDeferred>(std::ref(*this))}); break;
+                case GRAPHICS::TESS_BEZIER_4_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::Bezier4Deferred>(std::ref(*this))}); break;
+                case GRAPHICS::TESS_PHONG_TRI_COLOR_DEFERRED:   insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::PhongTriColorDeferred>(std::ref(*this))}); break;
+                case GRAPHICS::TESS_PHONG_TRI_COLOR_WF_DEFERRED:insertPair = pPipelines_.insert({type, Tessellation::MakePhongTriColorWireframeDeferred(std::ref(*this))}); break;
                 case GRAPHICS::GEOMETRY_SILHOUETTE_DEFERRED:    insertPair = pPipelines_.insert({type, std::make_unique<Geometry::Silhouette>(std::ref(*this))}); break;
                 case GRAPHICS::PRTCL_WAVE_DEFERRED:             insertPair = pPipelines_.insert({type, std::make_unique<Particle::Wave>(std::ref(*this))}); break;
                 case GRAPHICS::PRTCL_FOUNTAIN_DEFERRED:         insertPair = pPipelines_.insert({type, std::make_unique<Particle::Fountain>(std::ref(*this))}); break;

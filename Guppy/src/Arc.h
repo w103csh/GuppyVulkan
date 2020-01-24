@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -19,7 +19,7 @@ namespace Mesh {
 class Handler;
 
 struct ArcCreateInfo : public CreateInfo {
-    ArcCreateInfo() : CreateInfo{GRAPHICS::TESSELLATION_BEZIER_4_DEFERRED, false} {};
+    ArcCreateInfo() : CreateInfo{GRAPHICS::TESS_BEZIER_4_DEFERRED, false} {};
     std::vector<Vertex::Color> controlPoints;
 };
 

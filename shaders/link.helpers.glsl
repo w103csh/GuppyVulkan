@@ -5,8 +5,6 @@
  
 #version 450
 
-const float PI = 3.14159265358979323846;
-
 vec2 complexMultiply(const in vec2 a, const in vec2 b) {
     return vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x);
 }
