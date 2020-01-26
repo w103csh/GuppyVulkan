@@ -14,6 +14,7 @@ float complexMagnitude(const in vec2 a);
 // BINDINGS
 layout(set=_DS_OCEAN, binding=2) uniform Simulation {
     uvec2 nmLog2;   // log2 of discrete dimensions
+    float lambda;   // horizontal displacement scale factor
     float t;        // time
 } sim;
 layout(set=_DS_OCEAN, binding=3, rgba32f) uniform image2DArray imgOcean;
@@ -25,13 +26,13 @@ const int LAYER_HEIGHT          = 2;
 const int LAYER_SLOPE           = 3;
 const int LAYER_DIFFERENTIAL    = 4;
 
-void bitReversal(const int i, const int ii, const int j, const int jj, const int layer) {
+void swap(const int i, const int ii, const int j, const int jj, const int layer) {
     vec4 t = imageLoad(imgOcean, ivec3(i, ii, layer));
     imageStore(imgOcean, ivec3(i, ii, layer), imageLoad(imgOcean, ivec3(j, jj, layer)));
     imageStore(imgOcean, ivec3(j, jj, layer), t);
 }
 
-void something(const int i, const int ii, const int i1, const int ii1, const float u1, const float u2, const int layer) {
+void transform(const int i, const int ii, const int i1, const int ii1, const float u1, const float u2, const int layer) {
     vec4 t1 = imageLoad(imgOcean, ivec3(i1, ii1, layer));
     t1 = vec4(
         u1 * t1.x - u2 * t1.y,
@@ -62,8 +63,9 @@ void rows(const in int col) {
     j = 0;
     for (i = 0; i < n - 1; i++) {
         if (i < j) {
-            bitReversal(i, col, j, col, LAYER_HEIGHT); // TODO: this does zw comp needlessly
-            bitReversal(i, col, j, col, LAYER_SLOPE);
+            swap(i, col, j, col, LAYER_HEIGHT); // TODO: this does zw comp needlessly
+            swap(i, col, j, col, LAYER_SLOPE);
+            swap(i, col, j, col, LAYER_DIFFERENTIAL);
         }
         k = i2;
         while (k <= j) {
@@ -85,8 +87,9 @@ void rows(const in int col) {
         for (j = 0; j < l1; j++) {
             for (i = j; i < n; i += l2) {
                 i1 = i + l1;
-                something(i, col, i1, col, u1, u2, LAYER_HEIGHT); // TODO: this does zw comp needlessly
-                something(i, col, i1, col, u1, u2, LAYER_SLOPE);
+                transform(i, col, i1, col, u1, u2, LAYER_HEIGHT); // TODO: this does zw comp needlessly
+                transform(i, col, i1, col, u1, u2, LAYER_SLOPE);
+                transform(i, col, i1, col, u1, u2, LAYER_DIFFERENTIAL);
             }
             z = u1 * c1 - u2 * c2;
             u2 = u1 * c2 + u2 * c1;
@@ -116,8 +119,9 @@ void cols(const in int row) {
     j = 0;
     for (i = 0; i < n - 1; i++) {
         if (i < j) {
-            bitReversal(row, i, row, j, LAYER_HEIGHT); // TODO: this does zw comp needlessly
-            bitReversal(row, i, row, j, LAYER_SLOPE);
+            swap(row, i, row, j, LAYER_HEIGHT); // TODO: this does zw comp needlessly
+            swap(row, i, row, j, LAYER_SLOPE);
+            swap(row, i, row, j, LAYER_DIFFERENTIAL);
         }
         k = i2;
         while (k <= j) {
@@ -139,8 +143,9 @@ void cols(const in int row) {
         for (j = 0; j < l1; j++) {
             for (i = j; i < n; i += l2) {
                 i1 = i + l1;
-                something(row, i, row, i1, u1, u2, LAYER_HEIGHT); // TODO: this does zw comp needlessly
-                something(row, i, row, i1, u1, u2, LAYER_SLOPE);
+                transform(row, i, row, i1, u1, u2, LAYER_HEIGHT); // TODO: this does zw comp needlessly
+                transform(row, i, row, i1, u1, u2, LAYER_SLOPE);
+                transform(row, i, row, i1, u1, u2, LAYER_DIFFERENTIAL);
             }
             z = u1 * c1 - u2 * c2;
             u2 = u1 * c2 + u2 * c1;

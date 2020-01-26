@@ -14,6 +14,11 @@ layout(set=_DS_OCEAN, binding=0) uniform CameraDefaultPerspective {
     mat4 viewProjection;
     vec3 worldPosition;
 } camera;
+layout(set=_DS_OCEAN, binding=2) uniform Simulation {
+    uvec2 nmLog2;   // log2 of discrete dimensions
+    float lambda;   // horizontal displacement scale factor
+    float t;        // time
+} sim;
 layout(set=_DS_OCEAN, binding=3, rgba32f) uniform readonly image2DArray imgOcean;
 
 // IN
@@ -34,12 +39,23 @@ const int LAYER_DIFFERENTIAL    = 4;
 void main() {
     bool flipSign = ((inImageOffset.x + inImageOffset.y) & 1) > 0;
 
+    // Differential
+    vec4 dxdz = imageLoad(imgOcean, ivec3(inImageOffset, LAYER_DIFFERENTIAL));
+    if (flipSign) {
+        dxdz.x = -dxdz.x;
+        dxdz.z = -dxdz.z;
+    }
+
     // Position
-    outPosition = inPosition;
-    outPosition.y += imageLoad(imgOcean, ivec3(inImageOffset, LAYER_HEIGHT)).r;
+    outPosition = vec3(
+        inPosition.x + dxdz.x * sim.lambda,                         // x horizontal displacement (choppiness)
+        imageLoad(imgOcean, ivec3(inImageOffset, LAYER_HEIGHT)).r,  // height
+        inPosition.z + dxdz.z * sim.lambda                          // z horizontal displacement (choppiness)
+    );
     if (flipSign) outPosition.y = -outPosition.y;
     outPosition = (inModel * vec4(outPosition, 1.0)).xyz;
     gl_Position = camera.viewProjection * vec4(outPosition, 1.0);
+
     // Normal
     outNormal = imageLoad(imgOcean, ivec3(inImageOffset, LAYER_SLOPE)).rgb;
     if (flipSign) outNormal = -outNormal;

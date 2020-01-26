@@ -29,7 +29,8 @@ struct SurfaceCreateInfo {
           omega(1.0f, 0.0f),
           l(1.0f),
           A(2e-5f),
-          L() {
+          L(),
+          lambda(-1.0f) {
         L = (V * V) / g;
     }
     float Lx;         // grid size (meters)
@@ -41,6 +42,7 @@ struct SurfaceCreateInfo {
     float l;          // small wave cutoff (meters)
     float A;          // Phillips spectrum constant (wave amplitude?)
     float L;          // largest possible waves from continuous wind speed V
+    float lambda;     // horizontal displacement scale factor
 };
 
 }  // namespace Ocean
@@ -73,6 +75,7 @@ namespace Ocean {
 namespace Simulation {
 struct DATA {
     uint32_t nLog2, mLog2;  // log2 of discrete dimensions
+    float lambda;           // horizontal displacement scale factor
     float t;                // time
 };
 struct CreateInfo : Buffer::CreateInfo {
@@ -142,7 +145,6 @@ class Surface : public Graphics {
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
 };
-
 
 }  // namespace Ocean
 }  // namespace Pipeline

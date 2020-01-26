@@ -175,6 +175,7 @@ Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo
     assert(helpers::isPowerOfTwo(pCreateInfo->info.N) && helpers::isPowerOfTwo(pCreateInfo->info.M));
     data_.nLog2 = static_cast<uint32_t>(log2(pCreateInfo->info.N));
     data_.mLog2 = static_cast<uint32_t>(log2(pCreateInfo->info.M));
+    data_.lambda = pCreateInfo->info.lambda;
     data_.t = 0.0f;
     setData();
 }
