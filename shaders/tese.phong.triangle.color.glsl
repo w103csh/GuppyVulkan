@@ -38,7 +38,6 @@ layout(location=PATCH_CONTROL_POINTS*2) in PhongPatch inPhongPatch[];
 layout(location=0) out vec3 outPosition;
 layout(location=1) out vec3 outNormal;
 layout(location=2) out vec4 outColor;
-layout(location=3) out flat uint outFlags;
 
 #define Pi  gl_in[0].gl_Position.xyz
 #define Pj  gl_in[1].gl_Position.xyz
@@ -83,6 +82,4 @@ void main() {
     outColor = interp3Array(inColor, gl_TessCoord);
     // tex coordinate
     // outTexCoord = interp3_2(inTexCoord[0], inTexCoord[1], inTexCoord[2]);
-
-    outFlags = 0x1u;
 }

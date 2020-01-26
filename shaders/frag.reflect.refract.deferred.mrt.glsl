@@ -32,6 +32,7 @@ layout(set=_DS_SMP_DEF, binding=0) uniform samplerCube sampCube;
 // IN
 layout(location=0) in vec3 inPosition;    // (camera space)
 layout(location=1) in vec3 inNormal;      // (camera space)
+layout(location=2) in vec3 inColor;
 // OUT
 layout(location=0) out vec4 outPosition;
 layout(location=1) out vec4 outNormal;

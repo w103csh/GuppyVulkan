@@ -16,8 +16,7 @@
 * [Dear ImGui](https://github.com/ocornut/imgui) integration
 * [FMOD](https://www.fmod.com/) integration
 * [XInput](https://docs.microsoft.com/en-us/windows/win32/xinput/xinput-game-controller-apis-portal) integration
-* [stb_image.h](https://github.com/nothings/stb/blob/master/stb_image.h) for image loading
-* [tinyobjloader](https://github.com/syoyo/tinyobjloader) for mesh loading with material support
+* .obj mesh/material loading
 * Basic CPU selection
 * Other things I'm forgetting...
 
