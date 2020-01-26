@@ -157,10 +157,8 @@ class Shell {
     };
     virtual void log(LogPriority priority, const char *msg) const;
 
-    void init();
     virtual void run() = 0;
     virtual void quit() const = 0;
-    void destroy();
 
     // SHADER RECOMPILING
     virtual void asyncAlert(uint64_t milliseconds) = 0;  // TODO: think this through
