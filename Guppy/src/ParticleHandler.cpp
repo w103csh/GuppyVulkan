@@ -125,9 +125,18 @@ void Particle::Handler::create() {
     bool suppress = true;
 
     // OCEAN
-    if (!suppress || false) {
+    if (!suppress || true) {
         ::Ocean::SurfaceCreateInfo info = {};
-        info.l = 0.001f;  // TODO: try this with 1 like the paper says.
+        info.l = 0.5f;  // TODO: try this with 1 like the paper says.
+        info.A = 2e-6f;
+        info.N = info.M = 256;
+        info.Lx = info.Lz = 500.0f;
+        // info.l = 0.001f;  // TODO: try this with 1 like the paper says.
+        // info.A = 2e-6f;
+        // info.N = info.M = 64;
+        // info.Lx = info.Lz = 320.0f;
+        // info.V = 12.8f;
+        // info.omega = {0, 1};
 
         // BUFFER
         Ocean::CreateInfo buffOcnInfo = {};
@@ -140,6 +149,7 @@ void Particle::Handler::create() {
         };
         buffOcnInfo.graphicsPipelineTypes = {
             GRAPHICS::OCEAN_WF_DEFERRED,
+            GRAPHICS::OCEAN_SURFACE_DEFERRED,
         };
         buffOcnInfo.info = info;
 
@@ -153,7 +163,7 @@ void Particle::Handler::create() {
 
         // MATERIAL
         matInfo = {};
-        // matInfo.flags = Material::FLAG::PER_VERTEX_COLOR;
+        // matInfo.flags = Material::FLAG::MODE_FLAT_SHADE;
         matInfo.color = COLOR_BLUE;
         matInfo.shininess = 10;
         // matInfo.pTexture = textureHandler().getTexture(Texture::SKYBOX_NIGHT_ID);

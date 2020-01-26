@@ -52,8 +52,8 @@ void main() {
 
     // Slope
     imageStore(imgOcean, ivec3(pix, LAYER_SLOPE), vec4(
-        hTilde * vec2(0.0, kData.x),
-        hTilde * vec2(0.0, kData.y)
+        complexMultiply(hTilde, vec2(0.0, kData.x)),
+        complexMultiply(hTilde, vec2(0.0, kData.y))
     ));
 
     // Differentials
@@ -61,8 +61,8 @@ void main() {
         imageStore(imgOcean, ivec3(pix, LAYER_DIFFERENTIAL), vec4(0,0,0,0));
     } else {
         imageStore(imgOcean, ivec3(pix, LAYER_DIFFERENTIAL), vec4(
-            hTilde * vec2(0.0, -kData.x / kData.z),
-            hTilde * vec2(0.0, -kData.y / kData.z)
+            complexMultiply(hTilde, vec2(0.0, -kData.x / kData.z)),
+            complexMultiply(hTilde, vec2(0.0, -kData.y / kData.z))
         ));
     }
 }

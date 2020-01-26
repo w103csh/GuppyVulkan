@@ -81,6 +81,7 @@ struct CreateInfo : Buffer::CreateInfo {
 class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
    public:
     Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo);
+    void updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) override;
 };
 }  // namespace Simulation
 
@@ -128,6 +129,20 @@ class Wireframe : public Graphics {
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
 };
+
+// SURFACE
+class Surface : public Graphics {
+   public:
+    const bool DO_BLEND;
+    const bool IS_DEFERRED;
+
+    Surface(Handler& handler);
+
+   private:
+    void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
+    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
+};
+
 
 }  // namespace Ocean
 }  // namespace Pipeline

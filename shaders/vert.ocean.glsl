@@ -27,17 +27,22 @@ layout(location=0) out vec3 outPosition;        // (world space)
 layout(location=1) out vec3 outNormal;          // (world space)
 layout(location=2) out vec4 outColor;
 
-const int LAYER_HEIGHT = 2;
+const int LAYER_HEIGHT          = 2;
+const int LAYER_SLOPE           = 3;
+const int LAYER_DIFFERENTIAL    = 4;
 
 void main() {
+    bool flipSign = ((inImageOffset.x + inImageOffset.y) & 1) > 0;
+
     // Position
     outPosition = inPosition;
     outPosition.y += imageLoad(imgOcean, ivec3(inImageOffset, LAYER_HEIGHT)).r;
-    if (((inImageOffset.x + inImageOffset.y) & 1) > 0)
-        outPosition.y = -outPosition.y;
+    if (flipSign) outPosition.y = -outPosition.y;
     outPosition = (inModel * vec4(outPosition, 1.0)).xyz;
     gl_Position = camera.viewProjection * vec4(outPosition, 1.0);
     // Normal
-    // outNormal = normalize(mat3(inModel) * inNormal.xyz); // normal matrix ??
-    outNormal = normalize(mat3(inModel) * vec3(0, 1, 0));
+    outNormal = imageLoad(imgOcean, ivec3(inImageOffset, LAYER_SLOPE)).rgb;
+    if (flipSign) outNormal = -outNormal;
+    outNormal = normalize(vec3(-outNormal.x, 1.0, -outNormal.z));
+    outNormal = normalize(mat3(inModel) * outNormal); // normal matrix ??
 }

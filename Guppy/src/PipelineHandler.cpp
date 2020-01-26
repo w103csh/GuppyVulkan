@@ -112,6 +112,7 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_H
                 case GRAPHICS::HFF_WF_DEFERRED:                 insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluid::Wireframe>(std::ref(*this))}); break;
                 case GRAPHICS::HFF_OCEAN_DEFERRED:              insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluid::Ocean>(std::ref(*this))}); break;
                 case GRAPHICS::OCEAN_WF_DEFERRED:               insertPair = pPipelines_.insert({type, std::make_unique<Ocean::Wireframe>(std::ref(*this))}); break;
+                case GRAPHICS::OCEAN_SURFACE_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Ocean::Surface>(std::ref(*this))}); break;
                 default: assert(false);  // add new pipelines here
             }
             // clang-format on

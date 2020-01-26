@@ -38,6 +38,7 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         GRAPHICS::HFF_WF_DEFERRED,
         GRAPHICS::HFF_OCEAN_DEFERRED,
         GRAPHICS::OCEAN_WF_DEFERRED,
+        GRAPHICS::OCEAN_SURFACE_DEFERRED,
 #ifndef VK_USE_PLATFORM_MACOS_MVK
         GRAPHICS::DEFERRED_MRT_WF_COLOR,
 #endif
@@ -191,6 +192,7 @@ void Base::record(const uint8_t frameIndex) {
                     case GRAPHICS::HFF_WF_DEFERRED:
                     case GRAPHICS::HFF_OCEAN_DEFERRED:
                     case GRAPHICS::OCEAN_WF_DEFERRED:
+                    case GRAPHICS::OCEAN_SURFACE_DEFERRED:
                     case GRAPHICS::PRTCL_FOUNTAIN_DEFERRED: {
                         // PARTICLE GRAPHICS
                         handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
@@ -431,7 +433,8 @@ void Base::createDependencies() {
             });
         }
         if (pipelineType == PIPELINE{GRAPHICS::HFF_CLMN_DEFERRED} || pipelineType == PIPELINE{GRAPHICS::HFF_WF_DEFERRED} ||
-            pipelineType == PIPELINE{GRAPHICS::OCEAN_WF_DEFERRED}) {
+            pipelineType == PIPELINE{GRAPHICS::OCEAN_WF_DEFERRED} ||
+            pipelineType == PIPELINE{GRAPHICS::OCEAN_SURFACE_DEFERRED}) {
             // Dispatch writes into a storage buffer. Draw consumes that buffer as a shader object.
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,

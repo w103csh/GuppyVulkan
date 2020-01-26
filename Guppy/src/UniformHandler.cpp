@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -183,7 +183,8 @@ void Uniform::Handler::frame() {
 
     // MAIN CAMERA
     auto& camera = getMainCamera();
-    camera.update(shell().inputHandler().getPosDir(), shell().inputHandler().getLookDir(), frameIndex);
+    float movementFactor = 10.0f;
+    camera.update(shell().inputHandler().getPosDir() * movementFactor, shell().inputHandler().getLookDir(), frameIndex);
     update(camera, static_cast<int>(frameIndex));
 
     // DEFAULT DIRECTIONAL
@@ -295,7 +296,8 @@ void Uniform::Handler::createCameras() {
     {
         defInfo.aspect = static_cast<float>(settings().initial_width) / static_cast<float>(settings().initial_height);
         // createInfo.center = glm::vec3{-0.5f, 2.0f, 1.0f};
-        defInfo.eye = {4.0f, 6.0f, 4.0f};
+        // defInfo.eye = {4.0f, 6.0f, 4.0f};
+        defInfo.eye = {100.0f, 100.0f, 100.0f};
         camPersDefMgr().insert(dev, &defInfo);
         mainCameraOffset_ = camPersDefMgr().pItems.size() - 1;
     }
@@ -341,7 +343,8 @@ void Uniform::Handler::createLights() {
     assert(shell().context().imageCount == 3);  // Potential imageCount problem
     defDirInfo.dataCount = shell().context().imageCount;
     // MOON
-    defDirInfo.direction = glm::normalize(glm::vec3(0, 0.1f, 1.0f));  // direction to the light(s) (world space)
+    // defDirInfo.direction = glm::normalize(glm::vec3(0, 0.1f, 1.0f));  // direction to the light(s) (world space)
+    defDirInfo.direction = glm::normalize(glm::vec3(0, 1.0f, 1.0f));
     lgtDefDirMgr().insert(dev, &defDirInfo);
 
     Light::CreateInfo lightCreateInfo = {};

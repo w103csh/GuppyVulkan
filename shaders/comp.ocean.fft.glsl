@@ -25,6 +25,25 @@ const int LAYER_HEIGHT          = 2;
 const int LAYER_SLOPE           = 3;
 const int LAYER_DIFFERENTIAL    = 4;
 
+void bitReversal(const int i, const int ii, const int j, const int jj, const int layer) {
+    vec4 t = imageLoad(imgOcean, ivec3(i, ii, layer));
+    imageStore(imgOcean, ivec3(i, ii, layer), imageLoad(imgOcean, ivec3(j, jj, layer)));
+    imageStore(imgOcean, ivec3(j, jj, layer), t);
+}
+
+void something(const int i, const int ii, const int i1, const int ii1, const float u1, const float u2, const int layer) {
+    vec4 t1 = imageLoad(imgOcean, ivec3(i1, ii1, layer));
+    t1 = vec4(
+        u1 * t1.x - u2 * t1.y,
+        u1 * t1.y + u2 * t1.x,
+        u1 * t1.z - u2 * t1.w,
+        u1 * t1.w + u2 * t1.z
+    );
+    vec4 t2 = imageLoad(imgOcean, ivec3(i, ii, layer));
+    imageStore(imgOcean, ivec3(i1, ii1, layer), t2 - t1);
+    imageStore(imgOcean, ivec3(i, ii, layer), t2 + t1);
+}
+
 /**
  *  This algorithm comes from here: http://paulbourke.net/miscellaneous/dft/. It was
  *  modified slightly but the idea is the same. The entire image is transform using
@@ -43,13 +62,8 @@ void rows(const in int col) {
     j = 0;
     for (i = 0; i < n - 1; i++) {
         if (i < j) {
-            t1 = imageLoad(imgOcean, ivec3(i, col, LAYER_HEIGHT)).xy;
-            imageStore(imgOcean, ivec3(i, col, LAYER_HEIGHT),
-                vec4(imageLoad(imgOcean, ivec3(j, col, LAYER_HEIGHT)).xy, 0, 0)
-            );
-            imageStore(imgOcean, ivec3(j, col, LAYER_HEIGHT),
-                vec4(t1, 0, 0)
-            );
+            bitReversal(i, col, j, col, LAYER_HEIGHT); // TODO: this does zw comp needlessly
+            bitReversal(i, col, j, col, LAYER_SLOPE);
         }
         k = i2;
         while (k <= j) {
@@ -71,18 +85,8 @@ void rows(const in int col) {
         for (j = 0; j < l1; j++) {
             for (i = j; i < n; i += l2) {
                 i1 = i + l1;
-                t1 = imageLoad(imgOcean, ivec3(i1, col, LAYER_HEIGHT)).xy;
-                t1 = vec2(
-                    u1 * t1.x - u2 * t1.y,
-                    u1 * t1.y + u2 * t1.x
-                );
-                t2 = imageLoad(imgOcean, ivec3(i, col, LAYER_HEIGHT)).xy;
-                imageStore(imgOcean, ivec3(i1, col, LAYER_HEIGHT),
-                    vec4(t2 - t1, 0, 0)
-                );
-                imageStore(imgOcean, ivec3(i, col, LAYER_HEIGHT),
-                    vec4(t2 + t1, 0, 0)
-                );
+                something(i, col, i1, col, u1, u2, LAYER_HEIGHT); // TODO: this does zw comp needlessly
+                something(i, col, i1, col, u1, u2, LAYER_SLOPE);
             }
             z = u1 * c1 - u2 * c2;
             u2 = u1 * c2 + u2 * c1;
@@ -112,13 +116,8 @@ void cols(const in int row) {
     j = 0;
     for (i = 0; i < n - 1; i++) {
         if (i < j) {
-            t1 = imageLoad(imgOcean, ivec3(row, i, LAYER_HEIGHT)).xy;
-            imageStore(imgOcean, ivec3(row, i, LAYER_HEIGHT),
-                vec4(imageLoad(imgOcean, ivec3(row, j, LAYER_HEIGHT)).xy, 0, 0)
-            );
-            imageStore(imgOcean, ivec3(row, j, LAYER_HEIGHT),
-                vec4(t1, 0, 0)
-            );
+            bitReversal(row, i, row, j, LAYER_HEIGHT); // TODO: this does zw comp needlessly
+            bitReversal(row, i, row, j, LAYER_SLOPE);
         }
         k = i2;
         while (k <= j) {
@@ -140,18 +139,8 @@ void cols(const in int row) {
         for (j = 0; j < l1; j++) {
             for (i = j; i < n; i += l2) {
                 i1 = i + l1;
-                t1 = imageLoad(imgOcean, ivec3(row, i1, LAYER_HEIGHT)).xy;
-                t1 = vec2(
-                    u1 * t1.x - u2 * t1.y,
-                    u1 * t1.y + u2 * t1.x
-                );
-                t2 = imageLoad(imgOcean, ivec3(row, i, LAYER_HEIGHT)).xy;
-                imageStore(imgOcean, ivec3(row, i1, LAYER_HEIGHT),
-                    vec4(t2 - t1, 0, 0)
-                );
-                imageStore(imgOcean, ivec3(row, i, LAYER_HEIGHT),
-                    vec4(t2 + t1, 0, 0)
-                );
+                something(row, i, row, i1, u1, u2, LAYER_HEIGHT); // TODO: this does zw comp needlessly
+                something(row, i, row, i1, u1, u2, LAYER_SLOPE);
             }
             z = u1 * c1 - u2 * c2;
             u2 = u1 * c2 + u2 * c1;

@@ -167,6 +167,7 @@ const CreateInfo VERT_CREATE_INFO = {
 namespace UniformDynamic {
 namespace Ocean {
 namespace Simulation {
+
 Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
       Descriptor::Base(UNIFORM_DYNAMIC::OCEAN),
@@ -177,6 +178,12 @@ Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo
     data_.t = 0.0f;
     setData();
 }
+
+void Base::updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) {
+    data_.t = time;
+    setData(frameIndex);
+}
+
 }  // namespace Simulation
 }  // namespace Ocean
 }  // namespace UniformDynamic
@@ -244,13 +251,13 @@ const CreateInfo FFT_CREATE_INFO = {
 FFT::FFT(Handler& handler) : Compute(handler, &FFT_CREATE_INFO) {}
 
 // WIREFRAME
-const CreateInfo HFF_WF_CREATE_INFO = {
+const CreateInfo OCEAN_WF_CREATE_INFO = {
     GRAPHICS::OCEAN_WF_DEFERRED,
     "Ocean Surface Wireframe (Deferred) Pipeline",
     {SHADER::OCEAN_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
     {DESCRIPTOR_SET::OCEAN_DEFAULT},
 };
-Wireframe::Wireframe(Handler& handler) : Graphics(handler, &HFF_WF_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
+Wireframe::Wireframe(Handler& handler) : Graphics(handler, &OCEAN_WF_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
 
 void Wireframe::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     if (IS_DEFERRED) {
@@ -284,6 +291,47 @@ void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes
     createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
 }
 
+// SURFACE
+const CreateInfo OCEAN_SURFACE_CREATE_INFO = {
+    GRAPHICS::OCEAN_SURFACE_DEFERRED,
+    "Ocean Surface (Deferred) Pipeline",
+    {SHADER::OCEAN_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
+    {DESCRIPTOR_SET::OCEAN_DEFAULT},
+};
+Surface::Surface(Handler& handler) : Graphics(handler, &OCEAN_SURFACE_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
+
+void Surface::getBlendInfoResources(CreateInfoResources& createInfoRes) {
+    if (IS_DEFERRED) {
+        if (DO_BLEND) assert(handler().shell().context().independentBlendEnabled);
+        Deferred::GetBlendInfoResources(createInfoRes, DO_BLEND);
+    } else {
+        Graphics::getBlendInfoResources(createInfoRes);
+    }
+}
+
+void Surface::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
+
+    ::HeightFieldFluid::VertexData::getInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_VERTEX);
+    Storage::Vector4::GetInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_VERTEX);  // Not used
+    Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
+
+    // bindings
+    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
+    // attributes
+    createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
+        static_cast<uint32_t>(createInfoRes.attrDescs.size());
+    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
+    // topology
+    createInfoRes.inputAssemblyStateInfo = {};
+    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
+    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
+    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_TRUE;
+    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+}
+
 }  // namespace Ocean
 
 }  // namespace Pipeline
@@ -299,7 +347,7 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
       Obj3d::InstanceDraw(pInstanceData),
       normalOffset_(Particle::Buffer::BAD_OFFSET),
       indexWFRes_{},
-      drawMode(GRAPHICS::OCEAN_WF_DEFERRED) {
+      drawMode(GRAPHICS::OCEAN_SURFACE_DEFERRED) {
     assert(helpers::isPowerOfTwo(pCreateInfo->info.N) && helpers::isPowerOfTwo(pCreateInfo->info.M));
 
     for (uint32_t i = 0; i < static_cast<uint32_t>(pDescriptors_.size()); i++)
@@ -446,6 +494,34 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
                 0,                                         // uint32_t firstIndex
                 0,                                         // int32_t vertexOffset
                 0                                          // uint32_t firstInstance
+            );
+        } break;
+        case GRAPHICS::OCEAN_SURFACE_DEFERRED: {
+            vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+            vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                                    static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
+                                    descSetBindData.descriptorSets[setIndex].data(),
+                                    static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
+                                    descSetBindData.dynamicOffsets.data());
+            const VkBuffer buffers[] = {
+                verticesHFFRes_.buffer,
+                pDescriptors_[normalOffset_]->BUFFER_INFO.bufferInfo.buffer,
+                pInstObj3d_->BUFFER_INFO.bufferInfo.buffer,
+            };
+            const VkDeviceSize offsets[] = {
+                0,
+                pDescriptors_[normalOffset_]->BUFFER_INFO.memoryOffset,
+                pInstObj3d_->BUFFER_INFO.memoryOffset,
+            };
+            vkCmdBindVertexBuffers(cmd, 0, 3, buffers, offsets);
+            vkCmdBindIndexBuffer(cmd, indexRes_.buffer, 0, VK_INDEX_TYPE_UINT32);
+            vkCmdDrawIndexed(                            //
+                cmd,                                     // VkCommandBuffer commandBuffer
+                static_cast<uint32_t>(indices_.size()),  // uint32_t indexCount
+                pInstObj3d_->BUFFER_INFO.count,          // uint32_t instanceCount
+                0,                                       // uint32_t firstIndex
+                0,                                       // int32_t vertexOffset
+                0                                        // uint32_t firstInstance
             );
         } break;
         default: {

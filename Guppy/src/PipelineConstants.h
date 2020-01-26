@@ -79,6 +79,7 @@ enum class GRAPHICS : uint32_t {
     HFF_OCEAN_DEFERRED,
     // OCEAN
     OCEAN_WF_DEFERRED,
+    OCEAN_SURFACE_DEFERRED,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in code file.
