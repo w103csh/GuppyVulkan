@@ -65,6 +65,7 @@ namespace Ocean {
 extern const CreateInfo DISP_COMP_CREATE_INFO;
 extern const CreateInfo FFT_COMP_CREATE_INFO;
 extern const CreateInfo VERT_CREATE_INFO;
+extern const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO;
 }  // namespace Ocean
 }  // namespace Shader
 

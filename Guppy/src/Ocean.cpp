@@ -158,7 +158,13 @@ const CreateInfo VERT_CREATE_INFO = {
     "Ocean Surface Vertex Shader",
     "vert.ocean.glsl",
     VK_SHADER_STAGE_VERTEX_BIT,
-
+};
+const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO = {
+    SHADER::OCEAN_DEFERRED_MRT_FRAG,                                  //
+    "Ocean Surface Deferred Multiple Render Target Fragment Shader",  //
+    "frag.ocean.deferred.mrt.glsl",                                   //
+    VK_SHADER_STAGE_FRAGMENT_BIT,                                     //
+    {SHADER_LINK::COLOR_FRAG, SHADER_LINK::DEFAULT_MATERIAL},
 };
 }  // namespace Ocean
 }  // namespace Shader
@@ -296,7 +302,7 @@ void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes
 const CreateInfo OCEAN_SURFACE_CREATE_INFO = {
     GRAPHICS::OCEAN_SURFACE_DEFERRED,
     "Ocean Surface (Deferred) Pipeline",
-    {SHADER::OCEAN_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
+    {SHADER::OCEAN_VERT, SHADER::OCEAN_DEFERRED_MRT_FRAG},
     {DESCRIPTOR_SET::OCEAN_DEFAULT},
 };
 Surface::Surface(Handler& handler) : Graphics(handler, &OCEAN_SURFACE_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}

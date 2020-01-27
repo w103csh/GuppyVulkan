@@ -104,6 +104,7 @@ enum class SHADER {
     OCEAN_DISP_COMP,
     OCEAN_FFT_COMP,
     OCEAN_VERT,
+    OCEAN_DEFERRED_MRT_FRAG,
     // Add new to SHADER_ALL and SHADER_LINK_MAP.
 };
 

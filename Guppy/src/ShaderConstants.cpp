@@ -362,6 +362,7 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     {SHADER::OCEAN_DISP_COMP, Shader::Ocean::DISP_COMP_CREATE_INFO},
     {SHADER::OCEAN_FFT_COMP, Shader::Ocean::FFT_COMP_CREATE_INFO},
     {SHADER::OCEAN_VERT, Shader::Ocean::VERT_CREATE_INFO},
+    {SHADER::OCEAN_DEFERRED_MRT_FRAG, Shader::Ocean::DEFERRED_MRT_FRAG_CREATE_INFO},
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {
