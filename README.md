@@ -46,7 +46,7 @@ Recently in my experimenting with Vulkan pipelines/passes/shaders I decided to s
     [![ocean_surface_thumbnail](https://user-images.githubusercontent.com/5341766/73319812-b86cf800-41fa-11ea-9f87-ef008389ac5f.jpg)](https://youtu.be/rdF66PNIm78 "Guppy - Ocean Simulation")
     
     The technique used to generate the surface comes from Jerry Tessendorf's *Simulating Ocean Water* (a pdf of the paper can be found in the misc folder in the repository [here](misc/simulating_ocean_water_tessendorf.pdf)). This is still very much a work in progress.
-    * Wave displacement, and Fast Fourier Transform compute shaders generate height, normal, and horizontal displacement maps.
+    * Wave dispersion, and Fast Fourier Transform compute shaders generate height, normal, and horizontal displacement maps.
     * The color of the surface comes from pretty much the same technique that is outlined in the paper. The surface is also lightly tessellated using [Phong Tessellation](https://perso.telecom-paristech.fr/boubek/papers/PhongTessellation/).
     * Currently working on:
       * Adaptively tessellated terrain
