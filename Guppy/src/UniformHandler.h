@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -84,6 +84,8 @@ class Handler : public Game::Handler {
     virtual_inline auto& uniGeomDefMgr() { return std::get<Uniform::Manager<Geometry::Default::Base>>(managers_[14]);};
     virtual_inline auto& uniWaveMgr() { return std::get<Uniform::Manager<Particle::Wave::Base>>(managers_[15]);};
     virtual_inline auto& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[16]);};
+    // DYNAMIC
+    virtual_inline auto& tessPhongMgr() { return std::get<UniformDynamic::TessPhongManager>(managersDynamic_[0]);};
     
    private:
     template <class T> virtual_inline Manager<T>& getManager() { assert(false); }
@@ -127,6 +129,11 @@ class Handler : public Game::Handler {
         Manager<Storage::PostProcess::Base>           //
         >;
     std::array<Manager, 17> managers_;
+    // DYNAMIC
+    using ManagerDynamic = std::variant<  //
+        UniformDynamic::TessPhongManager  //
+        >;
+    std::array<ManagerDynamic, 1> managersDynamic_;
 
     std::vector<std::unique_ptr<Descriptor::Base>>& getItems(const DESCRIPTOR& type);
 

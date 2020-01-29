@@ -68,7 +68,8 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_
             case DESCRIPTOR_SET::SHADOW_CUBE_ALL:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::CUBE_ALL_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_SHADOW:                            pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_SHADOW_OFFSET:                     pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::SAMPLER_OFFSET_CREATE_INFO)); break;
-            case DESCRIPTOR_SET::UNIFORM_TESSELLATION_DEFAULT:              pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Tessellation::DEFAULT_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::TESS_DEFAULT:                              pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Tessellation::DEFAULT_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::TESS_PHONG:                                pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Tessellation::PHONG_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_GEOMETRY_DEFAULT:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Geometry::DEFAULT_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_PRTCL_WAVE:                        pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::WAVE_CREATE_INFO)); break;
             case DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN:                    pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Particle::FOUNTAIN_CREATE_INFO)); break;

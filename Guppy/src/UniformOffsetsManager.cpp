@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -33,7 +33,7 @@ const std::map<DESCRIPTOR, offsets> DEFAULT_OFFSETS_MAP = {
     {UNIFORM::DEFERRED_SSAO, DEFAULT_SINGLE_SET},
     {UNIFORM::SHADOW_DATA, DEFAULT_SINGLE_SET},
     // TESSELATION
-    {UNIFORM::TESSELLATION_DEFAULT, DEFAULT_SINGLE_SET},
+    {UNIFORM::TESS_DEFAULT, DEFAULT_SINGLE_SET},
     // GEOMETRY
     {UNIFORM::GEOMETRY_DEFAULT, DEFAULT_SINGLE_SET},
     // PARTICLE

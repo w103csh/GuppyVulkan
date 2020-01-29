@@ -6,6 +6,7 @@
 #include "ParticleHandler.h"
 
 #include "Shell.h"
+#include "Tessellation.h"
 // HANDLER
 #include "MeshHandler.h"
 #include "RenderPassHandler.h"
@@ -168,6 +169,12 @@ void Particle::Handler::create() {
         matInfo.shininess = 10;
         // matInfo.pTexture = textureHandler().getTexture(Texture::SKYBOX_NIGHT_ID);
         auto& pMaterial = materialHandler().makeMaterial(&matInfo);
+
+        // TESSELLATION
+        UniformDynamic::Tessellation::Phong::DATA data = {};
+        data.maxLevel = 2.0f;
+        uniformHandler().tessPhongMgr().insert(dev, true, {data});
+        pDescriptors.push_back(uniformHandler().tessPhongMgr().pItems.back());
 
         // INSTANCE
         Instance::Obj3d::CreateInfo instInfo = {};

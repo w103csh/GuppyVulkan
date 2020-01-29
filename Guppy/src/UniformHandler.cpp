@@ -65,7 +65,7 @@ Uniform::Handler::Handler(Game* pGame)
           {"Shadow Data", UNIFORM::DEFERRED_SSAO, 1, "_U_SHDW_DATA"},
           // TESSELLATION
           Uniform::Manager<Tessellation::Default::Base>  //
-          {"Tessellation Data", UNIFORM::TESSELLATION_DEFAULT, 2, "_U_TESS_DEF"},
+          {"Tessellation Data", UNIFORM::TESS_DEFAULT, 2, "_U_TESS_DEF"},
           // GEOMETRY
           Uniform::Manager<Geometry::Default::Base>  //
           {"Geomerty Wireframe", UNIFORM::GEOMETRY_DEFAULT, 1, "_U_GEOM_WF"},
@@ -76,6 +76,11 @@ Uniform::Handler::Handler(Game* pGame)
           Uniform::Manager<Storage::PostProcess::Base>  //
           {"Storage Default", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
           //
+      },
+      managersDynamic_{
+          // TESSELLATION
+          UniformDynamic::TessPhongManager  //
+          {"Tessellation Phong Data", UNIFORM_DYNAMIC::TESS_PHONG, 10, true, "_U_TESS_PHONG"},
       },
       mainCameraOffset_(0),
       hasVisualHelpers(false) {}
@@ -96,7 +101,7 @@ std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const
             case UNIFORM::PROJECTOR_DEFAULT:            return uniDefPrjMgr().pItems;
             case UNIFORM::SCREEN_SPACE_DEFAULT:         return uniScrDefMgr().pItems;
             case UNIFORM::DEFERRED_SSAO:                return uniDfrSSAOMgr().pItems;
-            case UNIFORM::TESSELLATION_DEFAULT:         return uniTessDefMgr().pItems;
+            case UNIFORM::TESS_DEFAULT:                 return uniTessDefMgr().pItems;
             case UNIFORM::GEOMETRY_DEFAULT:             return uniGeomDefMgr().pItems;
             case UNIFORM::PRTCL_WAVE:                   return uniWaveMgr().pItems;
             case UNIFORM::SHADOW_DATA:                  return uniShdwDataMgr().pItems;
@@ -144,7 +149,9 @@ void Uniform::Handler::init() {
     uniGeomDefMgr().init(shell().context());    ++count;
     uniWaveMgr().init(shell().context());       ++count;
     strPstPrcMgr().init(shell().context());     ++count;
-    assert(count == managers_.size());
+    // DYNAMIC
+    tessPhongMgr().init(shell().context());     ++count;
+    assert(count == managers_.size() + managersDynamic_.size());
     // clang-format on
 
     createCameras();
@@ -174,7 +181,9 @@ void Uniform::Handler::reset() {
     uniGeomDefMgr().destroy(dev);   ++count;
     uniWaveMgr().destroy(dev);      ++count;
     strPstPrcMgr().destroy(dev);    ++count;
-    assert(count == managers_.size());
+    // DYNAMIC
+    tessPhongMgr().destroy(dev);    ++count;
+    assert(count == managers_.size() + managersDynamic_.size());
     // clang-format on
 }
 

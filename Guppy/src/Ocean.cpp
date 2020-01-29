@@ -13,6 +13,7 @@
 
 #include "Deferred.h"
 #include "Helpers.h"
+#include "Tessellation.h"
 // HANDLERS
 #include "LoadingHandler.h"
 #include "ParticleHandler.h"
@@ -302,10 +303,16 @@ void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes
 const CreateInfo OCEAN_SURFACE_CREATE_INFO = {
     GRAPHICS::OCEAN_SURFACE_DEFERRED,
     "Ocean Surface (Deferred) Pipeline",
-    {SHADER::OCEAN_VERT, SHADER::OCEAN_DEFERRED_MRT_FRAG},
-    {DESCRIPTOR_SET::OCEAN_DEFAULT},
+    {
+        SHADER::OCEAN_VERT,
+        SHADER::PHONG_TRI_COLOR_TESC,
+        SHADER::PHONG_TRI_COLOR_TESE,
+        SHADER::OCEAN_DEFERRED_MRT_FRAG,
+    },
+    {DESCRIPTOR_SET::OCEAN_DEFAULT, DESCRIPTOR_SET::TESS_PHONG},
 };
-Surface::Surface(Handler& handler) : Graphics(handler, &OCEAN_SURFACE_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
+Surface::Surface(Handler& handler)
+    : Graphics(handler, &OCEAN_SURFACE_CREATE_INFO), DO_BLEND(false), DO_TESSELLATE(true), IS_DEFERRED(true) {}
 
 void Surface::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     if (IS_DEFERRED) {
@@ -335,8 +342,22 @@ void Surface::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) 
     createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
     createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
     createInfoRes.inputAssemblyStateInfo.flags = 0;
-    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_TRUE;
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    if (DO_TESSELLATE) {
+        createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
+        createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+    } else {
+        createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_TRUE;
+        createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    }
+}
+
+void Surface::getTesselationInfoResources(CreateInfoResources& createInfoRes) {
+    if (!DO_TESSELLATE) return;
+    createInfoRes.tessellationStateInfo = {};
+    createInfoRes.tessellationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
+    createInfoRes.tessellationStateInfo.pNext = nullptr;
+    createInfoRes.tessellationStateInfo.flags = 0;
+    createInfoRes.tessellationStateInfo.patchControlPoints = 3;
 }
 
 }  // namespace Ocean
@@ -391,18 +412,36 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
 
     // INDEX
     {
-        size_t numIndices = static_cast<size_t>(static_cast<size_t>(workgroupSize_.x) *
-                                                    (2 + ((static_cast<size_t>(workgroupSize_.y) - 2) * 2)) +
-                                                static_cast<size_t>(workgroupSize_.y) - 1);
-        indices_.resize(numIndices);
+        bool doPatchList = true;
+        if (!doPatchList) {
+            size_t numIndices = static_cast<size_t>(static_cast<size_t>(workgroupSize_.x) *
+                                                        (2 + ((static_cast<size_t>(workgroupSize_.y) - 2) * 2)) +
+                                                    static_cast<size_t>(workgroupSize_.y) - 1);
+            indices_.resize(numIndices);
+        } else {
+            indices_.reserve((workgroupSize_.x - 1) * (workgroupSize_.y - 1) * 6);
+        }
 
         size_t index = 0;
         for (uint32_t row = 0; row < workgroupSize_.y - 1; row++) {
+            auto rowOffset = row * workgroupSize_.x;
             for (uint32_t col = 0; col < workgroupSize_.x; col++) {
-                // Triangle strip indices (surface)
-                indices_[index + 1] = (row + 1) * workgroupSize_.x + col;
-                indices_[index] = row * workgroupSize_.x + col;
-                index += 2;
+                if (!doPatchList) {
+                    // Triangle strip indices (surface)
+                    indices_[index + 1] = (row + 1) * workgroupSize_.x + col;
+                    indices_[index] = row * workgroupSize_.x + col;
+                    index += 2;
+                } else {
+                    // Patch list (surface)
+                    if (col < workgroupSize_.x - 1) {
+                        indices_.push_back(col + rowOffset);
+                        indices_.push_back(col + rowOffset + workgroupSize_.x);
+                        indices_.push_back(col + rowOffset + 1);
+                        indices_.push_back(col + rowOffset + 1);
+                        indices_.push_back(col + rowOffset + workgroupSize_.x);
+                        indices_.push_back(col + rowOffset + workgroupSize_.x + 1);
+                    }
+                }
                 // Line strip indices (wireframe)
                 indicesWF_.push_back(row * workgroupSize_.x + col + workgroupSize_.x);
                 indicesWF_.push_back(indicesWF_[indicesWF_.size() - 1] - workgroupSize_.x);
@@ -411,7 +450,9 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
                     indicesWF_.push_back(indicesWF_[indicesWF_.size() - 3]);
                 }
             }
-            indices_[index++] = VB_INDEX_PRIMITIVE_RESTART;
+            if (!doPatchList) {
+                indices_[index++] = VB_INDEX_PRIMITIVE_RESTART;
+            }
             indicesWF_.push_back(VB_INDEX_PRIMITIVE_RESTART);
         }
     }

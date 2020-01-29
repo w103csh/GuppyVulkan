@@ -138,6 +138,7 @@ class Wireframe : public Graphics {
 class Surface : public Graphics {
    public:
     const bool DO_BLEND;
+    const bool DO_TESSELLATE;
     const bool IS_DEFERRED;
 
     Surface(Handler& handler);
@@ -145,6 +146,7 @@ class Surface : public Graphics {
    private:
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
+    void getTesselationInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
 }  // namespace Ocean

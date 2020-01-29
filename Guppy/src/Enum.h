@@ -224,7 +224,7 @@ enum class UNIFORM {
     DEFERRED_SSAO,
     SHADOW_DATA,
     // TESSELLATION
-    TESSELLATION_DEFAULT,
+    TESS_DEFAULT,
     // GEOMETRY
     GEOMETRY_DEFAULT,
     // PARTICLE
@@ -244,6 +244,7 @@ enum class UNIFORM_DYNAMIC {
     PRTCL_CLOTH,
     //
     MATRIX_4,
+    TESS_PHONG,
     // WATER
     HFF,
     OCEAN,

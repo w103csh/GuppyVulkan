@@ -6,19 +6,23 @@
 #version 450
 
 #define _DS_UNI_DFR_MRT 0
+#define _DS_TESS_PHONG 0
 #define PATCH_CONTROL_POINTS 3
 
 #define interp3(u, v, w, t)  u * t.x + v * t.y + w * t.z
 #define interp3Array(uvw, t)  uvw[0] * t.x + uvw[1] * t.y + uvw[2] * t.z
 
+// BINDINGS
 layout(set=_DS_UNI_DFR_MRT, binding=0) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
     mat4 viewProjection;
     vec3 worldPosition;
 } camera;
- // TODO: add to material or uniform
-const float alpha = 3.0 / 4.0;
+layout(set=_DS_TESS_PHONG, binding=0) uniform Phong {
+    float maxLevel;
+    float alpha;
+} tess;
 
 struct PhongPatch {
     float termIJ;
@@ -56,7 +60,7 @@ void main() {
     const vec3 termKI = vec3(inPhongPatch[0].termKI, inPhongPatch[1].termKI, inPhongPatch[2].termKI);
 
     // Phong tesselated position
-    vec3 pStar = tessCoordSquared.x * Pi
+    const vec3 pStar = tessCoordSquared.x * Pi
                + tessCoordSquared.y * Pj
                + tessCoordSquared.z * Pk
                + gl_TessCoord.x * gl_TessCoord.y * termIJ
@@ -64,13 +68,13 @@ void main() {
                + gl_TessCoord.z * gl_TessCoord.x * termKI;
 
     // Depth measurement factor
-    float d_alpha = alpha;
+    float d_alpha = tess.alpha;
     if (false) {
         // This needs more thought. See the comment in the control shader.
-        float d = inPhongPatch[0].di * gl_TessCoord.x
+        const float d = inPhongPatch[0].di * gl_TessCoord.x
                 + inPhongPatch[1].di * gl_TessCoord.y
                 + inPhongPatch[2].di * gl_TessCoord.z;
-        d_alpha = d * alpha;
+        d_alpha *= d;
     }
 
     // position

@@ -14,7 +14,7 @@ namespace Tessellation {
 
 Default::Base::Base(const Buffer::Info&& info, DATA* pData)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Descriptor::Base(UNIFORM::TESSELLATION_DEFAULT),
+      Descriptor::Base(UNIFORM::TESS_DEFAULT),
       Buffer::DataItem<DATA>(pData) {
     dirty = true;
 }
@@ -22,18 +22,32 @@ Default::Base::Base(const Buffer::Info&& info, DATA* pData)
 }  // namespace Tessellation
 }  // namespace Uniform
 
+namespace UniformDynamic {
+namespace Tessellation {
+namespace Phong {
+Base::Base(const Buffer::Info&& info, DATA* pData)
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),
+      Descriptor::Base(UNIFORM_DYNAMIC::TESS_PHONG),
+      Buffer::DataItem<DATA>(pData) {
+    dirty = true;
+}
+}  // namespace Phong
+}  // namespace Tessellation
+}  // namespace UniformDynamic
+
 namespace Descriptor {
 namespace Set {
 namespace Tessellation {
-
 const CreateInfo DEFAULT_CREATE_INFO = {
-    DESCRIPTOR_SET::UNIFORM_TESSELLATION_DEFAULT,
+    DESCRIPTOR_SET::TESS_DEFAULT,
     "_DS_UNI_TESS_DEF",
-    {
-        {{0, 0}, {UNIFORM::TESSELLATION_DEFAULT}},
-    },
+    {{{0, 0}, {UNIFORM::TESS_DEFAULT}}},
 };
-
+const CreateInfo PHONG_CREATE_INFO = {
+    DESCRIPTOR_SET::TESS_PHONG,
+    "_DS_TESS_PHONG",
+    {{{0, 0}, {UNIFORM_DYNAMIC::TESS_PHONG}}},
+};
 }  // namespace Tessellation
 }  // namespace Set
 }  // namespace Descriptor
@@ -101,7 +115,7 @@ const Pipeline::CreateInfo BEZIER_4_CREATE_INFO = {
     },
     {
         DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT,
-        DESCRIPTOR_SET::UNIFORM_TESSELLATION_DEFAULT,
+        DESCRIPTOR_SET::TESS_DEFAULT,
     },
     {},
     {PUSH_CONSTANT::DEFERRED},
@@ -118,13 +132,8 @@ const Pipeline::CreateInfo PHONG_TRI_DEFERRED_CREATE_INFO = {
         SHADER::PHONG_TRI_COLOR_TESE,
         SHADER::DEFERRED_MRT_COLOR_FRAG,
     },
-    {
-        DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT,
-        DESCRIPTOR_SET::UNIFORM_TESSELLATION_DEFAULT,
-    },
-    Descriptor::OffsetsMap::Type{
-        {UNIFORM::TESSELLATION_DEFAULT, {1}},
-    },
+    {DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT, DESCRIPTOR_SET::TESS_PHONG},
+    {},
     {PUSH_CONSTANT::DEFERRED},
 };
 // PHONG TRIANGLE COLOR (DEFERRED)

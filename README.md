@@ -41,6 +41,20 @@ Recently in my experimenting with Vulkan pipelines/passes/shaders I decided to s
   * Multi-sampling for output attachment passes, and resolve attachment for combine/screenspace pass with "by region" dependency.
   * Tessellation
     * Lines
+  * Ocean simulation - *click image for video link*
+  
+    [![ocean_surface_thumbnail](https://user-images.githubusercontent.com/5341766/73319812-b86cf800-41fa-11ea-9f87-ef008389ac5f.jpg)](https://youtu.be/rdF66PNIm78 "Guppy - Ocean Simulation")
+    
+    The technique used to generate the surface comes from Jerry Tessendorf's *Simulating Ocean Water* (a pdf of the paper can be found in the misc folder in the repository [here](misc/simulating_ocean_water_tessendorf.pdf)). This is still very much a work in progress.
+    * Wave displacement, and Fast Fourier Transform compute shaders generate height, normal, and horizontal displacement maps.
+    * The color of the surface comes from pretty much the same technique that is outlined in the paper. The surface is also lightly tessellated using [Phong Tessellation](https://perso.telecom-paristech.fr/boubek/papers/PhongTessellation/).
+    * Currently working on:
+      * Adaptively tessellated terrain
+      * Speeding up the hastily done FFT compute shader.
+      * Using the Jacobian properties of the surface described in the paper to generate foam and particle sprays
+      * Environmental reflection on the surface.
+      * Color from below the surface.
+
   * Particles (compute)
     * Fountains (euler integration)
       * Recyclable with parameterized position/velociity/acceleration/rotation
@@ -60,7 +74,7 @@ Recently in my experimenting with Vulkan pipelines/passes/shaders I decided to s
 
         [![hff](https://user-images.githubusercontent.com/5341766/70402036-3b3db780-19ef-11ea-9885-eb30c486db25.jpg)](https://youtu.be/j3vdii2Hkyc "Guppy - Height field fluid demo")
         
-        The color shaders used in the video are for debugging purposes like making sure normal generation is working correctly, and the simulation is stable and pausable. A proper color shader with reflection/refraction/noise is hopefully coming soon...
+        The color shaders used in the video are for debugging purposes like making sure normal generation is working correctly, and the simulation is stable and pausable.
   * Shadows
     * ~~One direction with PCF softening~~ removed in favor of below. Hopefully have a better solution soon.
     * Point lights that generate a dynamic depth cube map array using geometry shader - *click image for video link*

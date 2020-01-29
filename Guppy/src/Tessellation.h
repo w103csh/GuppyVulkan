@@ -7,10 +7,12 @@
 #define TESSELLATION_H
 
 #include <glm/glm.hpp>
+#include <memory>
 
 #include "BufferItem.h"
 #include "ConstantsAll.h"
 #include "Descriptor.h"
+#include "DescriptorManager.h"
 #include "Deferred.h"
 #include "Pipeline.h"
 
@@ -75,12 +77,28 @@ class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
 }  // namespace Tessellation
 }  // namespace Uniform
 
+namespace UniformDynamic {
+namespace Tessellation {
+namespace Phong {
+struct DATA {
+    float maxLevel = 1.0f;
+    float alpha = 0.75f;
+    alignas(8) float _padding;  // rem 8
+};
+class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
+   public:
+    Base(const Buffer::Info&& info, DATA* pData);
+};
+}  // namespace Phong
+}  // namespace Tessellation
+using TessPhongManager = Descriptor::Manager<Descriptor::Base, UniformDynamic::Tessellation::Phong::Base, std::shared_ptr>;
+}  // namespace UniformDynamic
+
 namespace Descriptor {
 namespace Set {
 namespace Tessellation {
-
 extern const CreateInfo DEFAULT_CREATE_INFO;
-
+extern const CreateInfo PHONG_CREATE_INFO;
 }  // namespace Tessellation
 }  // namespace Set
 }  // namespace Descriptor
