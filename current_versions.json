@@ -2,7 +2,10 @@
   "repos" : [
     {
       "name" : "LunarG Vulkan SDK",
-      "version" : "1.1.121.2"
+      "version": {
+        "Windows": "1.2.131.1",
+        "macOS": "1.1.121.2"
+      }
     },
     {
       "name" : "glslang",

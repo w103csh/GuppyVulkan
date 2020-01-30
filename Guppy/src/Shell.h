@@ -212,7 +212,7 @@ class Shell {
     void update(const double elapsed);
     void destroy();
 
-    virtual uint32_t getDesiredVersion() { return VK_MAKE_VERSION(1, 1, 0); }
+    virtual uint32_t getDesiredVersion() { return VK_API_VERSION_1_2; }
     virtual void setPlatformSpecificExtensions() = 0;
     void initVk();
     void cleanupVk();

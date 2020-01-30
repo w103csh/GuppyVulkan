@@ -179,7 +179,7 @@ void Shell::initInstance() {
     assertAllInstanceLayers();
     assertAllInstanceExtensions();
 
-    uint32_t version = VK_VERSION_1_0;
+    uint32_t version = VK_VERSION_1_2;
     determineApiVersion(version);
 
     VkApplicationInfo app_info = {};
@@ -1078,7 +1078,6 @@ void Shell::determineSwapchainImageCount() {
 }
 
 void Shell::determineApiVersion(uint32_t &version) {
-    version = VK_API_VERSION_1_0;
     // Android build not at 1.1 yet
 #ifndef ANDROID
     // Keep track of the major/minor version we can actually use
