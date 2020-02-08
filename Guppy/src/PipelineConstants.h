@@ -6,6 +6,7 @@
 #ifndef PIPELINE_CONSTANTS_H
 #define PIPELINE_CONSTANTS_H
 
+#include <glm/glm.hpp>
 #include <map>
 #include <memory>
 #include <set>
@@ -108,6 +109,8 @@ enum class COMPUTE : uint32_t {
 
 namespace Pipeline {
 
+constexpr std::string_view LOCAL_SIZE_MACRO_ID_PREFIX = "_LS_";
+
 // clang-format off
 struct IsGraphics {
     template <typename T>
@@ -167,6 +170,7 @@ struct CreateInfo {
     std::vector<DESCRIPTOR_SET> descriptorSets;
     Descriptor::OffsetsMap uniformOffsets;
     std::vector<PUSH_CONSTANT> pushConstantTypes;
+    glm::uvec3 localSize{1, 1, 1};  // compute only
 };
 
 namespace Default {

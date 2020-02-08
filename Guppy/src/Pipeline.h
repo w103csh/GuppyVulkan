@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -108,8 +108,13 @@ class Compute : public Base {
     void setInfo(CreateInfoResources &createInfoRes, VkGraphicsPipelineCreateInfo *pGraphicsInfo,
                  VkComputePipelineCreateInfo *pComputeInfo) override final;
 
+    virtual_inline auto getLocalSize() const { return localSize_; }
+
    protected:
     Compute(Pipeline::Handler &handler, const Pipeline::CreateInfo *pCreateInfo);
+
+   private:
+    glm::uvec3 localSize_;
 };
 
 // GRAPHICS

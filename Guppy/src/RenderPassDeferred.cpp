@@ -448,7 +448,6 @@ void Base::createDependencies() {
         }
         if (pipelineType == PIPELINE{GRAPHICS::DEFERRED_MRT_COLOR_RFL_RFR} ||
             pipelineType == PIPELINE{GRAPHICS::DEFERRED_MRT_SKYBOX}) {
-            // Dispatch writes into a storage buffer. Draw consumes that buffer as a shader object.
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,
                 subpass,

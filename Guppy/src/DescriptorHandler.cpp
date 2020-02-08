@@ -800,6 +800,17 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
             itInfoMap->second.descCount = 1;
             itCmbSampMat++;
 
+        } else if (std::visit(IsUniformTexelBuffer{}, bindingInfo.descType)) {
+            // UNIFORM TEXEL BUFFER
+
+            auto pPipelineTexelBuffer = textureHandler().getBufferView(bindingInfo.textureId);
+            if (pPipelineTexelBuffer == nullptr) {
+                assert(false && "Could not find uniform texel buffer");
+                exit(EXIT_FAILURE);
+            }
+            itInfoMap->second.texelBufferView = pPipelineTexelBuffer->view;
+            itInfoMap->second.descCount = 1;
+
         } else if (std::visit(IsPipelineImage{}, bindingInfo.descType) ||
                    std::visit(IsSwapchainStorageImage{}, bindingInfo.descType)) {
             // PIPELINE IMAGE/SAMPLER, SWAPCHAIN

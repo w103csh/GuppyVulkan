@@ -130,11 +130,9 @@ void Particle::Handler::create() {
         ::Ocean::SurfaceCreateInfo info = {};
         info.l = 1.0f;
         info.A = 2e-6f;
-        info.N = info.M = 256;
         info.Lx = info.Lz = 500.0f;
         // info.l = 0.001f;
         // info.A = 2e-6f;
-        // info.N = info.M = 64;
         // info.Lx = info.Lz = 320.0f;
         // info.V = 12.8f;
         // info.omega = {0, 1};
@@ -142,7 +140,6 @@ void Particle::Handler::create() {
         // BUFFER
         Ocean::CreateInfo buffOcnInfo = {};
         buffOcnInfo.name = "Ocean Surface Buffer";
-        buffOcnInfo.localSize = {4, 4, 1};
         buffOcnInfo.computePipelineTypes = {
             // COMPUTE::FFT_ONE,
             COMPUTE::OCEAN_DISP,

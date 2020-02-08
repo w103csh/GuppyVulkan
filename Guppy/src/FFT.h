@@ -7,8 +7,18 @@
 #define FFT_H
 
 #include <string_view>
+#include <vector>
 
+#include "BufferItem.h"
+#include "Descriptor.h"
+#include "DescriptorManager.h"
 #include "Pipeline.h"
+
+namespace FFT {
+std::vector<int16_t> MakeBitReversalOffsets(uint32_t N);
+std::vector<float> MakeTwiddleFactors(uint32_t N);
+using RowColumnOffset = int32_t;
+}  // namespace FFT
 
 // TEXTURE
 namespace Texture {

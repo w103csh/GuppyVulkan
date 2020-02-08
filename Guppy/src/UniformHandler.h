@@ -85,7 +85,7 @@ class Handler : public Game::Handler {
     virtual_inline auto& uniWaveMgr() { return std::get<Uniform::Manager<Particle::Wave::Base>>(managers_[15]);};
     virtual_inline auto& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[16]);};
     // DYNAMIC
-    virtual_inline auto& tessPhongMgr() { return std::get<UniformDynamic::TessPhongManager>(managersDynamic_[0]);};
+    virtual_inline auto& tessPhongMgr() { return std::get<UniformDynamic::Tessellation::Phong::Manager>(managersDynamic_[0]);};
     
    private:
     template <class T> virtual_inline Manager<T>& getManager() { assert(false); }
@@ -130,8 +130,8 @@ class Handler : public Game::Handler {
         >;
     std::array<Manager, 17> managers_;
     // DYNAMIC
-    using ManagerDynamic = std::variant<  //
-        UniformDynamic::TessPhongManager  //
+    using ManagerDynamic = std::variant<              //
+        UniformDynamic::Tessellation::Phong::Manager  //
         >;
     std::array<ManagerDynamic, 1> managersDynamic_;
 
@@ -164,7 +164,7 @@ class Handler : public Game::Handler {
     }
 
     // SHADER
-    void shaderTextReplace(const Descriptor::Set::textReplaceTuples& replaceTuples, const std::string_view& fileName,
+    void textReplaceShader(const Descriptor::Set::textReplaceTuples& replaceTuples, const std::string_view& fileName,
                            std::string& text) const;
 
     template <typename T>

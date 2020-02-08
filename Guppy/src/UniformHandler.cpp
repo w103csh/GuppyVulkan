@@ -79,8 +79,8 @@ Uniform::Handler::Handler(Game* pGame)
       },
       managersDynamic_{
           // TESSELLATION
-          UniformDynamic::TessPhongManager  //
-          {"Tessellation Phong Data", UNIFORM_DYNAMIC::TESS_PHONG, 10, true, "_U_TESS_PHONG"},
+          UniformDynamic::Tessellation::Phong::Manager  //
+          {"Tessellation Phong Data", UNIFORM_DYNAMIC::TESS_PHONG, 10, true, "_UD_TESS_PHONG"},
       },
       mainCameraOffset_(0),
       hasVisualHelpers(false) {}
@@ -623,7 +623,7 @@ void Uniform::Handler::getWriteInfos(const DESCRIPTOR& descType, const Uniform::
     }
 }
 
-void Uniform::Handler::shaderTextReplace(const Descriptor::Set::textReplaceTuples& replaceTuples,
+void Uniform::Handler::textReplaceShader(const Descriptor::Set::textReplaceTuples& replaceTuples,
                                          const std::string_view& fileName, std::string& text) const {
     for (const auto& macroIdPrefix : MACRO_ID_PREFIXES) {
         auto replaceInfo = helpers::getMacroReplaceInfo(macroIdPrefix, text);

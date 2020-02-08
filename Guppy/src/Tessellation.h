@@ -89,9 +89,9 @@ class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
    public:
     Base(const Buffer::Info&& info, DATA* pData);
 };
+using Manager = Descriptor::Manager<Descriptor::Base, Base, std::shared_ptr>;
 }  // namespace Phong
 }  // namespace Tessellation
-using TessPhongManager = Descriptor::Manager<Descriptor::Base, UniformDynamic::Tessellation::Phong::Base, std::shared_ptr>;
 }  // namespace UniformDynamic
 
 namespace Descriptor {

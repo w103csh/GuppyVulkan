@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -8,6 +8,7 @@
 
 #include <memory>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <vulkan/vulkan.h>
 
@@ -42,5 +43,17 @@ class Base {
 };
 
 }  // namespace Texture
+
+namespace BufferView {
+
+struct Base {
+    std::string_view id;
+    STATUS status = STATUS::PENDING;
+    BufferResource buffRes{};
+    VkBufferView view = VK_NULL_HANDLE;
+    std::unique_ptr<LoadingResource> pLdgRes = nullptr;
+};
+
+}  // namespace BufferView
 
 #endif  // TEXTURE_H

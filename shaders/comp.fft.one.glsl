@@ -7,10 +7,6 @@
 
 #define _DS_FFT 0
 
-// DECLARATIONS
-vec2 complexMultiply(const in vec2 a, const in vec2 b);
-float complexMagnitude(const in vec2 a);
-
 // BINDINGS
 layout(set=_DS_FFT, binding=0, rg32f  ) uniform image2DArray imgFFT;
 // IN

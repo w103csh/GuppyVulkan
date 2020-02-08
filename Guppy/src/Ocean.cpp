@@ -12,6 +12,7 @@
 #include <vulkan/vulkan.h>
 
 #include "Deferred.h"
+#include "FFT.h"
 #include "Helpers.h"
 #include "Tessellation.h"
 // HANDLERS
@@ -96,7 +97,7 @@ void MakTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info) {
     // Create texture
     {
         Sampler::CreateInfo sampInfo = {
-            std::string(OCEAN_DATA_ID) + " Sampler",
+            std::string(DATA_ID) + " Sampler",
             {{
                  {::Sampler::USAGE::DONT_CARE},  // wave vector
                  {::Sampler::USAGE::DONT_CARE},  // fourier domain
@@ -127,7 +128,7 @@ void MakTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info) {
                 sampInfo.layersInfo.infos[i].pPixel = (float*)malloc(dataSize);  // TODO: this shouldn't be necessary
         }
 
-        Texture::CreateInfo waveTexInfo = {std::string(OCEAN_DATA_ID), {sampInfo}, false, false, STORAGE_IMAGE::DONT_CARE};
+        Texture::CreateInfo waveTexInfo = {std::string(DATA_ID), {sampInfo}, false, false, STORAGE_IMAGE::DONT_CARE};
         handler.make(&waveTexInfo);
     }
 }
@@ -143,16 +144,12 @@ const CreateInfo DISP_COMP_CREATE_INFO = {
     "Ocean Sufrace Dispersion Compute Shader",
     "comp.ocean.dispersion.glsl",
     VK_SHADER_STAGE_COMPUTE_BIT,
-    {SHADER_LINK::HELPERS},
-
 };
 const CreateInfo FFT_COMP_CREATE_INFO = {
     SHADER::OCEAN_FFT_COMP,  //
     "Ocean Surface Fast Fourier Transform Compute Shader",
     "comp.ocean.fft.glsl",
     VK_SHADER_STAGE_COMPUTE_BIT,
-    {SHADER_LINK::HELPERS},
-
 };
 const CreateInfo VERT_CREATE_INFO = {
     SHADER::OCEAN_VERT,  //
@@ -206,7 +203,10 @@ const CreateInfo OCEAN_DEFAULT_CREATE_INFO = {
         {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
         {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_DEFAULT}},
         {{2, 0}, {UNIFORM_DYNAMIC::OCEAN}},
-        {{3, 0}, {STORAGE_IMAGE::PIPELINE, Texture::Ocean::OCEAN_DATA_ID}},
+        {{3, 0}, {STORAGE_IMAGE::PIPELINE, Texture::Ocean::DATA_ID}},
+        {{4, 0}, {UNIFORM_TEXEL_BUFFER::PIPELINE, BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_N_ID}},
+        {{5, 0}, {UNIFORM_TEXEL_BUFFER::PIPELINE, BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_M_ID}},
+        {{6, 0}, {UNIFORM_TEXEL_BUFFER::PIPELINE, BufferView::Ocean::FFT_TWIDDLE_FACTORS_ID}},
     },
 };
 }  // namespace Set
@@ -223,6 +223,9 @@ const CreateInfo DISP_CREATE_INFO = {
     "Ocean Surface Dispersion Compute Pipeline",
     {SHADER::OCEAN_DISP_COMP},
     {DESCRIPTOR_SET::OCEAN_DEFAULT},
+    {},
+    {},
+    {::Ocean::DISP_LOCAL_SIZE, ::Ocean::DISP_LOCAL_SIZE, 1},
 };
 
 Dispersion::Dispersion(Handler& handler)
@@ -255,6 +258,9 @@ const CreateInfo FFT_CREATE_INFO = {
     "Ocean Surface FFT Compute Pipeline",
     {SHADER::OCEAN_FFT_COMP},
     {DESCRIPTOR_SET::OCEAN_DEFAULT},
+    {},
+    {PUSH_CONSTANT::FFT_ROW_COL_OFFSET},
+    {::Ocean::FFT_LOCAL_SIZE, 1, 1},
 };
 FFT::FFT(Handler& handler) : Compute(handler, &FFT_CREATE_INFO) {}
 
@@ -375,33 +381,49 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
       Obj3d::InstanceDraw(pInstanceData),
       normalOffset_(Particle::Buffer::BAD_OFFSET),
       indexWFRes_{},
-      drawMode(GRAPHICS::OCEAN_SURFACE_DEFERRED) {
-    assert(helpers::isPowerOfTwo(pCreateInfo->info.N) && helpers::isPowerOfTwo(pCreateInfo->info.M));
+      drawMode(GRAPHICS::OCEAN_SURFACE_DEFERRED),
+      info_(pCreateInfo->info) {
+    assert(info_.N == info_.M);  // Needs to be square currently.
+    assert(info_.N == FFT_LOCAL_SIZE * FFT_WORKGROUP_SIZE);
+    assert(info_.N == DISP_LOCAL_SIZE * DISP_WORKGROUP_SIZE);
+    assert(helpers::isPowerOfTwo(N) && helpers::isPowerOfTwo(M));
+
+    const auto& N = info_.N;
+    const auto& M = info_.M;
 
     for (uint32_t i = 0; i < static_cast<uint32_t>(pDescriptors_.size()); i++)
         if (pDescriptors[i]->getDescriptorType() == DESCRIPTOR{STORAGE_BUFFER_DYNAMIC::NORMAL}) normalOffset_ = i;
     assert(normalOffset_ != Particle::Buffer::BAD_OFFSET);
 
-    workgroupSize_.x = pCreateInfo->info.N;
-    workgroupSize_.y = pCreateInfo->info.M;
-    assert(workgroupSize_.x > 1 && workgroupSize_.y > 1);
-
     // IMAGE
     // TODO: move the loop inside this function into the constructor here.
-    Texture::Ocean::MakTextures(handler.textureHandler(), pCreateInfo->info);
+    Texture::Ocean::MakTextures(handler.textureHandler(), info_);
 
-    const int halfN = workgroupSize_.x / 2, halfM = workgroupSize_.y / 2;
-    verticesHFF_.reserve(workgroupSize_.x * workgroupSize_.y);
-    verticesHFF_.reserve(workgroupSize_.x * workgroupSize_.y);
-    for (int i = 0, m = -halfM; i < static_cast<int>(workgroupSize_.y); i++, m++) {
-        for (int j = 0, n = -halfN; j < static_cast<int>(workgroupSize_.x); j++, n++) {
+    // BUFFER VIEWS
+    {
+        auto bitRevOffsets = FFT::MakeBitReversalOffsets(N);
+        handler.textureHandler().makeBufferView(BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_N_ID, VK_FORMAT_R16_SINT,
+                                                sizeof(uint16_t) * bitRevOffsets.size(), bitRevOffsets.data());
+        if (N != M) bitRevOffsets = FFT::MakeBitReversalOffsets(N);
+        handler.textureHandler().makeBufferView(BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_M_ID, VK_FORMAT_R16_SINT,
+                                                sizeof(uint16_t) * bitRevOffsets.size(), bitRevOffsets.data());
+        auto twiddleFactors = FFT::MakeTwiddleFactors((std::max)(N, M));
+        handler.textureHandler().makeBufferView(BufferView::Ocean::FFT_TWIDDLE_FACTORS_ID, VK_FORMAT_R32G32_SFLOAT,
+                                                sizeof(float) * twiddleFactors.size(), twiddleFactors.data());
+    }
+
+    const int halfN = N / 2, halfM = M / 2;
+    verticesHFF_.reserve(N * M);
+    verticesHFF_.reserve(N * M);
+    for (int i = 0, m = -halfM; i < static_cast<int>(M); i++, m++) {
+        for (int j = 0, n = -halfN; j < static_cast<int>(N); j++, n++) {
             // VERTEX
             verticesHFF_.push_back({
                 // position
                 {
-                    n * pCreateInfo->info.Lx / workgroupSize_.x,
+                    n * info_.Lx / N,
                     0.0f,
-                    m * pCreateInfo->info.Lz / workgroupSize_.y,
+                    m * info_.Lz / M,
                 },
                 // normal
                 // image offset
@@ -414,38 +436,37 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
     {
         bool doPatchList = true;
         if (!doPatchList) {
-            size_t numIndices = static_cast<size_t>(static_cast<size_t>(workgroupSize_.x) *
-                                                        (2 + ((static_cast<size_t>(workgroupSize_.y) - 2) * 2)) +
-                                                    static_cast<size_t>(workgroupSize_.y) - 1);
+            size_t numIndices = static_cast<size_t>(static_cast<size_t>(N) * (2 + ((static_cast<size_t>(M) - 2) * 2)) +
+                                                    static_cast<size_t>(M) - 1);
             indices_.resize(numIndices);
         } else {
-            indices_.reserve((workgroupSize_.x - 1) * (workgroupSize_.y - 1) * 6);
+            indices_.reserve((N - 1) * (M - 1) * 6);
         }
 
         size_t index = 0;
-        for (uint32_t row = 0; row < workgroupSize_.y - 1; row++) {
-            auto rowOffset = row * workgroupSize_.x;
-            for (uint32_t col = 0; col < workgroupSize_.x; col++) {
+        for (uint32_t row = 0; row < M - 1; row++) {
+            auto rowOffset = row * N;
+            for (uint32_t col = 0; col < N; col++) {
                 if (!doPatchList) {
                     // Triangle strip indices (surface)
-                    indices_[index + 1] = (row + 1) * workgroupSize_.x + col;
-                    indices_[index] = row * workgroupSize_.x + col;
+                    indices_[index + 1] = (row + 1) * N + col;
+                    indices_[index] = row * N + col;
                     index += 2;
                 } else {
                     // Patch list (surface)
-                    if (col < workgroupSize_.x - 1) {
+                    if (col < N - 1) {
                         indices_.push_back(col + rowOffset);
-                        indices_.push_back(col + rowOffset + workgroupSize_.x);
+                        indices_.push_back(col + rowOffset + N);
                         indices_.push_back(col + rowOffset + 1);
                         indices_.push_back(col + rowOffset + 1);
-                        indices_.push_back(col + rowOffset + workgroupSize_.x);
-                        indices_.push_back(col + rowOffset + workgroupSize_.x + 1);
+                        indices_.push_back(col + rowOffset + N);
+                        indices_.push_back(col + rowOffset + N + 1);
                     }
                 }
                 // Line strip indices (wireframe)
-                indicesWF_.push_back(row * workgroupSize_.x + col + workgroupSize_.x);
-                indicesWF_.push_back(indicesWF_[indicesWF_.size() - 1] - workgroupSize_.x);
-                if (col + 1 < workgroupSize_.x) {
+                indicesWF_.push_back(row * N + col + N);
+                indicesWF_.push_back(indicesWF_[indicesWF_.size() - 1] - N);
+                if (col + 1 < N) {
                     indicesWF_.push_back(indicesWF_[indicesWF_.size() - 1] + 1);
                     indicesWF_.push_back(indicesWF_[indicesWF_.size() - 3]);
                 }
@@ -581,9 +602,6 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
 void Buffer::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                       const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
                       const uint8_t frameIndex) const {
-    assert(LOCAL_SIZE.z == 1 && workgroupSize_.z == 1);
-    assert(workgroupSize_.x % LOCAL_SIZE.x == 0 && workgroupSize_.y % LOCAL_SIZE.y == 0);
-
     auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
 
     const VkMemoryBarrier memoryBarrierCompute = {
@@ -624,7 +642,7 @@ void Buffer::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::Bind
                                     static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
                                     descSetBindData.dynamicOffsets.data());
 
-            vkCmdDispatch(cmd, workgroupSize_.x, workgroupSize_.y, 1);
+            vkCmdDispatch(cmd, DISP_WORKGROUP_SIZE, DISP_WORKGROUP_SIZE, 1);
 
             vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1,
                                  &memoryBarrierCompute, 0, nullptr, 0, nullptr);
@@ -639,12 +657,20 @@ void Buffer::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::Bind
                                     static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
                                     descSetBindData.dynamicOffsets.data());
 
-            vkCmdDispatch(cmd, 1, workgroupSize_.y, 1);
+            FFT::RowColumnOffset offset = 1;  // row
+            vkCmdPushConstants(cmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                               static_cast<uint32_t>(sizeof(FFT::RowColumnOffset)), &offset);
+
+            vkCmdDispatch(cmd, FFT_WORKGROUP_SIZE, 1, 1);
 
             vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1,
                                  &memoryBarrierCompute, 0, nullptr, 0, nullptr);
 
-            vkCmdDispatch(cmd, workgroupSize_.x, 1, 1);
+            offset = 0;  // column
+            vkCmdPushConstants(cmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                               static_cast<uint32_t>(sizeof(FFT::RowColumnOffset)), &offset);
+
+            vkCmdDispatch(cmd, FFT_WORKGROUP_SIZE, 1, 1);
 
         } break;
         default: {

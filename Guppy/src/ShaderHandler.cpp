@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -103,9 +103,11 @@ std::vector<std::string> Shader::Handler::loadText(const infoMapKeyValue& keyVal
         shaderTexts_[std::get<0>(keyValue.first)] = FileLoader::readFile(BASE_DIRNAME + std::string(createInfo.fileName));
     }
     texts.push_back(shaderTexts_.at(std::get<0>(keyValue.first)));
-    textReplace(keyValue.second.first, texts.back());
-    uniformHandler().shaderTextReplace(keyValue.second.first, Shader::ALL.at(std::get<0>(keyValue.first)).fileName,
+    // TEXT REPLACE
+    textReplaceDescSet(keyValue.second.first, texts.back());
+    uniformHandler().textReplaceShader(keyValue.second.first, Shader::ALL.at(std::get<0>(keyValue.first)).fileName,
                                        texts.back());
+    textReplacePipeline(std::get<1>(keyValue.first), texts.back());
 
     // link shader text
     for (const auto& linkShaderType : createInfo.linkTypes) {
@@ -114,14 +116,16 @@ std::vector<std::string> Shader::Handler::loadText(const infoMapKeyValue& keyVal
             shaderLinkTexts_[linkShaderType] = FileLoader::readFile(BASE_DIRNAME + std::string(linkCreateInfo.fileName));
         }
         texts.push_back(shaderLinkTexts_.at(linkShaderType));
-        textReplace(keyValue.second.first, texts.back());
-        uniformHandler().shaderTextReplace(keyValue.second.first, Shader::LINK_ALL.at(linkShaderType).fileName,
+        // TEXT REPLACE
+        textReplaceDescSet(keyValue.second.first, texts.back());
+        uniformHandler().textReplaceShader(keyValue.second.first, Shader::LINK_ALL.at(linkShaderType).fileName,
                                            texts.back());
+        textReplacePipeline(std::get<1>(keyValue.first), texts.back());
     }
     return texts;
 }
 
-void Shader::Handler::textReplace(const Descriptor::Set::textReplaceTuples& replaceTuples, std::string& text) const {
+void Shader::Handler::textReplaceDescSet(const Descriptor::Set::textReplaceTuples& replaceTuples, std::string& text) const {
     auto replaceInfo = helpers::getMacroReplaceInfo(Descriptor::Set::MACRO_ID_PREFIX, text);
     for (auto& info : replaceInfo) {
         for (const auto& tuple : replaceTuples) {
@@ -129,6 +133,32 @@ void Shader::Handler::textReplace(const Descriptor::Set::textReplaceTuples& repl
             auto slot = static_cast<int>(std::get<1>(tuple));
             if (slot != std::get<3>(info))  //
                 helpers::macroReplace(info, slot, text);
+        }
+    }
+}
+
+void Shader::Handler::textReplacePipeline(const PIPELINE pipelineType, std::string& text) const {
+    if (!std::visit(Pipeline::IsCompute{}, pipelineType)) return;
+    // LOCAL SIZE
+    {
+        const auto localSize =
+            static_cast<const Pipeline::Compute*>(pipelineHandler().getPipeline(pipelineType).get())->getLocalSize();
+        auto replaceInfo = helpers::getMacroReplaceInfo(Pipeline::LOCAL_SIZE_MACRO_ID_PREFIX, text);
+        for (auto& info : replaceInfo) {
+            switch (std::get<0>(info).back()) {
+                case 'X':
+                    helpers::macroReplace(info, localSize.x, text);
+                    break;
+                case 'Y':
+                    helpers::macroReplace(info, localSize.y, text);
+                    break;
+                case 'Z':
+                    helpers::macroReplace(info, localSize.z, text);
+                    break;
+                default:
+                    assert(false && "Unhandled case");
+                    break;
+            }
         }
     }
 }

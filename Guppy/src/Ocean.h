@@ -16,6 +16,19 @@
 
 namespace Ocean {
 
+/**
+ * Unfortunately the ocean data sample dimensions need to be square because of how the fft compute shader works currently.
+ * The sample dimensions also need to be known here because of the pipeline creation order, and having to use a text
+ * replacement routine for the local size value. Still not sure if specialization info could be used for something like that.
+ * It didn't work the first time I tried it.
+ */
+constexpr uint32_t N = 256;
+constexpr uint32_t M = N;
+constexpr uint32_t FFT_LOCAL_SIZE = 64;
+constexpr uint32_t FFT_WORKGROUP_SIZE = N / FFT_LOCAL_SIZE;
+constexpr uint32_t DISP_LOCAL_SIZE = 32;
+constexpr uint32_t DISP_WORKGROUP_SIZE = N / DISP_LOCAL_SIZE;
+
 constexpr float T = 200.0f;  // wave repeat time
 constexpr float g = 9.81f;   // gravity
 
@@ -23,8 +36,8 @@ struct SurfaceCreateInfo {
     SurfaceCreateInfo()
         : Lx(1000.0f),  //
           Lz(1000.0f),
-          N(512),
-          M(512),
+          N(::Ocean::N),
+          M(::Ocean::M),
           V(31.0f),
           omega(1.0f, 0.0f),
           l(1.0f),
@@ -47,15 +60,22 @@ struct SurfaceCreateInfo {
 
 }  // namespace Ocean
 
+// BUFFER VIEW
+namespace BufferView {
+namespace Ocean {
+constexpr std::string_view FFT_BIT_REVERSAL_OFFSETS_N_ID = "Ocean FFT BRO N";
+constexpr std::string_view FFT_BIT_REVERSAL_OFFSETS_M_ID = "Ocean FFT BRO M";
+constexpr std::string_view FFT_TWIDDLE_FACTORS_ID = "Ocean FFT TF";
+}  // namespace Ocean
+}  // namespace BufferView
+
 // TEXTURE
 namespace Texture {
 class Handler;
 struct CreateInfo;
 namespace Ocean {
-
-constexpr std::string_view OCEAN_DATA_ID = "Ocean Data Texture";
+constexpr std::string_view DATA_ID = "Ocean Data Texture";
 void MakTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info);
-
 }  // namespace Ocean
 }  // namespace Texture
 
@@ -64,6 +84,8 @@ namespace Shader {
 namespace Ocean {
 extern const CreateInfo DISP_COMP_CREATE_INFO;
 extern const CreateInfo FFT_COMP_CREATE_INFO;
+extern const CreateInfo FFT_ROW_COMP_CREATE_INFO;
+extern const CreateInfo FFT_COL_COMP_CREATE_INFO;
 extern const CreateInfo VERT_CREATE_INFO;
 extern const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO;
 }  // namespace Ocean
@@ -184,6 +206,8 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
     BufferResource verticesHFFRes_;
     std::vector<VB_INDEX_TYPE> indicesWF_;
     BufferResource indexWFRes_;
+
+    SurfaceCreateInfo info_;
 };
 
 }  // namespace Ocean

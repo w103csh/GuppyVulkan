@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -29,9 +29,12 @@ class Handler : public Game::Handler {
     // the members of Texture::CreateInfo should be trivial.
     std::shared_ptr<Texture::Base>& make(const Texture::CreateInfo* pCreateInfo);
 
+    void makeBufferView(const std::string_view& id, const VkFormat format, const VkDeviceSize size, void* pData);
+
     const std::shared_ptr<Texture::Base> getTexture(const std::string_view& name) const;
     const std::shared_ptr<Texture::Base> getTexture(const uint32_t index) const;
     const std::shared_ptr<Texture::Base> getTexture(const std::string_view& name, const uint8_t frameIndex) const;
+    const BufferView::Base* getBufferView(const std::string_view& id) const;
     inline uint32_t getCount() { return static_cast<uint32_t>(pTextures_.size()); }
 
     // TODO: should these be public? Moved these for render to sampler.
@@ -65,6 +68,8 @@ class Handler : public Game::Handler {
 
     std::vector<std::shared_ptr<Texture::Base>> pTextures_;
     std::vector<std::future<std::shared_ptr<Texture::Base>>> texFutures_;
+
+    std::vector<BufferView::Base> bufferViews_;
 
     // REGEX
     std::regex perFramebufferSuffix_;

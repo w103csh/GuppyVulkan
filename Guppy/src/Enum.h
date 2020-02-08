@@ -129,6 +129,7 @@ enum class PUSH_CONSTANT {
     DEFERRED,
     PRTCL_EULER,
     HFF_COLUMN,
+    FFT_ROW_COL_OFFSET,
 };
 
 enum class INPUT_ACTION {
@@ -248,6 +249,12 @@ enum class UNIFORM_DYNAMIC {
     // WATER
     HFF,
     OCEAN,
+    //
+    DONT_CARE,
+};
+
+enum class UNIFORM_TEXEL_BUFFER {
+    PIPELINE,
     //
     DONT_CARE,
 };

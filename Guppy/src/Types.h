@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -176,6 +176,7 @@ struct BarrierResource {
 using DESCRIPTOR = std::variant<  //
     UNIFORM,                      //
     UNIFORM_DYNAMIC,              //
+    UNIFORM_TEXEL_BUFFER,         //
     COMBINED_SAMPLER,             //
     STORAGE_IMAGE,                //
     STORAGE_BUFFER,               //

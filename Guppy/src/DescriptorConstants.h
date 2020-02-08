@@ -120,6 +120,7 @@ struct GetTypeString {
     template <typename T> std::string operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
     std::string operator()(const UNIFORM& type)                 const { return std::string("UNIFORM "               + std::to_string(static_cast<int>(type))); }
     std::string operator()(const UNIFORM_DYNAMIC& type)         const { return std::string("UNIFORM_DYNAMIC "       + std::to_string(static_cast<int>(type))); }
+    std::string operator()(const UNIFORM_TEXEL_BUFFER& type)    const { return std::string("UNIFORM_TEXEL_BUFFER "  + std::to_string(static_cast<int>(type))); }
     std::string operator()(const COMBINED_SAMPLER& type)        const { return std::string("COMBINED_SAMPLER "      + std::to_string(static_cast<int>(type))); }
     std::string operator()(const STORAGE_IMAGE& type)           const { return std::string("STORAGE_IMAGE "         + std::to_string(static_cast<int>(type))); }
     std::string operator()(const STORAGE_BUFFER& type)          const { return std::string("STORAGE_BUFFER "        + std::to_string(static_cast<int>(type))); }
@@ -130,6 +131,7 @@ struct GetVkBufferUsage {
     template <typename T> VkBufferUsageFlagBits operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
     VkBufferUsageFlagBits operator()(const UNIFORM&                     ) const { return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; }
     VkBufferUsageFlagBits operator()(const UNIFORM_DYNAMIC&             ) const { return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; }
+    VkBufferUsageFlagBits operator()(const UNIFORM_TEXEL_BUFFER&        ) const { return VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT; }
     VkBufferUsageFlagBits operator()(const STORAGE_IMAGE&               ) const { return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; }
     VkBufferUsageFlagBits operator()(const STORAGE_BUFFER&              ) const { return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; }
     VkBufferUsageFlagBits operator()(const STORAGE_BUFFER_DYNAMIC& type ) const {
@@ -143,6 +145,7 @@ struct GetVkDescriptorType {
     template <typename T> VkDescriptorType operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
     VkDescriptorType operator()(const UNIFORM&                  ) const { return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; }
     VkDescriptorType operator()(const UNIFORM_DYNAMIC&          ) const { return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC; }
+    VkDescriptorType operator()(const UNIFORM_TEXEL_BUFFER&     ) const { return VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER; }
     VkDescriptorType operator()(const COMBINED_SAMPLER&         ) const { return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; }
     VkDescriptorType operator()(const STORAGE_IMAGE&            ) const { return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; }
     VkDescriptorType operator()(const STORAGE_BUFFER&           ) const { return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; }
@@ -173,9 +176,10 @@ struct IsImage {
 };
 struct IsPipelineImage {
     template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const COMBINED_SAMPLER& type) const { return type == COMBINED_SAMPLER::PIPELINE; }
-    bool operator()(const STORAGE_IMAGE& type) const { return type == STORAGE_IMAGE::PIPELINE; }
-    bool operator()(const INPUT_ATTACHMENT&) const { return true; }
+    bool operator()(const COMBINED_SAMPLER& type)       const { return type == COMBINED_SAMPLER::PIPELINE; }
+    bool operator()(const STORAGE_IMAGE& type)          const { return type == STORAGE_IMAGE::PIPELINE; }
+    bool operator()(const UNIFORM_TEXEL_BUFFER& type)   const { return type == UNIFORM_TEXEL_BUFFER::PIPELINE; }
+    bool operator()(const INPUT_ATTACHMENT&)            const { return true; }
 };
 struct HasPerFramebufferData {
     template <typename T> bool operator()(const T&) const { return false; }
@@ -311,6 +315,15 @@ struct IsMaterial {
         type == UNIFORM_DYNAMIC::MATERIAL_OBJ3D ||
         type == UNIFORM_DYNAMIC::MATERIAL_PBR;
     }
+};
+// UNIFORM TEXEL BUFFER
+struct IsUniformTexelBuffer {
+    template <typename T> bool operator()(const T&) const { return false; }
+    bool operator()(const UNIFORM_TEXEL_BUFFER&) const { return true; }
+};
+struct GetUniformTexelBuffer {
+    template <typename T> UNIFORM_TEXEL_BUFFER operator()(const T&) const { return UNIFORM_TEXEL_BUFFER::DONT_CARE; }
+    UNIFORM_TEXEL_BUFFER operator()(const UNIFORM_TEXEL_BUFFER& type) const { return type; }
 };
 // INPUT ATTACHMENT
 struct IsInputAttachment {

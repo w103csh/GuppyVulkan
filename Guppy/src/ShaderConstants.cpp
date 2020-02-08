@@ -483,10 +483,6 @@ const std::map<SHADER, std::set<SHADER_LINK>> LINK_MAP = {
      {
          SHADER_LINK::DEFAULT_MATERIAL,
      }},
-    {SHADER::FFT_ONE_COMP,
-     {
-         SHADER_LINK::HELPERS,
-     }},
 };
 
 }  // namespace Shader

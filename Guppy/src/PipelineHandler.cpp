@@ -214,11 +214,12 @@ std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
 
         // clang-format off
         switch (type) {
-            case PUSH_CONSTANT::DEFAULT:        range.size = sizeof(Pipeline::Default::PushConstant); break;
-            case PUSH_CONSTANT::POST_PROCESS:   range.size = sizeof(::Compute::PostProcess::PushConstant); break;
-            case PUSH_CONSTANT::DEFERRED:       range.size = sizeof(::Deferred::PushConstant); break;
-            case PUSH_CONSTANT::PRTCL_EULER:    range.size = sizeof(::Particle::Euler::PushConstant); break;
-            case PUSH_CONSTANT::HFF_COLUMN:     range.size = sizeof(HeightFieldFluid::Column::PushConstant); break;
+            case PUSH_CONSTANT::DEFAULT:            range.size = sizeof(Pipeline::Default::PushConstant); break;
+            case PUSH_CONSTANT::POST_PROCESS:       range.size = sizeof(::Compute::PostProcess::PushConstant); break;
+            case PUSH_CONSTANT::DEFERRED:           range.size = sizeof(::Deferred::PushConstant); break;
+            case PUSH_CONSTANT::PRTCL_EULER:        range.size = sizeof(::Particle::Euler::PushConstant); break;
+            case PUSH_CONSTANT::HFF_COLUMN:         range.size = sizeof(HeightFieldFluid::Column::PushConstant); break;
+            case PUSH_CONSTANT::FFT_ROW_COL_OFFSET: range.size = sizeof(::FFT::RowColumnOffset); break;
             default: assert(false && "Unknown push constant"); exit(EXIT_FAILURE);
         }
         // clang-format on
@@ -393,7 +394,7 @@ void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
 
                 } break;
                 default: {
-                    assert(false);  // I think the only other types is ray tracing
+                    assert(false);  // I think the only other types are ray tracing
                 } break;
             }
 

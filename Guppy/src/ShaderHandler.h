@@ -37,7 +37,8 @@ class Handler : public Game::Handler {
 
     bool make(infoMapKeyValue &keyValue, bool doAssert, bool isInit);
     std::vector<std::string> loadText(const infoMapKeyValue &keyValue);
-    void textReplace(const Descriptor::Set::textReplaceTuples &replaceTuples, std::string &text) const;
+    void textReplaceDescSet(const Descriptor::Set::textReplaceTuples &replaceTuples, std::string &text) const;
+    void textReplacePipeline(const PIPELINE pipelineType, std::string &text) const;
 
     // SHADERS
     void getShaderTypes(const SHADER_LINK &linkType, std::vector<SHADER> &types);

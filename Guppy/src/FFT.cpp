@@ -5,10 +5,59 @@
 
 #include "FFT.h"
 
+#include <complex>
+#include <cmath>
 #include <string>
 #include <vulkan/vulkan.h>
 
 #include "Helpers.h"
+
+std::vector<int16_t> FFT::MakeBitReversalOffsets(const uint32_t N) {
+    assert(N < INT16_MAX && helpers::isPowerOfTwo(N));
+
+    std::vector<int16_t> offsets(N);
+    int16_t log_2 = static_cast<int16_t>(log2(N));
+
+    const auto reverse = [&log_2](int16_t i) -> int16_t {
+        int16_t res = 0;
+        for (int j = 0; j < log_2; j++) {
+            res = (res << 1) + (i & 1);
+            i >>= 1;
+        }
+        return res;
+    };
+
+    for (int16_t i = 0; i < static_cast<int16_t>(N); i++) offsets[i] = reverse(i);
+
+    return offsets;
+}
+
+std::vector<float> FFT::MakeTwiddleFactors(uint32_t N) {
+    assert(N < INT16_MAX && helpers::isPowerOfTwo(N));
+
+    std::vector<std::complex<float>> ts;
+    int16_t log_2 = static_cast<int16_t>(log2(N));
+
+    std::complex<float> w, wm;
+    for (int s = 1; s <= log_2; ++s) {
+        int m = 1 << s;
+        int m2 = m >> 1;
+        w = 1.0f;
+        wm = std::polar<float>(1.0f, glm::pi<float>() / m2);
+        for (int j = 0; j < m2; ++j) {
+            ts.push_back(w);
+            w *= wm;
+        }
+    }
+
+    std::vector<float> twiddleFactors;
+    for (const auto& t : ts) {
+        twiddleFactors.emplace_back(t.real());
+        twiddleFactors.emplace_back(t.imag());
+    }
+
+    return twiddleFactors;
+}
 
 // TEXUTRE
 namespace Texture {
@@ -55,7 +104,6 @@ const CreateInfo FFT_ONE_COMP_CREATE_INFO = {
     "Fast Fourier Transform One Component Compute Shader",
     "comp.fft.one.glsl",
     VK_SHADER_STAGE_COMPUTE_BIT,
-    {SHADER_LINK::HELPERS},
 };
 }  // namespace Shader
 

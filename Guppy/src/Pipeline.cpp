@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -338,7 +338,7 @@ void Pipeline::Base::destroy() {
 // COMPUTE
 
 Pipeline::Compute::Compute(Pipeline::Handler& handler, const Pipeline::CreateInfo* pCreateInfo)
-    : Base(handler, VK_PIPELINE_BIND_POINT_COMPUTE, pCreateInfo) {
+    : Base(handler, VK_PIPELINE_BIND_POINT_COMPUTE, pCreateInfo), localSize_(pCreateInfo->localSize) {
     assert(std::visit(IsCompute{}, TYPE));
 }
 

@@ -6,11 +6,14 @@
 #version 450
 
 #define _DS_OCEAN 0
+#define _LS_X 1
 
-// DECLARATIONS
-vec2 complexMultiply(const in vec2 a, const in vec2 b);
-float complexMagnitude(const in vec2 a);
+#define complexMul(a, b) vec2(a.x * b.x - a.y * b.y, a.x * b.y + a.y * b.x)
 
+// PUSH CONSTANTS
+layout(push_constant) uniform PushBlock {
+    int rowColOffset;
+} pc;
 // BINDINGS
 layout(set=_DS_OCEAN, binding=2) uniform Simulation {
     uvec2 nmLog2;   // log2 of discrete dimensions
@@ -18,149 +21,55 @@ layout(set=_DS_OCEAN, binding=2) uniform Simulation {
     float t;        // time
 } sim;
 layout(set=_DS_OCEAN, binding=3, rgba32f) uniform image2DArray imgOcean;
+layout(set=_DS_OCEAN, binding=6) uniform samplerBuffer sampTwiddle;
 // IN
-layout(local_size_x=1, local_size_y=1) in;
+layout(local_size_x=_LS_X) in;
 
 const float PI = 3.14159265358979323846;
 const int LAYER_HEIGHT          = 2;
 const int LAYER_SLOPE           = 3;
 const int LAYER_DIFFERENTIAL    = 4;
 
-void swap(const int i, const int ii, const int j, const int jj, const int layer) {
-    vec4 t = imageLoad(imgOcean, ivec3(i, ii, layer));
-    imageStore(imgOcean, ivec3(i, ii, layer), imageLoad(imgOcean, ivec3(j, jj, layer)));
-    imageStore(imgOcean, ivec3(j, jj, layer), t);
+void transform2(const ivec2 pixA, const ivec2 pixB, const vec2 w, const in int layer) {
+    vec2 t0 = complexMul(w, imageLoad(imgOcean, ivec3(pixB, layer)).rg);
+    vec2 t1 = imageLoad(imgOcean, ivec3(pixA, layer)).rg;
+    imageStore(imgOcean, ivec3(pixB, layer), vec4(t1 - t0, 0, 0));
+    imageStore(imgOcean, ivec3(pixA, layer), vec4(t1 + t0, 0, 0));
 }
 
-void transform(const int i, const int ii, const int i1, const int ii1, const float u1, const float u2, const int layer) {
-    vec4 t1 = imageLoad(imgOcean, ivec3(i1, ii1, layer));
-    t1 = vec4(
-        u1 * t1.x - u2 * t1.y,
-        u1 * t1.y + u2 * t1.x,
-        u1 * t1.z - u2 * t1.w,
-        u1 * t1.w + u2 * t1.z
-    );
-    vec4 t2 = imageLoad(imgOcean, ivec3(i, ii, layer));
-    imageStore(imgOcean, ivec3(i1, ii1, layer), t2 - t1);
-    imageStore(imgOcean, ivec3(i, ii, layer), t2 + t1);
-}
-
-/**
- *  This algorithm comes from here: http://paulbourke.net/miscellaneous/dft/. It was
- *  modified slightly but the idea is the same. The entire image is transform using
- *  compute work groups. This is the IFFT version.
- */
-void rows(const in int col) {
-    int n, i, i1, j, k, i2, l, l1, l2;
-    float c1, c2, u1, u2, z;
-    vec2 t1, t2;
-
-    /* Calculate the number of points */
-    n = imageSize(imgOcean).x;
-
-    /* Do the bit reversal */
-    i2 = n >> 1;
-    j = 0;
-    for (i = 0; i < n - 1; i++) {
-        if (i < j) {
-            swap(i, col, j, col, LAYER_HEIGHT); // TODO: this does zw comp needlessly
-            swap(i, col, j, col, LAYER_SLOPE);
-            swap(i, col, j, col, LAYER_DIFFERENTIAL);
-        }
-        k = i2;
-        while (k <= j) {
-            j -= k;
-            k >>= 1;
-        }
-        j += k;
-    }
-
-    /* Compute the FFT */
-    c1 = -1.0;
-    c2 = 0.0;
-    l2 = 1;
-    for (l = 0; l < sim.nmLog2.y; l++) {
-        l1 = l2;
-        l2 <<= 1;
-        u1 = 1.0;
-        u2 = 0.0;
-        for (j = 0; j < l1; j++) {
-            for (i = j; i < n; i += l2) {
-                i1 = i + l1;
-                transform(i, col, i1, col, u1, u2, LAYER_HEIGHT); // TODO: this does zw comp needlessly
-                transform(i, col, i1, col, u1, u2, LAYER_SLOPE);
-                transform(i, col, i1, col, u1, u2, LAYER_DIFFERENTIAL);
-            }
-            z = u1 * c1 - u2 * c2;
-            u2 = u1 * c2 + u2 * c1;
-            u1 = z;
-        }
-        c2 = sqrt((1.0 - c1) / 2.0);
-        c1 = sqrt((1.0 + c1) / 2.0);
-    }
-
-}
-
-/**
- *  This algorithm comes from here: http://paulbourke.net/miscellaneous/dft/. It was
- *  modified slightly but the idea is the same. The entire image is transform using
- *  compute work groups. This is the IFFT version.
- */
-void cols(const in int row) {
-    int n, i, i1, j, k, i2, l, l1, l2;
-    float c1, c2, u1, u2, z;
-    vec2 t1, t2;
-
-    /* Calculate the number of points */
-    n = imageSize(imgOcean).y;
-
-    /* Do the bit reversal */
-    i2 = n >> 1;
-    j = 0;
-    for (i = 0; i < n - 1; i++) {
-        if (i < j) {
-            swap(row, i, row, j, LAYER_HEIGHT); // TODO: this does zw comp needlessly
-            swap(row, i, row, j, LAYER_SLOPE);
-            swap(row, i, row, j, LAYER_DIFFERENTIAL);
-        }
-        k = i2;
-        while (k <= j) {
-            j -= k;
-            k >>= 1;
-        }
-        j += k;
-    }
-
-    /* Compute the FFT */
-    c1 = -1.0;
-    c2 = 0.0;
-    l2 = 1;
-    for (l = 0; l < sim.nmLog2.x; l++) {
-        l1 = l2;
-        l2 <<= 1;
-        u1 = 1.0;
-        u2 = 0.0;
-        for (j = 0; j < l1; j++) {
-            for (i = j; i < n; i += l2) {
-                i1 = i + l1;
-                transform(row, i, row, i1, u1, u2, LAYER_HEIGHT); // TODO: this does zw comp needlessly
-                transform(row, i, row, i1, u1, u2, LAYER_SLOPE);
-                transform(row, i, row, i1, u1, u2, LAYER_DIFFERENTIAL);
-            }
-            z = u1 * c1 - u2 * c2;
-            u2 = u1 * c2 + u2 * c1;
-            u1 = z;
-        }
-        c2 = sqrt((1.0 - c1) / 2.0);
-        c1 = sqrt((1.0 + c1) / 2.0);
-    }
-
+void transform4(const ivec2 pixA, const ivec2 pixB, const vec2 w, const in int layer) {
+    vec4 t0 = imageLoad(imgOcean, ivec3(pixB, layer));
+    t0 = vec4(complexMul(w, t0.xy), complexMul(w, t0.zw));
+    vec4 t1 = imageLoad(imgOcean, ivec3(pixA, layer));
+    imageStore(imgOcean, ivec3(pixB, layer), t1 - t0);
+    imageStore(imgOcean, ivec3(pixA, layer), t1 + t0);
 }
 
 void main() {
-    if (gl_NumWorkGroups.x > gl_NumWorkGroups.y) {
-        cols(int(gl_GlobalInvocationID.x));
-    } else {
-        rows(int(gl_GlobalInvocationID.y));
+    // Determine the pixel location based on the push constant offset.
+    ivec2 pixA, pixB;
+    pixA[pc.rowColOffset] = pixB[pc.rowColOffset] = int(gl_GlobalInvocationID.x);
+
+    int i, m, m2, j, k,
+        offset = pc.rowColOffset ^ 1,
+        n = imageSize(imgOcean)[offset];
+
+    vec2 twiddle;
+
+    for (int s = 1; s <= sim.nmLog2[offset]; ++s) {
+        m = 1 << s;
+        m2 = m >> 1;
+        for (j = 0; j < m2; ++j) {
+            twiddle = texelFetch(sampTwiddle, m - m2 + j - 1).rg;
+            for (k = j; k < n; k += m) {
+                pixA[offset] = k;
+                pixB[offset] = k + m2;
+                transform2(pixA, pixB, twiddle, LAYER_HEIGHT);
+                transform4(pixA, pixB, twiddle, LAYER_SLOPE);
+                transform4(pixA, pixB, twiddle, LAYER_DIFFERENTIAL);
+            }
+
+        }
     }
+
 }

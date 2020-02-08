@@ -104,6 +104,7 @@ void Texture::Handler::init() {
 
 void Texture::Handler::reset() {
     const auto& dev = shell().context().dev;
+    // TEXTURES
     for (auto& pTexture : pTextures_) {
         for (auto& sampler : pTexture->samplers) {
             if (pTexture->status != STATUS::DESTROYED) {
@@ -112,6 +113,13 @@ void Texture::Handler::reset() {
         }
     }
     pTextures_.clear();
+    // BUFFER VIEWS
+    for (auto& bv : bufferViews_) {
+        vkDestroyBufferView(dev, bv.view, nullptr);
+        vkDestroyBuffer(dev, bv.buffRes.buffer, nullptr);
+        vkFreeMemory(dev, bv.buffRes.memory, nullptr);
+    }
+    bufferViews_.clear();
 }
 
 std::shared_ptr<Texture::Base>& Texture::Handler::make(const Texture::CreateInfo* pCreateInfo) {
@@ -171,6 +179,31 @@ std::shared_ptr<Texture::Base>& Texture::Handler::make(const Texture::CreateInfo
     return pTextures_.back();
 }
 
+void Texture::Handler::makeBufferView(const std::string_view& id, const VkFormat format, const VkDeviceSize size,
+                                      void* pData) {
+    // Just make a buffer per make call for now. Not sure if I will use this enough for it to matter.
+    const auto& ctx = shell().context();
+    bufferViews_.push_back({id});
+    bufferViews_.back().pLdgRes = loadingHandler().createLoadingResources();
+
+    BufferResource stgRes = {};
+    helpers::createBuffer(
+        ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, bufferViews_.back().pLdgRes->transferCmd,
+        static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT),
+        size, std::string(id) + " uniform texel buffer", stgRes, bufferViews_.back().buffRes, pData);
+    bufferViews_.back().pLdgRes->stgResources.push_back(stgRes);
+
+    loadingHandler().loadSubmit(std::move(bufferViews_.back().pLdgRes));
+
+    VkBufferViewCreateInfo createInfo{VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO};
+    createInfo.format = format;
+    createInfo.range = size;
+    createInfo.buffer = bufferViews_.back().buffRes.buffer;
+    vk::assert_success(vkCreateBufferView(ctx.dev, &createInfo, nullptr, &bufferViews_.back().view));
+
+    bufferViews_.back().status = STATUS::READY;
+}
+
 const std::shared_ptr<Texture::Base> Texture::Handler::getTexture(const std::string_view& textureId) const {
     for (const auto& pTexture : pTextures_)
         if (pTexture->NAME == textureId) return pTexture;
@@ -186,6 +219,12 @@ const std::shared_ptr<Texture::Base> Texture::Handler::getTexture(const std::str
                                                                   const uint8_t frameIndex) const {
     auto textureIdWithSuffix = std::string(textureId) + Texture::Handler::getIdSuffix(frameIndex);
     return getTexture(textureIdWithSuffix);
+}
+
+const BufferView::Base* Texture::Handler::getBufferView(const std::string_view& id) const {
+    for (auto& bv : bufferViews_)
+        if (bv.id == id) return &bv;
+    return nullptr;
 }
 
 bool Texture::Handler::update(std::shared_ptr<Texture::Base> pTexture) {
