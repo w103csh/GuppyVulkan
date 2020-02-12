@@ -1,12 +1,12 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
 #ifndef DESCRIPTOR_H
 #define DESCRIPTOR_H
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "Constants.h"
 #include "BufferItem.h"
@@ -31,7 +31,7 @@ class Base : public virtual Buffer::Item, public Descriptor::Interface {
     Base(const DESCRIPTOR&& descType) : descType_(descType) {}
 
    private:
-    VkDescriptorBufferInfo getBufferInfo(const uint32_t index = 0) const;
+    vk::DescriptorBufferInfo getBufferInfo(const uint32_t index = 0) const;
 
     DESCRIPTOR descType_;
 };

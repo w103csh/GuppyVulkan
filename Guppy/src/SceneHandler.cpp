@@ -279,7 +279,7 @@ void Scene::Handler::init() {
         }
 
         // ICOSAHEDRON
-        if (!suppress || false) {
+        if (!suppress && false) {  // TODO: GRAPHICS::TESS_PHONG_TRI_COLOR_DEFERRED This requires two dynamic uniforms now!
             modelInfo = {};
             modelInfo.async = false;
             modelInfo.callback = [groundPlane_bbmm](auto pModel) { pModel->putOnTop(groundPlane_bbmm); };

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -142,10 +142,10 @@ class Base : public Buffer::Base, public Obj3d::InstanceDraw {
          std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData);
 
     virtual void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                      const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                      const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                       const uint8_t frameIndex) const override;
     void dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                  const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                  const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                   const uint8_t frameIndex) const override;
 
     void getComputeDescSetBindData() override;

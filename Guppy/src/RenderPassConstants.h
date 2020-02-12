@@ -15,7 +15,7 @@
 #include <string_view>
 #include <utility>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "DescriptorConstants.h"
 #include "Types.h"
@@ -30,9 +30,10 @@ namespace Texture { struct CreateInfo; }
 // const glm::vec4 CLEAR_COLOR = {190.0f / 256.0f, 223.0f / 256.0f, 246.0f / 256.0f, 1.0f};
 const glm::vec4 CLEAR_COLOR = {0.69f, 0.84f, 1.0f, 1.0f};
 // const glm::vec4 CLEAR_COLOR = {};
-const VkClearColorValue DEFAULT_CLEAR_COLOR_VALUE = {{CLEAR_COLOR.x, CLEAR_COLOR.y, CLEAR_COLOR.z, CLEAR_COLOR.w}};
+const vk::ClearColorValue DEFAULT_CLEAR_COLOR_VALUE =
+    std::array<float, 4>{CLEAR_COLOR.x, CLEAR_COLOR.y, CLEAR_COLOR.z, CLEAR_COLOR.w};
 
-const VkClearDepthStencilValue DEFAULT_CLEAR_DEPTH_STENCIL_VALUE = {1.0f, 0};
+const vk::ClearDepthStencilValue DEFAULT_CLEAR_DEPTH_STENCIL_VALUE = {1.0f, 0};
 
 namespace RenderPass {
 
@@ -67,34 +68,34 @@ struct PipelineData {
                samples == other.samples;
     }
     constexpr bool operator!=(const PipelineData &other) { return !(*this == other); }
-    VkBool32 usesDepth;
-    VkSampleCountFlagBits samples;
+    vk::Bool32 usesDepth;
+    vk::SampleCountFlagBits samples;
 };
 
 struct SwapchainResources {
-    std::vector<VkImage> images;
-    std::vector<VkImageView> views;
+    std::vector<vk::Image> images;
+    std::vector<vk::ImageView> views;
 };
 
 struct Data {
-    std::vector<VkFramebuffer> framebuffers;
-    std::vector<VkCommandBuffer> priCmds;
-    std::vector<VkCommandBuffer> secCmds;
-    std::vector<VkSemaphore> semaphores;
-    VkPipelineStageFlags signalSrcStageMask = VK_PIPELINE_STAGE_FLAG_BITS_MAX_ENUM;
+    std::vector<vk::Framebuffer> framebuffers;
+    std::vector<vk::CommandBuffer> priCmds;
+    std::vector<vk::CommandBuffer> secCmds;
+    std::vector<vk::Semaphore> semaphores;
+    vk::PipelineStageFlags signalSrcStageMask;
 };
 
 struct Resources {
     // storage
-    std::vector<VkAttachmentReference> inputAttachments;
-    std::vector<VkAttachmentReference> colorAttachments;
-    std::vector<VkAttachmentReference> resolveAttachments;
-    VkAttachmentReference depthStencilAttachment = {};
+    std::vector<vk::AttachmentReference> inputAttachments;
+    std::vector<vk::AttachmentReference> colorAttachments;
+    std::vector<vk::AttachmentReference> resolveAttachments;
+    vk::AttachmentReference depthStencilAttachment = {};
     std::vector<uint32_t> preserveAttachments;
     // render pass create info
-    std::vector<VkSubpassDescription> subpasses;
-    std::vector<VkAttachmentDescription> attachments;
-    std::vector<VkSubpassDependency> dependencies;
+    std::vector<vk::SubpassDescription> subpasses;
+    std::vector<vk::AttachmentDescription> attachments;
+    std::vector<vk::SubpassDependency> dependencies;
 };
 
 struct CreateInfo {
@@ -105,8 +106,8 @@ struct CreateInfo {
     std::vector<std::string> textureIds;
     std::vector<PASS> prePassTypes;
     std::vector<PASS> postPassTypes;
-    VkImageLayout initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    VkImageLayout finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    vk::ImageLayout initialLayout = vk::ImageLayout::eColorAttachmentOptimal;
+    vk::ImageLayout finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
     descriptorPipelineOffsetsMap descPipelineOffsets;
 };
 

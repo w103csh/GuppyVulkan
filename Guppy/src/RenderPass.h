@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -11,7 +11,7 @@
 #include <unordered_set>
 #include <utility>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "ConstantsAll.h"
 #include "Handlee.h"
@@ -53,13 +53,13 @@ class Base : public Handlee<RenderPass::Handler> {
     constexpr auto getStatus() const { return status_; }
 
     // PRIMARY
-    virtual void beginPass(const VkCommandBuffer &cmd, const uint8_t frameIndex,
-                           VkSubpassContents &&subpassContents = VK_SUBPASS_CONTENTS_INLINE) const;
-    virtual void endPass(const VkCommandBuffer &cmd) const;
+    virtual void beginPass(const vk::CommandBuffer &cmd, const uint8_t frameIndex,
+                           vk::SubpassContents &&subpassContents = vk::SubpassContents::eInline) const;
+    virtual void endPass(const vk::CommandBuffer &cmd) const;
 
     // SECONDARY
     virtual void beginSecondary(const uint8_t frameIndex);
-    virtual void endSecondary(const uint8_t frameIndex, const VkCommandBuffer &priCmd);
+    virtual void endSecondary(const uint8_t frameIndex, const vk::CommandBuffer &priCmd);
 
     virtual void updateSubmitResource(SubmitResource &resource, const uint8_t frameIndex) const;
 
@@ -72,7 +72,9 @@ class Base : public Handlee<RenderPass::Handler> {
     constexpr bool usesSwapchain() const { return FLAGS & FLAG::SWAPCHAIN; }
     constexpr bool usesDepth() const { return FLAGS & FLAG::DEPTH; }
     constexpr bool usesDepthInputAttachment() const { return FLAGS & FLAG::DEPTH_INPUT_ATTACHMENT; }
-    constexpr bool usesMultiSample() const { return FLAGS & FLAG::MULTISAMPLE && getSamples() != VK_SAMPLE_COUNT_1_BIT; }
+    constexpr bool usesMultiSample() const {
+        return FLAGS & FLAG::MULTISAMPLE && getSamples() != vk::SampleCountFlagBits::e1;
+    }
     constexpr bool usesSecondaryCommands() const { return FLAGS & FLAG::SECONDARY_COMMANDS; }
     inline bool hasTargetSampler() const { return pTextures_.size(); }
     inline bool hasTargetSwapchain() const { return getTargetId() == SWAPCHAIN_TARGET_ID; }
@@ -114,7 +116,7 @@ class Base : public Handlee<RenderPass::Handler> {
     virtual void destroyTargetResources();
 
     // TODO: Scene as friend?
-    VkRenderPass pass;
+    vk::RenderPass pass;
     Data data;
 
    protected:
@@ -132,9 +134,9 @@ class Base : public Handlee<RenderPass::Handler> {
     virtual void createBeginInfo();
     virtual void updateBeginInfo();  // TODO: what should this be?
     virtual void createViewports();
-    std::vector<VkRect2D> scissors_;
-    std::vector<VkViewport> viewports_;
-    VkRenderPassBeginInfo beginInfo_;
+    std::vector<vk::Rect2D> scissors_;
+    std::vector<vk::Viewport> viewports_;
+    vk::RenderPassBeginInfo beginInfo_;
 
     // SUBPASS
     virtual void createAttachments();
@@ -149,11 +151,11 @@ class Base : public Handlee<RenderPass::Handler> {
     virtual void createDepthResource();
     virtual void updateClearValues();
     virtual void createFramebuffers();
-    std::vector<VkClearValue> clearValues_;
+    std::vector<vk::ClearValue> clearValues_;
 
     // SECONDARY
-    VkCommandBufferInheritanceInfo inheritInfo_;
-    VkCommandBufferBeginInfo secCmdBeginInfo_;
+    vk::CommandBufferInheritanceInfo inheritInfo_;
+    vk::CommandBufferBeginInfo secCmdBeginInfo_;
     bool secCmdFlag_;
 
     // ATTACHMENT
@@ -170,7 +172,7 @@ class Base : public Handlee<RenderPass::Handler> {
     // BARRIER
     BarrierResource barrierResource_;
 
-    VkExtent2D extent_;
+    vk::Extent2D extent_;
 
    private:
     /* It is important that this remains private and is set in Base::init. That way
@@ -180,10 +182,10 @@ class Base : public Handlee<RenderPass::Handler> {
     bool isInitialized_;
 
     // SETTINGS
-    VkFormat format_;
-    VkFormat depthFormat_;
-    VkImageLayout initialLayout_;
-    VkImageLayout finalLayout_;
+    vk::Format format_;
+    vk::Format depthFormat_;
+    vk::ImageLayout initialLayout_;
+    vk::ImageLayout finalLayout_;
     uint32_t commandCount_;
     uint32_t semaphoreCount_;
 

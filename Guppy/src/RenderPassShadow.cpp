@@ -29,18 +29,18 @@ Base::Base(RenderPass::Handler& handler, const index&& offset, const CreateInfo*
 
 void Base::createAttachments() {
     resources_.depthStencilAttachment = {static_cast<uint32_t>(resources_.attachments.size()),
-                                         VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL};
+                                         vk::ImageLayout::eDepthStencilAttachmentOptimal};
 
     resources_.attachments.push_back({});
     resources_.attachments.back().format = pTextures_[0]->samplers[0].imgCreateInfo.format;
-    resources_.attachments.back().samples = VK_SAMPLE_COUNT_1_BIT;
-    resources_.attachments.back().loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    resources_.attachments.back().storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    resources_.attachments.back().stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    resources_.attachments.back().stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    resources_.attachments.back().initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    resources_.attachments.back().finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-    resources_.attachments.back().flags = 0;
+    resources_.attachments.back().samples = vk::SampleCountFlagBits::e1;
+    resources_.attachments.back().loadOp = vk::AttachmentLoadOp::eClear;
+    resources_.attachments.back().storeOp = vk::AttachmentStoreOp::eStore;
+    resources_.attachments.back().stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+    resources_.attachments.back().stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+    resources_.attachments.back().initialLayout = vk::ImageLayout::eUndefined;
+    resources_.attachments.back().finalLayout = vk::ImageLayout::eDepthStencilReadOnlyOptimal;
+    resources_.attachments.back().flags = {};
 }
 
 void Base::createDependencies() {
@@ -49,10 +49,10 @@ void Base::createDependencies() {
         resources_.dependencies.push_back({
             VK_SUBPASS_EXTERNAL,
             pipelineBindDataList_.getOffset(GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER),
-            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-            VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-            VK_ACCESS_SHADER_WRITE_BIT,
-            VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
+            vk::PipelineStageFlagBits::eComputeShader,
+            vk::PipelineStageFlagBits::eVertexInput,
+            vk::AccessFlagBits::eShaderWrite,
+            vk::AccessFlagBits::eVertexAttributeRead,
         });
     }
 }
@@ -61,11 +61,10 @@ void Base::createFramebuffers() {
     /* Views for framebuffer.
      *  - depth
      */
-    std::vector<std::vector<VkImageView>> attachmentViewsList(handler().shell().context().imageCount);
+    std::vector<std::vector<vk::ImageView>> attachmentViewsList(handler().shell().context().imageCount);
     data.framebuffers.resize(attachmentViewsList.size());
 
-    VkFramebufferCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    vk::FramebufferCreateInfo createInfo = {};
     createInfo.renderPass = pass;
     createInfo.width = extent_.width;
     createInfo.height = extent_.height;
@@ -76,13 +75,12 @@ void Base::createFramebuffers() {
 
         assert(pTextures_[0]->samplers[0].layerResourceMap.size() == 1);
         attachmentViews.push_back(pTextures_[0]->samplers[0].layerResourceMap.begin()->second.view);
-        assert(attachmentViews.back() != VK_NULL_HANDLE);
+        assert(attachmentViews.back());
 
         createInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
         createInfo.pAttachments = attachmentViews.data();
 
-        vk::assert_success(
-            vkCreateFramebuffer(handler().shell().context().dev, &createInfo, nullptr, &data.framebuffers[frameIndex]));
+        data.framebuffers[frameIndex] = handler().shell().context().dev.createFramebuffer(createInfo, ALLOC_PLACE_HOLDER);
     }
 }
 
@@ -107,10 +105,10 @@ std::array<PIPELINE, 2> TEX_LIST = {
 }  // namespace
 
 void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::vector<PIPELINE>& surrogatePipelineTypes,
-                  const VkCommandBuffer& priCmd) {
+                  const vk::CommandBuffer& priCmd) {
     if (getStatus() != STATUS::READY) update();
     if (getStatus() == STATUS::READY) {
-        beginPass(priCmd, frameIndex, VK_SUBPASS_CONTENTS_INLINE);
+        beginPass(priCmd, frameIndex, vk::SubpassContents::eInline);
 
         auto& secCmd = data.secCmds[frameIndex];
         auto& pScene = handler().sceneHandler().getActiveScene();
@@ -127,7 +125,7 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
             }
         }
 
-        vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+        priCmd.nextSubpass(vk::SubpassContents::eInline);
 
         // PRTCL_FOUNTAIN_EULER_DEFERRED
         itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(),
@@ -138,7 +136,7 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
                                                    priCmd, frameIndex);
 
             surrogatePipelineTypes.erase(itSurrogate);
-            vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+            priCmd.nextSubpass(vk::SubpassContents::eInline);
         }
 
         // TEXTURE

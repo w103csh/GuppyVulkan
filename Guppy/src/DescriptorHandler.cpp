@@ -35,7 +35,7 @@
 #include "TextureHandler.h"
 #include "UniformHandler.h"
 
-Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_(VK_NULL_HANDLE) {
+Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_() {
     for (const auto& type : Descriptor::Set::ALL) {
         // clang-format off
         switch (type) {
@@ -100,26 +100,25 @@ void Descriptor::Handler::init() {
 
 void Descriptor::Handler::createPool() {
     // TODO: an actaul allocator that works, and doesn't waste a ton of memory
-    std::vector<VkDescriptorPoolSize> poolSizes = {
-        {VK_DESCRIPTOR_TYPE_SAMPLER, 1000},
-        {VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 1000},
-        {VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 1000},
-        {VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 1000},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 1000},
-        {VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 1000},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 1000},
-        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 1000},
-        {VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 1000},
-        {VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 1000},
-        {VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 1000},
+    std::vector<vk::DescriptorPoolSize> poolSizes = {
+        {vk::DescriptorType::eSampler, 1000},
+        {vk::DescriptorType::eCombinedImageSampler, 1000},
+        {vk::DescriptorType::eSampledImage, 1000},
+        {vk::DescriptorType::eStorageImage, 1000},
+        {vk::DescriptorType::eUniformTexelBuffer, 1000},
+        {vk::DescriptorType::eStorageTexelBuffer, 1000},
+        {vk::DescriptorType::eUniformBuffer, 1000},
+        {vk::DescriptorType::eStorageBuffer, 1000},
+        {vk::DescriptorType::eUniformBufferDynamic, 1000},
+        {vk::DescriptorType::eStorageBufferDynamic, 1000},
+        {vk::DescriptorType::eInputAttachment, 1000},
     };
-    VkDescriptorPoolCreateInfo poolInfo = {};
-    poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-    poolInfo.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+    vk::DescriptorPoolCreateInfo poolInfo = {};
+    poolInfo.flags = vk::DescriptorPoolCreateFlagBits::eFreeDescriptorSet;
     poolInfo.maxSets = 1000 * poolSizes.size();
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
-    vk::assert_success(vkCreateDescriptorPool(shell().context().dev, &poolInfo, nullptr, &pool_));
+    pool_ = shell().context().dev.createDescriptorPool(poolInfo, ALLOC_PLACE_HOLDER);
 }
 
 /* OLD POOL LOGIC THAT HAD A BAD ATTEMPT AT AN ALLOCATION STRATEGY
@@ -128,31 +127,30 @@ void Descriptor::Handler::createPool() {
 //    const auto& imageCount = shell().context().image_count;
 //    uint32_t maxSets = (pRes->colorCount * imageCount) + (pRes->texCount * imageCount);
 //
-//    std::vector<VkDescriptorPoolSize> poolSizes;
-//    VkDescriptorPoolSize poolSize;
+//    std::vector<vk::DescriptorPoolSize> poolSizes;
+//    vk::DescriptorPoolSize poolSize;
 //
 //    poolSize = {};
-//    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+//    poolSize.type = vk::DescriptorType::eUniformBuffer;
 //    poolSize.descriptorCount = (pRes->colorCount + pRes->texCount) * imageCount;
 //    poolSizes.push_back(poolSize);
 //
 //    poolSize = {};
-//    poolSize.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+//    poolSize.type = vk::DescriptorType::eCombinedImageSampler;
 //    poolSize.descriptorCount = pRes->texCount * imageCount;
 //    poolSizes.push_back(poolSize);
 //
 //    poolSize = {};
-//    poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+//    poolSize.type = vk::DescriptorType::eUniformBufferDynamic;
 //    poolSize.descriptorCount = pRes->texCount * imageCount;
 //    poolSizes.push_back(poolSize);
 //
-//    VkDescriptorPoolCreateInfo desc_pool_info = {};
-//    desc_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+//    vk::DescriptorPoolCreateInfo desc_pool_info = {};
 //    desc_pool_info.maxSets = maxSets;
 //    desc_pool_info.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 //    desc_pool_info.pPoolSizes = poolSizes.data();
 //
-//    vk::assert_success(vkCreateDescriptorPool(shell().context().dev, &desc_pool_info, nullptr, &pRes->pool));
+//    pRes->pool = shell().context().dev.createDescriptorPool(desc_pool_info, ALLOC_PLACE_HOLDER);
 //}
 
 void Descriptor::Handler::createLayouts() {
@@ -167,7 +165,7 @@ void Descriptor::Handler::createLayouts() {
             pipelineHandler().getShaderStages(res.pipelineTypes, res.stages);
 
             // Gather bindings...
-            std::vector<VkDescriptorSetLayoutBinding> bindings;
+            std::vector<vk::DescriptorSetLayoutBinding> bindings;
             for (auto& bindingKeyValue : pSet->getBindingMap()) {
                 auto it = res.offsets.map().find(bindingKeyValue.second.descType);
                 if (it == res.offsets.map().end()) {
@@ -179,18 +177,13 @@ void Descriptor::Handler::createLayouts() {
             }
 
             // Create layout...
-            VkDescriptorSetLayoutCreateInfo createInfo = {};
-            createInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+            vk::DescriptorSetLayoutCreateInfo createInfo = {};
             createInfo.bindingCount = static_cast<uint32_t>(bindings.size());
             createInfo.pBindings = bindings.data();
 
-            vk::assert_success(vkCreateDescriptorSetLayout(shell().context().dev, &createInfo, nullptr, &res.layout));
-
-            if (shell().context().debugMarkersEnabled) {
-                std::string markerName = " descriptor set layout";  // TODO: a meaningful name
-                ext::DebugMarkerSetObjectName(shell().context().dev, (uint64_t)res.layout,
-                                              VK_DEBUG_REPORT_OBJECT_TYPE_DESCRIPTOR_SET_LAYOUT_EXT, markerName.c_str());
-            }
+            res.layout = shell().context().dev.createDescriptorSetLayout(createInfo, ALLOC_PLACE_HOLDER);
+            std::string markerName = "";  // TODO: a meaningful name
+            shell().context().dbg.setMarkerName(res.layout, markerName.c_str());
         }
     }
 }
@@ -543,12 +536,12 @@ Descriptor::Set::resourceHelpers Descriptor::Handler::getResourceHelpers(
     return helpers;
 }
 
-VkDescriptorSetLayoutBinding Descriptor::Handler::getDecriptorSetLayoutBinding(
-    const Descriptor::bindingMapKeyValue& keyValue, const VkShaderStageFlags& stageFlags,
+vk::DescriptorSetLayoutBinding Descriptor::Handler::getDecriptorSetLayoutBinding(
+    const Descriptor::bindingMapKeyValue& keyValue, const vk::ShaderStageFlags& stageFlags,
     const Uniform::offsets& offsets) const {
-    VkDescriptorSetLayoutBinding layoutBinding = {};
+    vk::DescriptorSetLayoutBinding layoutBinding = {};
     layoutBinding.binding = keyValue.first.first;
-    layoutBinding.descriptorType = std::visit(GetVkDescriptorType{}, keyValue.second.descType);
+    layoutBinding.descriptorType = std::visit(GetVulkanDescriptorType{}, keyValue.second.descType);
     layoutBinding.descriptorCount = getDescriptorCount(keyValue.second.descType, offsets);
     layoutBinding.stageFlags = stageFlags;
     layoutBinding.pImmutableSamplers = nullptr;  // TODO: use this
@@ -632,7 +625,7 @@ void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::
                     helper.resourceOffset,
                     {
                         std::make_shared<Set::resourceInfoMap>(),
-                        std::vector<VkDescriptorSet>(pSet->getSetCount()),
+                        std::vector<vk::DescriptorSet>(pSet->getSetCount()),
                     },
                 });
                 assert(it.second);
@@ -655,7 +648,7 @@ void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::
             if (itBindDataMap == bindDataMap.end()) {
                 auto it = bindDataMap.insert({
                     helper.passTypes1,
-                    {0, std::vector<std::vector<VkDescriptorSet>>(sets.size())},
+                    {0, std::vector<std::vector<vk::DescriptorSet>>(sets.size())},
                 });
                 assert(it.second);
                 itBindDataMap = it.first;
@@ -685,22 +678,21 @@ void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::
 }
 
 void Descriptor::Handler::allocateDescriptorSets(const Descriptor::Set::Resource& resource,
-                                                 std::vector<VkDescriptorSet>& descriptorSets) {
-    std::vector<VkDescriptorSetLayout> layouts(descriptorSets.size(), resource.layout);
+                                                 std::vector<vk::DescriptorSet>& descriptorSets) {
+    std::vector<vk::DescriptorSetLayout> layouts(descriptorSets.size(), resource.layout);
 
-    VkDescriptorSetAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    vk::DescriptorSetAllocateInfo allocInfo = {};
     allocInfo.descriptorPool = pool_;
     allocInfo.descriptorSetCount = static_cast<uint32_t>(layouts.size());
     allocInfo.pSetLayouts = layouts.data();
 
-    vk::assert_success(vkAllocateDescriptorSets(shell().context().dev, &allocInfo, descriptorSets.data()));
+    helpers::checkVkResult(shell().context().dev.allocateDescriptorSets(&allocInfo, descriptorSets.data()));
 }
 
 void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bindingMap,
                                                const Descriptor::OffsetsMap& offsets, Set::resourceInfoMapSetsPair& pair,
                                                const std::vector<Descriptor::Base*> pDynamicItems) const {
-    std::vector<std::vector<VkWriteDescriptorSet>> writesList(pair.second.size());
+    std::vector<std::vector<vk::WriteDescriptorSet>> writesList(pair.second.size());
     assert(writesList.size() == pair.second.size());
 
     auto itDynItm = pDynamicItems.begin();
@@ -854,7 +846,7 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
     }
 
     for (auto& writes : writesList) {
-        vkUpdateDescriptorSets(shell().context().dev, static_cast<uint32_t>(writes.size()), writes.data(), 0, nullptr);
+        shell().context().dev.updateDescriptorSets(writes, {});
     }
 }
 
@@ -888,13 +880,12 @@ void Descriptor::Handler::updateBindData(const std::vector<std::string> textureI
     }
 }
 
-VkWriteDescriptorSet Descriptor::Handler::getWrite(const Descriptor::bindingMapKeyValue& keyValue,
-                                                   const VkDescriptorSet& set) const {
-    VkWriteDescriptorSet write = {};
-    write.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+vk::WriteDescriptorSet Descriptor::Handler::getWrite(const Descriptor::bindingMapKeyValue& keyValue,
+                                                     const vk::DescriptorSet& set) const {
+    vk::WriteDescriptorSet write = {};
     write.dstBinding = keyValue.first.first;
     write.dstArrayElement = keyValue.first.second;
-    write.descriptorType = std::visit(GetVkDescriptorType{}, keyValue.second.descType);
+    write.descriptorType = std::visit(GetVulkanDescriptorType{}, keyValue.second.descType);
     write.dstSet = set;
     return write;
 }
@@ -927,12 +918,11 @@ void Descriptor::Handler::getDynamicOffsets(const std::unique_ptr<Descriptor::Se
 
 void Descriptor::Handler::reset() {
     // POOL
-    if (pool_ != VK_NULL_HANDLE) vkDestroyDescriptorPool(shell().context().dev, pool_, nullptr);
+    if (pool_) shell().context().dev.destroyDescriptorPool(pool_, ALLOC_PLACE_HOLDER);
     // LAYOUT
     for (const auto& pSet : pDescriptorSets_) {
         for (auto& res : pSet->resources_) {
-            if (res.layout != VK_NULL_HANDLE)  //
-                vkDestroyDescriptorSetLayout(shell().context().dev, res.layout, nullptr);
+            if (res.layout) shell().context().dev.destroyDescriptorSetLayout(res.layout, ALLOC_PLACE_HOLDER);
         }
     }
 }

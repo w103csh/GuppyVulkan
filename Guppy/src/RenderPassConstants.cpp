@@ -1,12 +1,12 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
 #include "RenderPassConstants.h"
 
 #include <variant>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "ConstantsAll.h"
 #include "RenderPass.h"
@@ -41,47 +41,47 @@ const std::set<PASS> ALL = {
 const Sampler::CreateInfo DEFAULT_2D_SAMPLER_CREATE_INFO = {
     "Render Pass Default 2D Color Sampler",
     {{{::Sampler::USAGE::COLOR}}},
-    VK_IMAGE_VIEW_TYPE_2D,
+    vk::ImageViewType::e2D,
     BAD_EXTENT_3D,
     {false, true},
-    0,
+    {},
     SAMPLER::CLAMP_TO_BORDER,
-    (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
+    (vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment),
     {{false, false}, 1},
-    VK_FORMAT_R32G32B32A32_SFLOAT,  // VK_FORMAT_R8G8B8A8_UNORM,
+    vk::Format::eR32G32B32A32Sfloat,  // vk::Format::eR8G8B8A8Unorm,
 };
 
 const Sampler::CreateInfo PROJECT_2D_SAMPLER_CREATE_INFO = {
     "Render Pass Project 2D Color Sampler",
     {{{::Sampler::USAGE::COLOR}}},
-    VK_IMAGE_VIEW_TYPE_2D,
+    vk::ImageViewType::e2D,
     {640, 480, 1},
     {},
-    0,
+    {},
     SAMPLER::CLAMP_TO_BORDER,
-    (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
+    (vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment),
     {{false, false}, 1},
 };
 const Sampler::CreateInfo PROJECT_2D_ARRAY_SAMPLER_CREATE_INFO = {
     "Render Pass Project 2D Array Color Sampler",
     {{{::Sampler::USAGE::COLOR}}},
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    vk::ImageViewType::e2DArray,
     {1024, 768, 1},
     {},
-    0,
+    {},
     SAMPLER::CLAMP_TO_BORDER,
-    (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
+    (vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment),
     {{false, false}, 1},
 };
 const Sampler::CreateInfo SWAPCHAIN_TARGET_SAMPLER_CREATE_INFO = {
     "Swapchain Target Sampler",     //
     {{{::Sampler::USAGE::COLOR}}},  //
-    VK_IMAGE_VIEW_TYPE_2D,          //
+    vk::ImageViewType::e2D,         //
     BAD_EXTENT_3D,
     {true, true},
-    0,
+    {},
     SAMPLER::CLAMP_TO_BORDER,
-    VK_IMAGE_USAGE_SAMPLED_BIT,
+    vk::ImageUsageFlagBits::eSampled,
     {{false, false}, 1},
 };
 
@@ -159,8 +159,8 @@ const CreateInfo SAMPLER_DEFAULT_CREATE_INFO = {
     {std::string(DEFAULT_2D_TEXTURE_ID)},
     {},
     {},
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    vk::ImageLayout::eColorAttachmentOptimal,
+    vk::ImageLayout::eShaderReadOnlyOptimal,
 };
 
 // PROJECT
@@ -174,8 +174,8 @@ const CreateInfo PROJECT_CREATE_INFO = {
     {std::string(PROJECT_2D_ARRAY_TEXTURE_ID)},
     {},
     {},
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    vk::ImageLayout::eColorAttachmentOptimal,
+    vk::ImageLayout::eShaderReadOnlyOptimal,
     {
         {{UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, GRAPHICS::ALL_ENUM}, {1}},
         //{{UNIFORM::LIGHT_SPOT_DEFAULT, GRAPHICS::ALL_ENUM}, {1}},
@@ -190,9 +190,7 @@ namespace RenderPass {
 const CreateInfo SWAPCHAIN_IMAGE_CREATE_INFO = {
     DESCRIPTOR_SET::SWAPCHAIN_IMAGE,
     "_DS_SWAPCHAIN_IMAGE",
-    {
-        {{0, 0}, {STORAGE_IMAGE::SWAPCHAIN, ::RenderPass::SWAPCHAIN_TARGET_ID}},
-    },
+    {{{0, 0}, {STORAGE_IMAGE::SWAPCHAIN, ::RenderPass::SWAPCHAIN_TARGET_ID}}},
 };
 }  // namespace RenderPass
 }  // namespace Set

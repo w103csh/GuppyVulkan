@@ -1,5 +1,5 @@
 /*
- * Modifications copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Modifications copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  * -------------------------------
  * Copyright (C) 2016 Google, Inc.
@@ -24,7 +24,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <vulkan/vulkan.h>
 
 #include "Enum.h"
 
@@ -63,34 +62,34 @@ class Game {
     struct Settings {
         Settings();
         std::string name;
-        int initial_width;
-        int initial_height;
-        int queue_count;
-        int back_buffer_count;
-        int ticks_per_second;
+        int initialWidth;
+        int initialHeight;
+        int queueCount;
+        int backBufferCount;
+        int ticksPerSecond;
         bool vsync;
         bool animate;
 
         bool validate;
-        bool validate_verbose;
+        bool validateVerbose;
 
-        bool no_tick;
-        bool no_render;
+        bool noTick;
+        bool noRender;
 
         // *
-        bool try_sampler_anisotropy;  // TODO: Not sure what this does
-        bool try_sample_rate_shading;
-        bool try_compute_shading;
-        bool try_tessellation_shading;
-        bool try_geometry_shading;
-        bool try_wireframe_shading;
-        bool try_debug_markers;
-        bool try_independent_blend;
-        bool try_image_cube_array;
-        bool enable_sample_shading;
-        bool enable_double_clicks;
-        bool enable_directory_listener;
-        bool assert_on_recompile_shader;
+        bool trySamplerAnisotropy;  // TODO: Not sure what this does
+        bool trySampleRateShading;
+        bool tryComputeShading;
+        bool tryTessellationShading;
+        bool tryGeometryShading;
+        bool tryWireframeShading;
+        bool tryDebugMarkers;
+        bool tryIndependentBlend;
+        bool tryImageCubeArray;
+        bool enableSampleShading;
+        bool enableDoubleClicks;
+        bool enableDirectoryListener;
+        bool assertOnRecompileShader;
     };
 
     // SETTINGS
@@ -188,21 +187,21 @@ class Game {
                 settings_.vsync = false;
             } else if (*it == "-w") {
                 ++it;
-                settings_.initial_width = std::stoi(*it);
+                settings_.initialWidth = std::stoi(*it);
             } else if (*it == "-h") {
                 ++it;
-                settings_.initial_height = std::stoi(*it);
+                settings_.initialHeight = std::stoi(*it);
             } else if ((*it == "-v") || (*it == "--validate")) {
                 settings_.validate = true;
             } else if (*it == "-vv") {
                 settings_.validate = true;
-                settings_.validate_verbose = true;
+                settings_.validateVerbose = true;
             } else if (*it == "-nt") {
-                settings_.no_tick = true;
+                settings_.noTick = true;
             } else if (*it == "-nr") {
-                settings_.no_render = true;
+                settings_.noRender = true;
             } else if (*it == "-dbgm") {
-                settings_.try_debug_markers = true;
+                settings_.tryDebugMarkers = true;
             }
         }
     }

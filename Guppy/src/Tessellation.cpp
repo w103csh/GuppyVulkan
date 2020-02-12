@@ -67,7 +67,7 @@ void Base::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 
 void Base::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     Graphics::getInputAssemblyInfoResources(createInfoRes);
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::ePatchList;
 }
 
 void Base::getShaderStageInfoResources(CreateInfoResources& createInfoRes) {
@@ -88,18 +88,16 @@ void Base::getShaderStageInfoResources(CreateInfoResources& createInfoRes) {
     // createInfoRes.specializationInfo.back().pData = &handler().shell().context().samples;
 
     // assert(createInfoRes.shaderStageInfos.size() == 4 &&
-    //       createInfoRes.shaderStageInfos[1].stage == VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT &&
-    //       createInfoRes.shaderStageInfos[2].stage == VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT);
+    //       createInfoRes.shaderStageInfos[1].stage == vk::ShaderStageFlagBits::eTessellationControl &&
+    //       createInfoRes.shaderStageInfos[2].stage == vk::ShaderStageFlagBits::eTessellationEvaluation);
     //// Add the specialization to the tessellation shader infos.
     // createInfoRes.shaderStageInfos[1].pSpecializationInfo = &createInfoRes.specializationInfo.back();
     // createInfoRes.shaderStageInfos[2].pSpecializationInfo = &createInfoRes.specializationInfo.back();
 }
 
 void Base::getTesselationInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.tessellationStateInfo = {};
-    createInfoRes.tessellationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-    createInfoRes.tessellationStateInfo.pNext = nullptr;
-    createInfoRes.tessellationStateInfo.flags = 0;
+    createInfoRes.useTessellationInfo = true;
+    createInfoRes.tessellationStateInfo = vk::PipelineTessellationStateCreateInfo{};
     createInfoRes.tessellationStateInfo.patchControlPoints = PATCH_CONTROL_POINTS;
 }
 
@@ -151,7 +149,7 @@ PhongTriColorWireframeDeferred::PhongTriColorWireframeDeferred(Handler& handler,
 
 void PhongTriColorWireframeDeferred::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     Base::getRasterizationStateInfoResources(createInfoRes);
-    createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_LINE;
+    createInfoRes.rasterizationStateInfo.polygonMode = vk::PolygonMode::eLine;
 }
 
 }  // namespace Tessellation

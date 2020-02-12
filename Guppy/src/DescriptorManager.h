@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -9,7 +9,7 @@
 #include <memory>
 #include <string>
 #include <variant>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "ConstantsAll.h"
 #include "BufferManager.h"
@@ -21,18 +21,18 @@ class Manager : public Buffer::Manager::Base<TBase, TDerived, TSmartPointer> {
     using TManager = Buffer::Manager::Base<TBase, TDerived, TSmartPointer>;
 
    public:
-    Manager(const std::string &&name, const DESCRIPTOR &&descriptorType, const VkDeviceSize &&maxSize,
+    Manager(const std::string &&name, const DESCRIPTOR &&descriptorType, const vk::DeviceSize &&maxSize,
             const bool &&keepMapped, const std::string &&macroName = "N/A",
-            const VkSharingMode &&sharingMode = VK_SHARING_MODE_EXCLUSIVE, const VkBufferCreateFlags &&flags = 0)
+            const vk::SharingMode &&sharingMode = vk::SharingMode::eExclusive, const vk::BufferCreateFlags &&flags = {})
         : TManager(
               //
-              std::forward<const std::string>(name),                          //
-              std::forward<const VkDeviceSize>(maxSize),                      //
-              std::forward<const bool>(keepMapped),                           //
-              std::visit(Descriptor::GetVkBufferUsage{}, descriptorType),     //
-              std::visit(Descriptor::GetVkMemoryProperty{}, descriptorType),  //
-              std::forward<const VkSharingMode>(sharingMode),                 //
-              std::forward<const VkBufferCreateFlags>(flags)),
+              std::forward<const std::string>(name),                              //
+              std::forward<const vk::DeviceSize>(maxSize),                        //
+              std::forward<const bool>(keepMapped),                               //
+              std::visit(Descriptor::GetVulkanBufferUsage{}, descriptorType),     //
+              std::visit(Descriptor::GetVulkanMemoryProperty{}, descriptorType),  //
+              std::forward<const vk::SharingMode>(sharingMode),                   //
+              std::forward<const vk::BufferCreateFlags>(flags)),
           DESCRIPTOR_TYPE(descriptorType),
           MACRO_NAME(macroName) {}
 

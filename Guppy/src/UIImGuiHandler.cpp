@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -43,7 +43,7 @@ void UI::ImGuiHandler::frame() {
     ImGui::Render();
 }
 
-void UI::ImGuiHandler::draw(const VkCommandBuffer& cmd, const uint8_t frameIndex) {
+void UI::ImGuiHandler::draw(const vk::CommandBuffer& cmd, const uint8_t frameIndex) {
     // Record Imgui Draw Data and draw funcs into command buffer
     ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), cmd);
 }

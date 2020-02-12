@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -7,7 +7,7 @@
 #define UI_HANDLER_H
 
 #include <memory>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "Game.h"
 #include "RenderPass.h"
@@ -22,7 +22,7 @@ class Handler : public Game::Handler {
     virtual void init() override {}
     virtual void reset() override {}
     virtual void destroy() override {}
-    virtual void draw(const VkCommandBuffer& cmd, const uint8_t frameIndex) {}
+    virtual void draw(const vk::CommandBuffer& cmd, const uint8_t frameIndex) {}
 };
 
 }  // namespace UI

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -65,15 +65,13 @@ void Base::record(const uint8_t frameIndex) {
     auto& priCmd = data.priCmds[frameIndex];
 
     // RESET BUFFERS
-    vkResetCommandBuffer(priCmd, 0);
+    priCmd.reset({});
 
     // BEGIN BUFFERS
-    VkCommandBufferBeginInfo bufferInfo = {};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    // TODO: use VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT since this will only update after
+    vk::CommandBufferBeginInfo bufferInfo = {vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
+    // TODO: use vk::CommandBufferUsageFlagBits::eSimultaneousUse since this will only update after
     // swapchain recreation.
-    vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
+    priCmd.begin(bufferInfo);
 
     if (getStatus() != STATUS::READY) update();
     if (getStatus() == STATUS::READY) {
@@ -89,7 +87,7 @@ void Base::record(const uint8_t frameIndex) {
 
                 //::ScreenSpace::PushConstant pc = {::ScreenSpace::BLOOM_BRIGHT};
                 // const auto& pPipelineBindData = pPass->getPipelineBindDataMap().begin()->second;
-                // vkCmdPushConstants(priCmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                // priCmd.pushConstants(pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
                 //                   sizeof(::ScreenSpace::PushConstant), &pc);
 
                 auto it = pPass->getPipelineBindDataList().getValues().begin();
@@ -111,8 +109,8 @@ void Base::record(const uint8_t frameIndex) {
 
                 ::ScreenSpace::PushConstant pushConstant = {::ScreenSpace::BLOOM_BRIGHT};
                 auto it = pPass->getPipelineBindDataList().getValues().begin();
-                vkCmdPushConstants(priCmd, (*it)->layout, (*it)->pushConstantStages, 0,
-                                   static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
+                priCmd.pushConstants((*it)->layout, (*it)->pushConstantStages, 0,
+                                     static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
 
                 handler().getScreenQuad()->draw(TYPE, (*it), pPass->getDescSetBindDataMap((*it)->type).begin()->second,
                                                 priCmd, frameIndex);
@@ -129,8 +127,8 @@ void Base::record(const uint8_t frameIndex) {
 
                 ::ScreenSpace::PushConstant pushConstant = {::ScreenSpace::BLOOM_BLUR_A};
                 auto it = pPass->getPipelineBindDataList().getValues().begin();
-                vkCmdPushConstants(priCmd, (*it)->layout, (*it)->pushConstantStages, 0,
-                                   static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
+                priCmd.pushConstants((*it)->layout, (*it)->pushConstantStages, 0,
+                                     static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
 
                 handler().getScreenQuad()->draw(TYPE, (*it), pPass->getDescSetBindDataMap((*it)->type).begin()->second,
                                                 priCmd, frameIndex);
@@ -139,11 +137,11 @@ void Base::record(const uint8_t frameIndex) {
         }
 
         barrierResource_.reset();
-        barrierResource_.glblBarriers.push_back({VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr});
-        barrierResource_.glblBarriers.back().srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-        barrierResource_.glblBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-        helpers::recordBarriers(barrierResource_, priCmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+        barrierResource_.glblBarriers.push_back({});
+        barrierResource_.glblBarriers.back().srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+        barrierResource_.glblBarriers.back().dstAccessMask = vk::AccessFlagBits::eShaderRead;
+        helpers::recordBarriers(barrierResource_, priCmd, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                                vk::PipelineStageFlagBits::eFragmentShader);
 
         // BLUR B
         {
@@ -154,8 +152,8 @@ void Base::record(const uint8_t frameIndex) {
 
                 ::ScreenSpace::PushConstant pushConstant = {::ScreenSpace::BLOOM_BLUR_B};
                 auto it = pPass->getPipelineBindDataList().getValues().begin();
-                vkCmdPushConstants(priCmd, (*it)->layout, (*it)->pushConstantStages, 0,
-                                   static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
+                priCmd.pushConstants((*it)->layout, (*it)->pushConstantStages, 0,
+                                     static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
 
                 handler().getScreenQuad()->draw(TYPE, (*it), pPass->getDescSetBindDataMap((*it)->type).begin()->second,
                                                 priCmd, frameIndex);
@@ -169,8 +167,8 @@ void Base::record(const uint8_t frameIndex) {
 
             auto it = pipelineBindDataList_.getValues().begin();
             ::ScreenSpace::PushConstant pushConstant = {::ScreenSpace::PASS_FLAG::BLOOM};
-            vkCmdPushConstants(priCmd, (*it)->layout, (*it)->pushConstantStages, 0,
-                               static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
+            priCmd.pushConstants((*it)->layout, (*it)->pushConstantStages, 0,
+                                 static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
 
             handler().getScreenQuad()->draw(TYPE, (*it), pipelineDescSetBindDataMap_.at((*it)->type).begin()->second, priCmd,
                                             frameIndex);
@@ -179,7 +177,7 @@ void Base::record(const uint8_t frameIndex) {
         }
     }
 
-    // vk::assert_success(vkEndCommandBuffer(data.priCmds[frameIndex]));
+    // data.priCmds[frameIndex]).end();
 }
 
 void Base::update(const std::vector<Descriptor::Base*> pDynamicItems) {
@@ -201,8 +199,8 @@ const CreateInfo BRIGHT_CREATE_INFO = {
     {std::string(Texture::ScreenSpace::BLUR_A_2D_TEXTURE_ID)},
     {},
     {},
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    vk::ImageLayout::eColorAttachmentOptimal,
+    vk::ImageLayout::eShaderReadOnlyOptimal,
 };
 Bright::Bright(RenderPass::Handler& handler, const index&& offset)
     : RenderPass::ScreenSpace::Base{handler, std::forward<const index>(offset), &BRIGHT_CREATE_INFO} {}
@@ -218,8 +216,8 @@ const CreateInfo BLUR_A_CREATE_INFO = {
     {std::string(Texture::ScreenSpace::BLUR_B_2D_TEXTURE_ID)},
     {},
     {},
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    vk::ImageLayout::eColorAttachmentOptimal,
+    vk::ImageLayout::eShaderReadOnlyOptimal,
 };
 BlurA::BlurA(RenderPass::Handler& handler, const index&& offset)
     : RenderPass::ScreenSpace::Base{handler, std::forward<const index>(offset), &BLUR_A_CREATE_INFO} {}
@@ -235,8 +233,8 @@ const CreateInfo BLUR_B_CREATE_INFO = {
     {std::string(Texture::ScreenSpace::BLUR_A_2D_TEXTURE_ID)},
     {},
     {},
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    vk::ImageLayout::eShaderReadOnlyOptimal,
+    vk::ImageLayout::eShaderReadOnlyOptimal,
 };
 BlurB::BlurB(RenderPass::Handler& handler, const index&& offset)
     : RenderPass::ScreenSpace::Base{handler, std::forward<const index>(offset), &BLUR_B_CREATE_INFO} {}
@@ -253,65 +251,58 @@ const CreateInfo HDR_LOG_CREATE_INFO = {
     {std::string(Texture::ScreenSpace::HDR_LOG_2D_TEXTURE_ID)},
     {},
     {},
-    VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-    VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+    vk::ImageLayout::eColorAttachmentOptimal,
+    vk::ImageLayout::eTransferSrcOptimal,
 };
 
 HdrLog::HdrLog(RenderPass::Handler& handler, const index&& offset)
     : RenderPass::ScreenSpace::Base{handler, std::forward<const index>(offset), &HDR_LOG_CREATE_INFO} {}
 
-void transferAllToTransDst(const VkCommandBuffer& cmd, const Sampler::Base& sampler, BarrierResource& res,
-                           VkImageLayout oldLayout) {
+void transferAllToTransDst(const vk::CommandBuffer& cmd, const Sampler::Base& sampler, BarrierResource& res,
+                           vk::ImageLayout oldLayout) {
     res.reset();
 
     res.imgBarriers.push_back({});
-    res.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    res.imgBarriers.back().pNext = nullptr;
-    res.imgBarriers.back().srcAccessMask = 0;
-    res.imgBarriers.back().dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+    res.imgBarriers.back().srcAccessMask = {};
+    res.imgBarriers.back().dstAccessMask = vk::AccessFlagBits::eTransferWrite;
     res.imgBarriers.back().oldLayout = oldLayout;
-    res.imgBarriers.back().newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+    res.imgBarriers.back().newLayout = vk::ImageLayout::eTransferDstOptimal;
     res.imgBarriers.back().srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     res.imgBarriers.back().dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     res.imgBarriers.back().image = sampler.image;
-    res.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, sampler.imgCreateInfo.mipLevels, 0,
+    res.imgBarriers.back().subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, sampler.imgCreateInfo.mipLevels, 0,
                                                sampler.imgCreateInfo.arrayLayers};
 
-    helpers::recordBarriers(res, cmd, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT);
+    helpers::recordBarriers(res, cmd, vk::PipelineStageFlagBits::eFragmentShader, vk::PipelineStageFlagBits::eTransfer);
 }
 
-void HdrLog::downSample(const VkCommandBuffer& priCmd, const uint8_t frameIndex) {
+void HdrLog::downSample(const vk::CommandBuffer& priCmd, const uint8_t frameIndex) {
     if (transfCmds_.empty()) {
         transfCmds_.resize(handler().shell().context().imageCount);
-        handler().commandHandler().createCmdBuffers(QUEUE::GRAPHICS, transfCmds_.data(), VK_COMMAND_BUFFER_LEVEL_SECONDARY,
+        handler().commandHandler().createCmdBuffers(QUEUE::GRAPHICS, transfCmds_.data(), vk::CommandBufferLevel::eSecondary,
                                                     handler().shell().context().imageCount);
         for (uint8_t i = 0; static_cast<uint32_t>(i) < handler().shell().context().imageCount; i++) passFlags_[i] = true;
     }
     const auto& cmd = transfCmds_[frameIndex];
 
     // RESET BUFFERS
-    vkResetCommandBuffer(cmd, 0);
+    cmd.reset({});
 
     // BEGIN BUFFERS
-    VkCommandBufferBeginInfo bufferInfo = {};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    VkCommandBufferInheritanceInfo bufferInheritanceInfo = {};
-    bufferInheritanceInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_INHERITANCE_INFO;
+    vk::CommandBufferBeginInfo bufferInfo = {vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
+    vk::CommandBufferInheritanceInfo bufferInheritanceInfo = {};
     bufferInfo.pInheritanceInfo = &bufferInheritanceInfo;
-    // TODO: use VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT since this will only update after
+    // TODO: use vk::CommandBufferUsageFlagBits::eSimultaneousUse since this will only update after
     // swapchain recreation.
-    vk::assert_success(vkBeginCommandBuffer(cmd, &bufferInfo));
+    cmd.begin(bufferInfo);
 
     // Wait on log average luminance render target
     barrierResource_.reset();
     barrierResource_.glblBarriers.push_back({});
-    barrierResource_.glblBarriers.back().sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
-    barrierResource_.glblBarriers.back().pNext = nullptr;
-    barrierResource_.glblBarriers.back().srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    barrierResource_.glblBarriers.back().dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-    helpers::recordBarriers(barrierResource_, cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                            VK_PIPELINE_STAGE_TRANSFER_BIT);
+    barrierResource_.glblBarriers.back().srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+    barrierResource_.glblBarriers.back().dstAccessMask = vk::AccessFlagBits::eTransferRead;
+    helpers::recordBarriers(barrierResource_, cmd, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                            vk::PipelineStageFlagBits::eTransfer);
 
     // Source of the blit (render targets can have multiple mip levels)
     const auto& hdrLogSampler = pTextures_[frameIndex]->samplers[0];
@@ -321,17 +312,17 @@ void HdrLog::downSample(const VkCommandBuffer& priCmd, const uint8_t frameIndex)
 
     // Transfer all mip levels
     transferAllToTransDst(cmd, blitSamplerA, barrierResource_,
-                          (passFlags_[frameIndex] ? VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL));
+                          (passFlags_[frameIndex] ? vk::ImageLayout::eUndefined : vk::ImageLayout::eShaderReadOnlyOptimal));
     passFlags_[frameIndex] = false;
 
     int32_t mipWidth = hdrLogSampler.imgCreateInfo.extent.width;
     int32_t mipHeight = hdrLogSampler.imgCreateInfo.extent.height;
 
-    VkImageBlit blit = {};
+    vk::ImageBlit blit = {};
     // source
     blit.srcOffsets[0] = {0, 0, 0};
     blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
-    blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
     blit.srcSubresource.mipLevel = 0;
     blit.srcSubresource.baseArrayLayer = 0;
     blit.srcSubresource.layerCount = blitSamplerA.imgCreateInfo.arrayLayers;
@@ -342,39 +333,38 @@ void HdrLog::downSample(const VkCommandBuffer& priCmd, const uint8_t frameIndex)
     // destination
     blit.dstOffsets[0] = {0, 0, 0};
     blit.dstOffsets[1] = {mipWidth, mipHeight, 1};
-    blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    blit.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
     blit.dstSubresource.mipLevel = 0;
     blit.dstSubresource.baseArrayLayer = 0;
     blit.dstSubresource.layerCount = blitSamplerA.imgCreateInfo.arrayLayers;
 
-    vkCmdBlitImage(cmd, hdrLogSampler.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, blitSamplerA.image,
-                   VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+    cmd.blitImage(hdrLogSampler.image, vk::ImageLayout::eTransferSrcOptimal, blitSamplerA.image,
+                  vk::ImageLayout::eTransferDstOptimal, 1, &blit, vk::Filter::eLinear);
 
-    VkImageMemoryBarrier barrier = {};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    vk::ImageMemoryBarrier barrier = {};
     barrier.image = blitSamplerA.image;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount = blitSamplerA.imgCreateInfo.arrayLayers;
     barrier.subresourceRange.levelCount = 1;
 
     for (uint32_t i = 1; i < blitSamplerA.imgCreateInfo.mipLevels; i++) {
         barrier.subresourceRange.baseMipLevel = i - 1;
-        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+        barrier.newLayout = vk::ImageLayout::eTransferSrcOptimal;
+        barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+        barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
 
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr, 0, nullptr,
-                             1, &barrier);
+        cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, {}, {}, {},
+                            {barrier});
 
         blit = {};
         // source
         blit.srcOffsets[0] = {0, 0, 0};
         blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
-        blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
         blit.srcSubresource.mipLevel = i - 1;
         blit.srcSubresource.baseArrayLayer = 0;
         blit.srcSubresource.layerCount = blitSamplerA.imgCreateInfo.arrayLayers;
@@ -385,38 +375,38 @@ void HdrLog::downSample(const VkCommandBuffer& priCmd, const uint8_t frameIndex)
         // destination
         blit.dstOffsets[0] = {0, 0, 0};
         blit.dstOffsets[1] = {mipWidth, mipHeight, 1};
-        blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
         blit.dstSubresource.mipLevel = i;
         blit.dstSubresource.baseArrayLayer = 0;
         blit.dstSubresource.layerCount = blitSamplerA.imgCreateInfo.arrayLayers;
 
-        vkCmdBlitImage(cmd, blitSamplerA.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, blitSamplerA.image,
-                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+        cmd.blitImage(blitSamplerA.image, vk::ImageLayout::eTransferSrcOptimal, blitSamplerA.image,
+                      vk::ImageLayout::eTransferDstOptimal, 1, &blit, vk::Filter::eLinear);
 
         // Validation layers complain about every mip level that is not shader ready only optimal.
         // TODO: make the image view of the blit sampler only refer to the single pixel mip level so
         // these transition are not needed.
-        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.oldLayout = vk::ImageLayout::eTransferSrcOptimal;
+        barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
+        barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
-        vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0,
-                             nullptr, 1, &barrier);
+        cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, {},
+                            {barrier});
     }
 
     // Single pixel mip needs to be shader read only optimal.
     barrier.subresourceRange.baseMipLevel = blitSamplerA.imgCreateInfo.mipLevels - 1;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+    barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+    barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+    barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
-    vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, nullptr, 0,
-                         nullptr, 1, &barrier);
+    cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader, {}, {}, {},
+                        {barrier});
 
-    vk::assert_success(vkEndCommandBuffer(cmd));
-    vkCmdExecuteCommands(priCmd, 1, &cmd);
+    cmd.end();
+    priCmd.executeCommands({cmd});
 }
 
 }  // namespace ScreenSpace

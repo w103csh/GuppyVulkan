@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -32,10 +32,10 @@ const std::string MYBRICK_HGHT_TEX_PATH = MYBRICK_PATH + "mybrick-height.png";
 
 /* Formats that I know don't throw errors:
  *
- *		VK_FORMAT_R8_UNORM
- *		VK_FORMAT_R8G8_UNORM
- *		VK_FORMAT_R5G6B5_UNORM_PACK16 (I tested this and I was getting white spots)
- *		VK_FORMAT_R8G8B8A8_UNORM
+ *		vk::Format::eR8Unorm
+ *		vk::Format::eR8G8Unorm
+ *		vk::Format::eR5G6B5UnormPack16 (I tested this and I was getting white spots)
+ *		vk::Format::eR8G8B8A8Unorm
  *
  *	I found these from here:
  *	https://vulkan.lunarg.com/doc/view/1.0.26.0/linux/vkspec.chunked/ch31s03.html.
@@ -50,11 +50,11 @@ namespace Sampler {
 const CreateInfo STATUE_CREATE_INFO = {
     "Statue Color Sampler",
     {{{Sampler::USAGE::COLOR, STATUE_TEX_PATH}}},
-    // VK_IMAGE_VIEW_TYPE_2D,
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    // vk::ImageViewType::e2D,
+    vk::ImageViewType::e2DArray,
     BAD_EXTENT_3D,
     {},
-    0,
+    {},
     SAMPLER::CLAMP_TO_BORDER,
 };
 
@@ -62,63 +62,63 @@ const CreateInfo STATUE_CREATE_INFO = {
 const CreateInfo VULKAN_CREATE_INFO = {
     "Vulkan Color Sampler",
     {{{Sampler::USAGE::COLOR, VULKAN_TEX_PATH}}},
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    vk::ImageViewType::e2DArray,
 };
 
 // HARDWOOD
 const CreateInfo HARDWOOD_CREATE_INFO = {
     "Hardwood Color Sampler",
     {{{Sampler::USAGE::COLOR, HARDWOOD_FLOOR_TEX_PATH}}},
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    vk::ImageViewType::e2DArray,
 };
 
 // NEON BLUE TUX GUPPY
 const CreateInfo NEON_BLUE_TUX_GUPPY_CREATE_INFO = {
     "Neon Blue Tux Guppy Color Sampler",
     {{{Sampler::USAGE::COLOR, NEON_BLUE_TUX_GUPPY_TEX_PATH}}},
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    vk::ImageViewType::e2DArray,
 };
 
 // BLUEWATER
 const CreateInfo BLUEWATER_CREATE_INFO = {
     "Bluewater Color Sampler",
     {{{Sampler::USAGE::COLOR, BLUEWATER_TEX_PATH}}},
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    vk::ImageViewType::e2DArray,
 };
 
 // FIRE
 const CreateInfo FIRE_CREATE_INFO = {
     "Fire Color Sampler",
     {{{Sampler::USAGE::COLOR, FIRE_TEX_PATH}}},
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    vk::ImageViewType::e2DArray,
 };
 
 // SMOKE
 const CreateInfo SMOKE_CREATE_INFO = {
     "Smoke Color Sampler",
     {{{Sampler::USAGE::COLOR, SMOKE_TEX_PATH}}},
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    vk::ImageViewType::e2DArray,
 };
 
 // STAR
 const CreateInfo STAR_CREATE_INFO = {
     "Star Color Sampler",
     {{{Sampler::USAGE::COLOR, STAR_TEX_PATH}}},
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    vk::ImageViewType::e2DArray,
 };
 
 // FABRIC BROWN
 const CreateInfo FABRIC_BROWN_CREATE_INFO = {
     "Fabric Brown Color Sampler",
     {{{Sampler::USAGE::COLOR, FABRIC_BROWN_TEX_PATH}}},
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    vk::ImageViewType::e2DArray,
 };
 
 // BRIGHT MOON
 const CreateInfo BRIGHT_MOON_CREATE_INFO = {
     "Bright Moon Color Sampler",
     {{{Sampler::USAGE::COLOR, BRIGHT_MOON_TEX_PATH}}},
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    vk::ImageViewType::e2DArray,
 };
 
 // MEDIEVAL HOUSE
@@ -129,7 +129,7 @@ const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO = {
         {Sampler::USAGE::NORMAL, MED_H_NORM_TEX_PATH},
         {Sampler::USAGE::SPECULAR, MED_H_SPEC_TEX_PATH},
     }},
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    vk::ImageViewType::e2DArray,
 };
 
 // WOOD
@@ -139,14 +139,14 @@ const CreateInfo WOOD_CREATE_INFO = {
         {Sampler::USAGE::COLOR, WOOD_007_DIFF_TEX_PATH},
         {Sampler::USAGE::NORMAL, WOOD_007_NORM_TEX_PATH},
     }},
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    vk::ImageViewType::e2DArray,
 };
 
 // MYBRICK
 const CreateInfo MYBRICK_COLOR_CREATE_INFO = {
     "Mybrick Color Sampler",
     {{{Sampler::USAGE::COLOR, MYBRICK_DIFF_TEX_PATH}}},
-    VK_IMAGE_VIEW_TYPE_MAX_ENUM,
+    vk::ImageViewType{},
 };
 const CreateInfo MYBRICK_NORMAL_CREATE_INFO = {
     "Mybrick Normal Sampler",
@@ -159,7 +159,7 @@ const CreateInfo MYBRICK_NORMAL_CREATE_INFO = {
             {{MYBRICK_HGHT_TEX_PATH, Sampler::CHANNELS::_1, 3}},
         },
     }},
-    VK_IMAGE_VIEW_TYPE_MAX_ENUM,
+    vk::ImageViewType{},
 };
 
 /* It appears the cube map layers are in this order:
@@ -201,12 +201,12 @@ const CreateInfo PISA_HDR_CREATE_INFO = {
         {Sampler::USAGE::COLOR, PISA_HDR_POS_Z_TEX_PATH},
         {Sampler::USAGE::COLOR, PISA_HDR_NEG_Z_TEX_PATH},
     }},
-    VK_IMAGE_VIEW_TYPE_CUBE,
+    vk::ImageViewType::eCube,
     BAD_EXTENT_3D,
     {},
-    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+    vk::ImageCreateFlagBits::eCubeCompatible,
     SAMPLER::CUBE,
-    VK_IMAGE_USAGE_SAMPLED_BIT,
+    vk::ImageUsageFlagBits::eSampled,
     {{false, false}, 1},
 };
 
@@ -221,16 +221,16 @@ const CreateInfo SKYBOX_CREATE_INFO = {
         {Sampler::USAGE::COLOR, SKYBOX_POS_Z_TEX_PATH},
         {Sampler::USAGE::COLOR, SKYBOX_NEG_Z_TEX_PATH},
     }},
-    VK_IMAGE_VIEW_TYPE_CUBE,
+    vk::ImageViewType::eCube,
     BAD_EXTENT_3D,
     {},
-    VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+    vk::ImageCreateFlagBits::eCubeCompatible,
     SAMPLER::CUBE,
-    VK_IMAGE_USAGE_SAMPLED_BIT,
+    vk::ImageUsageFlagBits::eSampled,
     {{false, false}, 1},
 };
 
-uint32_t GetMipLevels(const VkExtent3D& extent) {
+uint32_t GetMipLevels(const vk::Extent3D& extent) {
     return static_cast<uint32_t>(std::floor(std::log2(std::max(extent.width, extent.height)))) + 1;
 }
 

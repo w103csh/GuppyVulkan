@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -80,7 +80,7 @@ const CreateInfo COLOR_FRAG_CREATE_INFO = {
     SHADER::PBR_COLOR_FRAG,
     "PBR Color Fragment Shader",
     "color.pbr.frag",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
     {
         SHADER_LINK::COLOR_FRAG,
         SHADER_LINK::PBR_FRAG,
@@ -91,7 +91,7 @@ const CreateInfo TEX_FRAG_CREATE_INFO = {
     SHADER::PBR_TEX_FRAG,
     "PBR Texture Fragment Shader",
     "texture.pbr.frag",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
     {
         SHADER_LINK::TEX_FRAG,
         SHADER_LINK::PBR_FRAG,

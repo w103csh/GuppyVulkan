@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -9,7 +9,7 @@
 #include <assert.h>
 #include <functional>
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 namespace Buffer {
 
@@ -20,19 +20,19 @@ struct CreateInfo {
 };
 
 struct Info {
-    VkDescriptorBufferInfo bufferInfo{VK_NULL_HANDLE, 0, 0};
-    uint32_t count = 0;
-    VkDeviceSize dataOffset = 0;
-    VkDeviceSize itemOffset = 0;
-    VkDeviceSize memoryOffset = 0;
-    VkDeviceSize resourcesOffset = 0;
+    vk::DescriptorBufferInfo bufferInfo;
+    uint32_t count;
+    vk::DeviceSize dataOffset;
+    vk::DeviceSize itemOffset;
+    vk::DeviceSize memoryOffset;
+    vk::DeviceSize resourcesOffset;
 };
 
 class Item {
    public:
     Item(const Buffer::Info&& info)  //
         : BUFFER_INFO(info), dirty(false) {
-        assert(BUFFER_INFO.bufferInfo.buffer != VK_NULL_HANDLE);
+        assert(BUFFER_INFO.bufferInfo.buffer);
     }
     virtual ~Item() = default;
 
@@ -86,7 +86,7 @@ class PerFramebufferDataItem : public Buffer::DataItem<TDATA> {
     TDATA data_;
 
    private:
-    inline void* getData(const VkDeviceSize offset) { return (((uint8_t*)TItem::pData_) + offset); }
+    inline void* getData(const vk::DeviceSize offset) { return (((uint8_t*)TItem::pData_) + offset); }
 };
 
 }  // namespace Buffer

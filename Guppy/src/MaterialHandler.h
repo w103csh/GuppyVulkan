@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -27,16 +27,16 @@ using ManagerType = Descriptor::Manager<Material::Base, TDerived, ItemPointer>;
 template <class TDerived>
 class Manager : public ManagerType<TDerived> {
    public:
-    Manager(const std::string &&name, const DESCRIPTOR &&descriptorType, const VkDeviceSize &&maxSize,
+    Manager(const std::string &&name, const DESCRIPTOR &&descriptorType, const vk::DeviceSize &&maxSize,
             const bool keepMapped = false)
         : ManagerType<TDerived>{
               std::forward<const std::string>(name),
               std::forward<const DESCRIPTOR>(descriptorType),
-              std::forward<const VkDeviceSize>(maxSize),
+              std::forward<const vk::DeviceSize>(maxSize),
               std::forward<const bool>(keepMapped),
           } {}
 
-    void updateTexture(const VkDevice &dev, const std::shared_ptr<Texture::Base> &pTexture) {
+    void updateTexture(const vk::Device &dev, const std::shared_ptr<Texture::Base> &pTexture) {
         for (auto &pItem : ManagerType<TDerived>::pItems)
             if (pItem->getTexture() == pTexture) {
                 pItem->setTextureData();

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -20,35 +20,35 @@ const CreateInfo WAVE_VERT_CREATE_INFO = {
     SHADER::PRTCL_WAVE_VERT,                         //
     "Particle Wave Color (Deferred) Vertex Shader",  //
     "vert.particle.wave.glsl",                       //
-    VK_SHADER_STAGE_VERTEX_BIT,                      //
+    vk::ShaderStageFlagBits::eVertex,                //
 };
 const CreateInfo FOUNTAIN_VERT_CREATE_INFO = {
     SHADER::PRTCL_FOUNTAIN_VERT,        //
     "Particle Fountain Vertex Shader",  //
     "vert.particle.fountain.glsl",      //
-    VK_SHADER_STAGE_VERTEX_BIT,         //
+    vk::ShaderStageFlagBits::eVertex,   //
     {SHADER_LINK::PRTCL_FOUNTAIN},
 };
 const CreateInfo FOUNTAIN_FRAG_DEFERRED_MRT_CREATE_INFO = {
     SHADER::PRTCL_FOUNTAIN_DEFERRED_MRT_FRAG,        //
     "Particle Fountain (Deferred) Fragment Shader",  //
     "frag.particle.deferred.mrt.fountain.glsl",      //
-    VK_SHADER_STAGE_FRAGMENT_BIT,                    //
+    vk::ShaderStageFlagBits::eFragment,              //
     {SHADER_LINK::DEFAULT_MATERIAL},
 };
 // EULER
 const CreateInfo EULER_CREATE_INFO = {
-    SHADER::PRTCL_EULER_COMP,         //
-    "Particle Euler Compute Shader",  //
-    "comp.particle.euler.glsl",       //
-    VK_SHADER_STAGE_COMPUTE_BIT,      //
+    SHADER::PRTCL_EULER_COMP,           //
+    "Particle Euler Compute Shader",    //
+    "comp.particle.euler.glsl",         //
+    vk::ShaderStageFlagBits::eCompute,  //
     {SHADER_LINK::PRTCL_FOUNTAIN},
 };
 const CreateInfo FOUNTAIN_EULER_VERT_CREATE_INFO = {
     SHADER::PRTCL_FOUNTAIN_EULER_VERT,        //
     "Particle Fountain Euler Vertex Shader",  //
     "vert.particle.fountain.euler.glsl",      //
-    VK_SHADER_STAGE_VERTEX_BIT,               //
+    vk::ShaderStageFlagBits::eVertex,         //
     {
         SHADER_LINK::DEFAULT_MATERIAL,
         SHADER_LINK::PRTCL_FOUNTAIN,
@@ -58,7 +58,7 @@ const CreateInfo SHDW_FOUNTAIN_EULER_VERT_CREATE_INFO = {
     SHADER::PRTCL_SHDW_FOUNTAIN_EULER_VERT,            //
     "Particle Fountain Euler (Shadow) Vertex Shader",  //
     "vert.particle.fountainEuler.shadow.glsl",         //
-    VK_SHADER_STAGE_VERTEX_BIT,                        //
+    vk::ShaderStageFlagBits::eVertex,                  //
     {SHADER_LINK::DEFAULT_MATERIAL},
 };
 // ATTRACTOR
@@ -66,13 +66,13 @@ const CreateInfo ATTR_COMP_CREATE_INFO = {
     SHADER::PRTCL_ATTR_COMP,              //
     "Particle Attractor Compute Shader",  //
     "comp.particle.attractor.glsl",       //
-    VK_SHADER_STAGE_COMPUTE_BIT,          //
+    vk::ShaderStageFlagBits::eCompute,    //
 };
 const CreateInfo ATTR_VERT_CREATE_INFO = {
     SHADER::PRTCL_ATTR_VERT,             //
     "Particle Attractor Vertex Shader",  //
     "vert.particle.attractor.glsl",      //
-    VK_SHADER_STAGE_VERTEX_BIT,          //
+    vk::ShaderStageFlagBits::eVertex,    //
 };
 }  // namespace Particle
 namespace Link {
@@ -231,8 +231,6 @@ const CreateInfo ATTRACTOR_CREATE_INFO = {
 namespace Pipeline {
 
 void GetFountainEulerInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
     Vertex::Color::getInputDescriptions(createInfoRes);
     ::Particle::FountainEuler::DATA::getInputDescriptions(createInfoRes);
     // bindings
@@ -243,12 +241,9 @@ void GetFountainEulerInputAssemblyInfoResources(CreateInfoResources& createInfoR
         static_cast<uint32_t>(createInfoRes.attrDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
-    createInfoRes.inputAssemblyStateInfo = {};
-    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
-    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo = vk::PipelineInputAssemblyStateCreateInfo{};
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eTriangleList;
 }
 
 namespace Particle {
@@ -277,8 +272,8 @@ void Wave::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 
 void Wave::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     Graphics::getInputAssemblyInfoResources(createInfoRes);
-    // assert(createInfoRes.inputAssemblyStateInfo.topology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST);
-    // createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY;
+    // assert(createInfoRes.inputAssemblyStateInfo.topology == vk::PrimitiveTopology::eTriangleList);
+    // createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eTriangleListWithAdjacency;
 }
 
 // FOUNTAIN
@@ -308,8 +303,6 @@ void Fountain::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 }
 
 void Fountain::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
     ::Particle::Fountain::DATA::getInputDescriptions(createInfoRes);
     // bindings
     createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
@@ -322,12 +315,9 @@ void Fountain::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes)
     // createInfoRes.vertexInputBindDivDescs.push_back({::Instance::Obj3d::BINDING, 8000});
     // createInfoRes.vertexInputBindDivDescs.push_back({::Instance::Particle::Fountain::BINDING, 1});
     // topology
-    createInfoRes.inputAssemblyStateInfo = {};
-    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
-    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo = vk::PipelineInputAssemblyStateCreateInfo{};
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eTriangleList;
 }
 
 // EULER (COMPUTE)
@@ -431,9 +421,7 @@ void AttractorPoint::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 }
 
 void AttractorPoint::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    Storage::Vector4::GetInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_INSTANCE);
+    Storage::Vector4::GetInputDescriptions(createInfoRes, vk::VertexInputRate::eInstance);
     // bindings
     createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
@@ -442,12 +430,9 @@ void AttractorPoint::getInputAssemblyInfoResources(CreateInfoResources& createIn
         static_cast<uint32_t>(createInfoRes.attrDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
-    createInfoRes.inputAssemblyStateInfo = {};
-    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
-    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo = vk::PipelineInputAssemblyStateCreateInfo{};
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::ePointList;
 }
 
 }  // namespace Particle

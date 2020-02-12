@@ -13,7 +13,7 @@
 #include <set>
 #include <variant>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "Enum.h"
 
@@ -24,11 +24,11 @@ enum class COMPUTE : uint32_t;
 using PIPELINE = std::variant<GRAPHICS, COMPUTE>;
 
 using FlagBits = uint32_t;
-// Type for the vertex buffer indices (this is also used in vkCmdBindIndexBuffer)
+// Type for the vertex buffer indices (this is also used in bindIndexBuffer)
 
 // INDEX TYPE
 using VB_INDEX_TYPE = uint32_t;
-// This value is dependent on the type set in vkCmdBindIndexBuffer. There is a list of valid restart values in the
+// This value is dependent on the type set in bindIndexBuffer. There is a list of valid restart values in the
 // specification.
 constexpr VB_INDEX_TYPE VB_INDEX_PRIMITIVE_RESTART = 0xFFFFFFFF;
 constexpr VB_INDEX_TYPE BAD_VB_INDEX = VB_INDEX_PRIMITIVE_RESTART - 1;
@@ -45,28 +45,29 @@ struct less_str {
 namespace Pipeline {
 struct CreateInfoResources {
     // BLENDING
-    std::vector<VkPipelineColorBlendAttachmentState> blendAttachmentStates;
-    VkPipelineColorBlendStateCreateInfo colorBlendStateInfo = {};
+    std::vector<vk::PipelineColorBlendAttachmentState> blendAttachmentStates;
+    vk::PipelineColorBlendStateCreateInfo colorBlendStateInfo;
     // DYNAMIC
-    VkDynamicState dynamicStates[VK_DYNAMIC_STATE_RANGE_SIZE];
-    VkPipelineDynamicStateCreateInfo dynamicStateInfo = {};
+    vk::DynamicState dynamicStates[VK_DYNAMIC_STATE_RANGE_SIZE];
+    vk::PipelineDynamicStateCreateInfo dynamicStateInfo;
     // INPUT ASSEMBLY
-    std::vector<VkVertexInputBindingDescription> bindDescs;
-    std::vector<VkVertexInputAttributeDescription> attrDescs;
-    VkPipelineVertexInputStateCreateInfo vertexInputStateInfo = {};
-    // std::vector<VkVertexInputBindingDivisorDescriptionEXT> vertexInputBindDivDescs;
-    // VkPipelineVertexInputDivisorStateCreateInfoEXT vertexInputDivInfo = {};
+    std::vector<vk::VertexInputBindingDescription> bindDescs;
+    std::vector<vk::VertexInputAttributeDescription> attrDescs;
+    vk::PipelineVertexInputStateCreateInfo vertexInputStateInfo;
+    // std::vector<vk::VertexInputBindingDivisorDescriptionEXT> vertexInputBindDivDescs;
+    // vk::PipelineVertexInputDivisorStateCreateInfoEXT vertexInputDivInfo;
     // FIXED FUNCTION
-    VkPipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo = {};
-    VkPipelineTessellationStateCreateInfo tessellationStateInfo = {};
-    VkPipelineViewportStateCreateInfo viewportStateInfo = {};
-    VkPipelineRasterizationStateCreateInfo rasterizationStateInfo = {};
-    VkPipelineMultisampleStateCreateInfo multisampleStateInfo = {};
-    VkPipelineDepthStencilStateCreateInfo depthStencilStateInfo = {};
+    vk::PipelineInputAssemblyStateCreateInfo inputAssemblyStateInfo;
+    bool useTessellationInfo = false;
+    vk::PipelineTessellationStateCreateInfo tessellationStateInfo;
+    vk::PipelineViewportStateCreateInfo viewportStateInfo;
+    vk::PipelineRasterizationStateCreateInfo rasterizationStateInfo;
+    vk::PipelineMultisampleStateCreateInfo multisampleStateInfo;
+    vk::PipelineDepthStencilStateCreateInfo depthStencilStateInfo;
     // SHADER
-    std::vector<VkPipelineShaderStageCreateInfo> shaderStageInfos;
-    std::vector<std::vector<VkSpecializationMapEntry>> specializationMapEntries;
-    std::vector<VkSpecializationInfo> specializationInfo;
+    std::vector<vk::PipelineShaderStageCreateInfo> shaderStageInfos;
+    std::vector<std::vector<vk::SpecializationMapEntry>> specializationMapEntries;
+    std::vector<vk::SpecializationInfo> specializationInfo;
 };
 }  // namespace Pipeline
 
@@ -83,30 +84,24 @@ class NonCopyable {
 };
 
 struct BufferResource {
-    VkBuffer buffer = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
-    VkMemoryRequirements memoryRequirements{};
+    vk::Buffer buffer;
+    vk::DeviceMemory memory;
+    vk::MemoryRequirements memoryRequirements;
 };
 
 struct ImageResource {
-    VkFormat format{};
-    VkImage image = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
-    VkImageView view = VK_NULL_HANDLE;
+    vk::Format format;
+    vk::Image image;
+    vk::DeviceMemory memory;
+    vk::ImageView view;
 };
 
 struct LoadingResource {
-    LoadingResource()
-        :  //
-          shouldWait(false),
-          graphicsCmd(VK_NULL_HANDLE),
-          transferCmd(VK_NULL_HANDLE),
-          semaphore(VK_NULL_HANDLE){};
-    bool shouldWait;
-    VkCommandBuffer graphicsCmd, transferCmd;
+    bool shouldWait = false;
+    vk::CommandBuffer graphicsCmd, transferCmd;
     std::vector<BufferResource> stgResources;
-    std::vector<VkFence> fences;
-    VkSemaphore semaphore;
+    std::vector<vk::Fence> fences;
+    vk::Semaphore semaphore;
 };
 
 // template <typename T>
@@ -123,15 +118,15 @@ struct Ray {
 
 struct DescriptorBufferResources {
     uint32_t count;
-    VkDeviceSize size;
-    VkDescriptorBufferInfo info;
-    VkBuffer buffer = VK_NULL_HANDLE;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
+    vk::DeviceSize size;
+    vk::DescriptorBufferInfo info;
+    vk::Buffer buffer;
+    vk::DeviceMemory memory;
 };
 
 struct DescriptorResource {
-    VkDescriptorBufferInfo info = {};
-    VkDeviceMemory memory = VK_NULL_HANDLE;
+    vk::DescriptorBufferInfo info;
+    vk::DeviceMemory memory;
 };
 
 template <typename TEnum>
@@ -146,14 +141,14 @@ struct hash_pair_enum_size_t {
 template <uint8_t size>
 struct SubmitResource {
     uint32_t waitSemaphoreCount = 0;
-    std::array<VkSemaphore, size> waitSemaphores = {};
-    std::array<VkPipelineStageFlags, size> waitDstStageMasks = {};
+    std::array<vk::Semaphore, size> waitSemaphores = {};
+    std::array<vk::PipelineStageFlags, size> waitDstStageMasks = {};
     uint32_t commandBufferCount = 0;
-    std::array<VkCommandBuffer, size> commandBuffers = {};
+    std::array<vk::CommandBuffer, size> commandBuffers = {};
     uint32_t signalSemaphoreCount = 0;
-    std::array<VkSemaphore, size> signalSemaphores = {};
+    std::array<vk::Semaphore, size> signalSemaphores = {};
     // Set below for stages the signal semaphores should wait on.
-    std::array<VkPipelineStageFlags, size> signalSrcStageMasks = {};
+    std::array<vk::PipelineStageFlags, size> signalSrcStageMasks = {};
     QUEUE queueType;
     void resetCount() {
         waitSemaphoreCount = 0;
@@ -163,9 +158,9 @@ struct SubmitResource {
 };
 
 struct BarrierResource {
-    std::vector<VkMemoryBarrier> glblBarriers;
-    std::vector<VkBufferMemoryBarrier> buffBarriers;
-    std::vector<VkImageMemoryBarrier> imgBarriers;
+    std::vector<vk::MemoryBarrier> glblBarriers;
+    std::vector<vk::BufferMemoryBarrier> buffBarriers;
+    std::vector<vk::ImageMemoryBarrier> imgBarriers;
     inline void reset() {
         glblBarriers.clear();
         buffBarriers.clear();
@@ -188,8 +183,8 @@ using DESCRIPTOR = std::variant<  //
 using pipelinePassSet = std::multiset<std::pair<PIPELINE, PASS>>;
 
 struct ImageInfo {
-    std::map<uint32_t, VkDescriptorImageInfo> descInfoMap;
-    VkImage image = VK_NULL_HANDLE;
+    std::map<uint32_t, vk::DescriptorImageInfo> descInfoMap;
+    vk::Image image;
 };
 
 // This is just quick and dirty. Not fully featured in any way.

@@ -8,7 +8,7 @@
 
 #include <string>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "ConstantsAll.h"
 #include "Helpers.h"
@@ -23,18 +23,18 @@ class Base {
 
     void determineImageTypes();
 
-    inline VkDeviceSize layerSize() const {
-        return static_cast<VkDeviceSize>(imgCreateInfo.extent.width) *   //
-               static_cast<VkDeviceSize>(imgCreateInfo.extent.height) *  //
-               static_cast<VkDeviceSize>(BYTES_PER_CHANNEL) *            //
-               static_cast<VkDeviceSize>(NUM_CHANNELS);
+    inline vk::DeviceSize layerSize() const {
+        return static_cast<vk::DeviceSize>(imgCreateInfo.extent.width) *   //
+               static_cast<vk::DeviceSize>(imgCreateInfo.extent.height) *  //
+               static_cast<vk::DeviceSize>(BYTES_PER_CHANNEL) *            //
+               static_cast<vk::DeviceSize>(NUM_CHANNELS);
     }
-    inline VkDeviceSize size() const { return layerSize() * static_cast<VkDeviceSize>(imgCreateInfo.arrayLayers); }
+    inline vk::DeviceSize size() const { return layerSize() * static_cast<vk::DeviceSize>(imgCreateInfo.arrayLayers); }
 
     void copyData(void *&pData, size_t &offset) const;
     inline void cleanup() { pPixels.clear(); }
 
-    void destroy(const VkDevice &dev);
+    void destroy(const vk::Device &dev);
 
     // TODO: Get rid of all these creation info members
 
@@ -45,15 +45,15 @@ class Base {
 
     FlagBits flags;  // TODO: remove this instead of passing a dynamic list to shaders?
 
-    VkImageCreateInfo imgCreateInfo;
+    vk::ImageCreateInfo imgCreateInfo;
     SwapchainInfo swpchnInfo;
     MipmapInfo mipmapInfo;
 
     float aspect;
-    VkImageViewType imageViewType;
+    vk::ImageViewType imageViewType;
 
-    VkImage image;
-    VkDeviceMemory memory;
+    vk::Image image;
+    vk::DeviceMemory memory;
 
     std::vector<void *> pPixels;
 
@@ -73,7 +73,7 @@ Sampler::Base make(const Shell &shell, const CreateInfo *pCreateInfo, const bool
 */
 inline FlagBits GetChannelMask(const CHANNELS &c) { return 1 << (c - 1); }
 
-VkSamplerCreateInfo GetVkSamplerCreateInfo(const Sampler::Base &sampler);
+vk::SamplerCreateInfo GetVulkanSamplerCreateInfo(const Sampler::Base &sampler);
 
 LayerInfo GetDef4Comb3And1LayerInfo(const Sampler::USAGE &&type, const std::string &path, const std::string &fileName,
                                     const std::string &combineFileName = "");

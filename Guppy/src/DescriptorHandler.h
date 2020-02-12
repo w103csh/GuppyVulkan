@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -10,7 +10,7 @@
 #include <memory>
 #include <set>
 #include <string>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "Descriptor.h"
 #include "ConstantsAll.h"
@@ -32,7 +32,7 @@ class Handler : public Game::Handler {
     void init() override;
 
     // POOL
-    inline const VkDescriptorPool& getPool() { return pool_; }
+    inline const vk::DescriptorPool& getPool() { return pool_; }
 
     // SET
     const Descriptor::Set::Base& getDescriptorSet(const DESCRIPTOR_SET& type) const {
@@ -55,7 +55,7 @@ class Handler : public Game::Handler {
 
     // POOL
     void createPool();
-    VkDescriptorPool pool_;
+    vk::DescriptorPool pool_;
 
     // LAYOUT
     void createLayouts();
@@ -73,19 +73,19 @@ class Handler : public Game::Handler {
 
     void prepareDescriptorSet(std::unique_ptr<Descriptor::Set::Base>& pSet);
 
-    void allocateDescriptorSets(const Descriptor::Set::Resource& resource, std::vector<VkDescriptorSet>& descriptorSets);
+    void allocateDescriptorSets(const Descriptor::Set::Resource& resource, std::vector<vk::DescriptorSet>& descriptorSets);
 
     void updateDescriptorSets(const Descriptor::bindingMap& bindingMap, const Descriptor::OffsetsMap& offsets,
                               Set::resourceInfoMapSetsPair& pair, const std::vector<Descriptor::Base*> pDynamicItems) const;
 
-    VkWriteDescriptorSet getWrite(const Descriptor::bindingMapKeyValue& keyValue, const VkDescriptorSet& set) const;
+    vk::WriteDescriptorSet getWrite(const Descriptor::bindingMapKeyValue& keyValue, const vk::DescriptorSet& set) const;
     void getDynamicOffsets(const std::unique_ptr<Descriptor::Set::Base>& pSet, std::vector<uint32_t>& dynamicOffsets,
                            const std::vector<Descriptor::Base*> pDynamicItems);
 
     // BINDING
-    VkDescriptorSetLayoutBinding getDecriptorSetLayoutBinding(const Descriptor::bindingMapKeyValue& keyValue,
-                                                              const VkShaderStageFlags& stageFlags,
-                                                              const Uniform::offsets& offsets) const;
+    vk::DescriptorSetLayoutBinding getDecriptorSetLayoutBinding(const Descriptor::bindingMapKeyValue& keyValue,
+                                                                const vk::ShaderStageFlags& stageFlags,
+                                                                const Uniform::offsets& offsets) const;
 
     std::vector<std::unique_ptr<Descriptor::Set::Base>> pDescriptorSets_;
 };

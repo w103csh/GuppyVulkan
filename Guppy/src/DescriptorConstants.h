@@ -10,7 +10,7 @@
 #include <set>
 #include <string>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "Types.h"
 #include "UniformConstants.h"
@@ -127,39 +127,39 @@ struct GetTypeString {
     std::string operator()(const STORAGE_BUFFER_DYNAMIC& type)  const { return std::string("STORAGE_BUFFER_DYNAMIC "+ std::to_string(static_cast<int>(type))); }
     std::string operator()(const INPUT_ATTACHMENT& type)        const { return std::string("INPUT_ATTACHMENT "      + std::to_string(static_cast<int>(type))); }
 };
-struct GetVkBufferUsage {
-    template <typename T> VkBufferUsageFlagBits operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
-    VkBufferUsageFlagBits operator()(const UNIFORM&                     ) const { return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; }
-    VkBufferUsageFlagBits operator()(const UNIFORM_DYNAMIC&             ) const { return VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT; }
-    VkBufferUsageFlagBits operator()(const UNIFORM_TEXEL_BUFFER&        ) const { return VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT; }
-    VkBufferUsageFlagBits operator()(const STORAGE_IMAGE&               ) const { return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; }
-    VkBufferUsageFlagBits operator()(const STORAGE_BUFFER&              ) const { return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT; }
-    VkBufferUsageFlagBits operator()(const STORAGE_BUFFER_DYNAMIC& type ) const {
+struct GetVulkanBufferUsage {
+    template <typename T> vk::BufferUsageFlags operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
+    vk::BufferUsageFlags operator()(const UNIFORM&)                         const { return vk::BufferUsageFlagBits::eUniformBuffer; }
+    vk::BufferUsageFlags operator()(const UNIFORM_DYNAMIC&)                 const { return vk::BufferUsageFlagBits::eUniformBuffer; }
+    vk::BufferUsageFlags operator()(const UNIFORM_TEXEL_BUFFER&)            const { return vk::BufferUsageFlagBits::eUniformTexelBuffer; }
+    vk::BufferUsageFlags operator()(const STORAGE_IMAGE&)                   const { return vk::BufferUsageFlagBits::eStorageBuffer; }
+    vk::BufferUsageFlags operator()(const STORAGE_BUFFER&)                  const { return vk::BufferUsageFlagBits::eStorageBuffer; }
+    vk::BufferUsageFlags operator()(const STORAGE_BUFFER_DYNAMIC& type )    const {
         switch (type) {
-            case STORAGE_BUFFER_DYNAMIC::VERTEX: return VkBufferUsageFlagBits(VK_BUFFER_USAGE_VERTEX_BUFFER_BIT | VK_BUFFER_USAGE_STORAGE_BUFFER_BIT);
-            default: return VK_BUFFER_USAGE_STORAGE_BUFFER_BIT;
+            case STORAGE_BUFFER_DYNAMIC::VERTEX: return vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eStorageBuffer;
+            default: return vk::BufferUsageFlagBits::eStorageBuffer;
         }
     }
 };
-struct GetVkDescriptorType {
-    template <typename T> VkDescriptorType operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
-    VkDescriptorType operator()(const UNIFORM&                  ) const { return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER; }
-    VkDescriptorType operator()(const UNIFORM_DYNAMIC&          ) const { return VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC; }
-    VkDescriptorType operator()(const UNIFORM_TEXEL_BUFFER&     ) const { return VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER; }
-    VkDescriptorType operator()(const COMBINED_SAMPLER&         ) const { return VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER; }
-    VkDescriptorType operator()(const STORAGE_IMAGE&            ) const { return VK_DESCRIPTOR_TYPE_STORAGE_IMAGE; }
-    VkDescriptorType operator()(const STORAGE_BUFFER&           ) const { return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER; }
-    VkDescriptorType operator()(const STORAGE_BUFFER_DYNAMIC&   ) const { return VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC; }
-    VkDescriptorType operator()(const INPUT_ATTACHMENT&         ) const { return VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT; }
+struct GetVulkanDescriptorType {
+    template <typename T> vk::DescriptorType operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
+    vk::DescriptorType operator()(const UNIFORM&)                   const { return vk::DescriptorType::eUniformBuffer; }
+    vk::DescriptorType operator()(const UNIFORM_DYNAMIC&)           const { return vk::DescriptorType::eUniformBufferDynamic; }
+    vk::DescriptorType operator()(const UNIFORM_TEXEL_BUFFER&)      const { return vk::DescriptorType::eUniformTexelBuffer; }
+    vk::DescriptorType operator()(const COMBINED_SAMPLER&)          const { return vk::DescriptorType::eCombinedImageSampler; }
+    vk::DescriptorType operator()(const STORAGE_IMAGE&)             const { return vk::DescriptorType::eStorageImage; }
+    vk::DescriptorType operator()(const STORAGE_BUFFER&)            const { return vk::DescriptorType::eStorageBuffer; }
+    vk::DescriptorType operator()(const STORAGE_BUFFER_DYNAMIC&)    const { return vk::DescriptorType::eStorageBufferDynamic; }
+    vk::DescriptorType operator()(const INPUT_ATTACHMENT&)          const { return vk::DescriptorType::eInputAttachment; }
 };
-struct GetVkMemoryProperty {
-    template <typename T> VkMemoryPropertyFlagBits operator()(const T& type) const {
-        return VkMemoryPropertyFlagBits(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+struct GetVulkanMemoryProperty {
+    template <typename T> vk::MemoryPropertyFlags operator()(const T& type) const {
+        return vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
     }
-    VkMemoryPropertyFlagBits operator()(const STORAGE_BUFFER_DYNAMIC& type) const {
+    vk::MemoryPropertyFlags operator()(const STORAGE_BUFFER_DYNAMIC& type) const {
         switch (type) {
-            case STORAGE_BUFFER_DYNAMIC::VERTEX: return VkMemoryPropertyFlagBits(VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-            default: return VkMemoryPropertyFlagBits(VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+            case STORAGE_BUFFER_DYNAMIC::VERTEX:    return vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+            default:                                return vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
         }
     }
 };
@@ -222,91 +222,91 @@ struct HasPerFramebufferData {
     }
 };
 //struct GetTextureImageInitialLayout {
-//    template <typename T> VkImageLayout operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
-//    VkImageLayout operator()(const COMBINED_SAMPLER&) const { return VK_IMAGE_LAYOUT_UNDEFINED; }
-//    VkImageLayout operator()(const STORAGE_IMAGE&) const { return VK_IMAGE_LAYOUT_GENERAL; }
+//    template <typename T> vk::ImageLayout operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
+//    vk::ImageLayout operator()(const COMBINED_SAMPLER&) const { return vk::ImageLayout::eUndefined; }
+//    vk::ImageLayout operator()(const STORAGE_IMAGE&) const { return vk::ImageLayout::eGeneral; }
 //};
 struct GetTextureImageLayout {
-    template <typename T> VkImageLayout operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
-    VkImageLayout operator()(const COMBINED_SAMPLER& type) const {
+    template <typename T> vk::ImageLayout operator()(const T&) const { assert(false); exit(EXIT_FAILURE); }
+    vk::ImageLayout operator()(const COMBINED_SAMPLER& type) const {
         switch (type) {
-            case COMBINED_SAMPLER::PIPELINE_DEPTH: return VK_IMAGE_LAYOUT_DEPTH_STENCIL_READ_ONLY_OPTIMAL;
-            default: return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+            case COMBINED_SAMPLER::PIPELINE_DEPTH:  return vk::ImageLayout::eDepthStencilReadOnlyOptimal;
+            default:                                return vk::ImageLayout::eShaderReadOnlyOptimal;
         }
     }
-    VkImageLayout operator()(const STORAGE_IMAGE&) const { return VK_IMAGE_LAYOUT_GENERAL; }
-    VkImageLayout operator()(const INPUT_ATTACHMENT&) const { return VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; }
+    vk::ImageLayout operator()(const STORAGE_IMAGE&)    const { return vk::ImageLayout::eGeneral; }
+    vk::ImageLayout operator()(const INPUT_ATTACHMENT&) const { return vk::ImageLayout::eShaderReadOnlyOptimal; }
 };
 struct IsDynamic {
     template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const UNIFORM_DYNAMIC&) const { return true; }
-    bool operator()(const STORAGE_BUFFER_DYNAMIC&) const { return true; }
+    bool operator()(const UNIFORM_DYNAMIC&)         const { return true; }
+    bool operator()(const STORAGE_BUFFER_DYNAMIC&)  const { return true; }
 };
 // COMBINED SAMPLER
 struct IsCombinedSampler {
     template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const COMBINED_SAMPLER&) const { return true; }
+    bool operator()(const COMBINED_SAMPLER&)        const { return true; }
 };
 struct GetCombinedSampler {
     template <typename T> COMBINED_SAMPLER operator()(const T&) const { return COMBINED_SAMPLER::DONT_CARE; }
-    COMBINED_SAMPLER operator()(const COMBINED_SAMPLER& type) const { return type; }
+    COMBINED_SAMPLER operator()(const COMBINED_SAMPLER& type)   const { return type; }
 };
 struct IsCombinedSamplerMaterial {
     template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const COMBINED_SAMPLER& type) const { return type == COMBINED_SAMPLER::MATERIAL; }
+    bool operator()(const COMBINED_SAMPLER& type)   const { return type == COMBINED_SAMPLER::MATERIAL; }
 };
 struct IsCombinedSamplerPipeline {
     template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const COMBINED_SAMPLER& type) const { return type == COMBINED_SAMPLER::PIPELINE || type == COMBINED_SAMPLER::PIPELINE_DEPTH; }
+    bool operator()(const COMBINED_SAMPLER& type)   const { return type == COMBINED_SAMPLER::PIPELINE || type == COMBINED_SAMPLER::PIPELINE_DEPTH; }
 };
 // STORAGE BUFFER
 struct IsStorageBuffer {
     template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const STORAGE_BUFFER&) const { return true; }
+    bool operator()(const STORAGE_BUFFER&)          const { return true; }
 };
 struct GetStorageBuffer {
-    template <typename T> STORAGE_BUFFER operator()(const T&) const { return STORAGE_BUFFER::DONT_CARE; }
-    STORAGE_BUFFER operator()(const STORAGE_BUFFER& type) const { return type; }
+    template <typename T> STORAGE_BUFFER operator()(const T&)   const { return STORAGE_BUFFER::DONT_CARE; }
+    STORAGE_BUFFER operator()(const STORAGE_BUFFER& type)       const { return type; }
 };
 // STORAGE BUFFER DYNAMIC
 struct IsStorageBufferDynamic {
     template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const STORAGE_BUFFER_DYNAMIC&) const { return true; }
+    bool operator()(const STORAGE_BUFFER_DYNAMIC&)  const { return true; }
 };
 struct GetStorageBufferDynamic {
-    template <typename T> STORAGE_BUFFER_DYNAMIC operator()(const T&) const { return STORAGE_BUFFER_DYNAMIC::DONT_CARE; }
-    STORAGE_BUFFER_DYNAMIC operator()(const STORAGE_BUFFER_DYNAMIC& type) const { return type; }
+    template <typename T> STORAGE_BUFFER_DYNAMIC operator()(const T&)       const { return STORAGE_BUFFER_DYNAMIC::DONT_CARE; }
+    STORAGE_BUFFER_DYNAMIC operator()(const STORAGE_BUFFER_DYNAMIC& type)   const { return type; }
 };
 // STORAGE IMAGE
 struct IsStorageImage {
     template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const STORAGE_IMAGE&) const { return true; }
+    bool operator()(const STORAGE_IMAGE&)           const { return true; }
 };
 struct GetStorageImage {
-    template <typename T> STORAGE_IMAGE operator()(const T&) const { return STORAGE_IMAGE::DONT_CARE; }
-    STORAGE_IMAGE operator()(const STORAGE_IMAGE& type) const { return type; }
+    template <typename T> STORAGE_IMAGE operator()(const T&)    const { return STORAGE_IMAGE::DONT_CARE; }
+    STORAGE_IMAGE operator()(const STORAGE_IMAGE& type)         const { return type; }
 };
 struct IsSwapchainStorageImage {
     template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const STORAGE_IMAGE& type) const { return type == STORAGE_IMAGE::SWAPCHAIN; }
+    bool operator()(const STORAGE_IMAGE& type)      const { return type == STORAGE_IMAGE::SWAPCHAIN; }
 };
 // UNIFORM
 struct IsUniform {
     template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const UNIFORM&) const { return true; }
+    bool operator()(const UNIFORM&)                 const { return true; }
 };
 struct GetUniform {
-    template <typename T> UNIFORM operator()(const T&) const { return UNIFORM::DONT_CARE; }
-    UNIFORM operator()(const UNIFORM& type) const { return type; }
+    template <typename T> UNIFORM operator()(const T&)  const { return UNIFORM::DONT_CARE; }
+    UNIFORM operator()(const UNIFORM& type)             const { return type; }
 };
 // UNIFORM DYNAMIC
 struct IsUniformDynamic {
     template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const UNIFORM_DYNAMIC&) const { return true; }
+    bool operator()(const UNIFORM_DYNAMIC&)         const { return true; }
 };
 struct GetUniformDynamic {
-    template <typename T> UNIFORM_DYNAMIC operator()(const T&) const { return UNIFORM_DYNAMIC::DONT_CARE; }
-    UNIFORM_DYNAMIC operator()(const UNIFORM_DYNAMIC& type) const { return type; }
+    template <typename T> UNIFORM_DYNAMIC operator()(const T&)  const { return UNIFORM_DYNAMIC::DONT_CARE; }
+    UNIFORM_DYNAMIC operator()(const UNIFORM_DYNAMIC& type)     const { return type; }
 };
 struct IsMaterial {
     template <typename T> bool operator()(const T&) const { return false; }
@@ -319,20 +319,20 @@ struct IsMaterial {
 // UNIFORM TEXEL BUFFER
 struct IsUniformTexelBuffer {
     template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const UNIFORM_TEXEL_BUFFER&) const { return true; }
+    bool operator()(const UNIFORM_TEXEL_BUFFER&)    const { return true; }
 };
 struct GetUniformTexelBuffer {
-    template <typename T> UNIFORM_TEXEL_BUFFER operator()(const T&) const { return UNIFORM_TEXEL_BUFFER::DONT_CARE; }
-    UNIFORM_TEXEL_BUFFER operator()(const UNIFORM_TEXEL_BUFFER& type) const { return type; }
+    template <typename T> UNIFORM_TEXEL_BUFFER operator()(const T&)     const { return UNIFORM_TEXEL_BUFFER::DONT_CARE; }
+    UNIFORM_TEXEL_BUFFER operator()(const UNIFORM_TEXEL_BUFFER& type)   const { return type; }
 };
 // INPUT ATTACHMENT
 struct IsInputAttachment {
     template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const INPUT_ATTACHMENT&) const { return true; }
+    bool operator()(const INPUT_ATTACHMENT&)        const { return true; }
 };
 struct GetInputAttachment {
     template <typename T> INPUT_ATTACHMENT operator()(const T&) const { return INPUT_ATTACHMENT::DONT_CARE; }
-    INPUT_ATTACHMENT operator()(const INPUT_ATTACHMENT& type) const { return type; }
+    INPUT_ATTACHMENT operator()(const INPUT_ATTACHMENT& type)   const { return type; }
 };
 // clang-format on
 
@@ -352,18 +352,18 @@ struct ResourceInfo {
     uint32_t uniqueDataSets = 0;
     uint32_t descCount = 0;
     std::vector<ImageInfo> imageInfos;
-    std::vector<VkDescriptorBufferInfo> bufferInfos;
-    VkBufferView texelBufferView = VK_NULL_HANDLE;
-    void setWriteInfo(const uint32_t index, VkWriteDescriptorSet& write) const;
+    std::vector<vk::DescriptorBufferInfo> bufferInfos;
+    vk::BufferView texelBufferView;
+    void setWriteInfo(const uint32_t index, vk::WriteDescriptorSet& write) const;
     void reset();
 };
 
 using resourceInfoMap = std::map<std::pair<uint32_t, DESCRIPTOR>, ResourceInfo>;
-using resourceInfoMapSetsPair = std::pair<std::shared_ptr<resourceInfoMap>, std::vector<VkDescriptorSet>>;
+using resourceInfoMapSetsPair = std::pair<std::shared_ptr<resourceInfoMap>, std::vector<vk::DescriptorSet>>;
 
 struct BindData {
     uint32_t firstSet;
-    std::vector<std::vector<VkDescriptorSet>> descriptorSets;
+    std::vector<std::vector<vk::DescriptorSet>> descriptorSets;
     std::map<DESCRIPTOR_SET, std::shared_ptr<resourceInfoMap>> setResourceInfoMap;
     std::vector<uint32_t> dynamicOffsets;
 };
@@ -373,10 +373,10 @@ using bindDataMap = std::map<std::set<PASS>, Descriptor::Set::BindData>;
 // Data for creation and merging of descriptor set layouts.
 struct Resource {
     OffsetsMap offsets;
-    VkDescriptorSetLayout layout = VK_NULL_HANDLE;
+    vk::DescriptorSetLayout layout;
     std::set<PASS> passTypes;
     std::set<PIPELINE> pipelineTypes;
-    VkShaderStageFlags stages = 0;
+    vk::ShaderStageFlags stages;
 };
 
 struct Helper {

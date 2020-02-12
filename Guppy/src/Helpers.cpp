@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -90,21 +90,20 @@ glm::mat3 makeArbitraryBasis(const glm::vec3 &dir) {
     return basis;
 }
 
-bool hasStencilComponent(VkFormat format) {
-    return format == VK_FORMAT_D32_SFLOAT_S8_UINT || format == VK_FORMAT_D24_UNORM_S8_UINT ||
-           format == VK_FORMAT_D32_SFLOAT_S8_UINT;
+bool hasStencilComponent(vk::Format format) {
+    return format == vk::Format::eD16UnormS8Uint || format == vk::Format::eD24UnormS8Uint ||
+           format == vk::Format::eD32SfloatS8Uint;
 }
 
-VkFormat findSupportedFormat(const VkPhysicalDevice &phyDev, const std::vector<VkFormat> &candidates,
-                             const VkImageTiling tiling, const VkFormatFeatureFlags features) {
-    VkFormat format = VK_FORMAT_UNDEFINED;
-    for (VkFormat f : candidates) {
-        VkFormatProperties props;
-        vkGetPhysicalDeviceFormatProperties(phyDev, f, &props);
-        if (tiling == VK_IMAGE_TILING_LINEAR && (props.linearTilingFeatures & features) == features) {
+vk::Format findSupportedFormat(const vk::PhysicalDevice &phyDev, const std::vector<vk::Format> &candidates,
+                               const vk::ImageTiling tiling, const vk::FormatFeatureFlags features) {
+    vk::Format format = vk::Format::eUndefined;
+    for (vk::Format f : candidates) {
+        vk::FormatProperties props = phyDev.getFormatProperties(f);
+        if (tiling == vk::ImageTiling::eLinear && (props.linearTilingFeatures & features) == features) {
             format = f;
             break;
-        } else if (tiling == VK_IMAGE_TILING_OPTIMAL && (props.optimalTilingFeatures & features) == features) {
+        } else if (tiling == vk::ImageTiling::eOptimal && (props.optimalTilingFeatures & features) == features) {
             format = f;
             break;
         }
@@ -112,12 +111,12 @@ VkFormat findSupportedFormat(const VkPhysicalDevice &phyDev, const std::vector<V
     return format;
 }
 
-VkFormat findDepthFormat(const VkPhysicalDevice &phyDev) {
-    return findSupportedFormat(phyDev, {VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT},
-                               VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+vk::Format findDepthFormat(const vk::PhysicalDevice &phyDev) {
+    return findSupportedFormat(phyDev, {vk::Format::eD32Sfloat, vk::Format::eD32SfloatS8Uint, vk::Format::eD24UnormS8Uint},
+                               vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
 }
 
-bool getMemoryType(const VkPhysicalDeviceMemoryProperties &memProps, uint32_t typeBits, VkMemoryPropertyFlags reqMask,
+bool getMemoryType(const vk::PhysicalDeviceMemoryProperties &memProps, uint32_t typeBits, vk::MemoryPropertyFlags reqMask,
                    uint32_t *typeIndex) {
     // Search memtypes to find first index with those properties
     for (uint32_t i = 0; i < memProps.memoryTypeCount; i++) {
@@ -134,35 +133,32 @@ bool getMemoryType(const VkPhysicalDeviceMemoryProperties &memProps, uint32_t ty
     return false;
 }
 
-VkDeviceSize createBuffer(const VkDevice &dev, const VkDeviceSize &size, const VkBufferUsageFlags &usage,
-                          const VkMemoryPropertyFlags &props, const VkPhysicalDeviceMemoryProperties &memProps,
-                          VkBuffer &buff, VkDeviceMemory &mem) {
-    VkBufferCreateInfo buffInfo = {};
-    buffInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+vk::DeviceSize createBuffer(const vk::Device &dev, const vk::DeviceSize &size, const vk::BufferUsageFlags &usage,
+                            const vk::MemoryPropertyFlags &props, const vk::PhysicalDeviceMemoryProperties &memProps,
+                            vk::Buffer &buff, vk::DeviceMemory &mem) {
+    vk::BufferCreateInfo buffInfo = {};
     buffInfo.size = size;
     buffInfo.usage = usage;
-    buffInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    buffInfo.sharingMode = vk::SharingMode::eExclusive;
     // TODO: what should these be ?
     // buffInfo.queueFamilyIndexCount = 0;
     // buffInfo.pQueueFamilyIndices = nullptr;
     // buffInfo.flags = 0;
 
-    vk::assert_success(vkCreateBuffer(dev, &buffInfo, nullptr, &buff));
+    buff = dev.createBuffer(buffInfo, ALLOC_PLACE_HOLDER);
 
     // ALLOCATE DEVICE MEMORY
 
-    VkMemoryRequirements memReqs;
-    vkGetBufferMemoryRequirements(dev, buff, &memReqs);
+    vk::MemoryRequirements memReqs = dev.getBufferMemoryRequirements(buff);
 
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    vk::MemoryAllocateInfo allocInfo = {};
     allocInfo.allocationSize = memReqs.size;
     auto pass = getMemoryType(memProps, memReqs.memoryTypeBits, props, &allocInfo.memoryTypeIndex);
     assert(pass && "No mappable, coherent memory");
 
     /*
         It should be noted that in a real world application, you're not supposed to actually
-        call vkAllocateMemory for every individual buffer. The maximum number of simultaneous
+        call allocateMemory for every individual buffer. The maximum number of simultaneous
         memory allocations is limited by the maxMemoryAllocationCount physical device limit,
         which may be as low as 4096 even on high end hardware like an NVIDIA GTX 1080. The
         right way to allocate memory for a large number of objects at the same time is to create
@@ -177,36 +173,35 @@ VkDeviceSize createBuffer(const VkDevice &dev, const VkDeviceSize &size, const V
         The previous chapter already mentioned that you should allocate multiple resources like
         buffers from a single memory allocation, but in fact you should go a step further.
         Driver developers recommend that you also store multiple buffers, like the vertex and
-        index buffer, into a single VkBuffer and use offsets in commands like
-        vkCmdBindVertexBuffers. The advantage is that your data is more cache friendly in that
+        index buffer, into a single vk::Buffer and use offsets in commands like
+        bindVertexBuffers. The advantage is that your data is more cache friendly in that
         case, because it's closer together. It is even possible to reuse the same chunk of
         memory for multiple resources if they are not used during the same render operations,
         provided that their data is refreshed, of course. This is known as aliasing and some
         Vulkan functions have explicit flags to specify that you want to do this.
     */
-    vk::assert_success(vkAllocateMemory(dev, &allocInfo, nullptr, &mem));
+    mem = dev.allocateMemory(allocInfo, ALLOC_PLACE_HOLDER);
 
     // BIND MEMORY
-    vk::assert_success(vkBindBufferMemory(dev, buff, mem, 0));
+    dev.bindBufferMemory(buff, mem, 0);
 
     return memReqs.size;
 }
 
-void copyBuffer(const VkCommandBuffer &cmd, const VkBuffer &srcBuff, const VkBuffer &dstBuff, const VkDeviceSize &size) {
-    VkBufferCopy copyRegion = {};
+void copyBuffer(const vk::CommandBuffer &cmd, const vk::Buffer &srcBuff, const vk::Buffer &dstBuff,
+                const vk::DeviceSize &size) {
+    vk::BufferCopy copyRegion = {};
     copyRegion.srcOffset = 0;  // Optional
     copyRegion.dstOffset = 0;  // Optional
     copyRegion.size = size;
-    vkCmdCopyBuffer(cmd, srcBuff, dstBuff, 1, &copyRegion);
+    cmd.copyBuffer(srcBuff, dstBuff, {copyRegion});
 }
 
-void createImageMemory(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps,
-                       const VkMemoryPropertyFlags &memPropFlags, VkImage &image, VkDeviceMemory &memory) {
-    VkMemoryRequirements memReqs;
-    vkGetImageMemoryRequirements(dev, image, &memReqs);
+void createImageMemory(const vk::Device &dev, const vk::PhysicalDeviceMemoryProperties &memProps,
+                       const vk::MemoryPropertyFlags &memPropFlags, vk::Image &image, vk::DeviceMemory &memory) {
+    vk::MemoryRequirements memReqs = dev.getImageMemoryRequirements(image);
 
-    VkMemoryAllocateInfo allocInfo = {};
-    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    vk::MemoryAllocateInfo allocInfo = {};
     allocInfo.allocationSize = memReqs.size;
 
     // Use the memory properties to determine the type of memory required
@@ -214,19 +209,18 @@ void createImageMemory(const VkDevice &dev, const VkPhysicalDeviceMemoryProperti
     assert(pass);
 
     // Allocate memory
-    vk::assert_success(vkAllocateMemory(dev, &allocInfo, nullptr, &memory));
+    memory = dev.allocateMemory(allocInfo, ALLOC_PLACE_HOLDER);
     // Bind memory
-    vk::assert_success(vkBindImageMemory(dev, image, memory, 0));
+    dev.bindImageMemory(image, memory, 0);
 }
 
-void createImage(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps,
-                 const std::vector<uint32_t> &queueFamilyIndices, const VkSampleCountFlagBits &numSamples,
-                 const VkFormat &format, const VkImageTiling &tiling, const VkImageUsageFlags &usage,
-                 const VkMemoryPropertyFlags &reqMask, uint32_t width, uint32_t height, uint32_t mipLevels,
-                 uint32_t arrayLayers, VkImage &image, VkDeviceMemory &memory) {
-    VkImageCreateInfo imageInfo = {};
-    imageInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageInfo.imageType = VK_IMAGE_TYPE_2D;  // param?
+void createImage(const vk::Device &dev, const vk::PhysicalDeviceMemoryProperties &memProps,
+                 const std::vector<uint32_t> &queueFamilyIndices, const vk::SampleCountFlagBits &numSamples,
+                 const vk::Format &format, const vk::ImageTiling &tiling, const vk::ImageUsageFlags &usage,
+                 const vk::MemoryPropertyFlags &reqMask, uint32_t width, uint32_t height, uint32_t mipLevels,
+                 uint32_t arrayLayers, vk::Image &image, vk::DeviceMemory &memory) {
+    vk::ImageCreateInfo imageInfo = {};
+    imageInfo.imageType = vk::ImageType::e2D;  // param?
     imageInfo.extent.width = width;
     imageInfo.extent.height = height;
     imageInfo.extent.depth = 1;
@@ -234,25 +228,25 @@ void createImage(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &me
     imageInfo.arrayLayers = arrayLayers;
     imageInfo.format = format;
     imageInfo.tiling = tiling;
-    imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imageInfo.initialLayout = vk::ImageLayout::eUndefined;
     imageInfo.usage = usage;
     imageInfo.samples = numSamples;
-    imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageInfo.sharingMode = vk::SharingMode::eExclusive;
     imageInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
     imageInfo.pQueueFamilyIndices = queueFamilyIndices.data();
 
-    vk::assert_success(vkCreateImage(dev, &imageInfo, nullptr, &image));
+    image = dev.createImage(imageInfo, ALLOC_PLACE_HOLDER);
     helpers::createImageMemory(dev, memProps, reqMask, image, memory);
 }
 
-void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount,
-                       const VkBuffer &srcBuff, const VkImage &dstImg) {
-    VkBufferImageCopy region = {};
+void copyBufferToImage(const vk::CommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount,
+                       const vk::Buffer &srcBuff, const vk::Image &dstImg) {
+    vk::BufferImageCopy region = {};
     region.bufferOffset = 0;
     region.bufferRowLength = 0;
     region.bufferImageHeight = 0;
 
-    region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
     region.imageSubresource.mipLevel = 0;
     region.imageSubresource.baseArrayLayer = 0;
     region.imageSubresource.layerCount = layerCount;
@@ -260,15 +254,13 @@ void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t heig
     region.imageOffset = {0, 0, 0};
     region.imageExtent = {width, height, 1};
 
-    vkCmdCopyBufferToImage(cmd, srcBuff, dstImg,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,  // VK_IMAGE_USAGE_TRANSFER_DST_BIT
-                           1, &region);
+    cmd.copyBufferToImage(srcBuff, dstImg, vk::ImageLayout::eTransferDstOptimal, {region});
 }
 
-void createImageView(const VkDevice &device, const VkImage &image, const VkFormat &format, const VkImageViewType &viewType,
-                     const VkImageSubresourceRange &subresourceRange, VkImageView &view) {
-    VkImageViewCreateInfo viewInfo = {};
-    viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+void createImageView(const vk::Device &device, const vk::Image &image, const vk::Format &format,
+                     const vk::ImageViewType &viewType, const vk::ImageSubresourceRange &subresourceRange,
+                     vk::ImageView &view) {
+    vk::ImageViewCreateInfo viewInfo = {};
     viewInfo.image = image;
 
     // swap chain is a 2D depth texture
@@ -276,10 +268,10 @@ void createImageView(const VkDevice &device, const VkImage &image, const VkForma
     viewInfo.format = format;
 
     // defaults
-    viewInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-    viewInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-    viewInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-    viewInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+    viewInfo.components.r = vk::ComponentSwizzle::eIdentity;
+    viewInfo.components.g = vk::ComponentSwizzle::eIdentity;
+    viewInfo.components.b = vk::ComponentSwizzle::eIdentity;
+    viewInfo.components.a = vk::ComponentSwizzle::eIdentity;
 
     /*  If you were working on a stereographic 3D application, then you would create a swap
         chain with multiple layers. You could then create multiple image views for each image
@@ -287,20 +279,18 @@ void createImageView(const VkDevice &device, const VkImage &image, const VkForma
     */
     viewInfo.subresourceRange = subresourceRange;
 
-    vk::assert_success(vkCreateImageView(device, &viewInfo, nullptr, &view));
+    view = device.createImageView(viewInfo, ALLOC_PLACE_HOLDER);
 }
 
-void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, const VkFormat &format,
-                           const VkImageLayout &oldLayout, const VkImageLayout &newLayout, VkPipelineStageFlags srcStages,
-                           VkPipelineStageFlags dstStages, uint32_t mipLevels, uint32_t layerCount) {
-    VkImageMemoryBarrier barrier;
+void transitionImageLayout(const vk::CommandBuffer &cmd, const vk::Image &image, const vk::Format &format,
+                           const vk::ImageLayout &oldLayout, const vk::ImageLayout &newLayout,
+                           vk::PipelineStageFlags srcStages, vk::PipelineStageFlags dstStages, uint32_t mipLevels,
+                           uint32_t layerCount) {
     // for (uint32_t i = 0; i < arrayLayers; i++) {
 
-    barrier = {};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    barrier.pNext = nullptr;
-    barrier.srcAccessMask = 0;
-    barrier.dstAccessMask = 0;
+    vk::ImageMemoryBarrier barrier = {};
+    barrier.srcAccessMask = {};
+    barrier.dstAccessMask = {};
     barrier.oldLayout = oldLayout;
     barrier.newLayout = newLayout;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;  // ignored for now
@@ -316,17 +306,17 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
     bool layoutHandled = true;
 
     switch (oldLayout) {
-        case VK_IMAGE_LAYOUT_UNDEFINED:
-            barrier.srcAccessMask = 0;
+        case vk::ImageLayout::eUndefined:
+            barrier.srcAccessMask = {};
             break;
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-            barrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+        case vk::ImageLayout::eColorAttachmentOptimal:
+            barrier.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
             break;
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        case vk::ImageLayout::eTransferDstOptimal:
+            barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
             break;
-        case VK_IMAGE_LAYOUT_PREINITIALIZED:
-            barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+        case vk::ImageLayout::ePreinitialized:
+            barrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
             break;
         default:
             layoutHandled = false;
@@ -334,51 +324,53 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
     }
 
     switch (newLayout) {
-        case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+        case vk::ImageLayout::eTransferDstOptimal:
+            barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
             break;
-        case VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
-            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        case vk::ImageLayout::eTransferSrcOptimal:
+            barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
             break;
-        case VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
-            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        case vk::ImageLayout::eShaderReadOnlyOptimal:
+            barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
             break;
-        case VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL:
-            barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;  // | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-            break;
-        case VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+        case vk::ImageLayout::eColorAttachmentOptimal:
             barrier.dstAccessMask =
-                VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;  // | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+                vk::AccessFlagBits::eColorAttachmentWrite;  // | vk::AccessFlagBits::eColorAttachmentRead;
             break;
-        case VK_IMAGE_LAYOUT_GENERAL:
-            barrier.dstAccessMask = 0;
+        case vk::ImageLayout::eDepthStencilAttachmentOptimal:
+            barrier.dstAccessMask =
+                vk::AccessFlagBits::eDepthStencilAttachmentWrite;  // | vk::AccessFlagBits::eDepthStencilAttachmentRead;
+            break;
+        case vk::ImageLayout::eGeneral:
+            barrier.dstAccessMask = {};
             break;
         default:
             layoutHandled = false;
             break;
     }
 
-    // if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) {
+    // if (old_layout == vk::ImageLayout::eUndefined && new_layout == vk::ImageLayout::eTransferDstOptimal) {
     //    barrier.srcAccessMask = 0;
-    //    barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //} else if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && new_layout ==
-    // VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) {
-    //    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    //    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    //    sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-    //} else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
+    //    barrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
+    //    sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
+    //    destinationStage = vk::PipelineStageFlagBits::eTransfer;
+    //} else if (old_layout == vk::ImageLayout::eTransferDstOptimal && new_layout ==
+    // vk::ImageLayout::eShaderReadOnlyOptimal) {
+    //    barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+    //    barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
+    //    sourceStage = vk::PipelineStageFlagBits::eTransfer;
+    //    destinationStage = vk::PipelineStageFlagBits::eFragmentShader;
+    //} else if (old_layout == vk::ImageLayout::eUndefined && new_layout == vk::ImageLayout::eDepthAttachmentOptimal)
+    //{
     //    barrier.srcAccessMask = 0;
-    //    barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-    //    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-    //} else if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED && new_layout == VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL) {
+    //    barrier.dstAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentRead |
+    //    vk::AccessFlagBits::eDepthStencilAttachmentWrite; sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
+    //    destinationStage = vk::PipelineStageFlagBits::eEarlyFragmentTests;
+    //} else if (old_layout == vk::ImageLayout::eUndefined && new_layout == vk::ImageLayout::eColorAttachmentOptimal) {
     //    barrier.srcAccessMask = 0;
-    //    barrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    //    sourceStage = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-    //    destinationStage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+    //    barrier.dstAccessMask = vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite;
+    //    sourceStage = vk::PipelineStageFlagBits::eTopOfPipe;
+    //    destinationStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
     //} else {
     //    throw std::invalid_argument("unsupported image layout transition!");
     //}
@@ -387,16 +379,16 @@ void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, con
 
     // ASPECT MASK
 
-    if (newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL) {
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    if (newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+        barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
         if (hasStencilComponent(format)) {
-            barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
+            barrier.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
         }
     } else {
-        barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
     }
 
-    vkCmdPipelineBarrier(cmd, srcStages, dstStages, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+    cmd.pipelineBarrier(srcStages, dstStages, {}, {}, {}, {barrier});
     //}
 }
 
@@ -555,78 +547,78 @@ void decomposeScale(const glm::mat4 &m, glm::vec3 &scale) {
     glm::decompose(m, scale, orientation, translation, skew, perspective);
 }
 
-void attachementImageBarrierWriteToSamplerRead(const VkImage &image, BarrierResource &resource,
+void attachementImageBarrierWriteToSamplerRead(const vk::Image &image, BarrierResource &resource,
                                                const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
-    resource.imgBarriers.push_back({VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr});
-    resource.imgBarriers.back().srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    resource.imgBarriers.back().newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+    resource.imgBarriers.push_back({});
+    resource.imgBarriers.back().srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+    resource.imgBarriers.back().dstAccessMask = vk::AccessFlagBits::eShaderRead;
+    resource.imgBarriers.back().oldLayout = vk::ImageLayout::eColorAttachmentOptimal;
+    resource.imgBarriers.back().newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
     resource.imgBarriers.back().srcQueueFamilyIndex = srcQueueFamilyIndex;
     resource.imgBarriers.back().dstQueueFamilyIndex = srcQueueFamilyIndex;
     resource.imgBarriers.back().image = image;
-    resource.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    resource.imgBarriers.back().subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
 }
 
-void attachementImageBarrierWriteToStorageRead(const VkImage &image, BarrierResource &resource,
+void attachementImageBarrierWriteToStorageRead(const vk::Image &image, BarrierResource &resource,
                                                const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
-    resource.imgBarriers.push_back({VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr});
-    resource.imgBarriers.back().srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    resource.imgBarriers.back().newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    resource.imgBarriers.push_back({});
+    resource.imgBarriers.back().srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+    resource.imgBarriers.back().dstAccessMask = vk::AccessFlagBits::eShaderRead;
+    resource.imgBarriers.back().oldLayout = vk::ImageLayout::eColorAttachmentOptimal;
+    resource.imgBarriers.back().newLayout = vk::ImageLayout::eGeneral;
     resource.imgBarriers.back().srcQueueFamilyIndex = srcQueueFamilyIndex;
     resource.imgBarriers.back().dstQueueFamilyIndex = dstQueueFamilyIndex;
     resource.imgBarriers.back().image = image;
-    resource.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    resource.imgBarriers.back().subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
 }
 
-void attachementImageBarrierStorageWriteToColorRead(const VkImage &image, BarrierResource &resource,
+void attachementImageBarrierStorageWriteToColorRead(const vk::Image &image, BarrierResource &resource,
                                                     const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
-    resource.imgBarriers.push_back({VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr});
-    resource.imgBarriers.back().srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-    resource.imgBarriers.back().newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    resource.imgBarriers.push_back({});
+    resource.imgBarriers.back().srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+    resource.imgBarriers.back().dstAccessMask = vk::AccessFlagBits::eShaderRead;
+    resource.imgBarriers.back().oldLayout = vk::ImageLayout::eGeneral;
+    resource.imgBarriers.back().newLayout = vk::ImageLayout::eColorAttachmentOptimal;
     resource.imgBarriers.back().srcQueueFamilyIndex = srcQueueFamilyIndex;
     resource.imgBarriers.back().dstQueueFamilyIndex = dstQueueFamilyIndex;
     resource.imgBarriers.back().image = image;
-    resource.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    resource.imgBarriers.back().subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
 }
 
-void attachementImageBarrierWriteToWrite(const VkImage &image, BarrierResource &resource, const uint32_t srcQueueFamilyIndex,
-                                         const uint32_t dstQueueFamilyIndex) {
+void attachementImageBarrierWriteToWrite(const vk::Image &image, BarrierResource &resource,
+                                         const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
     // Ex: Barrier between scene/post-processing write to framebuffer, and UI write to the same framebuffer.
     // I believe this exact thing is handled in a subpass depency in RenderPass::ImGui.
-    resource.imgBarriers.push_back({VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr});
-    resource.imgBarriers.back().srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    resource.imgBarriers.back().newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    resource.imgBarriers.push_back({});
+    resource.imgBarriers.back().srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+    resource.imgBarriers.back().dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+    resource.imgBarriers.back().oldLayout = vk::ImageLayout::eColorAttachmentOptimal;
+    resource.imgBarriers.back().newLayout = vk::ImageLayout::eColorAttachmentOptimal;
     resource.imgBarriers.back().srcQueueFamilyIndex = srcQueueFamilyIndex;
     resource.imgBarriers.back().dstQueueFamilyIndex = dstQueueFamilyIndex;
     resource.imgBarriers.back().image = image;
-    resource.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    resource.imgBarriers.back().subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
 }
 
-void storageImageBarrierWriteToRead(const VkImage &image, BarrierResource &resource, const uint32_t srcQueueFamilyIndex,
+void storageImageBarrierWriteToRead(const vk::Image &image, BarrierResource &resource, const uint32_t srcQueueFamilyIndex,
                                     const uint32_t dstQueueFamilyIndex) {
-    resource.imgBarriers.push_back({VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER, nullptr});
-    resource.imgBarriers.back().srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-    resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-    resource.imgBarriers.back().newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    resource.imgBarriers.push_back({});
+    resource.imgBarriers.back().srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+    resource.imgBarriers.back().dstAccessMask = vk::AccessFlagBits::eShaderRead;
+    resource.imgBarriers.back().oldLayout = vk::ImageLayout::eGeneral;
+    resource.imgBarriers.back().newLayout = vk::ImageLayout::eGeneral;
     resource.imgBarriers.back().srcQueueFamilyIndex = srcQueueFamilyIndex;
     resource.imgBarriers.back().dstQueueFamilyIndex = dstQueueFamilyIndex;
     resource.imgBarriers.back().image = image;
-    resource.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    resource.imgBarriers.back().subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
 }
 
-void bufferBarrierWriteToRead(const VkDescriptorBufferInfo &bufferInfo, BarrierResource &resource,
+void bufferBarrierWriteToRead(const vk::DescriptorBufferInfo &bufferInfo, BarrierResource &resource,
                               const uint32_t srcQueueFamilyIndex, const uint32_t dstQueueFamilyIndex) {
-    resource.buffBarriers.push_back({VK_STRUCTURE_TYPE_BUFFER_MEMORY_BARRIER, nullptr});
-    resource.buffBarriers.back().srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    resource.buffBarriers.back().dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    resource.buffBarriers.push_back({});
+    resource.buffBarriers.back().srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+    resource.buffBarriers.back().dstAccessMask = vk::AccessFlagBits::eShaderRead;
     resource.buffBarriers.back().srcQueueFamilyIndex = srcQueueFamilyIndex;
     resource.buffBarriers.back().dstQueueFamilyIndex = dstQueueFamilyIndex;
     resource.buffBarriers.back().buffer = bufferInfo.buffer;
@@ -635,82 +627,31 @@ void bufferBarrierWriteToRead(const VkDescriptorBufferInfo &bufferInfo, BarrierR
 }
 
 void globalDebugBarrierWriteToRead(BarrierResource &resource) {
-    resource.glblBarriers.push_back({VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr});
+    resource.glblBarriers.push_back({});
     // All src
     resource.glblBarriers.back().srcAccessMask =
-        VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
-        VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT |
-        VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-        VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT;
+        vk::AccessFlagBits::eIndirectCommandRead | vk::AccessFlagBits::eIndexRead |
+        vk::AccessFlagBits::eVertexAttributeRead | vk::AccessFlagBits::eUniformRead |
+        vk::AccessFlagBits::eInputAttachmentRead | vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite |
+        vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite |
+        vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite |
+        vk::AccessFlagBits::eTransferRead | vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eHostRead |
+        vk::AccessFlagBits::eHostWrite;
     // All dst
     resource.glblBarriers.back().dstAccessMask =
-        VK_ACCESS_INDIRECT_COMMAND_READ_BIT | VK_ACCESS_INDEX_READ_BIT | VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT |
-        VK_ACCESS_UNIFORM_READ_BIT | VK_ACCESS_INPUT_ATTACHMENT_READ_BIT | VK_ACCESS_SHADER_READ_BIT |
-        VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
-        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-        VK_ACCESS_TRANSFER_READ_BIT | VK_ACCESS_TRANSFER_WRITE_BIT | VK_ACCESS_HOST_READ_BIT | VK_ACCESS_HOST_WRITE_BIT;
+        vk::AccessFlagBits::eIndirectCommandRead | vk::AccessFlagBits::eIndexRead |
+        vk::AccessFlagBits::eVertexAttributeRead | vk::AccessFlagBits::eUniformRead |
+        vk::AccessFlagBits::eInputAttachmentRead | vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite |
+        vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite |
+        vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite |
+        vk::AccessFlagBits::eTransferRead | vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eHostRead |
+        vk::AccessFlagBits::eHostWrite;
 }
 
-void recordBarriers(const BarrierResource &resource, const VkCommandBuffer &cmd, const VkPipelineStageFlags srcStageMask,
-                    const VkPipelineStageFlags dstStageMask, const VkDependencyFlags dependencyFlags) {
-    vkCmdPipelineBarrier(                                     //
-        cmd,                                                  //
-        srcStageMask,                                         //
-        dstStageMask,                                         //
-        dependencyFlags,                                      //
-        static_cast<uint32_t>(resource.glblBarriers.size()),  //
-        resource.glblBarriers.data(),                         //
-        static_cast<uint32_t>(resource.buffBarriers.size()),  //
-        resource.buffBarriers.data(),                         //
-        static_cast<uint32_t>(resource.imgBarriers.size()),   //
-        resource.imgBarriers.data()                           //
-    );
-}
-
-void createBuffer(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps, const bool debugMarkersEnabled,
-                  const VkCommandBuffer &cmd, const VkBufferUsageFlagBits usage, const VkDeviceSize size,
-                  const std::string &&name, BufferResource &stgRes, BufferResource &buffRes, const void *data,
-                  const bool mappable) {
-    // STAGING RESOURCE
-    buffRes.memoryRequirements.size = helpers::createBuffer(
-        dev, size, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-        VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, memProps, stgRes.buffer, stgRes.memory);
-
-    // FILL STAGING BUFFER ON DEVICE
-    void *pData;
-    vk::assert_success(vkMapMemory(dev, stgRes.memory, 0, buffRes.memoryRequirements.size, 0, &pData));
-    /*
-        You can now simply memcpy the vertex data to the mapped memory and unmap it again using vkUnmapMemory.
-        Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
-        of caching. It is also possible that writes to the buffer are not visible in the mapped memory yet. There
-        are two ways to deal with that problem:
-            - Use a memory heap that is host coherent, indicated with VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-            - Call vkFlushMappedMemoryRanges to after writing to the mapped memory, and call
-              vkInvalidateMappedMemoryRanges before reading from the mapped memory
-        We went for the first approach, which ensures that the mapped memory always matches the contents of the
-        allocated memory. Do keep in mind that this may lead to slightly worse performance than explicit flushing,
-        but we'll see why that doesn't matter in the next chapter.
-    */
-    memcpy(pData, data, static_cast<size_t>(size));
-    vkUnmapMemory(dev, stgRes.memory);
-
-    // FAST VERTEX BUFFER
-    VkMemoryPropertyFlags memPropFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    if (mappable) memPropFlags |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-    helpers::createBuffer(dev, size,
-                          // TODO: probably don't need to check memory requirements again
-                          usage, memPropFlags, memProps, buffRes.buffer, buffRes.memory);
-
-    // COPY FROM STAGING TO FAST
-    helpers::copyBuffer(cmd, stgRes.buffer, buffRes.buffer, buffRes.memoryRequirements.size);
-
-    // Name the buffers for debugging
-    if (debugMarkersEnabled) {
-        std::string markerName = name + " buffer";
-        ext::DebugMarkerSetObjectName(dev, (uint64_t)buffRes.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                      markerName.c_str());
-    }
+void recordBarriers(const BarrierResource &resource, const vk::CommandBuffer &cmd, const vk::PipelineStageFlags srcStageMask,
+                    const vk::PipelineStageFlags dstStageMask, const vk::DependencyFlags dependencyFlags) {
+    cmd.pipelineBarrier(srcStageMask, dstStageMask, dependencyFlags, resource.glblBarriers, resource.buffBarriers,
+                        resource.imgBarriers);
 }
 
 }  // namespace helpers

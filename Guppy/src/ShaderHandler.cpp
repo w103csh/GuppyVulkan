@@ -37,8 +37,8 @@ void Shader::Handler::init() {
 void Shader::Handler::reset() {
     // SHADERS
     for (auto& keyValue : infoMap_) {
-        if (keyValue.second.second.module != VK_NULL_HANDLE)
-            vkDestroyShaderModule(shell().context().dev, keyValue.second.second.module, nullptr);
+        if (keyValue.second.second.module)
+            shell().context().dev.destroyShaderModule(keyValue.second.second.module, ALLOC_PLACE_HOLDER);
     }
 
     cleanup();
@@ -46,7 +46,7 @@ void Shader::Handler::reset() {
 
 bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit) {
     auto& stageInfo = keyValue.second.second;
-    if (isInit && stageInfo.module != VK_NULL_HANDLE) return false;
+    if (isInit && stageInfo.module) return false;
 
     auto stringTexts = loadText(keyValue);
 
@@ -56,7 +56,7 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
 
     const auto& createInfo = ALL.at(std::get<0>(keyValue.first));
     std::vector<unsigned int> spv;
-    bool success = GLSLtoSPV(createInfo.stage, texts, spv);
+    bool success = GLSLtoSPV(static_cast<VkShaderStageFlagBits>(createInfo.stage), texts, spv);
 
     // Return or assert on fail
     if (!success) {
@@ -69,27 +69,19 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
         }
     }
 
-    VkShaderModuleCreateInfo moduleInfo = {};
-    moduleInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    vk::ShaderModuleCreateInfo moduleInfo = {};
     moduleInfo.codeSize = spv.size() * sizeof(unsigned int);
     moduleInfo.pCode = spv.data();
 
     // Store old module for clean up if necessary
-    bool needsUpdate = stageInfo.module != VK_NULL_HANDLE;
+    bool needsUpdate = stageInfo.module;
     if (needsUpdate) oldModules_.push_back(std::move(stageInfo.module));
 
-    stageInfo = {};
-    vk::assert_success(vkCreateShaderModule(shell().context().dev, &moduleInfo, nullptr, &stageInfo.module));
-
-    stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    stageInfo = vk::PipelineShaderStageCreateInfo{};
     stageInfo.stage = createInfo.stage;
     stageInfo.pName = "main";
-
-    if (shell().context().debugMarkersEnabled) {
-        std::string markerName = createInfo.name + "shader module";
-        ext::DebugMarkerSetObjectName(shell().context().dev, (uint64_t)stageInfo.module,
-                                      VK_DEBUG_REPORT_OBJECT_TYPE_SHADER_MODULE_EXT, markerName.c_str());
-    }
+    stageInfo.module = shell().context().dev.createShaderModule(moduleInfo, ALLOC_PLACE_HOLDER);
+    shell().context().dbg.setMarkerName(stageInfo.module, createInfo.name.c_str());
 
     return needsUpdate;
 }
@@ -164,7 +156,7 @@ void Shader::Handler::textReplacePipeline(const PIPELINE pipelineType, std::stri
 }
 
 void Shader::Handler::getStagesInfo(const SHADER& shaderType, const PIPELINE& pipelineType, const PASS& passType,
-                                    std::vector<VkPipelineShaderStageCreateInfo>& stagesInfo) const {
+                                    std::vector<vk::PipelineShaderStageCreateInfo>& stagesInfo) const {
     auto it1 = infoMap_.begin();
     auto it2 = infoMap_.end();
     // Look for a specific stage info
@@ -191,15 +183,13 @@ void Shader::Handler::getStagesInfo(const SHADER& shaderType, const PIPELINE& pi
     assert(false);  // A shader stage info was not found.
 }
 
-VkShaderStageFlags Shader::Handler::getStageFlags(const std::set<SHADER>& shaderTypes) const {
-    VkShaderStageFlags stages = 0;
+vk::ShaderStageFlags Shader::Handler::getStageFlags(const std::set<SHADER>& shaderTypes) const {
+    vk::ShaderStageFlags stages = {};
     for (const auto& shaderType : shaderTypes) stages |= ALL.at(shaderType).stage;
     return stages;
 }
 
 void Shader::Handler::recompileShader(std::string fileName) {
-    bool assert = settings().assert_on_recompile_shader;
-
     init_glslang();
 
     std::vector<SHADER> needsUpdateTypes;
@@ -209,7 +199,7 @@ void Shader::Handler::recompileShader(std::string fileName) {
         if (createInfo.fileName == fileName) {
             for (auto& stageInfoKeyValue : infoMap_) {
                 if (std::get<0>(stageInfoKeyValue.first) == shaderType) {
-                    if (make(stageInfoKeyValue, assert, false)) {
+                    if (make(stageInfoKeyValue, settings().assertOnRecompileShader, false)) {
                         needsUpdateTypes.push_back(shaderType);
                     }
                 }
@@ -226,7 +216,7 @@ void Shader::Handler::recompileShader(std::string fileName) {
             for (auto& stageInfoKeyValue : infoMap_) {
                 for (const auto& shaderType : shaderTypes) {
                     if (std::get<0>(stageInfoKeyValue.first) == shaderType) {
-                        if (make(stageInfoKeyValue, assert, false)) {
+                        if (make(stageInfoKeyValue, settings().assertOnRecompileShader, false)) {
                             needsUpdateTypes.push_back(shaderType);
                         }
                     }
@@ -256,6 +246,6 @@ void Shader::Handler::getShaderTypes(const SHADER_LINK& linkType, std::vector<SH
 
 void Shader::Handler::cleanup() {
     for (auto& module : oldModules_)  //
-        vkDestroyShaderModule(shell().context().dev, module, nullptr);
+        shell().context().dev.destroyShaderModule(module, ALLOC_PLACE_HOLDER);
     oldModules_.clear();
 }

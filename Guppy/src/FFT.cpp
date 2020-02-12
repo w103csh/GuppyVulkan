@@ -8,7 +8,7 @@
 #include <complex>
 #include <cmath>
 #include <string>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "Helpers.h"
 
@@ -70,14 +70,14 @@ CreateInfo MakeTestTex() {
     Sampler::CreateInfo sampInfo = {
         std::string(TEST_ID) + " Sampler",
         {{{::Sampler::USAGE::HEIGHT}, {::Sampler::USAGE::HEIGHT}}, true, true},
-        VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+        vk::ImageViewType::e2DArray,
         {w, h, 1},
         {},
-        0,
+        {},
         SAMPLER::DEFAULT,
-        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
         {{false, false}, 1},
-        VK_FORMAT_R32G32_SFLOAT,
+        vk::Format::eR32G32Sfloat,
         Sampler::CHANNELS::_2,
         sizeof(float),
     };
@@ -103,7 +103,7 @@ const CreateInfo FFT_ONE_COMP_CREATE_INFO = {
     SHADER::FFT_ONE_COMP,  //
     "Fast Fourier Transform One Component Compute Shader",
     "comp.fft.one.glsl",
-    VK_SHADER_STAGE_COMPUTE_BIT,
+    vk::ShaderStageFlagBits::eCompute,
 };
 }  // namespace Shader
 

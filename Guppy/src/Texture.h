@@ -10,7 +10,7 @@
 #include <string>
 #include <string_view>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "Sampler.h"
 
@@ -25,7 +25,7 @@ class Base {
     Base(const uint32_t &&offset, const CreateInfo *pCreateInfo);
     virtual ~Base() = default;
 
-    void destroy(const VkDevice &dev);
+    void destroy(const vk::Device &dev);
 
     const DESCRIPTOR DESCRIPTOR_TYPE;  // TODO: this should probably be detemined by the pipeline/set
     const bool HAS_DATA;
@@ -49,8 +49,8 @@ namespace BufferView {
 struct Base {
     std::string_view id;
     STATUS status = STATUS::PENDING;
-    BufferResource buffRes{};
-    VkBufferView view = VK_NULL_HANDLE;
+    BufferResource buffRes;
+    vk::BufferView view;
     std::unique_ptr<LoadingResource> pLdgRes = nullptr;
 };
 

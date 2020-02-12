@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -27,25 +27,25 @@ void Base::createAttachments() {
     // COLOR ATTACHMENT
     resources_.attachments.push_back({});
     resources_.attachments.back().format = pTextures_.at(0)->samplers.at(0).imgCreateInfo.format;
-    resources_.attachments.back().samples = usesMultiSample() ? VK_SAMPLE_COUNT_1_BIT : getSamples();
-    resources_.attachments.back().loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-    resources_.attachments.back().storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-    resources_.attachments.back().stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    resources_.attachments.back().stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    resources_.attachments.back().initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    resources_.attachments.back().finalLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    resources_.attachments.back().flags = 0;
+    resources_.attachments.back().samples = usesMultiSample() ? vk::SampleCountFlagBits::e1 : getSamples();
+    resources_.attachments.back().loadOp = vk::AttachmentLoadOp::eClear;
+    resources_.attachments.back().storeOp = vk::AttachmentStoreOp::eStore;
+    resources_.attachments.back().stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+    resources_.attachments.back().stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+    resources_.attachments.back().initialLayout = vk::ImageLayout::eUndefined;
+    resources_.attachments.back().finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+    resources_.attachments.back().flags = {};
     // REFERENCE
     if (usesMultiSample()) {
         // Set resolve to swapchain attachment
         resources_.resolveAttachments.push_back({
             static_cast<uint32_t>(resources_.attachments.size() - 1),
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            vk::ImageLayout::eColorAttachmentOptimal,
         });
     } else {
         resources_.colorAttachments.push_back({
             static_cast<uint32_t>(resources_.attachments.size() - 1),
-            VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+            vk::ImageLayout::eColorAttachmentOptimal,
         });
     }
 }
@@ -54,11 +54,10 @@ void Base::createFramebuffers() {
     /* Views for framebuffer.
      *  - color
      */
-    std::vector<std::vector<VkImageView>> attachmentViewsList(handler().shell().context().imageCount);
+    std::vector<std::vector<vk::ImageView>> attachmentViewsList(handler().shell().context().imageCount);
     data.framebuffers.resize(attachmentViewsList.size());
 
-    VkFramebufferCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    vk::FramebufferCreateInfo createInfo = {};
     createInfo.renderPass = pass;
     createInfo.width = pTextures_[0]->samplers[0].imgCreateInfo.extent.width;
     createInfo.height = pTextures_[0]->samplers[0].imgCreateInfo.extent.height;
@@ -69,13 +68,12 @@ void Base::createFramebuffers() {
 
         assert(pTextures_[0]->samplers[0].layerResourceMap.size() == 1);
         attachmentViews.push_back(pTextures_[0]->samplers[0].layerResourceMap.begin()->second.view);
-        assert(attachmentViews.back() != VK_NULL_HANDLE);
+        assert(attachmentViews.back());
 
         createInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
         createInfo.pAttachments = attachmentViews.data();
 
-        vk::assert_success(
-            vkCreateFramebuffer(handler().shell().context().dev, &createInfo, nullptr, &data.framebuffers[frameIndex]));
+        data.framebuffers[frameIndex] = handler().shell().context().dev.createFramebuffer(createInfo, ALLOC_PLACE_HOLDER);
     }
 }
 
@@ -94,10 +92,10 @@ const CreateInfo SKYBOX_NIGHT_CREATE_INFO = {
 SkyboxNight::SkyboxNight(Handler& handler, const index&& offset)
     : Base(handler, std::forward<const index>(offset), &SKYBOX_NIGHT_CREATE_INFO) {}
 
-void SkyboxNight::record(const uint8_t frameIndex, const VkCommandBuffer& priCmd) {
+void SkyboxNight::record(const uint8_t frameIndex, const vk::CommandBuffer& priCmd) {
     if (getStatus() != STATUS::READY) update();
     if (getStatus() == STATUS::READY) {
-        beginPass(priCmd, frameIndex, VK_SUBPASS_CONTENTS_INLINE);
+        beginPass(priCmd, frameIndex, vk::SubpassContents::eInline);
 
         auto& secCmd = data.secCmds[frameIndex];
         auto& pScene = handler().sceneHandler().getActiveScene();
@@ -110,7 +108,7 @@ void SkyboxNight::record(const uint8_t frameIndex, const VkCommandBuffer& priCmd
             pStars->draw(TYPE, pipelineBindDataList_.getValue(pStars->PIPELINE_TYPE), priCmd, frameIndex);
         }
 
-        vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+        priCmd.nextSubpass(vk::SubpassContents::eInline);
 
         // TEXTURE
         if (true) {

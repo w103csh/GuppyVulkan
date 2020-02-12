@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -45,11 +45,11 @@ class Handler : public Game::Handler {
     void reset() override;
 
     // SYNC
-    std::vector<VkFence> passFences_;
+    std::vector<vk::Fence> passFences_;
 
     // SUBMIT (This is not used atm)
     void submitResources(std::vector<const SubmitResource*>& pResources);
-    std::vector<VkSubmitInfo> submitInfos_;
+    std::vector<vk::SubmitInfo> submitInfos_;
 
     /* Everything in pComputeMap_ gets submitted per frame. If you need to submit compute
      *  commands at a different rate then you should make another map, so that the logic doesn't

@@ -9,7 +9,6 @@
 #include <complex>
 #include <random>
 #include <string>
-#include <vulkan/vulkan.h>
 
 #include "Deferred.h"
 #include "FFT.h"
@@ -107,14 +106,14 @@ void MakTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info) {
              },
              true,
              true},
-            VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+            vk::ImageViewType::e2DArray,
             {info.N, info.M, 1},
             {},
-            0,
+            {},
             SAMPLER::DEFAULT_NEAREST,  // Maybe this texture should be split up for filtering layers separately?
-            VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+            vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
             {{false, false}, 1},
-            VK_FORMAT_R32G32B32A32_SFLOAT,
+            vk::Format::eR32G32B32A32Sfloat,
             Sampler::CHANNELS::_4,
             sizeof(float),
         };
@@ -143,25 +142,25 @@ const CreateInfo DISP_COMP_CREATE_INFO = {
     SHADER::OCEAN_DISP_COMP,  //
     "Ocean Sufrace Dispersion Compute Shader",
     "comp.ocean.dispersion.glsl",
-    VK_SHADER_STAGE_COMPUTE_BIT,
+    vk::ShaderStageFlagBits::eCompute,
 };
 const CreateInfo FFT_COMP_CREATE_INFO = {
     SHADER::OCEAN_FFT_COMP,  //
     "Ocean Surface Fast Fourier Transform Compute Shader",
     "comp.ocean.fft.glsl",
-    VK_SHADER_STAGE_COMPUTE_BIT,
+    vk::ShaderStageFlagBits::eCompute,
 };
 const CreateInfo VERT_CREATE_INFO = {
     SHADER::OCEAN_VERT,  //
     "Ocean Surface Vertex Shader",
     "vert.ocean.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO = {
     SHADER::OCEAN_DEFERRED_MRT_FRAG,                                  //
     "Ocean Surface Deferred Multiple Render Target Fragment Shader",  //
     "frag.ocean.deferred.mrt.glsl",                                   //
-    VK_SHADER_STAGE_FRAGMENT_BIT,                                     //
+    vk::ShaderStageFlagBits::eFragment,                               //
     {SHADER_LINK::COLOR_FRAG, SHADER_LINK::DEFAULT_MATERIAL},
 };
 }  // namespace Ocean
@@ -247,7 +246,7 @@ void Dispersion::getShaderStageInfoResources(CreateInfoResources& createInfoRes)
     createInfoRes.specializationInfo.back().pData = &omega0_;
 
     assert(createInfoRes.shaderStageInfos.size() == 1 &&
-           createInfoRes.shaderStageInfos[0].stage == VK_SHADER_STAGE_COMPUTE_BIT);
+           createInfoRes.shaderStageInfos[0].stage == vk::ShaderStageFlagBits::eCompute);
     // Add the specialization to the shader info.
     createInfoRes.shaderStageInfos[0].pSpecializationInfo = &createInfoRes.specializationInfo.back();
 }
@@ -283,10 +282,8 @@ void Wireframe::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 }
 
 void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    ::HeightFieldFluid::VertexData::getInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_VERTEX);
-    Storage::Vector4::GetInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_VERTEX);  // Not used
+    ::HeightFieldFluid::VertexData::getInputDescriptions(createInfoRes, vk::VertexInputRate::eVertex);
+    Storage::Vector4::GetInputDescriptions(createInfoRes, vk::VertexInputRate::eVertex);  // Not used
     Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
 
     // bindings
@@ -297,12 +294,9 @@ void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes
         static_cast<uint32_t>(createInfoRes.attrDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
-    createInfoRes.inputAssemblyStateInfo = {};
-    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
-    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo = vk::PipelineInputAssemblyStateCreateInfo{};
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_TRUE;
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eLineStrip;
 }
 
 // SURFACE
@@ -330,10 +324,8 @@ void Surface::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 }
 
 void Surface::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    ::HeightFieldFluid::VertexData::getInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_VERTEX);
-    Storage::Vector4::GetInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_VERTEX);  // Not used
+    ::HeightFieldFluid::VertexData::getInputDescriptions(createInfoRes, vk::VertexInputRate::eVertex);
+    Storage::Vector4::GetInputDescriptions(createInfoRes, vk::VertexInputRate::eVertex);  // Not used
     Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
 
     // bindings
@@ -344,25 +336,20 @@ void Surface::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) 
         static_cast<uint32_t>(createInfoRes.attrDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
-    createInfoRes.inputAssemblyStateInfo = {};
-    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
-    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo = vk::PipelineInputAssemblyStateCreateInfo{};
     if (DO_TESSELLATE) {
         createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
-        createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_PATCH_LIST;
+        createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::ePatchList;
     } else {
         createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_TRUE;
-        createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+        createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eTriangleStrip;
     }
 }
 
 void Surface::getTesselationInfoResources(CreateInfoResources& createInfoRes) {
     if (!DO_TESSELLATE) return;
-    createInfoRes.tessellationStateInfo = {};
-    createInfoRes.tessellationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO;
-    createInfoRes.tessellationStateInfo.pNext = nullptr;
-    createInfoRes.tessellationStateInfo.flags = 0;
+    createInfoRes.useTessellationInfo = true;
+    createInfoRes.tessellationStateInfo = vk::PipelineTessellationStateCreateInfo{};
     createInfoRes.tessellationStateInfo.patchControlPoints = 3;
 }
 
@@ -402,13 +389,13 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
     // BUFFER VIEWS
     {
         auto bitRevOffsets = FFT::MakeBitReversalOffsets(N);
-        handler.textureHandler().makeBufferView(BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_N_ID, VK_FORMAT_R16_SINT,
+        handler.textureHandler().makeBufferView(BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_N_ID, vk::Format::eR16Sint,
                                                 sizeof(uint16_t) * bitRevOffsets.size(), bitRevOffsets.data());
         if (N != M) bitRevOffsets = FFT::MakeBitReversalOffsets(N);
-        handler.textureHandler().makeBufferView(BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_M_ID, VK_FORMAT_R16_SINT,
+        handler.textureHandler().makeBufferView(BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_M_ID, vk::Format::eR16Sint,
                                                 sizeof(uint16_t) * bitRevOffsets.size(), bitRevOffsets.data());
         auto twiddleFactors = FFT::MakeTwiddleFactors((std::max)(N, M));
-        handler.textureHandler().makeBufferView(BufferView::Ocean::FFT_TWIDDLE_FACTORS_ID, VK_FORMAT_R32G32_SFLOAT,
+        handler.textureHandler().makeBufferView(BufferView::Ocean::FFT_TWIDDLE_FACTORS_ID, vk::Format::eR32G32Sfloat,
                                                 sizeof(float) * twiddleFactors.size(), twiddleFactors.data());
     }
 
@@ -489,29 +476,24 @@ void Buffer::loadBuffers() {
 
     // VERTEX
     BufferResource stgRes = {};
-    helpers::createBuffer(
-        ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd,
-        static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT),
-        sizeof(HeightFieldFluid::VertexData) * verticesHFF_.size(), NAME + " vertex", stgRes, verticesHFFRes_,
-        verticesHFF_.data());
+    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+                     sizeof(HeightFieldFluid::VertexData) * verticesHFF_.size(), NAME + " vertex", stgRes, verticesHFFRes_,
+                     verticesHFF_.data());
     pLdgRes_->stgResources.push_back(std::move(stgRes));
 
     // INDEX (SURFACE)
     assert(indices_.size());
     stgRes = {};
-    helpers::createBuffer(
-        ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd,
-        static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
-        sizeof(VB_INDEX_TYPE) * indices_.size(), NAME + " index (surface)", stgRes, indexRes_, indices_.data());
+    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+                     sizeof(VB_INDEX_TYPE) * indices_.size(), NAME + " index (surface)", stgRes, indexRes_, indices_.data());
     pLdgRes_->stgResources.push_back(std::move(stgRes));
 
     // INDEX (WIREFRAME)
     assert(indicesWF_.size());
     stgRes = {};
-    helpers::createBuffer(
-        ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd,
-        static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
-        sizeof(VB_INDEX_TYPE) * indicesWF_.size(), NAME + " index (wireframe)", stgRes, indexWFRes_, indicesWF_.data());
+    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+                     sizeof(VB_INDEX_TYPE) * indicesWF_.size(), NAME + " index (wireframe)", stgRes, indexWFRes_,
+                     indicesWF_.data());
     pLdgRes_->stgResources.push_back(std::move(stgRes));
 }
 
@@ -519,17 +501,17 @@ void Buffer::destroy() {
     Base::destroy();
     auto& dev = handler().shell().context().dev;
     if (verticesHFF_.size()) {
-        vkDestroyBuffer(dev, verticesHFFRes_.buffer, nullptr);
-        vkFreeMemory(dev, verticesHFFRes_.memory, nullptr);
+        dev.destroyBuffer(verticesHFFRes_.buffer, ALLOC_PLACE_HOLDER);
+        dev.freeMemory(verticesHFFRes_.memory, ALLOC_PLACE_HOLDER);
     }
     if (indicesWF_.size()) {
-        vkDestroyBuffer(dev, indexWFRes_.buffer, nullptr);
-        vkFreeMemory(dev, indexWFRes_.memory, nullptr);
+        dev.destroyBuffer(indexWFRes_.buffer, ALLOC_PLACE_HOLDER);
+        dev.freeMemory(indexWFRes_.memory, ALLOC_PLACE_HOLDER);
     }
 }
 
 void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                  const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                  const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                   const uint8_t frameIndex) const {
     if (pPipelineBindData->type != PIPELINE{drawMode}) return;
 
@@ -537,27 +519,23 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
 
     switch (drawMode) {
         case GRAPHICS::OCEAN_WF_DEFERRED: {
-            vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
-            vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                    static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                                    descSetBindData.descriptorSets[setIndex].data(),
-                                    static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                                    descSetBindData.dynamicOffsets.data());
-            const VkBuffer buffers[] = {
+            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                                   descSetBindData.descriptorSets[setIndex], descSetBindData.dynamicOffsets);
+            const std::array<vk::Buffer, 3> buffers = {
                 verticesHFFRes_.buffer,
                 pDescriptors_[normalOffset_]->BUFFER_INFO.bufferInfo.buffer,  // Not used
                 pInstObj3d_->BUFFER_INFO.bufferInfo.buffer,
 
             };
-            const VkDeviceSize offsets[] = {
+            const std::array<vk::DeviceSize, 3> offsets = {
                 0,
                 pDescriptors_[normalOffset_]->BUFFER_INFO.memoryOffset,  // Not used
                 pInstObj3d_->BUFFER_INFO.memoryOffset,
             };
-            vkCmdBindVertexBuffers(cmd, 0, 3, buffers, offsets);
-            vkCmdBindIndexBuffer(cmd, indexWFRes_.buffer, 0, VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(                              //
-                cmd,                                       // VkCommandBuffer commandBuffer
+            cmd.bindVertexBuffers(0, buffers, offsets);
+            cmd.bindIndexBuffer(indexWFRes_.buffer, 0, vk::IndexType::eUint32);
+            cmd.drawIndexed(                               //
                 static_cast<uint32_t>(indicesWF_.size()),  // uint32_t indexCount
                 pInstObj3d_->BUFFER_INFO.count,            // uint32_t instanceCount
                 0,                                         // uint32_t firstIndex
@@ -566,26 +544,25 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
             );
         } break;
         case GRAPHICS::OCEAN_SURFACE_DEFERRED: {
-            vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
-            vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                    static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                                    descSetBindData.descriptorSets[setIndex].data(),
-                                    static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                                    descSetBindData.dynamicOffsets.data());
-            const VkBuffer buffers[] = {
+            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                                   static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
+                                   descSetBindData.descriptorSets[setIndex].data(),
+                                   static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
+                                   descSetBindData.dynamicOffsets.data());
+            const std::array<vk::Buffer, 3> buffers = {
                 verticesHFFRes_.buffer,
                 pDescriptors_[normalOffset_]->BUFFER_INFO.bufferInfo.buffer,
                 pInstObj3d_->BUFFER_INFO.bufferInfo.buffer,
             };
-            const VkDeviceSize offsets[] = {
+            const std::array<vk::DeviceSize, 3> offsets = {
                 0,
                 pDescriptors_[normalOffset_]->BUFFER_INFO.memoryOffset,
                 pInstObj3d_->BUFFER_INFO.memoryOffset,
             };
-            vkCmdBindVertexBuffers(cmd, 0, 3, buffers, offsets);
-            vkCmdBindIndexBuffer(cmd, indexRes_.buffer, 0, VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(                            //
-                cmd,                                     // VkCommandBuffer commandBuffer
+            cmd.bindVertexBuffers(0, buffers, offsets);
+            cmd.bindIndexBuffer(indexRes_.buffer, 0, vk::IndexType::eUint32);
+            cmd.drawIndexed(                             //
                 static_cast<uint32_t>(indices_.size()),  // uint32_t indexCount
                 pInstObj3d_->BUFFER_INFO.count,          // uint32_t instanceCount
                 0,                                       // uint32_t firstIndex
@@ -600,77 +577,75 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
 }
 
 void Buffer::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                      const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                      const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                       const uint8_t frameIndex) const {
     auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
 
-    const VkMemoryBarrier memoryBarrierCompute = {
-        VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr,
-        VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT,  // srcAccessMask
-        VK_ACCESS_SHADER_WRITE_BIT | VK_ACCESS_SHADER_READ_BIT,  // dstAccessMask
+    const vk::MemoryBarrier memoryBarrierCompute = {
+        vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead,  // srcAccessMask
+        vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead,  // dstAccessMask
     };
 
     switch (std::visit(Pipeline::GetCompute{}, pPipelineBindData->type)) {
         case COMPUTE::FFT_ONE: {
-            vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
-            vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                    static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                                    descSetBindData.descriptorSets[setIndex].data(),
-                                    static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                                    descSetBindData.dynamicOffsets.data());
+            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                                   static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
+                                   descSetBindData.descriptorSets[setIndex].data(),
+                                   static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
+                                   descSetBindData.dynamicOffsets.data());
 
-            vkCmdDispatch(cmd, 1, 4, 1);
+            cmd.dispatch(1, 4, 1);
 
-            vkCmdPipelineBarrier(cmd,                                   //
-                                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,  // srcStageMask
-                                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,  // dstStageMask
-                                 0,                                     // dependencyFlags
-                                 1,                                     // memoryBarrierCount
-                                 &memoryBarrierCompute,                 // pMemoryBarriers
-                                 0, nullptr, 0, nullptr);
+            cmd.pipelineBarrier(                            //
+                vk::PipelineStageFlagBits::eComputeShader,  // srcStageMask
+                vk::PipelineStageFlagBits::eComputeShader,  // dstStageMask
+                {},                                         // dependencyFlags
+                {memoryBarrierCompute},                     // pMemoryBarriers
+                {}, {});
 
-            vkCmdDispatch(cmd, 4, 1, 1);
+            cmd.dispatch(4, 1, 1);
 
         } break;
         case COMPUTE::OCEAN_DISP: {
-            vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
-            vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                    static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                                    descSetBindData.descriptorSets[setIndex].data(),
-                                    static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                                    descSetBindData.dynamicOffsets.data());
+            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                                   static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
+                                   descSetBindData.descriptorSets[setIndex].data(),
+                                   static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
+                                   descSetBindData.dynamicOffsets.data());
 
-            vkCmdDispatch(cmd, DISP_WORKGROUP_SIZE, DISP_WORKGROUP_SIZE, 1);
+            cmd.dispatch(DISP_WORKGROUP_SIZE, DISP_WORKGROUP_SIZE, 1);
 
-            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1,
-                                 &memoryBarrierCompute, 0, nullptr, 0, nullptr);
+            cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+                                {memoryBarrierCompute}, {}, {});
 
         } break;
         case COMPUTE::OCEAN_FFT: {
-            vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
-            vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                    static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                                    descSetBindData.descriptorSets[setIndex].data(),
-                                    static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                                    descSetBindData.dynamicOffsets.data());
+            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                                   static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
+                                   descSetBindData.descriptorSets[setIndex].data(),
+                                   static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
+                                   descSetBindData.dynamicOffsets.data());
 
             FFT::RowColumnOffset offset = 1;  // row
-            vkCmdPushConstants(cmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
-                               static_cast<uint32_t>(sizeof(FFT::RowColumnOffset)), &offset);
+            cmd.pushConstants(pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                              static_cast<uint32_t>(sizeof(FFT::RowColumnOffset)), &offset);
 
-            vkCmdDispatch(cmd, FFT_WORKGROUP_SIZE, 1, 1);
+            cmd.dispatch(FFT_WORKGROUP_SIZE, 1, 1);
 
-            vkCmdPipelineBarrier(cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT, 0, 1,
-                                 &memoryBarrierCompute, 0, nullptr, 0, nullptr);
+            cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+                                {memoryBarrierCompute}, {}, {});
 
             offset = 0;  // column
-            vkCmdPushConstants(cmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
-                               static_cast<uint32_t>(sizeof(FFT::RowColumnOffset)), &offset);
+            cmd.pushConstants(pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                              static_cast<uint32_t>(sizeof(FFT::RowColumnOffset)), &offset);
 
-            vkCmdDispatch(cmd, FFT_WORKGROUP_SIZE, 1, 1);
+            cmd.dispatch(FFT_WORKGROUP_SIZE, 1, 1);
 
         } break;
         default: {

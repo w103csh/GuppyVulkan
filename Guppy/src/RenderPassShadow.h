@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -8,7 +8,7 @@
 
 #include <memory>
 #include <unordered_map>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "RenderPass.h"
 
@@ -32,7 +32,7 @@ class Base : public RenderPass::Base {
 
    public:
     void record(const uint8_t frameIndex, const PASS& surrogatePassType, std::vector<PIPELINE>& surrogatePipelineTypes,
-                const VkCommandBuffer& priCmd);
+                const vk::CommandBuffer& priCmd);
 };
 
 // DEFAULT

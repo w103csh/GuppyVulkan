@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -20,7 +20,7 @@ Texture::Base::Base(const uint32_t&& offset, const CreateInfo* pCreateInfo)
       aspect(BAD_ASPECT),
       pLdgRes(nullptr) {}
 
-void Texture::Base::destroy(const VkDevice& dev) {
+void Texture::Base::destroy(const vk::Device& dev) {
     for (auto& sampler : samplers) {
         sampler.destroy(dev);
     }

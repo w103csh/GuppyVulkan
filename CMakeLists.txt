@@ -439,7 +439,6 @@ if(NOT EXISTS ${GLMINC_PREFIX})
     message(FATAL_ERROR "Necessary glm headers do not exist: " ${GLMINC_PREFIX})
 endif()
 
-add_definitions(-DVULKAN_SAMPLES_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 add_definitions(-DGUPPY_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Custom targets

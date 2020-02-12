@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -121,7 +121,7 @@ void RenderPass::Handler::init() {
     createCmds();
     createFences();
     // TODO: should this just be an array too???? Ugh
-    submitInfos_.assign(RESOURCE_SIZE, {VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr});
+    submitInfos_.assign(RESOURCE_SIZE, {});
 
     // SCREEN QUAD
     Mesh::Plane::CreateInfo planeInfo = {};
@@ -207,16 +207,14 @@ void RenderPass::Handler::createCmds() {
     cmdList_.resize(10);
     for (auto& cmds : cmdList_) {
         cmds.resize(1);
-        commandHandler().createCmdBuffers(QUEUE::GRAPHICS, cmds.data(), VK_COMMAND_BUFFER_LEVEL_PRIMARY, cmds.size());
+        commandHandler().createCmdBuffers(QUEUE::GRAPHICS, cmds.data(), vk::CommandBufferLevel::ePrimary, cmds.size());
     }
 }
 
-void RenderPass::Handler::createFences(VkFenceCreateFlags flags) {
+void RenderPass::Handler::createFences(vk::FenceCreateFlags flags) {
     frameFences_.resize(shell().context().imageCount);
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = flags;
-    for (auto& fence : frameFences_) vk::assert_success(vkCreateFence(shell().context().dev, &fenceInfo, nullptr, &fence));
+    vk::FenceCreateInfo fenceInfo = {flags};
+    for (auto& fence : frameFences_) fence = shell().context().dev.createFence(fenceInfo, ALLOC_PLACE_HOLDER);
 }
 
 const std::unique_ptr<Mesh::Texture>& RenderPass::Handler::getScreenQuad() {
@@ -248,18 +246,15 @@ RenderPass::orderedPassTypeOffsetPairs RenderPass::Handler::getActivePassTypeOff
 void RenderPass::Handler::createSwapchainResources() {
     const auto& ctx = shell().context();
 
-    uint32_t imageCount = ctx.imageCount;
-    vk::assert_success(vkGetSwapchainImagesKHR(ctx.dev, ctx.swapchain, &imageCount, nullptr));
-
     // Get the image resources from the swapchain...
-    swpchnRes_.images.resize(imageCount);
-    vk::assert_success(vkGetSwapchainImagesKHR(ctx.dev, ctx.swapchain, &imageCount, swpchnRes_.images.data()));
+    swpchnRes_.images = ctx.dev.getSwapchainImagesKHR(ctx.swapchain);
 
     bool wasTexDestroyed = false;
-    swpchnRes_.views.resize(imageCount);
+    swpchnRes_.views.resize(swpchnRes_.images.size());
     for (uint32_t i = 0; i < ctx.imageCount; i++) {
-        VkImageSubresourceRange range = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-        helpers::createImageView(ctx.dev, swpchnRes_.images[i], ctx.surfaceFormat.format, VK_IMAGE_VIEW_TYPE_2D, range,
+        vk::ImageSubresourceRange range = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
+
+        helpers::createImageView(ctx.dev, swpchnRes_.images[i], ctx.surfaceFormat.format, vk::ImageViewType::e2D, range,
                                  swpchnRes_.views[i]);
 
         // TEXTURE
@@ -291,8 +286,8 @@ void RenderPass::Handler::acquireBackBuffer() {
     fences_.push_back(frameFences_[frameIndex_]);
 
     // wait for the last submission since we reuse frame data.
-    vk::assert_success(vkWaitForFences(ctx.dev, static_cast<uint32_t>(fences_.size()), fences_.data(), VK_TRUE, UINT64_MAX));
-    vk::assert_success(vkResetFences(ctx.dev, 1, &frameFences_[frameIndex_]));
+    ctx.dev.waitForFences(fences_, VK_TRUE, UINT64_MAX);
+    ctx.dev.resetFences(1, &frameFences_[frameIndex_]);
 }
 
 void RenderPass::Handler::recordPasses() {
@@ -300,12 +295,11 @@ void RenderPass::Handler::recordPasses() {
     auto frameIndex = getFrameIndex();
 
     // auto& cmd = cmdList_[frameIndex][0];
-    // vkResetCommandBuffer(cmd, 0);
-    // VkCommandBufferBeginInfo bufferInfo = {};
-    // bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    //// bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-    // bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-    // vk::assert_success(vkBeginCommandBuffer(cmd, &bufferInfo));
+    // cmd.reset({});
+    // vk::CommandBufferBeginInfo bufferInfo = {};
+    //// bufferInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
+    // bufferInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
+    // cmd.begin(bufferInfo);
 
     uint8_t passIndex = 0, resIndex = 0;
     for (; passIndex < mainLoopOffsets_.size(); passIndex++, resIndex++) {
@@ -321,15 +315,15 @@ void RenderPass::Handler::recordPasses() {
             pResource->waitSemaphoreCount++;
         } else if (submitResources_[resIndex - 1].signalSemaphoreCount) {
             // Take the signals from the previous pass
-            std::memcpy(                                                                   //
-                &pResource->waitSemaphores[pResource->waitSemaphoreCount],                 //
-                submitResources_[resIndex - 1].signalSemaphores.data(),                    //
-                sizeof(VkSemaphore) * submitResources_[resIndex - 1].signalSemaphoreCount  //
+            std::memcpy(                                                                     //
+                &pResource->waitSemaphores[pResource->waitSemaphoreCount],                   //
+                submitResources_[resIndex - 1].signalSemaphores.data(),                      //
+                sizeof(vk::Semaphore) * submitResources_[resIndex - 1].signalSemaphoreCount  //
             );
-            std::memcpy(                                                                            //
-                &pResource->waitDstStageMasks[pResource->waitSemaphoreCount],                       //
-                submitResources_[resIndex - 1].signalSrcStageMasks.data(),                          //
-                sizeof(VkPipelineStageFlags) * submitResources_[resIndex - 1].signalSemaphoreCount  //
+            std::memcpy(                                                                              //
+                &pResource->waitDstStageMasks[pResource->waitSemaphoreCount],                         //
+                submitResources_[resIndex - 1].signalSrcStageMasks.data(),                            //
+                sizeof(vk::PipelineStageFlags) * submitResources_[resIndex - 1].signalSemaphoreCount  //
             );
             pResource->waitSemaphoreCount += submitResources_[resIndex - 1].signalSemaphoreCount;
         }
@@ -354,7 +348,7 @@ void RenderPass::Handler::recordPasses() {
 
 void RenderPass::Handler::submit(const uint8_t submitCount) {
     const SubmitResource* pResource;
-    VkSubmitInfo* pInfo;
+    vk::SubmitInfo* pInfo;
     for (uint8_t i = 0; i < submitCount; i++) {
         pResource = &submitResources_[i];
         pInfo = &submitInfos_[i];
@@ -362,15 +356,15 @@ void RenderPass::Handler::submit(const uint8_t submitCount) {
         pInfo->pWaitSemaphores = pResource->waitSemaphores.data();
         pInfo->pWaitDstStageMask = pResource->waitDstStageMasks.data();
         for (uint32_t j = 0; j < pResource->commandBufferCount; j++)  //
-            vk::assert_success(vkEndCommandBuffer(pResource->commandBuffers[j]));
+            pResource->commandBuffers[j].end();
         pInfo->commandBufferCount = pResource->commandBufferCount;
         pInfo->pCommandBuffers = pResource->commandBuffers.data();
         pInfo->signalSemaphoreCount = pResource->signalSemaphoreCount;
         pInfo->pSignalSemaphores = pResource->signalSemaphores.data();
     }
 
-    vk::assert_success(
-        vkQueueSubmit(commandHandler().graphicsQueue(), submitCount, &submitInfos_[0], frameFences_[frameIndex_]));
+    helpers::checkVkResult(
+        commandHandler().graphicsQueue().submit(submitCount, submitInfos_.data(), frameFences_[frameIndex_]));
 }
 
 void RenderPass::Handler::updateFrameIndex() {
@@ -389,14 +383,14 @@ bool RenderPass::Handler::isFinalTargetPass(const std::string& targetId, const P
 
 void RenderPass::Handler::destroySwapchainResources() {
     for (uint32_t i = 0; i < swpchnRes_.views.size(); i++) {
-        vkDestroyImageView(shell().context().dev, swpchnRes_.views[i], nullptr);
+        shell().context().dev.destroyImageView(swpchnRes_.views[i], ALLOC_PLACE_HOLDER);
         // Update swapchain texture status.
         auto pTexture = textureHandler().getTexture(SWAPCHAIN_TARGET_ID, i);
         assert(pTexture);
         pTexture->status = STATUS::DESTROYED;
     }
     swpchnRes_.views.clear();
-    // Images are destroyed by vkDestroySwapchainKHR
+    // Images are destroyed by destroySwapchainKHR
     swpchnRes_.images.clear();
 }
 
@@ -416,7 +410,7 @@ void RenderPass::Handler::destroy() {
     }
     cmdList_.clear();
     // FENCE
-    for (auto& fence : frameFences_) vkDestroyFence(shell().context().dev, fence, nullptr);
+    for (auto& fence : frameFences_) shell().context().dev.destroyFence(fence, ALLOC_PLACE_HOLDER);
     frameFences_.clear();
 }
 

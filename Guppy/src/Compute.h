@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -9,7 +9,7 @@
 #include <set>
 #include <string>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "ConstantsAll.h"
 #include "Handlee.h"
@@ -82,17 +82,17 @@ class Base : public Handlee<Handler> {
    protected:
     Base(Handler& handler, const CreateInfo* pCreateInfo);
 
-    virtual void bindPushConstants(VkCommandBuffer cmd) {}
-    virtual void preDispatch(const VkCommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPplnBindData,
+    virtual void bindPushConstants(vk::CommandBuffer cmd) {}
+    virtual void preDispatch(const vk::CommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPplnBindData,
                              const Descriptor::Set::BindData& descSetBindData, const uint8_t frameIndex) {}
-    virtual void postDispatch(const VkCommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPplnBindData,
+    virtual void postDispatch(const vk::CommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPplnBindData,
                               const Descriptor::Set::BindData& descSetBindData, const uint8_t frameIndex) {}
 
     uint32_t groupCountX_;
     uint32_t groupCountY_;
     uint32_t groupCountZ_;
 
-    std::vector<VkCommandBuffer> cmds_;
+    std::vector<vk::CommandBuffer> cmds_;
     BarrierResource barrierResource_;
 
     // PIPELINE
@@ -102,7 +102,7 @@ class Base : public Handlee<Handler> {
     Descriptor::Set::bindDataMap bindDataMap_;
 
     // SYNC
-    std::vector<VkSemaphore> semaphores_;
+    std::vector<vk::Semaphore> semaphores_;
 
    private:
     FlagBits status_;
@@ -111,7 +111,7 @@ class Base : public Handlee<Handler> {
     bool isFramebufferImageSizeDependent_;
 
     // SYNC
-    VkFence fence_;
+    vk::Fence fence_;
 };
 
 namespace PostProcess {
@@ -128,9 +128,9 @@ class Default : public Base {
 
    protected:
     void record(const uint8_t frameIndex, RenderPass::SubmitResource& submitResource) override;
-    void preDispatch(const VkCommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPplnBindData,
+    void preDispatch(const vk::CommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPplnBindData,
                      const Descriptor::Set::BindData& descSetBindData, const uint8_t frameIndex) override;
-    void postDispatch(const VkCommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPplnBindData,
+    void postDispatch(const vk::CommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPplnBindData,
                       const Descriptor::Set::BindData& descSetBindData, const uint8_t frameIndex) override;
 };
 

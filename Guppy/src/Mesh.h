@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -10,6 +10,7 @@
 #include <glm/glm.hpp>
 #include <set>
 #include <vector>
+#include <vulkan/vulkan.hpp>
 
 #include "ConstantsAll.h"
 #include "Geometry.h"
@@ -78,7 +79,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Obj3d::In
     virtual inline uint32_t getVertexCount() const = 0;  // TODO: this shouldn't be public
     virtual const glm::vec3& getVertexPositionAtOffset(size_t offset) const = 0;
     void updateBuffers();
-    inline VkBuffer& getVertexBuffer() { return vertexRes_.buffer; }
+    inline vk::Buffer& getVertexBuffer() { return vertexRes_.buffer; }
 
     // INDEX
     uint32_t getFaceCount() const;
@@ -95,10 +96,11 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Obj3d::In
 
     // DRAWING
     bool shouldDraw(const PASS& passTypeComp, const PIPELINE& pipelineType) const;
-    void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData, const VkCommandBuffer& cmd,
-              const uint8_t frameIndex) const;
     void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-              const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd, const uint8_t frameIndex) const;
+              const vk::CommandBuffer& cmd, const uint8_t frameIndex) const;
+    void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+              const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
+              const uint8_t frameIndex) const;
 
     virtual void destroy();
 
@@ -115,20 +117,20 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Obj3d::In
     // VERTEX
     void loadBuffers();
     virtual inline const void* getVertexData() const = 0;
-    virtual inline VkDeviceSize getVertexBufferSize(bool assert = false) const = 0;
+    virtual inline vk::DeviceSize getVertexBufferSize(bool assert = false) const = 0;
 
     // INDEX
     inline VB_INDEX_TYPE* getIndexData() { return indices_.data(); }
     inline uint32_t getIndexCount() const { return static_cast<uint32_t>(indices_.size()); }
-    inline VkDeviceSize getIndexBufferSize(bool assert = false) const {
-        VkDeviceSize bufferSize = sizeof(indices_[0]) * indices_.size();
+    inline vk::DeviceSize getIndexBufferSize(bool assert = false) const {
+        vk::DeviceSize bufferSize = sizeof(indices_[0]) * indices_.size();
         if (assert) assert(bufferSize == indexRes_.memoryRequirements.size);
         return bufferSize;
     }
     // INDEX (ADJACENCY)
     virtual void makeAdjacenyList();
-    inline VkDeviceSize getIndexBufferAdjSize(bool assert = false) const {
-        VkDeviceSize bufferSize = sizeof(indicesAdjaceny_[0]) * indicesAdjaceny_.size();
+    inline vk::DeviceSize getIndexBufferAdjSize(bool assert = false) const {
+        vk::DeviceSize bufferSize = sizeof(indicesAdjaceny_[0]) * indicesAdjaceny_.size();
         if (assert) assert(bufferSize == indexAdjacencyRes_.memoryRequirements.size);
         return bufferSize;
     }
@@ -151,10 +153,8 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Obj3d::In
     std::shared_ptr<Material::Base> pMaterial_;
 
    private:
-    void createBufferData(const VkCommandBuffer& cmd, BufferResource& stgRes, VkDeviceSize bufferSize, const void* data,
-                          BufferResource& res, VkBufferUsageFlagBits usage, std::string bufferType);
-
-    void bindPushConstants(VkCommandBuffer cmd) const;  // TODO: I hate this...
+    void createBufferData(const vk::CommandBuffer& cmd, BufferResource& stgRes, vk::DeviceSize bufferSize, const void* data,
+                          BufferResource& res, vk::BufferUsageFlagBits usage, std::string bufferType);
 
     Mesh::index offset_;
 };
@@ -183,8 +183,8 @@ class Color : public Base {
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
     inline uint32_t getVertexCount() const override { return vertices_.size(); }
-    inline VkDeviceSize getVertexBufferSize(bool assert = false) const override {
-        VkDeviceSize bufferSize = sizeof(Vertex::Color) * vertices_.size();
+    inline vk::DeviceSize getVertexBufferSize(bool assert = false) const override {
+        vk::DeviceSize bufferSize = sizeof(Vertex::Color) * vertices_.size();
         if (assert) assert(bufferSize == vertexRes_.memoryRequirements.size);
         return bufferSize;
     }
@@ -240,8 +240,8 @@ class Texture : public Base {
     }
     inline virtual const void* getVertexData() const override { return vertices_.data(); }
     inline uint32_t getVertexCount() const override { return vertices_.size(); }
-    inline VkDeviceSize getVertexBufferSize(bool assert = false) const override {
-        VkDeviceSize bufferSize = sizeof(Vertex::Texture) * vertices_.size();
+    inline vk::DeviceSize getVertexBufferSize(bool assert = false) const override {
+        vk::DeviceSize bufferSize = sizeof(Vertex::Texture) * vertices_.size();
         if (assert) assert(bufferSize == vertexRes_.memoryRequirements.size);
         return bufferSize;
     }

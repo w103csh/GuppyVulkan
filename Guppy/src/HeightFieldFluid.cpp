@@ -17,7 +17,7 @@
 #include "TextureHandler.h"
 
 namespace HeightFieldFluid {
-void VertexData::getInputDescriptions(Pipeline::CreateInfoResources& createInfoRes, const VkVertexInputRate&& inputRate) {
+void VertexData::getInputDescriptions(Pipeline::CreateInfoResources& createInfoRes, const vk::VertexInputRate&& inputRate) {
     const auto BINDING = static_cast<uint32_t>(createInfoRes.bindDescs.size());
     createInfoRes.bindDescs.push_back({});
     createInfoRes.bindDescs.back().binding = BINDING;
@@ -28,13 +28,13 @@ void VertexData::getInputDescriptions(Pipeline::CreateInfoResources& createInfoR
     createInfoRes.attrDescs.push_back({});
     createInfoRes.attrDescs.back().binding = BINDING;
     createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
-    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
+    createInfoRes.attrDescs.back().format = vk::Format::eR32G32B32Sfloat;  // vec3
     createInfoRes.attrDescs.back().offset = offsetof(::HeightFieldFluid::VertexData, position);
     // imageOffset
     createInfoRes.attrDescs.push_back({});
     createInfoRes.attrDescs.back().binding = BINDING;
     createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
-    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32_SINT;  // ivec2
+    createInfoRes.attrDescs.back().format = vk::Format::eR32G32Sint;  // ivec2
     createInfoRes.attrDescs.back().offset = offsetof(::HeightFieldFluid::VertexData, imageOffset);
 }
 }  // namespace HeightFieldFluid
@@ -45,25 +45,25 @@ const CreateInfo HFF_COMP_CREATE_INFO = {
     SHADER::HFF_HGHT_COMP,
     "Height Field Fluid Height Compute Shader",
     "comp.hff.hght.glsl",
-    VK_SHADER_STAGE_COMPUTE_BIT,
+    vk::ShaderStageFlagBits::eCompute,
 };
 const CreateInfo HFF_NORM_COMP_CREATE_INFO = {
     SHADER::HFF_NORM_COMP,
     "Height Field Fluid Normal Compute Shader",
     "comp.hff.norm.glsl",
-    VK_SHADER_STAGE_COMPUTE_BIT,
+    vk::ShaderStageFlagBits::eCompute,
 };
 const CreateInfo HFF_VERT_CREATE_INFO = {
     SHADER::HFF_VERT,
     "Height Field Fluid Vertex Shader",
     "vert.hff.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 const CreateInfo HFF_CLMN_VERT_CREATE_INFO = {
     SHADER::HFF_CLMN_VERT,
     "Height Field Fluid Column Vertex Shader",
     "vert.hff.column.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 }  // namespace Shader
 
@@ -184,9 +184,7 @@ void Column::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 }
 
 void Column::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    ::HeightFieldFluid::VertexData::getInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_INSTANCE);
+    ::HeightFieldFluid::VertexData::getInputDescriptions(createInfoRes, vk::VertexInputRate::eInstance);
 
     // bindings
     createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
@@ -196,12 +194,9 @@ void Column::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
         static_cast<uint32_t>(createInfoRes.attrDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
-    createInfoRes.inputAssemblyStateInfo = {};
-    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
-    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo = vk::PipelineInputAssemblyStateCreateInfo{};
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eTriangleList;
 }
 
 // WIREFRAME
@@ -223,10 +218,8 @@ void Wireframe::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 }
 
 void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    ::HeightFieldFluid::VertexData::getInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_VERTEX);
-    Storage::Vector4::GetInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_VERTEX);  // Not used
+    ::HeightFieldFluid::VertexData::getInputDescriptions(createInfoRes, vk::VertexInputRate::eVertex);
+    Storage::Vector4::GetInputDescriptions(createInfoRes, vk::VertexInputRate::eVertex);  // Not used
     Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
 
     // bindings
@@ -237,12 +230,9 @@ void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes
         static_cast<uint32_t>(createInfoRes.attrDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
-    createInfoRes.inputAssemblyStateInfo = {};
-    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
-    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo = vk::PipelineInputAssemblyStateCreateInfo{};
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_TRUE;
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_STRIP;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eLineStrip;
 }
 
 // OCEAN
@@ -270,10 +260,8 @@ void Ocean::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 }
 
 void Ocean::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
-    ::HeightFieldFluid::VertexData::getInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_VERTEX);
-    Storage::Vector4::GetInputDescriptions(createInfoRes, VK_VERTEX_INPUT_RATE_VERTEX);
+    ::HeightFieldFluid::VertexData::getInputDescriptions(createInfoRes, vk::VertexInputRate::eVertex);
+    Storage::Vector4::GetInputDescriptions(createInfoRes, vk::VertexInputRate::eVertex);
     Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
 
     // bindings
@@ -284,29 +272,26 @@ void Ocean::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
         static_cast<uint32_t>(createInfoRes.attrDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
-    createInfoRes.inputAssemblyStateInfo = {};
-    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
-    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo = vk::PipelineInputAssemblyStateCreateInfo{};
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_TRUE;
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eTriangleStrip;
 }
 
 }  // namespace HeightFieldFluid
 }  // namespace Pipeline
 
-Texture::CreateInfo MakeHeightFieldFluidTex(stbi_uc* pData, VkExtent3D extent) {
+Texture::CreateInfo MakeHeightFieldFluidTex(stbi_uc* pData, vk::Extent3D extent) {
     Sampler::CreateInfo sampInfo = {
         "HFF Sampler",
         {{{::Sampler::USAGE::HEIGHT}}},
-        VK_IMAGE_VIEW_TYPE_3D,
+        vk::ImageViewType::e3D,
         extent,
         {},
-        0,
+        {},
         SAMPLER::DEFAULT,
-        VK_IMAGE_USAGE_STORAGE_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
+        vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
         {{false, false}, 1},
-        VK_FORMAT_R32_SFLOAT,
+        vk::Format::eR32Sfloat,
         Sampler::CHANNELS::_1,
         sizeof(float),
     };
@@ -441,28 +426,24 @@ void Buffer::loadBuffers() {
 
     // VERTEX
     BufferResource stgRes = {};
-    helpers::createBuffer(
-        ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd,
-        static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT),
-        sizeof(VertexData) * verticesHFF_.size(), NAME + " vertex", stgRes, verticesHFFRes_, verticesHFF_.data());
+    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+                     sizeof(VertexData) * verticesHFF_.size(), NAME + " vertex", stgRes, verticesHFFRes_,
+                     verticesHFF_.data());
     pLdgRes_->stgResources.push_back(std::move(stgRes));
 
     // INDEX (SURFACE)
     assert(indices_.size());
     stgRes = {};
-    helpers::createBuffer(
-        ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd,
-        static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
-        sizeof(VB_INDEX_TYPE) * indices_.size(), NAME + " index (surface)", stgRes, indexRes_, indices_.data());
+    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+                     sizeof(VB_INDEX_TYPE) * indices_.size(), NAME + " index (surface)", stgRes, indexRes_, indices_.data());
     pLdgRes_->stgResources.push_back(std::move(stgRes));
 
     // INDEX (WIREFRAME)
     assert(indicesWF_.size());
     stgRes = {};
-    helpers::createBuffer(
-        ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd,
-        static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
-        sizeof(VB_INDEX_TYPE) * indicesWF_.size(), NAME + " index (wireframe)", stgRes, indexWFRes_, indicesWF_.data());
+    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+                     sizeof(VB_INDEX_TYPE) * indicesWF_.size(), NAME + " index (wireframe)", stgRes, indexWFRes_,
+                     indicesWF_.data());
     pLdgRes_->stgResources.push_back(std::move(stgRes));
 }
 
@@ -470,12 +451,12 @@ void Buffer::destroy() {
     Base::destroy();
     auto& dev = handler().shell().context().dev;
     if (verticesHFF_.size()) {
-        vkDestroyBuffer(dev, verticesHFFRes_.buffer, nullptr);
-        vkFreeMemory(dev, verticesHFFRes_.memory, nullptr);
+        dev.destroyBuffer(verticesHFFRes_.buffer, ALLOC_PLACE_HOLDER);
+        dev.freeMemory(verticesHFFRes_.memory, ALLOC_PLACE_HOLDER);
     }
     if (indicesWF_.size()) {
-        vkDestroyBuffer(dev, indexWFRes_.buffer, nullptr);
-        vkFreeMemory(dev, indexWFRes_.memory, nullptr);
+        dev.destroyBuffer(indexWFRes_.buffer, ALLOC_PLACE_HOLDER);
+        dev.freeMemory(indexWFRes_.memory, ALLOC_PLACE_HOLDER);
     }
 }
 
@@ -487,7 +468,7 @@ void Buffer::destroy() {
 //}
 
 void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                  const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                  const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                   const uint8_t frameIndex) const {
     if (pPipelineBindData->type != PIPELINE{drawMode}) return;
 
@@ -495,42 +476,33 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
 
     switch (drawMode) {
         case GRAPHICS::HFF_CLMN_DEFERRED: {
-            vkCmdPushConstants(cmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
-                               static_cast<uint32_t>(sizeof(Pipeline::HeightFieldFluid::Column::PushConstant)),
-                               &pInstObj3d_->model());
-            vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
-            vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                    static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                                    descSetBindData.descriptorSets[setIndex].data(),
-                                    static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                                    descSetBindData.dynamicOffsets.data());
-            const VkBuffer buffers[] = {verticesHFFRes_.buffer};
-            const VkDeviceSize offsets[] = {0};
-            vkCmdBindVertexBuffers(cmd, 0, 1, buffers, offsets);
-            vkCmdDraw(cmd, 36, workgroupSize_.x * workgroupSize_.y, 0, 0);
+            cmd.pushConstants(pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                              static_cast<uint32_t>(sizeof(Pipeline::HeightFieldFluid::Column::PushConstant)),
+                              &pInstObj3d_->model());
+            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                                   descSetBindData.descriptorSets[setIndex], descSetBindData.dynamicOffsets);
+            cmd.bindVertexBuffers(0, {verticesHFFRes_.buffer}, {0});
+            cmd.draw(36, workgroupSize_.x * workgroupSize_.y, 0, 0);
         } break;
         case GRAPHICS::HFF_WF_DEFERRED: {
-            vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
-            vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                    static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                                    descSetBindData.descriptorSets[setIndex].data(),
-                                    static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                                    descSetBindData.dynamicOffsets.data());
-            const VkBuffer buffers[] = {
+            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                                   descSetBindData.descriptorSets[setIndex], descSetBindData.dynamicOffsets);
+            const std::array<vk::Buffer, 3> buffers = {
                 verticesHFFRes_.buffer,
                 pDescriptors_[normalOffset_]->BUFFER_INFO.bufferInfo.buffer,  // Not used
                 pInstObj3d_->BUFFER_INFO.bufferInfo.buffer,
 
             };
-            const VkDeviceSize offsets[] = {
+            const std::array<vk::DeviceSize, 3> offsets = {
                 0,
                 pDescriptors_[normalOffset_]->BUFFER_INFO.memoryOffset,  // Not used
                 pInstObj3d_->BUFFER_INFO.memoryOffset,
             };
-            vkCmdBindVertexBuffers(cmd, 0, 3, buffers, offsets);
-            vkCmdBindIndexBuffer(cmd, indexWFRes_.buffer, 0, VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(                              //
-                cmd,                                       // VkCommandBuffer commandBuffer
+            cmd.bindVertexBuffers(0, buffers, offsets);
+            cmd.bindIndexBuffer(indexWFRes_.buffer, 0, vk::IndexType::eUint32);
+            cmd.drawIndexed(                               //
                 static_cast<uint32_t>(indicesWF_.size()),  // uint32_t indexCount
                 pInstObj3d_->BUFFER_INFO.count,            // uint32_t instanceCount
                 0,                                         // uint32_t firstIndex
@@ -539,26 +511,22 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
             );
         } break;
         case GRAPHICS::HFF_OCEAN_DEFERRED: {
-            vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
-            vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                    static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                                    descSetBindData.descriptorSets[setIndex].data(),
-                                    static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                                    descSetBindData.dynamicOffsets.data());
-            const VkBuffer buffers[] = {
+            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                                   descSetBindData.descriptorSets[setIndex], descSetBindData.dynamicOffsets);
+            const std::array<vk::Buffer, 3> buffers = {
                 verticesHFFRes_.buffer,
                 pDescriptors_[normalOffset_]->BUFFER_INFO.bufferInfo.buffer,
                 pInstObj3d_->BUFFER_INFO.bufferInfo.buffer,
             };
-            const VkDeviceSize offsets[] = {
+            const std::array<vk::DeviceSize, 3> offsets = {
                 0,
                 pDescriptors_[normalOffset_]->BUFFER_INFO.memoryOffset,
                 pInstObj3d_->BUFFER_INFO.memoryOffset,
             };
-            vkCmdBindVertexBuffers(cmd, 0, 3, buffers, offsets);
-            vkCmdBindIndexBuffer(cmd, indexRes_.buffer, 0, VK_INDEX_TYPE_UINT32);
-            vkCmdDrawIndexed(                            //
-                cmd,                                     // VkCommandBuffer commandBuffer
+            cmd.bindVertexBuffers(0, buffers, offsets);
+            cmd.bindIndexBuffer(indexRes_.buffer, 0, vk::IndexType::eUint32);
+            cmd.drawIndexed(                             //
                 static_cast<uint32_t>(indices_.size()),  // uint32_t indexCount
                 pInstObj3d_->BUFFER_INFO.count,          // uint32_t instanceCount
                 0,                                       // uint32_t firstIndex
@@ -573,7 +541,7 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
 }
 
 void Buffer::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                      const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                      const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                       const uint8_t frameIndex) const {
     assert(LOCAL_SIZE.z == 1 && workgroupSize_.z == 1);
     assert(workgroupSize_.x % LOCAL_SIZE.x == 0 && workgroupSize_.y % LOCAL_SIZE.y == 0);
@@ -583,42 +551,34 @@ void Buffer::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::Bind
     switch (std::visit(Pipeline::GetCompute{}, pPipelineBindData->type)) {
         case COMPUTE::HFF_HGHT: {
             // if (!paused_) {
-            vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
-            vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                    static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                                    descSetBindData.descriptorSets[setIndex].data(),
-                                    static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                                    descSetBindData.dynamicOffsets.data());
+            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                                   descSetBindData.descriptorSets[setIndex], descSetBindData.dynamicOffsets);
 
-            vkCmdDispatch(cmd, workgroupSize_.x / LOCAL_SIZE.x, workgroupSize_.y / LOCAL_SIZE.y, 1);
+            cmd.dispatch(workgroupSize_.x / LOCAL_SIZE.x, workgroupSize_.y / LOCAL_SIZE.y, 1);
 
-            VkMemoryBarrier memoryBarrier = {
-                VK_STRUCTURE_TYPE_MEMORY_BARRIER, nullptr,
-                VK_ACCESS_SHADER_WRITE_BIT,  // srcAccessMask
-                VK_ACCESS_SHADER_READ_BIT,   // dstAccessMask
+            vk::MemoryBarrier memoryBarrier = {
+                vk::AccessFlagBits::eShaderWrite,  // srcAccessMask
+                vk::AccessFlagBits::eShaderRead,   // dstAccessMask
             };
 
-            vkCmdPipelineBarrier(cmd,                                   //
-                                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,  // srcStageMask
-                                 VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,  // dstStageMask
-                                 0,                                     // dependencyFlags
-                                 1,                                     // memoryBarrierCount
-                                 &memoryBarrier,                        // pMemoryBarriers
-                                 0, nullptr, 0, nullptr);
+            cmd.pipelineBarrier(                            //
+                vk::PipelineStageFlagBits::eComputeShader,  // srcStageMask
+                vk::PipelineStageFlagBits::eComputeShader,  // dstStageMask
+                {},                                         // dependencyFlags
+                {memoryBarrier},                            // pMemoryBarriers
+                {}, {});
             // }
         } break;
         case COMPUTE::HFF_NORM: {
-            vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
-            vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                    static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                                    descSetBindData.descriptorSets[setIndex].data(),
-                                    static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                                    descSetBindData.dynamicOffsets.data());
+            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                                   descSetBindData.descriptorSets[setIndex], descSetBindData.dynamicOffsets);
 
-            // vkCmdDispatch(cmd, workgroupSize_.x / 10, workgroupSize_.y / 10, 1);
-            vkCmdDispatch(cmd, workgroupSize_.x / LOCAL_SIZE.x, workgroupSize_.y / LOCAL_SIZE.y, 1);
+            // cmd.dispatch(workgroupSize_.x / 10, workgroupSize_.y / 10, 1);
+            cmd.dispatch(workgroupSize_.x / LOCAL_SIZE.x, workgroupSize_.y / LOCAL_SIZE.y, 1);
         } break;
         default: {
             assert(false);

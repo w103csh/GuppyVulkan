@@ -1,12 +1,12 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
 #ifndef UI_IMGUI_HANDLER_H
 #define UI_IMGUI_HANDLER_H
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "RenderPassImGui.h"
 #include "UIHandler.h"
@@ -21,7 +21,7 @@ class ImGuiHandler : public UI::Handler {
     ImGuiHandler(Game* pGame);
 
     void frame() override;
-    void draw(const VkCommandBuffer& cmd, const uint8_t frameIndex) override;
+    void draw(const vk::CommandBuffer& cmd, const uint8_t frameIndex) override;
 
     // Application main menu (TODO: move this to a UI class)
     void appMainMenuBar();

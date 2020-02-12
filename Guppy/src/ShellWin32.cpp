@@ -1,5 +1,5 @@
 /*
- * Modifications copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Modifications copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  * -------------------------------
  * Copyright (C) 2016 Google, Inc.
@@ -79,7 +79,7 @@ ShellWin32::ShellWin32(Game& game)
 }
 
 ShellWin32::~ShellWin32() {
-    cleanupVk();
+    cleanup();
     FreeLibrary(hmodule_);
 }
 
@@ -97,12 +97,12 @@ void ShellWin32::createWindow() {
     win_class.hInstance = hinstance_;
     win_class.hCursor = LoadCursor(nullptr, IDC_ARROW);
     win_class.lpszClassName = class_name.c_str();
-    if (settings_.enable_double_clicks) win_class.style = CS_DBLCLKS;
+    if (settings_.enableDoubleClicks) win_class.style = CS_DBLCLKS;
     RegisterClassEx(&win_class);
 
     const DWORD win_style = WS_CLIPSIBLINGS | WS_CLIPCHILDREN | WS_VISIBLE | WS_OVERLAPPEDWINDOW;
 
-    RECT win_rect = {0, 0, settings_.initial_width, settings_.initial_height};
+    RECT win_rect = {0, 0, settings_.initialWidth, settings_.initialHeight};
     AdjustWindowRect(&win_rect, win_style, false);
 
     hwnd_ = CreateWindowEx(WS_EX_APPWINDOW, class_name.c_str(), settings_.name.c_str(), win_style, 0, 0,
@@ -113,7 +113,7 @@ void ShellWin32::createWindow() {
     SetWindowLongPtr(hwnd_, GWLP_USERDATA, (LONG_PTR)this);
 }
 
-PFN_vkGetInstanceProcAddr ShellWin32::loadVk() {
+PFN_vkGetInstanceProcAddr ShellWin32::load() {
     const char filename[] = "vulkan-1.dll";
     HMODULE mod;
     PFN_vkGetInstanceProcAddr get_proc = nullptr;
@@ -137,20 +137,16 @@ PFN_vkGetInstanceProcAddr ShellWin32::loadVk() {
     return get_proc;
 }
 
-VkBool32 ShellWin32::canPresent(VkPhysicalDevice phy, uint32_t queueFamily) {
-    return vkGetPhysicalDeviceWin32PresentationSupportKHR(phy, queueFamily);
+vk::Bool32 ShellWin32::canPresent(vk::PhysicalDevice phy, uint32_t queueFamily) {
+    return phy.getWin32PresentationSupportKHR(queueFamily);
 }
 
-VkSurfaceKHR ShellWin32::createSurface(VkInstance instance) {
-    VkWin32SurfaceCreateInfoKHR surface_info = {};
-    surface_info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    surface_info.hinstance = hinstance_;
-    surface_info.hwnd = hwnd_;
+vk::SurfaceKHR ShellWin32::createSurface(vk::Instance instance) {
+    vk::Win32SurfaceCreateInfoKHR surfaceInfo = {};
+    surfaceInfo.hinstance = hinstance_;
+    surfaceInfo.hwnd = hwnd_;
 
-    VkSurfaceKHR surface;
-    vk::assert_success(vkCreateWin32SurfaceKHR(instance, &surface_info, NULL, &surface));
-
-    return surface;
+    return instance.createWin32SurfaceKHR(surfaceInfo, ALLOC_PLACE_HOLDER);
 }
 
 LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
@@ -443,12 +439,12 @@ void ShellWin32::quit() const { PostQuitMessage(0); }
 
 void ShellWin32::run() {
     setPlatformSpecificExtensions();
-    initVk();
+    init();
 
     createWindow();
 
     createContext();
-    resizeSwapchain(settings_.initial_width, settings_.initial_height, false);
+    resizeSwapchain(settings_.initialWidth, settings_.initialHeight, false);
 
     Win32Timer timer;
     currentTime_ = timer.get();
@@ -470,7 +466,7 @@ void ShellWin32::run() {
             DispatchMessage(&msg);
         }
 
-        if (settings_.enable_directory_listener) checkDirectories();
+        if (settings_.enableDirectoryListener) checkDirectories();
 
         if (quit) {
             break;
@@ -494,9 +490,9 @@ void ShellWin32::run() {
         if (limitFramerate) {
             // TODO: this is crude and inaccurate.
             DWORD Hz = static_cast<DWORD>(1000 / framesPerSecondLimit);  // 30Hz
-            if (settings_.enable_directory_listener) asyncAlert(Hz);
+            if (settings_.enableDirectoryListener) asyncAlert(Hz);
         } else {
-            if (settings_.enable_directory_listener) asyncAlert(0);
+            if (settings_.enableDirectoryListener) asyncAlert(0);
         }
 
         handlers_.pInput->clear();
@@ -517,7 +513,7 @@ void ShellWin32::asyncAlert(uint64_t milliseconds) {
 }
 
 void ShellWin32::watchDirectory(const std::string& directory, std::function<void(std::string)> callback) {
-    if (settings_.enable_directory_listener) {
+    if (settings_.enableDirectoryListener) {
         // build absolute path
         auto fullPath = GetWorkingDirectory() + ROOT_PATH + directory;
         dirInsts_.push_back({});

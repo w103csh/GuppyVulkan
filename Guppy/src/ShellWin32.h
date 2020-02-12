@@ -1,5 +1,5 @@
 /*
- * Modifications copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Modifications copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  * -------------------------------
  * Copyright (C) 2016 Google, Inc.
@@ -20,6 +20,7 @@
 #ifndef SHELL_WIN32_H
 #define SHELL_WIN32_H
 
+#include <vulkan/vulkan.hpp>
 #include <windows.h>
 
 #include "InputHandler.h"
@@ -52,13 +53,13 @@ class ShellWin32 : public Shell {
 
    protected:
     virtual void setPlatformSpecificExtensions() override;
-    PFN_vkGetInstanceProcAddr loadVk();
+    PFN_vkGetInstanceProcAddr load();
 
    private:
-    VkBool32 canPresent(VkPhysicalDevice phy, uint32_t queue_family);
+    vk::Bool32 canPresent(vk::PhysicalDevice phy, uint32_t queue_family);
 
     void createWindow() override;
-    VkSurfaceKHR createSurface(VkInstance instance);
+    vk::SurfaceKHR createSurface(vk::Instance instance);
 
     GAME_KEY getKey(WPARAM wParam, INPUT_ACTION type);
     void getMouse(UINT uMsg, LPARAM lParam);

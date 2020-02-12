@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -55,24 +55,24 @@ namespace ScreenSpace {
 const CreateInfo DEFAULT_2D_ARRAY_CREATE_INFO = {
     "Screen Space 2D Color Sampler",  //
     {{{::Sampler::USAGE::COLOR}}},
-    VK_IMAGE_VIEW_TYPE_2D,  //
+    vk::ImageViewType::e2D,  //
     BAD_EXTENT_3D,
     {true, true},
-    0,
+    {},
     SAMPLER::CLAMP_TO_BORDER,
-    VK_IMAGE_USAGE_SAMPLED_BIT,
+    vk::ImageUsageFlagBits::eSampled,
     {{false, false}, 1},
 };
 
 const CreateInfo COMPUTE_2D_ARRAY_CREATE_INFO = {
     "Screen Space Compute 2D Color Sampler",
     {{{::Sampler::USAGE::COLOR}}},
-    VK_IMAGE_VIEW_TYPE_2D,
+    vk::ImageViewType::e2D,
     BAD_EXTENT_3D,
     {true, true},
-    0,
+    {},
     SAMPLER::CLAMP_TO_BORDER,
-    VK_IMAGE_USAGE_STORAGE_BIT,
+    vk::ImageUsageFlagBits::eStorage,
     {{false, false}, 1},
 };
 
@@ -80,14 +80,14 @@ const CreateInfo COMPUTE_2D_ARRAY_CREATE_INFO = {
 const Sampler::CreateInfo HDR_LOG_SAMPLER_CREATE_INFO = {
     "Screen Space HDR Log 2D Sampler",
     {{{::Sampler::USAGE::COLOR}}},
-    VK_IMAGE_VIEW_TYPE_2D,
+    vk::ImageViewType::e2D,
     BAD_EXTENT_3D,
     {false, true},
-    0,
+    {},
     SAMPLER::CLAMP_TO_BORDER,
-    (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT),
+    (vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransferSrc),
     {{false, false}, 1},
-    VK_FORMAT_R32_SFLOAT,
+    vk::Format::eR32Sfloat,
     Sampler::CHANNELS::_1,
 };
 
@@ -95,40 +95,40 @@ const Sampler::CreateInfo HDR_LOG_SAMPLER_CREATE_INFO = {
 const Sampler::CreateInfo HDR_LOG_BLIT_A_SAMPLER_CREATE_INFO = {
     "Screen Space HDR Log Blit A 2D Sampler",  //
     {{{::Sampler::USAGE::COLOR}}},
-    VK_IMAGE_VIEW_TYPE_2D,
+    vk::ImageViewType::e2D,
     BAD_EXTENT_3D,
     {false, true, 0.5f},
-    0,
+    {},
     SAMPLER::CLAMP_TO_EDGE,
-    (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT),
+    (vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst),
     {{false, true}, 1},
-    VK_FORMAT_R32_SFLOAT,
+    vk::Format::eR32Sfloat,
 };
 const Sampler::CreateInfo HDR_LOG_BLIT_B_SAMPLER_CREATE_INFO = {
     "Screen Space HDR Log Blit B 2D Sampler",  //
     {{{::Sampler::USAGE::COLOR}}},
-    VK_IMAGE_VIEW_TYPE_2D,
+    vk::ImageViewType::e2D,
     BAD_EXTENT_3D,
     {false, true, 0.5f},
-    0,
+    {},
     SAMPLER::DEFAULT,
-    (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT),
+    (vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst),
     {{false, true}, 1},
-    VK_FORMAT_R32_SFLOAT,
+    vk::Format::eR32Sfloat,
 };
 
 // BLUR
 const Sampler::CreateInfo BLUR_2D_SAMPLER_CREATE_INFO = {
     "Screen Space Blur 2D Array Color Sampler",
     {{{::Sampler::USAGE::COLOR}}},
-    VK_IMAGE_VIEW_TYPE_2D,
+    vk::ImageViewType::e2D,
     BAD_EXTENT_3D,
     {false, true},
-    0,
+    {},
     SAMPLER::CLAMP_TO_BORDER,
-    (VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT),
+    (vk::ImageUsageFlagBits::eSampled | vk::ImageUsageFlagBits::eColorAttachment),
     {{false, false}, 1},
-    VK_FORMAT_R32G32B32A32_SFLOAT,  // VK_FORMAT_R8G8B8A8_UNORM,
+    vk::Format::eR32G32B32A32Sfloat,  // vk::Format::eR8G8B8A8Unorm,
 };
 
 }  // namespace ScreenSpace
@@ -263,14 +263,14 @@ const CreateInfo VERT_CREATE_INFO = {
     SHADER::SCREEN_SPACE_VERT,
     "Screen Space Vertex Shader",
     "screen.space.vert.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 
 const CreateInfo FRAG_CREATE_INFO = {
     SHADER::SCREEN_SPACE_FRAG,
     "Screen Space Fragment Shader",
     "screen.space.frag.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
     {
         SHADER_LINK::DEFAULT_MATERIAL,
     },
@@ -280,28 +280,28 @@ const CreateInfo FRAG_HDR_LOG_CREATE_INFO = {
     SHADER::SCREEN_SPACE_HDR_LOG_FRAG,
     "Screen Space HDR Log Fragment Shader",
     "screen.space.hdr.log.frag.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
 };
 
 const CreateInfo FRAG_BRIGHT_CREATE_INFO = {
     SHADER::SCREEN_SPACE_BRIGHT_FRAG,
     "Screen Space Bright Fragment Shader",
     "screen.space.bright.frag.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
 };
 
 const CreateInfo FRAG_BLUR_CREATE_INFO = {
     SHADER::SCREEN_SPACE_BLUR_FRAG,
     "Screen Space Blur Fragment Shader",
     "screen.space.blur.frag.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
 };
 
 const CreateInfo COMP_CREATE_INFO = {
     SHADER::SCREEN_SPACE_COMP,
     "Screen Space Compute Shader",
     "comp.hdr.glsl",
-    VK_SHADER_STAGE_COMPUTE_BIT,
+    vk::ShaderStageFlagBits::eCompute,
 };
 
 }  // namespace ScreenSpace

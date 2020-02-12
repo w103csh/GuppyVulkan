@@ -1,12 +1,10 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
 #ifndef RENDER_PASS_IMGUI_H
 #define RENDER_PASS_IMGUI_H
-
-#include <vulkan/vulkan.h>
 
 #include "ConstantsAll.h"
 #include "RenderPass.h"

@@ -11,6 +11,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <vulkan/vulkan.hpp>
 
 #include "Game.h"
 #include "Texture.h"
@@ -29,7 +30,7 @@ class Handler : public Game::Handler {
     // the members of Texture::CreateInfo should be trivial.
     std::shared_ptr<Texture::Base>& make(const Texture::CreateInfo* pCreateInfo);
 
-    void makeBufferView(const std::string_view& id, const VkFormat format, const VkDeviceSize size, void* pData);
+    void makeBufferView(const std::string_view& id, const vk::Format format, const vk::DeviceSize size, void* pData);
 
     const std::shared_ptr<Texture::Base> getTexture(const std::string_view& name) const;
     const std::shared_ptr<Texture::Base> getTexture(const uint32_t index) const;
@@ -38,7 +39,7 @@ class Handler : public Game::Handler {
     inline uint32_t getCount() { return static_cast<uint32_t>(pTextures_.size()); }
 
     // TODO: should these be public? Moved these for render to sampler.
-    void createSampler(const VkDevice& dev, const Sampler::Base& sampler, Sampler::LayerResource& layerResource);
+    void createSampler(const vk::Device& dev, const Sampler::Base& sampler, Sampler::LayerResource& layerResource);
 
     // TODO: most of these functions should be static
     static void createDescInfo(std::shared_ptr<Texture::Base>& pTexture, const uint32_t layerKey,
@@ -63,7 +64,7 @@ class Handler : public Game::Handler {
     void createImage(Sampler::Base& sampler, std::unique_ptr<LoadingResource>& pLdgRes);
     void createDepthImage(Sampler::Base& sampler, std::unique_ptr<LoadingResource>& pLdgRes);
     void generateMipmaps(Sampler::Base& sampler, std::unique_ptr<LoadingResource>& pLdgRes);
-    void createImageView(const VkDevice& dev, const Sampler::Base& sampler, const uint32_t baseArrayLayer,
+    void createImageView(const vk::Device& dev, const Sampler::Base& sampler, const uint32_t baseArrayLayer,
                          const uint32_t layerCount, Sampler::LayerResource& layerResource);
 
     std::vector<std::shared_ptr<Texture::Base>> pTextures_;

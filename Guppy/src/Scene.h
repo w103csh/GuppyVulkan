@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -7,7 +7,7 @@
 #define SCENE_H
 
 #include <set>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "Handlee.h"
 #include "Mesh.h"
@@ -33,8 +33,8 @@ class Base : public Handlee<Scene::Handler> {
     void addModelIndex(const Model::index offset);
 
     void record(const PASS& passType, const PIPELINE& pipelineType,
-                const std::shared_ptr<Pipeline::BindData>& pipelineBindData, const VkCommandBuffer& priCmd,
-                const VkCommandBuffer& secCmd, const uint8_t frameIndex,
+                const std::shared_ptr<Pipeline::BindData>& pipelineBindData, const vk::CommandBuffer& priCmd,
+                const vk::CommandBuffer& secCmd, const uint8_t frameIndex,
                 const Descriptor::Set::BindData* pDescSetBindData = nullptr);
 
     // SELECTION

@@ -28,19 +28,19 @@ void DATA::getInputDescriptions(Pipeline::CreateInfoResources& createInfoRes) {
     createInfoRes.bindDescs.push_back({});
     createInfoRes.bindDescs.back().binding = BINDING;
     createInfoRes.bindDescs.back().stride = sizeof(DATA);
-    createInfoRes.bindDescs.back().inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+    createInfoRes.bindDescs.back().inputRate = vk::VertexInputRate::eInstance;
 
     // velocity
     createInfoRes.attrDescs.push_back({});
     createInfoRes.attrDescs.back().binding = BINDING;
     createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
-    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32_SFLOAT;  // vec3
+    createInfoRes.attrDescs.back().format = vk::Format::eR32G32B32Sfloat;  // vec3
     createInfoRes.attrDescs.back().offset = offsetof(DATA, velocity);
     // timeOfBirth
     createInfoRes.attrDescs.push_back({});
     createInfoRes.attrDescs.back().binding = BINDING;
     createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
-    createInfoRes.attrDescs.back().format = VK_FORMAT_R32_SFLOAT;  // float
+    createInfoRes.attrDescs.back().format = vk::Format::eR32Sfloat;  // float
     createInfoRes.attrDescs.back().offset = offsetof(DATA, timeOfBirth);
 }
 
@@ -82,25 +82,25 @@ void DATA::getInputDescriptions(Pipeline::CreateInfoResources& createInfoRes) {
     createInfoRes.bindDescs.push_back({});
     createInfoRes.bindDescs.back().binding = BINDING;
     createInfoRes.bindDescs.back().stride = sizeof(DATA);
-    createInfoRes.bindDescs.back().inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+    createInfoRes.bindDescs.back().inputRate = vk::VertexInputRate::eInstance;
 
     // position / padding
     createInfoRes.attrDescs.push_back({});
     createInfoRes.attrDescs.back().binding = BINDING;
     createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
-    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32A32_SFLOAT;  // vec4
+    createInfoRes.attrDescs.back().format = vk::Format::eR32G32B32A32Sfloat;  // vec4
     createInfoRes.attrDescs.back().offset = offsetof(DATA, data0);
     // velocity / age
     createInfoRes.attrDescs.push_back({});
     createInfoRes.attrDescs.back().binding = BINDING;
     createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
-    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32A32_SFLOAT;  // vec4
+    createInfoRes.attrDescs.back().format = vk::Format::eR32G32B32A32Sfloat;  // vec4
     createInfoRes.attrDescs.back().offset = offsetof(DATA, data1);
     // rotation / padding
     createInfoRes.attrDescs.push_back({});
     createInfoRes.attrDescs.back().binding = BINDING;
     createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
-    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32A32_SFLOAT;  // vec4
+    createInfoRes.attrDescs.back().format = vk::Format::eR32G32B32A32Sfloat;  // vec4
     createInfoRes.attrDescs.back().offset = offsetof(DATA, data2);
 }
 
@@ -198,7 +198,7 @@ void Base::prepare() {
         // Submit vertex loading commands...
         handler().loadingHandler().loadSubmit(std::move(pLdgRes_));
         status_ ^= STATUS::PENDING_BUFFERS;
-    } else if (vertexRes_.buffer == VK_NULL_HANDLE && indexRes_.buffer == VK_NULL_HANDLE) {
+    } else if (!vertexRes_.buffer && !indexRes_.buffer) {
         assert(vertices_.empty() && indices_.empty() && "Did you mean to set the status to PENDING_BUFFERS?");
     }
 
@@ -227,29 +227,26 @@ void Base::loadBuffers() {
     // Vertex buffer
     BufferResource stgRes = {};
     if (vertices_.size()) {
-        helpers::createBuffer(
-            ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd,
-            static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT),
-            sizeof(Vertex::Color) * vertices_.size(), NAME + " vertex", stgRes, vertexRes_, vertices_.data());
+        ctx.createBuffer(pLdgRes_->transferCmd,
+                         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+                         sizeof(Vertex::Color) * vertices_.size(), NAME + " vertex", stgRes, vertexRes_, vertices_.data());
         pLdgRes_->stgResources.push_back(std::move(stgRes));
     }
 
     // Index buffer
     if (indices_.size()) {
         stgRes = {};
-        helpers::createBuffer(
-            ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd,
-            static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT),
-            sizeof(VB_INDEX_TYPE) * indices_.size(), NAME + " index", stgRes, indexRes_, indices_.data());
+        ctx.createBuffer(pLdgRes_->transferCmd,
+                         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+                         sizeof(VB_INDEX_TYPE) * indices_.size(), NAME + " index", stgRes, indexRes_, indices_.data());
         pLdgRes_->stgResources.push_back(std::move(stgRes));
     }
 
     // Texture coordinate buffer
     if (texCoords_.size()) {
         stgRes = {};
-        helpers::createBuffer(
-            ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd,
-            static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT),
+        ctx.createBuffer(
+            pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
             sizeof(glm::vec2) * texCoords_.size(), NAME + " tex coords", stgRes, texCoordRes_, texCoords_.data());
         pLdgRes_->stgResources.push_back(std::move(stgRes));
     }
@@ -258,16 +255,16 @@ void Base::loadBuffers() {
 void Base::destroy() {
     auto& dev = handler().shell().context().dev;
     if (vertices_.size()) {
-        vkDestroyBuffer(dev, vertexRes_.buffer, nullptr);
-        vkFreeMemory(dev, vertexRes_.memory, nullptr);
+        dev.destroyBuffer(vertexRes_.buffer, ALLOC_PLACE_HOLDER);
+        dev.freeMemory(vertexRes_.memory, ALLOC_PLACE_HOLDER);
     }
     if (indices_.size()) {
-        vkDestroyBuffer(dev, indexRes_.buffer, nullptr);
-        vkFreeMemory(dev, indexRes_.memory, nullptr);
+        dev.destroyBuffer(indexRes_.buffer, ALLOC_PLACE_HOLDER);
+        dev.freeMemory(indexRes_.memory, ALLOC_PLACE_HOLDER);
     }
     if (texCoords_.size()) {
-        vkDestroyBuffer(dev, texCoordRes_.buffer, nullptr);
-        vkFreeMemory(dev, texCoordRes_.memory, nullptr);
+        dev.destroyBuffer(texCoordRes_.buffer, ALLOC_PLACE_HOLDER);
+        dev.freeMemory(texCoordRes_.memory, ALLOC_PLACE_HOLDER);
     }
 }
 
@@ -339,29 +336,26 @@ Fountain::Fountain(Particle::Handler& handler, const index&& offset, const Creat
     : Base(handler, std::forward<const index>(offset), pCreateInfo, pMaterial, pDescriptors), pInst_(pInst) {}
 
 void Fountain::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                    const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                    const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                     const uint8_t frameIndex) const {
     auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
 
-    vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+    cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
-    vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                            static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                            descSetBindData.descriptorSets[setIndex].data(),
-                            static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                            descSetBindData.dynamicOffsets.data());
+    cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                           static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
+                           descSetBindData.descriptorSets[setIndex].data(),
+                           static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
+                           descSetBindData.dynamicOffsets.data());
 
     // Instance Fountain
-    vkCmdBindVertexBuffers(                      //
-        cmd,                                     // VkCommandBuffer commandBuffer
-        0,                                       // uint32_t firstBinding
-        1,                                       // uint32_t bindingCount
-        &pInst_->BUFFER_INFO.bufferInfo.buffer,  // const VkBuffer* pBuffers
-        &pInst_->BUFFER_INFO.memoryOffset        // const VkDeviceSize* pOffsets
+    cmd.bindVertexBuffers(                        //
+        0,                                        // uint32_t firstBinding
+        {pInst_->BUFFER_INFO.bufferInfo.buffer},  // const vk::Buffer* pBuffers
+        {pInst_->BUFFER_INFO.memoryOffset}        // const vk::DeviceSize* pOffsets
     );
 
-    vkCmdDraw(                      //
-        cmd,                        // VkCommandBuffer commandBuffer
+    cmd.draw(                       //
         6,                          // uint32_t vertexCount
         pInst_->BUFFER_INFO.count,  // uint32_t instanceCount
         0,                          // uint32_t firstVertex
@@ -400,45 +394,41 @@ Base::Base(Particle::Handler& handler, const index&& offset, const CreateInfo* p
 }
 
 void Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                 const uint8_t frameIndex) const {
     auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
 
-    vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+    cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
     if (pPipelineBindData->type != PIPELINE{GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER} &&
         pushConstant_ != Particle::Euler::FLAG::NONE) {
-        vkCmdPushConstants(cmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
-                           static_cast<uint32_t>(sizeof(pushConstant_)), &pushConstant_);
+        cmd.pushConstants(pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                          static_cast<uint32_t>(sizeof(pushConstant_)), &pushConstant_);
     }
 
-    vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                            static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                            descSetBindData.descriptorSets[setIndex].data(),
-                            static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                            descSetBindData.dynamicOffsets.data());
+    cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                           static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
+                           descSetBindData.descriptorSets[setIndex].data(),
+                           static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
+                           descSetBindData.dynamicOffsets.data());
 
     auto pInstData = pDescriptors_.at(descInstOffset_);
 
     // Instance
-    vkCmdBindVertexBuffers(                         //
-        cmd,                                        // VkCommandBuffer commandBuffer
-        firstInstanceBinding_,                      // uint32_t firstBinding
-        1,                                          // uint32_t bindingCount
-        &pInstData->BUFFER_INFO.bufferInfo.buffer,  // const VkBuffer* pBuffers
-        &pInstData->BUFFER_INFO.memoryOffset        // const VkDeviceSize* pOffsets
+    cmd.bindVertexBuffers(                           //
+        firstInstanceBinding_,                       // uint32_t firstBinding
+        {pInstData->BUFFER_INFO.bufferInfo.buffer},  // const vk::Buffer* pBuffers
+        {pInstData->BUFFER_INFO.memoryOffset}        // const vk::DeviceSize* pOffsets
     );
 
     if (vertices_.size() && indices_.size()) {
         assert(vertices_.size() && indices_.size());
         assert(VERTEX_TYPE == VERTEX::MESH);
 
-        VkDeviceSize offsets[] = {0};
-        vkCmdBindVertexBuffers(cmd, Vertex::BINDING, 1, &vertexRes_.buffer, offsets);
-        vkCmdBindIndexBuffer(cmd, indexRes_.buffer, 0, VK_INDEX_TYPE_UINT32);
+        cmd.bindVertexBuffers(Vertex::BINDING, {vertexRes_.buffer}, {0});
+        cmd.bindIndexBuffer(indexRes_.buffer, 0, vk::IndexType::eUint32);
 
-        vkCmdDrawIndexed(                            //
-            cmd,                                     // VkCommandBuffer commandBuffer
+        cmd.drawIndexed(                             //
             static_cast<uint32_t>(indices_.size()),  // uint32_t indexCount
             pInstData->BUFFER_INFO.count,            // uint32_t instanceCount
             0,                                       // uint32_t firstIndex
@@ -454,8 +444,7 @@ void Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>&
         uint32_t vertexCount = VERTEX_TYPE == VERTEX::BILLBOARD ? 6 : 1;
 
         // Draw a billboarded quad which does not require a vertex bind
-        vkCmdDraw(                         //
-            cmd,                           // VkCommandBuffer commandBuffer
+        cmd.draw(                          //
             vertexCount,                   // uint32_t vertexCount
             pInstData->BUFFER_INFO.count,  // uint32_t instanceCount
             0,                             // uint32_t firstVertex
@@ -465,26 +454,26 @@ void Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>&
 }
 
 void Base::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                    const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                    const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                     const uint8_t frameIndex) const {
     auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
 
-    vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+    cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
     if (pushConstant_ != Particle::Euler::FLAG::NONE) {
-        vkCmdPushConstants(cmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
-                           static_cast<uint32_t>(sizeof(pushConstant_)), &pushConstant_);
+        cmd.pushConstants(pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                          static_cast<uint32_t>(sizeof(pushConstant_)), &pushConstant_);
     }
 
-    vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                            static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                            descSetBindData.descriptorSets[setIndex].data(),
-                            static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                            descSetBindData.dynamicOffsets.data());
+    cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                           static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
+                           descSetBindData.descriptorSets[setIndex].data(),
+                           static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
+                           descSetBindData.dynamicOffsets.data());
 
     assert(LOCAL_SIZE.y == 1 && LOCAL_SIZE.z == 1);  // Haven't thought about anything else.
 
-    vkCmdDispatch(cmd, pDescriptors_.at(descInstOffset_)->BUFFER_INFO.count / LOCAL_SIZE.x, 1, 1);
+    cmd.dispatch(pDescriptors_.at(descInstOffset_)->BUFFER_INFO.count / LOCAL_SIZE.x, 1, 1);
 }
 
 // TORUS

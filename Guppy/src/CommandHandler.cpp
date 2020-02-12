@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -18,11 +18,11 @@ void Command::Handler::init() {
     auto uniqueQueueFamilies = getUniqueQueueFamilies();
     for (const auto& queueFamilyIndex : uniqueQueueFamilies) {
         // POOLS
-        pools_[queueFamilyIndex] = VK_NULL_HANDLE;
+        pools_[queueFamilyIndex] = vk::CommandPool{};
         createCmdPool(queueFamilyIndex, pools_.at(queueFamilyIndex));
         // BUFFERS
-        cmds_[queueFamilyIndex] = VK_NULL_HANDLE;
-        createCmdBuffers(pools_.at(queueFamilyIndex), &cmds_.at(queueFamilyIndex), VK_COMMAND_BUFFER_LEVEL_PRIMARY, 1);
+        cmds_[queueFamilyIndex] = vk::CommandBuffer{};
+        createCmdBuffers(pools_.at(queueFamilyIndex), &cmds_.at(queueFamilyIndex), vk::CommandBufferLevel::ePrimary, 1);
         // TODO: Begin recording the default command buffers???
         beginCmd(cmds_[queueFamilyIndex]);
     };
@@ -35,38 +35,32 @@ void Command::Handler::reset() {
     for (const auto& queueFamilyIndex : uniqueQueueFamilies) {
         // owned command buffers
         if (cmds_.count(queueFamilyIndex))
-            vkFreeCommandBuffers(shell().context().dev, pools_.at(queueFamilyIndex), 1, &cmds_.at(queueFamilyIndex));
+            shell().context().dev.freeCommandBuffers(pools_.at(queueFamilyIndex), cmds_.at(queueFamilyIndex));
         // pools
         if (pools_.count(queueFamilyIndex))
-            vkDestroyCommandPool(shell().context().dev, pools_.at(queueFamilyIndex), nullptr);
+            shell().context().dev.destroyCommandPool(pools_.at(queueFamilyIndex), ALLOC_PLACE_HOLDER);
     }
     cmds_.clear();
     pools_.clear();
 }
 
-void Command::Handler::createCmdPool(const uint32_t queueFamilyIndex, VkCommandPool& cmdPool) {
-    VkCommandPoolCreateInfo cmd_pool_info = {};
-    cmd_pool_info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    cmd_pool_info.queueFamilyIndex = queueFamilyIndex;
-    cmd_pool_info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-
-    vk::assert_success(vkCreateCommandPool(shell().context().dev, &cmd_pool_info, nullptr, &cmdPool));
+void Command::Handler::createCmdPool(const uint32_t queueFamilyIndex, vk::CommandPool& cmdPool) {
+    vk::CommandPoolCreateInfo cmdPoolInfo = {
+        vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
+        queueFamilyIndex,
+    };
+    cmdPool = shell().context().dev.createCommandPool(cmdPoolInfo, ALLOC_PLACE_HOLDER);
 }
 
-void Command::Handler::createCmdBuffers(const VkCommandPool& pool, VkCommandBuffer* pCommandBuffers,
-                                        VkCommandBufferLevel level, uint32_t count) {
-    VkCommandBufferAllocateInfo alloc_info = {};
-    alloc_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    alloc_info.pNext = nullptr;
-    alloc_info.commandPool = pool;
-    alloc_info.level = level;
-    alloc_info.commandBufferCount = count;
-    vk::assert_success(vkAllocateCommandBuffers(shell().context().dev, &alloc_info, pCommandBuffers));
+void Command::Handler::createCmdBuffers(const vk::CommandPool& pool, vk::CommandBuffer* pCommandBuffers,
+                                        vk::CommandBufferLevel level, uint32_t count) {
+    vk::CommandBufferAllocateInfo allocInfo = {pool, level, count};
+    helpers::checkVkResult(shell().context().dev.allocateCommandBuffers(&allocInfo, pCommandBuffers));
 }
 
 void Command::Handler::resetCmdBuffers() {
     for (auto& keyValue : cmds_) {
-        vkResetCommandBuffer(keyValue.second, 0);
+        keyValue.second.reset({});
         beginCmd(keyValue.second);
     }
 }
@@ -83,7 +77,7 @@ const uint32_t& Command::Handler::getIndex(const QUEUE type) {
     // clang-format on
 }
 
-const VkQueue& Command::Handler::getQueue(const QUEUE type) {
+const vk::Queue& Command::Handler::getQueue(const QUEUE type) {
     // clang-format off
     switch (type) {
         case QUEUE::GRAPHICS: return shell().context().queues.at(shell().context().graphicsIndex);
@@ -95,7 +89,7 @@ const VkQueue& Command::Handler::getQueue(const QUEUE type) {
     // clang-format on
 }
 
-const VkCommandPool& Command::Handler::getCmdPool(const QUEUE type) {
+const vk::CommandPool& Command::Handler::getCmdPool(const QUEUE type) {
     // clang-format off
     switch (type) {
         case QUEUE::GRAPHICS: return pools_.at(shell().context().graphicsIndex);
@@ -107,7 +101,7 @@ const VkCommandPool& Command::Handler::getCmdPool(const QUEUE type) {
     // clang-format on
 }
 
-const VkCommandBuffer& Command::Handler::getCmd(const QUEUE type) {
+const vk::CommandBuffer& Command::Handler::getCmd(const QUEUE type) {
     // clang-format off
     switch (type) {
         case QUEUE::GRAPHICS: return cmds_.at(shell().context().graphicsIndex);
@@ -140,15 +134,13 @@ std::vector<uint32_t> Command::Handler::getUniqueQueueFamilies(bool graphics, bo
     return fams;
 }
 
-void Command::Handler::beginCmd(const VkCommandBuffer& cmd, const VkCommandBufferInheritanceInfo* inheritanceInfo) const {
-    VkCommandBufferBeginInfo begin_info = {};
-    begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    begin_info.pNext = nullptr;
-    begin_info.flags = inheritanceInfo == nullptr
-                           ? 0
-                           : VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT | VK_COMMAND_BUFFER_USAGE_RENDER_PASS_CONTINUE_BIT;
-    begin_info.pInheritanceInfo = inheritanceInfo;
-    vk::assert_success(vkBeginCommandBuffer(cmd, &begin_info));
+void Command::Handler::beginCmd(const vk::CommandBuffer& cmd,
+                                const vk::CommandBufferInheritanceInfo* inheritanceInfo) const {
+    vk::CommandBufferBeginInfo beginInfo = {
+        inheritanceInfo == nullptr
+            ? vk::CommandBufferUsageFlagBits{}
+            : vk::CommandBufferUsageFlagBits::eSimultaneousUse | vk::CommandBufferUsageFlagBits::eRenderPassContinue,
+        inheritanceInfo,
+    };
+    cmd.begin(beginInfo);
 }
-
-void Command::Handler::endCmd(const VkCommandBuffer& cmd) const { vk::assert_success(vkEndCommandBuffer(cmd)); }

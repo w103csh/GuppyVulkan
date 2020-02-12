@@ -15,7 +15,7 @@
 #include <utility>
 #include <variant>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "Camera.h"
 #include "ConstantsAll.h"
@@ -57,8 +57,8 @@ class Manager : public ManagerType<TDerived> {
               std::forward<const index>(maxSize),
               true,
               std::forward<const std::string>(macroName),
-              VK_SHARING_MODE_EXCLUSIVE,
-              0,
+              vk::SharingMode::eExclusive,
+              {},
           } {}
 };
 

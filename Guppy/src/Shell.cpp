@@ -1,5 +1,5 @@
 /*
- * Modifications copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Modifications copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  * -------------------------------
  * Copyright (C) 2016 Google, Inc.
@@ -22,6 +22,7 @@
 #include <cassert>
 #include <array>
 #include <iostream>
+#include <stdio.h>
 #include <string>
 #include <sstream>
 #include <set>
@@ -33,6 +34,10 @@
 // HANDLERS
 #include "InputHandler.h"
 #include "SoundHandler.h"
+
+// See: https://github.com/KhronosGroup/Vulkan-Hpp#extensions--per-device-function-pointers
+VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE;
+static_assert(VK_HEADER_VERSION >= 126, "Vulkan version need 1.1.126.0 or greater");
 
 Shell::Shell(Game &game, Handlers &&handlers)
     : limitFramerate(true),
@@ -49,8 +54,8 @@ Shell::Shell(Game &game, Handlers &&handlers)
        */
       deviceExtensionInfo_{
           {VK_KHR_SWAPCHAIN_EXTENSION_NAME, true, true},
-          {VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false, settings_.try_debug_markers},
-          {VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false, settings_.try_debug_markers},
+          {VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false, settings_.tryDebugMarkers},
+          {VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false, settings_.tryDebugMarkers},
           {VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME, false, false},
           {VK_EXT_TRANSFORM_FEEDBACK_EXTENSION_NAME, false, false},
       },
@@ -58,9 +63,9 @@ Shell::Shell(Game &game, Handlers &&handlers)
       elapsedTime_(0.0),
       handlers_(std::move(handlers)),
       ctx_(),
-      gameTick_(1.0f / settings_.ticks_per_second),
+      gameTick_(1.0f / settings_.ticksPerSecond),
       gameTime_(gameTick_),
-      debugUtilsMessenger_(VK_NULL_HANDLE) {
+      debugUtilsMessenger_() {
     /**
      * Leaving this validation layer code in but I am going to start using vkconfig.exe instead. It does everything
      * the layer code here already did but better. You can read about it here
@@ -77,7 +82,7 @@ Shell::Shell(Game &game, Handlers &&handlers)
      * programmatically. Fortunately, the message were only for device extension enabling which is not super useful, or has
      * not been thus far. It does make we wonder if there are other messages I am potentially missing though.
      */
-    if (settings_.validate_verbose) assert(settings_.validate);
+    if (settings_.validateVerbose) assert(settings_.validate);
     if (settings_.validate) {
         instanceLayers_.push_back("VK_LAYER_KHRONOS_validation");
         instanceExtensions_.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
@@ -92,6 +97,10 @@ void Shell::log(LogPriority priority, const char *msg) const {
 }
 
 void Shell::init() {
+    initInstance();
+    initDebugUtilsMessenger();
+    initPhysicalDev();
+
     // TODO: Add init functions here... inline ???
     handlers_.pSound->init();
 }
@@ -108,17 +117,8 @@ void Shell::destroy() {
     handlers_.pSound->destroy();
 }
 
-void Shell::initVk() {
-    initInstance();
-
-    ext::CreateInstanceEXTs(ctx_.instance, settings_.validate);
-    initDebugUtilsMessenger();
-
-    initPhysicalDev();
-}
-
-void Shell::cleanupVk() {
-    if (settings_.validate) ext::vkDestroyDebugUtilsMessengerEXT(ctx_.instance, debugUtilsMessenger_, nullptr);
+void Shell::cleanup() {
+    if (settings_.validate) ctx_.instance.destroyDebugUtilsMessengerEXT(debugUtilsMessenger_, ALLOC_PLACE_HOLDER);
     destroyInstance();
 }
 
@@ -150,15 +150,15 @@ void Shell::assertAllInstanceExtensions() const {
     }
 }
 
-bool Shell::hasAllDeviceLayers(VkPhysicalDevice phy) const {
+bool Shell::hasAllDeviceLayers(vk::PhysicalDevice phy) const {
     // Something here?
 
     return true;
 }
 
-bool Shell::hasAllDeviceExtensions(VkPhysicalDevice phy) const {
+bool Shell::hasAllDeviceExtensions(vk::PhysicalDevice phy) const {
     //// enumerate device extensions
-    // std::vector<VkExtensionProperties> exts;
+    // std::vector<vk::ExtensionProperties> exts;
     // vk::enumerate(phy, nullptr, exts);
 
     // std::set<std::string> ext_names;
@@ -173,74 +173,77 @@ bool Shell::hasAllDeviceExtensions(VkPhysicalDevice phy) const {
 }
 
 void Shell::initInstance() {
+    vk::DynamicLoader dl;
+    PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
+
     // enumerate instance layer & extension properties
     enumerateInstanceProperties();
 
     assertAllInstanceLayers();
     assertAllInstanceExtensions();
 
-    uint32_t version = VK_VERSION_1_2;
-    determineApiVersion(version);
+    vk::ApplicationInfo appInfo = {};
+    appInfo.pApplicationName = settings_.name.c_str();
+    appInfo.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
+    appInfo.pEngineName = "Shell";
+    appInfo.engineVersion = VK_MAKE_VERSION(0, 1, 0);
+    appInfo.apiVersion = vk::enumerateInstanceVersion();
 
-    VkApplicationInfo app_info = {};
-    app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    app_info.pNext = nullptr;
-    app_info.pApplicationName = settings_.name.c_str();
-    app_info.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
-    app_info.pEngineName = "Shell";
-    app_info.engineVersion = VK_MAKE_VERSION(0, 1, 0);
-    app_info.apiVersion = version;
+    vk::InstanceCreateInfo instInfo = {};
+    instInfo.pApplicationInfo = &appInfo;
+    instInfo.enabledLayerCount = static_cast<uint32_t>(instanceLayers_.size());
+    instInfo.ppEnabledLayerNames = instanceLayers_.data();
+    instInfo.enabledExtensionCount = static_cast<uint32_t>(instanceExtensions_.size());
+    instInfo.ppEnabledExtensionNames = instanceExtensions_.data();
 
-    VkInstanceCreateInfo inst_info = {};
-    inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    inst_info.pNext = nullptr;
-    inst_info.flags = 0;
-    inst_info.pApplicationInfo = &app_info;
-    inst_info.enabledLayerCount = static_cast<uint32_t>(instanceLayers_.size());
-    inst_info.ppEnabledLayerNames = instanceLayers_.data();
-    inst_info.enabledExtensionCount = static_cast<uint32_t>(instanceExtensions_.size());
-    inst_info.ppEnabledExtensionNames = instanceExtensions_.data();
+    ctx_.instance = vk::createInstance(instInfo, ALLOC_PLACE_HOLDER);
+    assert(ctx_.instance);
 
-    VkResult res = vkCreateInstance(&inst_info, nullptr, &ctx_.instance);
-    assert(res == VK_SUCCESS);
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(ctx_.instance);
+
+    // Moved asserts below from old Extensions.h. Not sure yet if there is a better place.
+
+    if (settings_.validate) {
+        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkCreateDebugUtilsMessengerEXT);
+        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkDestroyDebugUtilsMessengerEXT);
+    }
 }
 
 void Shell::initDebugUtilsMessenger() {
     if (!settings_.validate) return;
 
-    VkDebugUtilsMessengerCreateInfoEXT debugInfo = {};
-    debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+    vk::DebugUtilsMessengerCreateInfoEXT debugInfo = {};
 
     debugInfo.messageSeverity =
-        VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-    debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT;
+        vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+    debugInfo.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation;
 
-    if (settings_.validate_verbose) {
+    if (settings_.validateVerbose) {
         debugInfo.messageSeverity |=
-            VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT;
+            vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
         debugInfo.messageType |=
-            VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+            vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
     }
 
     debugInfo.pfnUserCallback = events::DebugUtilsMessenger;
     debugInfo.pUserData = this;
 
-    vk::assert_success(ext::vkCreateDebugUtilsMessengerEXT(ctx_.instance, &debugInfo, nullptr, &debugUtilsMessenger_));
+    debugUtilsMessenger_ = ctx_.instance.createDebugUtilsMessengerEXT(debugInfo, ALLOC_PLACE_HOLDER);
 }
 
 void Shell::initPhysicalDev() {
     enumeratePhysicalDevs();
-
-    ctx_.physicalDev = VK_NULL_HANDLE;
     pickPhysicalDev();
-
-    if (ctx_.physicalDev == VK_NULL_HANDLE) throw std::runtime_error("failed to find any capable Vulkan physical device");
+    if (!ctx_.physicalDev) {
+        printf("failed to find any capable Vulkan physical device");
+        abort();
+    }
 }
 
 void Shell::createContext() {
     createDev();
 
-    ext::CreateDeviceEXTs(ctx_);
     initDevQueues();
 
     // TODO: should this do this?
@@ -254,9 +257,9 @@ void Shell::createContext() {
 }
 
 void Shell::destroyContext() {
-    if (ctx_.dev == VK_NULL_HANDLE) return;
+    if (!ctx_.dev) return;
 
-    vkDeviceWaitIdle(ctx_.dev);
+    ctx_.dev.waitIdle();
 
     destroySwapchain();
 
@@ -264,12 +267,8 @@ void Shell::destroyContext() {
 
     destroyBackBuffers();
 
-    // ctx_.game_queue = VK_NULL_HANDLE;
-    // ctx_.present_queue = VK_NULL_HANDLE;
-
-    vkDeviceWaitIdle(ctx_.dev);
-    vkDestroyDevice(ctx_.dev, nullptr);
-    ctx_.dev = VK_NULL_HANDLE;
+    ctx_.dev.waitIdle();
+    ctx_.dev.destroy(ALLOC_PLACE_HOLDER);
 }
 
 void Shell::createDev() {
@@ -281,19 +280,17 @@ void Shell::createDev() {
         ctx_.computeIndex,
     };
     float queue_priorities[1] = {0.0f};  // only one queue per family atm
-    std::vector<VkDeviceQueueCreateInfo> queue_infos;
+    std::vector<vk::DeviceQueueCreateInfo> queue_infos;
     for (auto &index : unique_queue_families) {
-        VkDeviceQueueCreateInfo queue_info = {};
-        queue_info.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-        queue_info.pNext = nullptr;
-        queue_info.queueCount = 1;  // only one queue per family atm
-        queue_info.queueFamilyIndex = index;
-        queue_info.pQueuePriorities = queue_priorities;
-        queue_infos.push_back(queue_info);
+        vk::DeviceQueueCreateInfo queueInfo = {};
+        queueInfo.queueCount = 1;  // only one queue per family atm
+        queueInfo.queueFamilyIndex = index;
+        queueInfo.pQueuePriorities = queue_priorities;
+        queue_infos.push_back(queueInfo);
     }
 
     // features
-    VkPhysicalDeviceFeatures deviceFeatures = {};
+    vk::PhysicalDeviceFeatures deviceFeatures = {};
     deviceFeatures.samplerAnisotropy = ctx_.samplerAnisotropyEnabled;
     deviceFeatures.sampleRateShading = ctx_.sampleRateShadingEnabled;
     deviceFeatures.fragmentStoresAndAtomics = ctx_.computeShadingEnabled;
@@ -309,8 +306,7 @@ void Shell::createDev() {
     for (const auto &extInfo : phyDevProps.phyDevExtInfos)
         if (extInfo.valid) enabledExtensionNames.push_back(extInfo.name);
 
-    VkDeviceCreateInfo devInfo = {};
-    devInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    vk::DeviceCreateInfo devInfo = {};
     devInfo.queueCreateInfoCount = static_cast<uint32_t>(queue_infos.size());
     devInfo.pQueueCreateInfos = queue_infos.data();
     devInfo.pEnabledFeatures = &deviceFeatures;
@@ -330,16 +326,42 @@ void Shell::createDev() {
         // pNext = &phyDevProps.featTransFback.pNext;
     }
 
-    vk::assert_success(vkCreateDevice(ctx_.physicalDev, &devInfo, nullptr, &ctx_.dev));
+    ctx_.dev = ctx_.physicalDev.createDevice(devInfo, ALLOC_PLACE_HOLDER);
+    assert(ctx_.dev);
+
+    VULKAN_HPP_DEFAULT_DISPATCHER.init(ctx_.dev);
+
+    // Moved asserts below from old Extensions.h. Not sure yet if there is a better place.
+
+    if (ctx_.debugMarkersEnabled) {
+        // There are more of these and really there needs to be a more robust solution. As of now there is no way to enable
+        // these.
+        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkDebugMarkerSetObjectTagEXT);
+        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkDebugMarkerSetObjectNameEXT);
+        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdDebugMarkerBeginEXT);
+        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdDebugMarkerEndEXT);
+        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdDebugMarkerInsertEXT);
+
+        ctx_.dbg.init(ctx_.dev, true);
+    }
+    if (ctx_.transformFeedbackEnabled) {
+        assert(false);  // You probably don't want to use transform feedback see below.
+        /**
+         * I started trying to implement a simple a vertex update on the gpu using transform feedback while following along
+         * with the shader book I'm reading. As I was doing this it was becoming increasingly clear that this was going to be
+         * difficult due to the lack of working examples I could find online. That is when I stumbled upon this blog post by
+         * a Khronos employee: http://jason-blog.jlekstrand.net/2018/10/transform-feedback-is-terrible-so-why.html. After
+         * reading this I will take his adivce and implement the update on the gpu using compute shaders, but I am going to
+         * leave this code here because I liked the changes I made to the extensions code in this file, and the
+         * Shell/Settings code elsewhere. Also, it should be a good reminder to not just following things blindly.
+         */
+        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdBindTransformFeedbackBuffersEXT);
+    }
 }
 
 void Shell::createBackBuffers() {
-    VkSemaphoreCreateInfo sem_info = {};
-    sem_info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-    VkFenceCreateInfo fence_info = {};
-    fence_info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fence_info.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    vk::SemaphoreCreateInfo semaphoreInfo = {};
+    vk::FenceCreateInfo fenceInfo = {vk::FenceCreateFlagBits::eSignaled};
 
     // BackBuffer is used to track which swapchain image and its associated
     // sync primitives are busy.  Having more BackBuffer's than swapchain
@@ -347,22 +369,22 @@ void Shell::createBackBuffers() {
     // on acquire_semaphore.
     const int count = ctx_.imageCount + 1;
     for (int i = 0; i < count; i++) {
-        BackBuffer buf = {};
-        vk::assert_success(vkCreateSemaphore(ctx_.dev, &sem_info, nullptr, &buf.acquireSemaphore));
-        vk::assert_success(vkCreateSemaphore(ctx_.dev, &sem_info, nullptr, &buf.renderSemaphore));
-        vk::assert_success(vkCreateFence(ctx_.dev, &fence_info, nullptr, &buf.presentFence));
+        BackBuffer backBuffer = {};
+        backBuffer.acquireSemaphore = ctx_.dev.createSemaphore(semaphoreInfo, ALLOC_PLACE_HOLDER);
+        backBuffer.renderSemaphore = ctx_.dev.createSemaphore(semaphoreInfo, ALLOC_PLACE_HOLDER);
+        backBuffer.presentFence = ctx_.dev.createFence(fenceInfo, ALLOC_PLACE_HOLDER);
 
-        ctx_.backBuffers.push(buf);
+        ctx_.backBuffers.push(backBuffer);
     }
 }
 
 void Shell::destroyBackBuffers() {
     while (!ctx_.backBuffers.empty()) {
-        const auto &buf = ctx_.backBuffers.front();
+        const auto &backBuffer = ctx_.backBuffers.front();
 
-        vkDestroySemaphore(ctx_.dev, buf.acquireSemaphore, nullptr);
-        vkDestroySemaphore(ctx_.dev, buf.renderSemaphore, nullptr);
-        vkDestroyFence(ctx_.dev, buf.presentFence, nullptr);
+        ctx_.dev.destroySemaphore(backBuffer.acquireSemaphore, ALLOC_PLACE_HOLDER);
+        ctx_.dev.destroySemaphore(backBuffer.renderSemaphore, ALLOC_PLACE_HOLDER);
+        ctx_.dev.destroyFence(backBuffer.presentFence, ALLOC_PLACE_HOLDER);
 
         ctx_.backBuffers.pop();
     }
@@ -372,8 +394,7 @@ void Shell::destroyBackBuffers() {
 void Shell::createSwapchain() {
     ctx_.surface = createSurface(ctx_.instance);
 
-    VkBool32 supported;
-    vk::assert_success(vkGetPhysicalDeviceSurfaceSupportKHR(ctx_.physicalDev, ctx_.presentIndex, ctx_.surface, &supported));
+    vk::Bool32 supported = ctx_.physicalDev.getSurfaceSupportKHR(ctx_.presentIndex, ctx_.surface);
     assert(supported);
     // this should be guaranteed by the platform-specific can_present call
     supported = canPresent(ctx_.physicalDev, ctx_.presentIndex);
@@ -395,25 +416,21 @@ void Shell::createSwapchain() {
         you loaded the original image.
     */
     ctx_.linearBlittingSupported =
-        helpers::findSupportedFormat(ctx_.physicalDev, {ctx_.surfaceFormat.format}, VK_IMAGE_TILING_OPTIMAL,
-                                     VK_FORMAT_FEATURE_SAMPLED_IMAGE_FILTER_LINEAR_BIT) != VK_FORMAT_UNDEFINED;
+        helpers::findSupportedFormat(ctx_.physicalDev, {ctx_.surfaceFormat.format}, vk::ImageTiling::eOptimal,
+                                     vk::FormatFeatureFlagBits::eSampledImageFilterLinear) != vk::Format::eUndefined;
 
     // defer to resizeSwapchain()
-    ctx_.swapchain = VK_NULL_HANDLE;
+    ctx_.swapchain = vk::SwapchainKHR{};
     // ctx_.extent.width = UINT32_MAX;
     // ctx_.extent.height = UINT32_MAX;
 }
 
 void Shell::destroySwapchain() {
-    if (ctx_.swapchain != VK_NULL_HANDLE) {
+    if (ctx_.swapchain) {
         game_.detachSwapchain();
-
-        vkDestroySwapchainKHR(ctx_.dev, ctx_.swapchain, nullptr);
-        ctx_.swapchain = VK_NULL_HANDLE;
+        ctx_.dev.destroySwapchainKHR(ctx_.swapchain, ALLOC_PLACE_HOLDER);
     }
-
-    vkDestroySurfaceKHR(ctx_.instance, ctx_.surface, nullptr);
-    ctx_.surface = VK_NULL_HANDLE;
+    ctx_.instance.destroySurfaceKHR(ctx_.surface, ALLOC_PLACE_HOLDER);
 }
 
 void Shell::onButton(const GameButtonBits buttons) { game_.onButton(buttons); }
@@ -439,20 +456,20 @@ void Shell::resizeSwapchain(uint32_t widthHint, uint32_t heightHint, bool refres
 
     auto &caps = ctx_.surfaceProps.capabilities;
 
-    VkSurfaceTransformFlagBitsKHR preTransform;  // ex: rotate 90
-    if (caps.supportedTransforms & VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR) {
-        preTransform = VK_SURFACE_TRANSFORM_IDENTITY_BIT_KHR;
+    vk::SurfaceTransformFlagBitsKHR preTransform;  // ex: rotate 90
+    if (caps.supportedTransforms & vk::SurfaceTransformFlagBitsKHR::eIdentity) {
+        preTransform = vk::SurfaceTransformFlagBitsKHR::eIdentity;
     } else {
         preTransform = caps.currentTransform;
     }
 
     // Find a supported composite alpha mode - one of these is guaranteed to be set
-    VkCompositeAlphaFlagBitsKHR compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-    VkCompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = {
-        VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR,
-        VK_COMPOSITE_ALPHA_PRE_MULTIPLIED_BIT_KHR,
-        VK_COMPOSITE_ALPHA_POST_MULTIPLIED_BIT_KHR,
-        VK_COMPOSITE_ALPHA_INHERIT_BIT_KHR,
+    vk::CompositeAlphaFlagBitsKHR compositeAlpha = vk::CompositeAlphaFlagBitsKHR::eOpaque;
+    vk::CompositeAlphaFlagBitsKHR compositeAlphaFlags[4] = {
+        vk::CompositeAlphaFlagBitsKHR::eOpaque,
+        vk::CompositeAlphaFlagBitsKHR::ePreMultiplied,
+        vk::CompositeAlphaFlagBitsKHR::ePostMultiplied,
+        vk::CompositeAlphaFlagBitsKHR::eInherit,
     };
     for (uint32_t i = 0; i < sizeof(compositeAlphaFlags); i++) {
         if (caps.supportedCompositeAlpha & compositeAlphaFlags[i]) {
@@ -461,50 +478,49 @@ void Shell::resizeSwapchain(uint32_t widthHint, uint32_t heightHint, bool refres
         }
     }
 
-    VkSwapchainCreateInfoKHR swapchain_info = {};
-    swapchain_info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-    swapchain_info.surface = ctx_.surface;
-    swapchain_info.minImageCount = ctx_.imageCount;
-    swapchain_info.imageFormat = ctx_.surfaceFormat.format;
-    swapchain_info.imageColorSpace = ctx_.surfaceFormat.colorSpace;
-    swapchain_info.imageExtent = ctx_.extent;
-    swapchain_info.imageArrayLayers = 1;
+    vk::SwapchainCreateInfoKHR swapchainInfo = {};
+    swapchainInfo.surface = ctx_.surface;
+    swapchainInfo.minImageCount = ctx_.imageCount;
+    swapchainInfo.imageFormat = ctx_.surfaceFormat.format;
+    swapchainInfo.imageColorSpace = ctx_.surfaceFormat.colorSpace;
+    swapchainInfo.imageExtent = ctx_.extent;
+    swapchainInfo.imageArrayLayers = 1;
     // TODO: Should these flags be pass setup dependent???
-    swapchain_info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;  // | VK_IMAGE_USAGE_STORAGE_BIT;
-    swapchain_info.preTransform = caps.currentTransform;
-    swapchain_info.compositeAlpha = compositeAlpha;
-    swapchain_info.presentMode = ctx_.mode;
+    swapchainInfo.imageUsage = vk::ImageUsageFlagBits::eColorAttachment;  // | vk::ImageUsageFlagBits::eStorage;
+    swapchainInfo.preTransform = caps.currentTransform;
+    swapchainInfo.compositeAlpha = compositeAlpha;
+    swapchainInfo.presentMode = ctx_.mode;
 #ifndef __ANDROID__
     // Clip obscured pixels (by other windows for example). Only needed if the pixel info is reused.
-    swapchain_info.clipped = true;
+    swapchainInfo.clipped = true;
 #else
     swapchain_info.clipped = false;
 #endif
-    swapchain_info.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    swapchain_info.queueFamilyIndexCount = 0;
-    swapchain_info.pQueueFamilyIndices = nullptr;
+    swapchainInfo.imageSharingMode = vk::SharingMode::eExclusive;
+    swapchainInfo.queueFamilyIndexCount = 0;
+    swapchainInfo.pQueueFamilyIndices = nullptr;
 
     if (ctx_.graphicsIndex != ctx_.presentIndex) {
         // If the graphics and present queues are from different queue families,
         // we either have to explicitly transfer ownership of images between the
         // queues, or we have to create the swapchain with imageSharingMode
-        // as VK_SHARING_MODE_CONCURRENT
+        // as vk::SharingMode::eConcurrent
         uint32_t queue_families[2] = {ctx_.graphicsIndex, ctx_.presentIndex};
-        swapchain_info.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-        swapchain_info.queueFamilyIndexCount = 2;
-        swapchain_info.pQueueFamilyIndices = queue_families;
+        swapchainInfo.imageSharingMode = vk::SharingMode::eConcurrent;
+        swapchainInfo.queueFamilyIndexCount = 2;
+        swapchainInfo.pQueueFamilyIndices = queue_families;
     }
 
-    swapchain_info.oldSwapchain = ctx_.swapchain;
+    swapchainInfo.oldSwapchain = ctx_.swapchain;
 
-    vk::assert_success(vkCreateSwapchainKHR(ctx_.dev, &swapchain_info, nullptr, &ctx_.swapchain));
+    ctx_.swapchain = ctx_.dev.createSwapchainKHR(swapchainInfo, ALLOC_PLACE_HOLDER);
 
     // destroy the old swapchain
-    if (swapchain_info.oldSwapchain != VK_NULL_HANDLE) {
-        vkDeviceWaitIdle(ctx_.dev);
+    if (swapchainInfo.oldSwapchain) {
+        ctx_.dev.waitIdle();
 
         game_.detachSwapchain();
-        vkDestroySwapchainKHR(ctx_.dev, swapchain_info.oldSwapchain, nullptr);
+        ctx_.dev.destroySwapchainKHR(swapchainInfo.oldSwapchain, ALLOC_PLACE_HOLDER);
     }
 
     game_.attachSwapchain();
@@ -513,7 +529,7 @@ void Shell::resizeSwapchain(uint32_t widthHint, uint32_t heightHint, bool refres
 void Shell::addGameTime(float time) {
     int max_ticks = 1;
 
-    if (!settings_.no_tick) gameTime_ += time;
+    if (!settings_.noTick) gameTime_ += time;
 
     while (gameTime_ >= gameTick_ && max_ticks--) {
         game_.onTick();
@@ -522,55 +538,55 @@ void Shell::addGameTime(float time) {
 }
 
 void Shell::acquireBackBuffer() {
-    auto &buf = ctx_.backBuffers.front();
+    auto &backBuffer = ctx_.backBuffers.front();
 
     // wait until acquire and render semaphores are waited/unsignaled
-    vk::assert_success(vkWaitForFences(ctx_.dev, 1, &buf.presentFence, true, UINT64_MAX));
+    ctx_.dev.waitForFences({backBuffer.presentFence}, true, UINT64_MAX);
 
-    VkResult res = VK_TIMEOUT;  // Anything but VK_SUCCESS
-    while (res != VK_SUCCESS) {
-        res = vkAcquireNextImageKHR(ctx_.dev, ctx_.swapchain, UINT64_MAX, buf.acquireSemaphore, VK_NULL_HANDLE,
-                                    &buf.imageIndex);
-        if (res == VK_ERROR_OUT_OF_DATE_KHR) {
+    vk::Result res = vk::Result::eTimeout;  // Anything but vk::Result::eSuccess
+    while (res != vk::Result::eSuccess) {
+        res = ctx_.dev.acquireNextImageKHR(ctx_.swapchain, UINT64_MAX, backBuffer.acquireSemaphore, {},
+                                           &backBuffer.imageIndex);
+
+        if (res == vk::Result::eErrorOutOfDateKHR) {
             // Swapchain is out of date (e.g. the window was resized) and
             // must be recreated:
             resizeSwapchain(0, 0);  // width and height hints should be ignored
         } else {
-            assert(!res);
+            helpers::checkVkResult(res);
         }
     }
 
     // reset the fence (AFTER POTENTIAL RECREATION OF SWAP CHAIN)
-    vk::assert_success(vkResetFences(ctx_.dev, 1, &buf.presentFence));  // *
+    ctx_.dev.resetFences({backBuffer.presentFence});
 
-    ctx_.acquiredBackBuffer = buf;
+    ctx_.acquiredBackBuffer = backBuffer;
     ctx_.backBuffers.pop();
 }
 
 void Shell::presentBackBuffer() {
-    const auto &buf = ctx_.acquiredBackBuffer;
+    const auto &backBuffer = ctx_.acquiredBackBuffer;
 
-    if (!settings_.no_render) game_.onFrame(gameTime_ / gameTick_);
+    if (!settings_.noRender) game_.onFrame(gameTime_ / gameTick_);
 
-    VkPresentInfoKHR present_info = {};
-    present_info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    present_info.waitSemaphoreCount = 1;
-    present_info.pWaitSemaphores = (settings_.no_render) ? &buf.acquireSemaphore : &buf.renderSemaphore;
-    present_info.swapchainCount = 1;
-    present_info.pSwapchains = &ctx_.swapchain;
-    present_info.pImageIndices = &buf.imageIndex;
+    vk::PresentInfoKHR presentInfo = {};
+    presentInfo.waitSemaphoreCount = 1;
+    presentInfo.pWaitSemaphores = (settings_.noRender) ? &backBuffer.acquireSemaphore : &backBuffer.renderSemaphore;
+    presentInfo.swapchainCount = 1;
+    presentInfo.pSwapchains = &ctx_.swapchain;
+    presentInfo.pImageIndices = &backBuffer.imageIndex;
 
-    VkResult res = vkQueuePresentKHR(ctx_.queues[ctx_.presentIndex], &present_info);
-    if (res == VK_ERROR_OUT_OF_DATE_KHR) {
+    auto res = ctx_.queues[ctx_.presentIndex].presentKHR(presentInfo);
+    if (res == vk::Result::eErrorOutOfDateKHR) {
         // Swapchain is out of date (e.g. the window was resized) and
         // must be recreated:
         resizeSwapchain(0, 0);  // width and height hints should be ignored
     } else {
-        assert(!res);
+        helpers::checkVkResult(res);
     }
 
-    vk::assert_success(vkQueueSubmit(ctx_.queues[ctx_.presentIndex], 0, nullptr, buf.presentFence));
-    ctx_.backBuffers.push(buf);
+    ctx_.queues[ctx_.presentIndex].submit({}, backBuffer.presentFence);
+    ctx_.backBuffers.push(backBuffer);
 }
 
 // ********
@@ -584,15 +600,14 @@ void Shell::initDevQueues() {
         ctx_.transferIndex,
         ctx_.computeIndex,
     };
-    for (auto queue_family_index : unique_queue_families) {
-        VkQueue queue = VK_NULL_HANDLE;
-        vkGetDeviceQueue(ctx_.dev, queue_family_index, 0, &queue);
-        assert(queue != VK_NULL_HANDLE);
-        ctx_.queues[queue_family_index] = queue;
+    for (auto familtyIndex : unique_queue_families) {
+        vk::Queue queue = ctx_.dev.getQueue(familtyIndex, 0);
+        assert(queue);
+        ctx_.queues[familtyIndex] = queue;
     }
 }
 
-void Shell::destroyInstance() { vkDestroyInstance(ctx_.instance, nullptr); }
+void Shell::destroyInstance() { ctx_.instance.destroy(ALLOC_PLACE_HOLDER); }
 
 void Shell::enumerateInstanceProperties() {
 #ifdef __ANDROID__
@@ -601,7 +616,7 @@ void Shell::enumerateInstanceProperties() {
     // vulkan_wrapper helper.
     if (!InitVulkan()) {
         LOGE("Failied initializing Vulkan APIs!");
-        return VK_ERROR_INITIALIZATION_FAILED;
+        return vk::Result::eErrorInitializationFailed;
     }
     LOGI("Loaded Vulkan APIs.");
 #endif
@@ -611,124 +626,58 @@ void Shell::enumerateInstanceProperties() {
      * instance layers could change. For example, installing something
      * could include new layers that the loader would pick up
      * between the initial query for the count and the
-     * request for VkLayerProperties. The loader indicates that
-     * by returning a VK_INCOMPLETE status and will update the
+     * request for vk::LayerProperties. The loader indicates that
+     * by returning a vk::Result::eIncomplete status and will update the
      * the count parameter.
      * The count parameter will be updated with the number of
      * entries loaded into the data pointer - in case the number
      * of layers went down or is smaller than the size given.
      */
-    uint32_t instance_layer_count;
-    vk::assert_success(vkEnumerateInstanceLayerProperties(&instance_layer_count, nullptr));
-
-    std::vector<VkLayerProperties> props(instance_layer_count);
-    vk::assert_success(vkEnumerateInstanceLayerProperties(&instance_layer_count, props.data()));
+    auto props = vk::enumerateInstanceLayerProperties();
 
     /*
      * Now gather the extension list for each instance layer.
      */
     for (auto &prop : props) {
         layerProps_.push_back({prop});
-        enumerateInstanceLayerExtensionProperties(layerProps_.back());
+        layerProps_.back().extensionProps =
+            vk::enumerateInstanceExtensionProperties(std::string(layerProps_.back().properties.layerName));
     }
 
     // Get instance extension properties
-    enumerateInstanceExtensionProperties();
-}
-
-void Shell::enumerateInstanceLayerExtensionProperties(LayerProperties &layerProps) {
-    VkExtensionProperties *instance_extensions;
-    uint32_t instance_extension_count;
-    VkResult res;
-    char *layer_name = layerProps.properties.layerName;
-
-    do {
-        // This could be cleaner obviously
-        res = vkEnumerateInstanceExtensionProperties(layer_name, &instance_extension_count, nullptr);
-        if (res) return;
-        if (instance_extension_count == 0) return;
-
-        layerProps.extensionProps.resize(instance_extension_count);
-        instance_extensions = layerProps.extensionProps.data();
-        res = vkEnumerateInstanceExtensionProperties(layer_name, &instance_extension_count, instance_extensions);
-    } while (res == VK_INCOMPLETE);
+    instExtProps_ = vk::enumerateInstanceExtensionProperties();
 }
 
 void Shell::enumerateDeviceLayerExtensionProperties(PhysicalDeviceProperties &props, LayerProperties &layerProps) {
-    uint32_t extensionCount;
-    std::vector<VkExtensionProperties> extensions;
-    char *layer_name = layerProps.properties.layerName;
-
-    vk::assert_success(vkEnumerateDeviceExtensionProperties(props.device, layer_name, &extensionCount, nullptr));
-
-    extensions.resize(extensionCount);
-    vk::assert_success(vkEnumerateDeviceExtensionProperties(props.device, layer_name, &extensionCount, extensions.data()));
-
+    auto extensions = props.device.enumerateDeviceExtensionProperties(std::string(layerProps.properties.layerName));
     if (!extensions.empty())
         for (auto &ext : extensions)
-            props.layerExtensionMap.insert(std::pair<const char *, VkExtensionProperties>(layer_name, ext));
-}
-
-void Shell::enumerateInstanceExtensionProperties() {
-    uint32_t ext_count;
-    vk::assert_success(vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, nullptr));
-    instExtProps_.resize(ext_count);
-    vk::assert_success(vkEnumerateInstanceExtensionProperties(nullptr, &ext_count, instExtProps_.data()));
+            props.layerExtensionMap.insert(
+                std::pair<const char *, vk::ExtensionProperties>(layerProps.properties.layerName, ext));
 }
 
 void Shell::enumerateSurfaceProperties() {
-    // capabilities
-    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx_.physicalDev, ctx_.surface, &ctx_.surfaceProps.capabilities);
-
-    // surface formats
-    uint32_t formatCount;
-    vkGetPhysicalDeviceSurfaceFormatsKHR(ctx_.physicalDev, ctx_.surface, &formatCount, NULL);
-    if (formatCount != 0) {
-        ctx_.surfaceProps.surfFormats.resize(formatCount);
-        vkGetPhysicalDeviceSurfaceFormatsKHR(ctx_.physicalDev, ctx_.surface, &formatCount,
-                                             ctx_.surfaceProps.surfFormats.data());
-    }
-
-    // present modes
-    uint32_t presentModeCount;
-    vkGetPhysicalDeviceSurfacePresentModesKHR(ctx_.physicalDev, ctx_.surface, &presentModeCount, NULL);
-    if (presentModeCount != 0) {
-        ctx_.surfaceProps.presentModes.resize(presentModeCount);
-        vkGetPhysicalDeviceSurfacePresentModesKHR(ctx_.physicalDev, ctx_.surface, &presentModeCount,
-                                                  ctx_.surfaceProps.presentModes.data());
-    }
+    ctx_.surfaceProps.capabilities = ctx_.physicalDev.getSurfaceCapabilitiesKHR(ctx_.surface);
+    ctx_.surfaceProps.formats = ctx_.physicalDev.getSurfaceFormatsKHR(ctx_.surface);
+    ctx_.surfaceProps.presentModes = ctx_.physicalDev.getSurfacePresentModesKHR(ctx_.surface);
 }
 
 void Shell::enumeratePhysicalDevs(uint32_t physicalDevCount) {
-    std::vector<VkPhysicalDevice> devs;
-    uint32_t const req_count = physicalDevCount;
-
-    VkResult res = vkEnumeratePhysicalDevices(ctx_.instance, &physicalDevCount, NULL);
-    assert(res == VK_SUCCESS && physicalDevCount >= req_count);
-    devs.resize(physicalDevCount);
-
-    vk::assert_success(vkEnumeratePhysicalDevices(ctx_.instance, &physicalDevCount, devs.data()));
+    auto devs = ctx_.instance.enumeratePhysicalDevices();
+    assert(devs.size() >= physicalDevCount);
 
     for (auto &dev : devs) {
-        PhysicalDeviceProperties props;
+        ctx_.physicalDevProps.push_back({});
+        auto &props = ctx_.physicalDevProps.back();
         props.device = dev;
 
         // Queue family properties
-        vkGetPhysicalDeviceQueueFamilyProperties(props.device, &props.queueFamilyCount, NULL);
-        assert(props.queueFamilyCount >= 1);
-
-        props.queueProps.resize(props.queueFamilyCount);
-        vkGetPhysicalDeviceQueueFamilyProperties(props.device, &props.queueFamilyCount, props.queueProps.data());
-        assert(props.queueFamilyCount >= 1);
-
+        props.queueProps = props.device.getQueueFamilyProperties();
+        assert(props.queueProps.size());
         // Memory properties
-        vkGetPhysicalDeviceMemoryProperties(props.device, &props.memoryProperties);
-
+        props.memoryProperties = props.device.getMemoryProperties();
         // Extension properties
-        uint32_t extensionCount;
-        vkEnumerateDeviceExtensionProperties(props.device, NULL, &extensionCount, NULL);
-        props.extensionProperties.resize(extensionCount);
-        vkEnumerateDeviceExtensionProperties(dev, NULL, &extensionCount, props.extensionProperties.data());
+        props.extensionProperties = props.device.enumerateDeviceExtensionProperties();
 
         // This could all be faster, but I doubt it will make a significant difference at any point.
         for (const auto &extInfo : deviceExtensionInfo_) {
@@ -759,10 +708,7 @@ void Shell::enumeratePhysicalDevs(uint32_t physicalDevCount) {
                 } else if (strcmp(extInfo.name, (char *)VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME) == 0) {
                     if (extInfo.tryToEnabled) {
                         assert(false);  // Not tested.
-                        VkPhysicalDeviceFeatures2 features = {};
-                        features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-                        features.pNext = &props.featVertAttrDiv;
-                        vkGetPhysicalDeviceFeatures2(props.device, &features);
+                        vk::PhysicalDeviceFeatures2 features = props.device.getFeatures2();
                         // Check features
                         if (props.featVertAttrDiv.vertexAttributeInstanceRateDivisor) {
                             props.featVertAttrDiv.vertexAttributeInstanceRateZeroDivisor = VK_FALSE;
@@ -773,10 +719,7 @@ void Shell::enumeratePhysicalDevs(uint32_t physicalDevCount) {
 
                 } else if (strcmp(extInfo.name, (char *)VK_EXT_TRANSFORM_FEEDBACK_EXTENSION_NAME) == 0) {
                     if (extInfo.tryToEnabled) {
-                        VkPhysicalDeviceFeatures2 features = {};
-                        features.sType = VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_FEATURES_2;
-                        features.pNext = &props.featTransFback;
-                        vkGetPhysicalDeviceFeatures2(props.device, &features);
+                        vk::PhysicalDeviceFeatures2 features = props.device.getFeatures2();
                         // Check features
                         if (props.featTransFback.transformFeedback) {
                             props.featTransFback.geometryStreams = VK_FALSE;
@@ -795,19 +738,15 @@ void Shell::enumeratePhysicalDevs(uint32_t physicalDevCount) {
         }
 
         // Physical device features
-        vkGetPhysicalDeviceFeatures(props.device, &props.features);
-
-        // TODO: enumerate extension properties.
+        props.features = props.device.getFeatures();
 
         // Physical device properties
-        vkGetPhysicalDeviceProperties(props.device, &props.properties);
+        props.properties = props.device.getProperties();
 
         // Layer extension properties
-        for (auto &layer_prop : layerProps_) {
-            enumerateDeviceLayerExtensionProperties(props, layer_prop);
+        for (auto &layerProp : layerProps_) {
+            enumerateDeviceLayerExtensionProperties(props, layerProp);
         }
-
-        ctx_.physicalDevProps.push_back(props);
     }
 
     devs.erase(devs.begin(), devs.end());
@@ -859,15 +798,15 @@ bool Shell::determineQueueFamiliesSupport(const PhysicalDeviceProperties &props,
     // Determine graphics and present queues ...
 
     // Iterate over each queue to learn whether it supports presenting:
-    std::vector<VkBool32> pSupportsPresent(props.queueFamilyCount);
+    std::vector<vk::Bool32> pSupportsPresent(props.queueProps.size());
     // TODO: I don't feel like re-arranging the whole start up atm.
     auto surface = createSurface(ctx_.instance);
-    for (uint32_t i = 0; i < props.queueFamilyCount; i++) {
-        vk::assert_success(vkGetPhysicalDeviceSurfaceSupportKHR(props.device, i, surface, pSupportsPresent.data()));
+    for (uint32_t i = 0; i < static_cast<uint32_t>(props.queueProps.size()); i++) {
+        pSupportsPresent[i] = props.device.getSurfaceSupportKHR(i, surface);
 
         // Search for a graphics and a present queue in the array of queue
         // families, try to find one that supports both
-        if (props.queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+        if (props.queueProps[i].queueFlags & vk::QueueFlagBits::eGraphics) {
             if (graphicsIndex == UINT32_MAX) graphicsIndex = i;
 
             if (pSupportsPresent[i] == VK_TRUE) {
@@ -881,35 +820,35 @@ bool Shell::determineQueueFamiliesSupport(const PhysicalDeviceProperties &props,
         // If didn't find a queue that supports both graphics and present, then
         // find a separate present queue.
         // TODO: is this the best thing to do?
-        for (uint32_t i = 0; i < props.queueFamilyCount; ++i) {
+        for (uint32_t i = 0; i < static_cast<uint32_t>(props.queueProps.size()); ++i) {
             if (pSupportsPresent[i] == VK_TRUE) {
                 presentIndex = i;
                 break;
             }
         }
     }
-    vkDestroySurfaceKHR(ctx_.instance, surface, nullptr);
+    ctx_.instance.destroySurfaceKHR(surface, ALLOC_PLACE_HOLDER);
 
     // Determine transfer queue ...
 
-    for (uint32_t i = 0; i < props.queueFamilyCount; ++i) {
-        if ((props.queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0 &&
-            props.queueProps[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(props.queueProps.size()); ++i) {
+        if ((props.queueProps[i].queueFlags & vk::QueueFlagBits::eGraphics) == vk::QueueFlagBits{} &&
+            props.queueProps[i].queueFlags & vk::QueueFlagBits::eTransfer) {
             transferIndex = i;
             break;
-        } else if (props.queueProps[i].queueFlags & VK_QUEUE_TRANSFER_BIT) {
+        } else if (props.queueProps[i].queueFlags & vk::QueueFlagBits::eTransfer) {
             transferIndex = i;
         }
     }
 
     // Determine compute queue ... (This logic ain't great. It can put compute with transfer)
 
-    for (uint32_t i = 0; i < props.queueFamilyCount; ++i) {
-        if ((props.queueProps[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) == 0 &&
-            props.queueProps[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
+    for (uint32_t i = 0; i < static_cast<uint32_t>(props.queueProps.size()); ++i) {
+        if ((props.queueProps[i].queueFlags & vk::QueueFlagBits::eGraphics) == vk::QueueFlagBits{} &&
+            props.queueProps[i].queueFlags & vk::QueueFlagBits::eCompute) {
             computeIndex = i;
             break;
-        } else if (props.queueProps[i].queueFlags & VK_QUEUE_COMPUTE_BIT) {
+        } else if (props.queueProps[i].queueFlags & vk::QueueFlagBits::eCompute) {
             computeIndex = i;
         }
     }
@@ -931,69 +870,68 @@ bool Shell::determineDeviceExtensionSupport(const PhysicalDeviceProperties &prop
 
 void Shell::determineDeviceFeatureSupport(const PhysicalDeviceProperties &props) {
     // sampler anisotropy
-    ctx_.samplerAnisotropyEnabled = props.features.samplerAnisotropy && settings_.try_sampler_anisotropy;
-    if (settings_.try_sampler_anisotropy && !ctx_.samplerAnisotropyEnabled)
+    ctx_.samplerAnisotropyEnabled = props.features.samplerAnisotropy && settings_.trySamplerAnisotropy;
+    if (settings_.trySamplerAnisotropy && !ctx_.samplerAnisotropyEnabled)
         log(LogPriority::LOG_WARN, "cannot enable sampler anisotropy");
     // sample rate shading
-    ctx_.sampleRateShadingEnabled = props.features.sampleRateShading && settings_.try_sample_rate_shading;
-    if (settings_.try_sample_rate_shading && !ctx_.sampleRateShadingEnabled)
+    ctx_.sampleRateShadingEnabled = props.features.sampleRateShading && settings_.trySampleRateShading;
+    if (settings_.trySampleRateShading && !ctx_.sampleRateShadingEnabled)
         log(LogPriority::LOG_WARN, "cannot enable sample rate shading");
     // compute shading (TODO: this should be more robust)
-    ctx_.computeShadingEnabled = props.features.fragmentStoresAndAtomics && settings_.try_compute_shading;
-    if (settings_.try_compute_shading && !ctx_.computeShadingEnabled)  //
+    ctx_.computeShadingEnabled = props.features.fragmentStoresAndAtomics && settings_.tryComputeShading;
+    if (settings_.tryComputeShading && !ctx_.computeShadingEnabled)  //
         log(LogPriority::LOG_WARN, "cannot enable compute shading (actually just can't enable fragment stores and atomics)");
     // tessellation shading
-    ctx_.tessellationShadingEnabled = props.features.tessellationShader && settings_.try_tessellation_shading;
-    if (settings_.try_tessellation_shading && !ctx_.tessellationShadingEnabled)  //
+    ctx_.tessellationShadingEnabled = props.features.tessellationShader && settings_.tryTessellationShading;
+    if (settings_.tryTessellationShading && !ctx_.tessellationShadingEnabled)  //
         log(LogPriority::LOG_WARN, "cannot enable tessellation shading");
     // geometry shading
-    ctx_.geometryShadingEnabled = props.features.geometryShader && settings_.try_geometry_shading;
-    if (settings_.try_geometry_shading && !ctx_.geometryShadingEnabled)  //
+    ctx_.geometryShadingEnabled = props.features.geometryShader && settings_.tryGeometryShading;
+    if (settings_.tryGeometryShading && !ctx_.geometryShadingEnabled)  //
         log(LogPriority::LOG_WARN, "cannot enable geometry shading");
     // wireframe shading
-    ctx_.wireframeShadingEnabled = props.features.fillModeNonSolid && settings_.try_wireframe_shading;
-    if (settings_.try_wireframe_shading && !ctx_.wireframeShadingEnabled)  //
+    ctx_.wireframeShadingEnabled = props.features.fillModeNonSolid && settings_.tryWireframeShading;
+    if (settings_.tryWireframeShading && !ctx_.wireframeShadingEnabled)  //
         log(LogPriority::LOG_WARN, "cannot enable wire frame shading (actually just can't enable fill mode non-solid)");
     // independent attachment blending
-    ctx_.independentBlendEnabled = props.features.independentBlend && settings_.try_independent_blend;
-    if (settings_.try_independent_blend && !ctx_.independentBlendEnabled)  //
+    ctx_.independentBlendEnabled = props.features.independentBlend && settings_.tryIndependentBlend;
+    if (settings_.tryIndependentBlend && !ctx_.independentBlendEnabled)  //
         log(LogPriority::LOG_WARN, "cannot enable independent attachment blending");
     // image cube arrays
-    ctx_.imageCubeArrayEnabled = props.features.imageCubeArray && settings_.try_image_cube_array;
-    if (settings_.try_image_cube_array && !ctx_.imageCubeArrayEnabled)  //
+    ctx_.imageCubeArrayEnabled = props.features.imageCubeArray && settings_.tryImageCubeArray;
+    if (settings_.tryImageCubeArray && !ctx_.imageCubeArrayEnabled)  //
         log(LogPriority::LOG_WARN, "cannot enable image cube arrays");
 }
 
 void Shell::determineSampleCount(const PhysicalDeviceProperties &props) {
     /* DEPENDS on determine_device_feature_support */
-    ctx_.samples = VK_SAMPLE_COUNT_1_BIT;
+    ctx_.samples = vk::SampleCountFlagBits::e1;
     if (ctx_.sampleRateShadingEnabled) {
-        VkSampleCountFlags counts = std::min(props.properties.limits.framebufferColorSampleCounts,
-                                             props.properties.limits.framebufferDepthSampleCounts);
+        vk::SampleCountFlags counts = std::min(props.properties.limits.framebufferColorSampleCounts,
+                                               props.properties.limits.framebufferDepthSampleCounts);
         // return the highest possible one for now
-        if (counts & VK_SAMPLE_COUNT_64_BIT)
-            ctx_.samples = VK_SAMPLE_COUNT_64_BIT;
-        else if (counts & VK_SAMPLE_COUNT_32_BIT)
-            ctx_.samples = VK_SAMPLE_COUNT_32_BIT;
-        else if (counts & VK_SAMPLE_COUNT_16_BIT)
-            ctx_.samples = VK_SAMPLE_COUNT_16_BIT;
-        else if (counts & VK_SAMPLE_COUNT_8_BIT)
-            ctx_.samples = VK_SAMPLE_COUNT_8_BIT;
-        else if (counts & VK_SAMPLE_COUNT_4_BIT)
-            ctx_.samples = VK_SAMPLE_COUNT_4_BIT;
-        else if (counts & VK_SAMPLE_COUNT_2_BIT)
-            ctx_.samples = VK_SAMPLE_COUNT_2_BIT;
+        if (counts & vk::SampleCountFlagBits::e64)
+            ctx_.samples = vk::SampleCountFlagBits::e64;
+        else if (counts & vk::SampleCountFlagBits::e32)
+            ctx_.samples = vk::SampleCountFlagBits::e32;
+        else if (counts & vk::SampleCountFlagBits::e16)
+            ctx_.samples = vk::SampleCountFlagBits::e16;
+        else if (counts & vk::SampleCountFlagBits::e8)
+            ctx_.samples = vk::SampleCountFlagBits::e8;
+        else if (counts & vk::SampleCountFlagBits::e4)
+            ctx_.samples = vk::SampleCountFlagBits::e4;
+        else if (counts & vk::SampleCountFlagBits::e2)
+            ctx_.samples = vk::SampleCountFlagBits::e2;
     }
 }
 
 bool Shell::determineSwapchainExtent(uint32_t widthHint, uint32_t heightHint, bool refreshCapabilities) {
     // 0, 0 for hints indicates calling from acquire_back_buffer... TODO: more robust solution???
-    if (refreshCapabilities)
-        vkGetPhysicalDeviceSurfaceCapabilitiesKHR(ctx_.physicalDev, ctx_.surface, &ctx_.surfaceProps.capabilities);
+    if (refreshCapabilities) ctx_.surfaceProps.capabilities = ctx_.physicalDev.getSurfaceCapabilitiesKHR(ctx_.surface);
 
     auto &caps = ctx_.surfaceProps.capabilities;
 
-    VkExtent2D extent = caps.currentExtent;
+    vk::Extent2D extent = caps.currentExtent;
 
     // use the hints
     if (extent.width == (uint32_t)-1) {
@@ -1022,41 +960,41 @@ bool Shell::determineSwapchainExtent(uint32_t widthHint, uint32_t heightHint, bo
 void Shell::determineDepthFormat() {
     /* allow custom depth formats */
 #ifdef __ANDROID__
-    // Depth format needs to be VK_FORMAT_D24_UNORM_S8_UINT on Android.
-    ctx_.depth_format = VK_FORMAT_D24_UNORM_S8_UINT;
+    // Depth format needs to be vk::Format::eD24UnormS8Uint on Android.
+    ctx_.depth_format = vk::Format::eD24UnormS8Uint;
 #elif defined(VK_USE_PLATFORM_IOS_MVK)
-    if (ctx_.depth_format == VK_FORMAT_UNDEFINED) ctx_.depth_format = VK_FORMAT_D32_SFLOAT;
+    if (ctx_.depth_format == vk::Format::eUndefined) ctx_.depth_format = vk::Format::eD32Sfloat;
 #else
-    if (ctx_.depthFormat == VK_FORMAT_UNDEFINED) ctx_.depthFormat = helpers::findDepthFormat(ctx_.physicalDev);
+    if (ctx_.depthFormat == vk::Format::eUndefined) ctx_.depthFormat = helpers::findDepthFormat(ctx_.physicalDev);
         // TODO: turn off depth if undefined still...
 #endif
 }
 
 void Shell::determineSwapchainSurfaceFormat() {
     // no preferred type
-    if (ctx_.surfaceProps.surfFormats.size() == 1 && ctx_.surfaceProps.surfFormats[0].format == VK_FORMAT_UNDEFINED) {
-        ctx_.surfaceFormat = {VK_FORMAT_B8G8R8A8_UNORM, VK_COLOR_SPACE_SRGB_NONLINEAR_KHR};
+    if (ctx_.surfaceProps.formats.size() == 1 && ctx_.surfaceProps.formats[0].format == vk::Format::eUndefined) {
+        ctx_.surfaceFormat = {vk::Format::eB8G8R8A8Unorm, vk::ColorSpaceKHR::eSrgbNonlinear};
         return;
     } else {
-        for (const auto &surfFormat : ctx_.surfaceProps.surfFormats) {
-            if (surfFormat.format == VK_FORMAT_B8G8R8A8_UNORM &&
-                surfFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+        for (const auto &surfFormat : ctx_.surfaceProps.formats) {
+            if (surfFormat.format == vk::Format::eB8G8R8A8Unorm &&
+                surfFormat.colorSpace == vk::ColorSpaceKHR::eSrgbNonlinear) {
                 ctx_.surfaceFormat = surfFormat;
                 return;
             }
         }
     }
     log(LogPriority::LOG_INFO, "choosing first available swap surface format!");
-    ctx_.surfaceFormat = ctx_.surfaceProps.surfFormats[0];
+    ctx_.surfaceFormat = ctx_.surfaceProps.formats[0];
 }
 
 void Shell::determineSwapchainPresentMode() {
     // guaranteed to be present (vert sync)
-    VkPresentModeKHR presentMode = VK_PRESENT_MODE_FIFO_KHR;
+    vk::PresentModeKHR presentMode = vk::PresentModeKHR::eFifo;
     for (const auto &mode : ctx_.surfaceProps.presentModes) {
-        if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {  // triple buffer
+        if (mode == vk::PresentModeKHR::eMailbox) {  // triple buffer
             presentMode = mode;
-        } else if (mode == VK_PRESENT_MODE_IMMEDIATE_KHR) {  // no sync
+        } else if (mode == vk::PresentModeKHR::eImmediate) {  // no sync
             presentMode = mode;
         }
     }
@@ -1065,122 +1003,53 @@ void Shell::determineSwapchainPresentMode() {
 
 void Shell::determineSwapchainImageCount() {
     auto &caps = ctx_.surfaceProps.capabilities;
-    // Determine the number of VkImage's to use in the swap chain.
+    // Determine the number of vk::Image's to use in the swap chain.
     // We need to acquire only 1 presentable image at at time.
     // Asking for minImageCount images ensures that we can acquire
     // 1 presentable image as long as we present it before attempting
     // to acquire another.
-    ctx_.imageCount = settings_.back_buffer_count;
+    ctx_.imageCount = settings_.backBufferCount;
     if (ctx_.imageCount < caps.minImageCount)
         ctx_.imageCount = caps.minImageCount;
     else if (ctx_.imageCount > caps.maxImageCount)
         ctx_.imageCount = caps.maxImageCount;
 }
 
-void Shell::determineApiVersion(uint32_t &version) {
-    // Android build not at 1.1 yet
-#ifndef ANDROID
-    // Keep track of the major/minor version we can actually use
-    uint16_t using_major_version = 1;
-    uint16_t using_minor_version = 0;
-    std::string using_version_string = "";
+void Shell::Context::createBuffer(const vk::CommandBuffer &cmd, const vk::BufferUsageFlags usage, const vk::DeviceSize size,
+                                  const std::string &&name, BufferResource &stgRes, BufferResource &buffRes,
+                                  const void *data, const bool mappable) const {
+    // STAGING RESOURCE
+    buffRes.memoryRequirements.size =
+        helpers::createBuffer(dev, size, vk::BufferUsageFlagBits::eTransferSrc,
+                              vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, memProps,
+                              stgRes.buffer, stgRes.memory);
 
-    // Set the desired version we want
-    uint32_t desired_version = getDesiredVersion();
-    uint16_t desired_major_version = VK_VERSION_MAJOR(desired_version);
-    uint16_t desired_minor_version = VK_VERSION_MINOR(desired_version);
-    std::string desired_version_string = std::to_string(desired_major_version) + "." + std::to_string(desired_minor_version);
+    // FILL STAGING BUFFER ON DEVICE
+    void *pData;
+    pData = dev.mapMemory(stgRes.memory, 0, buffRes.memoryRequirements.size);
+    /*
+        You can now simply memcpy the vertex data to the mapped memory and unmap it again using unmapMemory.
+        Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
+        of caching. It is also possible that writes to the buffer are not visible in the mapped memory yet. There
+        are two ways to deal with that problem:
+            - Use a memory heap that is host coherent, indicated with vk::MemoryPropertyFlagBits::eHostCoherent
+            - Call flushMappedMemoryRanges to after writing to the mapped memory, and call
+              invalidateMappedMemoryRanges before reading from the mapped memory
+        We went for the first approach, which ensures that the mapped memory always matches the contents of the
+        allocated memory. Do keep in mind that this may lead to slightly worse performance than explicit flushing,
+        but we'll see why that doesn't matter in the next chapter.
+    */
+    memcpy(pData, data, static_cast<size_t>(size));
+    dev.unmapMemory(stgRes.memory);
 
-    VkInstance instance = VK_NULL_HANDLE;
-    std::vector<VkPhysicalDevice> physical_devices_desired;
+    // FAST VERTEX BUFFER
+    vk::MemoryPropertyFlags memPropFlags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+    if (mappable) memPropFlags |= vk::MemoryPropertyFlagBits::eHostVisible;
+    helpers::createBuffer(dev, size,
+                          // TODO: probably don't need to check memory requirements again
+                          usage, memPropFlags, memProps, buffRes.buffer, buffRes.memory);
 
-    // Determine what API version is available
-    uint32_t api_version;
-    if (VK_SUCCESS == vkEnumerateInstanceVersion(&api_version)) {
-        // Translate the version into major/minor for easier comparison
-        uint32_t loader_major_version = VK_VERSION_MAJOR(api_version);
-        uint32_t loader_minor_version = VK_VERSION_MINOR(api_version);
-        std::cout << "Loader/Runtime support detected for Vulkan " << loader_major_version << "." << loader_minor_version
-                  << "\n";
-
-        // Check current version against what we want to run
-        if (loader_major_version > desired_major_version ||
-            (loader_major_version == desired_major_version && loader_minor_version >= desired_minor_version)) {
-            // Initialize the VkApplicationInfo structure with the version of the API we're intending to use
-            VkApplicationInfo app_info = {};
-            app_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-            app_info.pNext = nullptr;
-            app_info.pApplicationName = "";
-            app_info.applicationVersion = 1;
-            app_info.pEngineName = "";
-            app_info.engineVersion = 1;
-            app_info.apiVersion = desired_version;
-
-            // Initialize the VkInstanceCreateInfo structure
-            VkInstanceCreateInfo inst_info = {};
-            inst_info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-            inst_info.pNext = nullptr;
-            inst_info.flags = 0;
-            inst_info.pApplicationInfo = &app_info;
-            inst_info.enabledExtensionCount = 0;
-            inst_info.ppEnabledExtensionNames = nullptr;
-            inst_info.enabledLayerCount = 0;
-            inst_info.ppEnabledLayerNames = nullptr;
-
-            // Attempt to create the instance
-            if (VK_SUCCESS != vkCreateInstance(&inst_info, nullptr, &instance)) {
-                std::cout << "Unknown error creating " << desired_version_string << " Instance\n";
-                exit(-1);
-            }
-
-            // Get the list of physical devices
-            uint32_t phys_dev_count = 1;
-            if (VK_SUCCESS != vkEnumeratePhysicalDevices(instance, &phys_dev_count, nullptr) || phys_dev_count == 0) {
-                std::cout << "Failed searching for Vulkan physical devices\n";
-                exit(-1);
-            }
-            std::vector<VkPhysicalDevice> physical_devices;
-            physical_devices.resize(phys_dev_count);
-            if (VK_SUCCESS != vkEnumeratePhysicalDevices(instance, &phys_dev_count, physical_devices.data()) ||
-                phys_dev_count == 0) {
-                std::cout << "Failed enumerating Vulkan physical devices\n";
-                exit(-1);
-            }
-
-            // Go through the list of physical devices and select only those that are capable of running the API version
-            // we want.
-            for (uint32_t dev = 0; dev < physical_devices.size(); ++dev) {
-                VkPhysicalDeviceProperties physical_device_props = {};
-                vkGetPhysicalDeviceProperties(physical_devices[dev], &physical_device_props);
-                if (physical_device_props.apiVersion >= desired_version) {
-                    physical_devices_desired.push_back(physical_devices[dev]);
-                }
-            }
-
-            // If we have something in the desired version physical device list, we're good
-            if (physical_devices_desired.size() > 0) {
-                using_major_version = desired_major_version;
-                using_minor_version = desired_minor_version;
-            }
-        }
-    }
-
-    using_version_string += std::to_string(using_major_version);
-    using_version_string += ".";
-    using_version_string += std::to_string(using_minor_version);
-
-    if (using_minor_version != desired_minor_version) {
-        std::cout << "Determined that this system can only use Vulkan API version " << using_version_string
-                  << " instead of desired version " << desired_version_string << std::endl;
-    } else {
-        version = desired_version;
-        std::cout << "Determined that this system can run desired Vulkan API version " << desired_version_string
-                  << std::endl;
-    }
-
-    // Destroy the instance if it was created
-    if (VK_NULL_HANDLE == instance) {
-        vkDestroyInstance(instance, nullptr);
-    }
-#endif
+    // COPY FROM STAGING TO FAST
+    helpers::copyBuffer(cmd, stgRes.buffer, buffRes.buffer, buffRes.memoryRequirements.size);
+    dbg.setMarkerName(buffRes.buffer, name.c_str());
 }

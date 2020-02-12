@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -38,33 +38,33 @@ void Game::watchDirectory(const std::string& directory, std::function<void(std::
 
 Game::Settings::Settings()
     : name(""),
-      initial_width(1920),
-      initial_height(1080),
-      queue_count(1),
-      back_buffer_count(3),
-      ticks_per_second(30),
+      initialWidth(1920),
+      initialHeight(1080),
+      queueCount(1),
+      backBufferCount(3),
+      ticksPerSecond(30),
       vsync(true),
       animate(true),
-      validate(false),
-      validate_verbose(false),
-      no_tick(false),
-      no_render(false),
-      try_sampler_anisotropy(true),  // TODO: Not sure what this does
-      try_sample_rate_shading(true),
-      try_compute_shading(true),
+      validate(true),
+      validateVerbose(false),
+      noTick(false),
+      noRender(false),
+      trySamplerAnisotropy(true),  // TODO: Not sure what this does
+      trySampleRateShading(true),
+      tryComputeShading(true),
 #if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
       try_tessellation_shading(false),
       try_geometry_shading(false),
 #else
-      try_tessellation_shading(true),
-      try_geometry_shading(true),
+      tryTessellationShading(true),
+      tryGeometryShading(true),
 #endif
-      try_wireframe_shading(true),
-      try_debug_markers(false),
-      try_independent_blend(true),
-      try_image_cube_array(true),
-      enable_sample_shading(true),
-      enable_double_clicks(false),
-      enable_directory_listener(true),
-      assert_on_recompile_shader(false) {
+      tryWireframeShading(true),
+      tryDebugMarkers(false),
+      tryIndependentBlend(true),
+      tryImageCubeArray(true),
+      enableSampleShading(true),
+      enableDoubleClicks(false),
+      enableDirectoryListener(true),
+      assertOnRecompileShader(false) {
 }

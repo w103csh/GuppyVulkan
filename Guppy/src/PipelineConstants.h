@@ -13,7 +13,7 @@
 #include <string>
 #include <utility>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "DescriptorConstants.h"
 
@@ -146,10 +146,10 @@ extern const std::set<PIPELINE> MESHLESS;
 
 struct BindData {
     const PIPELINE type;
-    const VkPipelineBindPoint bindPoint;
-    const VkPipelineLayout layout;
-    VkPipeline pipeline;
-    VkShaderStageFlags pushConstantStages;
+    const vk::PipelineBindPoint bindPoint;
+    const vk::PipelineLayout layout;
+    vk::Pipeline pipeline;
+    vk::ShaderStageFlags pushConstantStages;
     const std::vector<PUSH_CONSTANT> pushConstantTypes;
     bool usesAdjacency;
 };

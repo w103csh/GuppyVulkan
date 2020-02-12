@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -96,11 +96,9 @@ void Compute::Handler::attachSwapchain() {
     for (auto& [key, pCompute] : pComputeMap_) pCompute->attachSwapchain();
     // FENCE
     assert(passFences_.empty());
-    VkFenceCreateInfo fenceInfo = {};
-    fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+    vk::FenceCreateInfo fenceInfo{vk::FenceCreateFlagBits::eSignaled};
     passFences_.resize(shell().context().imageCount);
-    for (auto& fence : passFences_) vk::assert_success(vkCreateFence(shell().context().dev, &fenceInfo, nullptr, &fence));
+    for (auto& fence : passFences_) fence = shell().context().dev.createFence(fenceInfo, ALLOC_PLACE_HOLDER);
 }
 
 void Compute::Handler::detachSwapchain() {
@@ -108,8 +106,8 @@ void Compute::Handler::detachSwapchain() {
     for (auto& [key, pCompute] : pComputeMap_) pCompute->detachSwapchain();
     // FENCE
     for (auto& fence : passFences_) {
-        vkWaitForFences(shell().context().dev, 1, &fence, VK_TRUE, UINT64_MAX);
-        vkDestroyFence(shell().context().dev, fence, nullptr);
+        shell().context().dev.waitForFences({fence}, VK_TRUE, UINT64_MAX);
+        shell().context().dev.destroyFence(fence, ALLOC_PLACE_HOLDER);
     }
     passFences_.clear();
 }
@@ -162,7 +160,7 @@ void Compute::Handler::submitResources(std::vector<const SubmitResource*>& pReso
     submitInfos_.clear();
 
     for (const auto& pResource : pResources) {
-        submitInfos_.push_back({VK_STRUCTURE_TYPE_SUBMIT_INFO, nullptr});
+        submitInfos_.push_back({});
         // TODO: find a way to validate that there are as many set waitDstStageMask flags
         // set as waitSemaphores.
         submitInfos_.back().waitSemaphoreCount = pResource->waitSemaphoreCount;
@@ -176,9 +174,8 @@ void Compute::Handler::submitResources(std::vector<const SubmitResource*>& pReso
     pResources.clear();
 
     assert(false);  // This did not work when it was commited. I left this so I wouldn't have to make it again.
-    // VkFence fence = pQueuedResources_.empty() && false ? passFences_[0] : VK_NULL_HANDLE;
-    VkFence fence = passFences_[0];
-    vk::assert_success(vkQueueSubmit(commandHandler().graphicsQueue(), submitInfos_.size(), submitInfos_.data(), fence));
+    // vk::Fence fence = pQueuedResources_.empty() && false ? passFences_[0] : {};
+    commandHandler().graphicsQueue().submit(submitInfos_, passFences_[0]);
 }
 
 void Compute::Handler::reset() {

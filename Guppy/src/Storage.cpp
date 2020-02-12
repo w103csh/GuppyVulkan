@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -23,7 +23,7 @@ namespace Storage {
 // VECTOR4
 namespace Vector4 {
 
-void GetInputDescriptions(Pipeline::CreateInfoResources& createInfoRes, const VkVertexInputRate&& inputRate) {
+void GetInputDescriptions(Pipeline::CreateInfoResources& createInfoRes, const vk::VertexInputRate&& inputRate) {
     const auto BINDING = static_cast<uint32_t>(createInfoRes.bindDescs.size());
     createInfoRes.bindDescs.push_back({});
     createInfoRes.bindDescs.back().binding = BINDING;
@@ -33,7 +33,7 @@ void GetInputDescriptions(Pipeline::CreateInfoResources& createInfoRes, const Vk
     createInfoRes.attrDescs.push_back({});
     createInfoRes.attrDescs.back().binding = BINDING;
     createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
-    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32A32_SFLOAT;  // vec4
+    createInfoRes.attrDescs.back().format = vk::Format::eR32G32B32A32Sfloat;  // vec4
     createInfoRes.attrDescs.back().offset = 0;
 }
 
@@ -49,7 +49,7 @@ Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo
             // Initial positions of the particles
             glm::vec4 p{0.0f, 0.0f, 0.0f, 1.0f};
             float dx = 2.0f / (pCreateInfo->localSize.x - 1), dy = 2.0f / (pCreateInfo->localSize.y - 1),
-                dz = 2.0f / (pCreateInfo->localSize.z - 1);
+                  dz = 2.0f / (pCreateInfo->localSize.z - 1);
             // We want to center the particles at (0,0,0)
             glm::mat4 transf = glm::translate(glm::mat4(1.0f), glm::vec3(-1, -1, -1));
             uint32_t idx = 0;
@@ -98,9 +98,9 @@ PostProcess::DATA::DATA()
 
 PostProcess::Base::Base(const Buffer::Info&& info, DATA* pData,
                         const Buffer::CreateInfo* pCreateInfo)
-    : Buffer::Item(std::forward<const Buffer::Info>(info)), //
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
       Descriptor::Base(STORAGE_BUFFER::POST_PROCESS),
-          Buffer::PerFramebufferDataItem<DATA>(pData) {
+      Buffer::PerFramebufferDataItem<DATA>(pData) {
     dirty = true;
 }
 

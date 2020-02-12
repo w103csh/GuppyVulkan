@@ -1,9 +1,11 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
 #include "ModelHandler.h"
+
+#include <vulkan/vulkan.hpp>
 
 #include "Mesh.h"
 #include "Shell.h"
@@ -47,7 +49,7 @@ void Model::Handler::makeTexture(const tinyobj::material_t &tinyobj_mat, const s
             // everything.
             Texture::CreateInfo texCreateInfo = {
                 tinyobj_mat.name + " Texture",
-                {{tinyobj_mat.name + " Sampler", {}, VK_IMAGE_VIEW_TYPE_2D_ARRAY}},
+                {{tinyobj_mat.name + " Sampler", {}, vk::ImageViewType::e2DArray}},
             };
 
             // DIFFUSE

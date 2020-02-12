@@ -119,12 +119,10 @@ void Base::record(const uint8_t frameIndex) {
         beginInfo_.framebuffer = data.framebuffers[frameIndex];
         auto& priCmd = data.priCmds[frameIndex];
 
-        vkResetCommandBuffer(priCmd, 0);
+        priCmd.reset({});
 
-        VkCommandBufferBeginInfo bufferInfo = {};
-        bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-        vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
+        vk::CommandBufferBeginInfo bufferInfo = {vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
+        priCmd.begin(bufferInfo);
 
         // COMPUTE
         for (const auto& pPipelineBindData : pipelineBindDataList_.getValues()) {
@@ -151,7 +149,7 @@ void Base::record(const uint8_t frameIndex) {
             static_cast<Shadow::Default*>(pPass.get())->record(frameIndex, TYPE, pipelineTypes, priCmd);
         }
 
-        beginPass(priCmd, frameIndex, VK_SUBPASS_CONTENTS_INLINE);
+        beginPass(priCmd, frameIndex, vk::SubpassContents::eInline);
 
         auto& pScene = handler().sceneHandler().getActiveScene();
 
@@ -168,13 +166,13 @@ void Base::record(const uint8_t frameIndex) {
                     case GRAPHICS::DEFERRED_MRT_PT:
                     case GRAPHICS::DEFERRED_MRT_LINE: {
                         ::Deferred::PushConstant pushConstant = {::Deferred::PASS_FLAG::NONE};
-                        vkCmdPushConstants(priCmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
-                                           static_cast<uint32_t>(sizeof(::Deferred::PushConstant)), &pushConstant);
+                        priCmd.pushConstants(pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                                             static_cast<uint32_t>(sizeof(::Deferred::PushConstant)), &pushConstant);
                     } break;
                     case GRAPHICS::DEFERRED_MRT_WF_COLOR: {
                         ::Deferred::PushConstant pushConstant = {::Deferred::PASS_FLAG::WIREFRAME};
-                        vkCmdPushConstants(priCmd, pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
-                                           static_cast<uint32_t>(sizeof(::Deferred::PushConstant)), &pushConstant);
+                        priCmd.pushConstants(pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                                             static_cast<uint32_t>(sizeof(::Deferred::PushConstant)), &pushConstant);
                     } break;
                     default:;
                 }
@@ -196,13 +194,13 @@ void Base::record(const uint8_t frameIndex) {
                     case GRAPHICS::PRTCL_FOUNTAIN_DEFERRED: {
                         // PARTICLE GRAPHICS
                         handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
-                        vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+                        priCmd.nextSubpass(vk::SubpassContents::eInline);
                     } break;
                     default: {
                         // MRT PASSES
                         auto& secCmd = data.secCmds[frameIndex];
                         pScene->record(TYPE, pPipelineBindData->type, pPipelineBindData, priCmd, secCmd, frameIndex);
-                        vkCmdNextSubpass(priCmd, VK_SUBPASS_CONTENTS_INLINE);
+                        priCmd.nextSubpass(vk::SubpassContents::eInline);
                     } break;
                     case GRAPHICS::DEFERRED_COMBINE: {
                         // TODO: this definitely only needs to be recorded once per swapchain creation!!!
@@ -216,7 +214,7 @@ void Base::record(const uint8_t frameIndex) {
 
         endPass(priCmd);
     }
-    // vk::assert_success(vkEndCommandBuffer(data.priCmds[frameIndex]));
+    // data.priCmds[frameIndex].end();
 }
 
 void Base::update(const std::vector<Descriptor::Base*> pDynamicItems) {
@@ -231,17 +229,17 @@ void Base::createAttachments() {
     // DEPTH/RESOLVE/SWAPCHAIN
     ::RenderPass::Base::createAttachments();
 
-    VkAttachmentDescription attachment = {
-        0,                                 // flags VkAttachmentDescriptionFlags
-        VK_FORMAT_UNDEFINED,               // format VkFormat
-        getSamples(),                      // samples VkSampleCountFlagBits
-        VK_ATTACHMENT_LOAD_OP_CLEAR,       // loadOp VkAttachmentLoadOp
-        VK_ATTACHMENT_STORE_OP_STORE,      // storeOp VkAttachmentStoreOp
-        VK_ATTACHMENT_LOAD_OP_DONT_CARE,   // stencilLoadOp VkAttachmentLoadOp
-        VK_ATTACHMENT_STORE_OP_DONT_CARE,  // stencilStoreOp VkAttachmentStoreOp
-        // VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,  // TRY THIS!!!
-        VK_IMAGE_LAYOUT_UNDEFINED,                // initialLayout VkImageLayout
-        VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL  // finalLayout VkImageLayout
+    vk::AttachmentDescription attachment = {
+        {},                                // flags vk::AttachmentDescriptionFlags
+        vk::Format::eUndefined,            // format vk::Format
+        getSamples(),                      // samples vk::SampleCountFlagBits
+        vk::AttachmentLoadOp::eClear,      // loadOp vk::AttachmentLoadOp
+        vk::AttachmentStoreOp::eStore,     // storeOp vk::AttachmentStoreOp
+        vk::AttachmentLoadOp::eDontCare,   // stencilLoadOp vk::AttachmentLoadOp
+        vk::AttachmentStoreOp::eDontCare,  // stencilStoreOp vk::AttachmentStoreOp
+        // vk::ImageLayout::eColorAttachmentOptimal,  // TRY THIS!!!
+        vk::ImageLayout::eUndefined,             // initialLayout vk::ImageLayout
+        vk::ImageLayout::eShaderReadOnlyOptimal  // finalLayout vk::ImageLayout
     };
 
     // assert(textureIds_.size() == 3 && pTextures_.size() >= textureIds_.size() &&
@@ -253,76 +251,76 @@ void Base::createAttachments() {
 
     // POSITION
     resources_.colorAttachments.push_back(
-        {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
+        {static_cast<uint32_t>(resources_.attachments.size()), vk::ImageLayout::eColorAttachmentOptimal});
     resources_.attachments.push_back(attachment);
     auto pTexture = handler().textureHandler().getTexture(Texture::Deferred::POS_2D_ID);
     assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
     resources_.inputAttachments.push_back(
-        {resources_.colorAttachments.back().attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
+        {resources_.colorAttachments.back().attachment, vk::ImageLayout::eShaderReadOnlyOptimal});
 
     // NORMAL
     resources_.colorAttachments.push_back(
-        {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
+        {static_cast<uint32_t>(resources_.attachments.size()), vk::ImageLayout::eColorAttachmentOptimal});
     resources_.attachments.push_back(attachment);
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::NORM_2D_ID);
     assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
     resources_.inputAttachments.push_back(
-        {resources_.colorAttachments.back().attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
+        {resources_.colorAttachments.back().attachment, vk::ImageLayout::eShaderReadOnlyOptimal});
 
     // DIFFUSE
     resources_.colorAttachments.push_back(
-        {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
+        {static_cast<uint32_t>(resources_.attachments.size()), vk::ImageLayout::eColorAttachmentOptimal});
     resources_.attachments.push_back(attachment);
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::DIFFUSE_2D_ID);
     assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
     resources_.inputAttachments.push_back(
-        {resources_.colorAttachments.back().attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
+        {resources_.colorAttachments.back().attachment, vk::ImageLayout::eShaderReadOnlyOptimal});
 
     // AMBIENT
     resources_.colorAttachments.push_back(
-        {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
+        {static_cast<uint32_t>(resources_.attachments.size()), vk::ImageLayout::eColorAttachmentOptimal});
     resources_.attachments.push_back(attachment);
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::AMBIENT_2D_ID);
     assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
     resources_.inputAttachments.push_back(
-        {resources_.colorAttachments.back().attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
+        {resources_.colorAttachments.back().attachment, vk::ImageLayout::eShaderReadOnlyOptimal});
 
     // SPECULAR
     resources_.colorAttachments.push_back(
-        {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
+        {static_cast<uint32_t>(resources_.attachments.size()), vk::ImageLayout::eColorAttachmentOptimal});
     resources_.attachments.push_back(attachment);
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::SPECULAR_2D_ID);
     assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
     resources_.inputAttachments.push_back(
-        {resources_.colorAttachments.back().attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
+        {resources_.colorAttachments.back().attachment, vk::ImageLayout::eShaderReadOnlyOptimal});
 
     // FLAGS
     resources_.colorAttachments.push_back(
-        {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
+        {static_cast<uint32_t>(resources_.attachments.size()), vk::ImageLayout::eColorAttachmentOptimal});
     resources_.attachments.push_back(attachment);
     pTexture = handler().textureHandler().getTexture(Texture::Deferred::FLAGS_2D_ID);
     assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
     resources_.inputAttachments.push_back(
-        {resources_.colorAttachments.back().attachment, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL});
+        {resources_.colorAttachments.back().attachment, vk::ImageLayout::eShaderReadOnlyOptimal});
 
     inputAttachmentCount_ = static_cast<uint32_t>(resources_.colorAttachments.size()) - inputAttachmentOffset_;
 
     // SSAO
     if (doSSAO_) {
         resources_.colorAttachments.push_back(
-            {static_cast<uint32_t>(resources_.attachments.size()), VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL});
+            {static_cast<uint32_t>(resources_.attachments.size()), vk::ImageLayout::eColorAttachmentOptimal});
         resources_.attachments.push_back(attachment);
         pTexture = handler().textureHandler().getTexture(Texture::Deferred::SSAO_2D_ID);
         assert(pTexture != nullptr);
@@ -334,7 +332,7 @@ void Base::createAttachments() {
 }
 
 void Base::createSubpassDescriptions() {
-    VkSubpassDescription subpassDesc;
+    vk::SubpassDescription subpassDesc;
 
     assert(inputAttachmentOffset_ == 1);  // Swapchain should be in 0
 
@@ -390,24 +388,24 @@ void Base::createSubpassDescriptions() {
 void Base::createDependencies() {
     // TODO: There might need to be an external pass dependency for the shadow passes.
 
-    VkSubpassDependency depthDependency = {
+    vk::SubpassDependency depthDependency = {
         0,  // srcSubpass
         0,  // dstSubpass
         // Both stages might have to access the depth-buffer
-        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,      // srcStageMask
-        VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,      // dstStageMask
-        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,                                                // srcAccessMask
-        VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT,  // dstAccessMask
-        VK_DEPENDENCY_BY_REGION_BIT,                                                                 // dependencyFlags
+        vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests,      // srcStageMask
+        vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests,      // dstStageMask
+        vk::AccessFlagBits::eDepthStencilAttachmentWrite,                                                    // srcAccessMask
+        vk::AccessFlagBits::eDepthStencilAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentRead,  // dstAccessMask
+        vk::DependencyFlagBits::eByRegion,  // dependencyFlags
     };
-    // VkSubpassDependency colorDependency = {
+    // vk::SubpassDependency colorDependency = {
     //    0,                                              // srcSubpass
     //    0,                                              // dstSubpass
-    //    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,  // srcStageMask
-    //    VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,  // dstStageMask
-    //    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,           // srcAccessMask
-    //    VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,           // dstAccessMask
-    //    VK_DEPENDENCY_BY_REGION_BIT,
+    //    vk::PipelineStageFlagBits::eColorAttachmentOutput,  // srcStageMask
+    //    vk::PipelineStageFlagBits::eColorAttachmentOutput,  // dstStageMask
+    //    vk::AccessFlagBits::eColorAttachmentWrite,           // srcAccessMask
+    //    vk::AccessFlagBits::eColorAttachmentWrite,           // dstAccessMask
+    //    vk::DependencyFlagBits::eByRegion,
     //};
 
     uint32_t subpass = 1;
@@ -425,11 +423,11 @@ void Base::createDependencies() {
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,
                 subpass,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_PIPELINE_STAGE_VERTEX_INPUT_BIT,
-                VK_ACCESS_SHADER_WRITE_BIT,
-                VK_ACCESS_VERTEX_ATTRIBUTE_READ_BIT,
-                VK_DEPENDENCY_BY_REGION_BIT,
+                vk::PipelineStageFlagBits::eComputeShader,
+                vk::PipelineStageFlagBits::eVertexInput,
+                vk::AccessFlagBits::eShaderWrite,
+                vk::AccessFlagBits::eVertexAttributeRead,
+                vk::DependencyFlagBits::eByRegion,
             });
         }
         if (pipelineType == PIPELINE{GRAPHICS::HFF_CLMN_DEFERRED} || pipelineType == PIPELINE{GRAPHICS::HFF_WF_DEFERRED} ||
@@ -439,11 +437,11 @@ void Base::createDependencies() {
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,
                 subpass,
-                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                VK_PIPELINE_STAGE_VERTEX_SHADER_BIT,
-                VK_ACCESS_SHADER_WRITE_BIT,
-                VK_ACCESS_SHADER_READ_BIT,
-                VK_DEPENDENCY_BY_REGION_BIT,
+                vk::PipelineStageFlagBits::eComputeShader,
+                vk::PipelineStageFlagBits::eVertexShader,
+                vk::AccessFlagBits::eShaderWrite,
+                vk::AccessFlagBits::eShaderRead,
+                vk::DependencyFlagBits::eByRegion,
             });
         }
         if (pipelineType == PIPELINE{GRAPHICS::DEFERRED_MRT_COLOR_RFL_RFR} ||
@@ -451,11 +449,11 @@ void Base::createDependencies() {
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,
                 subpass,
-                VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-                VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-                VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                VK_ACCESS_SHADER_READ_BIT,
-                VK_DEPENDENCY_BY_REGION_BIT,
+                vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                vk::PipelineStageFlagBits::eFragmentShader,
+                vk::AccessFlagBits::eColorAttachmentWrite,
+                vk::AccessFlagBits::eShaderRead,
+                vk::DependencyFlagBits::eByRegion,
             });
         }
         depthDependency.srcSubpass = subpass - 1;
@@ -468,14 +466,14 @@ void Base::createDependencies() {
         assert(false);
     } else {
         // Color input attachment dependency
-        VkSubpassDependency combineDependency = {
-            0,                                              // srcSubpass
-            0,                                              // dstSubpass
-            VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,  // srcStageMask
-            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,          // dstStageMask
-            VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,           // srcAccessMask
-            VK_ACCESS_INPUT_ATTACHMENT_READ_BIT,            // dstAccessMask
-            VK_DEPENDENCY_BY_REGION_BIT,                    // dependencyFlags
+        vk::SubpassDependency combineDependency = {
+            0,                                                  // srcSubpass
+            0,                                                  // dstSubpass
+            vk::PipelineStageFlagBits::eColorAttachmentOutput,  // srcStageMask
+            vk::PipelineStageFlagBits::eFragmentShader,         // dstStageMask
+            vk::AccessFlagBits::eColorAttachmentWrite,          // srcAccessMask
+            vk::AccessFlagBits::eInputAttachmentRead,           // dstAccessMask
+            vk::DependencyFlagBits::eByRegion,                  // dependencyFlags
         };
 
         combineDependency.dstSubpass = pipelineBindDataList_.getOffset(PIPELINE{GRAPHICS::DEFERRED_COMBINE});
@@ -493,10 +491,10 @@ void Base::updateClearValues() {
     RenderPass::Base::updateClearValues();
     // Position
     clearValues_.push_back({});
-    clearValues_.back().color = VkClearColorValue{0.0f, 0.0f, 0.0f, 0.0f};
+    clearValues_.back().color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f};
     // Normal
     clearValues_.push_back({});
-    clearValues_.back().color = VkClearColorValue{0.0f, 0.0f, 0.0f, 0.0f};
+    clearValues_.back().color = std::array<float, 4>{0.0f, 0.0f, 0.0f, 0.0f};
     // Diffuse
     clearValues_.push_back({});
     clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
@@ -508,7 +506,7 @@ void Base::updateClearValues() {
     clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
     // Flags
     clearValues_.push_back({});
-    clearValues_.back().color = VkClearColorValue{0u, 0u, 0u, 0u};
+    clearValues_.back().color = std::array<uint32_t, 4>{0u, 0u, 0u, 0u};
     // SSAO
     if (doSSAO_) {
         clearValues_.push_back({});
@@ -523,11 +521,10 @@ void Base::createFramebuffers() {
      *  - normal
      *  - color
      */
-    std::vector<std::vector<VkImageView>> attachmentViewsList(handler().shell().context().imageCount);
+    std::vector<std::vector<vk::ImageView>> attachmentViewsList(handler().shell().context().imageCount);
     data.framebuffers.resize(attachmentViewsList.size());
 
-    VkFramebufferCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    vk::FramebufferCreateInfo createInfo = {};
     createInfo.renderPass = pass;
     createInfo.width = extent_.width;
     createInfo.height = extent_.height;
@@ -543,63 +540,62 @@ void Base::createFramebuffers() {
 
         // DEPTH
         if (pipelineData_.usesDepth) {
-            assert(depth_.view != VK_NULL_HANDLE);
+            assert(depth_.view);
             attachmentViews.push_back(depth_.view);
         }
 
         // MULTI-SAMPLE
         if (usesMultiSample()) {
             assert(images_.size() == 1);
-            assert(images_[0].view != VK_NULL_HANDLE);
+            assert(images_[0].view);
             attachmentViews.push_back(images_[0].view);  // TODO: should there be one per swapchain image????????????????
         }
 
         // SWAPCHAIN
         attachmentViews.push_back(handler().getSwapchainViews()[frameIndex]);
-        assert(attachmentViews.back() != VK_NULL_HANDLE);
+        assert(attachmentViews.back());
 
         // POSITION
         auto pTexture = handler().textureHandler().getTexture(Texture::Deferred::POS_2D_ID);
         attachmentViews.push_back(pTexture->samplers[0].layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL).view);
-        assert(attachmentViews.back() != VK_NULL_HANDLE);
+        assert(attachmentViews.back());
 
         // NORMAL
         pTexture = handler().textureHandler().getTexture(Texture::Deferred::NORM_2D_ID);
         attachmentViews.push_back(pTexture->samplers[0].layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL).view);
-        assert(attachmentViews.back() != VK_NULL_HANDLE);
+        assert(attachmentViews.back());
 
         // DIFFUSE
         pTexture = handler().textureHandler().getTexture(Texture::Deferred::DIFFUSE_2D_ID);
         attachmentViews.push_back(pTexture->samplers[0].layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL).view);
-        assert(attachmentViews.back() != VK_NULL_HANDLE);
+        assert(attachmentViews.back());
 
         // AMBIENT
         pTexture = handler().textureHandler().getTexture(Texture::Deferred::AMBIENT_2D_ID);
         attachmentViews.push_back(pTexture->samplers[0].layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL).view);
-        assert(attachmentViews.back() != VK_NULL_HANDLE);
+        assert(attachmentViews.back());
 
         // SPECULAR
         pTexture = handler().textureHandler().getTexture(Texture::Deferred::SPECULAR_2D_ID);
         attachmentViews.push_back(pTexture->samplers[0].layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL).view);
-        assert(attachmentViews.back() != VK_NULL_HANDLE);
+        assert(attachmentViews.back());
 
         // FLAGS
         pTexture = handler().textureHandler().getTexture(Texture::Deferred::FLAGS_2D_ID);
         attachmentViews.push_back(pTexture->samplers[0].layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL).view);
-        assert(attachmentViews.back() != VK_NULL_HANDLE);
+        assert(attachmentViews.back());
 
         // SSAO
         if (doSSAO_) {
             pTexture = handler().textureHandler().getTexture(Texture::Deferred::SSAO_2D_ID);
             attachmentViews.push_back(pTexture->samplers[0].layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL).view);
-            assert(attachmentViews.back() != VK_NULL_HANDLE);
+            assert(attachmentViews.back());
         }
 
         createInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
         createInfo.pAttachments = attachmentViews.data();
 
-        vk::assert_success(
-            vkCreateFramebuffer(handler().shell().context().dev, &createInfo, nullptr, &data.framebuffers[frameIndex]));
+        data.framebuffers[frameIndex] = handler().shell().context().dev.createFramebuffer(createInfo, ALLOC_PLACE_HOLDER);
     }
 }
 

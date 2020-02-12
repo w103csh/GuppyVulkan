@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -26,7 +26,7 @@ Compute::Base::Base(Compute::Handler& handler, const Compute::CreateInfo* pCreat
       status_(STATUS::PENDING),
       isFramebufferCountDependent_(false),
       isFramebufferImageSizeDependent_(false),
-      fence_(VK_NULL_HANDLE) {
+      fence_() {
     // SYNC
     if (pCreateInfo->syncCount == -1) {
         isFramebufferCountDependent_ = true;
@@ -77,12 +77,12 @@ void Compute::Base::record(const uint8_t frameIndex, RenderPass::SubmitResource&
     // COMMAND
     auto& cmd = submitResource.commandBuffers[submitResource.commandBufferCount - 1];
     // auto& cmd = cmds_[syncIndex];
-    // vkResetCommandBuffer(cmd, 0);
+    // cmd.reset({});
     // handler().commandHandler().beginCmd(cmd);
 
     // PIPELINE
     assert(pipelineBindDataList_.size() == 1);  // TODO: This shouldn't be a map right? 1 to 1.
-    const auto& pipelineBindData = pipelineBindDataList_.getValue(PIPELINE_TYPE);
+    const auto& pPipelineBindData = pipelineBindDataList_.getValue(PIPELINE_TYPE);
 
     // DESCRIPTOR
     assert(bindDataMap_.size() == 1 &&
@@ -90,26 +90,23 @@ void Compute::Base::record(const uint8_t frameIndex, RenderPass::SubmitResource&
     const auto& descSetBindData = bindDataMap_.begin()->second;
 
     // PRE-DISPATCH
-    preDispatch(cmd, pipelineBindData, descSetBindData, frameIndex);
+    preDispatch(cmd, pPipelineBindData, descSetBindData, frameIndex);
 
     // PUSH CONSTANT
     bindPushConstants(cmd);
 
-    vkCmdBindPipeline(cmd, pipelineBindData->bindPoint, pipelineBindData->pipeline);
+    cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
-    vkCmdBindDescriptorSets(cmd, pipelineBindData->bindPoint, pipelineBindData->layout, descSetBindData.firstSet,
-                            static_cast<uint32_t>(descSetBindData.descriptorSets[frameIndex].size()),
-                            descSetBindData.descriptorSets[frameIndex].data(),
-                            static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                            descSetBindData.dynamicOffsets.data());
+    cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                           descSetBindData.descriptorSets[frameIndex], descSetBindData.dynamicOffsets);
 
     // DISPATCH
-    vkCmdDispatch(cmd, groupCountX_, groupCountY_, groupCountZ_);
+    cmd.dispatch(groupCountX_, groupCountY_, groupCountZ_);
 
     // POST-DISPATCH
-    postDispatch(cmd, pipelineBindData, descSetBindData, frameIndex);
+    postDispatch(cmd, pPipelineBindData, descSetBindData, frameIndex);
 
-    // handler().commandHandler().endCmd(cmd);
+    // cmd.end();
 
     //// SUBMIT INFO
     // submitResource.commandBufferCount = 1;
@@ -120,19 +117,16 @@ void Compute::Base::createSyncResources() {
     const auto& ctx = handler().shell().context();
     // COMMAND
     if (cmds_.empty()) cmds_.resize(ctx.imageCount);
-    handler().commandHandler().createCmdBuffers(QUEUE_TYPE, cmds_.data(), VK_COMMAND_BUFFER_LEVEL_PRIMARY, cmds_.size());
+    handler().commandHandler().createCmdBuffers(QUEUE_TYPE, cmds_.data(), vk::CommandBufferLevel::ePrimary, cmds_.size());
     // SEMAPHORE
-    VkSemaphoreCreateInfo createInfo = {};
-    createInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+    vk::SemaphoreCreateInfo createInfo = {};
     if (semaphores_.empty()) semaphores_.resize(ctx.imageCount);
     for (auto& semaphore : semaphores_)
-        vk::assert_success(vkCreateSemaphore(handler().shell().context().dev, &createInfo, nullptr, &semaphore));
+        semaphore = handler().shell().context().dev.createSemaphore(createInfo, ALLOC_PLACE_HOLDER);
     // FENCE
-    if (HAS_FENCE && fence_ == VK_NULL_HANDLE) {
-        VkFenceCreateInfo fenceInfo = {};
-        fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-        vk::assert_success(vkCreateFence(ctx.dev, &fenceInfo, nullptr, &fence_));
+    if (HAS_FENCE && !fence_) {
+        vk::FenceCreateInfo fenceInfo = {vk::FenceCreateFlagBits::eSignaled};
+        fence_ = ctx.dev.createFence(fenceInfo, ALLOC_PLACE_HOLDER);
     }
 }
 
@@ -158,7 +152,7 @@ void Compute::Base::destroySyncResources() {
     helpers::destroyCommandBuffers(dev, handler().commandHandler().getCmdPool(QUEUE_TYPE), cmds_);
     cmds_.clear();
     // SEMAPHORE
-    for (auto& semaphore : semaphores_) vkDestroySemaphore(dev, semaphore, nullptr);
+    for (auto& semaphore : semaphores_) dev.destroySemaphore(semaphore, ALLOC_PLACE_HOLDER);
     semaphores_.clear();
 }
 
@@ -176,7 +170,7 @@ void Compute::Base::destroy() {
         destroySyncResources();
     }
     // FENCE
-    vkDestroyFence(dev, fence_, nullptr);
+    dev.destroyFence(fence_, ALLOC_PLACE_HOLDER);
 }
 
 // POST-PROCESS
@@ -199,12 +193,12 @@ void PostProcess::Default::record(const uint8_t frameIndex, RenderPass::SubmitRe
     // COMMAND
     auto& cmd = submitResource.commandBuffers[submitResource.commandBufferCount - 1];
     // auto& cmd = cmds_[syncIndex];
-    // vkResetCommandBuffer(cmd, 0);
-    // handler().commandHandler().beginCmd(cmd);
+    // cmd.reset({});
+    // cmd.begin();
 
     // PIPELINE
     assert(pipelineBindDataList_.size() == 1);  // TODO: This shouldn't be a map right? 1 to 1.
-    const auto& pipelineBindData = pipelineBindDataList_.getValue(PIPELINE_TYPE);
+    const auto& pPipelineBindData = pipelineBindDataList_.getValue(PIPELINE_TYPE);
 
     // DESCRIPTOR
     assert(bindDataMap_.size() == 1 &&
@@ -212,7 +206,7 @@ void PostProcess::Default::record(const uint8_t frameIndex, RenderPass::SubmitRe
     const auto& descSetBindData = bindDataMap_.begin()->second;
 
     // PRE-DISPATCH
-    preDispatch(cmd, pipelineBindData, descSetBindData, frameIndex);
+    preDispatch(cmd, pPipelineBindData, descSetBindData, frameIndex);
 
     // PUSH CONSTANT
     Compute::PostProcess::PushConstant pushConstant = {
@@ -220,42 +214,37 @@ void PostProcess::Default::record(const uint8_t frameIndex, RenderPass::SubmitRe
         // ScreenSpace::PASS_FLAG::BLUR_1,
         // ScreenSpace::PASS_FLAG::HDR_1,
     };
-    vkCmdPushConstants(cmd, pipelineBindData->layout, pipelineBindData->pushConstantStages, 0,
-                       static_cast<uint32_t>(sizeof(PushConstant)), &pushConstant);
+    cmd.pushConstants(pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+                      sizeof(Compute::PostProcess::PushConstant), &pushConstant);
 
-    vkCmdBindPipeline(cmd, pipelineBindData->bindPoint, pipelineBindData->pipeline);
+    cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
-    vkCmdBindDescriptorSets(cmd, pipelineBindData->bindPoint, pipelineBindData->layout, descSetBindData.firstSet,
-                            static_cast<uint32_t>(descSetBindData.descriptorSets[frameIndex].size()),
-                            descSetBindData.descriptorSets[frameIndex].data(),
-                            static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                            descSetBindData.dynamicOffsets.data());
+    cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                           descSetBindData.descriptorSets[frameIndex], descSetBindData.dynamicOffsets);
 
     // DISPATCH
-    vkCmdDispatch(cmd, groupCountX_, groupCountY_, groupCountZ_);
+    cmd.dispatch(groupCountX_, groupCountY_, groupCountZ_);
 
     barrierResource_.reset();
     auto& resource = barrierResource_;
     resource.imgBarriers.push_back({});
-    resource.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    resource.imgBarriers.back().pNext = nullptr;
-    resource.imgBarriers.back().srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_GENERAL;
-    resource.imgBarriers.back().newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    resource.imgBarriers.back().srcAccessMask = vk::AccessFlagBits::eShaderWrite;
+    resource.imgBarriers.back().dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+    resource.imgBarriers.back().oldLayout = vk::ImageLayout::eGeneral;
+    resource.imgBarriers.back().newLayout = vk::ImageLayout::eColorAttachmentOptimal;
     resource.imgBarriers.back().srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     resource.imgBarriers.back().dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     resource.imgBarriers.back().image = handler().passHandler().getCurrentFramebufferImage();
-    resource.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    resource.imgBarriers.back().subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
 
-    helpers::recordBarriers(barrierResource_, cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    helpers::recordBarriers(barrierResource_, cmd, vk::PipelineStageFlagBits::eComputeShader,
+                            vk::PipelineStageFlagBits::eFragmentShader);
 
     // barrierResource_.reset();
     // helpers::attachementImageBarrierStorageWriteToColorRead(handler().passHandler().getCurrentFramebufferImage(),
     //                                                        barrierResource_);
-    // helpers::recordBarriers(barrierResource_, cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-    //                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    // helpers::recordBarriers(barrierResource_, cmd, vk::PipelineStageFlagBits::eComputeShader,
+    //                        vk::PipelineStageFlagBits::eFragmentShader);
 
     // const auto& imageInfo =
     //    descSetBindData.setResourceInfoMap.at(DESCRIPTOR_SET::STORAGE_IMAGE_SCREEN_SPACE_COMPUTE_DEFAULT)
@@ -272,10 +261,10 @@ void PostProcess::Default::record(const uint8_t frameIndex, RenderPass::SubmitRe
     //// TODO: fetch this on attachSwapchain
     // helpers::bufferBarrierWriteToRead(bufferInfo, barrierResource_);
 
-    //// helpers::recordBarriers(barrierResource_, cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-    ////                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
-    // helpers::recordBarriers(barrierResource_, cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-    //                        VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    //// helpers::recordBarriers(barrierResource_, cmd, vk::PipelineStageFlagBits::eComputeShader,
+    ////                        vk::PipelineStageFlagBits::eComputeShader);
+    // helpers::recordBarriers(barrierResource_, cmd, vk::PipelineStageFlagBits::eComputeShader,
+    //                        vk::PipelineStageFlagBits::eFragmentShader);
 
     // if (false) {
     //    // PUSH CONSTANT
@@ -284,12 +273,12 @@ void PostProcess::Default::record(const uint8_t frameIndex, RenderPass::SubmitRe
     //        ScreenSpace::PASS_FLAG::BLUR_2,
     //        // ScreenSpace::PASS_FLAG::HDR_2,
     //    };
-    //    vkCmdPushConstants(cmd, pipelineBindData->layout, pipelineBindData->pushConstantStages, 0,
-    //                       static_cast<uint32_t>(sizeof(Compute::PostProcess::PushConstant)), &pushConstant);
+    //    cmd.pushConstants(pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
+    //                      static_cast<uint32_t>(sizeof(Compute::PostProcess::PushConstant)), &pushConstant);
 
     //    // DISPATCH
-    //    vkCmdDispatch(cmd, groupCountX_, groupCountY_, groupCountZ_);
-    //    // vkCmdDispatch(cmd, 1, 1, 1);
+    //    cmd.dispatch(groupCountX_, groupCountY_, groupCountZ_);
+    //    // cmd.dispatch(1, 1, 1);
 
     //    // SECOND BARRIER
     //    barrierResource_.reset();
@@ -298,46 +287,47 @@ void PostProcess::Default::record(const uint8_t frameIndex, RenderPass::SubmitRe
     //    // TODO: fetch this on attachSwapchain
     //    helpers::bufferBarrierWriteToRead(bufferInfo, barrierResource_);
 
-    //    helpers::recordBarriers(barrierResource_, cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-    //                            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    //    helpers::recordBarriers(barrierResource_, cmd, vk::PipelineStageFlagBits::eComputeShader,
+    //                            vk::PipelineStageFlagBits::eFragmentShader);
     //}
 
-    // handler().commandHandler().endCmd(cmd);
+    // cmd.end();
 
-    // SUBMIT INFO
+    //// SUBMIT INFO
     // submitResource.signalSemaphores[submitResource.signalSemaphoreCount] = semaphores_[syncIndex];
-    // submitResource.signalSrcStageMasks[submitResource.signalSemaphoreCount++] = VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+    // submitResource.signalSrcStageMasks[submitResource.signalSemaphoreCount++] = vk::PipelineStageFlagBits::eBottomOfPipe;
     // submitResource.commandBufferCount = 1;
     // submitResource.commandBuffers[0] = cmd;
 }
 
-void PostProcess::Default::preDispatch(const VkCommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPplnBindData,
+void PostProcess::Default::preDispatch(const vk::CommandBuffer& cmd,
+                                       const std::shared_ptr<Pipeline::BindData>& pPplnBindData,
                                        const Descriptor::Set::BindData& descSetBindData, const uint8_t frameIndex) {
     // barrierResource_.reset();
     //// To me this makes no sense but oh well. It works atm.
     // helpers::attachementImageBarrierWriteToStorageRead(handler().passHandler().getCurrentFramebufferImage(),
     //                                                   barrierResource_);
-    // helpers::recordBarriers(barrierResource_, cmd, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-    //                        VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    // helpers::recordBarriers(barrierResource_, cmd, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+    //                        vk::PipelineStageFlagBits::eComputeShader);
 
     barrierResource_.reset();
     auto& resource = barrierResource_;
     resource.imgBarriers.push_back({});
-    resource.imgBarriers.back().sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    resource.imgBarriers.back().pNext = nullptr;
-    resource.imgBarriers.back().srcAccessMask = 0;
-    resource.imgBarriers.back().dstAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
-    resource.imgBarriers.back().oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-    resource.imgBarriers.back().newLayout = VK_IMAGE_LAYOUT_GENERAL;
+    resource.imgBarriers.back().srcAccessMask = {};
+    resource.imgBarriers.back().dstAccessMask = vk::AccessFlagBits::eShaderWrite;
+    resource.imgBarriers.back().oldLayout = vk::ImageLayout::eUndefined;
+    resource.imgBarriers.back().newLayout = vk::ImageLayout::eGeneral;
     resource.imgBarriers.back().srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     resource.imgBarriers.back().dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     resource.imgBarriers.back().image = handler().passHandler().getCurrentFramebufferImage();
-    resource.imgBarriers.back().subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    resource.imgBarriers.back().subresourceRange = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
 
-    helpers::recordBarriers(barrierResource_, cmd, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT);
+    helpers::recordBarriers(barrierResource_, cmd, vk::PipelineStageFlagBits::eTopOfPipe,
+                            vk::PipelineStageFlagBits::eComputeShader);
 }
 
-void PostProcess::Default::postDispatch(const VkCommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPplnBindData,
+void PostProcess::Default::postDispatch(const vk::CommandBuffer& cmd,
+                                        const std::shared_ptr<Pipeline::BindData>& pPplnBindData,
                                         const Descriptor::Set::BindData& descSetBindData, const uint8_t frameIndex) {
     barrierResource_.reset();
     // TODO: fetch this on attachSwapchain
@@ -354,8 +344,8 @@ void PostProcess::Default::postDispatch(const VkCommandBuffer& cmd, const std::s
             .bufferInfos[frameIndex];
     helpers::bufferBarrierWriteToRead(bufferInfo, barrierResource_);
 
-    helpers::recordBarriers(barrierResource_, cmd, VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
-                            VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT);
+    helpers::recordBarriers(barrierResource_, cmd, vk::PipelineStageFlagBits::eComputeShader,
+                            vk::PipelineStageFlagBits::eFragmentShader);
 }
 
 }  // namespace Compute

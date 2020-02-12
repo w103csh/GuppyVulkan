@@ -32,36 +32,27 @@
 
 namespace {
 
-void setBase(const VkPipeline& pipeline, VkGraphicsPipelineCreateInfo& info, bool& hasBase) {
-    if (!hasBase && pipeline != VK_NULL_HANDLE) {
+template <typename TCreateInfo>
+void setBase(const vk::Pipeline& pipeline, TCreateInfo& info, bool& hasBase) {
+    if (!hasBase && pipeline) {
         // Setup for derivatives...
-        info.flags = VK_PIPELINE_CREATE_DERIVATIVE_BIT;
+        info.flags = vk::PipelineCreateFlagBits::eDerivative;
         info.basePipelineHandle = pipeline;
         info.basePipelineIndex = -1;
         hasBase = true;
     }
 }
 
-void setBase(const VkPipeline& pipeline, VkComputePipelineCreateInfo& info, bool& hasBase) {
-    if (!hasBase && pipeline != VK_NULL_HANDLE) {
-        // Setup for derivatives...
-        info.flags = VK_PIPELINE_CREATE_DERIVATIVE_BIT;
-        info.basePipelineHandle = pipeline;
-        info.basePipelineIndex = -1;
-        hasBase = true;
-    }
-}
-
-constexpr bool hasAdjacencyTopology(const VkGraphicsPipelineCreateInfo& info) {
-    return info.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_LINE_LIST_WITH_ADJACENCY ||
-           info.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_LINE_STRIP_WITH_ADJACENCY ||
-           info.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST_WITH_ADJACENCY ||
-           info.pInputAssemblyState->topology == VK_PRIMITIVE_TOPOLOGY_TRIANGLE_STRIP_WITH_ADJACENCY;
+constexpr bool hasAdjacencyTopology(const vk::GraphicsPipelineCreateInfo& info) {
+    return info.pInputAssemblyState->topology == vk::PrimitiveTopology::eLineListWithAdjacency ||
+           info.pInputAssemblyState->topology == vk::PrimitiveTopology::eLineStripWithAdjacency ||
+           info.pInputAssemblyState->topology == vk::PrimitiveTopology::eTriangleListWithAdjacency ||
+           info.pInputAssemblyState->topology == vk::PrimitiveTopology::eTriangleStripWithAdjacency;
 }
 
 }  // namespace
 
-Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(VK_NULL_HANDLE), maxPushConstantsSize_(UINT32_MAX) {
+Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(), maxPushConstantsSize_(UINT32_MAX) {
     for (const auto& type : ALL) {
         assert(pPipelines_.count(type) == 0);
         std::pair<std::map<PIPELINE, std::unique_ptr<Pipeline::Base>>::iterator, bool> insertPair;
@@ -146,7 +137,7 @@ void Pipeline::Handler::reset() {
     pipelineBindDataMap_.clear();
     for (auto& [type, pPipeline] : pPipelines_) pPipeline->destroy();
     // CACHE
-    if (cache_ != VK_NULL_HANDLE) vkDestroyPipelineCache(shell().context().dev, cache_, nullptr);
+    if (cache_) shell().context().dev.destroyPipelineCache(cache_, ALLOC_PLACE_HOLDER);
 
     maxPushConstantsSize_ = 0;
 }
@@ -203,14 +194,14 @@ void Pipeline::Handler::tick() {
     needsUpdateSet_.clear();
 }
 
-std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
+std::vector<vk::PushConstantRange> Pipeline::Handler::getPushConstantRanges(
     const PIPELINE& pipelineType, const std::vector<PUSH_CONSTANT>& pushConstantTypes) const {
     // Make the ranges...
-    std::vector<VkPushConstantRange> ranges;
+    std::vector<vk::PushConstantRange> ranges;
 
     uint32_t offset = 0;
     for (auto& type : pushConstantTypes) {
-        VkPushConstantRange range = {};
+        vk::PushConstantRange range = {};
 
         // clang-format off
         switch (type) {
@@ -256,34 +247,23 @@ std::vector<VkPushConstantRange> Pipeline::Handler::getPushConstantRanges(
     return ranges;
 }
 
-void Pipeline::Handler::createPipelineCache(VkPipelineCache& cache) {
-    VkPipelineCacheCreateInfo pipeline_cache_info = {};
-    pipeline_cache_info.sType = VK_STRUCTURE_TYPE_PIPELINE_CACHE_CREATE_INFO;
-    pipeline_cache_info.initialDataSize = 0;
-    pipeline_cache_info.pInitialData = nullptr;
-    vk::assert_success(vkCreatePipelineCache(shell().context().dev, &pipeline_cache_info, nullptr, &cache));
+void Pipeline::Handler::createPipelineCache(vk::PipelineCache& cache) {
+    vk::PipelineCacheCreateInfo createInfo = {};
+    createInfo.initialDataSize = 0;
+    createInfo.pInitialData = nullptr;
+    cache = shell().context().dev.createPipelineCache(createInfo, ALLOC_PLACE_HOLDER);
 }
 
-void Pipeline::Handler::createPipeline(const std::string&& name, VkGraphicsPipelineCreateInfo& createInfo,
-                                       VkPipeline& pipeline) {
-    vk::assert_success(vkCreateGraphicsPipelines(shell().context().dev, cache_, 1, &createInfo, nullptr, &pipeline));
-
-    if (shell().context().debugMarkersEnabled) {
-        std::string markerName = name + " graphics pipline";
-        ext::DebugMarkerSetObjectName(shell().context().dev, (uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                                      markerName.c_str());
-    }
+void Pipeline::Handler::createPipeline(const std::string&& name, vk::GraphicsPipelineCreateInfo& createInfo,
+                                       vk::Pipeline& pipeline) {
+    pipeline = shell().context().dev.createGraphicsPipeline(cache_, createInfo, ALLOC_PLACE_HOLDER);
+    shell().context().dbg.setMarkerName(pipeline, name.c_str());
 }
 
-void Pipeline::Handler::createPipeline(const std::string&& name, VkComputePipelineCreateInfo& createInfo,
-                                       VkPipeline& pipeline) {
-    vk::assert_success(vkCreateComputePipelines(shell().context().dev, cache_, 1, &createInfo, nullptr, &pipeline));
-
-    if (shell().context().debugMarkersEnabled) {
-        std::string markerName = name + " compute pipline";
-        ext::DebugMarkerSetObjectName(shell().context().dev, (uint64_t)pipeline, VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_EXT,
-                                      markerName.c_str());
-    }
+void Pipeline::Handler::createPipeline(const std::string&& name, vk::ComputePipelineCreateInfo& createInfo,
+                                       vk::Pipeline& pipeline) {
+    pipeline = shell().context().dev.createComputePipeline(cache_, createInfo, ALLOC_PLACE_HOLDER);
+    shell().context().dbg.setMarkerName(pipeline, name.c_str());
 }
 
 bool Pipeline::Handler::checkVertexPipelineMap(VERTEX key, PIPELINE value) const {
@@ -307,19 +287,15 @@ void Pipeline::Handler::initPipelines() {
 }
 
 void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
-    VkGraphicsPipelineCreateInfo graphicsCreateInfo;
-    VkComputePipelineCreateInfo computeCreateInfo;
+    vk::GraphicsPipelineCreateInfo graphicsCreateInfo;
+    vk::ComputePipelineCreateInfo computeCreateInfo;
     CreateInfoResources createInfoRes;
 
     auto it = set.begin();
     while (it != set.end()) {
         // Clear out memory
-        graphicsCreateInfo = {};
-        graphicsCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-        graphicsCreateInfo.basePipelineIndex = 0;
-        computeCreateInfo = {};
-        computeCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
-        computeCreateInfo.basePipelineIndex = 0;
+        graphicsCreateInfo = vk::GraphicsPipelineCreateInfo{};
+        computeCreateInfo = vk::ComputePipelineCreateInfo{};
         createInfoRes = {};
 
         auto pipelineType = it->first;
@@ -349,7 +325,7 @@ void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
             // TODO: This can be simplified.
             switch (pPipelineBindData->bindPoint) {
                 // GRAPHICS
-                case VK_PIPELINE_BIND_POINT_GRAPHICS: {
+                case vk::PipelineBindPoint::eGraphics: {
                     const auto& pPass = passHandler().getPass(it->second);
 
                     setBase(pPipelineBindData->pipeline, graphicsCreateInfo, hasBase);
@@ -367,8 +343,7 @@ void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
                     }
 
                     // Save the old pipeline for clean up if necessary
-                    if (pPipelineBindData->pipeline != VK_NULL_HANDLE)
-                        oldPipelines_.push_back({-1, pPipelineBindData->pipeline});
+                    if (pPipelineBindData->pipeline) oldPipelines_.push_back({-1, pPipelineBindData->pipeline});
 
                     createPipeline(pPipeline->NAME + " " + std::to_string(static_cast<uint32_t>(it->second)),
                                    graphicsCreateInfo, pPipelineBindData->pipeline);
@@ -377,15 +352,14 @@ void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
 
                 } break;
                 // COMPUTE
-                case VK_PIPELINE_BIND_POINT_COMPUTE: {
+                case vk::PipelineBindPoint::eCompute: {
                     setBase(pPipelineBindData->pipeline, computeCreateInfo, hasBase);
 
                     computeCreateInfo.layout = pPipelineBindData->layout;
                     pPipeline->setInfo(createInfoRes, nullptr, &computeCreateInfo);
 
                     // Save the old pipeline for clean up if necessary
-                    if (pPipelineBindData->pipeline != VK_NULL_HANDLE)
-                        oldPipelines_.push_back({-1, pPipelineBindData->pipeline});
+                    if (pPipelineBindData->pipeline) oldPipelines_.push_back({-1, pPipelineBindData->pipeline});
 
                     createPipeline(pPipeline->NAME + " " + std::to_string(static_cast<uint32_t>(it->second)),
                                    computeCreateInfo, pPipelineBindData->pipeline);
@@ -421,7 +395,7 @@ void Pipeline::Handler::makeShaderInfoMap(Shader::infoMap& map) {
     }
 }
 
-void Pipeline::Handler::getShaderStages(const std::set<PIPELINE>& pipelineTypes, VkShaderStageFlags& stages) {
+void Pipeline::Handler::getShaderStages(const std::set<PIPELINE>& pipelineTypes, vk::ShaderStageFlags& stages) {
     for (const auto& [type, pPipeline] : pPipelines_) {
         if (pipelineTypes.find(pPipeline->TYPE) == pipelineTypes.end()) continue;
         stages |= shaderHandler().getStageFlags(pPipeline->getShaderTypes());
@@ -445,7 +419,7 @@ void Pipeline::Handler::cleanup(int frameIndex) {
     for (uint8_t i = 0; i < oldPipelines_.size(); i++) {
         auto& pair = oldPipelines_[i];
         if (pair.first == frameIndex || frameIndex == -1) {
-            vkDestroyPipeline(shell().context().dev, pair.second, nullptr);
+            shell().context().dev.destroyPipeline(pair.second, ALLOC_PLACE_HOLDER);
             oldPipelines_.erase(oldPipelines_.begin() + i);
         } else if (pair.first == -1) {
             pair.first = static_cast<int>(frameIndex);

@@ -1,5 +1,5 @@
 /*
- * Modifications copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Modifications copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  * Changed file name from "Hologram.cpp"
  * -------------------------------
@@ -134,7 +134,7 @@ void Guppy::attachShell(Shell& sh) {
     handlers_.pScene->init();
 
     // SHELL LISTENERS
-    if (settings().enable_directory_listener) {
+    if (settings().enableDirectoryListener) {
         watchDirectory(Shader::BASE_DIRNAME,
                        std::bind(&Shader::Handler::recompileShader, handlers_.pShader.get(), std::placeholders::_1));
     }
@@ -157,21 +157,6 @@ void Guppy::attachSwapchain() {
     if (ctx.extent.width && ctx.extent.height)
         aspect = static_cast<float>(ctx.extent.width) / static_cast<float>(ctx.extent.height);
     handlers_.pUniform->getMainCamera().setAspect(aspect);
-
-    // Trying to get rid of RenderDoc warnings...
-    // VkFenceCreateInfo fenceInfo = {};
-    // fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    // VkFence fence;
-    // vk::assert_success(vkCreateFence(shell().context().dev, &fenceInfo, nullptr, &fence));
-    // VkSubmitInfo submitInfo = {};
-    // submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    // submitInfo.commandBufferCount = 1;
-    // submitInfo.pCommandBuffers = &handlers_.pCommand->graphicsCmd();
-    // handlers_.pCommand->endCmd(handlers_.pCommand->graphicsCmd());
-    // vk::assert_success(vkQueueSubmit(handlers_.pCommand->graphicsQueue(), 1, &submitInfo, fence));
-    // vk::assert_success(vkWaitForFences(ctx.dev, 1, &fence, VK_TRUE, UINT64_MAX));
-    // vkDestroyFence(ctx.dev, fence, nullptr);
-    // vkResetCommandBuffer(handlers_.pCommand->graphicsCmd(), 0);
 }
 
 /* This function is for updating things regardless of framerate. It is based on settings.ticks_per_second,

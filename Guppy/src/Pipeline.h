@@ -10,7 +10,7 @@
 #include <set>
 #include <string>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "ConstantsAll.h"
 #include "DescriptorSet.h"
@@ -31,8 +31,8 @@ void GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources &createInfo
 void GetDefaultScreenQuadInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
 
 struct Layouts {
-    VkPipelineLayout pipelineLayout;
-    std::vector<VkDescriptorSetLayout> descSetLayouts;
+    vk::PipelineLayout pipelineLayout;
+    std::vector<vk::DescriptorSetLayout> descSetLayouts;
 };
 
 // BASE
@@ -46,7 +46,7 @@ class Base : public Handlee<Pipeline::Handler> {
     // INFOS
     virtual void getShaderStageInfoResources(CreateInfoResources &createInfoRes) {}
 
-    const VkPipelineBindPoint BIND_POINT;
+    const vk::PipelineBindPoint BIND_POINT;
     const std::vector<DESCRIPTOR_SET> DESCRIPTOR_SET_TYPES;
     const std::string NAME;
     const std::vector<PUSH_CONSTANT> PUSH_CONSTANT_TYPES;
@@ -61,11 +61,11 @@ class Base : public Handlee<Pipeline::Handler> {
     constexpr const auto &getDescriptorOffsets() { return descriptorOffsets_; }
 
     // I can't think of anything better atm.
-    virtual void setInfo(CreateInfoResources &createInfoRes, VkGraphicsPipelineCreateInfo *pGraphicsInfo,
-                         VkComputePipelineCreateInfo *pComputeInfo) = 0;
+    virtual void setInfo(CreateInfoResources &createInfoRes, vk::GraphicsPipelineCreateInfo *pGraphicsInfo,
+                         vk::ComputePipelineCreateInfo *pComputeInfo) = 0;
 
    protected:
-    Base(Pipeline::Handler &handler, const VkPipelineBindPoint &&bindPoint, const Pipeline::CreateInfo *pCreateInfo);
+    Base(Pipeline::Handler &handler, const vk::PipelineBindPoint &&bindPoint, const Pipeline::CreateInfo *pCreateInfo);
 
     const std::shared_ptr<Pipeline::BindData> &getBindData(const PASS &passType);
 
@@ -87,7 +87,7 @@ class Base : public Handlee<Pipeline::Handler> {
     std::map<std::set<PASS>, std::shared_ptr<Pipeline::BindData>> bindDataMap_;
 
    private:
-    std::shared_ptr<Pipeline::BindData> makeBindData(const VkPipelineLayout &layout);
+    std::shared_ptr<Pipeline::BindData> makeBindData(const vk::PipelineLayout &layout);
 
     bool isInitialized_;
 
@@ -96,7 +96,7 @@ class Base : public Handlee<Pipeline::Handler> {
     // DESCRIPTOR SET
     shaderTextReplaceInfoMap shaderTextReplaceInfoMap_;
     // PUSH CONSTANT
-    std::vector<VkPushConstantRange> pushConstantRanges_;
+    std::vector<vk::PushConstantRange> pushConstantRanges_;
     // TEXTURE
     std::vector<uint32_t> pendingTexturesOffsets_;
 };
@@ -105,8 +105,8 @@ class Base : public Handlee<Pipeline::Handler> {
 
 class Compute : public Base {
    public:
-    void setInfo(CreateInfoResources &createInfoRes, VkGraphicsPipelineCreateInfo *pGraphicsInfo,
-                 VkComputePipelineCreateInfo *pComputeInfo) override final;
+    void setInfo(CreateInfoResources &createInfoRes, vk::GraphicsPipelineCreateInfo *pGraphicsInfo,
+                 vk::ComputePipelineCreateInfo *pComputeInfo) override final;
 
     virtual_inline auto getLocalSize() const { return localSize_; }
 
@@ -121,8 +121,8 @@ class Compute : public Base {
 
 class Graphics : public Base {
    public:
-    void setInfo(CreateInfoResources &createInfoRes, VkGraphicsPipelineCreateInfo *pGraphicsInfo,
-                 VkComputePipelineCreateInfo *pComputeInfo) override final;
+    void setInfo(CreateInfoResources &createInfoRes, vk::GraphicsPipelineCreateInfo *pGraphicsInfo,
+                 vk::ComputePipelineCreateInfo *pComputeInfo) override final;
 
     Graphics(Pipeline::Handler &handler, const Pipeline::CreateInfo *pCreateInfo);
 

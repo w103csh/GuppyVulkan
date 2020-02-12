@@ -11,7 +11,9 @@
 #include <tiny_obj_loader.h>
 #include <utility>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
+
+constexpr vk::AllocationCallbacks* ALLOC_PLACE_HOLDER = nullptr;
 
 #define USE_DEBUG_UI
 #define DO_PROJECTOR 0  // Not sure where this should go, or if this is a good solution to the problem.
@@ -36,8 +38,8 @@ constexpr bool PRIMARY_MONITOR = 0;
 */
 constexpr uint32_t TEXTURE_LIMIT = 30;
 constexpr auto APP_SHORT_NAME = "Guppy";
-constexpr VkExtent2D BAD_EXTENT_2D = {UINT32_MAX, UINT32_MAX};
-constexpr VkExtent3D BAD_EXTENT_3D = {UINT32_MAX, UINT32_MAX, 1};
+constexpr vk::Extent2D BAD_EXTENT_2D = {UINT32_MAX, UINT32_MAX};
+constexpr vk::Extent3D BAD_EXTENT_3D = {UINT32_MAX, UINT32_MAX, 1};
 constexpr float BAD_ASPECT = FLT_MAX;
 
 constexpr float T_MAX = 1.0f;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -32,7 +32,7 @@ Base::Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo
     update();
 }
 
-Ray Base::getRay(glm::vec2 &&position, const VkExtent2D &extent, float distance) {
+Ray Base::getRay(glm::vec2 &&position, const vk::Extent2D &extent, float distance) {
     /*  Viewport appears to take x, y, w, h where:
             w, y - lower left
             w, h - width and height

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -42,24 +42,23 @@ void RenderPass::ImGui::postCreate() {
     init_info.MinImageCount = handler().shell().context().imageCount;  // use the minImageCount?
     init_info.ImageCount = handler().shell().context().imageCount;
     init_info.Allocator = nullptr;
-    init_info.CheckVkResultFn = (void (*)(VkResult))vk::assert_success;
+    init_info.CheckVkResultFn = &helpers::checkVkResult;
 
     ImGui_ImplVulkan_Init(&init_info, pass);
 
     // FONTS
     ImGui_ImplVulkan_CreateFontsTexture(handler().commandHandler().graphicsCmd());
-    vkEndCommandBuffer(handler().commandHandler().graphicsCmd());
+    handler().commandHandler().graphicsCmd().end();
 
-    VkSubmitInfo end_info = {};
-    end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    vk::SubmitInfo end_info = {};
     end_info.commandBufferCount = 1;
     end_info.pCommandBuffers = &handler().commandHandler().graphicsCmd();
-    vk::assert_success(vkQueueSubmit(ctx.queues.at(ctx.graphicsIndex), 1, &end_info, VK_NULL_HANDLE));
+    helpers::checkVkResult(ctx.queues.at(ctx.graphicsIndex).submit(1, &end_info, {}));
 
-    vk::assert_success(vkDeviceWaitIdle(ctx.dev));
+    ctx.dev.waitIdle();
 
     // RESET GRAPHICS DEFAULT COMMAND
-    vk::assert_success(vkResetCommandBuffer(handler().commandHandler().graphicsCmd(), 0));
+    handler().commandHandler().graphicsCmd().reset({});
     handler().commandHandler().beginCmd(handler().commandHandler().graphicsCmd());
 
     ImGui_ImplVulkan_DestroyFontUploadObjects();
@@ -70,18 +69,16 @@ void RenderPass::ImGui::record(const uint8_t frameIndex) {
     auto& priCmd = data.priCmds[frameIndex];
 
     // RESET BUFFERS
-    vkResetCommandBuffer(priCmd, 0);
+    priCmd.reset({});
 
     // BEGIN BUFFERS
-    VkCommandBufferBeginInfo bufferInfo = {};
-    bufferInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    bufferInfo.flags = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-    vk::assert_success(vkBeginCommandBuffer(priCmd, &bufferInfo));
+    vk::CommandBufferBeginInfo bufferInfo = {vk::CommandBufferUsageFlagBits::eSimultaneousUse};
+    priCmd.begin(bufferInfo);
 
     beginPass(priCmd, frameIndex);
     handler().uiHandler().draw(data.priCmds[frameIndex], frameIndex);
     endPass(priCmd);
-    // vk::assert_success(vkEndCommandBuffer(data.priCmds[frameIndex]));
+    // data.priCmds[frameIndex].end();
 }
 
 void RenderPass::ImGui::createAttachments() {
@@ -97,25 +94,25 @@ void RenderPass::ImGui::createAttachments() {
 
     bool isClear = handler().isClearTargetPass(getTargetId(), TYPE);
 
-    VkAttachmentDescription attachment = {};
+    vk::AttachmentDescription attachment = {};
     attachment.format = getFormat();
-    attachment.samples = VK_SAMPLE_COUNT_1_BIT;
-    attachment.loadOp = isClear ? VK_ATTACHMENT_LOAD_OP_CLEAR : VK_ATTACHMENT_LOAD_OP_LOAD;
-    attachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-    attachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-    attachment.initialLayout = isClear ? VK_IMAGE_LAYOUT_UNDEFINED : getInitialLayout();
+    attachment.samples = vk::SampleCountFlagBits::e1;
+    attachment.loadOp = isClear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad;
+    attachment.storeOp = vk::AttachmentStoreOp::eDontCare;
+    attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+    attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+    attachment.initialLayout = isClear ? vk::ImageLayout::eUndefined : getInitialLayout();
     attachment.finalLayout = getFinalLayout();
 
     resources_.attachments.push_back(attachment);
 
     resources_.colorAttachments.resize(1);
     resources_.colorAttachments.back().attachment = 0;
-    resources_.colorAttachments.back().layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    resources_.colorAttachments.back().layout = vk::ImageLayout::eColorAttachmentOptimal;
 }
 
 void RenderPass::ImGui::createSubpassDescriptions() {
-    VkSubpassDescription subpass = {};
+    vk::SubpassDescription subpass = {};
     subpass.colorAttachmentCount = static_cast<uint32_t>(resources_.colorAttachments.size());
     subpass.pColorAttachments = resources_.colorAttachments.data();
     subpass.pResolveAttachments = resources_.resolveAttachments.data();
@@ -127,13 +124,13 @@ void RenderPass::ImGui::createDependencies() {
     /*
         SEE COMMENT IN createSubpassesAndAttachments !!!!!
     */
-    VkSubpassDependency dependency = {};
+    vk::SubpassDependency dependency = {};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
-    dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-    dependency.srcAccessMask = 0;
-    dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+    dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    dependency.dstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    dependency.srcAccessMask = {};
+    dependency.dstAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
 
     resources_.dependencies.push_back(dependency);
 }

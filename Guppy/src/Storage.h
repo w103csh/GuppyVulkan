@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -17,7 +17,7 @@ namespace Storage {
 // VECTOR4
 namespace Vector4 {
 
-void GetInputDescriptions(Pipeline::CreateInfoResources& createInfoRes, const VkVertexInputRate&& inputRate);
+void GetInputDescriptions(Pipeline::CreateInfoResources& createInfoRes, const vk::VertexInputRate&& inputRate);
 
 class Base;
 struct CreateInfo : Buffer::CreateInfo {
@@ -34,7 +34,7 @@ class Base : public Buffer::DataItem<DATA>, public Descriptor::Base {
     const TYPE VECTOR_TYPE;
     Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo);
 
-    void set(const DATA& v, const VkDeviceSize index) { pData_[index] = v; }
+    void set(const DATA& v, const vk::DeviceSize index) { pData_[index] = v; }
 };
 
 }  // namespace Vector4

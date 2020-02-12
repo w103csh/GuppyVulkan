@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -22,107 +22,114 @@ const CreateInfo POS_NORM_2D_ARRAY_CREATE_INFO = {
         true,
         true,
     },
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    vk::ImageViewType::e2DArray,
     BAD_EXTENT_3D,
     {false, true, 1.0f, ::Deferred::DO_MSAA},
-    0,
+    {},
     SAMPLER::DEFAULT,
-    (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
+    (vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled),
     {{false, false}, 1},
-    VK_FORMAT_R16G16B16A16_SFLOAT,
+    vk::Format::eR16G16B16A16Sfloat,
 };
 
 const CreateInfo POS_2D_CREATE_INFO = {
     "Deferred 2D Position Sampler",
     {{{::Sampler::USAGE::POSITION}}},
-    VK_IMAGE_VIEW_TYPE_2D,
+    vk::ImageViewType::e2D,
     BAD_EXTENT_3D,
     {false, true, 1.0f, ::Deferred::DO_MSAA},
-    0,
+    {},
     SAMPLER::DEFAULT,
-    //(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
-    (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT),
+    //(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled),
+    (vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment |
+     vk::ImageUsageFlagBits::eInputAttachment),
     {{false, false}, 1},
-    VK_FORMAT_R16G16B16A16_SFLOAT,
+    vk::Format::eR16G16B16A16Sfloat,
 };
 
 const CreateInfo NORM_2D_CREATE_INFO = {
     "Deferred 2D Normal Sampler",
     {{{::Sampler::USAGE::POSITION}}},
-    VK_IMAGE_VIEW_TYPE_2D,
+    vk::ImageViewType::e2D,
     BAD_EXTENT_3D,
     {false, true, 1.0f, ::Deferred::DO_MSAA},
-    0,
+    {},
     SAMPLER::DEFAULT,
-    //(VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
-    (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT),
+    //(vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eSampled),
+    (vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment |
+     vk::ImageUsageFlagBits::eInputAttachment),
     {{false, false}, 1},
-    VK_FORMAT_R16G16B16A16_SFLOAT,
+    vk::Format::eR16G16B16A16Sfloat,
 };
 
 const CreateInfo DIFFUSE_2D_CREATE_INFO = {
     "Deferred 2D Diffuse Color Sampler",
     {{{::Sampler::USAGE::COLOR}}},
-    VK_IMAGE_VIEW_TYPE_2D,
+    vk::ImageViewType::e2D,
     BAD_EXTENT_3D,
     {false, true, 1.0f, ::Deferred::DO_MSAA},
-    0,
+    {},
     SAMPLER::DEFAULT,
-    (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT),
+    (vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment |
+     vk::ImageUsageFlagBits::eInputAttachment),
     {{false, false}, 1},
-    VK_FORMAT_R8G8B8A8_UNORM,
+    vk::Format::eR8G8B8A8Unorm,
 };
 
 const CreateInfo AMBIENT_2D_CREATE_INFO = {
     "Deferred 2D Ambient Color Sampler",
     {{{::Sampler::USAGE::COLOR}}},
-    VK_IMAGE_VIEW_TYPE_2D,
+    vk::ImageViewType::e2D,
     BAD_EXTENT_3D,
     {false, true, 1.0f, ::Deferred::DO_MSAA},
-    0,
+    {},
     SAMPLER::DEFAULT,
-    (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT),
+    (vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment |
+     vk::ImageUsageFlagBits::eInputAttachment),
     {{false, false}, 1},
-    VK_FORMAT_R8G8B8A8_UNORM,
+    vk::Format::eR8G8B8A8Unorm,
 };
 
 const CreateInfo SPECULAR_2D_CREATE_INFO = {
     "Deferred 2D Specular Color Sampler",
     {{{::Sampler::USAGE::COLOR}}},
-    VK_IMAGE_VIEW_TYPE_2D,
+    vk::ImageViewType::e2D,
     BAD_EXTENT_3D,
     {false, true, 1.0f, ::Deferred::DO_MSAA},
-    0,
+    {},
     SAMPLER::DEFAULT,
-    (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT),
+    (vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment |
+     vk::ImageUsageFlagBits::eInputAttachment),
     {{false, false}, 1},
-    VK_FORMAT_R8G8B8A8_UNORM,
+    vk::Format::eR8G8B8A8Unorm,
 };
 
 const CreateInfo FLAGS_2D_CREATE_INFO = {
     "Deferred 2D Flag Sampler",
     {{{::Sampler::USAGE::FLAGS}}},
-    VK_IMAGE_VIEW_TYPE_2D,
+    vk::ImageViewType::e2D,
     BAD_EXTENT_3D,
     {false, true, 1.0f, ::Deferred::DO_MSAA},
-    0,
+    {},
     SAMPLER::DEFAULT,
-    (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT),
+    (vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment |
+     vk::ImageUsageFlagBits::eInputAttachment),
     {{false, false}, 1},
-    VK_FORMAT_R8_UINT,
+    vk::Format::eR8Uint,
 };
 
 const CreateInfo SSAO_2D_CREATE_INFO = {
     "Deferred 2D SSAO Sampler",
     {{{::Sampler::USAGE::COLOR}}},  // COLOR ???
-    VK_IMAGE_VIEW_TYPE_2D,
+    vk::ImageViewType::e2D,
     BAD_EXTENT_3D,
     {false, true},
-    0,
+    {},
     SAMPLER::DEFAULT,
-    (VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | VK_IMAGE_USAGE_INPUT_ATTACHMENT_BIT),
+    (vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment |
+     vk::ImageUsageFlagBits::eInputAttachment),
     {{false, false}, 1},
-    VK_FORMAT_R16_SFLOAT,
+    vk::Format::eR16Sfloat,
 };
 
 }  // namespace Deferred
@@ -196,7 +203,7 @@ const CreateInfo SSAO_2D_CREATE_INFO = {
 
 CreateInfo MakeSSAORandRotationTex() {
     uint32_t size = 4;
-    uint32_t channels = 4;  // VK_FORMAT_R16G16B16A16_SFLOAT
+    uint32_t channels = 4;  // vk::Format::eR16G16B16A16Sfloat
 
     float* pData = (float*)malloc(static_cast<size_t>(channels) * static_cast<size_t>(size) * static_cast<size_t>(size) *
                                   sizeof(float));
@@ -211,14 +218,14 @@ CreateInfo MakeSSAORandRotationTex() {
     Sampler::CreateInfo sampInfo = {
         "Deferred 2D SSAO Random Sampler",
         {{{::Sampler::USAGE::POSITION}}},
-        VK_IMAGE_VIEW_TYPE_2D,
+        vk::ImageViewType::e2D,
         {size, size, 1},
         {},
-        0,
+        {},
         SAMPLER::DEFAULT,
-        VK_IMAGE_USAGE_SAMPLED_BIT,
+        vk::ImageUsageFlagBits::eSampled,
         {{false, false}, 1},
-        VK_FORMAT_R32G32B32A32_SFLOAT,
+        vk::Format::eR32G32B32A32Sfloat,
         Sampler::CHANNELS::_4,
         sizeof(float),
     };
@@ -323,35 +330,35 @@ const CreateInfo VERT_CREATE_INFO = {
     SHADER::DEFERRED_VERT,
     "Deferred Vertex Shader",
     "vert.deferred.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 
 const CreateInfo FRAG_CREATE_INFO = {
     SHADER::DEFERRED_FRAG,
     "Deferred Fragment Shader",
     "frag.deferred.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
 };
 
 const CreateInfo FRAG_MS_CREATE_INFO = {
     SHADER::DEFERRED_MS_FRAG,
     "Deferred Multi-Sample Fragment Shader",
     "frag.deferred.ms.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
 };
 
 const CreateInfo MRT_TEX_CS_VERT_CREATE_INFO = {
     SHADER::DEFERRED_MRT_TEX_CS_VERT,
     "Deferred Multiple Render Target Texture Camera Space Vertex Shader",
     "vert.texture.deferred.mrt.cs.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 
 const CreateInfo MRT_TEX_FRAG_CREATE_INFO = {
     SHADER::DEFERRED_MRT_TEX_FRAG,
     "Deferred Multiple Render Target Texture Fragment Shader",
     "frag.texture.deferred.mrt.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
     {
         SHADER_LINK::TEX_FRAG,
         SHADER_LINK::DEFAULT_MATERIAL,
@@ -362,14 +369,14 @@ const CreateInfo MRT_COLOR_CS_VERT_CREATE_INFO = {
     SHADER::DEFERRED_MRT_COLOR_CS_VERT,
     "Deferred Multiple Render Target Color Camera Space Vertex Shader",
     "vert.color.deferred.mrt.cs.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 
 const CreateInfo MRT_COLOR_FRAG_CREATE_INFO = {
     SHADER::DEFERRED_MRT_COLOR_FRAG,
     "Deferred Multiple Render Target Color Fragment Shader",
     "frag.color.deferred.mrt.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
     {
         SHADER_LINK::COLOR_FRAG,
         SHADER_LINK::DEFAULT_MATERIAL,
@@ -381,7 +388,7 @@ const CreateInfo MRT_POINT_FRAG_CREATE_INFO = {
     SHADER::DEFERRED_MRT_POINT_FRAG,  //
     "Deferred Multiple Render Target Point Fragment Shader",
     "frag.point.deferred.mrt.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
     {SHADER_LINK::DEFAULT_MATERIAL},
 };
 
@@ -389,7 +396,7 @@ const CreateInfo MRT_COLOR_REF_REF_FRAG_CREATE_INFO = {
     SHADER::DEFERRED_MRT_COLOR_RFL_RFR_FRAG,
     "Deferred Multiple Render Target Cube Fragment Shader",
     "frag.reflect.refract.deferred.mrt.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
     {
         SHADER_LINK::DEFAULT_MATERIAL,
         SHADER_LINK::UTILITY_FRAG,
@@ -400,14 +407,14 @@ const CreateInfo MRT_SKYBOX_FRAG_CREATE_INFO = {
     SHADER::DEFERRED_MRT_SKYBOX_FRAG,
     "Deferred Multiple Render Target Skybox Fragment Shader",
     "frag.skybox.deferred.mrt.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
 };
 
 const CreateInfo SSAO_FRAG_CREATE_INFO = {
     SHADER::DEFERRED_SSAO_FRAG,
     "Deferred SSAO Fragment Shader",
     "frag.deferred.ssao.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
 };
 
 }  // namespace Deferred
@@ -418,11 +425,11 @@ namespace Deferred {
 
 void GetBlendInfoResources(CreateInfoResources& createInfoRes, bool blend) {
     // Blend disabled
-    VkPipelineColorBlendAttachmentState noBlendRGBA = {VK_FALSE};
-    noBlendRGBA.colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
-    VkPipelineColorBlendAttachmentState noBlendR = {VK_FALSE};
-    noBlendR.colorWriteMask = VK_COLOR_COMPONENT_R_BIT;
+    vk::PipelineColorBlendAttachmentState noBlendRGBA = {VK_FALSE};
+    noBlendRGBA.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+                                 vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
+    vk::PipelineColorBlendAttachmentState noBlendR = {VK_FALSE};
+    noBlendR.colorWriteMask = vk::ColorComponentFlagBits::eR;
 
     if (!blend) {
         // Position/Normal/Diffuse/Ambient/Specular
@@ -430,7 +437,7 @@ void GetBlendInfoResources(CreateInfoResources& createInfoRes, bool blend) {
         // Flags
         createInfoRes.blendAttachmentStates.push_back(noBlendR);
 
-        createInfoRes.colorBlendStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr};
+        createInfoRes.colorBlendStateInfo = vk::PipelineColorBlendStateCreateInfo{};
         createInfoRes.colorBlendStateInfo.attachmentCount =
             static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size());
         createInfoRes.colorBlendStateInfo.pAttachments = createInfoRes.blendAttachmentStates.data();
@@ -440,33 +447,33 @@ void GetBlendInfoResources(CreateInfoResources& createInfoRes, bool blend) {
         // Position/Normal
         createInfoRes.blendAttachmentStates.assign(2, noBlendRGBA);
 
-        VkPipelineColorBlendAttachmentState blendRGBA = {VK_TRUE};
-        blendRGBA.colorWriteMask =
-            VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        vk::PipelineColorBlendAttachmentState blendRGBA = {VK_TRUE};
+        blendRGBA.colorWriteMask = vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG |
+                                   vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA;
         if (true) {
             // This one makes the most sense to me. I found the other two online.
-            blendRGBA.srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-            blendRGBA.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-            blendRGBA.colorBlendOp = VK_BLEND_OP_ADD;
-            blendRGBA.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-            blendRGBA.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-            blendRGBA.alphaBlendOp = VK_BLEND_OP_ADD;
+            blendRGBA.srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
+            blendRGBA.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
+            blendRGBA.colorBlendOp = vk::BlendOp::eAdd;
+            blendRGBA.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+            blendRGBA.dstAlphaBlendFactor = vk::BlendFactor::eZero;
+            blendRGBA.alphaBlendOp = vk::BlendOp::eAdd;
         } else if (false) {
             // Additive blending
-            blendRGBA.colorBlendOp = VK_BLEND_OP_ADD;
-            blendRGBA.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-            blendRGBA.dstColorBlendFactor = VK_BLEND_FACTOR_ONE;
-            blendRGBA.alphaBlendOp = VK_BLEND_OP_ADD;
-            blendRGBA.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-            blendRGBA.dstAlphaBlendFactor = VK_BLEND_FACTOR_DST_ALPHA;
+            blendRGBA.colorBlendOp = vk::BlendOp::eAdd;
+            blendRGBA.srcColorBlendFactor = vk::BlendFactor::eOne;
+            blendRGBA.dstColorBlendFactor = vk::BlendFactor::eOne;
+            blendRGBA.alphaBlendOp = vk::BlendOp::eAdd;
+            blendRGBA.srcAlphaBlendFactor = vk::BlendFactor::eSrcAlpha;
+            blendRGBA.dstAlphaBlendFactor = vk::BlendFactor::eDstAlpha;
         } else {
             // Premulitplied alpha
-            blendRGBA.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;
-            blendRGBA.dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-            blendRGBA.colorBlendOp = VK_BLEND_OP_ADD;
-            blendRGBA.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-            blendRGBA.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-            blendRGBA.alphaBlendOp = VK_BLEND_OP_ADD;
+            blendRGBA.srcColorBlendFactor = vk::BlendFactor::eOne;
+            blendRGBA.dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
+            blendRGBA.colorBlendOp = vk::BlendOp::eAdd;
+            blendRGBA.srcAlphaBlendFactor = vk::BlendFactor::eOne;
+            blendRGBA.dstAlphaBlendFactor = vk::BlendFactor::eZero;
+            blendRGBA.alphaBlendOp = vk::BlendOp::eAdd;
         }
         // Diffuse/Ambient/Specular
         createInfoRes.blendAttachmentStates.push_back(blendRGBA);
@@ -475,7 +482,7 @@ void GetBlendInfoResources(CreateInfoResources& createInfoRes, bool blend) {
         // Flags
         createInfoRes.blendAttachmentStates.push_back(noBlendR);
 
-        createInfoRes.colorBlendStateInfo = {VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO, nullptr};
+        createInfoRes.colorBlendStateInfo = vk::PipelineColorBlendStateCreateInfo{};
         createInfoRes.colorBlendStateInfo.attachmentCount =
             static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size());
         createInfoRes.colorBlendStateInfo.pAttachments = createInfoRes.blendAttachmentStates.data();
@@ -507,8 +514,8 @@ void MRTTexture::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 // MRTTextureWireframe::MRTTextureWireframe(Handler& handler) : MRTTexture(handler) {}
 // void MRTTextureWireframe::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
 //    MRTTexture::getRasterizationStateInfoResources(createInfoRes);
-//    createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_LINE;
-//    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_NONE;
+//    createInfoRes.rasterizationStateInfo.polygonMode = vk::PolygonMode::eLine;
+//    createInfoRes.rasterizationStateInfo.cullMode = vk::CullModeFlagBits::eNone;
 //}
 
 // MRT (COLOR)
@@ -546,8 +553,8 @@ const Pipeline::CreateInfo MRT_COLOR_WF_CREATE_INFO = {
 MRTColorWireframe::MRTColorWireframe(Handler& handler) : MRTColor(handler, &MRT_COLOR_WF_CREATE_INFO) {}
 void MRTColorWireframe::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     MRTColor::getRasterizationStateInfoResources(createInfoRes);
-    createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_LINE;
-    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_NONE;
+    createInfoRes.rasterizationStateInfo.polygonMode = vk::PolygonMode::eLine;
+    createInfoRes.rasterizationStateInfo.cullMode = vk::CullModeFlagBits::eNone;
 }
 
 // MRT (POINT)
@@ -565,7 +572,7 @@ void MRTPoint::getBlendInfoResources(CreateInfoResources& createInfoRes) { GetBl
 
 void MRTPoint::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     GetDefaultColorInputAssemblyInfoResources(createInfoRes);
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::ePointList;
 }
 
 // MRT (LINE)
@@ -585,7 +592,7 @@ void MRTLine::getBlendInfoResources(CreateInfoResources& createInfoRes) {
 
 void MRTLine::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     GetDefaultColorInputAssemblyInfoResources(createInfoRes);
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eLineList;
 }
 
 // MRT (COLOR REFLECT REFRACT)
@@ -653,7 +660,7 @@ void Combine::init() {
     if (!doMSAA_) {
         replaceShaderType(SHADER::DEFERRED_MS_FRAG, SHADER::DEFERRED_FRAG);
     } else {
-        assert(handler().shell().context().samples != VK_SAMPLE_COUNT_1_BIT);
+        assert(handler().shell().context().samples != vk::SampleCountFlagBits::e1);
     }
     Graphics::init();
 }
@@ -674,7 +681,7 @@ void Combine::getShaderStageInfoResources(CreateInfoResources& createInfoRes) {
         // Use specialization constants to pass number of samples to the shader (used for MSAA resolve)
         createInfoRes.specializationMapEntries.back().back().constantID = 0;
         createInfoRes.specializationMapEntries.back().back().offset = 0;
-        createInfoRes.specializationMapEntries.back().back().size = sizeof(VkSampleCountFlagBits);
+        createInfoRes.specializationMapEntries.back().back().size = sizeof(vk::SampleCountFlagBits);
 
         createInfoRes.specializationInfo.push_back({});
         createInfoRes.specializationInfo.back().mapEntryCount =
@@ -684,7 +691,7 @@ void Combine::getShaderStageInfoResources(CreateInfoResources& createInfoRes) {
         createInfoRes.specializationInfo.back().pData = &handler().shell().context().samples;
 
         assert(createInfoRes.shaderStageInfos.size() == 2 &&
-               createInfoRes.shaderStageInfos[1].stage == VK_SHADER_STAGE_FRAGMENT_BIT);
+               createInfoRes.shaderStageInfos[1].stage == vk::ShaderStageFlagBits::eFragment);
         // Add the specialization to the fragment shader info.
         createInfoRes.shaderStageInfos[1].pSpecializationInfo = &createInfoRes.specializationInfo.back();
     }

@@ -1,9 +1,11 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
 #include "TextureConstants.h"
+
+#include <vulkan/vulkan.hpp>
 
 #include "Random.h"
 #include "Texture.h"
@@ -113,14 +115,14 @@ CreateInfo MakeRandom1dTex(const std::string_view& textureId, const std::string_
     Sampler::CreateInfo sampInfo = {
         std::string(samplerId),
         {{{::Sampler::USAGE::RANDOM}}},
-        VK_IMAGE_VIEW_TYPE_1D,
+        vk::ImageViewType::e1D,
         {bufSize, 1, 1},
         {},
-        0,
+        {},
         SAMPLER::DEFAULT_NEAREST,
-        VK_IMAGE_USAGE_SAMPLED_BIT,
+        vk::ImageUsageFlagBits::eSampled,
         {{false, false}, 1},
-        VK_FORMAT_R32_SFLOAT,
+        vk::Format::eR32Sfloat,
         Sampler::CHANNELS::_1,
         sizeof(float),
     };
@@ -136,12 +138,12 @@ CreateInfo MakeCubeMapTex(const std::string_view id, const SAMPLER type, const u
     Sampler::CreateInfo sampInfo = {
         std::string(id) + " Sampler",
         {{}, true, true},
-        numMaps > 1 ? VK_IMAGE_VIEW_TYPE_CUBE_ARRAY : VK_IMAGE_VIEW_TYPE_CUBE,
+        numMaps > 1 ? vk::ImageViewType::eCubeArray : vk::ImageViewType::eCube,
         {size, size, 1},
         {},
-        VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT,
+        vk::ImageCreateFlagBits::eCubeCompatible,
         type,
-        VK_IMAGE_USAGE_SAMPLED_BIT,
+        vk::ImageUsageFlagBits::eSampled,
     };
 
     Sampler::LayerInfo layerInfo = {};
@@ -149,8 +151,8 @@ CreateInfo MakeCubeMapTex(const std::string_view id, const SAMPLER type, const u
     switch (type) {
         case SAMPLER::CLAMP_TO_BORDER_DEPTH:
         case SAMPLER::CLAMP_TO_BORDER_DEPTH_PCF: {
-            sampInfo.imageViewType = VK_IMAGE_VIEW_TYPE_CUBE_ARRAY;  // force this always?
-            sampInfo.usage |= VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+            sampInfo.imageViewType = vk::ImageViewType::eCubeArray;  // force this always?
+            sampInfo.usage |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
             layerInfo.type = Sampler::USAGE::DEPTH;
             descType = COMBINED_SAMPLER::PIPELINE_DEPTH;
         } break;
@@ -159,7 +161,7 @@ CreateInfo MakeCubeMapTex(const std::string_view id, const SAMPLER type, const u
         case SAMPLER::CLAMP_TO_BORDER:
         case SAMPLER::CLAMP_TO_EDGE:
         case SAMPLER::DEFAULT_NEAREST: {
-            sampInfo.usage |= VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+            sampInfo.usage |= vk::ImageUsageFlagBits::eColorAttachment;
             layerInfo.type = Sampler::USAGE::COLOR;
         } break;
         default: {

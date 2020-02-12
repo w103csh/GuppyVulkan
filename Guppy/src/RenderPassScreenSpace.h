@@ -1,12 +1,12 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
 #ifndef RENDER_PASS_SCREEN_SPACE_H
 #define RENDER_PASS_SCREEN_SPACE_H
 
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "ConstantsAll.h"
 #include "RenderPass.h"
@@ -58,11 +58,11 @@ class HdrLog : public RenderPass::ScreenSpace::Base {
     HdrLog(Handler& handler, const index&& offset);
 
     void record(const uint8_t frameIndex) override {}
-    void downSample(const VkCommandBuffer& priCmd, const uint8_t frameIndex);
+    void downSample(const vk::CommandBuffer& priCmd, const uint8_t frameIndex);
 
    private:
     std::map<uint8_t, bool> passFlags_;
-    std::vector<VkCommandBuffer> transfCmds_;
+    std::vector<vk::CommandBuffer> transfCmds_;
 };
 
 }  // namespace ScreenSpace

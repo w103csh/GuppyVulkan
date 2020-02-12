@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -14,7 +14,7 @@
 #include <imgui_impl_vulkan.h>
 #include <type_traits>
 #include <utility>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "Helpers.h"
 #include "Shell.h"
@@ -49,8 +49,6 @@ class ShellGLFW : public TShell {
         }
 
         setPlatformSpecificExtensions();
-        TShell::initVk();
-
         TShell::init();
 
         // input listeners (set before imgui init because it installs it own callbacks)
@@ -72,7 +70,7 @@ class ShellGLFW : public TShell {
             // two flags.
             glfwPollEvents();
 
-            if (TShell::settings_.enable_directory_listener) TShell::checkDirectories();
+            if (TShell::settings_.enableDirectoryListener) TShell::checkDirectories();
 
             TShell::acquireBackBuffer();
 
@@ -91,17 +89,17 @@ class ShellGLFW : public TShell {
             if (TShell::limitFramerate) {
                 // TODO: this is inaccurate.
                 auto Hz = static_cast<uint64_t>(1000 / TShell::framesPerSecondLimit);  // Hz
-                if (TShell::settings_.enable_directory_listener) TShell::asyncAlert(Hz);
+                if (TShell::settings_.enableDirectoryListener) TShell::asyncAlert(Hz);
             } else {
 #if defined(VK_USE_PLATFORM_WIN32_KHR)
-                if (TShell::settings_.enable_directory_listener) TShell::asyncAlert(0);
+                if (TShell::settings_.enableDirectoryListener) TShell::asyncAlert(0);
 #endif
             }
 
             TShell::handlers_.pInput->clear();
         }
 
-        vkDeviceWaitIdle(TShell::context().dev);
+        TShell::context().dev.waitIdle();
 
         TShell::destroy();
 
@@ -136,7 +134,7 @@ class ShellGLFW : public TShell {
 
         windowData_.Surface = TShell::context().surface;
         windowData_.SurfaceFormat = TShell::context().surfaceFormat;
-        windowData_.PresentMode = TShell::context().mode;
+        windowData_.PresentMode = static_cast<VkPresentModeKHR>(TShell::context().mode);
 
         // Setup Platform/Renderer bindings
         ImGui_ImplGlfw_InitForVulkan(window_, true);
@@ -160,14 +158,14 @@ class ShellGLFW : public TShell {
         //}
 
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-        window_ = glfwCreateWindow(TShell::settings_.initial_width, TShell::settings_.initial_height,
+        window_ = glfwCreateWindow(TShell::settings_.initialWidth, TShell::settings_.initialHeight,
                                    TShell::settings_.name.c_str(), NULL, NULL);
         glfwSetWindowUserPointer(window_, this);
     }
 
-    VkSurfaceKHR createSurface(VkInstance instance) override {
+    vk::SurfaceKHR createSurface(vk::Instance instance) override {
         VkSurfaceKHR surface;
-        vk::assert_success(glfwCreateWindowSurface(instance, window_, nullptr, &surface));
+        helpers::checkVkResult(glfwCreateWindowSurface(instance, window_, nullptr, &surface));
         return surface;
     };
 

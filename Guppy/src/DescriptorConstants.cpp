@@ -85,12 +85,12 @@ const std::set<DESCRIPTOR_SET> ALL = {
     DESCRIPTOR_SET::OCEAN_DEFAULT,
 };
 
-void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& write) const {
+void ResourceInfo::setWriteInfo(const uint32_t index, vk::WriteDescriptorSet& write) const {
     auto offset = (std::min)(index, uniqueDataSets - 1);
 
     if (imageInfos.size()) {
         // IMAGE
-        assert(bufferInfos.empty() && texelBufferView == VK_NULL_HANDLE);
+        assert(bufferInfos.empty() && !texelBufferView);
 
         assert(descCount == 1);  // I haven't thought about this yet.
 
@@ -99,7 +99,7 @@ void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& writ
 
     } else if (bufferInfos.size()) {
         // BUFFER
-        assert(imageInfos.empty() && texelBufferView == VK_NULL_HANDLE);
+        assert(imageInfos.empty() && !texelBufferView);
 
         offset *= descCount;
         assert((offset + descCount) <= static_cast<uint32_t>(bufferInfos.size()));
@@ -107,7 +107,7 @@ void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& writ
         write.descriptorCount = descCount;
         write.pBufferInfo = &bufferInfos.at(offset);
 
-    } else if (texelBufferView != VK_NULL_HANDLE) {
+    } else if (texelBufferView) {
         // TEXEL BUFFER
         assert(bufferInfos.empty() && imageInfos.empty());
 
@@ -115,8 +115,7 @@ void ResourceInfo::setWriteInfo(const uint32_t index, VkWriteDescriptorSet& writ
         write.pTexelBufferView = &texelBufferView;
     }
 
-    assert(write.pBufferInfo != VK_NULL_HANDLE || write.pImageInfo != VK_NULL_HANDLE ||
-           write.pTexelBufferView != VK_NULL_HANDLE);
+    assert(write.pBufferInfo || write.pImageInfo || write.pTexelBufferView);
 }
 
 void ResourceInfo::reset() {
@@ -124,7 +123,7 @@ void ResourceInfo::reset() {
     descCount = 0;
     imageInfos.clear();
     bufferInfos.clear();
-    texelBufferView = VK_NULL_HANDLE;
+    texelBufferView = vk::BufferView{};
 }
 
 namespace Default {

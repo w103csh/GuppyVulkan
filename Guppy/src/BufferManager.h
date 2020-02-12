@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -9,14 +9,13 @@
 #include <algorithm>
 #include <string>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 #define DIAGNOSE false
 #if DIAGNOSE
 #include <iostream>
 #endif
 
 #include "BufferItem.h"
-#include "Extensions.h"
 #include "Helpers.h"
 #include "Shell.h"
 
@@ -26,24 +25,24 @@ namespace Manager {
 template <typename T>
 class Data {
    public:
-    Data(VkDeviceSize maxSize, VkDeviceSize alignment)  //
+    Data(vk::DeviceSize maxSize, vk::DeviceSize alignment)  //
         : TOTAL_SIZE(maxSize * alignment), ALIGNMENT(alignment) {
         pData_ = (uint8_t *)std::calloc(1, TOTAL_SIZE);
     }
 
-    const VkDeviceSize TOTAL_SIZE;
-    const VkDeviceSize ALIGNMENT;
+    const vk::DeviceSize TOTAL_SIZE;
+    const vk::DeviceSize ALIGNMENT;
 
     inline const void *data() const { return pData_; }
 
-    inline void set(VkDeviceSize index, const std::vector<T> &data) {
+    inline void set(vk::DeviceSize index, const std::vector<T> &data) {
         auto offset = index * ALIGNMENT;
         assert(offset + (ALIGNMENT * data.size()) <= TOTAL_SIZE);
         for (uint64_t i = 0; i < data.size(); i++)  //
             std::memcpy((pData_ + (offset + (i * ALIGNMENT))), &data[i], sizeof(T));
     }
 
-    inline T &get(VkDeviceSize index) {
+    inline T &get(vk::DeviceSize index) {
         auto offset = index * ALIGNMENT;
         assert(offset + ALIGNMENT <= TOTAL_SIZE);
         return (T &)(*(pData_ + offset));
@@ -59,13 +58,18 @@ class Data {
 template <typename T>
 struct Resource {
    public:
-    Resource(VkDeviceSize totalSize, VkDeviceSize alignment)  //
-        : data(std::forward<VkDeviceSize>(totalSize), std::forward<VkDeviceSize>(alignment)) {}
-    VkBuffer buffer = VK_NULL_HANDLE;
-    VkDeviceSize currentOffset = 0;
-    VkDeviceMemory memory = VK_NULL_HANDLE;
-    VkMemoryRequirements memoryRequirements{};
-    void *pMappedData = nullptr;
+    Resource(vk::DeviceSize totalSize, vk::DeviceSize alignment)
+        : buffer(),
+          currentOffset(),
+          memory(),
+          memoryRequirements(),
+          pMappedData(nullptr),
+          data(std::forward<vk::DeviceSize>(totalSize), std::forward<vk::DeviceSize>(alignment)) {}
+    vk::Buffer buffer;
+    vk::DeviceSize currentOffset;
+    vk::DeviceMemory memory;
+    vk::MemoryRequirements memoryRequirements;
+    void *pMappedData;
     Buffer::Manager::Data<T> data;
 };
 
@@ -79,9 +83,9 @@ class Base {
         allocation amount, and then recommend just increasing the max size... until I
         write the allocation code.
     */
-    Base(const std::string &&name, const VkDeviceSize &&maxSize, const bool &&keepMapped,
-         const VkBufferUsageFlagBits &&usage, const VkMemoryPropertyFlagBits &&properties,
-         const VkSharingMode &&sharingMode = VK_SHARING_MODE_EXCLUSIVE, const VkBufferCreateFlags &&flags = 0)
+    Base(const std::string &&name, const vk::DeviceSize &&maxSize, const bool &&keepMapped,
+         const vk::BufferUsageFlags &&usage, const vk::MemoryPropertyFlags &&properties,
+         const vk::SharingMode &&sharingMode = vk::SharingMode::eExclusive, const vk::BufferCreateFlags &&flags = {})
         : NAME(name),
           MAX_SIZE(maxSize),
           KEEP_MAPPED(keepMapped),
@@ -92,12 +96,12 @@ class Base {
           alignment_(sizeof(typename TDerived::DATA)) {}
 
     const std::string NAME;
-    const VkDeviceSize MAX_SIZE;
+    const vk::DeviceSize MAX_SIZE;
     const bool KEEP_MAPPED;
-    const VkBufferUsageFlags USAGE;
-    const VkMemoryPropertyFlags PROPERTIES;
-    const VkSharingMode MODE;
-    const VkBufferCreateFlags FLAGS;
+    const vk::BufferUsageFlags USAGE;
+    const vk::MemoryPropertyFlags PROPERTIES;
+    const vk::SharingMode MODE;
+    const vk::BufferCreateFlags FLAGS;
 
     virtual void init(const Shell::Context &ctx, std::vector<uint32_t> queueFamilyIndices = {}) {
         reset(ctx.dev);
@@ -114,7 +118,7 @@ class Base {
 #endif
 
     template <typename TCreateInfo>
-    void insert(const VkDevice &dev, TCreateInfo *pCreateInfo) {
+    void insert(const vk::Device &dev, TCreateInfo *pCreateInfo) {
         assert(pItems.size() < MAX_SIZE);
         auto info = fill(dev, std::vector<typename TDerived::DATA>(pCreateInfo->dataCount), pCreateInfo->countInRange);
         diagnose(info);
@@ -122,7 +126,7 @@ class Base {
         if (pCreateInfo == nullptr || pCreateInfo->update) updateData(dev, pItems.back()->BUFFER_INFO);
     }
 
-    void insert(const VkDevice &dev, bool update = true,
+    void insert(const vk::Device &dev, bool update = true,
                 const std::vector<typename TDerived::DATA> &data = std::vector<typename TDerived::DATA>(1)) {
         assert(pItems.size() < MAX_SIZE);
         auto info = fill(dev, data, false);
@@ -131,7 +135,7 @@ class Base {
         if (update) updateData(dev, pItems.back()->BUFFER_INFO);
     }
 
-    void updateData(const VkDevice &dev, const Buffer::Info &info, const int index = -1) {
+    void updateData(const vk::Device &dev, const Buffer::Info &info, const int index = -1) {
         if (pItems[info.itemOffset]->dirty) {
             updateMappedMemory(dev, info, index);
             pItems[info.itemOffset]->dirty = false;
@@ -140,7 +144,7 @@ class Base {
 
     TDerived &getTypedItem(const uint32_t &index) { return std::ref(*(TDerived *)(pItems.at(index).get())); }
 
-    void destroy(const VkDevice &dev) {
+    void destroy(const vk::Device &dev) {
         reset(dev);
         pItems.clear();
     }
@@ -150,7 +154,7 @@ class Base {
    protected:
     virtual void setInfo(Buffer::Info &info){};
 
-    Buffer::Info fill(const VkDevice &dev, const std::vector<typename TDerived::DATA> data, const bool countInRange) {
+    Buffer::Info fill(const vk::Device &dev, const std::vector<typename TDerived::DATA> data, const bool countInRange) {
         assert(resources_.size() && "Did you initialize the manager?");
         auto &resource = resources_.back();
 
@@ -184,11 +188,11 @@ class Base {
         return info;
     }
 
-    VkDeviceSize alignment_;
+    vk::DeviceSize alignment_;
 
    private:
     // TODO: change the caller so that all the memory can be updated at once.
-    void updateMappedMemory(const VkDevice &dev, const Buffer::Info &info, const int index) {
+    void updateMappedMemory(const vk::Device &dev, const Buffer::Info &info, const int index) {
         auto &resource = resources_[info.resourcesOffset];
 
         // If the index was set offset into both memory pointers.
@@ -197,24 +201,24 @@ class Base {
 
         auto pData = static_cast<uint8_t *>(resource.pMappedData) + memoryOffset;
         // If index is not set copy the entire range for the item.
-        VkDeviceSize range = (index == -1) ? (info.count * resource.data.ALIGNMENT) : resource.data.ALIGNMENT;
+        vk::DeviceSize range = (index == -1) ? (info.count * resource.data.ALIGNMENT) : resource.data.ALIGNMENT;
 
         if (KEEP_MAPPED) {
             memcpy(pData, &resource.data.get(dataOffset), range);
         } else {
             // TODO: Only map the region that is being copied???
-            vk::assert_success(
-                vkMapMemory(dev, resource.memory, 0, resource.memoryRequirements.size, 0, &resource.pMappedData));
+            resource.pMappedData = dev.mapMemory(resource.memory, 0, resource.memoryRequirements.size);
+
             memcpy(pData, &resource.data.get(dataOffset), range);
-            vkUnmapMemory(dev, resource.memory);
+            dev.unmapMemory(resource.memory);
         }
     }
 
-    void reset(const VkDevice &dev) {
+    void reset(const vk::Device &dev) {
         for (auto &resource : resources_) {
-            if (KEEP_MAPPED) vkUnmapMemory(dev, resource.memory);
-            vkDestroyBuffer(dev, resource.buffer, nullptr);
-            vkFreeMemory(dev, resource.memory, nullptr);
+            if (KEEP_MAPPED) dev.unmapMemory(resource.memory);
+            dev.destroyBuffer(resource.buffer, ALLOC_PLACE_HOLDER);
+            dev.freeMemory(resource.memory, ALLOC_PLACE_HOLDER);
         }
     }
 
@@ -226,61 +230,49 @@ class Base {
 
         // CREATE BUFFER
 
-        VkBufferCreateInfo createInfo = {};
-        createInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+        vk::BufferCreateInfo createInfo = {};
         createInfo.flags = FLAGS;
         createInfo.size = MAX_SIZE * alignment_;
         createInfo.usage = USAGE;
-        createInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+        createInfo.sharingMode = vk::SharingMode::eExclusive;
         createInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices_.size());
         createInfo.pQueueFamilyIndices = queueFamilyIndices_.data();
-
-        vk::assert_success(vkCreateBuffer(ctx.dev, &createInfo, nullptr, &resource.buffer));
+        resource.buffer = ctx.dev.createBuffer(createInfo, ALLOC_PLACE_HOLDER);
 
         // ALLOCATE DEVICE MEMORY
-
-        vkGetBufferMemoryRequirements(ctx.dev, resource.buffer, &resource.memoryRequirements);
+        resource.memoryRequirements = ctx.dev.getBufferMemoryRequirements(resource.buffer);
 
         assert(resource.memoryRequirements.size == createInfo.size &&
                "Figure out how to deal with this! (\"range\" of add)");
 
-        VkMemoryAllocateInfo allocInfo = {};
-        allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        allocInfo.allocationSize = resource.memoryRequirements.size;
+        vk::MemoryAllocateInfo allocInfo;
+        allocInfo.setAllocationSize(resource.memoryRequirements.size);
         auto pass = helpers::getMemoryType(ctx.memProps, resource.memoryRequirements.memoryTypeBits, PROPERTIES,
                                            &allocInfo.memoryTypeIndex);
         assert(pass && "No mappable, coherent memory");
 
-        vk::assert_success(vkAllocateMemory(ctx.dev, &allocInfo, nullptr, &resource.memory));
+        resource.memory = ctx.dev.allocateMemory(allocInfo, ALLOC_PLACE_HOLDER);
 
         // MAP MEMORY
 
         // TODO: why doesn't below work WWWWTTTTTTFFFFFFFFFFF!!!!!!
         // auto pData = resource.data.data();
-        // vk::assert_success(vkMapMemory(ctx.dev, resource.memory, 0, memReqs.size, 0, (void **)&pData));
+        //  resource.pMappedData = ctx.dev.mapMemory(resource.memory, 0, memReqs.size);
+        resource.pMappedData = ctx.dev.mapMemory(resource.memory, 0, resource.memoryRequirements.size);
 
-        vk::assert_success(
-            vkMapMemory(ctx.dev, resource.memory, 0, resource.memoryRequirements.size, 0, &resource.pMappedData));
         /*  Copying all the memory here is probably a redunant init step. The way its written now,
             each item will do a memcpy if dirty after creation. Maybe just make that a necessary step,
             and leave the rest of the buffer garbage.
         */
         memcpy(resource.pMappedData, resource.data.data(), static_cast<size_t>(resource.memoryRequirements.size));
-        if (!KEEP_MAPPED) vkUnmapMemory(ctx.dev, resource.memory);
+        if (!KEEP_MAPPED) ctx.dev.unmapMemory(resource.memory);
 
         // BIND MEMORY
 
-        vk::assert_success(vkBindBufferMemory(ctx.dev, resource.buffer, resource.memory, 0));
-
-        if (ctx.debugMarkersEnabled) {
-            std::string markerName = NAME + " block (" + std::to_string(resources_.size()) + ")";
-            ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)resource.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                          markerName.c_str());
-
-            // ext::DebugMarkerSetObjectTag(ctx.dev, (uint64_t)resources_.back().buffer,
-            // VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT, 0,
-            //                             sizeof(_UniformTag), &tag);
-        }
+        ctx.dev.bindBufferMemory(resource.buffer, resource.memory, 0);
+        std::string markerName = NAME + " block (" + std::to_string(resources_.size()) + ")";
+        ctx.dbg.setMarkerName(resource.buffer, markerName.c_str());
+        // ctx.dbg.setMarkerTag(resource.buffer, markerName.c_str(), tag);
     }
 
     typename TDerived::DATA *get(const Buffer::Info &info) {

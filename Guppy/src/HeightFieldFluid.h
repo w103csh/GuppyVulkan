@@ -8,7 +8,7 @@
 
 #include <memory>
 #include <string_view>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "ConstantsAll.h"
 #include "Obj3dDrawInst.h"
@@ -30,7 +30,7 @@ struct Info {
     float lengthM = 1.0f;
 };
 struct VertexData {
-    static void getInputDescriptions(Pipeline::CreateInfoResources& createInfoRes, const VkVertexInputRate&& inputRate);
+    static void getInputDescriptions(Pipeline::CreateInfoResources& createInfoRes, const vk::VertexInputRate&& inputRate);
     glm::vec3 position;
     glm::ivec2 imageOffset;
 };
@@ -162,10 +162,10 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
     // bool shouldDispatch() const override;
 
     virtual void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                      const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                      const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                       const uint8_t frameIndex) const override;
     void dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                  const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                  const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                   const uint8_t frameIndex) const override;
 
     GRAPHICS drawMode;

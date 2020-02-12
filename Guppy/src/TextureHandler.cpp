@@ -115,9 +115,9 @@ void Texture::Handler::reset() {
     pTextures_.clear();
     // BUFFER VIEWS
     for (auto& bv : bufferViews_) {
-        vkDestroyBufferView(dev, bv.view, nullptr);
-        vkDestroyBuffer(dev, bv.buffRes.buffer, nullptr);
-        vkFreeMemory(dev, bv.buffRes.memory, nullptr);
+        dev.destroyBufferView(bv.view, ALLOC_PLACE_HOLDER);
+        dev.destroyBuffer(bv.buffRes.buffer, ALLOC_PLACE_HOLDER);
+        dev.freeMemory(bv.buffRes.memory, ALLOC_PLACE_HOLDER);
     }
     bufferViews_.clear();
 }
@@ -179,7 +179,7 @@ std::shared_ptr<Texture::Base>& Texture::Handler::make(const Texture::CreateInfo
     return pTextures_.back();
 }
 
-void Texture::Handler::makeBufferView(const std::string_view& id, const VkFormat format, const VkDeviceSize size,
+void Texture::Handler::makeBufferView(const std::string_view& id, const vk::Format format, const vk::DeviceSize size,
                                       void* pData) {
     // Just make a buffer per make call for now. Not sure if I will use this enough for it to matter.
     const auto& ctx = shell().context();
@@ -187,19 +187,18 @@ void Texture::Handler::makeBufferView(const std::string_view& id, const VkFormat
     bufferViews_.back().pLdgRes = loadingHandler().createLoadingResources();
 
     BufferResource stgRes = {};
-    helpers::createBuffer(
-        ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, bufferViews_.back().pLdgRes->transferCmd,
-        static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_UNIFORM_TEXEL_BUFFER_BIT),
-        size, std::string(id) + " uniform texel buffer", stgRes, bufferViews_.back().buffRes, pData);
+    ctx.createBuffer(bufferViews_.back().pLdgRes->transferCmd,
+                     vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eUniformTexelBuffer, size,
+                     std::string(id) + " uniform texel buffer", stgRes, bufferViews_.back().buffRes, pData);
     bufferViews_.back().pLdgRes->stgResources.push_back(stgRes);
 
     loadingHandler().loadSubmit(std::move(bufferViews_.back().pLdgRes));
 
-    VkBufferViewCreateInfo createInfo{VK_STRUCTURE_TYPE_BUFFER_VIEW_CREATE_INFO};
+    vk::BufferViewCreateInfo createInfo = {};
     createInfo.format = format;
     createInfo.range = size;
     createInfo.buffer = bufferViews_.back().buffRes.buffer;
-    vk::assert_success(vkCreateBufferView(ctx.dev, &createInfo, nullptr, &bufferViews_.back().view));
+    bufferViews_.back().view = ctx.dev.createBufferView(createInfo, ALLOC_PLACE_HOLDER);
 
     bufferViews_.back().status = STATUS::READY;
 }
@@ -326,7 +325,7 @@ void Texture::Handler::createTexture(std::shared_ptr<Texture::Base> pTexture, bo
 void Texture::Handler::makeTexture(std::shared_ptr<Texture::Base>& pTexture, Sampler::Base& sampler) {
     assert(sampler.imgCreateInfo.arrayLayers > 0);
 
-    if (sampler.imgCreateInfo.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
+    if (sampler.imgCreateInfo.usage & vk::ImageUsageFlagBits::eDepthStencilAttachment) {
         createDepthImage(sampler, pTexture->pLdgRes);
     } else {
         createImage(sampler, pTexture->pLdgRes);
@@ -335,23 +334,24 @@ void Texture::Handler::makeTexture(std::shared_ptr<Texture::Base>& pTexture, Sam
     if (sampler.mipmapInfo.generateMipmaps && sampler.imgCreateInfo.mipLevels > 1) {
         generateMipmaps(sampler, pTexture->pLdgRes);
     } else if (std::visit(Descriptor::IsInputAttachment{}, pTexture->DESCRIPTOR_TYPE)) {
-        // TODO: Test this once the framerate gets slower to see if using VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL as
+        // TODO: Test this once the framerate gets slower to see if using vk::ImageLayout::eColorAttachmentOptimal as
         // the initial layout is faster.
 
         // helpers::transitionImageLayout(commandHandler().graphicsCmd(), sampler.image, sampler.imgCreateInfo.format,
-        //                               VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-        //                               VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-        //                               sampler.imgCreateInfo.mipLevels, sampler.imgCreateInfo.arrayLayers);
+        //                               vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
+        //                               vk::PipelineStageFlagBits::eTopOfPipe,
+        //                               vk::PipelineStageFlagBits::eColorAttachmentOutput, sampler.imgCreateInfo.mipLevels,
+        //                               sampler.imgCreateInfo.arrayLayers);
     } else if (pTexture->pLdgRes != nullptr) {
         /* As of now there are memory barries (transitions) in "createImages", "generateMipmaps",
          *	and here. Its kind of confusing and should potentionally be combined into one call
-         *	to vkCmdPipelineBarrier. A single call might not be possible because you
+         *	to pipelineBarrier. A single call might not be possible because you
          *	can/should use different queues based on staging and things.
          */
         helpers::transitionImageLayout(pTexture->pLdgRes->graphicsCmd, sampler.image, sampler.imgCreateInfo.format,
-                                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                                       vk::ImageLayout::eTransferDstOptimal,
                                        std::visit(Descriptor::GetTextureImageLayout{}, pTexture->DESCRIPTOR_TYPE),
-                                       VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+                                       vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader,
                                        sampler.imgCreateInfo.mipLevels, sampler.imgCreateInfo.arrayLayers);
     }
 
@@ -373,7 +373,7 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
     // Loading data only settings for image
     if (pLdgRes != nullptr) {
         assert(sampler.imgCreateInfo.arrayLayers == sampler.pPixels.size());
-        sampler.imgCreateInfo.usage |= VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        sampler.imgCreateInfo.usage |= vk::ImageUsageFlagBits::eTransferSrc | vk::ImageUsageFlagBits::eTransferDst;
     } else {
         assert(sampler.pPixels.empty());
     }
@@ -390,28 +390,27 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
     }
 
     // Create image
-    vk::assert_success(vkCreateImage(shell().context().dev, &sampler.imgCreateInfo, nullptr, &sampler.image));
+    sampler.image = shell().context().dev.createImage(sampler.imgCreateInfo, ALLOC_PLACE_HOLDER);
 
-    VkMemoryPropertyFlags memFlags;
+    vk::MemoryPropertyFlags memFlags;
     if (sampler.NAME.find("Deferred 2D Array Position/Normal Sampler") != std::string::npos ||
         sampler.NAME.find("Deferred 2D Color Sampler") != std::string::npos) {
         // Test to see if the device has any memory with the lazily allocated bit.
-        memFlags = VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT;
-        VkMemoryRequirements memReqs;
-        vkGetImageMemoryRequirements(shell().context().dev, sampler.image, &memReqs);
+        memFlags = vk::MemoryPropertyFlagBits::eLazilyAllocated;
+        vk::MemoryRequirements memReqs = shell().context().dev.getImageMemoryRequirements(sampler.image);
         uint32_t heapIndex;
         if (helpers::getMemoryType(shell().context().memProps, memReqs.memoryTypeBits, memFlags, &heapIndex)) {
             assert(false);  // Never tested the lazy allocation bit. Check to see if all is well!!!
         } else {
             // Section 10.2 of the spec has a list of heap types and the one we want when doing deferred for attachments
-            // is VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT | VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT. The check above is for
-            // testing when I use a gpu that has one of these heaps.
-            memFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-            // TODO: the getMemoryType function stinks. If I use VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT |
-            // VK_MEMORY_PROPERTY_LAZILY_ALLOCATED_BIT its picks the worst kind of memory.
+            // is vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eLazilyAllocated. The check above is
+            // for testing when I use a gpu that has one of these heaps.
+            memFlags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+            // TODO: the getMemoryType function stinks. If I use vk::MemoryPropertyFlagBits::eDeviceLocal |
+            // vk::MemoryPropertyFlagBits::eLazilyAllocated its picks the worst kind of memory.
         }
     } else {
-        memFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+        memFlags = vk::MemoryPropertyFlagBits::eDeviceLocal;
     }
 
     // Allocate memory
@@ -420,22 +419,22 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
     // If loading data create a staging buffer, and copy/transition the data to the image.
     if (pLdgRes != nullptr) {
         BufferResource stgRes = {};
-        VkDeviceSize memorySize = sampler.size();
-        auto memReqsSize = helpers::createBuffer(shell().context().dev, memorySize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                                                 VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-                                                 shell().context().memProps, stgRes.buffer, stgRes.memory);
+        vk::DeviceSize memorySize = sampler.size();
+        auto memReqsSize =
+            helpers::createBuffer(shell().context().dev, memorySize, vk::BufferUsageFlagBits::eTransferSrc,
+                                  vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+                                  shell().context().memProps, stgRes.buffer, stgRes.memory);
 
-        void* pData;
+        void* pData = shell().context().dev.mapMemory(stgRes.memory, 0, memReqsSize);
         size_t offset = 0;
-        vk::assert_success(vkMapMemory(shell().context().dev, stgRes.memory, 0, memReqsSize, 0, &pData));
         // Copy data to memory
         sampler.copyData(pData, offset);
 
-        vkUnmapMemory(shell().context().dev, stgRes.memory);
+        shell().context().dev.unmapMemory(stgRes.memory);
 
         helpers::transitionImageLayout(pLdgRes->transferCmd, sampler.image, sampler.imgCreateInfo.format,
-                                       VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-                                       VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT,
+                                       vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal,
+                                       vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTransfer,
                                        sampler.imgCreateInfo.mipLevels, sampler.imgCreateInfo.arrayLayers);
 
         helpers::copyBufferToImage(pLdgRes->graphicsCmd, sampler.imgCreateInfo.extent.width,
@@ -456,14 +455,13 @@ void Texture::Handler::createDepthImage(Sampler::Base& sampler, std::unique_ptr<
     sampler.imgCreateInfo.queueFamilyIndexCount = commandHandler().graphicsIndex();
     sampler.imgCreateInfo.pQueueFamilyIndices = queueFamilyIndices.data();
 
-    VkFormatProperties props;
-    vkGetPhysicalDeviceFormatProperties(shell().context().physicalDev, sampler.imgCreateInfo.format, &props);
-    if (props.linearTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-        // bool b = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT & props.linearTilingFeatures;
-        sampler.imgCreateInfo.tiling = VK_IMAGE_TILING_LINEAR;
-    } else if (props.optimalTilingFeatures & VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-        // bool b = VK_FORMAT_FEATURE_COLOR_ATTACHMENT_BLEND_BIT & props.optimalTilingFeatures;
-        sampler.imgCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    vk::FormatProperties props = shell().context().physicalDev.getFormatProperties(sampler.imgCreateInfo.format);
+    if (props.linearTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment) {
+        // bool b = vk::FormatFeatureFlagBits::eColorAttachmentBlend & props.linearTilingFeatures;
+        sampler.imgCreateInfo.tiling = vk::ImageTiling::eLinear;
+    } else if (props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment) {
+        // bool b = vk::FormatFeatureFlagBits::eColorAttachmentBlend & props.optimalTilingFeatures;
+        sampler.imgCreateInfo.tiling = vk::ImageTiling::eOptimal;
     } else {
         // TODO: Try other depth formats.
         assert(false && "depth format unsupported");
@@ -471,10 +469,10 @@ void Texture::Handler::createDepthImage(Sampler::Base& sampler, std::unique_ptr<
     }
 
     // Create image
-    vk::assert_success(vkCreateImage(shell().context().dev, &sampler.imgCreateInfo, nullptr, &sampler.image));
+    sampler.image = shell().context().dev.createImage(sampler.imgCreateInfo, ALLOC_PLACE_HOLDER);
 
     // Allocate memory
-    helpers::createImageMemory(shell().context().dev, shell().context().memProps, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
+    helpers::createImageMemory(shell().context().dev, shell().context().memProps, vk::MemoryPropertyFlagBits::eDeviceLocal,
                                sampler.image, sampler.memory);
 }
 
@@ -485,20 +483,19 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
     //    dstQueueFamilyIndexFinal,
     //    m_mipLevels,
     //    image,
-    //    VK_FORMAT_R8G8B8A8_UNORM,
-    //    VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-    //    VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+    //    vk::Format::eR8G8B8A8Unorm,
+    //    vk::ImageLayout::eTransferDstOptimal,
+    //    vk::ImageLayout::eShaderReadOnlyOptimal,
     //    m_transferCommandPool
     //);
 
-    // transition to VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL while generating mipmaps
+    // transition to vk::ImageLayout::eShaderReadOnlyOptimal while generating mipmaps
 
-    VkImageMemoryBarrier barrier = {};
-    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    vk::ImageMemoryBarrier barrier = {};
     barrier.image = sampler.image;
     barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+    barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
     barrier.subresourceRange.baseArrayLayer = 0;
     barrier.subresourceRange.layerCount = sampler.imgCreateInfo.arrayLayers;
     barrier.subresourceRange.levelCount = 1;
@@ -510,42 +507,42 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
         // CREATE MIP LEVEL
 
         barrier.subresourceRange.baseMipLevel = i - 1;
-        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-        barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+        barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+        barrier.newLayout = vk::ImageLayout::eTransferSrcOptimal;
+        barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+        barrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
 
-        vkCmdPipelineBarrier(pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0,
-                             nullptr, 0, nullptr, 1, &barrier);
+        pLdgRes->graphicsCmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, {},
+                                             {}, {}, {barrier});
 
-        VkImageBlit blit = {};
+        vk::ImageBlit blit = {};
         // source
         blit.srcOffsets[0] = {0, 0, 0};
         blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
-        blit.srcSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
         blit.srcSubresource.mipLevel = i - 1;
         blit.srcSubresource.baseArrayLayer = 0;
         blit.srcSubresource.layerCount = sampler.imgCreateInfo.arrayLayers;
         // destination
         blit.dstOffsets[0] = {0, 0, 0};
         blit.dstOffsets[1] = {mipWidth > 1 ? mipWidth / 2 : 1, mipHeight > 1 ? mipHeight / 2 : 1, 1};
-        blit.dstSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+        blit.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
         blit.dstSubresource.mipLevel = i;
         blit.dstSubresource.baseArrayLayer = 0;
         blit.dstSubresource.layerCount = sampler.imgCreateInfo.arrayLayers;
 
-        vkCmdBlitImage(pLdgRes->graphicsCmd, sampler.image, VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, sampler.image,
-                       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &blit, VK_FILTER_LINEAR);
+        pLdgRes->graphicsCmd.blitImage(sampler.image, vk::ImageLayout::eTransferSrcOptimal, sampler.image,
+                                       vk::ImageLayout::eTransferDstOptimal, 1, &blit, vk::Filter::eLinear);
 
         // TRANSITION TO SHADER READY
 
-        barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-        barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        barrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-        barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+        barrier.oldLayout = vk::ImageLayout::eTransferSrcOptimal;
+        barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+        barrier.srcAccessMask = vk::AccessFlagBits::eTransferRead;
+        barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
-        vkCmdPipelineBarrier(pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
-                             0, nullptr, 0, nullptr, 1, &barrier);
+        pLdgRes->graphicsCmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                                             vk::PipelineStageFlagBits::eFragmentShader, {}, {}, {}, {barrier});
 
         // This is a bit wonky methinks (non-sqaure is the case for this)
         if (mipWidth > 1) mipWidth /= 2;
@@ -556,36 +553,34 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
     // blitted from.
 
     barrier.subresourceRange.baseMipLevel = sampler.imgCreateInfo.mipLevels - 1;
-    barrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
-    barrier.newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-    barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    barrier.oldLayout = vk::ImageLayout::eTransferDstOptimal;
+    barrier.newLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
+    barrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
+    barrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
 
-    vkCmdPipelineBarrier(pLdgRes->graphicsCmd, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0,
-                         nullptr, 0, nullptr, 1, &barrier);
+    pLdgRes->graphicsCmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eFragmentShader,
+                                         {}, {}, {}, {barrier});
 }
 
-void Texture::Handler::createImageView(const VkDevice& dev, const Sampler::Base& sampler, const uint32_t baseArrayLayer,
+void Texture::Handler::createImageView(const vk::Device& dev, const Sampler::Base& sampler, const uint32_t baseArrayLayer,
                                        const uint32_t layerCount, Sampler::LayerResource& layerResource) {
-    VkImageAspectFlags aspectFlags;
-    if (sampler.imgCreateInfo.usage & VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT) {
-        aspectFlags = VK_IMAGE_ASPECT_DEPTH_BIT;
-        if (helpers::hasStencilComponent(sampler.imgCreateInfo.format)) aspectFlags |= VK_IMAGE_ASPECT_STENCIL_BIT;
+    vk::ImageAspectFlags aspectFlags;
+    if (sampler.imgCreateInfo.usage & vk::ImageUsageFlagBits::eDepthStencilAttachment) {
+        aspectFlags = vk::ImageAspectFlagBits::eDepth;
+        if (helpers::hasStencilComponent(sampler.imgCreateInfo.format)) aspectFlags |= vk::ImageAspectFlagBits::eStencil;
     } else {
-        aspectFlags = VK_IMAGE_ASPECT_COLOR_BIT;
+        aspectFlags = vk::ImageAspectFlagBits::eColor;
     }
-    VkImageSubresourceRange range = {aspectFlags, 0, sampler.imgCreateInfo.mipLevels, baseArrayLayer, layerCount};
+    vk::ImageSubresourceRange range = {aspectFlags, 0, sampler.imgCreateInfo.mipLevels, baseArrayLayer, layerCount};
     helpers::createImageView(dev, sampler.image, sampler.imgCreateInfo.format, sampler.imageViewType, range,
                              layerResource.view);
 }
 
-void Texture::Handler::createSampler(const VkDevice& dev, const Sampler::Base& sampler,
+void Texture::Handler::createSampler(const vk::Device& dev, const Sampler::Base& sampler,
                                      Sampler::LayerResource& layerResource) {
-    VkSamplerCreateInfo samplerInfo = Sampler::GetVkSamplerCreateInfo(sampler);
-    vk::assert_success(vkCreateSampler(dev, &samplerInfo, nullptr, &layerResource.sampler));
-    // Name some objects for debugging
-    ext::DebugMarkerSetObjectName(dev, (uint64_t)layerResource.sampler, VK_DEBUG_REPORT_OBJECT_TYPE_SAMPLER_EXT,
-                                  (sampler.NAME + " sampler").c_str());
+    vk::SamplerCreateInfo samplerInfo = Sampler::GetVulkanSamplerCreateInfo(sampler);
+    layerResource.sampler = dev.createSampler(samplerInfo, ALLOC_PLACE_HOLDER);
+    shell().context().dbg.setMarkerName(layerResource.sampler, (sampler.NAME + " sampler").c_str());
 }
 
 void Texture::Handler::createDescInfo(std::shared_ptr<Texture::Base>& pTexture, const uint32_t layerKey,
@@ -640,21 +635,21 @@ void Texture::Handler::attachSwapchain() {
             for (const auto& sampler : pTexture->samplers) {
                 // TODO: Make an actual barrier. Not sure if it will ever be necessary
                 helpers::transitionImageLayout(commandHandler().transferCmd(), sampler.image, sampler.imgCreateInfo.format,
-                                               VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_GENERAL,
-                                               VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, 1, 1);
+                                               vk::ImageLayout::eUndefined, vk::ImageLayout::eGeneral,
+                                               vk::PipelineStageFlagBits::eAllCommands,
+                                               vk::PipelineStageFlagBits::eAllCommands, 1, 1);
             }
         }
     }
     // This will leave the global transfer command in a bad spot, but I don't like any of
     // the command handler. It was the first thing I wrote, and makes no sense now that I
     // know better.
-    commandHandler().endCmd(commandHandler().transferCmd());
+    commandHandler().transferCmd().end();
 
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    vk::SubmitInfo submitInfo = {};
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &commandHandler().transferCmd();
-    vk::assert_success(vkQueueSubmit(commandHandler().transferQueue(), 1, &submitInfo, nullptr));
+    commandHandler().transferQueue().submit({submitInfo}, {});
 }
 
 void Texture::Handler::detachSwapchain() {

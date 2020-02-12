@@ -517,7 +517,7 @@ void Particle::Handler::startFountain(const uint32_t offset) {
 }
 
 void Particle::Handler::recordDraw(const PASS passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                                   const VkCommandBuffer& cmd, const uint8_t frameIndex) {
+                                   const vk::CommandBuffer& cmd, const uint8_t frameIndex) {
     // TODO: This is slow.
     for (const auto& pBuffer : pBuffers_) {
         for (auto i = 0; i < pBuffer->GRAPHICS_PIPELINE_TYPES.size(); i++) {
@@ -545,7 +545,7 @@ void Particle::Handler::recordDraw(const PASS passType, const std::shared_ptr<Pi
 }
 
 void Particle::Handler::recordDispatch(const PASS passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                                       const VkCommandBuffer& cmd, const uint8_t frameIndex) {
+                                       const vk::CommandBuffer& cmd, const uint8_t frameIndex) {
     // TODO: This is slow.
     for (const auto& pBuffer : pBuffers_) {
         for (auto i = 0; i < pBuffer->COMPUTE_PIPELINE_TYPES.size(); i++) {

@@ -11,7 +11,6 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include <vulkan/vulkan.h>
 
 #include "ConstantsAll.h"
 #include "Handlee.h"

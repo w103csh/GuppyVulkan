@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -29,13 +29,13 @@ const CreateInfo MAP_2D_ARRAY_CREATE_INFO = {
         true,
         true,
     },
-    VK_IMAGE_VIEW_TYPE_2D_ARRAY,
+    vk::ImageViewType::e2DArray,
     {MAP_WIDTH, MAP_HEIGHT, 1},
     {},
-    0,
+    {},
     // SAMPLER::CLAMP_TO_BORDER_DEPTH,
     SAMPLER::CLAMP_TO_BORDER_DEPTH_PCF,
-    (VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_IMAGE_USAGE_SAMPLED_BIT),
+    (vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled),
 };
 
 }  // namespace Shadow
@@ -92,14 +92,14 @@ CreateInfo MakeOffsetTex() {
     Sampler::CreateInfo sampInfo = {
         "Shadow Offset 2D Sampler",
         {{{::Sampler::USAGE::DONT_CARE}}},
-        VK_IMAGE_VIEW_TYPE_3D,
+        vk::ImageViewType::e3D,
         {OFFSET_WIDTH, OFFSET_HEIGHT, samples / 2},
         {},
-        0,
+        {},
         SAMPLER::DEFAULT_NEAREST,
-        VK_IMAGE_USAGE_SAMPLED_BIT,
+        vk::ImageUsageFlagBits::eSampled,
         {{false, false}, 1},
-        VK_FORMAT_R32G32B32A32_SFLOAT,
+        vk::Format::eR32G32B32A32Sfloat,
         Sampler::CHANNELS::_4,
         sizeof(float),
     };
@@ -238,11 +238,10 @@ const CreateInfo SAMPLER_OFFSET_CREATE_INFO = {
 namespace Pipeline {
 
 void GetShadowRasterizationStateInfoResources(Pipeline::CreateInfoResources& createInfoRes) {
-    createInfoRes.rasterizationStateInfo = {};
-    createInfoRes.rasterizationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
+    createInfoRes.rasterizationStateInfo = vk::PipelineRasterizationStateCreateInfo{};
     createInfoRes.rasterizationStateInfo.lineWidth = 1.0f;
-    createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_FILL;
-    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
+    createInfoRes.rasterizationStateInfo.polygonMode = vk::PolygonMode::eFill;
+    createInfoRes.rasterizationStateInfo.cullMode = vk::CullModeFlagBits::eBack;
     /**
      * THIS SETTING IS SPECIFICALLY FOR RENDER TO CUBE MAP TEXTURE LOOKUP/CAMERA CREATION !!!
      *
@@ -252,7 +251,7 @@ void GetShadowRasterizationStateInfoResources(Pipeline::CreateInfoResources& cre
      * left-handed system it was easier to just reverse the winding here as the final piece of making it all work correctly.
      * There might be a simpler solution, but I couldn't find one at the time.
      */
-    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    createInfoRes.rasterizationStateInfo.frontFace = vk::FrontFace::eClockwise;
     /**
      * If depthClampEnable is set to VK_TRUE, then fragments that are beyond the near and far
      *  planes are clamped to them as opposed to discarding them. This is useful in some special
@@ -263,7 +262,7 @@ void GetShadowRasterizationStateInfoResources(Pipeline::CreateInfoResources& cre
     /**
      *I've seen literally no results with changing the constant factor. I probably just dont understand
      *  how it works. The slope factor on the other hand seemed to help tremendously. Ultimately the most
-     *  success came from setting the cullMode to VK_CULL_MODE_FRONT_BIT which eliminated almost all of
+     *  success came from setting the cullMode to vk::CullMode::eFront which eliminated almost all of
      *  the "shadow acne".
      */
     createInfoRes.rasterizationStateInfo.depthBiasEnable = VK_FALSE;

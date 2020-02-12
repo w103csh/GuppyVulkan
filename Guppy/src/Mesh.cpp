@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -35,8 +35,8 @@ Mesh::Base::Base(Mesh::Handler& handler, const index&& offset, const MESH&& type
       // INFO
       selectable_(pCreateInfo->selectable),
       //
-      vertexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
-      indexRes_{VK_NULL_HANDLE, VK_NULL_HANDLE},
+      vertexRes_(),
+      indexRes_(),
       pLdgRes_(nullptr),
       pMaterial_(pMaterial),
       offset_(offset)
@@ -128,23 +128,21 @@ void Mesh::Base::loadBuffers() {
     const auto& ctx = handler().shell().context();
     pLdgRes_ = handler().loadingHandler().createLoadingResources();
 
-    VkBufferUsageFlagBits vertexUsage =
-        static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    vk::BufferUsageFlags vertexUsage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer;
 
     // Vertex buffer
     BufferResource stgRes = {};
-    helpers::createBuffer(ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd, vertexUsage,
-                          getVertexBufferSize(), NAME + " vertex", stgRes, vertexRes_, getVertexData(), MAPPABLE);
+    ctx.createBuffer(pLdgRes_->transferCmd, vertexUsage, getVertexBufferSize(), NAME + " vertex", stgRes, vertexRes_,
+                     getVertexData(), MAPPABLE);
     pLdgRes_->stgResources.push_back(std::move(stgRes));
 
-    VkBufferUsageFlagBits indexUsage =
-        static_cast<VkBufferUsageFlagBits>(VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+    vk::BufferUsageFlags indexUsage = vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer;
 
     // Index buffer
     if (getIndexCount()) {
         stgRes = {};
-        helpers::createBuffer(ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd, indexUsage,
-                              getIndexBufferSize(), NAME + " index", stgRes, indexRes_, getIndexData(), MAPPABLE);
+        ctx.createBuffer(pLdgRes_->transferCmd, indexUsage, getIndexBufferSize(), NAME + " index", stgRes, indexRes_,
+                         getIndexData(), MAPPABLE);
         pLdgRes_->stgResources.push_back(std::move(stgRes));
     }
 
@@ -153,77 +151,51 @@ void Mesh::Base::loadBuffers() {
         // TODO: I should probably either create this buffer or the normal index buffer. If you
         // update this then you should also do this everywhere like "updateBuffers" for example.
         stgRes = {};
-        helpers::createBuffer(ctx.dev, ctx.memProps, ctx.debugMarkersEnabled, pLdgRes_->transferCmd, indexUsage,
-                              getIndexBufferAdjSize(), NAME + " adjacency index", stgRes, indexAdjacencyRes_,
-                              indicesAdjaceny_.data(), MAPPABLE);
+        ctx.createBuffer(pLdgRes_->transferCmd, indexUsage, getIndexBufferAdjSize(), NAME + " adjacency index", stgRes,
+                         indexAdjacencyRes_, indicesAdjaceny_.data(), MAPPABLE);
         pLdgRes_->stgResources.push_back(std::move(stgRes));
     }
 }
 
-void Mesh::Base::createBufferData(const VkCommandBuffer& cmd, BufferResource& stgRes, VkDeviceSize bufferSize,
-                                  const void* data, BufferResource& res, VkBufferUsageFlagBits usage,
+void Mesh::Base::createBufferData(const vk::CommandBuffer& cmd, BufferResource& stgRes, vk::DeviceSize bufferSize,
+                                  const void* data, BufferResource& res, vk::BufferUsageFlagBits usage,
                                   std::string bufferType) {
     const auto& ctx = handler().shell().context();
 
     // STAGING RESOURCE
     res.memoryRequirements.size =
-        helpers::createBuffer(ctx.dev, bufferSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-                              VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, ctx.memProps,
-                              stgRes.buffer, stgRes.memory);
+        helpers::createBuffer(ctx.dev, bufferSize, vk::BufferUsageFlagBits::eTransferSrc,
+                              vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
+                              ctx.memProps, stgRes.buffer, stgRes.memory);
 
     // FILL STAGING BUFFER ON DEVICE
-    void* pData;
-    vk::assert_success(vkMapMemory(ctx.dev, stgRes.memory, 0, res.memoryRequirements.size, 0, &pData));
+    void* pData = ctx.dev.mapMemory(stgRes.memory, 0, res.memoryRequirements.size);
     /*
-        You can now simply memcpy the vertex data to the mapped memory and unmap it again using vkUnmapMemory.
-        Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
-        of caching. It is also possible that writes to the buffer are not visible in the mapped memory yet. There
-        are two ways to deal with that problem:
-            - Use a memory heap that is host coherent, indicated with VK_MEMORY_PROPERTY_HOST_COHERENT_BIT
-            - Call vkFlushMappedMemoryRanges to after writing to the mapped memory, and call
-              vkInvalidateMappedMemoryRanges before reading from the mapped memory
-        We went for the first approach, which ensures that the mapped memory always matches the contents of the
-        allocated memory. Do keep in mind that this may lead to slightly worse performance than explicit flushing,
-        but we'll see why that doesn't matter in the next chapter.
-    */
+     *  You can now simply memcpy the vertex data to the mapped memory and unmap it again using unmapMemory.
+     *  Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
+     *  of caching. It is also possible that writes to the buffer are not visible in the mapped memory yet. There
+     *  are two ways to deal with that problem:
+     *      - Use a memory heap that is host coherent, indicated with vk::MemoryPropertyFlagBits::eHostCoherent
+     *      - Call flushMappedMemoryRanges to after writing to the mapped memory, and call
+     *        invalidateMappedMemoryRanges before reading from the mapped memory
+     *  We went for the first approach, which ensures that the mapped memory always matches the contents of the
+     *  allocated memory. Do keep in mind that this may lead to slightly worse performance than explicit flushing,
+     *  but we'll see why that doesn't matter in the next chapter.
+     */
     memcpy(pData, data, static_cast<size_t>(bufferSize));
-    vkUnmapMemory(ctx.dev, stgRes.memory);
+    ctx.dev.unmapMemory(stgRes.memory);
 
     // FAST VERTEX BUFFER
-    VkMemoryPropertyFlags memProps = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-    if (MAPPABLE) memProps |= VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    vk::MemoryPropertyFlags memProps = vk::MemoryPropertyFlagBits::eDeviceLocal;
+    if (MAPPABLE) memProps |= vk::MemoryPropertyFlagBits::eHostVisible;
     helpers::createBuffer(ctx.dev, bufferSize,
                           // TODO: probably don't need to check memory requirements again
                           usage, memProps, ctx.memProps, res.buffer, res.memory);
 
     // COPY FROM STAGING TO FAST
     helpers::copyBuffer(cmd, stgRes.buffer, res.buffer, res.memoryRequirements.size);
-
-    // Name the buffers for debugging
-    if (handler().shell().context().debugMarkersEnabled) {
-        std::string markerName = NAME + " " + bufferType + " mesh buffer";
-        ext::DebugMarkerSetObjectName(ctx.dev, (uint64_t)res.buffer, VK_DEBUG_REPORT_OBJECT_TYPE_BUFFER_EXT,
-                                      markerName.c_str());
-    }
-}
-
-// TODO: I hate this...
-void Mesh::Base::bindPushConstants(VkCommandBuffer cmd) const {
-    assert(false);
-    // if (pipelineReference_.pushConstantTypes.empty()) return;
-    // assert(pipelineReference_.pushConstantTypes.size() == 1 && "Cannot handle multiple push constants");
-
-    // TODO: MATERIAL INFO SHOULD PROBABLY BE A DYNAMIC UNIFORM (since it doesn't change constantly)
-
-    assert(false);
-    // switch (pipelineReference_.pushConstantTypes.front()) {
-    //    case PUSH_CONSTANT::DEFAULT: {
-    //        Pipeline::Default::PushConstant pushConstant = {model_};
-    //        vkCmdPushConstants(cmd, pipelineReference_.layout, pipelineReference_.pushConstantStages, 0,
-    //                           static_cast<uint32_t>(sizeof Pipeline::Default::PushConstant), &pushConstant);
-    //    } break;
-    //    default: { assert(false && "Add new push constant"); } break;
-    //}
+    std::string markerName = NAME + " " + bufferType + " mesh";
+    ctx.dbg.setMarkerName(res.buffer, markerName.c_str());
 }
 
 void Mesh::Base::addVertex(const Face& face) {
@@ -235,30 +207,27 @@ void Mesh::Base::addVertex(const Face& face) {
 
 void Mesh::Base::updateBuffers() {
     auto& dev = handler().shell().context().dev;
-    VkDeviceSize bufferSize;
-    void* pData;
 
     // VERTEX BUFFER
-    bufferSize = getVertexBufferSize(true);
-    vk::assert_success(vkMapMemory(dev, vertexRes_.memory, 0, VK_WHOLE_SIZE, 0, &pData));
+    vk::DeviceSize bufferSize = getVertexBufferSize(true);
+    void* pData = dev.mapMemory(vertexRes_.memory, 0, VK_WHOLE_SIZE);
     memcpy(pData, getVertexData(), static_cast<size_t>(bufferSize));
-    vkUnmapMemory(dev, vertexRes_.memory);
+    dev.unmapMemory(vertexRes_.memory);
 
     // INDEX BUFFER
     if (getIndexCount()) {
         bufferSize = getIndexBufferSize(true);
-        vk::assert_success(vkMapMemory(dev, indexRes_.memory, 0, indexRes_.memoryRequirements.size, 0, &pData));
+        pData = dev.mapMemory(indexRes_.memory, 0, indexRes_.memoryRequirements.size);
         memcpy(pData, getIndexData(), static_cast<size_t>(bufferSize));
-        vkUnmapMemory(dev, indexRes_.memory);
+        dev.unmapMemory(indexRes_.memory);
     }
 
     // INDEX BUFFER (ADJACENCY)
     if (indicesAdjaceny_.size()) {
         bufferSize = getIndexBufferAdjSize(true);
-        vk::assert_success(
-            vkMapMemory(dev, indexAdjacencyRes_.memory, 0, indexAdjacencyRes_.memoryRequirements.size, 0, &pData));
+        pData = dev.mapMemory(indexAdjacencyRes_.memory, 0, indexAdjacencyRes_.memoryRequirements.size);
         memcpy(pData, indicesAdjaceny_.data(), static_cast<size_t>(bufferSize));
-        vkUnmapMemory(dev, indexAdjacencyRes_.memory);
+        dev.unmapMemory(indexAdjacencyRes_.memory);
     }
 }
 
@@ -421,45 +390,39 @@ bool Mesh::Base::shouldDraw(const PASS& passTypeComp, const PIPELINE& pipelineTy
 }
 
 void Mesh::Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                      const VkCommandBuffer& cmd, const uint8_t frameIndex) const {
+                      const vk::CommandBuffer& cmd, const uint8_t frameIndex) const {
     draw(passType, pPipelineBindData, getDescriptorSetBindData(passType), cmd, frameIndex);
 }
 
 void Mesh::Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                      const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                      const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                       const uint8_t frameIndex) const {
     auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
 
-    vkCmdBindPipeline(cmd, pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+    cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
 
     // bindPushConstants(cmd);
 
-    vkCmdBindDescriptorSets(cmd, pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                            static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                            descSetBindData.descriptorSets[setIndex].data(),
-                            static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                            descSetBindData.dynamicOffsets.data());
+    cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                           descSetBindData.descriptorSets[setIndex], descSetBindData.dynamicOffsets);
 
     // VERTEX
-    VkDeviceSize offsets[] = {0};
-    vkCmdBindVertexBuffers(cmd, Vertex::BINDING, 1, &vertexRes_.buffer, offsets);
+    cmd.bindVertexBuffers(Vertex::BINDING, {vertexRes_.buffer}, {0});
 
     // INSTANCE (as of now there will always be at least one instance binding)
-    vkCmdBindVertexBuffers(         //
-        cmd,                        // VkCommandBuffer commandBuffer
+    cmd.bindVertexBuffers(          //
         getInstanceFirstBinding(),  // uint32_t firstBinding
         getInstanceBindingCount(),  // uint32_t bindingCount
-        getInstanceBuffers(),       // const VkBuffer* pBuffers
-        getInstanceOffsets()        // const VkDeviceSize* pOffsets
+        getInstanceBuffers(),       // const vk::Buffer* pBuffers
+        getInstanceOffsets()        // const vk::DeviceSize* pOffsets
     );
 
     // TODO: clean these up!!
     if (pPipelineBindData->usesAdjacency) {
-        assert(indicesAdjaceny_.size() && indexAdjacencyRes_.buffer != VK_NULL_HANDLE);
+        assert(indicesAdjaceny_.size() && indexAdjacencyRes_.buffer);
         // TODO: Make index type value dynamic.
-        vkCmdBindIndexBuffer(cmd, indexAdjacencyRes_.buffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(                                    //
-            cmd,                                             // VkCommandBuffer commandBuffer
+        cmd.bindIndexBuffer(indexAdjacencyRes_.buffer, 0, vk::IndexType::eUint32);
+        cmd.drawIndexed(                                     //
             static_cast<uint32_t>(indicesAdjaceny_.size()),  // uint32_t indexCount
             getInstanceCount(),                              // uint32_t instanceCount
             0,                                               // uint32_t firstIndex
@@ -468,9 +431,8 @@ void Mesh::Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::Bind
         );
     } else if (indices_.size()) {
         // TODO: Make index type value dynamic.
-        vkCmdBindIndexBuffer(cmd, indexRes_.buffer, 0, VK_INDEX_TYPE_UINT32);
-        vkCmdDrawIndexed(               //
-            cmd,                        // VkCommandBuffer commandBuffer
+        cmd.bindIndexBuffer(indexRes_.buffer, 0, vk::IndexType::eUint32);
+        cmd.drawIndexed(                //
             getIndexCount(),            // uint32_t indexCount
             getInstanceCount(),         // uint32_t instanceCount
             0,                          // uint32_t firstIndex
@@ -478,8 +440,7 @@ void Mesh::Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::Bind
             getInstanceFirstInstance()  // uint32_t firstInstance
         );
     } else {
-        vkCmdDraw(                      //
-            cmd,                        // VkCommandBuffer commandBuffer
+        cmd.draw(                       //
             getVertexCount(),           // uint32_t vertexCount
             getInstanceCount(),         // uint32_t instanceCount
             0,                          // uint32_t firstVertex
@@ -491,15 +452,11 @@ void Mesh::Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::Bind
 void Mesh::Base::destroy() {
     auto& dev = handler().shell().context().dev;
     // vertex
-    vkDestroyBuffer(dev, vertexRes_.buffer, nullptr);
-    vkFreeMemory(dev, vertexRes_.memory, nullptr);
+    dev.destroyBuffer(vertexRes_.buffer, ALLOC_PLACE_HOLDER);
+    dev.freeMemory(vertexRes_.memory, ALLOC_PLACE_HOLDER);
     // index
-    if (indexRes_.buffer != VK_NULL_HANDLE) {
-        vkDestroyBuffer(dev, indexRes_.buffer, nullptr);
-    }
-    if (indexRes_.memory != VK_NULL_HANDLE) {
-        vkFreeMemory(dev, indexRes_.memory, nullptr);
-    }
+    if (indexRes_.buffer) dev.destroyBuffer(indexRes_.buffer, ALLOC_PLACE_HOLDER);
+    if (indexRes_.memory) dev.freeMemory(indexRes_.memory, ALLOC_PLACE_HOLDER);
 }
 
 // COLOR

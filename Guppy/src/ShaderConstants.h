@@ -11,7 +11,7 @@
 #include <string>
 #include <string_view>
 #include <utility>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "DescriptorConstants.h"
 
@@ -133,13 +133,13 @@ struct CreateInfo {
     SHADER type;
     std::string name;
     std::string_view fileName;
-    VkShaderStageFlagBits stage;
+    vk::ShaderStageFlagBits stage;
     std::set<SHADER_LINK> linkTypes;
 };
 
 // Pipeline shader stage create info map
 using infoMapKey = std::tuple<SHADER, PIPELINE, std::set<PASS>>;
-using infoMapValue = std::pair<Descriptor::Set::textReplaceTuples, VkPipelineShaderStageCreateInfo>;
+using infoMapValue = std::pair<Descriptor::Set::textReplaceTuples, vk::PipelineShaderStageCreateInfo>;
 using infoMapKeyValue = std::pair<const infoMapKey, infoMapValue>;
 using infoMap = std::multimap<infoMapKey, infoMapValue>;
 

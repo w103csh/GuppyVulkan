@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -43,7 +43,7 @@ class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
     Base(const Buffer::Info&& info, DATA* pData);
 
     void updateLine(const glm::vec4 color, const float width);
-    void updateViewport(const VkExtent2D& extent);
+    void updateViewport(const vk::Extent2D& extent);
 };
 }  // namespace Default
 

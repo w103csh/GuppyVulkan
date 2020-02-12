@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -20,7 +20,7 @@ void Descriptor::Base::setDescriptorInfo(Set::ResourceInfo& info, const uint32_t
     }
 }
 
-VkDescriptorBufferInfo Descriptor::Base::getBufferInfo(const uint32_t index) const {
+vk::DescriptorBufferInfo Descriptor::Base::getBufferInfo(const uint32_t index) const {
     auto bufferInfo = BUFFER_INFO.bufferInfo;
     bufferInfo.offset += index * bufferInfo.range;
     return bufferInfo;

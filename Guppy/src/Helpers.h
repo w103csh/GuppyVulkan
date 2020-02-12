@@ -25,25 +25,23 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <limits>
 #include <sstream>
+#include <stdio.h>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 #include <utility>
 
 #include "ConstantsAll.h"
 
-namespace vk {
-inline VkResult assert_success(VkResult res) {
-    if (res != VK_SUCCESS) {
-        std::stringstream ss;
-        ss << "VkResult " << res << " returned";
-        assert(false);
-        exit(EXIT_FAILURE);
-    }
-    return res;
-}
-}  // namespace vk
+struct Context;
 
 namespace helpers {
+
+static void checkVkResult(VkResult err) {
+    if (err == 0) return;
+    printf("VkResult %d\n", err);
+    if (err < 0) abort();
+}
+static void checkVkResult(vk::Result err) { checkVkResult(static_cast<VkResult>(err)); }
 
 // Epsilon compare for floating point. Taken from here https://en.cppreference.com/w/cpp/types/numeric_limits/epsilon
 template <class T>
@@ -215,40 +213,43 @@ static std::string makeVecString(TVec v) {
     return s;
 }
 
-bool hasStencilComponent(VkFormat format);
+bool hasStencilComponent(vk::Format format);
 
-VkFormat findSupportedFormat(const VkPhysicalDevice &phyDev, const std::vector<VkFormat> &candidates,
-                             const VkImageTiling tiling, const VkFormatFeatureFlags features);
+vk::Format findSupportedFormat(const vk::PhysicalDevice &phyDev, const std::vector<vk::Format> &candidates,
+                               const vk::ImageTiling tiling, const vk::FormatFeatureFlags features);
 
-VkFormat findDepthFormat(const VkPhysicalDevice &phyDev);
+vk::Format findDepthFormat(const vk::PhysicalDevice &phyDev);
 
-bool getMemoryType(const VkPhysicalDeviceMemoryProperties &memProps, uint32_t typeBits, VkMemoryPropertyFlags reqMask,
+bool getMemoryType(const vk::PhysicalDeviceMemoryProperties &memProps, uint32_t typeBits, vk::MemoryPropertyFlags reqMask,
                    uint32_t *typeIndex);
 
-VkDeviceSize createBuffer(const VkDevice &dev, const VkDeviceSize &size, const VkBufferUsageFlags &usage,
-                          const VkMemoryPropertyFlags &props, const VkPhysicalDeviceMemoryProperties &memProps,
-                          VkBuffer &buff, VkDeviceMemory &mem);
+vk::DeviceSize createBuffer(const vk::Device &dev, const vk::DeviceSize &size, const vk::BufferUsageFlags &usage,
+                            const vk::MemoryPropertyFlags &props, const vk::PhysicalDeviceMemoryProperties &memProps,
+                            vk::Buffer &buff, vk::DeviceMemory &mem);
 
-void copyBuffer(const VkCommandBuffer &cmd, const VkBuffer &srcBuff, const VkBuffer &dstBuff, const VkDeviceSize &size);
+void copyBuffer(const vk::CommandBuffer &cmd, const vk::Buffer &srcBuff, const vk::Buffer &dstBuff,
+                const vk::DeviceSize &size);
 
-void createImageMemory(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps,
-                       const VkMemoryPropertyFlags &memPropFlags, VkImage &image, VkDeviceMemory &memory);
+void createImageMemory(const vk::Device &dev, const vk::PhysicalDeviceMemoryProperties &memProps,
+                       const vk::MemoryPropertyFlags &memPropFlags, vk::Image &image, vk::DeviceMemory &memory);
 
-void createImage(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps,
-                 const std::vector<uint32_t> &queueFamilyIndices, const VkSampleCountFlagBits &numSamples,
-                 const VkFormat &format, const VkImageTiling &tiling, const VkImageUsageFlags &usage,
-                 const VkMemoryPropertyFlags &reqMask, uint32_t width, uint32_t height, uint32_t mipLevels,
-                 uint32_t arrayLayers, VkImage &image, VkDeviceMemory &memory);
+void createImage(const vk::Device &dev, const vk::PhysicalDeviceMemoryProperties &memProps,
+                 const std::vector<uint32_t> &queueFamilyIndices, const vk::SampleCountFlagBits &numSamples,
+                 const vk::Format &format, const vk::ImageTiling &tiling, const vk::ImageUsageFlags &usage,
+                 const vk::MemoryPropertyFlags &reqMask, uint32_t width, uint32_t height, uint32_t mipLevels,
+                 uint32_t arrayLayers, vk::Image &image, vk::DeviceMemory &memory);
 
-void copyBufferToImage(const VkCommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount,
-                       const VkBuffer &src_buf, const VkImage &dst_img);
+void copyBufferToImage(const vk::CommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount,
+                       const vk::Buffer &src_buf, const vk::Image &dst_img);
 
-void createImageView(const VkDevice &device, const VkImage &image, const VkFormat &format, const VkImageViewType &viewType,
-                     const VkImageSubresourceRange &subresourceRange, VkImageView &view);
+void createImageView(const vk::Device &device, const vk::Image &image, const vk::Format &format,
+                     const vk::ImageViewType &viewType, const vk::ImageSubresourceRange &subresourceRange,
+                     vk::ImageView &view);
 
-void transitionImageLayout(const VkCommandBuffer &cmd, const VkImage &image, const VkFormat &format,
-                           const VkImageLayout &oldLayout, const VkImageLayout &newLayout, VkPipelineStageFlags srcStages,
-                           VkPipelineStageFlags dstStages, uint32_t mipLevels, uint32_t arrayLayers);
+void transitionImageLayout(const vk::CommandBuffer &cmd, const vk::Image &image, const vk::Format &format,
+                           const vk::ImageLayout &oldLayout, const vk::ImageLayout &newLayout,
+                           vk::PipelineStageFlags srcStages, vk::PipelineStageFlags dstStages, uint32_t mipLevels,
+                           uint32_t arrayLayers);
 
 void validatePassTypeStructures();
 
@@ -267,9 +268,9 @@ static glm::vec2 pointOnCircle(const glm::vec2 origin, float radius, float angle
 
 void makeTriangleAdjacenyList(const std::vector<VB_INDEX_TYPE> &indices, std::vector<VB_INDEX_TYPE> &indiciesAdjacency);
 
-static void destroyCommandBuffers(const VkDevice &dev, const VkCommandPool &pool, std::vector<VkCommandBuffer> &cmds) {
-    if (!cmds.empty()) {
-        vkFreeCommandBuffers(dev, pool, static_cast<uint32_t>(cmds.size()), cmds.data());
+static void destroyCommandBuffers(const vk::Device &dev, const vk::CommandPool &pool, std::vector<vk::CommandBuffer> &cmds) {
+    if (cmds.size()) {
+        dev.freeCommandBuffers(pool, cmds);
         cmds.clear();
     }
 }
@@ -286,20 +287,17 @@ static FlagBits incrementByteFlag(FlagBits flags, T1 firstBit, T2 allBits) {
     return flags;
 }
 
-static void destroyImageResource(const VkDevice &dev, ImageResource &res) {
-    if (res.view != VK_NULL_HANDLE) vkDestroyImageView(dev, res.view, nullptr);
-    res.view = VK_NULL_HANDLE;
-    if (res.image != VK_NULL_HANDLE) vkDestroyImage(dev, res.image, nullptr);
-    res.image = VK_NULL_HANDLE;
-    if (res.memory != VK_NULL_HANDLE) vkFreeMemory(dev, res.memory, nullptr);
-    res.memory = VK_NULL_HANDLE;
+static void destroyImageResource(const vk::Device &dev, ImageResource &res) {
+    if (res.view) dev.destroyImageView(res.view, ALLOC_PLACE_HOLDER);
+    if (res.image) dev.destroyImage(res.image, ALLOC_PLACE_HOLDER);
+    if (res.memory) dev.freeMemory(res.memory, ALLOC_PLACE_HOLDER);
 }
 
-constexpr bool compExtent2D(const VkExtent2D &a, const VkExtent2D &b) {
+constexpr bool compExtent2D(const vk::Extent2D &a, const vk::Extent2D &b) {
     return a.height == b.height && a.width == b.width;  //
 }
 
-constexpr bool compExtent3D(const VkExtent3D &a, const VkExtent3D &b) {
+constexpr bool compExtent3D(const vk::Extent3D &a, const vk::Extent3D &b) {
     return a.height == b.height && a.width == b.width && a.depth == b.depth;
 }
 
@@ -307,39 +305,34 @@ static bool isNumber(const std::string_view &sv) {
     return std::find_if(sv.begin(), sv.end(), [](const auto &c) { return !std::isdigit(c); }) == sv.end();
 }
 
-void attachementImageBarrierWriteToSamplerRead(const VkImage &image, BarrierResource &resource,
+void attachementImageBarrierWriteToSamplerRead(const vk::Image &image, BarrierResource &resource,
                                                const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                                                const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
 
-void attachementImageBarrierWriteToStorageRead(const VkImage &image, BarrierResource &resource,
+void attachementImageBarrierWriteToStorageRead(const vk::Image &image, BarrierResource &resource,
                                                const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                                                const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
 
-void attachementImageBarrierStorageWriteToColorRead(const VkImage &image, BarrierResource &resource,
+void attachementImageBarrierStorageWriteToColorRead(const vk::Image &image, BarrierResource &resource,
                                                     const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                                                     const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
 
-void attachementImageBarrierWriteToWrite(const VkImage &image, BarrierResource &resource,
+void attachementImageBarrierWriteToWrite(const vk::Image &image, BarrierResource &resource,
                                          const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                                          const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
 
-void storageImageBarrierWriteToRead(const VkImage &image, BarrierResource &resource,
+void storageImageBarrierWriteToRead(const vk::Image &image, BarrierResource &resource,
                                     const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                                     const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
 
-void bufferBarrierWriteToRead(const VkDescriptorBufferInfo &bufferInfo, BarrierResource &resource,
+void bufferBarrierWriteToRead(const vk::DescriptorBufferInfo &bufferInfo, BarrierResource &resource,
                               const uint32_t srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED,
                               const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
 
 void globalDebugBarrierWriteToRead(BarrierResource &resource);
 
-void recordBarriers(const BarrierResource &resource, const VkCommandBuffer &cmd, const VkPipelineStageFlags srcStageMask,
-                    const VkPipelineStageFlags dstStageMask, const VkDependencyFlags dependencyFlags = 0);
-
-void createBuffer(const VkDevice &dev, const VkPhysicalDeviceMemoryProperties &memProps, const bool debugMarkersEnabled,
-                  const VkCommandBuffer &cmd, const VkBufferUsageFlagBits usage, const VkDeviceSize size,
-                  const std::string &&name, BufferResource &stgRes, BufferResource &buffRes, const void *data,
-                  const bool mappable = false);
+void recordBarriers(const BarrierResource &resource, const vk::CommandBuffer &cmd, const vk::PipelineStageFlags srcStageMask,
+                    const vk::PipelineStageFlags dstStageMask, const vk::DependencyFlags dependencyFlags = {});
 
 }  // namespace helpers
 

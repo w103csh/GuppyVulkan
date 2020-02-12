@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -154,10 +154,10 @@ class Base : public NonCopyable, public Handlee<Handler> {
 
     // TODO: These are directly copied from Mesh::Base. Changed getDescriptorSetBindData slightly.
     virtual void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                      const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                      const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                       const uint8_t frameIndex) const = 0;
     virtual void dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                          const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                          const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                           const uint8_t frameIndex) const {}
     const Descriptor::Set::BindData& getDescriptorSetBindData(const PASS& passType,
                                                               const Descriptor::Set::bindDataMap& map) const;
@@ -219,7 +219,7 @@ class Fountain : public Base {
              std::shared_ptr<::Instance::Base> pInst);
 
     void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-              const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+              const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
               const uint8_t frameIndex) const override;
 
     void update(const float time, const float elapsed, const uint32_t frameIndex) override;
@@ -254,10 +254,10 @@ class Base : public Buffer::Base {
          const GRAPHICS&& shadowPipelineType = GRAPHICS::ALL_ENUM);
 
     void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-              const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+              const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
               const uint8_t frameIndex) const override;
     void dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                  const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                  const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                   const uint8_t frameIndex) const override;
 
    private:

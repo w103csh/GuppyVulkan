@@ -1,9 +1,11 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
 #include "Parallax.h"
+
+#include <vulkan/vulkan.hpp>
 
 #include "Instance.h"
 #include "PipelineHandler.h"
@@ -39,20 +41,20 @@ const CreateInfo VERT_CREATE_INFO = {
     SHADER::PARALLAX_VERT,
     "Parallax Vertex Shader",
     "parallax.vert.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 const CreateInfo SIMPLE_CREATE_INFO = {
     SHADER::PARALLAX_SIMPLE_FRAG,       //
     "Parallax Simple Fragment Shader",  //
     "parallax.frag.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
     {SHADER_LINK::DEFAULT_MATERIAL},
 };
 const CreateInfo STEEP_CREATE_INFO = {
-    SHADER::PARALLAX_STEEP_FRAG,       //
-    "Parallax Steep Fragment Shader",  //
-    "steep-parallax.frag.glsl",        //
-    VK_SHADER_STAGE_FRAGMENT_BIT,      //
+    SHADER::PARALLAX_STEEP_FRAG,         //
+    "Parallax Steep Fragment Shader",    //
+    "steep-parallax.frag.glsl",          //
+    vk::ShaderStageFlagBits::eFragment,  //
     {SHADER_LINK::DEFAULT_MATERIAL},
 };
 }  // namespace Parallax

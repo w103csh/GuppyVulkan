@@ -20,8 +20,6 @@
 #include "TextureHandler.h"
 
 void Pipeline::GetDefaultColorInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
     Vertex::Color::getInputDescriptions(createInfoRes);
     Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
     // bindings
@@ -32,17 +30,12 @@ void Pipeline::GetDefaultColorInputAssemblyInfoResources(CreateInfoResources& cr
         static_cast<uint32_t>(createInfoRes.attrDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
-    createInfoRes.inputAssemblyStateInfo = {};
-    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
-    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo = vk::PipelineInputAssemblyStateCreateInfo{};
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eTriangleList;
 }
 
 void Pipeline::GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
     Vertex::Texture::getInputDescriptions(createInfoRes);
     Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
     // bindings
@@ -53,17 +46,12 @@ void Pipeline::GetDefaultTextureInputAssemblyInfoResources(CreateInfoResources& 
         static_cast<uint32_t>(createInfoRes.attrDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
-    createInfoRes.inputAssemblyStateInfo = {};
-    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
-    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo = vk::PipelineInputAssemblyStateCreateInfo{};
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eTriangleList;
 }
 
 void Pipeline::GetDefaultScreenQuadInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.vertexInputStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-
     Vertex::Texture::getScreenQuadInputDescriptions(createInfoRes);
     // bindings
     createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
@@ -73,17 +61,14 @@ void Pipeline::GetDefaultScreenQuadInputAssemblyInfoResources(CreateInfoResource
         static_cast<uint32_t>(createInfoRes.attrDescs.size());
     createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
-    createInfoRes.inputAssemblyStateInfo = {};
-    createInfoRes.inputAssemblyStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
-    createInfoRes.inputAssemblyStateInfo.pNext = nullptr;
-    createInfoRes.inputAssemblyStateInfo.flags = 0;
+    createInfoRes.inputAssemblyStateInfo = vk::PipelineInputAssemblyStateCreateInfo{};
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eTriangleList;
 }
 
 // BASE
 
-Pipeline::Base::Base(Handler& handler, const VkPipelineBindPoint&& bindPoint, const CreateInfo* pCreateInfo)
+Pipeline::Base::Base(Handler& handler, const vk::PipelineBindPoint&& bindPoint, const CreateInfo* pCreateInfo)
     : Handlee(handler),
       BIND_POINT(bindPoint),
       DESCRIPTOR_SET_TYPES(pCreateInfo->descriptorSets),
@@ -195,7 +180,7 @@ void Pipeline::Base::prepareDescriptorSetInfo() {
             if (it == layoutsMap_.end()) {
                 auto insertPair = layoutsMap_.insert(std::pair<std::set<PASS>, Layouts>{
                     helper.passTypes1,
-                    {VK_NULL_HANDLE, {}},
+                    {{}, {}},
                 });
                 assert(insertPair.second);
                 it = insertPair.first;
@@ -209,14 +194,14 @@ void Pipeline::Base::prepareDescriptorSetInfo() {
     for (const auto& keyValue : layoutsMap_) assert(keyValue.second.descSetLayouts.size() == DESCRIPTOR_SET_TYPES.size());
 }
 
-std::shared_ptr<Pipeline::BindData> Pipeline::Base::makeBindData(const VkPipelineLayout& layout) {
-    VkPipelineStageFlags pushConstantStages = 0;
+std::shared_ptr<Pipeline::BindData> Pipeline::Base::makeBindData(const vk::PipelineLayout& layout) {
+    vk::ShaderStageFlags pushConstantStages = {};
     for (const auto& range : pushConstantRanges_) pushConstantStages |= range.stageFlags;
     return std::shared_ptr<BindData>(new BindData{
         TYPE,
         BIND_POINT,
         layout,
-        VK_NULL_HANDLE,
+        {},
         pushConstantStages,
         PUSH_CONSTANT_TYPES,
         false,
@@ -232,21 +217,15 @@ void Pipeline::Base::makePipelineLayouts() {
         // PUSH CONSTANTS
         if (PUSH_CONSTANT_TYPES.size()) pushConstantRanges_ = handler().getPushConstantRanges(TYPE, PUSH_CONSTANT_TYPES);
 
-        VkPipelineLayoutCreateInfo layoutInfo = {};
-        layoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        vk::PipelineLayoutCreateInfo layoutInfo = {};
         layoutInfo.pushConstantRangeCount = static_cast<uint32_t>(pushConstantRanges_.size());
         layoutInfo.pPushConstantRanges = pushConstantRanges_.data();
         layoutInfo.setLayoutCount = static_cast<uint32_t>(keyValue.second.descSetLayouts.size());
         layoutInfo.pSetLayouts = keyValue.second.descSetLayouts.data();
 
-        vk::assert_success(
-            vkCreatePipelineLayout(handler().shell().context().dev, &layoutInfo, nullptr, &keyValue.second.pipelineLayout));
-
-        if (handler().shell().context().debugMarkersEnabled) {
-            std::string markerName = NAME + " pipeline layout";
-            ext::DebugMarkerSetObjectName(handler().shell().context().dev, (uint64_t)&keyValue.second.pipelineLayout,
-                                          VK_DEBUG_REPORT_OBJECT_TYPE_PIPELINE_LAYOUT_EXT, markerName.c_str());
-        }
+        keyValue.second.pipelineLayout =
+            handler().shell().context().dev.createPipelineLayout(layoutInfo, ALLOC_PLACE_HOLDER);
+        handler().shell().context().dbg.setMarkerName(keyValue.second.pipelineLayout, NAME.c_str());
     }
 }
 
@@ -324,13 +303,13 @@ void Pipeline::Base::replaceShaderType(const SHADER type, const SHADER replaceWi
 void Pipeline::Base::destroy() {
     const auto& dev = handler().shell().context().dev;
     for (const auto& [passTypes, bindData] : bindDataMap_) {
-        if (bindData->pipeline != VK_NULL_HANDLE)  //
-            vkDestroyPipeline(dev, bindData->pipeline, nullptr);
+        if (bindData->pipeline)  //
+            dev.destroyPipeline(bindData->pipeline, ALLOC_PLACE_HOLDER);
     }
     bindDataMap_.clear();
     for (auto& [passTypes, layouts] : layoutsMap_) {
-        if (layouts.pipelineLayout != VK_NULL_HANDLE)  //
-            vkDestroyPipelineLayout(dev, layouts.pipelineLayout, nullptr);
+        if (layouts.pipelineLayout)  //
+            dev.destroyPipelineLayout(layouts.pipelineLayout, ALLOC_PLACE_HOLDER);
     }
     layoutsMap_.clear();
 }
@@ -338,34 +317,33 @@ void Pipeline::Base::destroy() {
 // COMPUTE
 
 Pipeline::Compute::Compute(Pipeline::Handler& handler, const Pipeline::CreateInfo* pCreateInfo)
-    : Base(handler, VK_PIPELINE_BIND_POINT_COMPUTE, pCreateInfo), localSize_(pCreateInfo->localSize) {
+    : Base(handler, vk::PipelineBindPoint::eCompute, pCreateInfo), localSize_(pCreateInfo->localSize) {
     assert(std::visit(IsCompute{}, TYPE));
 }
 
-void Pipeline::Compute::setInfo(CreateInfoResources& createInfoRes, VkGraphicsPipelineCreateInfo* pGraphicsInfo,
-                                VkComputePipelineCreateInfo* pComputeInfo) {
+void Pipeline::Compute::setInfo(CreateInfoResources& createInfoRes, vk::GraphicsPipelineCreateInfo* pGraphicsInfo,
+                                vk::ComputePipelineCreateInfo* pComputeInfo) {
     // Gather info from derived classes...
     getShaderStageInfoResources(createInfoRes);
 
     assert(pGraphicsInfo == nullptr && pComputeInfo != nullptr);
-    pComputeInfo->sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
-    pComputeInfo->flags = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;
+    pComputeInfo->flags = vk::PipelineCreateFlagBits::eAllowDerivatives;
     // SHADER
     // I believe these asserts should always be the case. Not sure though.
     assert(createInfoRes.shaderStageInfos.size() == 1);
-    assert(createInfoRes.shaderStageInfos.front().stage == VK_SHADER_STAGE_COMPUTE_BIT);
+    assert(createInfoRes.shaderStageInfos.front().stage == vk::ShaderStageFlagBits::eCompute);
     pComputeInfo->stage = createInfoRes.shaderStageInfos.front();
 }
 
 //  GRAPHICS
 
 Pipeline::Graphics::Graphics(Pipeline::Handler& handler, const Pipeline::CreateInfo* pCreateInfo)
-    : Base(handler, VK_PIPELINE_BIND_POINT_GRAPHICS, pCreateInfo) {
+    : Base(handler, vk::PipelineBindPoint::eGraphics, pCreateInfo) {
     assert(std::visit(IsGraphics{}, TYPE));
 }
 
-void Pipeline::Graphics::setInfo(CreateInfoResources& createInfoRes, VkGraphicsPipelineCreateInfo* pGraphicsInfo,
-                                 VkComputePipelineCreateInfo* pComputeInfo) {
+void Pipeline::Graphics::setInfo(CreateInfoResources& createInfoRes, vk::GraphicsPipelineCreateInfo* pGraphicsInfo,
+                                 vk::ComputePipelineCreateInfo* pComputeInfo) {
     assert(pGraphicsInfo != nullptr && pComputeInfo == nullptr);
     /*
         The idea here is that this can be overridden in a bunch of ways, or you
@@ -391,13 +369,11 @@ void Pipeline::Graphics::setInfo(CreateInfoResources& createInfoRes, VkGraphicsP
     getViewportStateInfoResources(createInfoRes);
 
     // PIPELINE
-    pGraphicsInfo->sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    pGraphicsInfo->flags = VK_PIPELINE_CREATE_ALLOW_DERIVATIVES_BIT;
+    pGraphicsInfo->flags = vk::PipelineCreateFlagBits::eAllowDerivatives;
     // INPUT ASSEMBLY
     pGraphicsInfo->pInputAssemblyState = &createInfoRes.inputAssemblyStateInfo;
     // if (createInfoRes.vertexInputBindDivDescs.size()) {
     //    createInfoRes.vertexInputDivInfo = {};
-    //    createInfoRes.vertexInputDivInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_DIVISOR_STATE_CREATE_INFO_EXT;
     //    createInfoRes.vertexInputDivInfo.vertexBindingDivisorCount =
     //        static_cast<uint32_t>(createInfoRes.vertexInputBindDivDescs.size());
     //    createInfoRes.vertexInputDivInfo.pVertexBindingDivisors = createInfoRes.vertexInputBindDivDescs.data();
@@ -414,20 +390,15 @@ void Pipeline::Graphics::setInfo(CreateInfoResources& createInfoRes, VkGraphicsP
     pGraphicsInfo->pInputAssemblyState = &createInfoRes.inputAssemblyStateInfo;
     pGraphicsInfo->pMultisampleState = &createInfoRes.multisampleStateInfo;
     pGraphicsInfo->pRasterizationState = &createInfoRes.rasterizationStateInfo;
-    if (createInfoRes.tessellationStateInfo.sType == VK_STRUCTURE_TYPE_PIPELINE_TESSELLATION_STATE_CREATE_INFO)
-        pGraphicsInfo->pTessellationState = &createInfoRes.tessellationStateInfo;
-    else
-        pGraphicsInfo->pTessellationState = nullptr;
+    pGraphicsInfo->pTessellationState = createInfoRes.useTessellationInfo ? &createInfoRes.tessellationStateInfo : nullptr;
     pGraphicsInfo->pVertexInputState = &createInfoRes.vertexInputStateInfo;
     pGraphicsInfo->pViewportState = &createInfoRes.viewportStateInfo;
 }
 
 void Pipeline::Graphics::getDynamicStateInfoResources(CreateInfoResources& createInfoRes) {
     // TODO: this is weird
-    createInfoRes.dynamicStateInfo = {};
+    createInfoRes.dynamicStateInfo = vk::PipelineDynamicStateCreateInfo{};
     memset(createInfoRes.dynamicStates, 0, sizeof(createInfoRes.dynamicStates));
-    createInfoRes.dynamicStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    createInfoRes.dynamicStateInfo.pNext = nullptr;
     createInfoRes.dynamicStateInfo.pDynamicStates = createInfoRes.dynamicStates;
     createInfoRes.dynamicStateInfo.dynamicStateCount = 0;
 }
@@ -453,11 +424,10 @@ void Pipeline::Graphics::getInputAssemblyInfoResources(CreateInfoResources& crea
 }
 
 void Pipeline::Graphics::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.rasterizationStateInfo = {};
-    createInfoRes.rasterizationStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
-    createInfoRes.rasterizationStateInfo.polygonMode = VK_POLYGON_MODE_FILL;
-    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_BACK_BIT;
-    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+    createInfoRes.rasterizationStateInfo = vk::PipelineRasterizationStateCreateInfo{};
+    createInfoRes.rasterizationStateInfo.polygonMode = vk::PolygonMode::eFill;
+    createInfoRes.rasterizationStateInfo.cullMode = vk::CullModeFlagBits::eBack;
+    createInfoRes.rasterizationStateInfo.frontFace = vk::FrontFace::eCounterClockwise;
     /* If depthClampEnable is set to VK_TRUE, then fragments that are beyond the near and far
      *  planes are clamped to them as opposed to discarding them. This is useful in some special
      *  cases like shadow maps. Using this requires enabling a GPU feature.
@@ -479,13 +449,12 @@ void Pipeline::Graphics::getMultisampleStateInfoResources(CreateInfoResources& c
     auto& settings = handler().settings();
     auto& ctx = handler().shell().context();
 
-    createInfoRes.multisampleStateInfo = {};
-    createInfoRes.multisampleStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+    createInfoRes.multisampleStateInfo = vk::PipelineMultisampleStateCreateInfo{};
     createInfoRes.multisampleStateInfo.rasterizationSamples = ctx.samples;
     // enable sample shading in the pipeline (sampling for fragment interiors)
-    createInfoRes.multisampleStateInfo.sampleShadingEnable = settings.enable_sample_shading;
+    createInfoRes.multisampleStateInfo.sampleShadingEnable = settings.enableSampleShading;
     // min fraction for sample shading; closer to one is smooth
-    createInfoRes.multisampleStateInfo.minSampleShading = settings.enable_sample_shading ? MIN_SAMPLE_SHADING : 0.0f;
+    createInfoRes.multisampleStateInfo.minSampleShading = settings.enableSampleShading ? MIN_SAMPLE_SHADING : 0.0f;
     createInfoRes.multisampleStateInfo.pSampleMask = nullptr;             // Optional
     createInfoRes.multisampleStateInfo.alphaToCoverageEnable = VK_FALSE;  // Optional
     createInfoRes.multisampleStateInfo.alphaToOneEnable = VK_FALSE;       // Optional
@@ -494,32 +463,32 @@ void Pipeline::Graphics::getMultisampleStateInfoResources(CreateInfoResources& c
 void Pipeline::Graphics::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.blendAttachmentStates.push_back({});
     createInfoRes.blendAttachmentStates.back().colorWriteMask =
-        VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+        vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB |
+        vk::ColorComponentFlagBits::eA;
     // blend_attachment.blendEnable = VK_FALSE;
-    // blend_attachment.alphaBlendOp = VK_BLEND_OP_ADD;              // Optional
-    // blend_attachment.colorBlendOp = VK_BLEND_OP_ADD;              // Optional
-    // blend_attachment.srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
-    // blend_attachment.dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
-    // blend_attachment.srcColorBlendFactor = VK_BLEND_FACTOR_ONE;   // Optional
-    // blend_attachment.dstColorBlendFactor = VK_BLEND_FACTOR_ZERO;  // Optional
+    // blend_attachment.alphaBlendOp = vk::BlendOp::eAdd;              // Optional
+    // blend_attachment.colorBlendOp = vk::BlendOp::eAdd;              // Optional
+    // blend_attachment.srcAlphaBlendFactor = vk::BlendFactor::eOne;   // Optional
+    // blend_attachment.dstAlphaBlendFactor = vk::BlendFactor::eZero;  // Optional
+    // blend_attachment.srcColorBlendFactor = vk::BlendFactor::eOne;   // Optional
+    // blend_attachment.dstColorBlendFactor = vk::BlendFactor::eZero;  // Optional
     // common setup
     createInfoRes.blendAttachmentStates.back().blendEnable = VK_TRUE;
-    createInfoRes.blendAttachmentStates.back().srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    createInfoRes.blendAttachmentStates.back().dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    createInfoRes.blendAttachmentStates.back().colorBlendOp = VK_BLEND_OP_ADD;
-    createInfoRes.blendAttachmentStates.back().srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE;
-    createInfoRes.blendAttachmentStates.back().dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
-    createInfoRes.blendAttachmentStates.back().alphaBlendOp = VK_BLEND_OP_ADD;
-    // createInfoRes.blendAttach.srcAlphaBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
-    // createInfoRes.blendAttach.dstAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
-    // createInfoRes.blendAttach.alphaBlendOp = VK_BLEND_OP_ADD;
+    createInfoRes.blendAttachmentStates.back().srcColorBlendFactor = vk::BlendFactor::eSrcAlpha;
+    createInfoRes.blendAttachmentStates.back().dstColorBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
+    createInfoRes.blendAttachmentStates.back().colorBlendOp = vk::BlendOp::eAdd;
+    createInfoRes.blendAttachmentStates.back().srcAlphaBlendFactor = vk::BlendFactor::eOne;
+    createInfoRes.blendAttachmentStates.back().dstAlphaBlendFactor = vk::BlendFactor::eZero;
+    createInfoRes.blendAttachmentStates.back().alphaBlendOp = vk::BlendOp::eAdd;
+    // createInfoRes.blendAttach.srcAlphaBlendFactor = vk::BlendFactor::eSrcAlpha;
+    // createInfoRes.blendAttach.dstAlphaBlendFactor = vk::BlendFactor::eOneMinusSrcAlpha;
+    // createInfoRes.blendAttach.alphaBlendOp = vk::BlendOp::eAdd;
 
-    createInfoRes.colorBlendStateInfo = {};
-    createInfoRes.colorBlendStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
+    createInfoRes.colorBlendStateInfo = vk::PipelineColorBlendStateCreateInfo{};
     createInfoRes.colorBlendStateInfo.attachmentCount = static_cast<uint32_t>(createInfoRes.blendAttachmentStates.size());
     createInfoRes.colorBlendStateInfo.pAttachments = createInfoRes.blendAttachmentStates.data();
     createInfoRes.colorBlendStateInfo.logicOpEnable = VK_FALSE;
-    createInfoRes.colorBlendStateInfo.logicOp = VK_LOGIC_OP_COPY;  // What does this do?
+    createInfoRes.colorBlendStateInfo.logicOp = vk::LogicOp::eCopy;  // What does this do?
     createInfoRes.colorBlendStateInfo.blendConstants[0] = 0.0f;
     createInfoRes.colorBlendStateInfo.blendConstants[1] = 0.0f;
     createInfoRes.colorBlendStateInfo.blendConstants[2] = 0.0f;
@@ -531,28 +500,27 @@ void Pipeline::Graphics::getBlendInfoResources(CreateInfoResources& createInfoRe
 }
 
 void Pipeline::Graphics::getViewportStateInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.viewportStateInfo = {};
-    createInfoRes.viewportStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
+    createInfoRes.viewportStateInfo = vk::PipelineViewportStateCreateInfo{};
 #ifndef __ANDROID__
     createInfoRes.viewportStateInfo.viewportCount = NUM_VIEWPORTS;
-    createInfoRes.dynamicStates[createInfoRes.dynamicStateInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_VIEWPORT;
+    createInfoRes.dynamicStates[createInfoRes.dynamicStateInfo.dynamicStateCount++] = vk::DynamicState::eViewport;
     createInfoRes.viewportStateInfo.scissorCount = NUM_SCISSORS;
-    createInfoRes.dynamicStates[createInfoRes.dynamicStateInfo.dynamicStateCount++] = VK_DYNAMIC_STATE_SCISSOR;
+    createInfoRes.dynamicStates[createInfoRes.dynamicStateInfo.dynamicStateCount++] = vk::DynamicState::eScissor;
     createInfoRes.viewportStateInfo.pScissors = nullptr;
     createInfoRes.viewportStateInfo.pViewports = nullptr;
 #else
     // TODO: this is outdated now...
     // Temporary disabling dynamic viewport on Android because some of drivers doesn't
     // support the feature.
-    VkViewport viewports;
-    VkViewport viewports;
+    vk::Viewport viewports;
+    vk::Viewport viewports;
     viewports.minDepth = 0.0f;
     viewports.maxDepth = 1.0f;
     viewports.x = 0;
     viewports.y = 0;
     viewports.width = info.width;
     viewports.height = info.height;
-    VkRect2D scissor;
+    vk::Rect2D scissor;
     scissor.extent.width = info.width;
     scissor.extent.height = info.height;
     scissor.offset.x = 0;
@@ -565,44 +533,42 @@ void Pipeline::Graphics::getViewportStateInfoResources(CreateInfoResources& crea
 }
 
 void Pipeline::Graphics::getDepthInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.depthStencilStateInfo = {};
-    createInfoRes.depthStencilStateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-    createInfoRes.depthStencilStateInfo.pNext = nullptr;
-    createInfoRes.depthStencilStateInfo.flags = 0;
+    createInfoRes.depthStencilStateInfo = vk::PipelineDepthStencilStateCreateInfo{};
     // This is set in overridePipelineCreateInfo now.
     // createInfoRes.depthStencilStateInfo.depthTestEnable = handler().settings().include_depth;
     // createInfoRes.depthStencilStateInfo.depthWriteEnable = handler().settings().include_depth;
-    createInfoRes.depthStencilStateInfo.depthCompareOp = VK_COMPARE_OP_LESS;
+    createInfoRes.depthStencilStateInfo.depthCompareOp = vk::CompareOp::eLess;
     createInfoRes.depthStencilStateInfo.depthBoundsTestEnable = VK_FALSE;
     createInfoRes.depthStencilStateInfo.minDepthBounds = 0.0f;
     createInfoRes.depthStencilStateInfo.maxDepthBounds = 1.0f;
     createInfoRes.depthStencilStateInfo.stencilTestEnable = VK_FALSE;
     createInfoRes.depthStencilStateInfo.front = {};
     createInfoRes.depthStencilStateInfo.back = {};
-    // dss.back.failOp = VK_STENCIL_OP_KEEP; // ARE THESE IMPORTANT !!!
-    // dss.back.passOp = VK_STENCIL_OP_KEEP;
-    // dss.back.compareOp = VK_COMPARE_OP_ALWAYS;
+    // dss.back.failOp = vk::StencilOp::eKeep; // ARE THESE IMPORTANT !!!
+    // dss.back.passOp = vk::StencilOp::eKeep;
+    // dss.back.compareOp = vk::CompareOp::eAlways;
     // dss.back.compareMask = 0;
     // dss.back.reference = 0;
-    // dss.back.depthFailOp = VK_STENCIL_OP_KEEP;
+    // dss.back.depthFailOp = vk::StencilOp::eKeep;
     // dss.back.writeMask = 0;
     // dss.front = ds.back;
 }
 
 void Pipeline::Graphics::getTesselationInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.tessellationStateInfo = {};
+    createInfoRes.useTessellationInfo = false;
+    createInfoRes.tessellationStateInfo = vk::PipelineTessellationStateCreateInfo{};
 }
 
 //  LINE
 void Pipeline::Default::Line::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     GetDefaultColorInputAssemblyInfoResources(createInfoRes);
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eLineList;
 }
 
 //  POINT
 void Pipeline::Default::Point::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     GetDefaultColorInputAssemblyInfoResources(createInfoRes);
-    createInfoRes.inputAssemblyStateInfo.topology = VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::ePointList;
 }
 
 // CUBE
@@ -610,13 +576,13 @@ void Pipeline::Default::Cube::getDepthInfoResources(CreateInfoResources& createI
     Graphics::getDepthInfoResources(createInfoRes);
     // This causes the non-skybox reflect/refact options to not work correctly. Unfortunately, you need to make two shaders
     // if you want it to work right !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-    createInfoRes.depthStencilStateInfo.depthCompareOp = VK_COMPARE_OP_LESS_OR_EQUAL;
+    createInfoRes.depthStencilStateInfo.depthCompareOp = vk::CompareOp::eLessOrEqual;
 }
 
 // BLINN PHONG TEXTURE CULL NONE
 void Pipeline::BP::TextureCullNone::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     Graphics::getRasterizationStateInfoResources(createInfoRes);
-    createInfoRes.rasterizationStateInfo.cullMode = VK_CULL_MODE_NONE;
+    createInfoRes.rasterizationStateInfo.cullMode = vk::CullModeFlagBits::eNone;
 }
 
 // CUBE MAP
@@ -634,7 +600,7 @@ Pipeline::Default::TriListColorCube::TriListColorCube(Pipeline::Handler& handler
     : TriListColor(handler, pCreateInfo) {}
 void Pipeline::Default::TriListColorCube::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     TriListColor::getRasterizationStateInfoResources(createInfoRes);
-    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    createInfoRes.rasterizationStateInfo.frontFace = vk::FrontFace::eClockwise;
 }
 
 // LINE
@@ -650,7 +616,7 @@ Pipeline::Default::LineCube::LineCube(Pipeline::Handler& handler, const CreateIn
     : Line(handler, pCreateInfo) {}
 void Pipeline::Default::LineCube::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     Line::getRasterizationStateInfoResources(createInfoRes);
-    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    createInfoRes.rasterizationStateInfo.frontFace = vk::FrontFace::eClockwise;
 }
 
 // POINT
@@ -666,7 +632,7 @@ Pipeline::Default::PointCube::PointCube(Pipeline::Handler& handler, const Create
     : Point(handler, pCreateInfo) {}
 void Pipeline::Default::PointCube::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     Point::getRasterizationStateInfoResources(createInfoRes);
-    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    createInfoRes.rasterizationStateInfo.frontFace = vk::FrontFace::eClockwise;
 }
 
 // TEXTURE
@@ -682,5 +648,5 @@ Pipeline::Default::TriListTextureCube::TriListTextureCube(Pipeline::Handler& han
     : TriListTexture(handler, pCreateInfo) {}
 void Pipeline::Default::TriListTextureCube::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     TriListTexture::getRasterizationStateInfoResources(createInfoRes);
-    createInfoRes.rasterizationStateInfo.frontFace = VK_FRONT_FACE_CLOCKWISE;
+    createInfoRes.rasterizationStateInfo.frontFace = vk::FrontFace::eClockwise;
 }

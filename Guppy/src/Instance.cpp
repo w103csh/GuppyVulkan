@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -10,7 +10,7 @@ void Instance::Obj3d::DATA::getInputDescriptions(Pipeline::CreateInfoResources& 
     createInfoRes.bindDescs.push_back({});
     createInfoRes.bindDescs.back().binding = BINDING;
     createInfoRes.bindDescs.back().stride = sizeof(DATA);
-    createInfoRes.bindDescs.back().inputRate = VK_VERTEX_INPUT_RATE_INSTANCE;
+    createInfoRes.bindDescs.back().inputRate = vk::VertexInputRate::eInstance;
 
     // model
     auto modelOffset = offsetof(DATA, model);
@@ -19,25 +19,25 @@ void Instance::Obj3d::DATA::getInputDescriptions(Pipeline::CreateInfoResources& 
     createInfoRes.attrDescs.push_back({});
     createInfoRes.attrDescs.back().binding = BINDING;
     createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
-    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32A32_SFLOAT;  // vec4
+    createInfoRes.attrDescs.back().format = vk::Format::eR32G32B32A32Sfloat;  // vec4
     createInfoRes.attrDescs.back().offset = static_cast<uint32_t>(modelOffset + sizeof(glm::vec4) * 0);
     // column 1
     createInfoRes.attrDescs.push_back({});
     createInfoRes.attrDescs.back().binding = BINDING;
     createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
-    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32A32_SFLOAT;  // vec4
+    createInfoRes.attrDescs.back().format = vk::Format::eR32G32B32A32Sfloat;  // vec4
     createInfoRes.attrDescs.back().offset = static_cast<uint32_t>(modelOffset + sizeof(glm::vec4) * 1);
     // column 2
     createInfoRes.attrDescs.push_back({});
     createInfoRes.attrDescs.back().binding = BINDING;
     createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
-    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32A32_SFLOAT;  // vec4
+    createInfoRes.attrDescs.back().format = vk::Format::eR32G32B32A32Sfloat;  // vec4
     createInfoRes.attrDescs.back().offset = static_cast<uint32_t>(modelOffset + sizeof(glm::vec4) * 2);
     // column 3
     createInfoRes.attrDescs.push_back({});
     createInfoRes.attrDescs.back().binding = BINDING;
     createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
-    createInfoRes.attrDescs.back().format = VK_FORMAT_R32G32B32A32_SFLOAT;  // vec4
+    createInfoRes.attrDescs.back().format = vk::Format::eR32G32B32A32Sfloat;  // vec4
     createInfoRes.attrDescs.back().offset = static_cast<uint32_t>(modelOffset + sizeof(glm::vec4) * 3);
 }
 

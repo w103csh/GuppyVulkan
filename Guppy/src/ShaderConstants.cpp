@@ -25,10 +25,10 @@ namespace Shader {
 // SHADER INFO
 
 const CreateInfo COLOR_VERT_CREATE_INFO = {
-    SHADER::COLOR_VERT,             //
-    "Default Color Vertex Shader",  //
-    "color.vert",                   //
-    VK_SHADER_STAGE_VERTEX_BIT,     //
+    SHADER::COLOR_VERT,                //
+    "Default Color Vertex Shader",     //
+    "color.vert",                      //
+    vk::ShaderStageFlagBits::eVertex,  //
     {SHADER_LINK::UTILITY_VERT},
 };
 
@@ -36,7 +36,7 @@ const CreateInfo COLOR_FRAG_CREATE_INFO = {
     SHADER::COLOR_FRAG,
     "Default Color Fragment Shader",
     "color.frag",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
     {
         SHADER_LINK::COLOR_FRAG,
         SHADER_LINK::UTILITY_FRAG,
@@ -46,18 +46,18 @@ const CreateInfo COLOR_FRAG_CREATE_INFO = {
 };
 
 const CreateInfo LINE_FRAG_CREATE_INFO = {
-    SHADER::LINE_FRAG,               //
-    "Default Line Fragment Shader",  //
-    "line.frag",                     //
-    VK_SHADER_STAGE_FRAGMENT_BIT,    //
+    SHADER::LINE_FRAG,                   //
+    "Default Line Fragment Shader",      //
+    "line.frag",                         //
+    vk::ShaderStageFlagBits::eFragment,  //
     {SHADER_LINK::UTILITY_FRAG},
 };
 
 const CreateInfo TEX_VERT_CREATE_INFO = {
-    SHADER::TEX_VERT,                 //
-    "Default Texture Vertex Shader",  //
-    "texture.vert",                   //
-    VK_SHADER_STAGE_VERTEX_BIT,       //
+    SHADER::TEX_VERT,                  //
+    "Default Texture Vertex Shader",   //
+    "texture.vert",                    //
+    vk::ShaderStageFlagBits::eVertex,  //
     {SHADER_LINK::UTILITY_VERT},
 };
 
@@ -65,7 +65,7 @@ const CreateInfo TEX_FRAG_CREATE_INFO = {
     SHADER::TEX_FRAG,
     "Default Texture Fragment Shader",
     "texture.frag",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
     {
         SHADER_LINK::TEX_FRAG,
         SHADER_LINK::UTILITY_FRAG,
@@ -75,18 +75,18 @@ const CreateInfo TEX_FRAG_CREATE_INFO = {
 };
 
 const CreateInfo CUBE_VERT_CREATE_INFO = {
-    SHADER::CUBE_VERT,           //
-    "Cube Vertex Shader",        //
-    "cube.vert",                 //
-    VK_SHADER_STAGE_VERTEX_BIT,  //
+    SHADER::CUBE_VERT,                 //
+    "Cube Vertex Shader",              //
+    "cube.vert",                       //
+    vk::ShaderStageFlagBits::eVertex,  //
     {SHADER_LINK::DEFAULT_MATERIAL},
 };
 
 const CreateInfo CUBE_FRAG_CREATE_INFO = {
-    SHADER::CUBE_FRAG,             //
-    "Cube Fragment Shader",        //
-    "cube.frag",                   //
-    VK_SHADER_STAGE_FRAGMENT_BIT,  //
+    SHADER::CUBE_FRAG,                   //
+    "Cube Fragment Shader",              //
+    "cube.frag",                         //
+    vk::ShaderStageFlagBits::eFragment,  //
     {
         SHADER_LINK::DEFAULT_MATERIAL,
         SHADER_LINK::UTILITY_FRAG,
@@ -97,77 +97,77 @@ const CreateInfo POINT_VERT_CREATE_INFO = {
     SHADER::POINT_VERT,
     "Default Point Vertex Shader",
     "point.vert",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 
 const CreateInfo VERT_COLOR_CREATE_INFO = {
     SHADER::VERT_COLOR,
     "Vertex Color Shader",
     "vert.color.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 
 const CreateInfo VERT_PT_CREATE_INFO = {
     SHADER::VERT_POINT,
     "Vertex Point Shader",
     "vert.point.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 
 const CreateInfo VERT_TEX_CREATE_INFO = {
     SHADER::VERT_TEX,
     "Vertex Texture Shader",
     "vert.texture.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 
 const CreateInfo VERT_COLOR_CUBE_MAP_CREATE_INFO = {
     SHADER::VERT_COLOR_CUBE_MAP,
     "Vertex Color Cube Map Shader",
     "vert.color.cube.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 
 const CreateInfo VERT_PT_CUBE_MAP_CREATE_INFO = {
     SHADER::VERT_PT_CUBE_MAP,
     "Vertex Point Cube Map Shader",
     "vert.point.cube.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 
 const CreateInfo VERT_TEX_CUBE_MAP_CREATE_INFO = {
     SHADER::VERT_TEX_CUBE_MAP,
     "Vertex Texture Cube Map Shader",
     "vert.texture.cube.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 
 const CreateInfo VERT_SKYBOX_CREATE_INFO = {
     SHADER::VERT_SKYBOX,
     "Vertex Skybox Shader",
     "vert.skybox.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 
 const CreateInfo GEOM_COLOR_CREATE_INFO = {
     SHADER::GEOM_COLOR_CUBE_MAP,
     "Geometry Color Cube Map Shader",
     "geom.color.cube.glsl",
-    VK_SHADER_STAGE_GEOMETRY_BIT,
+    vk::ShaderStageFlagBits::eGeometry,
 };
 
 const CreateInfo GEOM_PT_CREATE_INFO = {
     SHADER::GEOM_PT_CUBE_MAP,
     "Geometry Point Cube Map Shader",
     "geom.point.cube.glsl",
-    VK_SHADER_STAGE_GEOMETRY_BIT,
+    vk::ShaderStageFlagBits::eGeometry,
 };
 
 const CreateInfo GEOM_TEX_CREATE_INFO = {
     SHADER::GEOM_TEX_CUBE_MAP,
     "Geometry Texture Cube Map Shader",
     "geom.texture.cube.glsl",
-    VK_SHADER_STAGE_GEOMETRY_BIT,
+    vk::ShaderStageFlagBits::eGeometry,
 };
 
 namespace Link {
@@ -217,31 +217,31 @@ const CreateInfo COLOR_VERT_CREATE_INFO = {
     SHADER::TESS_COLOR_VERT,
     "Tessellation Color Vertex Shader",
     "vert.color.tess.passthrough.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 const CreateInfo BEZIER_4_TESC_CREATE_INFO = {
     SHADER::BEZIER_4_TESC,
     "Bezier 4 Control Point Tesselation Control Shader",
     "tesc.bezier4.glsl",
-    VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
+    vk::ShaderStageFlagBits::eTessellationControl,
 };
 const CreateInfo BEZIER_4_TESE_CREATE_INFO = {
     SHADER::BEZIER_4_TESE,
     "Bezier 4 Control Point Tesselation Evaluation Shader",
     "tese.bezier4.glsl",
-    VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
+    vk::ShaderStageFlagBits::eTessellationEvaluation,
 };
 const CreateInfo PHONG_TRI_COLOR_TESC_CREATE_INFO = {
     SHADER::PHONG_TRI_COLOR_TESC,
     "Phong Tesselation Triangle Color Control Shader",
     "tesc.phong.triangle.color.glsl",
-    VK_SHADER_STAGE_TESSELLATION_CONTROL_BIT,
+    vk::ShaderStageFlagBits::eTessellationControl,
 };
 const CreateInfo PHONG_TRI_COLOR_TESE_CREATE_INFO = {
     SHADER::PHONG_TRI_COLOR_TESE,  //
     "Phong Tesselation Triangle Color Evaluation Shader",
     "tese.phong.triangle.color.glsl",
-    VK_SHADER_STAGE_TESSELLATION_EVALUATION_BIT,
+    vk::ShaderStageFlagBits::eTessellationEvaluation,
 };
 
 }  // namespace Tessellation

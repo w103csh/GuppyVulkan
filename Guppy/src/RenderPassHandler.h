@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -73,12 +73,12 @@ class Handler : public Game::Handler {
 
     // COMMANDS
     void createCmds();
-    std::vector<std::vector<VkCommandBuffer>> cmdList_;
+    std::vector<std::vector<vk::CommandBuffer>> cmdList_;
 
     // FENCES
-    void createFences(VkFenceCreateFlags flags = VK_FENCE_CREATE_SIGNALED_BIT);
-    std::vector<VkFence> fences_;
-    std::vector<VkFence> frameFences_;
+    void createFences(vk::FenceCreateFlags flags = vk::FenceCreateFlagBits::eSignaled);
+    std::vector<vk::Fence> fences_;
+    std::vector<vk::Fence> frameFences_;
 
     // This should be a unique list of active passes in order of first use.
     orderedPassTypeOffsetPairs getActivePassTypeOffsetPairs();
@@ -98,7 +98,7 @@ class Handler : public Game::Handler {
     // SUBMIT
     void submit(const uint8_t submitCount);
     SubmitResources submitResources_;
-    std::vector<VkSubmitInfo> submitInfos_;
+    std::vector<vk::SubmitInfo> submitInfos_;
 
     std::vector<std::unique_ptr<RenderPass::Base>> pPasses_;
     std::set<std::pair<PASS, index>> activeTypeOffsetPairs_;

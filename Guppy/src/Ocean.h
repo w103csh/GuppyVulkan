@@ -8,6 +8,7 @@
 
 #include <glm/glm.hpp>
 #include <string_view>
+#include <vulkan/vulkan.hpp>
 
 #include "ConstantsAll.h"
 #include "HeightFieldFluid.h"
@@ -188,10 +189,10 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
            std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData);
 
     virtual void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                      const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                      const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                       const uint8_t frameIndex) const override;
     void dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                  const Descriptor::Set::BindData& descSetBindData, const VkCommandBuffer& cmd,
+                  const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                   const uint8_t frameIndex) const override;
 
     GRAPHICS drawMode;

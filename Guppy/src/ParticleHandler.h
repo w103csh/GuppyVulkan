@@ -87,9 +87,9 @@ class Handler : public Game::Handler {
     }
 
     void recordDraw(const PASS passType, const std::shared_ptr<Pipeline::BindData> &pPipelineBindData,
-                    const VkCommandBuffer &cmd, const uint8_t frameIndex);
+                    const vk::CommandBuffer &cmd, const uint8_t frameIndex);
     void recordDispatch(const PASS passType, const std::shared_ptr<Pipeline::BindData> &pPipelineBindData,
-                        const VkCommandBuffer &cmd, const uint8_t frameIndex);
+                        const vk::CommandBuffer &cmd, const uint8_t frameIndex);
 
     Descriptor::Manager<Descriptor::Base, UniformDynamic::Particle::Attractor::Base, std::shared_ptr> prtclAttrMgr;
     Descriptor::Manager<Descriptor::Base, UniformDynamic::Particle::Cloth::Base, std::shared_ptr> prtclClthMgr;

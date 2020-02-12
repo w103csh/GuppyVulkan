@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -7,7 +7,7 @@
 #define CAMERA_H
 
 #include <glm/glm.hpp>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "Constants.h"
 #include "BufferItem.h"
@@ -80,10 +80,10 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
         return glm::inverse(data_.view);
     }
 
-    Ray getRay(glm::vec2 &&position, const VkExtent2D &extent) {
+    Ray getRay(glm::vec2 &&position, const vk::Extent2D &extent) {
         return getRay(std::forward<glm::vec2>(position), extent, far_);
     }
-    Ray getRay(glm::vec2 &&position, const VkExtent2D &extent, float distance);
+    Ray getRay(glm::vec2 &&position, const vk::Extent2D &extent, float distance);
 
     virtual_inline const auto &getMVP() const { return data_.viewProjection; }
     virtual_inline const auto &getMV() const { return data_.view; }

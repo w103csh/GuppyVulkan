@@ -69,8 +69,8 @@ void Scene::Base::addModelIndex(const Model::index offset) {
 }
 
 void Scene::Base::record(const PASS& passType, const PIPELINE& pipelineType,
-                         const std::shared_ptr<Pipeline::BindData>& pPipelineBindData, const VkCommandBuffer& priCmd,
-                         const VkCommandBuffer& secCmd, const uint8_t frameIndex,
+                         const std::shared_ptr<Pipeline::BindData>& pPipelineBindData, const vk::CommandBuffer& priCmd,
+                         const vk::CommandBuffer& secCmd, const uint8_t frameIndex,
                          const Descriptor::Set::BindData* pDescSetBindData) {
     switch (std::visit(Pipeline::GetGraphics{}, pipelineType)) {
         case GRAPHICS::DEFERRED_MRT_COLOR:

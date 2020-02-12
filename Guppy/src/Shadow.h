@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -9,6 +9,7 @@
 #include <array>
 #include <glm/glm.hpp>
 #include <string_view>
+#include <vulkan/vulkan.hpp>
 
 #include "BufferItem.h"
 #include "ConstantsAll.h"
@@ -151,25 +152,25 @@ const CreateInfo COLOR_VERT_CREATE_INFO = {
     SHADER::SHADOW_COLOR_VERT,
     "Shadow Color Vertex Shader",
     "vert.color.shadow.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 const CreateInfo TEX_VERT_CREATE_INFO = {
     SHADER::SHADOW_TEX_VERT,
     "Shadow Texture Vertex Shader",
     "vert.texture.shadow.glsl",
-    VK_SHADER_STAGE_VERTEX_BIT,
+    vk::ShaderStageFlagBits::eVertex,
 };
 const CreateInfo CUBE_GEOM_CREATE_INFO = {
     SHADER::SHADOW_CUBE_GEOM,
     "Shadow Cube Geometry Shader",
     "geom.shadow.cube.glsl",
-    VK_SHADER_STAGE_GEOMETRY_BIT,
+    vk::ShaderStageFlagBits::eGeometry,
 };
 const CreateInfo FRAG_CREATE_INFO = {
     SHADER::SHADOW_FRAG,
     "Shadow Fragment Shader",
     "frag.shadow.glsl",
-    VK_SHADER_STAGE_FRAGMENT_BIT,
+    vk::ShaderStageFlagBits::eFragment,
 };
 
 }  // namespace Shadow

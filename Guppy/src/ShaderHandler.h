@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -10,7 +10,7 @@
 #include <queue>
 #include <string>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "ConstantsAll.h"
 #include "Game.h"
@@ -25,8 +25,8 @@ class Handler : public Game::Handler {
     inline void destroy() override { reset(); }
 
     void getStagesInfo(const SHADER &shaderType, const PIPELINE &pipelineType, const PASS &passType,
-                       std::vector<VkPipelineShaderStageCreateInfo> &stagesInfo) const;
-    VkShaderStageFlags getStageFlags(const std::set<SHADER> &shaderTypes) const;
+                       std::vector<vk::PipelineShaderStageCreateInfo> &stagesInfo) const;
+    vk::ShaderStageFlags getStageFlags(const std::set<SHADER> &shaderTypes) const;
 
     void recompileShader(std::string);
 
@@ -50,7 +50,7 @@ class Handler : public Game::Handler {
     infoMap infoMap_;
 
     std::queue<PIPELINE> updateQueue_;
-    std::vector<VkShaderModule> oldModules_;
+    std::vector<vk::ShaderModule> oldModules_;
 };
 
 }  // namespace Shader

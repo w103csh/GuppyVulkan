@@ -11,9 +11,9 @@ set(SOURCE
     Constants.cpp
     Constants.h
     ConstantsAll.h
+    Debug.h
     Enum.h
     EventHandlers.h
-    Extensions.h
     Face.cpp
     Face.h
     FileLoader.cpp
@@ -378,6 +378,10 @@ else()
     endif()
 
 endif()
+
+add_definitions(
+    -DVULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
+    )
 
 set_target_properties(${TARGET_NAME} PROPERTIES
     CXX_STANDARD 17

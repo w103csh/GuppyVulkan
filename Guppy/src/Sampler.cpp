@@ -92,36 +92,36 @@ Sampler::Base::Base(const CreateInfo* pCreateInfo, bool needsData)
       NUM_CHANNELS(pCreateInfo->numberOfChannels),
       TYPE(pCreateInfo->type),
       flags(0),
-      imgCreateInfo{VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO, nullptr},
+      imgCreateInfo(),
       swpchnInfo(pCreateInfo->swpchnInfo),
       mipmapInfo(pCreateInfo->mipmapCreateInfo.info),
       aspect(BAD_ASPECT),
       imageViewType(pCreateInfo->imageViewType),
-      image(VK_NULL_HANDLE),
-      memory(VK_NULL_HANDLE),
+      image(),
+      memory(),
       imgInfo{}  //
 {
     // Image create info
     imgCreateInfo.flags = pCreateInfo->imageFlags;
-    imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+    imgCreateInfo.imageType = vk::ImageType::e2D;
     imgCreateInfo.format = pCreateInfo->format;
     imgCreateInfo.extent = pCreateInfo->extent;
     imgCreateInfo.mipLevels = pCreateInfo->mipmapCreateInfo.mipLevels;
     imgCreateInfo.arrayLayers = pCreateInfo->layersInfo.infos.size();
-    imgCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imgCreateInfo.samples = vk::SampleCountFlagBits::e1;
     imgCreateInfo.tiling = pCreateInfo->tiling;
     imgCreateInfo.usage = pCreateInfo->usage;
-    imgCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imgCreateInfo.sharingMode = vk::SharingMode::eExclusive;
     imgCreateInfo.queueFamilyIndexCount = 0;
     imgCreateInfo.pQueueFamilyIndices = nullptr;
-    imgCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    imgCreateInfo.initialLayout = vk::ImageLayout::eUndefined;
 
     // Swapchain info settings
     if (swpchnInfo.usesSwapchain()) {
         if (swpchnInfo.usesExtent) assert(helpers::compExtent3D(imgCreateInfo.extent, BAD_EXTENT_3D));
-        if (swpchnInfo.usesFormat) imgCreateInfo.format = VK_FORMAT_UNDEFINED;
+        if (swpchnInfo.usesFormat) imgCreateInfo.format = vk::Format::eUndefined;
     } else {
-        assert(imgCreateInfo.format != VK_FORMAT_UNDEFINED);
+        assert(imgCreateInfo.format != vk::Format::eUndefined);
         if (!helpers::compExtent3D(imgCreateInfo.extent, BAD_EXTENT_3D)) assert(!needsData);
     }
 
@@ -154,60 +154,61 @@ void Sampler::Base::determineImageTypes() {
     const auto& samples = imgCreateInfo.samples;
     const auto& flags = imgCreateInfo.flags;
 
-    if (imageViewType == VK_IMAGE_VIEW_TYPE_MAX_ENUM) {
+    if (imageViewType == vk::ImageViewType{}) {
         // If imageViewType is not set then determine one.
         if (extent.width >= 1 && extent.height == 1 && arrayLayers == 1) {
-            imageViewType = VK_IMAGE_VIEW_TYPE_1D;
-            imgCreateInfo.imageType = VK_IMAGE_TYPE_1D;
+            imageViewType = vk::ImageViewType::e1D;
+            imgCreateInfo.imageType = vk::ImageType::e1D;
         } else if (extent.width >= 1 && extent.height == 1 && arrayLayers > 1) {
-            imageViewType = VK_IMAGE_VIEW_TYPE_1D_ARRAY;
-            imgCreateInfo.imageType = VK_IMAGE_TYPE_1D;
+            imageViewType = vk::ImageViewType::e1DArray;
+            imgCreateInfo.imageType = vk::ImageType::e1D;
         } else if (extent.width >= 1 && extent.height >= 1 && arrayLayers == 1) {
-            imageViewType = VK_IMAGE_VIEW_TYPE_2D;
-            imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+            imageViewType = vk::ImageViewType::e2D;
+            imgCreateInfo.imageType = vk::ImageType::e2D;
         } else if (extent.width >= 1 && extent.width == extent.height && arrayLayers == 6) {
-            imageViewType = VK_IMAGE_VIEW_TYPE_CUBE;
-            imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+            imageViewType = vk::ImageViewType::eCube;
+            imgCreateInfo.imageType = vk::ImageType::e2D;
         } else if (extent.width >= 1 && extent.height >= 1 && arrayLayers > 1) {
-            imageViewType = VK_IMAGE_VIEW_TYPE_2D_ARRAY;
-            imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+            imageViewType = vk::ImageViewType::e2DArray;
+            imgCreateInfo.imageType = vk::ImageType::e2D;
         }
     } else {
         // If imageViewType is set then validate it.
         switch (imageViewType) {
-            case VK_IMAGE_VIEW_TYPE_1D:
+            case vk::ImageViewType::e1D:
                 assert(extent.width >= 1 && extent.height == 1 && extent.depth == 1 && arrayLayers >= 1);
-                imgCreateInfo.imageType = VK_IMAGE_TYPE_1D;
+                imgCreateInfo.imageType = vk::ImageType::e1D;
                 break;
-            case VK_IMAGE_VIEW_TYPE_1D_ARRAY:
+            case vk::ImageViewType::e1DArray:
                 assert(extent.width >= 1 && extent.height == 1 && extent.depth == 1 && arrayLayers >= 1);
-                imgCreateInfo.imageType = VK_IMAGE_TYPE_1D;
+                imgCreateInfo.imageType = vk::ImageType::e1D;
                 break;
-            case VK_IMAGE_VIEW_TYPE_2D:
+            case vk::ImageViewType::e2D:
                 // Note: There are versions of 2D that can have a depth >= 1, but there are other
-                // conditions and would result in VK_IMAGE_TYPE_3D.
+                // conditions and would result in vk::ImageType::e3D.
                 assert(extent.width >= 1 && extent.height >= 1 && extent.depth == 1 && arrayLayers >= 1);
-                imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+                imgCreateInfo.imageType = vk::ImageType::e2D;
                 break;
-            case VK_IMAGE_VIEW_TYPE_2D_ARRAY:
+            case vk::ImageViewType::e2DArray:
                 // Note: There are versions of 2D_ARRAY that can have a depth >= 1, but there are
-                // other conditions and would result in VK_IMAGE_TYPE_3D.
+                // other conditions and would result in vk::ImageType::e3D.
                 assert(extent.width >= 1 && extent.height >= 1 && extent.depth == 1 && arrayLayers >= 1);
-                imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+                imgCreateInfo.imageType = vk::ImageType::e2D;
                 break;
-            case VK_IMAGE_VIEW_TYPE_CUBE:
+            case vk::ImageViewType::eCube:
                 assert(extent.width >= 1 && extent.width == extent.height && extent.depth == 1 && arrayLayers >= 6);
-                imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+                imgCreateInfo.imageType = vk::ImageType::e2D;
                 break;
-            case VK_IMAGE_VIEW_TYPE_3D:
-                assert(extent.width >= 1 && extent.height >= 1 && extent.depth >= 1 && arrayLayers == 1 && samples == 1);
-                imgCreateInfo.imageType = VK_IMAGE_TYPE_3D;
+            case vk::ImageViewType::e3D:
+                assert(extent.width >= 1 && extent.height >= 1 && extent.depth >= 1 && arrayLayers == 1 &&
+                       samples == vk::SampleCountFlagBits::e1);
+                imgCreateInfo.imageType = vk::ImageType::e3D;
                 break;
-            case VK_IMAGE_VIEW_TYPE_CUBE_ARRAY:
+            case vk::ImageViewType::eCubeArray:
                 assert(extent.width >= 1 && extent.height == extent.width && extent.depth == 1 &&
-                       (arrayLayers > 0 && arrayLayers % 6 == 0) && samples == 1 &&
-                       ((flags & VK_IMAGE_CREATE_CUBE_COMPATIBLE_BIT) > 0));
-                imgCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+                       (arrayLayers > 0 && arrayLayers % 6 == 0) && samples == vk::SampleCountFlagBits::e1 &&
+                       (flags & vk::ImageCreateFlagBits::eCubeCompatible));
+                imgCreateInfo.imageType = vk::ImageType::e2D;
                 break;
             default:
                 assert(false && "Unhandled image view type");
@@ -225,13 +226,13 @@ void Sampler::Base::copyData(void*& pData, size_t& offset) const {
     }
 }
 
-void Sampler::Base::destroy(const VkDevice& dev) {
+void Sampler::Base::destroy(const vk::Device& dev) {
     for (auto& [layer, layerResource] : layerResourceMap) {
-        if (layerResource.sampler != VK_NULL_HANDLE) vkDestroySampler(dev, layerResource.sampler, nullptr);
-        vkDestroyImageView(dev, layerResource.view, nullptr);
+        if (layerResource.sampler) dev.destroySampler(layerResource.sampler, ALLOC_PLACE_HOLDER);
+        dev.destroyImageView(layerResource.view, ALLOC_PLACE_HOLDER);
     }
-    vkDestroyImage(dev, image, nullptr);
-    vkFreeMemory(dev, memory, nullptr);
+    dev.destroyImage(image, ALLOC_PLACE_HOLDER);
+    dev.freeMemory(memory, ALLOC_PLACE_HOLDER);
 }
 
 // FUNCTIONS
@@ -321,9 +322,9 @@ Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, c
                 validateDimensions(shell, sampler, layerInfo.path, w, h);
 
                 // Mix combined data in.
-                VkDeviceSize size = static_cast<VkDeviceSize>(sampler.imgCreateInfo.extent.width) *
-                                    static_cast<VkDeviceSize>(sampler.imgCreateInfo.extent.height);
-                for (VkDeviceSize i = 0; i < size; i++) {
+                vk::DeviceSize size = static_cast<vk::DeviceSize>(sampler.imgCreateInfo.extent.width) *
+                                      static_cast<vk::DeviceSize>(sampler.imgCreateInfo.extent.height);
+                for (vk::DeviceSize i = 0; i < size; i++) {
                     // combineInfo { path, number of channels, combine offset }
                     auto offset = (i * sampler.NUM_CHANNELS) + std::get<2>(combineInfo);
                     auto combineOffset = i * std::get<1>(combineInfo);
@@ -340,34 +341,33 @@ Sampler::Base Sampler::make(const Shell& shell, const CreateInfo* pCreateInfo, c
     return sampler;
 }
 
-VkSamplerCreateInfo Sampler::GetVkSamplerCreateInfo(const Sampler::Base& sampler) {
-    VkSamplerCreateInfo info = {};
-    info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-    info.magFilter = VK_FILTER_LINEAR;
-    info.minFilter = VK_FILTER_LINEAR;
-    info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-    info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-    info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+vk::SamplerCreateInfo Sampler::GetVulkanSamplerCreateInfo(const Sampler::Base& sampler) {
+    vk::SamplerCreateInfo info = {};
+    info.magFilter = vk::Filter::eLinear;
+    info.minFilter = vk::Filter::eLinear;
+    info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+    info.addressModeU = vk::SamplerAddressMode::eRepeat;
+    info.addressModeV = vk::SamplerAddressMode::eRepeat;
+    info.addressModeW = vk::SamplerAddressMode::eRepeat;
     info.mipLodBias = 0;              // Optional
     info.anisotropyEnable = VK_TRUE;  // TODO: OPTION (FEATURE BASED)
     info.maxAnisotropy = 16;
     info.compareEnable = VK_FALSE;
-    info.compareOp = VK_COMPARE_OP_ALWAYS;
+    info.compareOp = vk::CompareOp::eAlways;
     info.minLod = 0;  // static_cast<float>(m_mipLevels / 2); // Optional
     info.maxLod = static_cast<float>(sampler.imgCreateInfo.mipLevels);
-    info.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+    info.borderColor = vk::BorderColor::eIntOpaqueBlack;
     info.unnormalizedCoordinates = VK_FALSE;  // test this out for fun
 
     switch (sampler.TYPE) {
         case SAMPLER::DEFAULT_NEAREST:
-            info.magFilter = VK_FILTER_NEAREST;
-            info.minFilter = VK_FILTER_NEAREST;
+            info.magFilter = vk::Filter::eNearest;
+            info.minFilter = vk::Filter::eNearest;
             break;
         case SAMPLER::CUBE:
-            info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+            info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+            info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
             info.anisotropyEnable = VK_FALSE;  // VK_TRUE;
             // info.maxAnisotropy = 16;
             if (sampler.imgCreateInfo.mipLevels > 0) {
@@ -377,28 +377,28 @@ VkSamplerCreateInfo Sampler::GetVkSamplerCreateInfo(const Sampler::Base& sampler
             }
             break;
         case SAMPLER::CLAMP_TO_BORDER:
-            info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-            info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-            info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-            info.borderColor = VK_BORDER_COLOR_FLOAT_TRANSPARENT_BLACK;
+            info.addressModeU = vk::SamplerAddressMode::eClampToBorder;
+            info.addressModeV = vk::SamplerAddressMode::eClampToBorder;
+            info.addressModeW = vk::SamplerAddressMode::eClampToBorder;
+            info.borderColor = vk::BorderColor::eFloatTransparentBlack;
             break;
         case SAMPLER::CLAMP_TO_EDGE:
-            info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
-            info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_EDGE;
+            info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+            info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+            info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
             break;
         case SAMPLER::CLAMP_TO_BORDER_DEPTH:
-            info.magFilter = VK_FILTER_NEAREST;
-            info.minFilter = VK_FILTER_NEAREST;
+            info.magFilter = vk::Filter::eNearest;
+            info.minFilter = vk::Filter::eNearest;
         case SAMPLER::CLAMP_TO_BORDER_DEPTH_PCF:
-            info.magFilter = VK_FILTER_LINEAR;
-            info.minFilter = VK_FILTER_LINEAR;
-            info.addressModeU = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-            info.addressModeV = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
-            info.addressModeW = VK_SAMPLER_ADDRESS_MODE_CLAMP_TO_BORDER;
+            info.magFilter = vk::Filter::eLinear;
+            info.minFilter = vk::Filter::eLinear;
+            info.addressModeU = vk::SamplerAddressMode::eClampToBorder;
+            info.addressModeV = vk::SamplerAddressMode::eClampToBorder;
+            info.addressModeW = vk::SamplerAddressMode::eClampToBorder;
             info.compareEnable = VK_TRUE;
-            info.compareOp = VK_COMPARE_OP_LESS;
-            info.borderColor = VK_BORDER_COLOR_FLOAT_OPAQUE_WHITE;
+            info.compareOp = vk::CompareOp::eLess;
+            info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
             break;
         case SAMPLER::DEFAULT:
             break;

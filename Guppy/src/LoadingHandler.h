@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -8,7 +8,7 @@
 
 #include <memory>
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "Game.h"
 #include "Helpers.h"
@@ -27,7 +27,7 @@ class Handler : public Game::Handler {
     std::unique_ptr<LoadingResource> createLoadingResources() const;
     void loadSubmit(std::unique_ptr<LoadingResource> pLdgRes);
 
-    void getFences(std::vector<VkFence> &fences);
+    void getFences(std::vector<vk::Fence> &fences);
 
    private:
     void reset() override{};

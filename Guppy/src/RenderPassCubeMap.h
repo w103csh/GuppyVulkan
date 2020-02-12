@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -7,7 +7,7 @@
 #define RENDER_PASS_CUBE_MAP_H
 
 #include <vector>
-#include <vulkan/vulkan.h>
+#include <vulkan/vulkan.hpp>
 
 #include "RenderPass.h"
 
@@ -30,7 +30,7 @@ class Base : public RenderPass::Base {
 class SkyboxNight : public Base {
    public:
     SkyboxNight(Handler& handler, const index&& offset);
-    void record(const uint8_t frameIndex, const VkCommandBuffer& priCmd);
+    void record(const uint8_t frameIndex, const vk::CommandBuffer& priCmd);
 };
 
 }  // namespace CubeMap
