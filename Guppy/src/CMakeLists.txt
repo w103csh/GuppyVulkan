@@ -225,7 +225,7 @@ file(GLOB UTILS
 set(LINKS
     ${GLFW_LIBRARIES}
     ${IMGUI_LIB}
-    # ${CDLOD_LIB}
+    ${CDLOD_LIB}
     )
     
 # target includes
