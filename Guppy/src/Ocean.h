@@ -6,6 +6,7 @@
 #ifndef OCEAN_H
 #define OCEAN_H
 
+#include <CDLODQuadTree.h>
 #include <glm/glm.hpp>
 #include <string_view>
 #include <vulkan/vulkan.hpp>
@@ -209,6 +210,9 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
     BufferResource indexWFRes_;
 
     SurfaceCreateInfo info_;
+
+    void initQuadTree();
+    CDLODQuadTree quadTree_;
 };
 
 }  // namespace Ocean

@@ -225,6 +225,7 @@ file(GLOB UTILS
 set(LINKS
     ${GLFW_LIBRARIES}
     ${IMGUI_LIB}
+    # ${CDLOD_LIB}
     )
     
 # target includes
@@ -236,8 +237,8 @@ set(INCLUDES
     ${IMGUI_INCLUDE_DIRS}
     )
 
-# message(STATUS "IMGUI_INCLUDE_DIRS: ${IMGUI_INCLUDE_DIRS}")
-# message(STATUS ${IMGUI_LIB})
+# message(STATUS "CDLOD_INCLUDE_DIRS: ${CDLOD_INCLUDE_DIRS}")
+# message(STATUS ${CDLOD_LIB})
 
 if(FMOD_FOUND)
     list(APPEND LINKS ${FMOD_LIBRARIES})

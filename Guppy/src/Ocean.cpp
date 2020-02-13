@@ -369,11 +369,12 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
       normalOffset_(Particle::Buffer::BAD_OFFSET),
       indexWFRes_{},
       drawMode(GRAPHICS::OCEAN_SURFACE_DEFERRED),
-      info_(pCreateInfo->info) {
+      info_(pCreateInfo->info),
+      quadTree_() {
     assert(info_.N == info_.M);  // Needs to be square currently.
     assert(info_.N == FFT_LOCAL_SIZE * FFT_WORKGROUP_SIZE);
     assert(info_.N == DISP_LOCAL_SIZE * DISP_WORKGROUP_SIZE);
-    assert(helpers::isPowerOfTwo(N) && helpers::isPowerOfTwo(M));
+    assert(helpers::isPowerOfTwo(info_.N) && helpers::isPowerOfTwo(info_.M));
 
     const auto& N = info_.N;
     const auto& M = info_.M;
@@ -385,6 +386,9 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
     // IMAGE
     // TODO: move the loop inside this function into the constructor here.
     Texture::Ocean::MakTextures(handler.textureHandler(), info_);
+
+    // CDLOD
+    initQuadTree();
 
     // BUFFER VIEWS
     {
@@ -652,6 +656,24 @@ void Buffer::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::Bind
             assert(false);
         } break;
     }
+}
+
+void Buffer::initQuadTree() {
+    CDLODQuadTree::CreateDesc createDesc = {};
+    createDesc.pHeightmap = nullptr;
+    createDesc.LeafRenderNodeSize = 8;
+    createDesc.LODLevelCount = 8;
+    createDesc.MapDims.MinX = -20480.0;
+    createDesc.MapDims.MinY = -10240.0;
+    createDesc.MapDims.MinZ = 0.00;
+    createDesc.MapDims.SizeX = 40960.0;
+    createDesc.MapDims.SizeY = 20480.0;
+    createDesc.MapDims.SizeZ = 1200.00;
+
+    return;
+    assert(createDesc.pHeightmap);
+
+    quadTree_.Create(createDesc);
 }
 
 }  // namespace Ocean
