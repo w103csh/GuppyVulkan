@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -11,7 +11,7 @@
 #include <glm/glm.hpp>
 #include <XInput.h>
 
-#include "Helpers.h"
+#include <Common/Helpers.h>
 
 namespace Input {
 namespace XInput {

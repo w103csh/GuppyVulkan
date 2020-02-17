@@ -22,6 +22,7 @@ namespace {
 const std::set<std::string_view> MACRO_ID_PREFIXES = {
     "_U_",
     "_S_",
+    "_UD_",
 };
 
 //// TODO: what should this be???
@@ -74,13 +75,19 @@ Uniform::Handler::Handler(Game* pGame)
           {"Particle Wave", UNIFORM::PRTCL_WAVE, 3, "_U_PRTCL_WAVE"},
           // STORAGE
           Uniform::Manager<Storage::PostProcess::Base>  //
-          {"Storage Default", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
+          {"Post Process Data", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
+          //
+          Uniform::Manager<Uniform::CDLOD::QuadTree::Base>  //
+          {"CDLOD Quad Tree Data", UNIFORM::CDLOD_QUAD_TREE, 1, "_U_CDLOD_QDTR"},
           //
       },
       managersDynamic_{
           // TESSELLATION
           UniformDynamic::Tessellation::Phong::Manager  //
           {"Tessellation Phong Data", UNIFORM_DYNAMIC::TESS_PHONG, 10, true, "_UD_TESS_PHONG"},
+          // TESSELLATION
+          UniformDynamic::CDLOD::Grid::Manager  //
+          {"CDLOD Grid Data", UNIFORM_DYNAMIC::CDLOD_GRID, 30, true, "_UD_CDLOD_GRID"},
       },
       mainCameraOffset_(0),
       hasVisualHelpers(false) {}
@@ -149,8 +156,10 @@ void Uniform::Handler::init() {
     uniGeomDefMgr().init(shell().context());    ++count;
     uniWaveMgr().init(shell().context());       ++count;
     strPstPrcMgr().init(shell().context());     ++count;
+    cdlodQdTrMgr().init(shell().context());     ++count;
     // DYNAMIC
     tessPhongMgr().init(shell().context());     ++count;
+    cdlodGridMgr().init(shell().context());     ++count;
     assert(count == managers_.size() + managersDynamic_.size());
     // clang-format on
 
@@ -161,28 +170,29 @@ void Uniform::Handler::init() {
 }
 
 void Uniform::Handler::reset() {
-    const auto& dev = shell().context().dev;
     // clang-format off
     uint8_t count = 0;
-    camPersDefMgr().destroy(dev);   ++count;
-    camPersCubeMgr().destroy(dev);  ++count;
-    lgtDefDirMgr().destroy(dev);    ++count;
-    lgtDefPosMgr().destroy(dev);    ++count;
-    lgtPbrPosMgr().destroy(dev);    ++count;
-    lgtDefSptMgr().destroy(dev);    ++count;
-    lgtShdwPosMgr().destroy(dev);   ++count;
-    lgtShdwCubeMgr().destroy(dev);  ++count;
-    uniDefFogMgr().destroy(dev);    ++count;
-    uniDefPrjMgr().destroy(dev);    ++count;
-    uniScrDefMgr().destroy(dev);    ++count;
-    uniDfrSSAOMgr().destroy(dev);   ++count;
-    uniShdwDataMgr().destroy(dev);  ++count;
-    uniTessDefMgr().destroy(dev);   ++count;
-    uniGeomDefMgr().destroy(dev);   ++count;
-    uniWaveMgr().destroy(dev);      ++count;
-    strPstPrcMgr().destroy(dev);    ++count;
+    camPersDefMgr().destroy(shell().context());   ++count;
+    camPersCubeMgr().destroy(shell().context());  ++count;
+    lgtDefDirMgr().destroy(shell().context());    ++count;
+    lgtDefPosMgr().destroy(shell().context());    ++count;
+    lgtPbrPosMgr().destroy(shell().context());    ++count;
+    lgtDefSptMgr().destroy(shell().context());    ++count;
+    lgtShdwPosMgr().destroy(shell().context());   ++count;
+    lgtShdwCubeMgr().destroy(shell().context());  ++count;
+    uniDefFogMgr().destroy(shell().context());    ++count;
+    uniDefPrjMgr().destroy(shell().context());    ++count;
+    uniScrDefMgr().destroy(shell().context());    ++count;
+    uniDfrSSAOMgr().destroy(shell().context());   ++count;
+    uniShdwDataMgr().destroy(shell().context());  ++count;
+    uniTessDefMgr().destroy(shell().context());   ++count;
+    uniGeomDefMgr().destroy(shell().context());   ++count;
+    uniWaveMgr().destroy(shell().context());      ++count;
+    strPstPrcMgr().destroy(shell().context());    ++count;
+    cdlodQdTrMgr().destroy(shell().context());    ++count;
     // DYNAMIC
-    tessPhongMgr().destroy(dev);    ++count;
+    tessPhongMgr().destroy(shell().context());    ++count;
+    cdlodGridMgr().destroy(shell().context());    ++count;
     assert(count == managers_.size() + managersDynamic_.size());
     // clang-format on
 }

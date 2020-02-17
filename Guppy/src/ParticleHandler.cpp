@@ -567,20 +567,20 @@ void Particle::Handler::reset() {
     // BUFFER
     for (auto& pBuffer : pBuffers_) pBuffer->destroy();
     pBuffers_.clear();
-    prtclAttrMgr.destroy(shell().context().dev);
-    prtclClthMgr.destroy(shell().context().dev);
-    prtclFntnMgr.destroy(shell().context().dev);
-    mat4Mgr.destroy(shell().context().dev);
-    vec4Mgr.destroy(shell().context().dev);
-    hffMgr.destroy(shell().context().dev);
-    ocnMgr.destroy(shell().context().dev);
-    instFntnMgr_.destroy(shell().context().dev);
+    prtclAttrMgr.destroy(shell().context());
+    prtclClthMgr.destroy(shell().context());
+    prtclFntnMgr.destroy(shell().context());
+    mat4Mgr.destroy(shell().context());
+    vec4Mgr.destroy(shell().context());
+    hffMgr.destroy(shell().context());
+    ocnMgr.destroy(shell().context());
+    instFntnMgr_.destroy(shell().context());
     if (pInstFntnEulerMgr_ == nullptr && shell().context().computeShadingEnabled) {
         pInstFntnEulerMgr_ =
             std::make_unique<Descriptor::Manager<Descriptor::Base, Particle::FountainEuler::Base, std::shared_ptr>>(
                 "Instance Particle Fountain Data", STORAGE_BUFFER_DYNAMIC::VERTEX, (4000 * 5) * 2, false);
     } else if (pInstFntnEulerMgr_ != nullptr) {
-        pInstFntnEulerMgr_->destroy(shell().context().dev);
+        pInstFntnEulerMgr_->destroy(shell().context());
         if (!shell().context().computeShadingEnabled) pInstFntnEulerMgr_ = nullptr;
     }
 }

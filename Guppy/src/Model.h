@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -12,9 +12,10 @@
 #include <string>
 #include <vector>
 
+#include <Common/Helpers.h>
+
 #include "ConstantsAll.h"
 #include "Handlee.h"
-#include "Helpers.h"
 #include "Instance.h"
 #include "Material.h"
 #include "Mesh.h"

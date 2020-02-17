@@ -25,14 +25,13 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <limits>
 #include <sstream>
+#include <string_view>
 #include <stdio.h>
 #include <vector>
 #include <vulkan/vulkan.hpp>
 #include <utility>
 
-#include "ConstantsAll.h"
-
-struct Context;
+#include "Types.h"
 
 namespace helpers {
 
@@ -180,7 +179,7 @@ static glm::mat4 viewToWorld(glm::vec3 position, glm::vec3 focalPoint, glm::vec3
         assert(false && "TODO: rotate");
     } else if (up.y == 1.0f) {
         // glm::lookAt defaults to looking in -z by default so rotate it to positive...
-        m = glm::rotate(m, M_PI_FLT, CARDINAL_Y);
+        m = glm::rotate(m, glm::pi<float>(), glm::vec3(0.0f, 1.0f, 0.0f));
         // m = glm::rotate(m, M_PI_FLT, glm::vec3(glm::row(m, 1)));
     } else if (up.z == 1.0f) {
         assert(false && "TODO: rotate");
@@ -225,33 +224,33 @@ bool getMemoryType(const vk::PhysicalDeviceMemoryProperties &memProps, uint32_t 
 
 vk::DeviceSize createBuffer(const vk::Device &dev, const vk::DeviceSize &size, const vk::BufferUsageFlags &usage,
                             const vk::MemoryPropertyFlags &props, const vk::PhysicalDeviceMemoryProperties &memProps,
-                            vk::Buffer &buff, vk::DeviceMemory &mem);
+                            vk::Buffer &buff, vk::DeviceMemory &mem, const vk::AllocationCallbacks *pAllocator);
 
 void copyBuffer(const vk::CommandBuffer &cmd, const vk::Buffer &srcBuff, const vk::Buffer &dstBuff,
                 const vk::DeviceSize &size);
 
 void createImageMemory(const vk::Device &dev, const vk::PhysicalDeviceMemoryProperties &memProps,
-                       const vk::MemoryPropertyFlags &memPropFlags, vk::Image &image, vk::DeviceMemory &memory);
+                       const vk::MemoryPropertyFlags &memPropFlags, vk::Image &image, vk::DeviceMemory &memory,
+                       const vk::AllocationCallbacks *pAllocator);
 
 void createImage(const vk::Device &dev, const vk::PhysicalDeviceMemoryProperties &memProps,
                  const std::vector<uint32_t> &queueFamilyIndices, const vk::SampleCountFlagBits &numSamples,
                  const vk::Format &format, const vk::ImageTiling &tiling, const vk::ImageUsageFlags &usage,
                  const vk::MemoryPropertyFlags &reqMask, uint32_t width, uint32_t height, uint32_t mipLevels,
-                 uint32_t arrayLayers, vk::Image &image, vk::DeviceMemory &memory);
+                 uint32_t arrayLayers, vk::Image &image, vk::DeviceMemory &memory,
+                 const vk::AllocationCallbacks *pAllocator);
 
 void copyBufferToImage(const vk::CommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount,
                        const vk::Buffer &src_buf, const vk::Image &dst_img);
 
 void createImageView(const vk::Device &device, const vk::Image &image, const vk::Format &format,
                      const vk::ImageViewType &viewType, const vk::ImageSubresourceRange &subresourceRange,
-                     vk::ImageView &view);
+                     vk::ImageView &view, const vk::AllocationCallbacks *pAllocator);
 
 void transitionImageLayout(const vk::CommandBuffer &cmd, const vk::Image &image, const vk::Format &format,
                            const vk::ImageLayout &oldLayout, const vk::ImageLayout &newLayout,
                            vk::PipelineStageFlags srcStages, vk::PipelineStageFlags dstStages, uint32_t mipLevels,
                            uint32_t arrayLayers);
-
-void validatePassTypeStructures();
 
 void cramers3(glm::vec3 c1, glm::vec3 c2, glm::vec3 c3, glm::vec3 c4);
 
@@ -266,7 +265,7 @@ static glm::vec2 pointOnCircle(const glm::vec2 origin, float radius, float angle
     return {origin.x + radius * cos(angle), origin.y + radius * sin(angle)};
 }
 
-void makeTriangleAdjacenyList(const std::vector<VB_INDEX_TYPE> &indices, std::vector<VB_INDEX_TYPE> &indiciesAdjacency);
+void makeTriangleAdjacenyList(const std::vector<IndexBufferType> &indices, std::vector<IndexBufferType> &indiciesAdjacency);
 
 static void destroyCommandBuffers(const vk::Device &dev, const vk::CommandPool &pool, std::vector<vk::CommandBuffer> &cmds) {
     if (cmds.size()) {
@@ -287,10 +286,10 @@ static FlagBits incrementByteFlag(FlagBits flags, T1 firstBit, T2 allBits) {
     return flags;
 }
 
-static void destroyImageResource(const vk::Device &dev, ImageResource &res) {
-    if (res.view) dev.destroyImageView(res.view, ALLOC_PLACE_HOLDER);
-    if (res.image) dev.destroyImage(res.image, ALLOC_PLACE_HOLDER);
-    if (res.memory) dev.freeMemory(res.memory, ALLOC_PLACE_HOLDER);
+static void destroyImageResource(const vk::Device &dev, ImageResource &res, vk::AllocationCallbacks *pAllocator) {
+    if (res.view) dev.destroyImageView(res.view, pAllocator);
+    if (res.image) dev.destroyImage(res.image, pAllocator);
+    if (res.memory) dev.freeMemory(res.memory, pAllocator);
 }
 
 constexpr bool compExtent2D(const vk::Extent2D &a, const vk::Extent2D &b) {

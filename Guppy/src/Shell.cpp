@@ -26,27 +26,21 @@
 #include <string>
 #include <sstream>
 #include <set>
+#include <Common/Helpers.h>
 
+#include "Constants.h"
 #include "EventHandlers.h"
 #include "Game.h"
-#include "Helpers.h"
 #include "InputHandler.h"
 // HANDLERS
 #include "InputHandler.h"
 #include "SoundHandler.h"
-
-// See: https://github.com/KhronosGroup/Vulkan-Hpp#extensions--per-device-function-pointers
-VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE;
-static_assert(VK_HEADER_VERSION >= 126, "Vulkan version need 1.1.126.0 or greater");
 
 Shell::Shell(Game &game, Handlers &&handlers)
     : limitFramerate(true),
       framesPerSecondLimit(10),
       game_(game),
       settings_(game.settings()),
-      instanceExtensions_{
-          VK_KHR_SURFACE_EXTENSION_NAME,  // require generic WSI extensions
-      },
       /** Device extensions:
        *    If an extension is required to run flip that flag and the program will not start without it. If you want the
        * extension to be optional set the required flag to false. If you do not want the extension to try to be enabled set
@@ -66,6 +60,7 @@ Shell::Shell(Game &game, Handlers &&handlers)
       gameTick_(1.0f / settings_.ticksPerSecond),
       gameTime_(gameTick_),
       debugUtilsMessenger_() {
+    ctx_.instanceEnabledExtensionNames.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
     /**
      * Leaving this validation layer code in but I am going to start using vkconfig.exe instead. It does everything
      * the layer code here already did but better. You can read about it here
@@ -84,8 +79,8 @@ Shell::Shell(Game &game, Handlers &&handlers)
      */
     if (settings_.validateVerbose) assert(settings_.validate);
     if (settings_.validate) {
-        instanceLayers_.push_back("VK_LAYER_KHRONOS_validation");
-        instanceExtensions_.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+        ctx_.instanceEnabledLayerNames.push_back("VK_LAYER_KHRONOS_validation");
+        ctx_.instanceEnabledExtensionNames.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
     }
 }
 
@@ -98,9 +93,7 @@ void Shell::log(LogPriority priority, const char *msg) const {
 
 void Shell::init() {
     initInstance();
-    initDebugUtilsMessenger();
-    initPhysicalDev();
-
+    initPhysicalDevice();
     // TODO: Add init functions here... inline ???
     handlers_.pSound->init();
 }
@@ -118,13 +111,13 @@ void Shell::destroy() {
 }
 
 void Shell::cleanup() {
-    if (settings_.validate) ctx_.instance.destroyDebugUtilsMessengerEXT(debugUtilsMessenger_, ALLOC_PLACE_HOLDER);
-    destroyInstance();
+    ctx_.destroyDebug();
+    ctx_.destroyInstance();
 }
 
 void Shell::assertAllInstanceLayers() const {
     // Check if all instance layers required are present
-    for (const auto &layerName : instanceLayers_) {
+    for (const auto &layerName : ctx_.instanceEnabledLayerNames) {
         auto it = std::find_if(layerProps_.begin(), layerProps_.end(), [&layerName](auto layer_prop) {
             return std::strcmp(layer_prop.properties.layerName, layerName) == 0;
         });
@@ -139,7 +132,7 @@ void Shell::assertAllInstanceLayers() const {
 
 void Shell::assertAllInstanceExtensions() const {
     // Check if all instance extensions required are present
-    for (const auto &extensionName : instanceExtensions_) {
+    for (const auto &extensionName : ctx_.instanceEnabledExtensionNames) {
         auto it = std::find_if(instExtProps_.begin(), instExtProps_.end(),
                                [&extensionName](auto ext) { return std::strcmp(extensionName, ext.extensionName) == 0; });
         if (it == instExtProps_.end()) {
@@ -173,68 +166,19 @@ bool Shell::hasAllDeviceExtensions(vk::PhysicalDevice phy) const {
 }
 
 void Shell::initInstance() {
-    vk::DynamicLoader dl;
-    PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
-    VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
-
     // enumerate instance layer & extension properties
     enumerateInstanceProperties();
 
     assertAllInstanceLayers();
     assertAllInstanceExtensions();
 
-    vk::ApplicationInfo appInfo = {};
-    appInfo.pApplicationName = settings_.name.c_str();
-    appInfo.applicationVersion = VK_MAKE_VERSION(0, 1, 0);
-    appInfo.pEngineName = "Shell";
-    appInfo.engineVersion = VK_MAKE_VERSION(0, 1, 0);
-    appInfo.apiVersion = vk::enumerateInstanceVersion();
-
-    vk::InstanceCreateInfo instInfo = {};
-    instInfo.pApplicationInfo = &appInfo;
-    instInfo.enabledLayerCount = static_cast<uint32_t>(instanceLayers_.size());
-    instInfo.ppEnabledLayerNames = instanceLayers_.data();
-    instInfo.enabledExtensionCount = static_cast<uint32_t>(instanceExtensions_.size());
-    instInfo.ppEnabledExtensionNames = instanceExtensions_.data();
-
-    ctx_.instance = vk::createInstance(instInfo, ALLOC_PLACE_HOLDER);
-    assert(ctx_.instance);
-
-    VULKAN_HPP_DEFAULT_DISPATCHER.init(ctx_.instance);
-
-    // Moved asserts below from old Extensions.h. Not sure yet if there is a better place.
-
-    if (settings_.validate) {
-        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkCreateDebugUtilsMessengerEXT);
-        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkDestroyDebugUtilsMessengerEXT);
-    }
+    ctx_.initInstance(settings_.name.c_str(), "Shell", settings_.validate);
+    ctx_.initDebug(settings_.validate, settings_.validateVerbose, &events::DebugUtilsMessenger);
 }
 
-void Shell::initDebugUtilsMessenger() {
-    if (!settings_.validate) return;
-
-    vk::DebugUtilsMessengerCreateInfoEXT debugInfo = {};
-
-    debugInfo.messageSeverity =
-        vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
-    debugInfo.messageType = vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation;
-
-    if (settings_.validateVerbose) {
-        debugInfo.messageSeverity |=
-            vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
-        debugInfo.messageType |=
-            vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral | vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance;
-    }
-
-    debugInfo.pfnUserCallback = events::DebugUtilsMessenger;
-    debugInfo.pUserData = this;
-
-    debugUtilsMessenger_ = ctx_.instance.createDebugUtilsMessengerEXT(debugInfo, ALLOC_PLACE_HOLDER);
-}
-
-void Shell::initPhysicalDev() {
-    enumeratePhysicalDevs();
-    pickPhysicalDev();
+void Shell::initPhysicalDevice() {
+    enumeratePhysicalDevices();
+    pickPhysicalDevice();
     if (!ctx_.physicalDev) {
         printf("failed to find any capable Vulkan physical device");
         abort();
@@ -242,9 +186,8 @@ void Shell::initPhysicalDev() {
 }
 
 void Shell::createContext() {
-    createDev();
-
-    initDevQueues();
+    ctx_.initDevice();
+    initDeviceQueues();
 
     // TODO: should this do this?
     // initialize ctx_.{surface,format} before attach_shell
@@ -262,101 +205,10 @@ void Shell::destroyContext() {
     ctx_.dev.waitIdle();
 
     destroySwapchain();
-
     game_.detachShell();
-
     destroyBackBuffers();
 
-    ctx_.dev.waitIdle();
-    ctx_.dev.destroy(ALLOC_PLACE_HOLDER);
-}
-
-void Shell::createDev() {
-    // queue create info
-    std::set<uint32_t> unique_queue_families = {
-        ctx_.graphicsIndex,
-        ctx_.presentIndex,
-        ctx_.transferIndex,
-        ctx_.computeIndex,
-    };
-    float queue_priorities[1] = {0.0f};  // only one queue per family atm
-    std::vector<vk::DeviceQueueCreateInfo> queue_infos;
-    for (auto &index : unique_queue_families) {
-        vk::DeviceQueueCreateInfo queueInfo = {};
-        queueInfo.queueCount = 1;  // only one queue per family atm
-        queueInfo.queueFamilyIndex = index;
-        queueInfo.pQueuePriorities = queue_priorities;
-        queue_infos.push_back(queueInfo);
-    }
-
-    // features
-    vk::PhysicalDeviceFeatures deviceFeatures = {};
-    deviceFeatures.samplerAnisotropy = ctx_.samplerAnisotropyEnabled;
-    deviceFeatures.sampleRateShading = ctx_.sampleRateShadingEnabled;
-    deviceFeatures.fragmentStoresAndAtomics = ctx_.computeShadingEnabled;
-    deviceFeatures.tessellationShader = ctx_.tessellationShadingEnabled;
-    deviceFeatures.geometryShader = ctx_.geometryShadingEnabled;
-    deviceFeatures.fillModeNonSolid = ctx_.wireframeShadingEnabled;
-    deviceFeatures.independentBlend = ctx_.independentBlendEnabled;
-    deviceFeatures.imageCubeArray = ctx_.independentBlendEnabled;
-
-    // Phyiscal device extensions names
-    auto &phyDevProps = ctx_.physicalDevProps[ctx_.physicalDevIndex];
-    std::vector<const char *> enabledExtensionNames;
-    for (const auto &extInfo : phyDevProps.phyDevExtInfos)
-        if (extInfo.valid) enabledExtensionNames.push_back(extInfo.name);
-
-    vk::DeviceCreateInfo devInfo = {};
-    devInfo.queueCreateInfoCount = static_cast<uint32_t>(queue_infos.size());
-    devInfo.pQueueCreateInfos = queue_infos.data();
-    devInfo.pEnabledFeatures = &deviceFeatures;
-    devInfo.enabledExtensionCount = static_cast<uint32_t>(enabledExtensionNames.size());
-    devInfo.ppEnabledExtensionNames = enabledExtensionNames.data();
-
-    // Physical device extension featrues (For some reason using the name above doesn't always work)
-    // void **pNext = &(const_cast<void *>(devInfo.pNext));
-    if (ctx_.vertexAttributeDivisorEnabled) {
-        assert(false);  // Never tested. Was using the name above sufficient?
-        // *pNext = &phyDevProps.featVertAttrDiv;
-        // pNext = &phyDevProps.featVertAttrDiv.pNext;
-    }
-    if (ctx_.transformFeedbackEnabled) {
-        assert(false);
-        // *pNext = &phyDevProps.featTransFback;
-        // pNext = &phyDevProps.featTransFback.pNext;
-    }
-
-    ctx_.dev = ctx_.physicalDev.createDevice(devInfo, ALLOC_PLACE_HOLDER);
-    assert(ctx_.dev);
-
-    VULKAN_HPP_DEFAULT_DISPATCHER.init(ctx_.dev);
-
-    // Moved asserts below from old Extensions.h. Not sure yet if there is a better place.
-
-    if (ctx_.debugMarkersEnabled) {
-        // There are more of these and really there needs to be a more robust solution. As of now there is no way to enable
-        // these.
-        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkDebugMarkerSetObjectTagEXT);
-        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkDebugMarkerSetObjectNameEXT);
-        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdDebugMarkerBeginEXT);
-        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdDebugMarkerEndEXT);
-        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdDebugMarkerInsertEXT);
-
-        ctx_.dbg.init(ctx_.dev, true);
-    }
-    if (ctx_.transformFeedbackEnabled) {
-        assert(false);  // You probably don't want to use transform feedback see below.
-        /**
-         * I started trying to implement a simple a vertex update on the gpu using transform feedback while following along
-         * with the shader book I'm reading. As I was doing this it was becoming increasingly clear that this was going to be
-         * difficult due to the lack of working examples I could find online. That is when I stumbled upon this blog post by
-         * a Khronos employee: http://jason-blog.jlekstrand.net/2018/10/transform-feedback-is-terrible-so-why.html. After
-         * reading this I will take his adivce and implement the update on the gpu using compute shaders, but I am going to
-         * leave this code here because I liked the changes I made to the extensions code in this file, and the
-         * Shell/Settings code elsewhere. Also, it should be a good reminder to not just following things blindly.
-         */
-        assert(VULKAN_HPP_DEFAULT_DISPATCHER.vkCmdBindTransformFeedbackBuffersEXT);
-    }
+    ctx_.destroyDevice();
 }
 
 void Shell::createBackBuffers() {
@@ -369,12 +221,10 @@ void Shell::createBackBuffers() {
     // on acquire_semaphore.
     const int count = ctx_.imageCount + 1;
     for (int i = 0; i < count; i++) {
-        BackBuffer backBuffer = {};
-        backBuffer.acquireSemaphore = ctx_.dev.createSemaphore(semaphoreInfo, ALLOC_PLACE_HOLDER);
-        backBuffer.renderSemaphore = ctx_.dev.createSemaphore(semaphoreInfo, ALLOC_PLACE_HOLDER);
-        backBuffer.presentFence = ctx_.dev.createFence(fenceInfo, ALLOC_PLACE_HOLDER);
-
-        ctx_.backBuffers.push(backBuffer);
+        ctx_.backBuffers.push({});
+        ctx_.backBuffers.back().acquireSemaphore = ctx_.dev.createSemaphore(semaphoreInfo, ctx_.pAllocator);
+        ctx_.backBuffers.back().renderSemaphore = ctx_.dev.createSemaphore(semaphoreInfo, ctx_.pAllocator);
+        ctx_.backBuffers.back().presentFence = ctx_.dev.createFence(fenceInfo, ctx_.pAllocator);
     }
 }
 
@@ -382,9 +232,9 @@ void Shell::destroyBackBuffers() {
     while (!ctx_.backBuffers.empty()) {
         const auto &backBuffer = ctx_.backBuffers.front();
 
-        ctx_.dev.destroySemaphore(backBuffer.acquireSemaphore, ALLOC_PLACE_HOLDER);
-        ctx_.dev.destroySemaphore(backBuffer.renderSemaphore, ALLOC_PLACE_HOLDER);
-        ctx_.dev.destroyFence(backBuffer.presentFence, ALLOC_PLACE_HOLDER);
+        ctx_.dev.destroySemaphore(backBuffer.acquireSemaphore, ctx_.pAllocator);
+        ctx_.dev.destroySemaphore(backBuffer.renderSemaphore, ctx_.pAllocator);
+        ctx_.dev.destroyFence(backBuffer.presentFence, ctx_.pAllocator);
 
         ctx_.backBuffers.pop();
     }
@@ -428,9 +278,9 @@ void Shell::createSwapchain() {
 void Shell::destroySwapchain() {
     if (ctx_.swapchain) {
         game_.detachSwapchain();
-        ctx_.dev.destroySwapchainKHR(ctx_.swapchain, ALLOC_PLACE_HOLDER);
+        ctx_.dev.destroySwapchainKHR(ctx_.swapchain, ctx_.pAllocator);
     }
-    ctx_.instance.destroySurfaceKHR(ctx_.surface, ALLOC_PLACE_HOLDER);
+    ctx_.instance.destroySurfaceKHR(ctx_.surface, ctx_.pAllocator);
 }
 
 void Shell::onButton(const GameButtonBits buttons) { game_.onButton(buttons); }
@@ -513,14 +363,14 @@ void Shell::resizeSwapchain(uint32_t widthHint, uint32_t heightHint, bool refres
 
     swapchainInfo.oldSwapchain = ctx_.swapchain;
 
-    ctx_.swapchain = ctx_.dev.createSwapchainKHR(swapchainInfo, ALLOC_PLACE_HOLDER);
+    ctx_.swapchain = ctx_.dev.createSwapchainKHR(swapchainInfo, ctx_.pAllocator);
 
     // destroy the old swapchain
     if (swapchainInfo.oldSwapchain) {
         ctx_.dev.waitIdle();
 
         game_.detachSwapchain();
-        ctx_.dev.destroySwapchainKHR(swapchainInfo.oldSwapchain, ALLOC_PLACE_HOLDER);
+        ctx_.dev.destroySwapchainKHR(swapchainInfo.oldSwapchain, ctx_.pAllocator);
     }
 
     game_.attachSwapchain();
@@ -593,7 +443,7 @@ void Shell::presentBackBuffer() {
 // NEW FUNCTIONS FROM MY OTHER INIT CODE
 // ********
 
-void Shell::initDevQueues() {
+void Shell::initDeviceQueues() {
     std::set<uint32_t> unique_queue_families = {
         ctx_.graphicsIndex,
         ctx_.presentIndex,
@@ -606,8 +456,6 @@ void Shell::initDevQueues() {
         ctx_.queues[familtyIndex] = queue;
     }
 }
-
-void Shell::destroyInstance() { ctx_.instance.destroy(ALLOC_PLACE_HOLDER); }
 
 void Shell::enumerateInstanceProperties() {
 #ifdef __ANDROID__
@@ -648,7 +496,7 @@ void Shell::enumerateInstanceProperties() {
     instExtProps_ = vk::enumerateInstanceExtensionProperties();
 }
 
-void Shell::enumerateDeviceLayerExtensionProperties(PhysicalDeviceProperties &props, LayerProperties &layerProps) {
+void Shell::enumerateDeviceLayerExtensionProperties(Context::PhysicalDeviceProperties &props, LayerProperties &layerProps) {
     auto extensions = props.device.enumerateDeviceExtensionProperties(std::string(layerProps.properties.layerName));
     if (!extensions.empty())
         for (auto &ext : extensions)
@@ -662,7 +510,7 @@ void Shell::enumerateSurfaceProperties() {
     ctx_.surfaceProps.presentModes = ctx_.physicalDev.getSurfacePresentModesKHR(ctx_.surface);
 }
 
-void Shell::enumeratePhysicalDevs(uint32_t physicalDevCount) {
+void Shell::enumeratePhysicalDevices(uint32_t physicalDevCount) {
     auto devs = ctx_.instance.enumeratePhysicalDevices();
     assert(devs.size() >= physicalDevCount);
 
@@ -752,13 +600,13 @@ void Shell::enumeratePhysicalDevs(uint32_t physicalDevCount) {
     devs.erase(devs.begin(), devs.end());
 }
 
-void Shell::pickPhysicalDev() {
+void Shell::pickPhysicalDevice() {
     // Iterate over each enumerated physical device
     for (size_t i = 0; i < ctx_.physicalDevProps.size(); i++) {
         auto &props = ctx_.physicalDevProps[i];
         ctx_.physicalDevIndex = ctx_.graphicsIndex = ctx_.presentIndex = ctx_.transferIndex = ctx_.computeIndex = UINT32_MAX;
 
-        if (isDevSuitable(props, ctx_.graphicsIndex, ctx_.presentIndex, ctx_.transferIndex, ctx_.computeIndex)) {
+        if (isDeviceSuitable(props, ctx_.graphicsIndex, ctx_.presentIndex, ctx_.transferIndex, ctx_.computeIndex)) {
             // We found a suitable physical device so set relevant data.
             ctx_.physicalDevIndex = i;
             ctx_.physicalDev = props.device;
@@ -782,8 +630,8 @@ void Shell::pickPhysicalDev() {
     }
 }
 
-bool Shell::isDevSuitable(const PhysicalDeviceProperties &props, uint32_t &graphicsIndex, uint32_t &presentIndex,
-                          uint32_t &transferIndex, uint32_t &computeIndex) {
+bool Shell::isDeviceSuitable(const Context::PhysicalDeviceProperties &props, uint32_t &graphicsIndex, uint32_t &presentIndex,
+                             uint32_t &transferIndex, uint32_t &computeIndex) {
     if (!determineQueueFamiliesSupport(props, graphicsIndex, presentIndex, transferIndex, computeIndex)) return false;
     if (!determineDeviceExtensionSupport(props)) return false;
     // optional (warn but dont throw)
@@ -793,7 +641,7 @@ bool Shell::isDevSuitable(const PhysicalDeviceProperties &props, uint32_t &graph
     return true;
 }
 
-bool Shell::determineQueueFamiliesSupport(const PhysicalDeviceProperties &props, uint32_t &graphicsIndex,
+bool Shell::determineQueueFamiliesSupport(const Context::PhysicalDeviceProperties &props, uint32_t &graphicsIndex,
                                           uint32_t &presentIndex, uint32_t &transferIndex, uint32_t &computeIndex) {
     // Determine graphics and present queues ...
 
@@ -827,7 +675,7 @@ bool Shell::determineQueueFamiliesSupport(const PhysicalDeviceProperties &props,
             }
         }
     }
-    ctx_.instance.destroySurfaceKHR(surface, ALLOC_PLACE_HOLDER);
+    ctx_.instance.destroySurfaceKHR(surface, ctx_.pAllocator);
 
     // Determine transfer queue ...
 
@@ -860,7 +708,7 @@ bool Shell::determineQueueFamiliesSupport(const PhysicalDeviceProperties &props,
             computeIndex != UINT32_MAX);
 }
 
-bool Shell::determineDeviceExtensionSupport(const PhysicalDeviceProperties &props) {
+bool Shell::determineDeviceExtensionSupport(const Context::PhysicalDeviceProperties &props) {
     if (deviceExtensionInfo_.empty()) return true;
     for (const auto &extInfo : props.phyDevExtInfos) {
         if (extInfo.required && !extInfo.valid) return false;
@@ -868,7 +716,7 @@ bool Shell::determineDeviceExtensionSupport(const PhysicalDeviceProperties &prop
     return true;
 }
 
-void Shell::determineDeviceFeatureSupport(const PhysicalDeviceProperties &props) {
+void Shell::determineDeviceFeatureSupport(const Context::PhysicalDeviceProperties &props) {
     // sampler anisotropy
     ctx_.samplerAnisotropyEnabled = props.features.samplerAnisotropy && settings_.trySamplerAnisotropy;
     if (settings_.trySamplerAnisotropy && !ctx_.samplerAnisotropyEnabled)
@@ -903,7 +751,7 @@ void Shell::determineDeviceFeatureSupport(const PhysicalDeviceProperties &props)
         log(LogPriority::LOG_WARN, "cannot enable image cube arrays");
 }
 
-void Shell::determineSampleCount(const PhysicalDeviceProperties &props) {
+void Shell::determineSampleCount(const Context::PhysicalDeviceProperties &props) {
     /* DEPENDS on determine_device_feature_support */
     ctx_.samples = vk::SampleCountFlagBits::e1;
     if (ctx_.sampleRateShadingEnabled) {
@@ -1013,43 +861,4 @@ void Shell::determineSwapchainImageCount() {
         ctx_.imageCount = caps.minImageCount;
     else if (ctx_.imageCount > caps.maxImageCount)
         ctx_.imageCount = caps.maxImageCount;
-}
-
-void Shell::Context::createBuffer(const vk::CommandBuffer &cmd, const vk::BufferUsageFlags usage, const vk::DeviceSize size,
-                                  const std::string &&name, BufferResource &stgRes, BufferResource &buffRes,
-                                  const void *data, const bool mappable) const {
-    // STAGING RESOURCE
-    buffRes.memoryRequirements.size =
-        helpers::createBuffer(dev, size, vk::BufferUsageFlagBits::eTransferSrc,
-                              vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, memProps,
-                              stgRes.buffer, stgRes.memory);
-
-    // FILL STAGING BUFFER ON DEVICE
-    void *pData;
-    pData = dev.mapMemory(stgRes.memory, 0, buffRes.memoryRequirements.size);
-    /*
-        You can now simply memcpy the vertex data to the mapped memory and unmap it again using unmapMemory.
-        Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
-        of caching. It is also possible that writes to the buffer are not visible in the mapped memory yet. There
-        are two ways to deal with that problem:
-            - Use a memory heap that is host coherent, indicated with vk::MemoryPropertyFlagBits::eHostCoherent
-            - Call flushMappedMemoryRanges to after writing to the mapped memory, and call
-              invalidateMappedMemoryRanges before reading from the mapped memory
-        We went for the first approach, which ensures that the mapped memory always matches the contents of the
-        allocated memory. Do keep in mind that this may lead to slightly worse performance than explicit flushing,
-        but we'll see why that doesn't matter in the next chapter.
-    */
-    memcpy(pData, data, static_cast<size_t>(size));
-    dev.unmapMemory(stgRes.memory);
-
-    // FAST VERTEX BUFFER
-    vk::MemoryPropertyFlags memPropFlags = vk::MemoryPropertyFlagBits::eDeviceLocal;
-    if (mappable) memPropFlags |= vk::MemoryPropertyFlagBits::eHostVisible;
-    helpers::createBuffer(dev, size,
-                          // TODO: probably don't need to check memory requirements again
-                          usage, memPropFlags, memProps, buffRes.buffer, buffRes.memory);
-
-    // COPY FROM STAGING TO FAST
-    helpers::copyBuffer(cmd, stgRes.buffer, buffRes.buffer, buffRes.memoryRequirements.size);
-    dbg.setMarkerName(buffRes.buffer, name.c_str());
 }

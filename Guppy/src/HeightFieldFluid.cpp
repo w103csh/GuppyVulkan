@@ -435,29 +435,24 @@ void Buffer::loadBuffers() {
     assert(indices_.size());
     stgRes = {};
     ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-                     sizeof(VB_INDEX_TYPE) * indices_.size(), NAME + " index (surface)", stgRes, indexRes_, indices_.data());
+                     sizeof(IndexBufferType) * indices_.size(), NAME + " index (surface)", stgRes, indexRes_,
+                     indices_.data());
     pLdgRes_->stgResources.push_back(std::move(stgRes));
 
     // INDEX (WIREFRAME)
     assert(indicesWF_.size());
     stgRes = {};
     ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-                     sizeof(VB_INDEX_TYPE) * indicesWF_.size(), NAME + " index (wireframe)", stgRes, indexWFRes_,
+                     sizeof(IndexBufferType) * indicesWF_.size(), NAME + " index (wireframe)", stgRes, indexWFRes_,
                      indicesWF_.data());
     pLdgRes_->stgResources.push_back(std::move(stgRes));
 }
 
 void Buffer::destroy() {
     Base::destroy();
-    auto& dev = handler().shell().context().dev;
-    if (verticesHFF_.size()) {
-        dev.destroyBuffer(verticesHFFRes_.buffer, ALLOC_PLACE_HOLDER);
-        dev.freeMemory(verticesHFFRes_.memory, ALLOC_PLACE_HOLDER);
-    }
-    if (indicesWF_.size()) {
-        dev.destroyBuffer(indexWFRes_.buffer, ALLOC_PLACE_HOLDER);
-        dev.freeMemory(indexWFRes_.memory, ALLOC_PLACE_HOLDER);
-    }
+    const auto& ctx = handler().shell().context();
+    if (verticesHFF_.size()) ctx.destroyBuffer(verticesHFFRes_);
+    if (indicesWF_.size()) ctx.destroyBuffer(indexWFRes_);
 }
 
 // bool Buffer::shouldDispatch() const {

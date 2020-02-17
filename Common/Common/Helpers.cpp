@@ -9,14 +9,7 @@
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <regex>
-#define STB_IMAGE_IMPLEMENTATION
-#include <stb_image.h>
 #include <unordered_map>
-
-#include "ConstantsAll.h"
-#include "ComputeHandler.h"  // Remove this if a ComputeConstants.h is made.
-#include "Face.h"
-#include "Mesh.h"
 
 namespace {
 const std::string MACRO_REPLACE_PREFIX = "MACRO_REPLACE_PREFIX";
@@ -30,7 +23,7 @@ std::vector<macroInfo> getMacroReplaceInfo(const std::string_view &macroIdentifi
     std::vector<macroInfo> replaceStrs;
 
     auto regexStr = MACRO_REGEX_TEMPLATE;
-    regexStr = helpers::replaceFirstOccurrence(MACRO_REPLACE_PREFIX, macroIdentifierPrefix, regexStr);
+    regexStr = replaceFirstOccurrence(MACRO_REPLACE_PREFIX, macroIdentifierPrefix, regexStr);
     std::regex macroRegex(regexStr);
 
     std::smatch results;
@@ -47,7 +40,7 @@ std::vector<macroInfo> getMacroReplaceInfo(const std::string_view &macroIdentifi
 
 void macroReplace(const macroInfo &info, int itemCount, std::string &text) {
     std::string replaceStr = std::get<2>(info) + std::to_string(itemCount);
-    helpers::replaceFirstOccurrence(std::get<1>(info), replaceStr, text);
+    replaceFirstOccurrence(std::get<1>(info), replaceStr, text);
 }
 
 glm::mat4 moveAndRotateTo(const glm::vec3 eye, const glm::vec3 center, const glm::vec3 up) {
@@ -135,7 +128,7 @@ bool getMemoryType(const vk::PhysicalDeviceMemoryProperties &memProps, uint32_t 
 
 vk::DeviceSize createBuffer(const vk::Device &dev, const vk::DeviceSize &size, const vk::BufferUsageFlags &usage,
                             const vk::MemoryPropertyFlags &props, const vk::PhysicalDeviceMemoryProperties &memProps,
-                            vk::Buffer &buff, vk::DeviceMemory &mem) {
+                            vk::Buffer &buff, vk::DeviceMemory &mem, const vk::AllocationCallbacks *pAllocator) {
     vk::BufferCreateInfo buffInfo = {};
     buffInfo.size = size;
     buffInfo.usage = usage;
@@ -145,7 +138,7 @@ vk::DeviceSize createBuffer(const vk::Device &dev, const vk::DeviceSize &size, c
     // buffInfo.pQueueFamilyIndices = nullptr;
     // buffInfo.flags = 0;
 
-    buff = dev.createBuffer(buffInfo, ALLOC_PLACE_HOLDER);
+    buff = dev.createBuffer(buffInfo, pAllocator);
 
     // ALLOCATE DEVICE MEMORY
 
@@ -180,7 +173,7 @@ vk::DeviceSize createBuffer(const vk::Device &dev, const vk::DeviceSize &size, c
         provided that their data is refreshed, of course. This is known as aliasing and some
         Vulkan functions have explicit flags to specify that you want to do this.
     */
-    mem = dev.allocateMemory(allocInfo, ALLOC_PLACE_HOLDER);
+    mem = dev.allocateMemory(allocInfo, pAllocator);
 
     // BIND MEMORY
     dev.bindBufferMemory(buff, mem, 0);
@@ -198,7 +191,8 @@ void copyBuffer(const vk::CommandBuffer &cmd, const vk::Buffer &srcBuff, const v
 }
 
 void createImageMemory(const vk::Device &dev, const vk::PhysicalDeviceMemoryProperties &memProps,
-                       const vk::MemoryPropertyFlags &memPropFlags, vk::Image &image, vk::DeviceMemory &memory) {
+                       const vk::MemoryPropertyFlags &memPropFlags, vk::Image &image, vk::DeviceMemory &memory,
+                       const vk::AllocationCallbacks *pAllocator) {
     vk::MemoryRequirements memReqs = dev.getImageMemoryRequirements(image);
 
     vk::MemoryAllocateInfo allocInfo = {};
@@ -209,7 +203,7 @@ void createImageMemory(const vk::Device &dev, const vk::PhysicalDeviceMemoryProp
     assert(pass);
 
     // Allocate memory
-    memory = dev.allocateMemory(allocInfo, ALLOC_PLACE_HOLDER);
+    memory = dev.allocateMemory(allocInfo, pAllocator);
     // Bind memory
     dev.bindImageMemory(image, memory, 0);
 }
@@ -218,7 +212,8 @@ void createImage(const vk::Device &dev, const vk::PhysicalDeviceMemoryProperties
                  const std::vector<uint32_t> &queueFamilyIndices, const vk::SampleCountFlagBits &numSamples,
                  const vk::Format &format, const vk::ImageTiling &tiling, const vk::ImageUsageFlags &usage,
                  const vk::MemoryPropertyFlags &reqMask, uint32_t width, uint32_t height, uint32_t mipLevels,
-                 uint32_t arrayLayers, vk::Image &image, vk::DeviceMemory &memory) {
+                 uint32_t arrayLayers, vk::Image &image, vk::DeviceMemory &memory,
+                 const vk::AllocationCallbacks *pAllocator) {
     vk::ImageCreateInfo imageInfo = {};
     imageInfo.imageType = vk::ImageType::e2D;  // param?
     imageInfo.extent.width = width;
@@ -235,8 +230,8 @@ void createImage(const vk::Device &dev, const vk::PhysicalDeviceMemoryProperties
     imageInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
     imageInfo.pQueueFamilyIndices = queueFamilyIndices.data();
 
-    image = dev.createImage(imageInfo, ALLOC_PLACE_HOLDER);
-    helpers::createImageMemory(dev, memProps, reqMask, image, memory);
+    image = dev.createImage(imageInfo, pAllocator);
+    createImageMemory(dev, memProps, reqMask, image, memory, pAllocator);
 }
 
 void copyBufferToImage(const vk::CommandBuffer &cmd, uint32_t width, uint32_t height, uint32_t layerCount,
@@ -259,7 +254,7 @@ void copyBufferToImage(const vk::CommandBuffer &cmd, uint32_t width, uint32_t he
 
 void createImageView(const vk::Device &device, const vk::Image &image, const vk::Format &format,
                      const vk::ImageViewType &viewType, const vk::ImageSubresourceRange &subresourceRange,
-                     vk::ImageView &view) {
+                     vk::ImageView &view, const vk::AllocationCallbacks *pAllocator) {
     vk::ImageViewCreateInfo viewInfo = {};
     viewInfo.image = image;
 
@@ -279,7 +274,7 @@ void createImageView(const vk::Device &device, const vk::Image &image, const vk:
     */
     viewInfo.subresourceRange = subresourceRange;
 
-    view = device.createImageView(viewInfo, ALLOC_PLACE_HOLDER);
+    view = device.createImageView(viewInfo, pAllocator);
 }
 
 void transitionImageLayout(const vk::CommandBuffer &cmd, const vk::Image &image, const vk::Format &format,
@@ -392,11 +387,6 @@ void transitionImageLayout(const vk::CommandBuffer &cmd, const vk::Image &image,
     //}
 }
 
-void validatePassTypeStructures() {
-    auto it1 = std::find_first_of(RenderPass::ALL.begin(), RenderPass::ALL.end(), Compute::ALL.begin(), Compute::ALL.end());
-    assert(it1 == RenderPass::ALL.end());
-}
-
 void cramers3(glm::vec3 c1, glm::vec3 c2, glm::vec3 c3, glm::vec3 c4) {
     /*  Setup example (comes from barycentric intersection):
 
@@ -424,8 +414,8 @@ void cramers3(glm::vec3 c1, glm::vec3 c2, glm::vec3 c3, glm::vec3 c4) {
 
 // triangle adjacency helpers
 namespace {
-constexpr bool any2(const VB_INDEX_TYPE i0, const VB_INDEX_TYPE i1, const VB_INDEX_TYPE i2, const VB_INDEX_TYPE i,
-                    VB_INDEX_TYPE &r0, VB_INDEX_TYPE &r1) {
+constexpr bool any2(const IndexBufferType i0, const IndexBufferType i1, const IndexBufferType i2, const IndexBufferType i,
+                    IndexBufferType &r0, IndexBufferType &r1) {
     if (i0 == i) {
         r0 = i1;
         r1 = i2;
@@ -443,7 +433,7 @@ constexpr bool any2(const VB_INDEX_TYPE i0, const VB_INDEX_TYPE i1, const VB_IND
     }
     return false;
 }
-constexpr bool any1(const VB_INDEX_TYPE i0, const VB_INDEX_TYPE i1, const VB_INDEX_TYPE i, VB_INDEX_TYPE &r) {
+constexpr bool any1(const IndexBufferType i0, const IndexBufferType i1, const IndexBufferType i, IndexBufferType &r) {
     if (i0 == i) {
         r = i1;
         return true;
@@ -454,9 +444,9 @@ constexpr bool any1(const VB_INDEX_TYPE i0, const VB_INDEX_TYPE i1, const VB_IND
     }
     return false;
 }
-constexpr bool sharesTwoIndices(const VB_INDEX_TYPE i00, const VB_INDEX_TYPE i10, const VB_INDEX_TYPE i20,
-                                const VB_INDEX_TYPE i01, const VB_INDEX_TYPE i11, VB_INDEX_TYPE &r) {
-    VB_INDEX_TYPE r0 = 0, r1 = 0;
+constexpr bool sharesTwoIndices(const IndexBufferType i00, const IndexBufferType i10, const IndexBufferType i20,
+                                const IndexBufferType i01, const IndexBufferType i11, IndexBufferType &r) {
+    IndexBufferType r0 = 0, r1 = 0;
     if (any2(i00, i10, i20, i01, r0, r1))
         if (any1(r0, r1, i11, r)) return true;
     if (any2(i00, i10, i20, i11, r0, r1))
@@ -465,12 +455,12 @@ constexpr bool sharesTwoIndices(const VB_INDEX_TYPE i00, const VB_INDEX_TYPE i10
 }
 }  // namespace
 
-void makeTriangleAdjacenyList(const std::vector<VB_INDEX_TYPE> &indices, std::vector<VB_INDEX_TYPE> &indicesAdjaceny) {
+void makeTriangleAdjacenyList(const std::vector<IndexBufferType> &indices, std::vector<IndexBufferType> &indicesAdjaceny) {
     indicesAdjaceny.resize(indices.size() * 3);
     // I used int64_t in the second loops below.
     assert(indicesAdjaceny.size() <= INT64_MAX);
 
-    VB_INDEX_TYPE t0, t1, t2, a0, a1, a2, r;
+    IndexBufferType t0, t1, t2, a0, a1, a2, r;
     bool b0, b1, b2;
     auto iSize = static_cast<int64_t>(indices.size());
 

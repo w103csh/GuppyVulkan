@@ -18,7 +18,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include "DescriptorConstants.h"
-#include "Types.h"
+#include "Enum.h"
 
 enum class DESCRIPTOR_SET;
 enum class SHADER;
@@ -26,6 +26,9 @@ enum class SHADER;
 namespace Sampler { struct CreateInfo; }
 namespace Texture { struct CreateInfo; }
 // clang-format on
+
+// Why is this a multiset?
+using pipelinePassSet = std::multiset<std::pair<PIPELINE, PASS>>;
 
 // const glm::vec4 CLEAR_COLOR = {190.0f / 256.0f, 223.0f / 256.0f, 246.0f / 256.0f, 1.0f};
 const glm::vec4 CLEAR_COLOR = {0.69f, 0.84f, 1.0f, 1.0f};

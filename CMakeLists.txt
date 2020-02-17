@@ -442,6 +442,7 @@ endif()
 add_definitions(-DGUPPY_BASE_DIR="${CMAKE_CURRENT_SOURCE_DIR}")
 
 # Custom targets
+add_subdirectory(Common)
 add_subdirectory(shaders)
 add_subdirectory(libs)
 add_subdirectory(CDLOD)

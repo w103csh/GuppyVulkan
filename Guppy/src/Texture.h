@@ -25,7 +25,7 @@ class Base {
     Base(const uint32_t &&offset, const CreateInfo *pCreateInfo);
     virtual ~Base() = default;
 
-    void destroy(const vk::Device &dev);
+    void destroy(const Context &ctx);
 
     const DESCRIPTOR DESCRIPTOR_TYPE;  // TODO: this should probably be detemined by the pipeline/set
     const bool HAS_DATA;

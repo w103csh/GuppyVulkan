@@ -29,9 +29,10 @@
 #include <type_traits>
 #include <vulkan/vulkan.hpp>
 
-#include "Debug.h"
+#include <Common/Context.h>
+#include <Common/Types.h>
+
 #include "Game.h"
-#include "Types.h"
 
 // clang-format off
 namespace Input { class Handler; }
@@ -44,102 +45,9 @@ class Shell {
     Shell &operator=(const Shell &sh) = delete;
     virtual ~Shell();
 
-    struct BackBuffer {
-        uint32_t imageIndex;
-        vk::Semaphore acquireSemaphore;
-        vk::Semaphore renderSemaphore;
-        // signaled when this struct is ready for reuse
-        vk::Fence presentFence;
-    };
-
     struct LayerProperties {
         vk::LayerProperties properties;
         std::vector<vk::ExtensionProperties> extensionProps;
-    };
-
-    struct SurfaceProperties {
-        vk::SurfaceCapabilitiesKHR capabilities;
-        std::vector<vk::SurfaceFormatKHR> formats;
-        std::vector<vk::PresentModeKHR> presentModes;
-    };
-
-    struct ExtensionInfo {
-        const char *name;
-        bool required;
-        bool tryToEnabled;
-        bool valid;
-    };
-
-    struct PhysicalDeviceProperties {
-        vk::PhysicalDevice device;
-        uint32_t queueFamilyCount;
-        std::vector<vk::QueueFamilyProperties> queueProps;
-        vk::PhysicalDeviceMemoryProperties memoryProperties;
-        vk::PhysicalDeviceProperties properties;
-        std::vector<vk::ExtensionProperties> extensionProperties;
-        std::multimap<const char *, vk::ExtensionProperties, less_str> layerExtensionMap;
-        vk::PhysicalDeviceFeatures features;
-        // Physical device extensions
-        std::vector<ExtensionInfo> phyDevExtInfos;
-        vk::PhysicalDeviceVertexAttributeDivisorFeaturesEXT featVertAttrDiv;
-        // vk::PhysicalDeviceVertexAttributeDivisorPropertiesEXT propsVertAttrDiv;
-        vk::PhysicalDeviceTransformFeedbackFeaturesEXT featTransFback;
-        // vk::PhysicalDeviceTransformFeedbackPropertiesEXT propsTransFback;
-    };
-
-    struct Context {
-        vk::Instance instance;
-
-        // TODO: make these const after setting somehow.
-        bool samplerAnisotropyEnabled;
-        bool sampleRateShadingEnabled;
-        bool linearBlittingSupported;
-        bool computeShadingEnabled;
-        bool tessellationShadingEnabled;
-        bool geometryShadingEnabled;
-        bool wireframeShadingEnabled;
-        bool vertexAttributeDivisorEnabled;
-        bool transformFeedbackEnabled;
-        bool debugMarkersEnabled;
-        bool independentBlendEnabled;
-        bool imageCubeArrayEnabled;
-
-        vk::PhysicalDevice physicalDev;
-        std::vector<PhysicalDeviceProperties> physicalDevProps;
-        uint32_t physicalDevIndex;
-        vk::PhysicalDeviceMemoryProperties memProps;
-        std::map<uint32_t, vk::Queue> queues;
-        uint32_t graphicsIndex;
-        uint32_t presentIndex;
-        uint32_t transferIndex;
-        uint32_t computeIndex;
-
-        vk::Device dev;
-
-        // SURFACE (TODO: figure out what is what)
-        SurfaceProperties surfaceProps;
-        vk::SurfaceFormatKHR surfaceFormat;
-        vk::SurfaceKHR surface;
-        vk::PresentModeKHR mode;
-        vk::SampleCountFlagBits samples;
-        uint32_t imageCount;
-        vk::Extent2D extent;
-
-        // DEPTH
-        vk::Format depthFormat = {};
-
-        // SWAPCHAIN (TODO: figure out what is what)
-        vk::SwapchainKHR swapchain;
-        std::queue<BackBuffer> backBuffers;
-        BackBuffer acquiredBackBuffer;
-        vk::PipelineStageFlags waitDstStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-
-        // DEBUG
-        Debug::Base dbg;
-
-        void createBuffer(const vk::CommandBuffer &cmd, const vk::BufferUsageFlags usage, const vk::DeviceSize size,
-                          const std::string &&name, BufferResource &stgRes, BufferResource &buffRes, const void *data,
-                          const bool mappable = false) const;
     };
 
     constexpr const auto &context() const { return ctx_; }
@@ -218,9 +126,11 @@ class Shell {
     void update(const double elapsed);
     void destroy();
 
-    virtual uint32_t getDesiredVersion() { return VK_API_VERSION_1_2; }
     virtual void setPlatformSpecificExtensions() = 0;
     void cleanup();
+
+    void addInstanceEnabledLayerName(const char *name) { ctx_.instanceEnabledLayerNames.push_back(name); }
+    void addInstanceEnabledExtensionName(const char *name) { ctx_.instanceEnabledExtensionNames.push_back(name); }
 
     void createContext();
     virtual void destroyContext();
@@ -234,10 +144,7 @@ class Shell {
     Game &game_;
     const Game::Settings &settings_;
 
-    std::vector<const char *> instanceLayers_;
-    std::vector<const char *> instanceExtensions_;
-
-    std::vector<ExtensionInfo> deviceExtensionInfo_;
+    std::vector<Context::ExtensionInfo> deviceExtensionInfo_;
 
     std::vector<LayerProperties> layerProps_;
     std::vector<vk::ExtensionProperties> instExtProps_;
@@ -259,30 +166,28 @@ class Shell {
     virtual PFN_vkGetInstanceProcAddr load() = 0;
     virtual vk::Bool32 canPresent(vk::PhysicalDevice phy, uint32_t queueFamily) = 0;
     void initInstance();
-    void initDebugUtilsMessenger();
-    void initPhysicalDev();
+    void initPhysicalDevice();
 
     // called by enumerateInstanceLayerExtensionProperties
-    void enumerateDeviceLayerExtensionProperties(PhysicalDeviceProperties &props, LayerProperties &layerProps);
+    void enumerateDeviceLayerExtensionProperties(Context::PhysicalDeviceProperties &props, LayerProperties &layerProps);
 
     // called by initPhysicalDev
-    void enumeratePhysicalDevs(uint32_t physicalDevCount = 1);
-    void pickPhysicalDev();
+    void enumeratePhysicalDevices(uint32_t physicalDevCount = 1);
+    void pickPhysicalDevice();
 
     // called by pickDevice
-    bool isDevSuitable(const PhysicalDeviceProperties &props, uint32_t &graphicsIndex, uint32_t &presentIndex,
-                       uint32_t &transferIndex, uint32_t &computeIndex);
+    bool isDeviceSuitable(const Context::PhysicalDeviceProperties &props, uint32_t &graphicsIndex, uint32_t &presentIndex,
+                          uint32_t &transferIndex, uint32_t &computeIndex);
 
     // called by isDevSuitable
-    bool determineQueueFamiliesSupport(const PhysicalDeviceProperties &props, uint32_t &graphicsIndex,
+    bool determineQueueFamiliesSupport(const Context::PhysicalDeviceProperties &props, uint32_t &graphicsIndex,
                                        uint32_t &presentIndex, uint32_t &transferIndex, uint32_t &computeIndex);
-    bool determineDeviceExtensionSupport(const PhysicalDeviceProperties &props);
-    void determineDeviceFeatureSupport(const PhysicalDeviceProperties &props);
-    void determineSampleCount(const PhysicalDeviceProperties &props);
+    bool determineDeviceExtensionSupport(const Context::PhysicalDeviceProperties &props);
+    void determineDeviceFeatureSupport(const Context::PhysicalDeviceProperties &props);
+    void determineSampleCount(const Context::PhysicalDeviceProperties &props);
 
     // called by createContext
-    void initDevQueues();
-    void createDev();
+    void initDeviceQueues();
     void createBackBuffers();
     void destroyBackBuffers();
     virtual void createWindow() = 0;
@@ -299,9 +204,6 @@ class Shell {
 
     // called by resizeSwapchain
     bool determineSwapchainExtent(uint32_t widthHint, uint32_t heightHint, bool refreshCapabilities);
-
-    // called by cleanup
-    void destroyInstance();
 
     Context ctx_;
 

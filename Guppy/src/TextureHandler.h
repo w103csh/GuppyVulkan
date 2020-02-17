@@ -39,7 +39,7 @@ class Handler : public Game::Handler {
     inline uint32_t getCount() { return static_cast<uint32_t>(pTextures_.size()); }
 
     // TODO: should these be public? Moved these for render to sampler.
-    void createSampler(const vk::Device& dev, const Sampler::Base& sampler, Sampler::LayerResource& layerResource);
+    void createSampler(const Context& ctx, const Sampler::Base& sampler, Sampler::LayerResource& layerResource);
 
     // TODO: most of these functions should be static
     static void createDescInfo(std::shared_ptr<Texture::Base>& pTexture, const uint32_t layerKey,
@@ -64,7 +64,7 @@ class Handler : public Game::Handler {
     void createImage(Sampler::Base& sampler, std::unique_ptr<LoadingResource>& pLdgRes);
     void createDepthImage(Sampler::Base& sampler, std::unique_ptr<LoadingResource>& pLdgRes);
     void generateMipmaps(Sampler::Base& sampler, std::unique_ptr<LoadingResource>& pLdgRes);
-    void createImageView(const vk::Device& dev, const Sampler::Base& sampler, const uint32_t baseArrayLayer,
+    void createImageView(const Context& ctx, const Sampler::Base& sampler, const uint32_t baseArrayLayer,
                          const uint32_t layerCount, Sampler::LayerResource& layerResource);
 
     std::vector<std::shared_ptr<Texture::Base>> pTextures_;

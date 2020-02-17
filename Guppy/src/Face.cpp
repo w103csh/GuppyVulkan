@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -8,13 +8,12 @@
 #include <glm/gtx/projection.hpp>
 
 #include "Face.h"
-#include "Helpers.h"
 #include "Mesh.h"
 
 Face::Face() : indices_{BAD_VB_INDEX, BAD_VB_INDEX, BAD_VB_INDEX}, meshOffset_(), vertices_() {}
 
-Face::Face(Vertex::Complete va, Vertex::Complete vb, Vertex::Complete vc, VB_INDEX_TYPE ia, VB_INDEX_TYPE ib,
-           VB_INDEX_TYPE ic, size_t meshOffset)
+Face::Face(Vertex::Complete va, Vertex::Complete vb, Vertex::Complete vc, IndexBufferType ia, IndexBufferType ib,
+           IndexBufferType ic, size_t meshOffset)
     : indices_{ia, ib, ic}, meshOffset_(meshOffset), vertices_{va, vb, vc} {}
 
 void Face::calculateNormal() {

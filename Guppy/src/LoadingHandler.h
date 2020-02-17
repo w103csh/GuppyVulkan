@@ -10,9 +10,10 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
+#include <Common/Helpers.h>
+#include <Common/Types.h>
+
 #include "Game.h"
-#include "Helpers.h"
-#include "Types.h"
 
 namespace Loading {
 

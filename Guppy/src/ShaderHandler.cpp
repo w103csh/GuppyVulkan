@@ -38,7 +38,7 @@ void Shader::Handler::reset() {
     // SHADERS
     for (auto& keyValue : infoMap_) {
         if (keyValue.second.second.module)
-            shell().context().dev.destroyShaderModule(keyValue.second.second.module, ALLOC_PLACE_HOLDER);
+            shell().context().dev.destroyShaderModule(keyValue.second.second.module, shell().context().pAllocator);
     }
 
     cleanup();
@@ -80,8 +80,8 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
     stageInfo = vk::PipelineShaderStageCreateInfo{};
     stageInfo.stage = createInfo.stage;
     stageInfo.pName = "main";
-    stageInfo.module = shell().context().dev.createShaderModule(moduleInfo, ALLOC_PLACE_HOLDER);
-    shell().context().dbg.setMarkerName(stageInfo.module, createInfo.name.c_str());
+    stageInfo.module = shell().context().dev.createShaderModule(moduleInfo, shell().context().pAllocator);
+    // shell().context().dbg.setMarkerName(stageInfo.module, createInfo.name.c_str());
 
     return needsUpdate;
 }
@@ -246,6 +246,6 @@ void Shader::Handler::getShaderTypes(const SHADER_LINK& linkType, std::vector<SH
 
 void Shader::Handler::cleanup() {
     for (auto& module : oldModules_)  //
-        shell().context().dev.destroyShaderModule(module, ALLOC_PLACE_HOLDER);
+        shell().context().dev.destroyShaderModule(module, shell().context().pAllocator);
     oldModules_.clear();
 }

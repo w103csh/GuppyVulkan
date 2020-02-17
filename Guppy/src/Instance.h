@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -10,10 +10,11 @@
 #include <memory>
 #include <vector>
 
+#include <Common/Types.h>
+
 #include "BufferItem.h"
 #include "Descriptor.h"
 #include "Obj3d.h"
-#include "Types.h"
 
 // clang-format off
 namespace Obj3d { class Instance; }

@@ -137,7 +137,7 @@ void Pipeline::Handler::reset() {
     pipelineBindDataMap_.clear();
     for (auto& [type, pPipeline] : pPipelines_) pPipeline->destroy();
     // CACHE
-    if (cache_) shell().context().dev.destroyPipelineCache(cache_, ALLOC_PLACE_HOLDER);
+    if (cache_) shell().context().dev.destroyPipelineCache(cache_, shell().context().pAllocator);
 
     maxPushConstantsSize_ = 0;
 }
@@ -251,19 +251,19 @@ void Pipeline::Handler::createPipelineCache(vk::PipelineCache& cache) {
     vk::PipelineCacheCreateInfo createInfo = {};
     createInfo.initialDataSize = 0;
     createInfo.pInitialData = nullptr;
-    cache = shell().context().dev.createPipelineCache(createInfo, ALLOC_PLACE_HOLDER);
+    cache = shell().context().dev.createPipelineCache(createInfo, shell().context().pAllocator);
 }
 
 void Pipeline::Handler::createPipeline(const std::string&& name, vk::GraphicsPipelineCreateInfo& createInfo,
                                        vk::Pipeline& pipeline) {
-    pipeline = shell().context().dev.createGraphicsPipeline(cache_, createInfo, ALLOC_PLACE_HOLDER);
-    shell().context().dbg.setMarkerName(pipeline, name.c_str());
+    pipeline = shell().context().dev.createGraphicsPipeline(cache_, createInfo, shell().context().pAllocator);
+    // shell().context().dbg.setMarkerName(pipeline, name.c_str());
 }
 
 void Pipeline::Handler::createPipeline(const std::string&& name, vk::ComputePipelineCreateInfo& createInfo,
                                        vk::Pipeline& pipeline) {
-    pipeline = shell().context().dev.createComputePipeline(cache_, createInfo, ALLOC_PLACE_HOLDER);
-    shell().context().dbg.setMarkerName(pipeline, name.c_str());
+    pipeline = shell().context().dev.createComputePipeline(cache_, createInfo, shell().context().pAllocator);
+    // shell().context().dbg.setMarkerName(pipeline, name.c_str());
 }
 
 bool Pipeline::Handler::checkVertexPipelineMap(VERTEX key, PIPELINE value) const {
@@ -419,7 +419,7 @@ void Pipeline::Handler::cleanup(int frameIndex) {
     for (uint8_t i = 0; i < oldPipelines_.size(); i++) {
         auto& pair = oldPipelines_[i];
         if (pair.first == frameIndex || frameIndex == -1) {
-            shell().context().dev.destroyPipeline(pair.second, ALLOC_PLACE_HOLDER);
+            shell().context().dev.destroyPipeline(pair.second, shell().context().pAllocator);
             oldPipelines_.erase(oldPipelines_.begin() + i);
         } else if (pair.first == -1) {
             pair.first = static_cast<int>(frameIndex);

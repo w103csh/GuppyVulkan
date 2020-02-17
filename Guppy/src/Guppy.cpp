@@ -93,7 +93,8 @@ Guppy::Guppy(const std::vector<std::string>& args)
     }
 
     // VALIDATION
-    helpers::validatePassTypeStructures();
+    auto it = std::find_first_of(RenderPass::ALL.begin(), RenderPass::ALL.end(), Compute::ALL.begin(), Compute::ALL.end());
+    assert(it == RenderPass::ALL.end());
 
     // init_workers();
 }

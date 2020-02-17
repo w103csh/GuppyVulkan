@@ -5,8 +5,9 @@
 
 #include "Game.h"
 
-#include "Helpers.h"
-#include "Types.h"
+#include <Common/Helpers.h>
+#include <Common/Types.h>
+
 // HANDLERS
 #include "CommandHandler.h"
 #include "ComputeHandler.h"

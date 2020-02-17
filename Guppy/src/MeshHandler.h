@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -10,8 +10,9 @@
 #include <future>
 #include <unordered_set>
 
+#include <Common/Helpers.h>
+
 #include "Game.h"
-#include "Helpers.h"
 #include "Instance.h"
 #include "InstanceManager.h"
 #include "MaterialHandler.h"  // TODO: including this is sketchy

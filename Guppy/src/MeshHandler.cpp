@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -89,7 +89,7 @@ void Mesh::Handler::reset() {
     for (auto& pMesh : texMeshes_) pMesh->destroy();
     texMeshes_.clear();
     // INSTANCE
-    instObj3dMgr_.destroy(shell().context().dev);
+    instObj3dMgr_.destroy(shell().context());
 }
 
 void Mesh::Handler::addOffsetToScene(const MESH type, const Mesh::index offset) {

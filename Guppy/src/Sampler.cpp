@@ -9,7 +9,8 @@
 #include <stb_image.h>
 #include <variant>
 
-#include "Helpers.h"
+#include <Common/Helpers.h>
+
 #include "Shell.h"
 
 namespace {
@@ -226,13 +227,13 @@ void Sampler::Base::copyData(void*& pData, size_t& offset) const {
     }
 }
 
-void Sampler::Base::destroy(const vk::Device& dev) {
+void Sampler::Base::destroy(const Context& ctx) {
     for (auto& [layer, layerResource] : layerResourceMap) {
-        if (layerResource.sampler) dev.destroySampler(layerResource.sampler, ALLOC_PLACE_HOLDER);
-        dev.destroyImageView(layerResource.view, ALLOC_PLACE_HOLDER);
+        if (layerResource.sampler) ctx.dev.destroySampler(layerResource.sampler, ctx.pAllocator);
+        ctx.dev.destroyImageView(layerResource.view, ctx.pAllocator);
     }
-    dev.destroyImage(image, ALLOC_PLACE_HOLDER);
-    dev.freeMemory(memory, ALLOC_PLACE_HOLDER);
+    ctx.dev.destroyImage(image, ctx.pAllocator);
+    ctx.dev.freeMemory(memory, ctx.pAllocator);
 }
 
 // FUNCTIONS

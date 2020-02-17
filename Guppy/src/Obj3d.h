@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -10,7 +10,7 @@
 #include <glm/gtc/matrix_access.hpp>
 #include <vector>
 
-#include "Helpers.h"
+#include "Constants.h"
 #include "Vertex.h"
 
 namespace Obj3d {

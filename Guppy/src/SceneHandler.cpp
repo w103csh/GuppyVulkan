@@ -51,7 +51,7 @@ void Scene::Handler::init() {
     auto& pScene = makeScene(true, makeFaceSelectionMesh);
 
     if (deferred) {
-        Mesh::ArcCreateInfo arcInfo;
+        Mesh::Arc::CreateInfo arcInfo;
         Mesh::AxesCreateInfo axesInfo;
         Mesh::GenericCreateInfo colorInfo;
         Mesh::CreateInfo meshInfo;

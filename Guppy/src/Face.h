@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -11,7 +11,8 @@
 #include <glm/gtc/epsilon.hpp>
 #include <unordered_map>
 
-#include "Helpers.h"
+#include <Common/Helpers.h>
+
 #include "Mesh.h"
 #include "Vertex.h"
 
@@ -20,11 +21,11 @@
     creating more than one mesh based on the vertices, you can smooth vertices and attempt to
     index as many of the vertices as possible.
 */
-using unique_vertices_map_smoothing = std::unordered_multimap<Vertex::Complete, std::pair<size_t, VB_INDEX_TYPE>,
+using unique_vertices_map_smoothing = std::unordered_multimap<Vertex::Complete, std::pair<size_t, IndexBufferType>,
                                                               Vertex::Complete::hash_vertex_complete_smoothing,
                                                               Vertex::Complete::hash_vertex_complete_smoothing>;
 
-using unique_vertices_map_non_smoothing = std::unordered_multimap<Vertex::Complete, std::pair<size_t, VB_INDEX_TYPE>,
+using unique_vertices_map_non_smoothing = std::unordered_multimap<Vertex::Complete, std::pair<size_t, IndexBufferType>,
                                                                   Vertex::Complete::hash_vertex_complete_non_smoothing,
                                                                   Vertex::Complete::hash_vertex_complete_non_smoothing>;
 
@@ -33,8 +34,8 @@ class Face {
     static const uint8_t NUM_VERTICES = 3;
 
     Face();
-    Face(Vertex::Complete va, Vertex::Complete vb, Vertex::Complete vc, VB_INDEX_TYPE ia, VB_INDEX_TYPE ib, VB_INDEX_TYPE ic,
-         size_t meshOffset);
+    Face(Vertex::Complete va, Vertex::Complete vb, Vertex::Complete vc, IndexBufferType ia, IndexBufferType ib,
+         IndexBufferType ic, size_t meshOffset);
 
     constexpr auto &operator[](const uint8_t index) { return vertices_.at(index); }
     constexpr const auto &operator[](const uint8_t index) const { return vertices_.at(index); }
@@ -74,7 +75,7 @@ class Face {
             auto range = vertexMap.equal_range(vertices_[i]);
             if (range.first == range.second) {
                 // New vertex
-                index = static_cast<VB_INDEX_TYPE>(pMeshes[meshOffset]->getVertexCount());
+                index = static_cast<IndexBufferType>(pMeshes[meshOffset]->getVertexCount());
                 vertexMap.insert({{vertices_[i], {meshOffset, index}}});
                 pMeshes[meshOffset]->addVertex(std::move(vertices_[i]));
             } else {
@@ -132,7 +133,7 @@ class Face {
                 // If the vertex is indexed for other meshes but not the current mesh then add
                 // a new value to the vertex map.
                 if (index < 0) {
-                    index = static_cast<VB_INDEX_TYPE>(pMeshes[meshOffset]->getVertexCount());
+                    index = static_cast<IndexBufferType>(pMeshes[meshOffset]->getVertexCount());
                     vertexMap.insert({{vertices_[i], {meshOffset, index}}});
 
                     // this vertex should retain non-normal data (such as texture coords)
@@ -154,7 +155,7 @@ class Face {
     }
 
    private:
-    std::array<VB_INDEX_TYPE, NUM_VERTICES> indices_;
+    std::array<IndexBufferType, NUM_VERTICES> indices_;
     size_t meshOffset_;
     std::array<Vertex::Complete, NUM_VERTICES> vertices_;
 };

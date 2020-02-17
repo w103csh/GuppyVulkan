@@ -15,23 +15,23 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
-#include "Enum.h"
+enum class QUEUE;
 
-enum class PASS : uint32_t;
-enum class GRAPHICS : uint32_t;
-enum class COMPUTE : uint32_t;
-
-using PIPELINE = std::variant<GRAPHICS, COMPUTE>;
+enum class MODEL_FILE_TYPE {
+    //
+    UNKNOWN = 0,
+    OBJ,
+};
 
 using FlagBits = uint32_t;
 // Type for the vertex buffer indices (this is also used in bindIndexBuffer)
 
 // INDEX TYPE
-using VB_INDEX_TYPE = uint32_t;
+using IndexBufferType = uint32_t;
 // This value is dependent on the type set in bindIndexBuffer. There is a list of valid restart values in the
 // specification.
-constexpr VB_INDEX_TYPE VB_INDEX_PRIMITIVE_RESTART = 0xFFFFFFFF;
-constexpr VB_INDEX_TYPE BAD_VB_INDEX = VB_INDEX_PRIMITIVE_RESTART - 1;
+constexpr IndexBufferType VB_INDEX_PRIMITIVE_RESTART = 0xFFFFFFFF;
+constexpr IndexBufferType BAD_VB_INDEX = VB_INDEX_PRIMITIVE_RESTART - 1;
 
 // TODO: make a data structure so this can be const in the handlers.
 template <typename TEnum, typename TType>
@@ -168,20 +168,6 @@ struct BarrierResource {
     }
 };
 
-using DESCRIPTOR = std::variant<  //
-    UNIFORM,                      //
-    UNIFORM_DYNAMIC,              //
-    UNIFORM_TEXEL_BUFFER,         //
-    COMBINED_SAMPLER,             //
-    STORAGE_IMAGE,                //
-    STORAGE_BUFFER,               //
-    STORAGE_BUFFER_DYNAMIC,       //
-    INPUT_ATTACHMENT              //
-    >;
-
-// Why is this a multiset?
-using pipelinePassSet = std::multiset<std::pair<PIPELINE, PASS>>;
-
 struct ImageInfo {
     std::map<uint32_t, vk::DescriptorImageInfo> descInfoMap;
     vk::Image image;
@@ -246,5 +232,20 @@ struct insertion_ordered_unique_keyvalue_list {
     std::vector<TValue> valueList_;
     std::vector<TKey> keyList_;
 };
+
+/**
+ *  Just using a glm::vec4 to represent the equation for a plane:
+ *      Ax + By + Cz + D = 0
+ *  So for now,
+ *      glm::vec4::x = A
+ *      glm::vec4::y = B
+ *      glm::vec4::z = C
+ *      glm::vec4::w = D
+ */
+using plane = glm::vec4;
+
+inline void normalizePlane(plane &plane) { plane /= glm::length(glm::vec3(plane.x, plane.y, plane.z)); }
+
+using frustumPlanes = std::array<plane, 6>;
 
 #endif  //! TYPE_H

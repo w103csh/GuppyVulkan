@@ -10,8 +10,9 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
+#include <Common/Context.h>
+
 #include "ConstantsAll.h"
-#include "Helpers.h"
 
 class Shell;
 
@@ -34,7 +35,7 @@ class Base {
     void copyData(void *&pData, size_t &offset) const;
     inline void cleanup() { pPixels.clear(); }
 
-    void destroy(const vk::Device &dev);
+    void destroy(const Context &ctx);
 
     // TODO: Get rid of all these creation info members
 

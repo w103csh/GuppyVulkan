@@ -92,22 +92,24 @@ void Compute::Handler::getActivePassTypes(std::set<PASS>& types, const PIPELINE&
 }
 
 void Compute::Handler::attachSwapchain() {
+    const auto& ctx = shell().context();
     for (auto& [key, pCompute] : pComputePendingMap_) pCompute->attachSwapchain();
     for (auto& [key, pCompute] : pComputeMap_) pCompute->attachSwapchain();
     // FENCE
     assert(passFences_.empty());
     vk::FenceCreateInfo fenceInfo{vk::FenceCreateFlagBits::eSignaled};
-    passFences_.resize(shell().context().imageCount);
-    for (auto& fence : passFences_) fence = shell().context().dev.createFence(fenceInfo, ALLOC_PLACE_HOLDER);
+    passFences_.resize(ctx.imageCount);
+    for (auto& fence : passFences_) fence = ctx.dev.createFence(fenceInfo, ctx.pAllocator);
 }
 
 void Compute::Handler::detachSwapchain() {
+    const auto& ctx = shell().context();
     for (auto& [key, pCompute] : pComputePendingMap_) pCompute->detachSwapchain();
     for (auto& [key, pCompute] : pComputeMap_) pCompute->detachSwapchain();
     // FENCE
     for (auto& fence : passFences_) {
-        shell().context().dev.waitForFences({fence}, VK_TRUE, UINT64_MAX);
-        shell().context().dev.destroyFence(fence, ALLOC_PLACE_HOLDER);
+        ctx.dev.waitForFences({fence}, VK_TRUE, UINT64_MAX);
+        ctx.dev.destroyFence(fence, ctx.pAllocator);
     }
     passFences_.clear();
 }

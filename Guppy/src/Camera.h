@@ -6,12 +6,14 @@
 #ifndef CAMERA_H
 #define CAMERA_H
 
+#include <array>
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
 
+#include <Common/Helpers.h>
+
 #include "Constants.h"
 #include "BufferItem.h"
-#include "Helpers.h"
 #include "Obj3d.h"
 #include "Uniform.h"
 
@@ -89,10 +91,14 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
     virtual_inline const auto &getMV() const { return data_.view; }
 
     void setAspect(float aspect);
-    void update(const glm::vec3 &pos_dir, const glm::vec3 &look_dir, const uint32_t frameIndex);
+    void update(const glm::vec3 &posDir, const glm::vec3 &lookDir, const uint32_t frameIndex);
+
+    frustumPlanes getFrustumPlanes() const;
+    virtual_inline const auto &getPosition() const { return eye_; }
+    virtual_inline auto getViewRange() const { return viewRange_; }
 
    private:
-    bool updateView(const glm::vec3 &pos_dir, const glm::vec3 &look_dir);
+    bool updateView(const glm::vec3 &posDir, const glm::vec3 &lookDir);
     void update(const uint32_t frameIndex = UINT32_MAX);
 
     // This should be the only way to set the projection data. Also,
@@ -104,9 +110,10 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
 
     // projection
     float aspect_;
-    float far_;
-    float fov_;
     float near_;
+    float far_;
+    float viewRange_;
+    float fov_;
     glm::mat4 proj_;
     // view
     // storing eye & center make the matrix creation faster?

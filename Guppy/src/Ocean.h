@@ -6,12 +6,15 @@
 #ifndef OCEAN_H
 #define OCEAN_H
 
-#include <CDLODQuadTree.h>
 #include <glm/glm.hpp>
 #include <string_view>
 #include <vulkan/vulkan.hpp>
 
+#include <CDLOD/CDLODQuadTree.h>
+#include <CDLOD/CDLODRenderer.h>
+
 #include "ConstantsAll.h"
+#include "DescriptorManager.h"
 #include "HeightFieldFluid.h"
 #include "ParticleBuffer.h"
 #include "Pipeline.h"
@@ -93,10 +96,23 @@ extern const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO;
 }  // namespace Ocean
 }  // namespace Shader
 
+namespace Uniform {
+namespace CDLOD {
+namespace QuadTree {
+using DATA = CDLODRenderer::UniformData;
+class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
+   public:
+    Base(const Buffer::Info&& info, DATA* pData);
+};
+}  // namespace QuadTree
+}  // namespace CDLOD
+
+}  // namespace Uniform
+
 // UNIFORM DYNAMIC
 namespace UniformDynamic {
-namespace Ocean {
 
+namespace Ocean {
 namespace Simulation {
 struct DATA {
     uint32_t nLog2, mLog2;  // log2 of discrete dimensions
@@ -112,8 +128,20 @@ class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA
     void updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) override;
 };
 }  // namespace Simulation
-
 }  // namespace Ocean
+
+namespace CDLOD {
+namespace Grid {
+using DATA = CDLODRendererBatchInfo::UniformDynamicData;
+class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
+   public:
+    Base(const Buffer::Info&& info, DATA* pData, const Buffer::CreateInfo* pCreateInfo);
+    void updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) override;
+};
+using Manager = Descriptor::Manager<Descriptor::Base, Base, std::shared_ptr>;
+}  // namespace Grid
+}  // namespace CDLOD
+
 }  // namespace UniformDynamic
 
 // DESCRIPTOR SET
@@ -206,13 +234,15 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
 
     std::vector<HeightFieldFluid::VertexData> verticesHFF_;
     BufferResource verticesHFFRes_;
-    std::vector<VB_INDEX_TYPE> indicesWF_;
+    std::vector<IndexBufferType> indicesWF_;
     BufferResource indexWFRes_;
 
     SurfaceCreateInfo info_;
 
-    void initQuadTree();
-    CDLODQuadTree quadTree_;
+    // CDLOD
+    void initCDLOD();
+    CDLODQuadTree cdlodQuadTree_;
+    CDLODRenderer cdlodRenderer_;
 };
 
 }  // namespace Ocean

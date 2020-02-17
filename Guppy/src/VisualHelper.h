@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -10,8 +10,9 @@
 #include <memory>
 #include <vector>
 
+#include <Common/Helpers.h>
+
 #include "Axes.h"
-#include "Helpers.h"
 #include "Instance.h"
 
 namespace Mesh {
@@ -19,7 +20,7 @@ class Handler;
 namespace VisualHelper {
 
 class ModelSpace : public Axes {
-    friend class Mesh::Handler; // clang
+    friend class Mesh::Handler;  // clang
 
    protected:
     ModelSpace(Handler& handler, const index&& offset, AxesCreateInfo* pCreateInfo,
@@ -29,7 +30,7 @@ class ModelSpace : public Axes {
 };
 
 class TangentSpace : public Line {
-    friend class Mesh::Handler; // clang
+    friend class Mesh::Handler;  // clang
 
    protected:
     // COLOR

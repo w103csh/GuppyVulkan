@@ -214,7 +214,7 @@ void RenderPass::Handler::createCmds() {
 void RenderPass::Handler::createFences(vk::FenceCreateFlags flags) {
     frameFences_.resize(shell().context().imageCount);
     vk::FenceCreateInfo fenceInfo = {flags};
-    for (auto& fence : frameFences_) fence = shell().context().dev.createFence(fenceInfo, ALLOC_PLACE_HOLDER);
+    for (auto& fence : frameFences_) fence = shell().context().dev.createFence(fenceInfo, shell().context().pAllocator);
 }
 
 const std::unique_ptr<Mesh::Texture>& RenderPass::Handler::getScreenQuad() {
@@ -255,7 +255,7 @@ void RenderPass::Handler::createSwapchainResources() {
         vk::ImageSubresourceRange range = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
 
         helpers::createImageView(ctx.dev, swpchnRes_.images[i], ctx.surfaceFormat.format, vk::ImageViewType::e2D, range,
-                                 swpchnRes_.views[i]);
+                                 swpchnRes_.views[i], shell().context().pAllocator);
 
         // TEXTURE
         auto pTexture = textureHandler().getTexture(SWAPCHAIN_TARGET_ID, i);
@@ -383,7 +383,7 @@ bool RenderPass::Handler::isFinalTargetPass(const std::string& targetId, const P
 
 void RenderPass::Handler::destroySwapchainResources() {
     for (uint32_t i = 0; i < swpchnRes_.views.size(); i++) {
-        shell().context().dev.destroyImageView(swpchnRes_.views[i], ALLOC_PLACE_HOLDER);
+        shell().context().dev.destroyImageView(swpchnRes_.views[i], shell().context().pAllocator);
         // Update swapchain texture status.
         auto pTexture = textureHandler().getTexture(SWAPCHAIN_TARGET_ID, i);
         assert(pTexture);
@@ -410,7 +410,7 @@ void RenderPass::Handler::destroy() {
     }
     cmdList_.clear();
     // FENCE
-    for (auto& fence : frameFences_) shell().context().dev.destroyFence(fence, ALLOC_PLACE_HOLDER);
+    for (auto& fence : frameFences_) shell().context().dev.destroyFence(fence, shell().context().pAllocator);
     frameFences_.clear();
 }
 

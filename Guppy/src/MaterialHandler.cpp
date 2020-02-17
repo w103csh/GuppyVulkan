@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -28,7 +28,7 @@ void Material::Handler::updateTexture(const std::shared_ptr<Texture::Base>& pTex
 }
 
 void Material::Handler::reset() {
-    defMgr_.destroy(shell().context().dev);
-    pbrMgr_.destroy(shell().context().dev);
-    obj3dMgr_.destroy(shell().context().dev);
+    defMgr_.destroy(shell().context());
+    pbrMgr_.destroy(shell().context());
+    obj3dMgr_.destroy(shell().context());
 }

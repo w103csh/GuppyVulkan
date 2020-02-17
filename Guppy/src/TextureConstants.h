@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -10,7 +10,9 @@
 #include <string_view>
 #include <vector>
 
-#include "Types.h"
+#include <Common/Types.h>
+
+#include "Enum.h"
 #include "SamplerConstants.h"
 
 namespace Texture {

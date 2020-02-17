@@ -12,10 +12,11 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
+#include <Common/Helpers.h>
+
 #include "ConstantsAll.h"
 #include "Geometry.h"
 #include "Handlee.h"
-#include "Helpers.h"
 #include "Instance.h"
 #include "Material.h"
 #include "Obj3dDrawInst.h"
@@ -84,10 +85,10 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Obj3d::In
     // INDEX
     uint32_t getFaceCount() const;
     Face getFace(size_t faceIndex);
-    inline void addIndices(std::vector<VB_INDEX_TYPE>& is) {
+    inline void addIndices(std::vector<IndexBufferType>& is) {
         for (auto i : is) indices_.push_back(i);
     }
-    inline void addIndex(VB_INDEX_TYPE index) { indices_.push_back(index); }
+    inline void addIndex(IndexBufferType index) { indices_.push_back(index); }
 
     // FACE
     inline bool isSelectable() { return selectable_; }
@@ -120,7 +121,7 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Obj3d::In
     virtual inline vk::DeviceSize getVertexBufferSize(bool assert = false) const = 0;
 
     // INDEX
-    inline VB_INDEX_TYPE* getIndexData() { return indices_.data(); }
+    inline IndexBufferType* getIndexData() { return indices_.data(); }
     inline uint32_t getIndexCount() const { return static_cast<uint32_t>(indices_.size()); }
     inline vk::DeviceSize getIndexBufferSize(bool assert = false) const {
         vk::DeviceSize bufferSize = sizeof(indices_[0]) * indices_.size();
@@ -145,9 +146,9 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Obj3d::In
     Descriptor::Set::bindDataMap descSetBindDataMap_;
 
     BufferResource vertexRes_;
-    std::vector<VB_INDEX_TYPE> indices_;
+    std::vector<IndexBufferType> indices_;
     BufferResource indexRes_;
-    std::vector<VB_INDEX_TYPE> indicesAdjaceny_;
+    std::vector<IndexBufferType> indicesAdjaceny_;
     BufferResource indexAdjacencyRes_;
     std::unique_ptr<LoadingResource> pLdgRes_;
     std::shared_ptr<Material::Base> pMaterial_;

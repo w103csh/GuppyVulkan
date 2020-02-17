@@ -5,11 +5,12 @@
 // Distributed under the zlib License (see readme.txt)
 //////////////////////////////////////////////////////////////////////
 
-#ifndef CDLOD_QUAD_TREE_H
-#define CDLOD_QUAD_TREE_H
+#ifndef QUAD_TREE_H
+#define QUAD_TREE_H
+
+#include <glm/glm.hpp>
 
 #include "Common.h"
-
 #include "MiniMath.h"
 
 //////////////////////////////////////////////////////////////////////////
@@ -325,4 +326,4 @@ inline CDLODQuadTree::SelectedNode::SelectedNode(const Node* node, int LODLevel,
 }
 //
 
-#endif  // !CDLOD_QUAD_TREE_H
+#endif  // !QUAD_TREE_H

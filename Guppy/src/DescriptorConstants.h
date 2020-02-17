@@ -12,7 +12,8 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
-#include "Types.h"
+#include <Common/Types.h>
+
 #include "UniformConstants.h"
 
 enum class PASS : uint32_t;

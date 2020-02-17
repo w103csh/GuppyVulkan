@@ -11,7 +11,6 @@ set(SOURCE
     Constants.cpp
     Constants.h
     ConstantsAll.h
-    Debug.h
     Enum.h
     EventHandlers.h
     Face.cpp
@@ -29,8 +28,6 @@ set(SOURCE
     Handlee.h
     HeightFieldFluid.cpp
     HeightFieldFluid.h
-    Helpers.cpp
-    Helpers.h
     InputHandler.cpp
     InputHandler.h
     Light.cpp
@@ -69,7 +66,6 @@ set(SOURCE
     StorageConstants.h
     Tessellation.cpp
     Tessellation.h
-    Types.h
     UIHandler.cpp
     UIHandler.h
     Vertex.cpp
@@ -226,6 +222,7 @@ set(LINKS
     ${GLFW_LIBRARIES}
     ${IMGUI_LIB}
     ${CDLOD_LIB}
+    ${COMMON_LIB}
     )
     
 # target includes
@@ -237,7 +234,7 @@ set(INCLUDES
     ${IMGUI_INCLUDE_DIRS}
     )
 
-# message(STATUS "CDLOD_INCLUDE_DIRS: ${CDLOD_INCLUDE_DIRS}")
+# message(STATUS "INCLUDES: ${INCLUDES}")
 # message(STATUS ${CDLOD_LIB})
 
 if(FMOD_FOUND)
@@ -379,10 +376,6 @@ else()
     endif()
 
 endif()
-
-add_definitions(
-    -DVULKAN_HPP_DISPATCH_LOADER_DYNAMIC=1
-    )
 
 set_target_properties(${TARGET_NAME} PROPERTIES
     CXX_STANDARD 17

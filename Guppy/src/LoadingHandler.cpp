@@ -5,6 +5,7 @@
 
 #include "LoadingHandler.h"
 
+#include "Constants.h"
 #include "Shell.h"
 // HANDLERS
 #include "CommandHandler.h"
@@ -56,6 +57,8 @@ std::unique_ptr<LoadingResource> Loading::Handler::createLoadingResources() cons
 }
 
 void Loading::Handler::loadSubmit(std::unique_ptr<LoadingResource> pLdgRes) {
+    const auto& ctx = shell().context();
+
     auto queueFamilyIndices = commandHandler().getUniqueQueueFamilies(true, false, true, false);
     pLdgRes->shouldWait = queueFamilyIndices.size() > 1;
 
@@ -66,12 +69,12 @@ void Loading::Handler::loadSubmit(std::unique_ptr<LoadingResource> pLdgRes) {
     // Fences for cleanup ...
     for (int i = 0; i < queueFamilyIndices.size(); i++) {
         vk::FenceCreateInfo fenceInfo = {};
-        pLdgRes->fences.push_back(shell().context().dev.createFence(fenceInfo, ALLOC_PLACE_HOLDER));
+        pLdgRes->fences.push_back(ctx.dev.createFence(fenceInfo, ctx.pAllocator));
     }
 
     // Semaphore
     vk::SemaphoreCreateInfo semaphoreInfo = {};
-    pLdgRes->semaphore = shell().context().dev.createSemaphore(semaphoreInfo, ALLOC_PLACE_HOLDER);
+    pLdgRes->semaphore = ctx.dev.createSemaphore(semaphoreInfo, ctx.pAllocator);
 
     // Wait stages
     vk::PipelineStageFlags wait_stages[] = {vk::PipelineStageFlagBits::eTransfer};
@@ -118,29 +121,31 @@ void Loading::Handler::getFences(std::vector<vk::Fence>& fences) {
 }
 
 bool Loading::Handler::destroyResource(LoadingResource& resource) const {
+    const auto& ctx = shell().context();
+
     // Check fences for cleanup
     bool ready = true;
-    for (auto& fence : resource.fences) ready &= shell().context().dev.getFenceStatus(fence) == vk::Result::eSuccess;
+    for (auto& fence : resource.fences) ready &= ctx.dev.getFenceStatus(fence) == vk::Result::eSuccess;
 
     if (ready) {
         // Free stating resources
         for (auto& res : resource.stgResources) {
-            shell().context().dev.destroyBuffer(res.buffer, ALLOC_PLACE_HOLDER);
-            shell().context().dev.freeMemory(res.memory, ALLOC_PLACE_HOLDER);
+            ctx.dev.destroyBuffer(res.buffer, ctx.pAllocator);
+            ctx.dev.freeMemory(res.memory, ctx.pAllocator);
         }
         resource.stgResources.clear();
 
         // Free fences
-        for (auto& fence : resource.fences) shell().context().dev.destroyFence(fence, ALLOC_PLACE_HOLDER);
+        for (auto& fence : resource.fences) ctx.dev.destroyFence(fence, ctx.pAllocator);
         resource.fences.clear();
 
         // Free semaphores
-        shell().context().dev.destroySemaphore(resource.semaphore, ALLOC_PLACE_HOLDER);
+        ctx.dev.destroySemaphore(resource.semaphore, ctx.pAllocator);
 
         // Free command buffers
-        shell().context().dev.freeCommandBuffers(commandHandler().graphicsCmdPool(), 1, &resource.graphicsCmd);
+        ctx.dev.freeCommandBuffers(commandHandler().graphicsCmdPool(), 1, &resource.graphicsCmd);
         if (resource.shouldWait) {
-            shell().context().dev.freeCommandBuffers(commandHandler().transferCmdPool(), 1, &resource.transferCmd);
+            ctx.dev.freeCommandBuffers(commandHandler().transferCmdPool(), 1, &resource.transferCmd);
         }
 
         return true;

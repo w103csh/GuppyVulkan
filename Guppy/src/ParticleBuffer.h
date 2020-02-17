@@ -186,7 +186,7 @@ class Base : public NonCopyable, public Handlee<Handler> {
 
     glm::uvec3 workgroupSize_;
 
-    std::vector<VB_INDEX_TYPE> indices_;
+    std::vector<IndexBufferType> indices_;
     BufferResource indexRes_;
     std::vector<Vertex::Color> vertices_;
     BufferResource vertexRes_;

@@ -5,7 +5,8 @@
 
 #include "Compute.h"
 
-#include "Helpers.h"
+#include <Common/Helpers.h>
+
 #include "ScreenSpace.h"
 // HANDLERS
 #include "CommandHandler.h"
@@ -121,12 +122,11 @@ void Compute::Base::createSyncResources() {
     // SEMAPHORE
     vk::SemaphoreCreateInfo createInfo = {};
     if (semaphores_.empty()) semaphores_.resize(ctx.imageCount);
-    for (auto& semaphore : semaphores_)
-        semaphore = handler().shell().context().dev.createSemaphore(createInfo, ALLOC_PLACE_HOLDER);
+    for (auto& semaphore : semaphores_) semaphore = ctx.dev.createSemaphore(createInfo, ctx.pAllocator);
     // FENCE
     if (HAS_FENCE && !fence_) {
         vk::FenceCreateInfo fenceInfo = {vk::FenceCreateFlagBits::eSignaled};
-        fence_ = ctx.dev.createFence(fenceInfo, ALLOC_PLACE_HOLDER);
+        fence_ = ctx.dev.createFence(fenceInfo, ctx.pAllocator);
     }
 }
 
@@ -147,12 +147,12 @@ void Compute::Base::attachSwapchain() {
 }
 
 void Compute::Base::destroySyncResources() {
-    const auto& dev = handler().shell().context().dev;
+    const auto& ctx = handler().shell().context();
     // COMMAND
-    helpers::destroyCommandBuffers(dev, handler().commandHandler().getCmdPool(QUEUE_TYPE), cmds_);
+    helpers::destroyCommandBuffers(ctx.dev, handler().commandHandler().getCmdPool(QUEUE_TYPE), cmds_);
     cmds_.clear();
     // SEMAPHORE
-    for (auto& semaphore : semaphores_) dev.destroySemaphore(semaphore, ALLOC_PLACE_HOLDER);
+    for (auto& semaphore : semaphores_) ctx.dev.destroySemaphore(semaphore, ctx.pAllocator);
     semaphores_.clear();
 }
 
@@ -164,13 +164,13 @@ void Compute::Base::detachSwapchain() {
 }
 
 void Compute::Base::destroy() {
-    const auto& dev = handler().shell().context().dev;
+    const auto& ctx = handler().shell().context();
     // SYNC
     if (!isFramebufferCountDependent_) {
         destroySyncResources();
     }
     // FENCE
-    dev.destroyFence(fence_, ALLOC_PLACE_HOLDER);
+    ctx.dev.destroyFence(fence_, ctx.pAllocator);
 }
 
 // POST-PROCESS

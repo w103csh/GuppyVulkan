@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -9,8 +9,9 @@
 #include <memory>
 #include <vector>
 
+#include <Common/Helpers.h>
+
 #include "ConstantsAll.h"
-#include "Helpers.h"
 #include "Mesh.h"
 #include "Scene.h"
 #include "Game.h"

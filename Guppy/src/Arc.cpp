@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -10,7 +10,7 @@
 
 using namespace Mesh;
 
-Arc::Arc(Handler& handler, const index&& offset, const ArcCreateInfo* pCreateInfo,
+Arc::Arc(Handler& handler, const index&& offset, const CreateInfo* pCreateInfo,
          std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
     : Line(handler, std::forward<const index>(offset), "Arc", pCreateInfo, pInstanceData, pMaterial) {
     // Only doing bezier 4 control point that is tessellated on the gpu atm.

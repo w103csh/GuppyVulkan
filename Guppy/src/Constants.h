@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -8,12 +8,11 @@
 
 #include <glm/glm.hpp>
 #include <map>
+#include <stb_image.h>
 #include <tiny_obj_loader.h>
 #include <utility>
 #include <vector>
 #include <vulkan/vulkan.hpp>
-
-constexpr vk::AllocationCallbacks* ALLOC_PLACE_HOLDER = nullptr;
 
 #define USE_DEBUG_UI
 #define DO_PROJECTOR 0  // Not sure where this should go, or if this is a good solution to the problem.

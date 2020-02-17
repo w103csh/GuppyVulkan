@@ -118,7 +118,7 @@ void Descriptor::Handler::createPool() {
     poolInfo.maxSets = 1000 * poolSizes.size();
     poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
     poolInfo.pPoolSizes = poolSizes.data();
-    pool_ = shell().context().dev.createDescriptorPool(poolInfo, ALLOC_PLACE_HOLDER);
+    pool_ = shell().context().dev.createDescriptorPool(poolInfo, shell().context().pAllocator);
 }
 
 /* OLD POOL LOGIC THAT HAD A BAD ATTEMPT AT AN ALLOCATION STRATEGY
@@ -150,7 +150,7 @@ void Descriptor::Handler::createPool() {
 //    desc_pool_info.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
 //    desc_pool_info.pPoolSizes = poolSizes.data();
 //
-//    pRes->pool = shell().context().dev.createDescriptorPool(desc_pool_info, ALLOC_PLACE_HOLDER);
+//    pRes->pool = shell().context().dev.createDescriptorPool(desc_pool_info, shell().context().pAllocator);
 //}
 
 void Descriptor::Handler::createLayouts() {
@@ -181,9 +181,9 @@ void Descriptor::Handler::createLayouts() {
             createInfo.bindingCount = static_cast<uint32_t>(bindings.size());
             createInfo.pBindings = bindings.data();
 
-            res.layout = shell().context().dev.createDescriptorSetLayout(createInfo, ALLOC_PLACE_HOLDER);
+            res.layout = shell().context().dev.createDescriptorSetLayout(createInfo, shell().context().pAllocator);
             std::string markerName = "";  // TODO: a meaningful name
-            shell().context().dbg.setMarkerName(res.layout, markerName.c_str());
+            // shell().context().dbg.setMarkerName(res.layout, markerName.c_str());
         }
     }
 }
@@ -917,12 +917,13 @@ void Descriptor::Handler::getDynamicOffsets(const std::unique_ptr<Descriptor::Se
 }
 
 void Descriptor::Handler::reset() {
+    const auto& ctx = shell().context();
     // POOL
-    if (pool_) shell().context().dev.destroyDescriptorPool(pool_, ALLOC_PLACE_HOLDER);
+    if (pool_) ctx.dev.destroyDescriptorPool(pool_, ctx.pAllocator);
     // LAYOUT
     for (const auto& pSet : pDescriptorSets_) {
         for (auto& res : pSet->resources_) {
-            if (res.layout) shell().context().dev.destroyDescriptorSetLayout(res.layout, ALLOC_PLACE_HOLDER);
+            if (res.layout) ctx.dev.destroyDescriptorSetLayout(res.layout, ctx.pAllocator);
         }
     }
 }

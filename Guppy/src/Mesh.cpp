@@ -166,7 +166,7 @@ void Mesh::Base::createBufferData(const vk::CommandBuffer& cmd, BufferResource& 
     res.memoryRequirements.size =
         helpers::createBuffer(ctx.dev, bufferSize, vk::BufferUsageFlagBits::eTransferSrc,
                               vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-                              ctx.memProps, stgRes.buffer, stgRes.memory);
+                              ctx.memProps, stgRes.buffer, stgRes.memory, ctx.pAllocator);
 
     // FILL STAGING BUFFER ON DEVICE
     void* pData = ctx.dev.mapMemory(stgRes.memory, 0, res.memoryRequirements.size);
@@ -190,12 +190,12 @@ void Mesh::Base::createBufferData(const vk::CommandBuffer& cmd, BufferResource& 
     if (MAPPABLE) memProps |= vk::MemoryPropertyFlagBits::eHostVisible;
     helpers::createBuffer(ctx.dev, bufferSize,
                           // TODO: probably don't need to check memory requirements again
-                          usage, memProps, ctx.memProps, res.buffer, res.memory);
+                          usage, memProps, ctx.memProps, res.buffer, res.memory, ctx.pAllocator);
 
     // COPY FROM STAGING TO FAST
     helpers::copyBuffer(cmd, stgRes.buffer, res.buffer, res.memoryRequirements.size);
     std::string markerName = NAME + " " + bufferType + " mesh";
-    ctx.dbg.setMarkerName(res.buffer, markerName.c_str());
+    // ctx.dbg.setMarkerName(res.buffer, markerName.c_str());
 }
 
 void Mesh::Base::addVertex(const Face& face) {
@@ -237,15 +237,15 @@ uint32_t Mesh::Base::getFaceCount() const {
 }
 
 Face Mesh::Base::getFace(size_t faceIndex) {
-    VB_INDEX_TYPE idx0 = indices_[faceIndex + 0];
-    VB_INDEX_TYPE idx1 = indices_[faceIndex + 1];
-    VB_INDEX_TYPE idx2 = indices_[faceIndex + 2];
+    IndexBufferType idx0 = indices_[faceIndex + 0];
+    IndexBufferType idx1 = indices_[faceIndex + 1];
+    IndexBufferType idx2 = indices_[faceIndex + 2];
     return {getVertexComplete(idx0), getVertexComplete(idx1), getVertexComplete(idx2), idx0, idx1, idx2, 0};
 }
 
 void Mesh::Base::selectFace(const Ray& ray, float& tMin, Face& face, size_t offset) const {
     bool hit = false;
-    VB_INDEX_TYPE idx0_hit = 0, idx1_hit = 0, idx2_hit = 0;
+    IndexBufferType idx0_hit = 0, idx1_hit = 0, idx2_hit = 0;
 
     // Declare some variables that will be reused
     float a, b, c;
@@ -450,13 +450,9 @@ void Mesh::Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::Bind
 }
 
 void Mesh::Base::destroy() {
-    auto& dev = handler().shell().context().dev;
-    // vertex
-    dev.destroyBuffer(vertexRes_.buffer, ALLOC_PLACE_HOLDER);
-    dev.freeMemory(vertexRes_.memory, ALLOC_PLACE_HOLDER);
-    // index
-    if (indexRes_.buffer) dev.destroyBuffer(indexRes_.buffer, ALLOC_PLACE_HOLDER);
-    if (indexRes_.memory) dev.freeMemory(indexRes_.memory, ALLOC_PLACE_HOLDER);
+    const auto& ctx = handler().shell().context();
+    ctx.destroyBuffer(vertexRes_);
+    ctx.destroyBuffer(indexRes_);
 }
 
 // COLOR

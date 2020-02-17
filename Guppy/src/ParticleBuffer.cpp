@@ -5,7 +5,8 @@
 
 #include "ParticleBuffer.h"
 
-#include "Helpers.h"
+#include <Common/Helpers.h>
+
 #include "Material.h"
 #include "Random.h"
 #include "Torus.h"
@@ -238,7 +239,7 @@ void Base::loadBuffers() {
         stgRes = {};
         ctx.createBuffer(pLdgRes_->transferCmd,
                          vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-                         sizeof(VB_INDEX_TYPE) * indices_.size(), NAME + " index", stgRes, indexRes_, indices_.data());
+                         sizeof(IndexBufferType) * indices_.size(), NAME + " index", stgRes, indexRes_, indices_.data());
         pLdgRes_->stgResources.push_back(std::move(stgRes));
     }
 
@@ -253,19 +254,10 @@ void Base::loadBuffers() {
 }
 
 void Base::destroy() {
-    auto& dev = handler().shell().context().dev;
-    if (vertices_.size()) {
-        dev.destroyBuffer(vertexRes_.buffer, ALLOC_PLACE_HOLDER);
-        dev.freeMemory(vertexRes_.memory, ALLOC_PLACE_HOLDER);
-    }
-    if (indices_.size()) {
-        dev.destroyBuffer(indexRes_.buffer, ALLOC_PLACE_HOLDER);
-        dev.freeMemory(indexRes_.memory, ALLOC_PLACE_HOLDER);
-    }
-    if (texCoords_.size()) {
-        dev.destroyBuffer(texCoordRes_.buffer, ALLOC_PLACE_HOLDER);
-        dev.freeMemory(texCoordRes_.memory, ALLOC_PLACE_HOLDER);
-    }
+    const auto& ctx = handler().shell().context();
+    if (vertices_.size()) ctx.destroyBuffer(vertexRes_);
+    if (indices_.size()) ctx.destroyBuffer(indexRes_);
+    if (texCoords_.size()) ctx.destroyBuffer(texCoordRes_);
 }
 
 const std::vector<Descriptor::Base*> Base::getSDynamicDataItems(const PIPELINE pipelineType) const {

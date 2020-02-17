@@ -10,9 +10,10 @@
 #include <glm/glm.hpp>
 #include <vulkan/vulkan.hpp>
 
+#include <Common/Helpers.h>
+
 #include "BufferItem.h"
 #include "ConstantsAll.h"
-#include "Helpers.h"
 #include "Obj3d.h"
 #include "Uniform.h"
 

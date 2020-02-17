@@ -20,9 +20,9 @@ Texture::Base::Base(const uint32_t&& offset, const CreateInfo* pCreateInfo)
       aspect(BAD_ASPECT),
       pLdgRes(nullptr) {}
 
-void Texture::Base::destroy(const vk::Device& dev) {
+void Texture::Base::destroy(const Context& ctx) {
     for (auto& sampler : samplers) {
-        sampler.destroy(dev);
+        sampler.destroy(ctx);
     }
     status = STATUS::DESTROYED;
 }

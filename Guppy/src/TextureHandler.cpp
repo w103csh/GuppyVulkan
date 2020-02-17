@@ -103,21 +103,21 @@ void Texture::Handler::init() {
 }
 
 void Texture::Handler::reset() {
-    const auto& dev = shell().context().dev;
+    const auto& ctx = shell().context();
     // TEXTURES
     for (auto& pTexture : pTextures_) {
         for (auto& sampler : pTexture->samplers) {
             if (pTexture->status != STATUS::DESTROYED) {
-                sampler.destroy(dev);
+                sampler.destroy(ctx);
             }
         }
     }
     pTextures_.clear();
     // BUFFER VIEWS
     for (auto& bv : bufferViews_) {
-        dev.destroyBufferView(bv.view, ALLOC_PLACE_HOLDER);
-        dev.destroyBuffer(bv.buffRes.buffer, ALLOC_PLACE_HOLDER);
-        dev.freeMemory(bv.buffRes.memory, ALLOC_PLACE_HOLDER);
+        ctx.dev.destroyBufferView(bv.view, ctx.pAllocator);
+        ctx.dev.destroyBuffer(bv.buffRes.buffer, ctx.pAllocator);
+        ctx.dev.freeMemory(bv.buffRes.memory, ctx.pAllocator);
     }
     bufferViews_.clear();
 }
@@ -198,7 +198,7 @@ void Texture::Handler::makeBufferView(const std::string_view& id, const vk::Form
     createInfo.format = format;
     createInfo.range = size;
     createInfo.buffer = bufferViews_.back().buffRes.buffer;
-    bufferViews_.back().view = ctx.dev.createBufferView(createInfo, ALLOC_PLACE_HOLDER);
+    bufferViews_.back().view = ctx.dev.createBufferView(createInfo, ctx.pAllocator);
 
     bufferViews_.back().status = STATUS::READY;
 }
@@ -359,9 +359,9 @@ void Texture::Handler::makeTexture(std::shared_ptr<Texture::Base>& pTexture, Sam
         uint32_t layerCount = (layer == Sampler::IMAGE_ARRAY_LAYERS_ALL) ? sampler.imgCreateInfo.arrayLayers : 1;
         uint32_t baseArrayLayer = (layer == Sampler::IMAGE_ARRAY_LAYERS_ALL) ? 0 : layer;
         // Image view
-        createImageView(shell().context().dev, sampler, baseArrayLayer, layerCount, layerResource);
+        createImageView(shell().context(), sampler, baseArrayLayer, layerCount, layerResource);
         // Sampler (optional)
-        if (layerResource.hasSampler) createSampler(shell().context().dev, sampler, layerResource);
+        if (layerResource.hasSampler) createSampler(shell().context(), sampler, layerResource);
 
         createDescInfo(pTexture, layer, layerResource, sampler);
     }
@@ -390,7 +390,7 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
     }
 
     // Create image
-    sampler.image = shell().context().dev.createImage(sampler.imgCreateInfo, ALLOC_PLACE_HOLDER);
+    sampler.image = shell().context().dev.createImage(sampler.imgCreateInfo, shell().context().pAllocator);
 
     vk::MemoryPropertyFlags memFlags;
     if (sampler.NAME.find("Deferred 2D Array Position/Normal Sampler") != std::string::npos ||
@@ -414,7 +414,8 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
     }
 
     // Allocate memory
-    helpers::createImageMemory(shell().context().dev, shell().context().memProps, memFlags, sampler.image, sampler.memory);
+    helpers::createImageMemory(shell().context().dev, shell().context().memProps, memFlags, sampler.image, sampler.memory,
+                               shell().context().pAllocator);
 
     // If loading data create a staging buffer, and copy/transition the data to the image.
     if (pLdgRes != nullptr) {
@@ -423,7 +424,7 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
         auto memReqsSize =
             helpers::createBuffer(shell().context().dev, memorySize, vk::BufferUsageFlagBits::eTransferSrc,
                                   vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent,
-                                  shell().context().memProps, stgRes.buffer, stgRes.memory);
+                                  shell().context().memProps, stgRes.buffer, stgRes.memory, shell().context().pAllocator);
 
         void* pData = shell().context().dev.mapMemory(stgRes.memory, 0, memReqsSize);
         size_t offset = 0;
@@ -469,11 +470,11 @@ void Texture::Handler::createDepthImage(Sampler::Base& sampler, std::unique_ptr<
     }
 
     // Create image
-    sampler.image = shell().context().dev.createImage(sampler.imgCreateInfo, ALLOC_PLACE_HOLDER);
+    sampler.image = shell().context().dev.createImage(sampler.imgCreateInfo, shell().context().pAllocator);
 
     // Allocate memory
     helpers::createImageMemory(shell().context().dev, shell().context().memProps, vk::MemoryPropertyFlagBits::eDeviceLocal,
-                               sampler.image, sampler.memory);
+                               sampler.image, sampler.memory, shell().context().pAllocator);
 }
 
 void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<LoadingResource>& pLdgRes) {
@@ -562,7 +563,7 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
                                          {}, {}, {}, {barrier});
 }
 
-void Texture::Handler::createImageView(const vk::Device& dev, const Sampler::Base& sampler, const uint32_t baseArrayLayer,
+void Texture::Handler::createImageView(const Context& ctx, const Sampler::Base& sampler, const uint32_t baseArrayLayer,
                                        const uint32_t layerCount, Sampler::LayerResource& layerResource) {
     vk::ImageAspectFlags aspectFlags;
     if (sampler.imgCreateInfo.usage & vk::ImageUsageFlagBits::eDepthStencilAttachment) {
@@ -572,15 +573,15 @@ void Texture::Handler::createImageView(const vk::Device& dev, const Sampler::Bas
         aspectFlags = vk::ImageAspectFlagBits::eColor;
     }
     vk::ImageSubresourceRange range = {aspectFlags, 0, sampler.imgCreateInfo.mipLevels, baseArrayLayer, layerCount};
-    helpers::createImageView(dev, sampler.image, sampler.imgCreateInfo.format, sampler.imageViewType, range,
-                             layerResource.view);
+    helpers::createImageView(ctx.dev, sampler.image, sampler.imgCreateInfo.format, sampler.imageViewType, range,
+                             layerResource.view, ctx.pAllocator);
 }
 
-void Texture::Handler::createSampler(const vk::Device& dev, const Sampler::Base& sampler,
+void Texture::Handler::createSampler(const Context& ctx, const Sampler::Base& sampler,
                                      Sampler::LayerResource& layerResource) {
     vk::SamplerCreateInfo samplerInfo = Sampler::GetVulkanSamplerCreateInfo(sampler);
-    layerResource.sampler = dev.createSampler(samplerInfo, ALLOC_PLACE_HOLDER);
-    shell().context().dbg.setMarkerName(layerResource.sampler, (sampler.NAME + " sampler").c_str());
+    layerResource.sampler = ctx.dev.createSampler(samplerInfo, ctx.pAllocator);
+    // shell().context().dbg.setMarkerName(layerResource.sampler, (sampler.NAME + " sampler").c_str());
 }
 
 void Texture::Handler::createDescInfo(std::shared_ptr<Texture::Base>& pTexture, const uint32_t layerKey,
@@ -658,7 +659,7 @@ void Texture::Handler::detachSwapchain() {
         if (pTexture->usesSwapchain) {
             for (auto& sampler : pTexture->samplers) {
                 if (sampler.swpchnInfo.usesSwapchain()) {
-                    pTexture->destroy(shell().context().dev);
+                    pTexture->destroy(shell().context());
                 }
             }
         }

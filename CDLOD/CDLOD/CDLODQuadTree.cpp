@@ -7,8 +7,6 @@
 
 #include "CDLODQuadTree.h"
 
-#include <algorithm>
-
 CDLODQuadTree::CDLODQuadTree() {
     m_allNodesBuffer = NULL;
     m_topLevelNodes = NULL;
@@ -134,15 +132,15 @@ void CDLODQuadTree::Node::Create(int x, int y, int size, int level, const Create
             float *pBLZ = (float *)&this->SubBL;
             float *pBRZ = (float *)&this->SubBR;
 
-            int _limitX = (std::min)(rasterSizeX - 1, x + size);
-            int _limitY = (std::min)(rasterSizeY - 1, y + size);
+            limitX = (std::min)(rasterSizeX - 1, x + size);
+            limitY = (std::min)(rasterSizeY - 1, y + size);
             *pTLZ = createDesc.MapDims.MinZ + createDesc.pHeightmap->GetHeightAt(x, y) * createDesc.MapDims.SizeZ / 65535.0f;
             *pTRZ = createDesc.MapDims.MinZ +
-                    createDesc.pHeightmap->GetHeightAt(_limitX, y) * createDesc.MapDims.SizeZ / 65535.0f;
+                    createDesc.pHeightmap->GetHeightAt(limitX, y) * createDesc.MapDims.SizeZ / 65535.0f;
             *pBLZ = createDesc.MapDims.MinZ +
-                    createDesc.pHeightmap->GetHeightAt(x, _limitY) * createDesc.MapDims.SizeZ / 65535.0f;
+                    createDesc.pHeightmap->GetHeightAt(x, limitY) * createDesc.MapDims.SizeZ / 65535.0f;
             *pBRZ = createDesc.MapDims.MinZ +
-                    createDesc.pHeightmap->GetHeightAt(_limitX, _limitY) * createDesc.MapDims.SizeZ / 65535.0f;
+                    createDesc.pHeightmap->GetHeightAt(limitX, limitY) * createDesc.MapDims.SizeZ / 65535.0f;
         }
     } else {
         int subSize = size / 2;
@@ -185,10 +183,10 @@ void CDLODQuadTree::Node::Create(int x, int y, int size, int level, const Create
 }
 
 void CDLODQuadTree::Node::DebugDrawAABB(unsigned int penColor, const CDLODQuadTree &quadTree) const {
+    assert(false);
     AABB boundingBox;
     GetAABB(boundingBox, quadTree.m_rasterSizeX, quadTree.m_rasterSizeY, quadTree.m_desc.MapDims);
-    assert(false);
-    // GetCanvas3D()->DrawBox(boundingBox.Min, boundingBox.Max, penColor);  // *****
+    // GetCanvas3D()->DrawBox(boundingBox.Min, boundingBox.Max, penColor);
 }
 
 CDLODQuadTree::Node::LODSelectResult CDLODQuadTree::Node::LODSelect(LODSelectInfo &lodSelectInfo,
@@ -257,8 +255,7 @@ CDLODQuadTree::Node::LODSelectResult CDLODQuadTree::Node::LODSelect(LODSelectInf
             if (maxDistFromCam > morphStartRange) {
                 lodSelectInfo.SelectionObj->m_visDistTooSmall = true;
 #ifdef _DEBUG
-                assert(false);
-                // GetCanvas3D()->DrawBox(boundingBox.Min, boundingBox.Max, 0xFFFF0000, 0x40FF0000);  // *****
+                // GetCanvas3D()->DrawBox(boundingBox.Min, boundingBox.Max, 0xFFFF0000, 0x40FF0000);
 #endif
             }
         }
@@ -590,7 +587,7 @@ bool CDLODQuadTree::Node::IntersectRay(const glm::vec3 &rayOrigin, const glm::ve
     FillSubNodes(subNodes, subNodeCount);
 
     float closestHitDist = FLT_MAX;
-    glm::vec3 closestHit;
+    glm::vec3 closestHit = {};
 
     for (int i = 0; i < subNodeCount; i++) {
         glm::vec3 hit;
@@ -606,8 +603,7 @@ bool CDLODQuadTree::Node::IntersectRay(const glm::vec3 &rayOrigin, const glm::ve
     }
 
     if (closestHitDist != FLT_MAX) {
-        assert(false);
-        // hitPoint = closestHit;  // *****
+        hitPoint = closestHit;
 
         // glm::vec3 vz( 0.5f, 0.5f, 200.0f );
         // GetCanvas3D()->DrawBox( hitPoint, hitPoint + vz, 0xFF000000, 0x8000FF00 );
@@ -621,7 +617,7 @@ bool CDLODQuadTree::Node::IntersectRay(const glm::vec3 &rayOrigin, const glm::ve
 bool CDLODQuadTree::IntersectRay(const glm::vec3 &rayOrigin, const glm::vec3 &rayDirection, float maxDistance,
                                  glm::vec3 &hitPoint) const {
     float closestHitDist = FLT_MAX;
-    glm::vec3 closestHit;
+    glm::vec3 closestHit = {};
 
     for (int y = 0; y < m_topNodeCountY; y++)
         for (int x = 0; x < m_topNodeCountX; x++) {
@@ -638,7 +634,7 @@ bool CDLODQuadTree::IntersectRay(const glm::vec3 &rayOrigin, const glm::vec3 &ra
         }
 
     if (closestHitDist != FLT_MAX) {
-        // hitPoint = closestHit;  // *****
+        hitPoint = closestHit;
         return true;
     }
 

@@ -16,7 +16,8 @@
 #include <utility>
 #include <vulkan/vulkan.hpp>
 
-#include "Helpers.h"
+#include <Common/Helpers.h>
+
 #include "Shell.h"
 
 void glfw_error_callback(int error, const char* description);
@@ -173,7 +174,7 @@ class ShellGLFW : public TShell {
         uint32_t extensions_count = 0;
         const char** extensions = glfwGetRequiredInstanceExtensions(&extensions_count);
 
-        for (uint32_t i = 0; i < extensions_count; i++) TShell::instanceExtensions_.push_back(extensions[i]);
+        for (uint32_t i = 0; i < extensions_count; i++) TShell::addInstanceEnabledExtensionName(extensions[i]);
 
         TShell::setPlatformSpecificExtensions();
     }

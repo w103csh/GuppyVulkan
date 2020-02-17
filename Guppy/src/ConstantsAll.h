@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  *
  *  This is really like a PCH file. I should make one.
@@ -11,9 +11,7 @@
 #ifndef CONSTANTS_ALL_H
 #define CONSTANTS_ALL_H
 
-#include "Constants.h"
-#include "Enum.h"
-#include "Types.h"
+#include <Common/Types.h>
 
 #include "DescriptorConstants.h"
 #include "MeshConstants.h"

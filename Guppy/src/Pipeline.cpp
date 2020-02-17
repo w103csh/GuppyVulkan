@@ -8,6 +8,8 @@
 #include <algorithm>
 #include <variant>
 
+#include <Common/Helpers.h>
+
 #include "ConstantsAll.h"
 #include "Instance.h"
 #include "Vertex.h"
@@ -209,6 +211,7 @@ std::shared_ptr<Pipeline::BindData> Pipeline::Base::makeBindData(const vk::Pipel
 }
 
 void Pipeline::Base::makePipelineLayouts() {
+    const auto& ctx = handler().shell().context();
     // TODO: destroy layouts if they already exist
 
     prepareDescriptorSetInfo();
@@ -223,9 +226,8 @@ void Pipeline::Base::makePipelineLayouts() {
         layoutInfo.setLayoutCount = static_cast<uint32_t>(keyValue.second.descSetLayouts.size());
         layoutInfo.pSetLayouts = keyValue.second.descSetLayouts.data();
 
-        keyValue.second.pipelineLayout =
-            handler().shell().context().dev.createPipelineLayout(layoutInfo, ALLOC_PLACE_HOLDER);
-        handler().shell().context().dbg.setMarkerName(keyValue.second.pipelineLayout, NAME.c_str());
+        keyValue.second.pipelineLayout = ctx.dev.createPipelineLayout(layoutInfo, ctx.pAllocator);
+        // ctx.dbg.setMarkerName(keyValue.second.pipelineLayout, NAME.c_str());
     }
 }
 
@@ -301,15 +303,15 @@ void Pipeline::Base::replaceShaderType(const SHADER type, const SHADER replaceWi
 }
 
 void Pipeline::Base::destroy() {
-    const auto& dev = handler().shell().context().dev;
+    const auto& ctx = handler().shell().context();
     for (const auto& [passTypes, bindData] : bindDataMap_) {
         if (bindData->pipeline)  //
-            dev.destroyPipeline(bindData->pipeline, ALLOC_PLACE_HOLDER);
+            ctx.dev.destroyPipeline(bindData->pipeline, ctx.pAllocator);
     }
     bindDataMap_.clear();
     for (auto& [passTypes, layouts] : layoutsMap_) {
         if (layouts.pipelineLayout)  //
-            dev.destroyPipelineLayout(layouts.pipelineLayout, ALLOC_PLACE_HOLDER);
+            ctx.dev.destroyPipelineLayout(layouts.pipelineLayout, ctx.pAllocator);
     }
     layoutsMap_.clear();
 }

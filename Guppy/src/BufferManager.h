@@ -15,8 +15,10 @@
 #include <iostream>
 #endif
 
+#include <Common/Context.h>
+#include <Common/Helpers.h>
+
 #include "BufferItem.h"
-#include "Helpers.h"
 #include "Shell.h"
 
 namespace Buffer {
@@ -103,8 +105,8 @@ class Base {
     const vk::SharingMode MODE;
     const vk::BufferCreateFlags FLAGS;
 
-    virtual void init(const Shell::Context &ctx, std::vector<uint32_t> queueFamilyIndices = {}) {
-        reset(ctx.dev);
+    virtual void init(const Context &ctx, std::vector<uint32_t> queueFamilyIndices = {}) {
+        reset(ctx);
         queueFamilyIndices_ = queueFamilyIndices;
         createBuffer(ctx);
     }
@@ -144,8 +146,8 @@ class Base {
 
     TDerived &getTypedItem(const uint32_t &index) { return std::ref(*(TDerived *)(pItems.at(index).get())); }
 
-    void destroy(const vk::Device &dev) {
-        reset(dev);
+    void destroy(const Context &ctx) {
+        reset(ctx);
         pItems.clear();
     }
 
@@ -214,15 +216,15 @@ class Base {
         }
     }
 
-    void reset(const vk::Device &dev) {
+    void reset(const Context &ctx) {
         for (auto &resource : resources_) {
-            if (KEEP_MAPPED) dev.unmapMemory(resource.memory);
-            dev.destroyBuffer(resource.buffer, ALLOC_PLACE_HOLDER);
-            dev.freeMemory(resource.memory, ALLOC_PLACE_HOLDER);
+            if (KEEP_MAPPED) ctx.dev.unmapMemory(resource.memory);
+            ctx.dev.destroyBuffer(resource.buffer, ctx.pAllocator);
+            ctx.dev.freeMemory(resource.memory, ctx.pAllocator);
         }
     }
 
-    void createBuffer(const Shell::Context &ctx) {
+    void createBuffer(const Context &ctx) {
         resources_.push_back({MAX_SIZE, alignment_});
         auto &resource = resources_.back();
 
@@ -237,7 +239,7 @@ class Base {
         createInfo.sharingMode = vk::SharingMode::eExclusive;
         createInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices_.size());
         createInfo.pQueueFamilyIndices = queueFamilyIndices_.data();
-        resource.buffer = ctx.dev.createBuffer(createInfo, ALLOC_PLACE_HOLDER);
+        resource.buffer = ctx.dev.createBuffer(createInfo, ctx.pAllocator);
 
         // ALLOCATE DEVICE MEMORY
         resource.memoryRequirements = ctx.dev.getBufferMemoryRequirements(resource.buffer);
@@ -251,7 +253,7 @@ class Base {
                                            &allocInfo.memoryTypeIndex);
         assert(pass && "No mappable, coherent memory");
 
-        resource.memory = ctx.dev.allocateMemory(allocInfo, ALLOC_PLACE_HOLDER);
+        resource.memory = ctx.dev.allocateMemory(allocInfo, ctx.pAllocator);
 
         // MAP MEMORY
 
@@ -271,7 +273,7 @@ class Base {
 
         ctx.dev.bindBufferMemory(resource.buffer, resource.memory, 0);
         std::string markerName = NAME + " block (" + std::to_string(resources_.size()) + ")";
-        ctx.dbg.setMarkerName(resource.buffer, markerName.c_str());
+        // ctx.dbg.setMarkerName(resource.buffer, markerName.c_str());
         // ctx.dbg.setMarkerTag(resource.buffer, markerName.c_str(), tag);
     }
 

@@ -595,7 +595,8 @@ void Base::createFramebuffers() {
         createInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
         createInfo.pAttachments = attachmentViews.data();
 
-        data.framebuffers[frameIndex] = handler().shell().context().dev.createFramebuffer(createInfo, ALLOC_PLACE_HOLDER);
+        data.framebuffers[frameIndex] =
+            handler().shell().context().dev.createFramebuffer(createInfo, handler().shell().context().pAllocator);
     }
 }
 

@@ -12,8 +12,9 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
+#include <Common/Types.h>
+
 #include "Constants.h"
-#include "Types.h"
 
 using stbi_uc = unsigned char;  // <stbi_image.h>
 

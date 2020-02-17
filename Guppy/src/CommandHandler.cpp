@@ -5,9 +5,11 @@
 
 #include <algorithm>
 
+#include <Common/Helpers.h>
+
 #include "CommandHandler.h"
 
-#include "Helpers.h"
+#include "Constants.h"
 #include "Shell.h"
 
 Command::Handler::Handler(Game* pGame) : Game::Handler(pGame) {}
@@ -38,7 +40,7 @@ void Command::Handler::reset() {
             shell().context().dev.freeCommandBuffers(pools_.at(queueFamilyIndex), cmds_.at(queueFamilyIndex));
         // pools
         if (pools_.count(queueFamilyIndex))
-            shell().context().dev.destroyCommandPool(pools_.at(queueFamilyIndex), ALLOC_PLACE_HOLDER);
+            shell().context().dev.destroyCommandPool(pools_.at(queueFamilyIndex), shell().context().pAllocator);
     }
     cmds_.clear();
     pools_.clear();
@@ -49,7 +51,7 @@ void Command::Handler::createCmdPool(const uint32_t queueFamilyIndex, vk::Comman
         vk::CommandPoolCreateFlagBits::eResetCommandBuffer,
         queueFamilyIndex,
     };
-    cmdPool = shell().context().dev.createCommandPool(cmdPoolInfo, ALLOC_PLACE_HOLDER);
+    cmdPool = shell().context().dev.createCommandPool(cmdPoolInfo, shell().context().pAllocator);
 }
 
 void Command::Handler::createCmdBuffers(const vk::CommandPool& pool, vk::CommandBuffer* pCommandBuffers,

@@ -26,9 +26,10 @@
 #include <tchar.h>
 #include <windowsx.h>
 
+#include <Common/Helpers.h>
+
 #include "ConstantsAll.h"
 #include "Game.h"
-#include "Helpers.h"
 #include "ShellWin32.h"
 // HANLDERS
 #include "InputHandler.h"
@@ -83,7 +84,7 @@ ShellWin32::~ShellWin32() {
     FreeLibrary(hmodule_);
 }
 
-void ShellWin32::setPlatformSpecificExtensions() { instanceExtensions_.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME); }
+void ShellWin32::setPlatformSpecificExtensions() { addInstanceEnabledExtensionName(VK_KHR_WIN32_SURFACE_EXTENSION_NAME); }
 
 void ShellWin32::createWindow() {
     const std::string class_name(settings_.name + "WindowClass");
@@ -146,7 +147,7 @@ vk::SurfaceKHR ShellWin32::createSurface(vk::Instance instance) {
     surfaceInfo.hinstance = hinstance_;
     surfaceInfo.hwnd = hwnd_;
 
-    return instance.createWin32SurfaceKHR(surfaceInfo, ALLOC_PLACE_HOLDER);
+    return instance.createWin32SurfaceKHR(surfaceInfo, context().pAllocator);
 }
 
 LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {

@@ -10,8 +10,9 @@
 #include <imgui_impl_vulkan.h>
 #include <glm/glm.hpp>
 
+#include <Common/Helpers.h>
+
 #include "Face.h"
-#include "Helpers.h"
 #include "HeightFieldFluid.h"
 // HANDLERS
 #include "CommandHandler.h"

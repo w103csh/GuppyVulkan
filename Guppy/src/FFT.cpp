@@ -10,7 +10,7 @@
 #include <string>
 #include <vulkan/vulkan.hpp>
 
-#include "Helpers.h"
+#include <Common/Helpers.h>
 
 std::vector<int16_t> FFT::MakeBitReversalOffsets(const uint32_t N) {
     assert(N < INT16_MAX && helpers::isPowerOfTwo(N));

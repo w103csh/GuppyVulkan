@@ -12,8 +12,8 @@
 #include <glm/gtx/hash.hpp>
 #include <vector>
 
-#include "Helpers.h"
-#include "Types.h"
+#include <Common/Helpers.h>
+#include <Common/Types.h>
 
 namespace Vertex {
 

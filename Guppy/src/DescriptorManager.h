@@ -11,6 +11,8 @@
 #include <variant>
 #include <vulkan/vulkan.hpp>
 
+#include <Common/Context.h>
+
 #include "ConstantsAll.h"
 #include "BufferManager.h"
 
@@ -39,7 +41,7 @@ class Manager : public Buffer::Manager::Base<TBase, TDerived, TSmartPointer> {
     const DESCRIPTOR DESCRIPTOR_TYPE;
     const std::string MACRO_NAME;
 
-    void init(const Shell::Context &ctx, std::vector<uint32_t> queueFamilyIndices = {}) override {
+    void init(const Context &ctx, std::vector<uint32_t> queueFamilyIndices = {}) override {
         // TODO: dump the alignment padding here so you can see how bad it is...
         const auto &minAlignment =
             ctx.physicalDevProps[ctx.physicalDevIndex].properties.limits.minUniformBufferOffsetAlignment;

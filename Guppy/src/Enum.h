@@ -6,6 +6,8 @@
 #ifndef ENUM_H
 #define ENUM_H
 
+#include <variant>
+
 enum class GAME_KEY {
     // VIRTUAL KEYS
     KEY_SHUTDOWN,
@@ -86,12 +88,6 @@ typedef enum GAME_BUTTON : GameButtonBits {
     Y               = 0x8000,
 } GAME_BUTTON;
 // clang-format on
-
-enum class MODEL_FILE_TYPE {
-    //
-    UNKNOWN = 0,
-    OBJ,
-};
 
 // clang-format off
 typedef enum STATUS {
@@ -224,6 +220,7 @@ enum class UNIFORM {
     SCREEN_SPACE_DEFAULT,
     DEFERRED_SSAO,
     SHADOW_DATA,
+    CDLOD_QUAD_TREE,
     // TESSELLATION
     TESS_DEFAULT,
     // GEOMETRY
@@ -246,6 +243,7 @@ enum class UNIFORM_DYNAMIC {
     //
     MATRIX_4,
     TESS_PHONG,
+    CDLOD_GRID,
     // WATER
     HFF,
     OCEAN,
@@ -280,5 +278,104 @@ enum class SCENE {
     DEFAULT,
     DEFERRED,
 };
+
+enum class GRAPHICS : uint32_t {
+    // DEFAULT
+    TRI_LIST_COLOR = 0,
+    LINE,
+    POINT,
+    TRI_LIST_TEX,
+    CUBE,
+    CUBE_MAP_COLOR,
+    CUBE_MAP_LINE,
+    CUBE_MAP_PT,
+    CUBE_MAP_TEX,
+    // PBR
+    PBR_COLOR,
+    PBR_TEX,
+    // BLINN PHONG
+    BP_TEX_CULL_NONE,
+    // PARALLAX
+    PARALLAX_SIMPLE,
+    PARALLAX_STEEP,
+    // SCREEN SPACE
+    SCREEN_SPACE_DEFAULT,
+    SCREEN_SPACE_HDR_LOG,
+    SCREEN_SPACE_BRIGHT,
+    SCREEN_SPACE_BLUR_A,
+    SCREEN_SPACE_BLUR_B,
+    // DEFERRED
+    DEFERRED_MRT_TEX,
+    DEFERRED_MRT_COLOR,
+    DEFERRED_MRT_WF_COLOR,
+    DEFERRED_MRT_PT,
+    DEFERRED_MRT_LINE,
+    DEFERRED_MRT_COLOR_RFL_RFR,
+    DEFERRED_MRT_SKYBOX,
+    DEFERRED_SSAO,
+    DEFERRED_COMBINE,
+    // SHADOW
+    SHADOW_COLOR,
+    SHADOW_TEX,
+    // TESSELLATION
+    TESS_BEZIER_4_DEFERRED,
+    TESS_PHONG_TRI_COLOR_WF_DEFERRED,
+    TESS_PHONG_TRI_COLOR_DEFERRED,
+    // GEOMETRY
+    GEOMETRY_SILHOUETTE_DEFERRED,
+    // PARTICLE
+    PRTCL_WAVE_DEFERRED,
+    PRTCL_FOUNTAIN_DEFERRED,
+    PRTCL_FOUNTAIN_EULER_DEFERRED,
+    PRTCL_SHDW_FOUNTAIN_EULER,
+    PRTCL_ATTR_PT_DEFERRED,
+    PRTCL_CLOTH_DEFERRED,
+    // HEIGHT FLUID FIELD
+    HFF_CLMN_DEFERRED,
+    HFF_WF_DEFERRED,
+    HFF_OCEAN_DEFERRED,
+    // OCEAN
+    OCEAN_WF_DEFERRED,
+    OCEAN_SURFACE_DEFERRED,
+    // Used to indicate bad data, and "all" in uniform offsets
+    ALL_ENUM = UINT32_MAX,
+    // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in PipelineConstants.cpp
+};
+
+enum class COMPUTE : uint32_t {
+    // SCREEN SPACE
+    SCREEN_SPACE_DEFAULT,
+    // PARTICLE
+    PRTCL_EULER,
+    PRTCL_ATTR,
+    PRTCL_CLOTH,
+    PRTCL_CLOTH_NORM,
+    // HEIGHT FLUID FIELD
+    HFF_HGHT,
+    HFF_NORM,
+    // FFT
+    FFT_ONE,
+    // OCEAN
+    OCEAN_DISP,
+    OCEAN_FFT,
+    // Used to indicate bad data, and "all" in uniform offsets
+    ALL_ENUM = UINT32_MAX,
+    // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in PipelineConstants.cpp
+};
+
+// VARIANTS
+
+using PIPELINE = std::variant<GRAPHICS, COMPUTE>;
+
+using DESCRIPTOR = std::variant<  //
+    UNIFORM,                      //
+    UNIFORM_DYNAMIC,              //
+    UNIFORM_TEXEL_BUFFER,         //
+    COMBINED_SAMPLER,             //
+    STORAGE_IMAGE,                //
+    STORAGE_BUFFER,               //
+    STORAGE_BUFFER_DYNAMIC,       //
+    INPUT_ATTACHMENT              //
+    >;
 
 #endif  // !ENUM_H

@@ -178,7 +178,7 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
 
     std::vector<VertexData> verticesHFF_;
     BufferResource verticesHFFRes_;
-    std::vector<VB_INDEX_TYPE> indicesWF_;
+    std::vector<IndexBufferType> indicesWF_;
     BufferResource indexWFRes_;
 };
 

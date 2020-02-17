@@ -1,5 +1,5 @@
 /*
- * Modifications copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Modifications copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  * Changed file name from "Hologram.h"
  * -------------------------------
@@ -23,8 +23,9 @@
 
 #include <vector>
 
+#include <Common/Helpers.h>
+
 #include "Game.h"
-#include "Helpers.h"
 #include "RenderPass.h"
 
 class Base;

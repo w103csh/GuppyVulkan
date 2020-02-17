@@ -1,11 +1,13 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
 #include "InputHandler.h"
 
-#include "Helpers.h"
+#include <sstream>
+
+#include "Constants.h"
 
 /* All of this old input code needs an update (everything other than XInput). I wrote it when I
  *  barely knew C++. I am going to hold off on any major abstractions of the input until I have

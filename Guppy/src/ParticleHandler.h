@@ -10,6 +10,8 @@
 #include <unordered_set>
 #include <vector>
 
+#include <Common/Types.h>
+
 #include "ConstantsAll.h"
 #include "Cloth.h"
 #include "Descriptor.h"
@@ -22,7 +24,6 @@
 #include "Ocean.h"
 #include "ParticleBuffer.h"
 #include "Storage.h"
-#include "Types.h"
 #include "Uniform.h"
 
 namespace Particle {

@@ -5,8 +5,9 @@
 
 #include "RenderPass.h"
 
+#include <Common/Helpers.h>
+
 #include "Descriptor.h"
-#include "Helpers.h"
 #include "Shell.h"
 // HANDLERS
 #include "CommandHandler.h"
@@ -299,9 +300,9 @@ void RenderPass::Base::createPass() {
     createInfo.dependencyCount = static_cast<uint32_t>(resources_.dependencies.size());
     createInfo.pDependencies = resources_.dependencies.data();
 
-    pass = handler().shell().context().dev.createRenderPass(createInfo, ALLOC_PLACE_HOLDER);
+    pass = handler().shell().context().dev.createRenderPass(createInfo, handler().shell().context().pAllocator);
     assert(pass);
-    handler().shell().context().dbg.setMarkerName(pass, NAME.c_str());
+    // handler().shell().context().dbg.setMarkerName(pass, NAME.c_str());
 }
 
 void RenderPass::Base::createBeginInfo() {
@@ -502,10 +503,11 @@ void RenderPass::Base::createImageResources() {
                              pipelineData_.samples, format_, vk::ImageTiling::eOptimal,
                              vk::ImageUsageFlagBits::eTransientAttachment | vk::ImageUsageFlagBits::eColorAttachment,
                              vk::MemoryPropertyFlagBits::eDeviceLocal, extent_.width, extent_.height, 1, 1,
-                             images_.back().image, images_.back().memory);
+                             images_.back().image, images_.back().memory, ctx.pAllocator);
 
         vk::ImageSubresourceRange range = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
-        helpers::createImageView(ctx.dev, images_.back().image, format_, vk::ImageViewType::e2D, range, images_.back().view);
+        helpers::createImageView(ctx.dev, images_.back().image, format_, vk::ImageViewType::e2D, range, images_.back().view,
+                                 ctx.pAllocator);
     } else {
         assert(resources_.resolveAttachments.size() == 0 && "Make sure multi-sampling attachment reference was not added");
     }
@@ -527,10 +529,11 @@ void RenderPass::Base::createDepthResource() {
             throw std::runtime_error(("depth format unsupported"));
         }
 
-        helpers::createImage(
-            ctx.dev, ctx.memProps, handler().commandHandler().getUniqueQueueFamilies(true, false, true, false),
-            pipelineData_.samples, depthFormat_, tiling, vk::ImageUsageFlagBits::eDepthStencilAttachment,
-            vk::MemoryPropertyFlagBits::eDeviceLocal, extent_.width, extent_.height, 1, 1, depth_.image, depth_.memory);
+        helpers::createImage(ctx.dev, ctx.memProps,
+                             handler().commandHandler().getUniqueQueueFamilies(true, false, true, false),
+                             pipelineData_.samples, depthFormat_, tiling, vk::ImageUsageFlagBits::eDepthStencilAttachment,
+                             vk::MemoryPropertyFlagBits::eDeviceLocal, extent_.width, extent_.height, 1, 1, depth_.image,
+                             depth_.memory, ctx.pAllocator);
 
         vk::ImageAspectFlags aspectFlags = vk::ImageAspectFlagBits::eDepth;
         if (helpers::hasStencilComponent(depthFormat_)) {
@@ -538,7 +541,8 @@ void RenderPass::Base::createDepthResource() {
         }
 
         vk::ImageSubresourceRange range = {aspectFlags, 0, 1, 0, 1};
-        helpers::createImageView(ctx.dev, depth_.image, depthFormat_, vk::ImageViewType::e2D, range, depth_.view);
+        helpers::createImageView(ctx.dev, depth_.image, depthFormat_, vk::ImageViewType::e2D, range, depth_.view,
+                                 ctx.pAllocator);
     }
 }
 
@@ -622,7 +626,8 @@ void RenderPass::Base::createFramebuffers() {
         createInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
         createInfo.pAttachments = attachmentViews.data();
 
-        data.framebuffers[frameIndex] = handler().shell().context().dev.createFramebuffer(createInfo, ALLOC_PLACE_HOLDER);
+        data.framebuffers[frameIndex] =
+            handler().shell().context().dev.createFramebuffer(createInfo, handler().shell().context().pAllocator);
     }
 }
 
@@ -651,28 +656,28 @@ void RenderPass::Base::updateBeginInfo() {
 }
 
 void RenderPass::Base::destroyTargetResources() {
-    auto& dev = handler().shell().context().dev;
+    auto& ctx = handler().shell().context();
 
     // COLOR
-    for (auto& color : images_) helpers::destroyImageResource(dev, color);
+    for (auto& color : images_) helpers::destroyImageResource(ctx.dev, color, ctx.pAllocator);
     images_.clear();
 
     // DEPTH
-    helpers::destroyImageResource(dev, depth_);
+    helpers::destroyImageResource(ctx.dev, depth_, ctx.pAllocator);
 
     // FRAMEBUFFER
-    for (auto& framebuffer : data.framebuffers) dev.destroyFramebuffer(framebuffer, ALLOC_PLACE_HOLDER);
+    for (auto& framebuffer : data.framebuffers) ctx.dev.destroyFramebuffer(framebuffer, ctx.pAllocator);
     data.framebuffers.clear();
 
     // EXTENT
     extent_ = BAD_EXTENT_2D;
 
     // COMMAND
-    helpers::destroyCommandBuffers(dev, handler().commandHandler().graphicsCmdPool(), data.priCmds);
-    helpers::destroyCommandBuffers(dev, handler().commandHandler().graphicsCmdPool(), data.secCmds);
+    helpers::destroyCommandBuffers(ctx.dev, handler().commandHandler().graphicsCmdPool(), data.priCmds);
+    helpers::destroyCommandBuffers(ctx.dev, handler().commandHandler().graphicsCmdPool(), data.secCmds);
 
     // SEMAPHORE
-    for (auto& semaphore : data.semaphores) dev.destroySemaphore(semaphore, ALLOC_PLACE_HOLDER);
+    for (auto& semaphore : data.semaphores) ctx.dev.destroySemaphore(semaphore, ctx.pAllocator);
     data.semaphores.clear();
 }
 
@@ -746,14 +751,15 @@ void RenderPass::Base::setBindData(const PIPELINE& pipelineType, const std::shar
 
 void RenderPass::Base::destroy() {
     // render pass
-    if (pass) handler().shell().context().dev.destroyRenderPass(pass, ALLOC_PLACE_HOLDER);
+    if (pass) handler().shell().context().dev.destroyRenderPass(pass, handler().shell().context().pAllocator);
 }
 
 void RenderPass::Base::createSemaphores() {
     vk::SemaphoreCreateInfo createInfo = {};
     data.semaphores.resize(semaphoreCount_);
     for (uint32_t i = 0; i < semaphoreCount_; i++) {
-        data.semaphores[i] = handler().shell().context().dev.createSemaphore(createInfo, ALLOC_PLACE_HOLDER);
+        data.semaphores[i] =
+            handler().shell().context().dev.createSemaphore(createInfo, handler().shell().context().pAllocator);
     }
 }
 
@@ -765,12 +771,12 @@ void RenderPass::Base::createAttachmentDebugMarkers() {
         for (auto& color : images_) {
             if (color.image) {
                 markerName = NAME + " color framebuffer image (" + std::to_string(count++) + ")";
-                handler().shell().context().dbg.setMarkerName(color.image, markerName.c_str());
+                // handler().shell().context().dbg.setMarkerName(color.image, markerName.c_str());
             }
         }
         if (depth_.image) {
             markerName = NAME + " depth framebuffer image";
-            handler().shell().context().dbg.setMarkerName(depth_.image, markerName.c_str());
+            // handler().shell().context().dbg.setMarkerName(depth_.image, markerName.c_str());
         }
     }
 }
