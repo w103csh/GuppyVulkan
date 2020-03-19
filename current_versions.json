@@ -3,7 +3,7 @@
     {
       "name" : "LunarG Vulkan SDK",
       "version": {
-        "Windows": "1.2.131.1",
+        "Windows": "1.2.131.2",
         "macOS": "1.1.121.2"
       }
     },
@@ -13,23 +13,23 @@
       "sub_dir" : "glslang",
       "build_dir" : "glslang/build",
       "install_dir" : "glslang/build/install",
-      "commit" : "34953810a62c5230cc059cfdf42dc44c5aab2246",
+      "commit" : "4fc7a33910fb8e40b970d160e1b38ab3f67fe0f3",
       "prebuild" : [
         "python update_glslang_sources.py"
       ]
     },
     {
       "name" : "GLM",
-      "version" : "0.9.9.5"
+      "version" : "0.9.9.7"
     },
     {
       "name" : "ImGui",
-      "commit" : "aeb64814995d624f6b3c2122d9e8312474e168f6"
+      "commit" : "fbc93debf96521350ee93eb74fa30c4de42e0707"
     },
     {
       "name" : "GLFW",
       "data" : [
-        { "platform": "Win32", "version": "glfw-3.2.1.bin.WIN64", "file" : "glfw3.lib" },
+        { "platform": "Win32", "version": "glfw-3.3.2.bin.WIN64", "file" : "glfw3.lib" },
         { "platform": "macOS", "version": "5292914ce19ed2dc6c6abfd591c4df18820a466a", "file" : "libglfw.3.3.dylib" }
       ]
     },
@@ -40,14 +40,14 @@
           "platform": "macOS",
           "version": "https://github.com/KhronosGroup/MoltenVK.git",
           "file" : "N/A",
-          "last-working-forked-commit": "70749b0618695128abb886b4c6808bc9124786c0"
+          "last-working-forked-commit": "N/A"
         }
       ]
     },
     {
       "name" : "FMod",
       "data" : [
-        { "platform": "Win32", "version": "2.00.04", "file" : "fmod_vc.lib" },
+        { "platform": "Win32", "version": "2.00.08", "file" : "fmod_vc.lib" },
         { "platform": "macOS", "version": "2.00.04", "file" : "libfmod.dylib" }
       ]
     }

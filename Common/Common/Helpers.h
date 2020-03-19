@@ -20,7 +20,14 @@
 #ifndef HELPERS_H
 #define HELPERS_H
 
+#ifdef _WIN32
+#ifndef NOMINMAX
+#define NOMINMAX /* Don't let Windows define min() or max() */
+#endif
+#endif
+
 #include <algorithm>
+#include <cctype>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <limits>
