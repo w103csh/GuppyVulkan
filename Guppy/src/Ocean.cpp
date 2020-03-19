@@ -359,7 +359,15 @@ const CreateInfo OCEAN_SURFACE_CREATE_INFO = {
     {DESCRIPTOR_SET::OCEAN_DEFAULT, DESCRIPTOR_SET::TESS_PHONG},
 };
 Surface::Surface(Handler& handler)
-    : Graphics(handler, &OCEAN_SURFACE_CREATE_INFO), DO_BLEND(false), DO_TESSELLATE(true), IS_DEFERRED(true) {}
+    : Graphics(handler, &OCEAN_SURFACE_CREATE_INFO),
+      DO_BLEND(false),
+#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+      DO_TESSELLATE(false),
+#else
+      DO_TESSELLATE(true),
+#endif
+      IS_DEFERRED(true) {
+}
 
 void Surface::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     if (IS_DEFERRED) {
@@ -413,9 +421,9 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
                std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData)
     : Buffer::Base(handler, std::forward<const Particle::Buffer::index>(offset), pCreateInfo, pMaterial, pDescriptors),
       Obj3d::InstanceDraw(pInstanceData),
+      drawMode(GRAPHICS::OCEAN_SURFACE_DEFERRED),
       normalOffset_(Particle::Buffer::BAD_OFFSET),
       indexWFRes_{},
-      drawMode(GRAPHICS::OCEAN_SURFACE_DEFERRED),
       info_(pCreateInfo->info),
       cdlodQuadTree_(),
       cdlodRenderer_(handler.shell().context()) {
@@ -804,9 +812,6 @@ void Buffer::initCDLOD() {
     {
         const auto& camera = handler().uniformHandler().getMainCamera();
         auto planes = camera.getFrustumPlanes();
-
-        auto t1 = camera.getWorldSpacePosition();
-        auto t2 = camera.getPosition();
 
         CDLODQuadTree::LODSelectionOnStack<4096> cdlodSelection(camera.getPosition(), camera.getViewRange() * 30.0f,
                                                                 planes.data(), settings.LODLevelDistanceRatio);

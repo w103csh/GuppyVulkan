@@ -4,7 +4,7 @@
       "name" : "LunarG Vulkan SDK",
       "version": {
         "Windows": "1.2.131.2",
-        "macOS": "1.1.121.2"
+        "macOS": "1.2.131.2"
       }
     },
     {
@@ -30,7 +30,7 @@
       "name" : "GLFW",
       "data" : [
         { "platform": "Win32", "version": "glfw-3.3.2.bin.WIN64", "file" : "glfw3.lib" },
-        { "platform": "macOS", "version": "5292914ce19ed2dc6c6abfd591c4df18820a466a", "file" : "libglfw.3.3.dylib" }
+        { "platform": "macOS", "version": "44b5d06583cd21ac237eb8f6263db03faf1726c2", "file" : "libglfw.3.dylib" }
       ]
     },
     {
@@ -40,6 +40,7 @@
           "platform": "macOS",
           "version": "https://github.com/KhronosGroup/MoltenVK.git",
           "file" : "N/A",
+          "last-working-commit": "e8c90be68192a4b67986335ea04ff24863d3f704",
           "last-working-forked-commit": "N/A"
         }
       ]
@@ -48,7 +49,7 @@
       "name" : "FMod",
       "data" : [
         { "platform": "Win32", "version": "2.00.08", "file" : "fmod_vc.lib" },
-        { "platform": "macOS", "version": "2.00.04", "file" : "libfmod.dylib" }
+        { "platform": "macOS", "version": "2.00.08", "file" : "libfmod.dylib" }
       ]
     }
   ],

@@ -7,9 +7,10 @@
 #include <thread>
 #include <vulkan/vulkan.h>
 
+#include <Common/Helpers.h>
+
 #include "Constants.h"
 #include "Game.h"
-#include "Helpers.h"
 #include "ShellMac.h"
 // HANLDERS
 #include "InputHandler.h"
@@ -47,7 +48,7 @@ ShellMac::ShellMac(Game& game)
       watchDirStreamRef(NULL) {
 }
 
-ShellMac::~ShellMac() { cleanupVk(); }
+ShellMac::~ShellMac() { cleanup(); }
 
 void ShellMac::setPlatformSpecificExtensions() {
     // instanceExtensions_.push_back(VK_MVK_MACOS_SURFACE_EXTENSION_NAME);
@@ -55,12 +56,12 @@ void ShellMac::setPlatformSpecificExtensions() {
 
 void ShellMac::createWindow() { assert(false); }
 
-PFN_vkGetInstanceProcAddr ShellMac::loadVk() {
+PFN_vkGetInstanceProcAddr ShellMac::load() {
     assert(false);
     return nullptr;
 }
 
-VkBool32 ShellMac::canPresent(VkPhysicalDevice phy, uint32_t queueFamily) {
+vk::Bool32 ShellMac::canPresent(vk::PhysicalDevice phy, uint32_t queueFamily) {
     VkBool32 supported = VK_FALSE;
     vkGetPhysicalDeviceSurfaceSupportKHR(phy, queueFamily, context().surface, &supported);
     return supported;
@@ -82,7 +83,7 @@ void ShellMac::asyncAlert(uint64_t milliseconds) { std::this_thread::sleep_for(s
 void ShellMac::run() { assert(false); }
 
 void ShellMac::watchDirectory(const std::string& directory, std::function<void(std::string)> callback) {
-    if (settings_.enable_directory_listener) {
+    if (settings_.enableDirectoryListener) {
         watchCallback = callback;
         auto fullPath = ROOT_PATH + directory;
 

@@ -98,10 +98,7 @@ void SkyboxNight::record(const uint8_t frameIndex, const vk::CommandBuffer& priC
     if (getStatus() == STATUS::READY) {
         beginPass(priCmd, frameIndex, vk::SubpassContents::eInline);
 
-        auto& secCmd = data.secCmds[frameIndex];
         auto& pScene = handler().sceneHandler().getActiveScene();
-
-        std::vector<PIPELINE>::iterator itSurrogate;
 
         // POINT
         if (true) {

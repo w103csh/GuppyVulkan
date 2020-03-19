@@ -159,8 +159,15 @@ struct GetVulkanMemoryProperty {
     }
     vk::MemoryPropertyFlags operator()(const STORAGE_BUFFER_DYNAMIC& type) const {
         switch (type) {
-            case STORAGE_BUFFER_DYNAMIC::VERTEX:    return vk::MemoryPropertyFlagBits::eDeviceLocal | vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
-            default:                                return vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent;
+            case STORAGE_BUFFER_DYNAMIC::VERTEX: return 
+                (vk::MemoryPropertyFlagBits::eHostVisible
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+                | vk::MemoryPropertyFlagBits::eDeviceLocal
+#endif
+                | vk::MemoryPropertyFlagBits::eHostCoherent);
+            default: return 
+                (vk::MemoryPropertyFlagBits::eHostVisible
+                | vk::MemoryPropertyFlagBits::eHostCoherent);
         }
     }
 };

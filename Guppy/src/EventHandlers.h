@@ -17,10 +17,18 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugUtilsMessenger(VkDebugUtilsMessageSev
                                                           VkDebugUtilsMessageTypeFlagsEXT messageTypes,
                                                           const VkDebugUtilsMessengerCallbackDataEXT *pCallbackData,
                                                           void *pUserData) {
-    Shell *shell = reinterpret_cast<Shell *>(pUserData);
+    if (pCallbackData == nullptr || pUserData == nullptr) {
+        assert(false);
+        return;
+    }
 
+    Shell *shell = reinterpret_cast<Shell *>(pUserData);
     std::stringstream ss;
-    ss << pCallbackData->pMessageIdName << " (";
+
+    if (pCallbackData->pMessageIdName != nullptr)
+        ss << pCallbackData->pMessageIdName << " (";
+    else  // I believe this only happens with MoltenVK atm.
+        ss << "(";
 
     Shell::LogPriority priority;
     switch (messageSeverity) {
@@ -55,8 +63,10 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugUtilsMessenger(VkDebugUtilsMessageSev
             ss << "PERFORMANCE";
         } break;
         default:
-            assert(false && "Not sure if messageTypes is a bitmask or not");
-            return VK_TRUE;
+            // MoltenVK puts what seems like nonsense in here...
+            // assert(false && "Not sure if messageTypes is a bitmask or not");
+            // return VK_TRUE;
+            break;
     }
 
     ss << "): msgNum: " << pCallbackData->messageIdNumber << " - " << pCallbackData->pMessage;

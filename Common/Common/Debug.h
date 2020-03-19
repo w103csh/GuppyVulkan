@@ -85,7 +85,6 @@ class Base {
         dev_.debugMarkerSetObjectTagEXT({getDebugReportObjectTypeEXT(object.objectType),
                                          reinterpret_cast<const uint64_t&>(object),
                                          makeName(object.objectType, name).c_str(), sizeof(tag), &tag});
-        dev_.debug
     }
 
    private:

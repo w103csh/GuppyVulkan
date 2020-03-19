@@ -32,8 +32,8 @@ class VkGridMesh {
     void SetDimensions(int dim);
     int GetDimensions() const { return m_dimension; }
     //
-    const auto GetIndexBuffer() const { return m_indexBuffer; }
-    const auto GetVertexBuffer() const { return m_vertexBuffer; }
+    const auto& GetIndexBuffer() const { return m_indexBuffer; }
+    const auto& GetVertexBuffer() const { return m_vertexBuffer; }
     int GetIndexEndTL() const { return m_indexEndTL; }
     int GetIndexEndTR() const { return m_indexEndTR; }
     int GetIndexEndBL() const { return m_indexEndBL; }

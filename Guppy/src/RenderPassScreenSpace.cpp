@@ -318,10 +318,10 @@ void HdrLog::downSample(const vk::CommandBuffer& priCmd, const uint8_t frameInde
     int32_t mipWidth = hdrLogSampler.imgCreateInfo.extent.width;
     int32_t mipHeight = hdrLogSampler.imgCreateInfo.extent.height;
 
-    vk::ImageBlit blit = {};
+    vk::ImageBlit blit = vk::ImageBlit{};
     // source
-    blit.srcOffsets[0] = {0, 0, 0};
-    blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
+    blit.srcOffsets[0] = vk::Offset3D{0, 0, 0};
+    blit.srcOffsets[1] = vk::Offset3D{mipWidth, mipHeight, 1};
     blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
     blit.srcSubresource.mipLevel = 0;
     blit.srcSubresource.baseArrayLayer = 0;
@@ -331,8 +331,8 @@ void HdrLog::downSample(const vk::CommandBuffer& priCmd, const uint8_t frameInde
     mipHeight /= 2;
 
     // destination
-    blit.dstOffsets[0] = {0, 0, 0};
-    blit.dstOffsets[1] = {mipWidth, mipHeight, 1};
+    blit.dstOffsets[0] = vk::Offset3D{0, 0, 0};
+    blit.dstOffsets[1] = vk::Offset3D{mipWidth, mipHeight, 1};
     blit.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
     blit.dstSubresource.mipLevel = 0;
     blit.dstSubresource.baseArrayLayer = 0;
@@ -360,10 +360,10 @@ void HdrLog::downSample(const vk::CommandBuffer& priCmd, const uint8_t frameInde
         cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eTransfer, {}, {}, {},
                             {barrier});
 
-        blit = {};
+        blit = vk::ImageBlit{};
         // source
-        blit.srcOffsets[0] = {0, 0, 0};
-        blit.srcOffsets[1] = {mipWidth, mipHeight, 1};
+        blit.srcOffsets[0] = vk::Offset3D{0, 0, 0};
+        blit.srcOffsets[1] = vk::Offset3D{mipWidth, mipHeight, 1};
         blit.srcSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
         blit.srcSubresource.mipLevel = i - 1;
         blit.srcSubresource.baseArrayLayer = 0;
@@ -373,8 +373,8 @@ void HdrLog::downSample(const vk::CommandBuffer& priCmd, const uint8_t frameInde
         mipHeight /= 2;
 
         // destination
-        blit.dstOffsets[0] = {0, 0, 0};
-        blit.dstOffsets[1] = {mipWidth, mipHeight, 1};
+        blit.dstOffsets[0] = vk::Offset3D{0, 0, 0};
+        blit.dstOffsets[1] = vk::Offset3D{mipWidth, mipHeight, 1};
         blit.dstSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
         blit.dstSubresource.mipLevel = i;
         blit.dstSubresource.baseArrayLayer = 0;

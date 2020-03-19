@@ -47,7 +47,6 @@ Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo
         case TYPE::ATTRACTOR_POSITION: {
             assert(BUFFER_INFO.count == pCreateInfo->localSize.x * pCreateInfo->localSize.y * pCreateInfo->localSize.z);
             // Initial positions of the particles
-            glm::vec4 p{0.0f, 0.0f, 0.0f, 1.0f};
             float dx = 2.0f / (pCreateInfo->localSize.x - 1), dy = 2.0f / (pCreateInfo->localSize.y - 1),
                   dz = 2.0f / (pCreateInfo->localSize.z - 1);
             // We want to center the particles at (0,0,0)

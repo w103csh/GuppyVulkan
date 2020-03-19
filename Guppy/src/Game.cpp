@@ -47,15 +47,19 @@ Game::Settings::Settings()
       vsync(true),
       animate(true),
       validate(true),
+#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+      validateVerbose(true),
+#else
       validateVerbose(false),
+#endif
       noTick(false),
       noRender(false),
       trySamplerAnisotropy(true),  // TODO: Not sure what this does
       trySampleRateShading(true),
       tryComputeShading(true),
 #if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-      try_tessellation_shading(false),
-      try_geometry_shading(false),
+      tryTessellationShading(false),
+      tryGeometryShading(false),
 #else
       tryTessellationShading(true),
       tryGeometryShading(true),

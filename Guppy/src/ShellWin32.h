@@ -53,7 +53,7 @@ class ShellWin32 : public Shell {
 
    protected:
     virtual void setPlatformSpecificExtensions() override;
-    PFN_vkGetInstanceProcAddr load();
+    PFN_vkGetInstanceProcAddr load() override;
 
    private:
     vk::Bool32 canPresent(vk::PhysicalDevice phy, uint32_t queue_family);

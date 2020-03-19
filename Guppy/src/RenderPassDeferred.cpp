@@ -350,7 +350,7 @@ void Base::createSubpassDescriptions() {
     }
 
     // MRT
-    subpassDesc = {};
+    subpassDesc = vk::SubpassDescription{};
     subpassDesc.colorAttachmentCount = inputAttachmentCount_;
     subpassDesc.pColorAttachments = &resources_.colorAttachments[inputAttachmentOffset_];
     subpassDesc.pResolveAttachments = nullptr;
@@ -360,7 +360,7 @@ void Base::createSubpassDescriptions() {
     // SSAO
     if (doSSAO_) {
         assert(resources_.colorAttachments.size() > (size_t)inputAttachmentCount_ + (size_t)inputAttachmentOffset_);
-        subpassDesc = {};
+        subpassDesc = vk::SubpassDescription{};
         subpassDesc.colorAttachmentCount = 1;
         subpassDesc.pColorAttachments =
             &resources_.colorAttachments[(size_t)inputAttachmentOffset_ + (size_t)inputAttachmentCount_];
@@ -372,7 +372,7 @@ void Base::createSubpassDescriptions() {
     if (usesMultiSample()) assert(resources_.resolveAttachments.size() == 1);
 
     // COMBINE
-    subpassDesc = {};
+    subpassDesc = vk::SubpassDescription{};
     subpassDesc.inputAttachmentCount = static_cast<uint32_t>(resources_.inputAttachments.size());
     subpassDesc.pInputAttachments = resources_.inputAttachments.data();
     subpassDesc.colorAttachmentCount = 1;

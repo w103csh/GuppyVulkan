@@ -27,11 +27,11 @@ class ShellMac : public Shell {
 
    protected:
     virtual void setPlatformSpecificExtensions() override;
-    PFN_vkGetInstanceProcAddr loadVk() override;
+    PFN_vkGetInstanceProcAddr load() override;
     void destroyContext() override;
 
    private:
-    VkBool32 canPresent(VkPhysicalDevice phy, uint32_t queue_family) override;
+    vk::Bool32 canPresent(vk::PhysicalDevice phy, uint32_t queue_family) override;
 
     void createWindow() override;
     // VkSurfaceKHR createSurface(VkInstance instance);

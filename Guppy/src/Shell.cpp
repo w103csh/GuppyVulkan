@@ -172,8 +172,8 @@ void Shell::initInstance() {
     assertAllInstanceLayers();
     assertAllInstanceExtensions();
 
-    ctx_.initInstance(settings_.name.c_str(), "Shell", settings_.validate);
-    ctx_.initDebug(settings_.validate, settings_.validateVerbose, &events::DebugUtilsMessenger);
+    ctx_.initInstance(settings_.name.c_str(), "Shell", settings_.validate);  // More descriptive name???
+    ctx_.initDebug(settings_.validate, settings_.validateVerbose, &events::DebugUtilsMessenger, this);
 }
 
 void Shell::initPhysicalDevice() {
@@ -556,7 +556,6 @@ void Shell::enumeratePhysicalDevices(uint32_t physicalDevCount) {
                 } else if (strcmp(extInfo.name, (char *)VK_EXT_VERTEX_ATTRIBUTE_DIVISOR_EXTENSION_NAME) == 0) {
                     if (extInfo.tryToEnabled) {
                         assert(false);  // Not tested.
-                        vk::PhysicalDeviceFeatures2 features = props.device.getFeatures2();
                         // Check features
                         if (props.featVertAttrDiv.vertexAttributeInstanceRateDivisor) {
                             props.featVertAttrDiv.vertexAttributeInstanceRateZeroDivisor = VK_FALSE;
@@ -567,7 +566,6 @@ void Shell::enumeratePhysicalDevices(uint32_t physicalDevCount) {
 
                 } else if (strcmp(extInfo.name, (char *)VK_EXT_TRANSFORM_FEEDBACK_EXTENSION_NAME) == 0) {
                     if (extInfo.tryToEnabled) {
-                        vk::PhysicalDeviceFeatures2 features = props.device.getFeatures2();
                         // Check features
                         if (props.featTransFback.transformFeedback) {
                             props.featTransFback.geometryStreams = VK_FALSE;

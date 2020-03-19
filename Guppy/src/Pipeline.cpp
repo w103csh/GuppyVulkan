@@ -544,8 +544,8 @@ void Pipeline::Graphics::getDepthInfoResources(CreateInfoResources& createInfoRe
     createInfoRes.depthStencilStateInfo.minDepthBounds = 0.0f;
     createInfoRes.depthStencilStateInfo.maxDepthBounds = 1.0f;
     createInfoRes.depthStencilStateInfo.stencilTestEnable = VK_FALSE;
-    createInfoRes.depthStencilStateInfo.front = {};
-    createInfoRes.depthStencilStateInfo.back = {};
+    createInfoRes.depthStencilStateInfo.front = vk::StencilOpState{};
+    createInfoRes.depthStencilStateInfo.back = vk::StencilOpState{};
     // dss.back.failOp = vk::StencilOp::eKeep; // ARE THESE IMPORTANT !!!
     // dss.back.passOp = vk::StencilOp::eKeep;
     // dss.back.compareOp = vk::CompareOp::eAlways;

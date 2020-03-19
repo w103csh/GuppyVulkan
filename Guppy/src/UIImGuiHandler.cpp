@@ -128,6 +128,10 @@ void UI::ImGuiHandler::menuWater() {
         case GRAPHICS::HFF_OCEAN_DEFERRED:
             waterFlat_ = true;
             break;
+        default:
+            assert(false && "Unhandled or invalid case");
+            exit(EXIT_FAILURE);
+            break;
     }
     if (ImGui::MenuItem("Columns", nullptr, &waterColumns_)) {
         pWater->drawMode = GRAPHICS::HFF_CLMN_DEFERRED;

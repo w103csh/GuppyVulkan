@@ -111,7 +111,8 @@ class Context {
     void initDevice();
     void destroyDevice();
 
-    void initDebug(const bool validate, const bool validateVerbose, const PFN_vkDebugUtilsMessengerCallbackEXT pCallback);
+    void initDebug(const bool validate, const bool validateVerbose, const PFN_vkDebugUtilsMessengerCallbackEXT pCallback,
+                   void *pUserData);
     void destroyDebug();
 
     void createBuffer(const vk::CommandBuffer &cmd, const vk::BufferUsageFlags usage, const vk::DeviceSize size,

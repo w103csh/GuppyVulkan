@@ -246,8 +246,8 @@ void copyBufferToImage(const vk::CommandBuffer &cmd, uint32_t width, uint32_t he
     region.imageSubresource.baseArrayLayer = 0;
     region.imageSubresource.layerCount = layerCount;
 
-    region.imageOffset = {0, 0, 0};
-    region.imageExtent = {width, height, 1};
+    region.imageOffset = vk::Offset3D{0, 0, 0};
+    region.imageExtent = vk::Extent3D{width, height, 1};
 
     cmd.copyBufferToImage(srcBuff, dstImg, vk::ImageLayout::eTransferDstOptimal, {region});
 }

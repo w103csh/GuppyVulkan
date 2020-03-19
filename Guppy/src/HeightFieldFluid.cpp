@@ -309,9 +309,9 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
                std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData)
     : Buffer::Base(handler, std::forward<const Particle::Buffer::index>(offset), pCreateInfo, pMaterial, pDescriptors),
       Obj3d::InstanceDraw(pInstanceData),
+      drawMode(GRAPHICS::HFF_OCEAN_DEFERRED),
       normalOffset_(Particle::Buffer::BAD_OFFSET),
-      indexWFRes_{},
-      drawMode(GRAPHICS::HFF_OCEAN_DEFERRED) {
+      indexWFRes_{} {
     for (uint32_t i = 0; i < static_cast<uint32_t>(pDescriptors_.size()); i++)
         if (pDescriptors[i]->getDescriptorType() == DESCRIPTOR{STORAGE_BUFFER_DYNAMIC::NORMAL}) normalOffset_ = i;
     assert(normalOffset_ != Particle::Buffer::BAD_OFFSET);

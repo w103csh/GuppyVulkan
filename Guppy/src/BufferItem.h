@@ -47,7 +47,7 @@ class Item {
      *   most derived class calls the constructor" of the virtually inherited
      *   class (this), so just add the public constructor above to that level.
      */
-    Item() : dirty(false) { assert(false); }
+    Item() : BUFFER_INFO(), dirty(false) { assert(false); }
 };
 
 template <typename TDATA>

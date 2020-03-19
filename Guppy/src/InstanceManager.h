@@ -36,8 +36,12 @@ class Manager : public Buffer::Manager::Base<TBase, TDerived, std::shared_ptr> {
               // This used to not have the vk::MemoryPropertyFlagBits::eHostCoherent set. It was needed to work
               // with the macOS build. TBH I am not sure which would be faster - using the coherent bit,
               // or flusing and invalidating. I just set the bit because I didn't know how to test it atm.
-              (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eDeviceLocal |
-               vk::MemoryPropertyFlagBits::eHostCoherent)) {}
+              (vk::MemoryPropertyFlagBits::eHostVisible
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+                | vk::MemoryPropertyFlagBits::eDeviceLocal
+#else
+               | vk::MemoryPropertyFlagBits::eHostCoherent)) {
+    }
     virtual ~Manager() = default;
 
     const DESCRIPTOR DESCRIPTOR_TYPE;

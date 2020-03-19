@@ -139,7 +139,7 @@ void Context::destroyDevice() {
 }
 
 void Context::initDebug(const bool validate, const bool validateVerbose,
-                        const PFN_vkDebugUtilsMessengerCallbackEXT pCallback) {
+                        const PFN_vkDebugUtilsMessengerCallbackEXT pCallback, void *pUserData) {
     if (!validate) return;
 
     vk::DebugUtilsMessengerCreateInfoEXT debugInfo = {};
@@ -155,7 +155,7 @@ void Context::initDebug(const bool validate, const bool validateVerbose,
     }
 
     debugInfo.pfnUserCallback = pCallback;
-    debugInfo.pUserData = this;
+    debugInfo.pUserData = pUserData;
 
     debugUtilsMessenger_ = instance.createDebugUtilsMessengerEXT(debugInfo, pAllocator);
 }

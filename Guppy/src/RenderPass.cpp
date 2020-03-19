@@ -419,7 +419,7 @@ void RenderPass::Base::createDependencies() {
     // 7.1. Render Pass Creation has examples of what this should be.
     vk::SubpassDependency dependency;
     for (uint32_t i = 0; i < pipelineBindDataList_.size() - 1; i++) {
-        dependency = {};
+        dependency = vk::SubpassDependency{};
         dependency.srcSubpass = i;
         dependency.dstSubpass = i + 1;
         dependency.dependencyFlags = {};
@@ -644,14 +644,14 @@ void RenderPass::Base::createViewports() {
     // SCISSOR
     scissors_.clear();
     scissors_.emplace_back();
-    scissors_.back().offset = {0, 0};
+    scissors_.back().offset = vk::Offset2D{0, 0};
     scissors_.back().extent = extent_;
 }
 
 void RenderPass::Base::updateBeginInfo() {
     beginInfo_.clearValueCount = static_cast<uint32_t>(clearValues_.size());
     beginInfo_.pClearValues = clearValues_.data();
-    beginInfo_.renderArea.offset = {0, 0};
+    beginInfo_.renderArea.offset = vk::Offset2D{0, 0};
     beginInfo_.renderArea.extent = extent_;
 }
 
@@ -764,19 +764,19 @@ void RenderPass::Base::createSemaphores() {
 }
 
 void RenderPass::Base::createAttachmentDebugMarkers() {
-    auto& ctx = handler().shell().context();
+    // auto& ctx = handler().shell().context();
     if (handler().shell().context().debugMarkersEnabled) {
         std::string markerName;
         uint32_t count = 0;
         for (auto& color : images_) {
             if (color.image) {
                 markerName = NAME + " color framebuffer image (" + std::to_string(count++) + ")";
-                // handler().shell().context().dbg.setMarkerName(color.image, markerName.c_str());
+                // ctx.dbg.setMarkerName(color.image, markerName.c_str());
             }
         }
         if (depth_.image) {
             markerName = NAME + " depth framebuffer image";
-            // handler().shell().context().dbg.setMarkerName(depth_.image, markerName.c_str());
+            // ctx.dbg.setMarkerName(depth_.image, markerName.c_str());
         }
     }
 }

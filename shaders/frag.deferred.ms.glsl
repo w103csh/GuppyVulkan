@@ -19,7 +19,7 @@ const uint LIGHT_SHOW       = 0x00000001u;
 const uint IA_FLAT_SHADE    = 0x01u;
 const uint IA_CAMERA_SPACE  = 0x02u;
 
-layout(constant_id = 0) const int NUM_SAMPLES = 8;
+layout(constant_id=0) const int NUM_SAMPLES = 8;
 
 layout(set=_DS_UNI_DFR_COMB, binding=0) uniform CameraDefaultPerspective {
     mat4 view;

@@ -104,7 +104,7 @@ the [Dear ImGui](https://github.com/ocornut/imgui) debug UI. Eventually [Dear Im
 
 #### ImGui
 
-There currently is a repository dependency on the [dear imgui library](https://github.com/ocornut/imgui) in the cmake scripts. You need to clone the repository when running `Cmake` (described later) add the absolute path of the cloned repository to either:
+There currently is a repository dependency on the [dear imgui library](https://github.com/ocornut/imgui) in the cmake scripts. You need to clone the repository when running `CMake` (described later) add the absolute path of the cloned repository to either:
 1. A command line arugment `-DIMGUI_REPO_DIR=absolute_path_to_repo_directory`
 1. Or an environmental variable named `IMGUI_REPO_DIR`
 
