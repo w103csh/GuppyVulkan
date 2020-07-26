@@ -19,7 +19,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL DebugUtilsMessenger(VkDebugUtilsMessageSev
                                                           void *pUserData) {
     if (pCallbackData == nullptr || pUserData == nullptr) {
         assert(false);
-        return;
+        return VK_FALSE;
     }
 
     Shell *shell = reinterpret_cast<Shell *>(pUserData);

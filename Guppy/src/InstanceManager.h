@@ -39,7 +39,7 @@ class Manager : public Buffer::Manager::Base<TBase, TDerived, std::shared_ptr> {
               (vk::MemoryPropertyFlagBits::eHostVisible
 #if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
                 | vk::MemoryPropertyFlagBits::eDeviceLocal
-#else
+#endif
                | vk::MemoryPropertyFlagBits::eHostCoherent)) {
     }
     virtual ~Manager() = default;
