@@ -16,7 +16,7 @@
 
 class Context {
    public:
-    Context() = default;
+    Context();
     ~Context() = default;
 
     struct BackBuffer {

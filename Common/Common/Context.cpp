@@ -11,6 +11,46 @@
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE;
 static_assert(VK_HEADER_VERSION >= 126, "Vulkan version need 1.1.126.0 or greater");
 
+// This cannot be a default compiler generated constructor. There was a very cryptic compiler error that happened after VS
+// 2019 update to 16.5. I am too lazy to pin down the compiler version. I waited for MS to fix the compiler error so that it
+// would give an actual error message but at this point I don't think its ever going to happen. Finding this was a nightmare.
+Context::Context()
+    : samplerAnisotropyEnabled(false),
+      sampleRateShadingEnabled(false),
+      linearBlittingSupported(false),
+      computeShadingEnabled(false),
+      tessellationShadingEnabled(false),
+      geometryShadingEnabled(false),
+      wireframeShadingEnabled(false),
+      vertexAttributeDivisorEnabled(false),
+      transformFeedbackEnabled(),
+      debugMarkersEnabled(false),
+      independentBlendEnabled(false),
+      imageCubeArrayEnabled(false),
+      instance{},
+      physicalDev{},
+      physicalDevIndex(0),
+      memProps{},
+      graphicsIndex(0),
+      presentIndex(0),
+      transferIndex(0),
+      computeIndex(0),
+      dev{},
+      pAllocator(nullptr),
+      surfaceProps{},
+      surfaceFormat{},
+      surface{},
+      mode{},
+      samples{},
+      imageCount(0),
+      extent{},
+      depthFormat{},
+      swapchain{},
+      acquiredBackBuffer{},
+      waitDstStageMask(vk::PipelineStageFlagBits::eColorAttachmentOutput),
+      debugUtilsMessenger_{},
+      dbg_() {}
+
 void Context::initInstance(const char *appName, const char *engineName, const bool validate) {
     vk::DynamicLoader dl;
     PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");

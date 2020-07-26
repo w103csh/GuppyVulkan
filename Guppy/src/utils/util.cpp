@@ -26,6 +26,7 @@ VULKAN_SAMPLE_DESCRIPTION
 samples utility functions
 */
 
+#include <memory>
 #include "util.hpp"
 
 #ifdef __ANDROID__
