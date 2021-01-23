@@ -286,8 +286,10 @@ void RenderPass::Handler::acquireBackBuffer() {
     fences_.push_back(frameFences_[frameIndex_]);
 
     // wait for the last submission since we reuse frame data.
-    ctx.dev.waitForFences(fences_, VK_TRUE, UINT64_MAX);
-    ctx.dev.resetFences(1, &frameFences_[frameIndex_]);
+    auto result = ctx.dev.waitForFences(fences_, VK_TRUE, UINT64_MAX);
+    assert(result == vk::Result::eSuccess);
+    result = ctx.dev.resetFences(1, &frameFences_[frameIndex_]);
+    assert(result == vk::Result::eSuccess);
 }
 
 void RenderPass::Handler::recordPasses() {

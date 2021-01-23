@@ -365,7 +365,7 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
                           / 1.0f /* glm::two_pi<float>()*/);
             pData[idx] += (2.0f * cos(static_cast<float>(0.01f * x))) *  //
                           (glm::pi<float>() + (2.0f * sin(static_cast<float>(0.01f * z))));
-            pData[idx] += pow(glm::one_over_pi<float>(), 2) * (1.0f - Random::inst().nextFloatZeroToOne());
+            pData[idx] += powf(glm::one_over_pi<float>(), 2) * (1.0f - Random::inst().nextFloatZeroToOne());
             pData[idx] -= 4.0f;  // offset everything back toward level
         }
     }

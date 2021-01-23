@@ -48,7 +48,7 @@ struct CreateInfoResources {
     std::vector<vk::PipelineColorBlendAttachmentState> blendAttachmentStates;
     vk::PipelineColorBlendStateCreateInfo colorBlendStateInfo;
     // DYNAMIC
-    vk::DynamicState dynamicStates[VK_DYNAMIC_STATE_RANGE_SIZE];
+    std::vector<vk::DynamicState> dynamicStates;
     vk::PipelineDynamicStateCreateInfo dynamicStateInfo;
     // INPUT ASSEMBLY
     std::vector<vk::VertexInputBindingDescription> bindDescs;

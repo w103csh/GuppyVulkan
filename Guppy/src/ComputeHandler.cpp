@@ -108,7 +108,8 @@ void Compute::Handler::detachSwapchain() {
     for (auto& [key, pCompute] : pComputeMap_) pCompute->detachSwapchain();
     // FENCE
     for (auto& fence : passFences_) {
-        ctx.dev.waitForFences({fence}, VK_TRUE, UINT64_MAX);
+        auto result = ctx.dev.waitForFences({fence}, VK_TRUE, UINT64_MAX);
+        assert(result == vk::Result::eSuccess);
         ctx.dev.destroyFence(fence, ctx.pAllocator);
     }
     passFences_.clear();

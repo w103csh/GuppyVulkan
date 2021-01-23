@@ -126,15 +126,16 @@ class Graphics : public Base {
     Graphics(Pipeline::Handler &handler, const Pipeline::CreateInfo *pCreateInfo);
 
    protected:
-    // INFOS
     virtual void getBlendInfoResources(CreateInfoResources &createInfoRes);
     virtual void getDepthInfoResources(CreateInfoResources &createInfoRes);
-    virtual void getDynamicStateInfoResources(CreateInfoResources &createInfoRes);
     virtual void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
     virtual void getMultisampleStateInfoResources(CreateInfoResources &createInfoRes);
     virtual void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes);
     virtual void getTesselationInfoResources(CreateInfoResources &createInfoRes);
     virtual void getViewportStateInfoResources(CreateInfoResources &createInfoRes);
+
+   private:
+    void getDynamicStateInfoResources(CreateInfoResources &createInfoRes);
 };
 
 // DEFAULT

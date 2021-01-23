@@ -45,8 +45,8 @@ constexpr vk::DebugReportObjectTypeEXT getDebugReportObjectTypeEXT(const vk::Obj
         case vk::ObjectType::eDebugReportCallbackEXT        : return vk::DebugReportObjectTypeEXT::eDebugReportCallbackEXT;
         case vk::ObjectType::eDisplayKHR                    : return vk::DebugReportObjectTypeEXT::eDisplayKHR;
         case vk::ObjectType::eDisplayModeKHR                : return vk::DebugReportObjectTypeEXT::eDisplayModeKHR;
-        case vk::ObjectType::eObjectTableNVX                : return vk::DebugReportObjectTypeEXT::eObjectTableNVX;
-        case vk::ObjectType::eIndirectCommandsLayoutNVX     : return vk::DebugReportObjectTypeEXT::eIndirectCommandsLayoutNVX;
+        //case vk::ObjectType::eObjectTableNVX                : return vk::DebugReportObjectTypeEXT::eObjectTableNVX;
+        //case vk::ObjectType::eIndirectCommandsLayoutNVX     : return vk::DebugReportObjectTypeEXT::eIndirectCommandsLayoutNVX;
         case vk::ObjectType::eValidationCacheEXT            : return vk::DebugReportObjectTypeEXT::eValidationCacheEXT;
         case vk::ObjectType::eSamplerYcbcrConversion        : return vk::DebugReportObjectTypeEXT::eSamplerYcbcrConversion;
         case vk::ObjectType::eDescriptorUpdateTemplate      : return vk::DebugReportObjectTypeEXT::eDescriptorUpdateTemplate;

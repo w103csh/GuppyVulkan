@@ -391,9 +391,10 @@ void Shell::acquireBackBuffer() {
     auto &backBuffer = ctx_.backBuffers.front();
 
     // wait until acquire and render semaphores are waited/unsignaled
-    ctx_.dev.waitForFences({backBuffer.presentFence}, true, UINT64_MAX);
+    vk::Result res = ctx_.dev.waitForFences({backBuffer.presentFence}, true, UINT64_MAX);
+    assert(res == vk::Result::eSuccess);
 
-    vk::Result res = vk::Result::eTimeout;  // Anything but vk::Result::eSuccess
+    res = vk::Result::eTimeout;  // Anything but vk::Result::eSuccess
     while (res != vk::Result::eSuccess) {
         res = ctx_.dev.acquireNextImageKHR(ctx_.swapchain, UINT64_MAX, backBuffer.acquireSemaphore, {},
                                            &backBuffer.imageIndex);
@@ -489,7 +490,7 @@ void Shell::enumerateInstanceProperties() {
     for (auto &prop : props) {
         layerProps_.push_back({prop});
         layerProps_.back().extensionProps =
-            vk::enumerateInstanceExtensionProperties(std::string(layerProps_.back().properties.layerName));
+            vk::enumerateInstanceExtensionProperties(std::string(layerProps_.back().properties.layerName.data()));
     }
 
     // Get instance extension properties
@@ -497,7 +498,7 @@ void Shell::enumerateInstanceProperties() {
 }
 
 void Shell::enumerateDeviceLayerExtensionProperties(Context::PhysicalDeviceProperties &props, LayerProperties &layerProps) {
-    auto extensions = props.device.enumerateDeviceExtensionProperties(std::string(layerProps.properties.layerName));
+    auto extensions = props.device.enumerateDeviceExtensionProperties(std::string(layerProps.properties.layerName.data()));
     if (!extensions.empty())
         for (auto &ext : extensions)
             props.layerExtensionMap.insert(

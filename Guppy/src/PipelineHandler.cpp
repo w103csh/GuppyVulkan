@@ -256,13 +256,17 @@ void Pipeline::Handler::createPipelineCache(vk::PipelineCache& cache) {
 
 void Pipeline::Handler::createPipeline(const std::string&& name, vk::GraphicsPipelineCreateInfo& createInfo,
                                        vk::Pipeline& pipeline) {
-    pipeline = shell().context().dev.createGraphicsPipeline(cache_, createInfo, shell().context().pAllocator);
+    auto resultValue = shell().context().dev.createGraphicsPipeline(cache_, createInfo, shell().context().pAllocator);
+    assert(resultValue.result == vk::Result::eSuccess);
+    pipeline = resultValue.value;
     // shell().context().dbg.setMarkerName(pipeline, name.c_str());
 }
 
 void Pipeline::Handler::createPipeline(const std::string&& name, vk::ComputePipelineCreateInfo& createInfo,
                                        vk::Pipeline& pipeline) {
-    pipeline = shell().context().dev.createComputePipeline(cache_, createInfo, shell().context().pAllocator);
+    auto resultValue = shell().context().dev.createComputePipeline(cache_, createInfo, shell().context().pAllocator);
+    assert(resultValue.result == vk::Result::eSuccess);
+    pipeline = resultValue.value;
     // shell().context().dbg.setMarkerName(pipeline, name.c_str());
 }
 

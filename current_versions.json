@@ -3,7 +3,7 @@
     {
       "name" : "LunarG Vulkan SDK",
       "version": {
-        "Windows": "1.2.131.2",
+        "Windows": "1.2.162.1",
         "macOS": "1.2.131.2"
       }
     },

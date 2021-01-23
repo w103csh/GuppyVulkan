@@ -362,13 +362,13 @@ void Pipeline::Graphics::setInfo(CreateInfoResources& createInfoRes, vk::Graphic
     // Gather info from derived classes...
     getBlendInfoResources(createInfoRes);
     getDepthInfoResources(createInfoRes);
-    getDynamicStateInfoResources(createInfoRes);
     getInputAssemblyInfoResources(createInfoRes);
     getMultisampleStateInfoResources(createInfoRes);
     getRasterizationStateInfoResources(createInfoRes);
     getShaderStageInfoResources(createInfoRes);
     getTesselationInfoResources(createInfoRes);
     getViewportStateInfoResources(createInfoRes);
+    getDynamicStateInfoResources(createInfoRes);
 
     // PIPELINE
     pGraphicsInfo->flags = vk::PipelineCreateFlagBits::eAllowDerivatives;
@@ -398,11 +398,9 @@ void Pipeline::Graphics::setInfo(CreateInfoResources& createInfoRes, vk::Graphic
 }
 
 void Pipeline::Graphics::getDynamicStateInfoResources(CreateInfoResources& createInfoRes) {
-    // TODO: this is weird
     createInfoRes.dynamicStateInfo = vk::PipelineDynamicStateCreateInfo{};
-    memset(createInfoRes.dynamicStates, 0, sizeof(createInfoRes.dynamicStates));
-    createInfoRes.dynamicStateInfo.pDynamicStates = createInfoRes.dynamicStates;
-    createInfoRes.dynamicStateInfo.dynamicStateCount = 0;
+    createInfoRes.dynamicStateInfo.pDynamicStates = createInfoRes.dynamicStates.data();
+    createInfoRes.dynamicStateInfo.dynamicStateCount = static_cast<uint32_t>(createInfoRes.dynamicStates.size());
 }
 
 void Pipeline::Graphics::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
@@ -504,12 +502,16 @@ void Pipeline::Graphics::getBlendInfoResources(CreateInfoResources& createInfoRe
 void Pipeline::Graphics::getViewportStateInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.viewportStateInfo = vk::PipelineViewportStateCreateInfo{};
 #ifndef __ANDROID__
+    // Viewports
     createInfoRes.viewportStateInfo.viewportCount = NUM_VIEWPORTS;
-    createInfoRes.dynamicStates[createInfoRes.dynamicStateInfo.dynamicStateCount++] = vk::DynamicState::eViewport;
-    createInfoRes.viewportStateInfo.scissorCount = NUM_SCISSORS;
-    createInfoRes.dynamicStates[createInfoRes.dynamicStateInfo.dynamicStateCount++] = vk::DynamicState::eScissor;
-    createInfoRes.viewportStateInfo.pScissors = nullptr;
+    for (auto i = 0; i < NUM_VIEWPORTS; i++)  //
+        createInfoRes.dynamicStates.push_back(vk::DynamicState::eViewport);
     createInfoRes.viewportStateInfo.pViewports = nullptr;
+    // Scissors
+    createInfoRes.viewportStateInfo.scissorCount = NUM_SCISSORS;
+    for (auto i = 0; i < NUM_SCISSORS; i++)  //
+        createInfoRes.dynamicStates.push_back(vk::DynamicState::eScissor);
+    createInfoRes.viewportStateInfo.pScissors = nullptr;
 #else
     // TODO: this is outdated now...
     // Temporary disabling dynamic viewport on Android because some of drivers doesn't
