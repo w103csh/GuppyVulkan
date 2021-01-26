@@ -134,7 +134,7 @@ class Handler : public Game::Handler {
         Material::Default::CreateInfo matInfo = {};
         // INSTANCE
         Instance::Obj3d::CreateInfo instInfo = {};
-        instInfo.data.push_back({obj.model()});
+        instInfo.data.push_back({obj.getModel()});
         auto &pInstObj3d = makeInstanceObj3d(&instInfo);
 
         auto offset = make<VisualHelper::ModelSpace>(lineMeshes_, &meshInfo, &matInfo, pInstObj3d)->getOffset();

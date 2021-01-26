@@ -28,6 +28,7 @@ class Instance : public Obj3d::Interface {
     inline uint32_t getModelCount() { return pInstObj3d_->BUFFER_INFO.count; }
     inline const Buffer::Info& getInstanceDataInfo() { return pInstObj3d_->BUFFER_INFO; }
 
+    // Obj3d::Interface
     inline glm::vec3 worldToLocal(const glm::vec3& v, const bool isPosition = false,
                                   const uint32_t index = 0) const override {
         return pInstObj3d_->worldToLocal(v, std::forward<const bool>(isPosition), std::forward<const uint32_t>(index));
@@ -38,9 +39,6 @@ class Instance : public Obj3d::Interface {
     inline glm::vec3 getWorldSpacePosition(const glm::vec3& p = {}, const uint32_t index = 0) const override {
         return pInstObj3d_->getWorldSpacePosition(p, std::forward<const uint32_t>(index));
     }
-    inline void transform(const glm::mat4 t, const uint32_t index = 0) override {
-        return pInstObj3d_->transform(std::forward<const glm::mat4>(t), std::forward<const uint32_t>(index));
-    }
     inline BoundingBoxMinMax getBoundingBoxMinMax(const bool transform = true, const uint32_t index = 0) const override {
         return pInstObj3d_->getBoundingBoxMinMax(std::forward<const bool>(transform), std::forward<const uint32_t>(index));
     }
@@ -49,14 +47,22 @@ class Instance : public Obj3d::Interface {
         return pInstObj3d_->testBoundingBox(ray, tMin, std::forward<const bool>(useDirection),
                                             std::forward<const uint32_t>(index));
     }
+    inline BoundingBox getBoundingBox(const uint32_t index = 0) const override {
+        return pInstObj3d_->getBoundingBox(std::forward<const uint32_t>(index));
+    }
+    inline const glm::mat4& getModel(const uint32_t index = 0) const override {
+        return pInstObj3d_->getModel(std::forward<const uint32_t>(index));
+    }
+    inline void transform(const glm::mat4 t, const uint32_t index = 0) override {
+        return pInstObj3d_->transform(std::forward<const glm::mat4>(t), std::forward<const uint32_t>(index));
+    }
     inline void putOnTop(const BoundingBoxMinMax& boundingBox,
                          const uint32_t index = ::Instance::Obj3d::MODEL_ALL) override {
         return pInstObj3d_->putOnTop(boundingBox, std::forward<const uint32_t>(index));
     }
-    inline BoundingBox getBoundingBox(const uint32_t index = 0) const override {
-        return pInstObj3d_->getBoundingBox(std::forward<const uint32_t>(index));
+    inline void setModel(const glm::mat4 m, const uint32_t index = 0) override {
+        pInstObj3d_->setModel(std::forward<const glm::mat4>(m), std::forward<const uint32_t>(index));
     }
-    inline const glm::mat4& model(const uint32_t index = 0) const override { return pInstObj3d_->model(index); }
 
    protected:
     std::shared_ptr<::Instance::Obj3d::Base> pInstObj3d_;

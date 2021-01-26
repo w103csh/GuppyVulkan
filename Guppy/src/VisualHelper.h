@@ -74,7 +74,7 @@ class TangentSpace : public Line {
         // Determine the line size, which needs to account for the model matrix
         // having a scale.
         glm::vec3 scale = {};
-        helpers::decomposeScale(model(), scale);
+        helpers::decomposeScale(getModel(), scale);
         glm::vec3 lineSize{1.0f};
         lineSize /= scale;  // inverse scale of model matrix
         lineSize *= pCreateInfo->lineSize;

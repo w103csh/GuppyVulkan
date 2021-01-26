@@ -17,6 +17,7 @@ enum class PASS : uint32_t;
 namespace Uniform {
 
 using index = uint8_t;
+constexpr index BAD_OFFSET = UINT8_MAX;
 const auto UNIFORM_MAX_COUNT = UINT8_MAX;
 
 // Uniform buffer offsets to pass types

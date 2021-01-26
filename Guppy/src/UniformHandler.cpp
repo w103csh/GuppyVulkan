@@ -37,7 +37,7 @@ Uniform::Handler::Handler(Game* pGame)
       managers_{
           // CAMERA
           Uniform::Manager<Camera::Perspective::Default::Base>  //
-          {"Default Perspective Camera", UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, 9, "_U_CAM_DEF_PERS"},
+          {"Default Perspective Camera", UNIFORM::CAMERA_PERSPECTIVE_DEFAULT, 4 * 3, "_U_CAM_DEF_PERS"},
           Uniform::Manager<Camera::Perspective::CubeMap::Base>  //
           {"Default Perspective Cube Map Camera", UNIFORM::CAMERA_PERSPECTIVE_CUBE_MAP, 3, "_U_CAM_PERS_CUBE"},
           // LIGHT
@@ -89,8 +89,10 @@ Uniform::Handler::Handler(Game* pGame)
           UniformDynamic::CDLOD::Grid::Manager  //
           {"CDLOD Grid Data", UNIFORM_DYNAMIC::CDLOD_GRID, 30, true, "_UD_CDLOD_GRID"},
       },
-      mainCameraOffset_(0),
-      hasVisualHelpers(false) {}
+      activeCameraOffset_(BAD_OFFSET),
+      mainCameraOffset_(BAD_OFFSET),
+      debugCameraOffset_(BAD_OFFSET),
+      hasVisualHelpers_(false) {}
 
 std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const DESCRIPTOR& type) {
     // clang-format off
@@ -200,8 +202,8 @@ void Uniform::Handler::reset() {
 void Uniform::Handler::frame() {
     const auto frameIndex = passHandler().getFrameIndex();
 
-    // MAIN CAMERA
-    auto& camera = getMainCamera();
+    // ACTIVE CAMERA
+    auto& camera = getActiveCamera();
     float movementFactor = 10.0f;
     camera.update(shell().inputHandler().getPosDir() * movementFactor, shell().inputHandler().getLookDir(), frameIndex);
     update(camera, static_cast<int>(frameIndex));
@@ -319,6 +321,7 @@ void Uniform::Handler::createCameras() {
         defInfo.eye = {100.0f, 100.0f, 100.0f};
         camPersDefMgr().insert(dev, &defInfo);
         mainCameraOffset_ = camPersDefMgr().pItems.size() - 1;
+        activeCameraOffset_ = mainCameraOffset_;
     }
 
     // 1 (PROJECTOR)
@@ -341,8 +344,6 @@ void Uniform::Handler::createCameras() {
         // mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
     }
 
-    assert(mainCameraOffset_ < camPersDefMgr().pItems.size());
-
     // CUBE MAP
     {
         Camera::Perspective::CubeMap::CreateInfo cubeInfo = {};
@@ -352,6 +353,18 @@ void Uniform::Handler::createCameras() {
         // 0
         camPersCubeMgr().insert(dev, &cubeInfo);
     }
+
+    // (DEBUG)
+    {
+        defInfo.aspect = static_cast<float>(settings().initialWidth) / static_cast<float>(settings().initialHeight);
+        defInfo.eye = {50.0f, 50.0f, 50.0f};
+        defInfo.center = {};
+        camPersDefMgr().insert(dev, &defInfo);
+        debugCameraOffset_ = camPersDefMgr().pItems.size() - 1;
+    }
+
+    assert(mainCameraOffset_ != BAD_OFFSET);
+    assert(activeCameraOffset_ == mainCameraOffset_);
 }
 
 void Uniform::Handler::createLights() {
@@ -538,19 +551,19 @@ void Uniform::Handler::createVisualHelpers() {
     for (uint32_t i = 0; i < lgtDefPosMgr().pItems.size(); i++) {
         auto& lgt = lgtDefPosMgr().getTypedItem(i);
         meshHandler().makeModelSpaceVisualHelper(lgt);
-        hasVisualHelpers = true;
+        hasVisualHelpers_ = true;
     }
     // PBR POSITIONAL
     for (uint32_t i = 0; i < lgtPbrPosMgr().pItems.size(); i++) {
         auto& lgt = lgtPbrPosMgr().getTypedItem(i);
         meshHandler().makeModelSpaceVisualHelper(lgt);
-        hasVisualHelpers = true;
+        hasVisualHelpers_ = true;
     }
     // DEFAULT SPOT
     for (uint32_t i = 0; i < lgtDefSptMgr().pItems.size(); i++) {
         auto& lgt = lgtDefSptMgr().getTypedItem(i);
         meshHandler().makeModelSpaceVisualHelper(lgt);
-        hasVisualHelpers = true;
+        hasVisualHelpers_ = true;
     }
     // for (auto& light : posLights) {
     //    meshCreateInfo = {};

@@ -51,7 +51,10 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
           Buffer::PerFramebufferDataItem<TDATA>(pData),                //
           model_(pCreateInfo->model) {}
 
-    inline const glm::mat4 &model(const uint32_t index = 0) const override { return model_; }
+    inline const glm::mat4 &getModel(const uint32_t index = 0) const override { return model_; }
+
+   protected:
+    glm::mat4 &model(const uint32_t index = 0) override { return model_; }
 
    private:
     glm::mat4 model_;

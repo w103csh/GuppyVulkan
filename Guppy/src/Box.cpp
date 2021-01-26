@@ -15,7 +15,7 @@ using namespace Mesh;
 
 namespace {
 void addPlane(const glm::mat4& t, const Mesh::Geometry::Info& geoInfo, std::vector<Face>& faces) {
-    auto planeFaces = Plane::make({}, geoInfo);
+    auto planeFaces = Plane::make(Plane::Info{}, geoInfo);
     for (auto& face : planeFaces) face.transform(t);
     faces.insert(faces.end(), planeFaces.begin(), planeFaces.end());
 }
@@ -24,6 +24,19 @@ void addFaces(Base* pMesh, const Mesh::Geometry::Info& geoInfo) {
     // using the same ideas (for testing)...
     unique_vertices_map_non_smoothing vertexMap = {};
     auto faces = Box::make(geoInfo);
+    for (auto& face : faces) {
+        if (pMesh->SETTINGS.indexVertices) {
+            face.indexVertices(vertexMap, pMesh);
+        } else {
+            pMesh->addVertex(face);
+        }
+    }
+}
+void addFaces(Base* pMesh, const Mesh::Frustum::CreateInfo& info) {
+    // Mimic approach in loadObj in FileLoader. This way everything is
+    // using the same ideas (for testing)...
+    unique_vertices_map_non_smoothing vertexMap = {};
+    auto faces = Frustum::make(info.settings.geometryInfo, info.frustumInfo);
     for (auto& face : faces) {
         if (pMesh->SETTINGS.indexVertices) {
             face.indexVertices(vertexMap, pMesh);
@@ -74,6 +87,71 @@ Box::Texture::Texture(Handler& handler, const index&& offset, CreateInfo* pCreat
                       std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
     : Mesh::Texture(handler, std::forward<const index>(offset), "Texture Box", pCreateInfo, pInstanceData, pMaterial) {
     addFaces(this, pCreateInfo->settings.geometryInfo);
+    pInstObj3d_->updateBoundingBox(vertices_);
+    status_ = STATUS::PENDING_BUFFERS;
+}
+
+std::vector<Face> Frustum::make(const Mesh::Geometry::Info& geoInfo, const Camera::FrustumInfo& frustumInfo) {
+    std::vector<Face> faces;
+
+    // Field of view is the total view angle with relation to the y-axis (glm::perspective).
+    float tanHalfFovy = tan(frustumInfo.fieldOfView / 2.0f);
+
+    const float nearZ = frustumInfo.nearDistance;  // near distance from eye
+    const float nearDistToPlaneY = tanHalfFovy * nearZ;
+    const float nearDistToPlaneX = nearDistToPlaneY * frustumInfo.aspectRatio;
+
+    const float farZ = 5.0f;  // far distance from eye
+    const float farDistToPlaneY = tanHalfFovy * farZ;
+    const float farDistToPlaneX = farDistToPlaneY * frustumInfo.aspectRatio;
+
+    // Positions on frustum
+    glm::vec3 nearTL = {-nearDistToPlaneX, nearDistToPlaneY, nearZ};
+    glm::vec3 nearTR = {nearDistToPlaneX, nearDistToPlaneY, nearZ};
+    glm::vec3 nearBL = {-nearDistToPlaneX, -nearDistToPlaneY, nearZ};
+    glm::vec3 nearBR = {nearDistToPlaneX, -nearDistToPlaneY, nearZ};
+    glm::vec3 farTL = {-farDistToPlaneX, farDistToPlaneY, farZ};
+    glm::vec3 farTR = {farDistToPlaneX, farDistToPlaneY, farZ};
+    glm::vec3 farBL = {-farDistToPlaneX, -farDistToPlaneY, farZ};
+    glm::vec3 farBR = {farDistToPlaneX, -farDistToPlaneY, farZ};
+
+    std::array<glm::vec3, 4> corners;
+    std::vector<Face> temp;
+
+    // The orders below are kind of arbitrary. There are no uvs for this so it doesn't really matter atm.
+
+    // near
+    corners = {nearBL, nearBR, nearTL, nearTR};
+    temp = Plane::make(corners, geoInfo);
+    faces.insert(faces.end(), temp.begin(), temp.end());
+    // far
+    corners = {farBR, farBL, farTR, farTL};
+    temp = Plane::make(corners, geoInfo);
+    faces.insert(faces.end(), temp.begin(), temp.end());
+    // top
+    corners = {nearTL, nearTR, farTL, farTR};
+    temp = Plane::make(corners, geoInfo);
+    faces.insert(faces.end(), temp.begin(), temp.end());
+    // bottom
+    corners = {farBL, farBR, nearBL, nearBR};
+    temp = Plane::make(corners, geoInfo);
+    faces.insert(faces.end(), temp.begin(), temp.end());
+    // right
+    corners = {nearBR, farBR, nearTR, farTR};
+    temp = Plane::make(corners, geoInfo);
+    faces.insert(faces.end(), temp.begin(), temp.end());
+    // left
+    corners = {farBL, nearBL, farTL, nearTL};
+    temp = Plane::make(corners, geoInfo);
+    faces.insert(faces.end(), temp.begin(), temp.end());
+
+    return faces;
+}
+
+Frustum::Base::Base(Handler& handler, const index&& offset, CreateInfo* pCreateInfo,
+                    std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData, std::shared_ptr<Material::Base>& pMaterial)
+    : Mesh::Color(handler, std::forward<const index>(offset), "Frustum", pCreateInfo, pInstanceData, pMaterial) {
+    addFaces(this, *pCreateInfo);
     pInstObj3d_->updateBoundingBox(vertices_);
     status_ = STATUS::PENDING_BUFFERS;
 }

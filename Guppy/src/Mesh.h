@@ -25,8 +25,8 @@
 
 // clang-format off
 class Face;
-namespace Loading       { struct Resource; }
-namespace Scene         { class Handler; }
+namespace Loading { struct Resource; }
+namespace Scene   { class Handler; }
 // clang-format on
 
 namespace Mesh {

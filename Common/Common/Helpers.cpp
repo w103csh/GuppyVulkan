@@ -44,7 +44,7 @@ void macroReplace(const macroInfo &info, int itemCount, std::string &text) {
 }
 
 glm::mat4 moveAndRotateTo(const glm::vec3 eye, const glm::vec3 center, const glm::vec3 up) {
-    auto const z(glm::normalize(eye - center));
+    auto const z(glm::normalize(center - eye));
     auto const x(glm::normalize(cross(z, up)));
     auto const y(glm::cross(x, z));
 

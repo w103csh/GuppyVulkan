@@ -27,6 +27,7 @@
 #endif
 
 constexpr bool PRIMARY_MONITOR = 0;
+
 // TODO: a proper dynamic buffer allocator.
 /*  I am using this for the mean time to restrict the number of textures, so
     that I don't have to write an allocator before I know what is necessary. The limit
@@ -41,7 +42,7 @@ constexpr vk::Extent2D BAD_EXTENT_2D = {UINT32_MAX, UINT32_MAX};
 constexpr vk::Extent3D BAD_EXTENT_3D = {UINT32_MAX, UINT32_MAX, 1};
 constexpr float BAD_ASPECT = FLT_MAX;
 
-constexpr float T_MAX = 1.0f;
+constexpr float T_MAX = 1.0f;  // This is used during ray testing for selection
 
 #ifdef NDEBUG
 constexpr bool ENABLE_VALIDATION_LAYERS = false;

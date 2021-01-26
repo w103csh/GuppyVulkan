@@ -25,6 +25,15 @@ constexpr glm::mat4 VULKAN_CLIP_MAT4 = glm::mat4{1.0f, 0.0f,  0.0f, 0.0f,   //
                                                  0.0f, 0.0f,  0.5f, 0.0f,   //
                                                  0.0f, 0.0f,  0.5f, 1.0f};  //
 
+struct FrustumInfo {
+    float fieldOfView;
+    float aspectRatio;
+    float nearDistance;
+    float farDistance;
+    // For testing...
+    frustumPlanes planes;
+};
+
 namespace Perspective {
 
 namespace Default {
@@ -54,33 +63,24 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
     Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo);
 
     inline glm::vec3 getCameraSpaceDirection(const glm::vec3 &d = FORWARD_VECTOR) const {
-        // TODO: deal with model_...
         glm::vec3 direction = glm::mat3(data_.view) * d;
         return glm::normalize(direction);
     }
 
-    inline glm::vec3 getCameraSpacePosition(const glm::vec3 &p = {}) const {
-        // TODO: deal with model_...
-        return data_.view * glm::vec4(p, 1.0f);
-    }
+    inline glm::vec3 getCameraSpacePosition(const glm::vec3 &p = {}) const { return data_.view * glm::vec4(p, 1.0f); }
 
     // FORWARD_VECTOR is negated here (cameras look in the negative Z direction traditionally).
     // Not sure if this will cause confusion in the future.
     inline glm::vec3 getWorldSpaceDirection(const glm::vec3 &d = -FORWARD_VECTOR, const uint32_t index = 0) const override {
-        // TODO: deal with model_...
         glm::vec3 direction = glm::inverse(data_.view) * glm::vec4(d, 0.0f);
         return glm::normalize(direction);
     }
 
     inline glm::vec3 getWorldSpacePosition(const glm::vec3 &p = {}, const uint32_t index = 0) const override {
-        // TODO: deal with model_...
         return glm::inverse(data_.view) * glm::vec4(p, 1.0f);
     }
 
-    inline glm::mat4 getCameraSpaceToWorldSpaceTransform() const {
-        // TODO: deal with model_...
-        return glm::inverse(data_.view);
-    }
+    inline glm::mat4 getCameraSpaceToWorldSpaceTransform() const { return glm::inverse(data_.view); }
 
     Ray getRay(glm::vec2 &&position, const vk::Extent2D &extent) {
         return getRay(std::forward<glm::vec2>(position), extent, far_);
@@ -94,8 +94,23 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
     void update(const glm::vec3 &posDir, const glm::vec3 &lookDir, const uint32_t frameIndex);
 
     frustumPlanes getFrustumPlanes() const;
-    virtual_inline const auto &getPosition() const { return eye_; }
+    virtual_inline auto getPosition() const { return eye_; }
     virtual_inline auto getViewRange() const { return viewRange_; }
+
+    FrustumInfo getFrustumInfo() const {
+        FrustumInfo info;
+        info.fieldOfView = fov_;
+        info.aspectRatio = aspect_;
+        info.nearDistance = near_;
+        info.farDistance = far_;
+        info.planes = getFrustumPlanes();
+        return info;
+    }
+
+    const glm::mat4 &getModel(const uint32_t index = 0) const override { return model_; }
+
+   protected:
+    glm::mat4 &model(const uint32_t index = 0) override { return model_; }
 
    private:
     bool updateView(const glm::vec3 &posDir, const glm::vec3 &lookDir);
@@ -105,9 +120,7 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
     // this is not actually the projection matrix!!!
     inline void setProjectionData() { data_.projection = VULKAN_CLIP_MAT4 * proj_; }
 
-    inline const glm::mat4 &model(const uint32_t index = 0) const override { return model_; }
     glm::mat4 model_;
-
     // projection
     float aspect_;
     float near_;
@@ -142,9 +155,13 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
    public:
     Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo);
 
+    inline const glm::mat4 &getModel(const uint32_t index = 0) const override { return model_; }
+
+   protected:
+    glm::mat4 &model(const uint32_t index = 0) override { return model_; }
+
    private:
     void setViews();
-    inline const glm::mat4 &model(const uint32_t index = 0) const override { return model_; }
 
     float near_;
     float far_;

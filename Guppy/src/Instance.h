@@ -55,14 +55,20 @@ class Base : public ::Obj3d::AbstractBase, public Buffer::DataItem<DATA>, public
    public:
     Base(const Buffer::Info&& info, DATA* pData);
 
-    void putOnTop(const ::Obj3d::BoundingBoxMinMax& inBoundingBoxMinMax, const uint32_t index = MODEL_ALL) override;
+    inline const glm::mat4& getModel(const uint32_t index = 0) const override { return (pData_ + index)->model; }
 
     inline void transform(const glm::mat4 t, const uint32_t index = 0) override {
         ::Obj3d::AbstractBase::transform(std::forward<const glm::mat4>(t), std::forward<const uint32_t>(index));
         dirty = true;
     }
+    void putOnTop(const ::Obj3d::BoundingBoxMinMax& inBoundingBoxMinMax, const uint32_t index = MODEL_ALL) override;
+    inline void setModel(const glm::mat4 m, const uint32_t index = 0) override {
+        ::Obj3d::AbstractBase::setModel(std::forward<const glm::mat4>(m), std::forward<const uint32_t>(index));
+        dirty = true;
+    }
 
-    inline const glm::mat4& model(const uint32_t index = 0) const override { return (pData_ + index)->model; }
+   protected:
+    inline glm::mat4& model(const uint32_t index = 0) override { return (pData_ + index)->model; }
 };
 
 }  // namespace Obj3d

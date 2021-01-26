@@ -42,10 +42,11 @@ class Interface {
                                  const uint32_t index = 0) const = 0;
     virtual BoundingBox getBoundingBox(const uint32_t index = 0) const = 0;
     // Model space to world space
-    virtual const glm::mat4& model(const uint32_t index = 0) const = 0;
+    virtual const glm::mat4& getModel(const uint32_t index = 0) const = 0;
 
     virtual void transform(const glm::mat4 t, const uint32_t index = 0) = 0;
     virtual void putOnTop(const BoundingBoxMinMax& boundingBox, const uint32_t index = 0) = 0;
+    virtual void setModel(const glm::mat4 m, const uint32_t index = 0) = 0;
 };
 
 glm::mat4 TranslateToTop(const BoundingBoxMinMax& bottomBBMM, const BoundingBoxMinMax& topBBMM);
@@ -56,38 +57,33 @@ class AbstractBase : public Interface {
    public:
     virtual inline glm::vec3 worldToLocal(const glm::vec3& v, const bool isPosition = false,
                                           const uint32_t index = 0) const override {
-        glm::vec3 local = glm::inverse(model(index)) * glm::vec4(v, isPosition ? 1.0f : 0.0f);
+        glm::vec3 local = glm::inverse(getModel(index)) * glm::vec4(v, isPosition ? 1.0f : 0.0f);
         return isPosition ? local : glm::normalize(local);
     }
 
     virtual inline glm::vec3 getWorldSpaceDirection(const glm::vec3& d = FORWARD_VECTOR,
                                                     const uint32_t index = 0) const override {
-        glm::vec3 direction = model(index) * glm::vec4(d, 0.0f);
+        glm::vec3 direction = getModel(index) * glm::vec4(d, 0.0f);
         return glm::normalize(direction);
     }
 
     virtual inline glm::vec3 getWorldSpacePosition(const glm::vec3& p = {}, const uint32_t index = 0) const override {
-        return model(index) * glm::vec4(p, 1.0f);  //
-    }
-
-    // I did the order this way so that the incoming tranform doesn't get scaled...
-    // This could be problematic. Not sure yet.
-    virtual inline void transform(const glm::mat4 t, const uint32_t index = 0) override {
-        auto& m = const_cast<glm::mat4&>(model(index));
-        m = t * m;
+        return getModel(index) * glm::vec4(p, 1.0f);  //
     }
 
     BoundingBoxMinMax getBoundingBoxMinMax(const bool transform = true, const uint32_t index = 0) const override;
-
     virtual bool testBoundingBox(const Ray& ray, const float& tMin, const bool useDirection = true,
                                  const uint32_t index = 0) const override;
-    virtual void putOnTop(const BoundingBoxMinMax& boundingBox, const uint32_t index = 0) override;
-
     BoundingBox getBoundingBox(const uint32_t index = 0) const override;
+
+    // I did the order this way so that the incoming tranform doesn't get scaled... This could be problematic. Not sure yet.
+    virtual inline void transform(const glm::mat4 t, const uint32_t index = 0) override { model(index) = t * model(index); }
+    virtual void putOnTop(const BoundingBoxMinMax& boundingBox, const uint32_t index = 0) override;
+    virtual inline void setModel(const glm::mat4 m, const uint32_t index = 0) override { model(index) = m; }
 
     template <typename T>
     void worldToLocal(T& vecs, const uint32_t index = 0) const {
-        auto inverse = glm::inverse(model(index));
+        auto inverse = glm::inverse(getModel(index));
         for (auto& v : vecs) {
             v = inverse * v;
         }
@@ -119,6 +115,8 @@ class AbstractBase : public Interface {
 
    protected:
     AbstractBase() : boundingBox_(DEFAULT_BOUNDING_BOX) {}
+
+    virtual glm::mat4& model(const uint32_t index = 0) = 0;
 
    private:
     /* This needs to be transformed so it should be private!

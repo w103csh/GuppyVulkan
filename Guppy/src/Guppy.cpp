@@ -187,8 +187,8 @@ void Guppy::onFrame(float framePred) {
     handlers_.pPass->acquireBackBuffer();
     // PRE-DRAW
     handlers_.pUI->frame();
+    handlers_.pUniform->frame();  // Camera updates happen here... this seems bad.
     handlers_.pScene->frame();
-    handlers_.pUniform->frame();
     handlers_.pParticle->frame();
     // DRAW
     handlers_.pPass->recordPasses();
@@ -199,6 +199,7 @@ void Guppy::onFrame(float framePred) {
     handlers_.pScene->cleanup();
     // **********************
     handlers_.pPass->updateFrameIndex();
+    Game::onFrame(framePred);
 }
 
 void Guppy::onKey(const GAME_KEY key) {
@@ -215,6 +216,9 @@ void Guppy::onKey(const GAME_KEY key) {
         case GAME_KEY::KEY_SPACE:
             // sim_paused_ = !sim_paused_;
             break;
+        case GAME_KEY::KEY_TAB: {
+            handlers_.pUniform->cycleCamera();
+        } break;
         case GAME_KEY::KEY_F: {
         } break;
         case GAME_KEY::KEY_1: {

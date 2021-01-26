@@ -473,7 +473,7 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
         case GRAPHICS::HFF_CLMN_DEFERRED: {
             cmd.pushConstants(pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
                               static_cast<uint32_t>(sizeof(Pipeline::HeightFieldFluid::Column::PushConstant)),
-                              &pInstObj3d_->model());
+                              &pInstObj3d_->getModel());
             cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
             cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
                                    descSetBindData.descriptorSets[setIndex], descSetBindData.dynamicOffsets);

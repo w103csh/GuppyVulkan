@@ -19,7 +19,6 @@ Base::Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
       Descriptor::Base(UNIFORM::CAMERA_PERSPECTIVE_DEFAULT),
       Buffer::PerFramebufferDataItem<DATA>(pData),
-      model_{1.0f},
       aspect_(pCreateInfo->aspect),
       near_(pCreateInfo->n),
       far_(pCreateInfo->f),
@@ -48,7 +47,7 @@ Ray Base::getRay(glm::vec2 &&position, const vk::Extent2D &extent, float distanc
     // It looks like this returns a point in world space.
     auto d = glm::unProject(  //
         win,                  // win
-        data_.view,           // model (TODO: add model_ to this?)
+        data_.view,           // model (TODO: view is not a model matrix...)
         proj_,                // projection
         viewport              // viewport
     );
@@ -126,17 +125,19 @@ void Base::update(const glm::vec3 &posDir, const glm::vec3 &lookDir, const uint3
 }
 
 void Base::update(const uint32_t frameIndex) {
-    data_.view = data_.view * model_;
     data_.viewProjection = data_.projection * data_.view;
-    data_.worldPosition = getWorldSpacePosition();
+    data_.worldPosition = eye_;
     setData(frameIndex);
+    // For now there is no model matrix. The camera is never transformed but is always reconstructed using glm::lookAt().
+    // Currently, this is only used by the debug camera, which makes this an unecessary per frame update.
+    model_ = helpers::moveAndRotateTo(eye_, center_, UP_VECTOR);
 }
 
 bool Base::updateView(const glm::vec3 &posDir, const glm::vec3 &lookDir) {
-    bool update_pos = !glm::all(glm::equal(posDir, glm::vec3()));
-    bool update_look = !glm::all(glm::equal(lookDir, glm::vec3()));
+    bool updatePos = !glm::all(glm::equal(posDir, glm::vec3()));
+    bool updateLook = !glm::all(glm::equal(lookDir, glm::vec3()));
     // If there is nothing to update then return ...
-    if (!update_pos && !update_look) return false;
+    if (!updatePos && !updateLook) return false;
 
     // Get othonormal basis for camera view ...
     glm::vec3 w = glm::row(data_.view, 2);
@@ -144,7 +145,7 @@ bool Base::updateView(const glm::vec3 &posDir, const glm::vec3 &lookDir) {
     glm::vec3 v = glm::row(data_.view, 1);
 
     // MOVEMENT
-    if (update_pos) {
+    if (updatePos) {
         auto pos = w * (posDir.z * -1);  // w is pointing in -z direction
         pos += u * posDir.x;
         pos += v * posDir.y;
@@ -153,7 +154,7 @@ bool Base::updateView(const glm::vec3 &posDir, const glm::vec3 &lookDir) {
         center_ += pos;
     }
     // LOOK
-    if (update_look) {
+    if (updateLook) {
         auto look = u * lookDir.x;
         look += v * lookDir.y;
         center_ += look;
@@ -174,7 +175,6 @@ Base::Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo
       Buffer::PerFramebufferDataItem<DATA>(pData),
       near_(pCreateInfo->n),
       far_(pCreateInfo->f) {
-    model_ = glm::translate(glm::mat4(1.0f), pCreateInfo->position);
     data_.proj = glm::perspective(glm::half_pi<float>(), 1.0f, near_, far_);
     setViews();
     setData();

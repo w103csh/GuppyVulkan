@@ -106,10 +106,13 @@ class Game {
 
     // LIFECYCLE
     virtual void onTick() {}
-    virtual void onFrame(float framePred) {}
+    virtual void onFrame(float framePred) { frameCount_++; }
     virtual void onButton(const GameButtonBits buttons) {}  // TODO: bad design
     virtual void onKey(const GAME_KEY key) {}               // TODO: bad design
     virtual void onMouse(const MouseInput &input) {}        // TODO: bad design & misleading name
+
+    // STATE
+    constexpr auto getFrameCount() const { return frameCount_; }
 
     // HANDLER
     struct Handlers {
@@ -142,6 +145,7 @@ class Game {
 
         constexpr const auto &settings() const { return pGame_->settings(); }
         constexpr const auto &shell() const { return pGame_->shell(); }
+        constexpr const auto &game() const { return *pGame_; }
 
         inline Command::Handler &commandHandler() const { return std::ref(*pGame_->handlers_.pCommand); }
         inline Compute::Handler &computeHandler() const { return std::ref(*pGame_->handlers_.pCompute); }
@@ -180,6 +184,8 @@ class Game {
    private:
     Settings settings_;
     Shell *shell_;
+
+    uint64_t frameCount_;
 
     void parse_args(const std::vector<std::string> &args) {
         for (auto it = args.begin(); it != args.end(); ++it) {

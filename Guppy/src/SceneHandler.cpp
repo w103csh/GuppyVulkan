@@ -115,6 +115,29 @@ void Scene::Handler::init() {
             groundPlane_bbmm = pGroundPlane->getBoundingBoxMinMax();
         }
 
+        // DEBUG CAMERA
+        if (!suppress || uniformHandler().hasDebugCamera()) {
+            const auto& debugCamera = uniformHandler().getDebugCamera();
+            // Set the frustum mesh info.
+            Mesh::Frustum::CreateInfo frustumMeshInfo = {};
+            frustumMeshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_WF_COLOR;
+            frustumMeshInfo.selectable = false;
+            frustumMeshInfo.settings.geometryInfo.doubleSided = true;
+            frustumMeshInfo.frustumInfo = debugCamera.getFrustumInfo();
+            // Set the material info.
+            defMatInfo = {};
+            defMatInfo.shininess = Material::SHININESS_EGGSHELL;
+            defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::MODE_FLAT_SHADE;
+            defMatInfo.color = {0.0f, 1.0f, 0.0f};
+            // Set the 3d object info, which in this case comes from the debug camera.
+            instObj3dInfo = {};
+            instObj3dInfo.data.push_back({debugCamera.getModel()});
+            // Make the mesh and add it to the scene.
+            auto& pFrustum = meshHandler().makeColorMesh<Mesh::Frustum::Base>(&frustumMeshInfo, &defMatInfo, &instObj3dInfo);
+            pScene->debugFrustumOffset = pFrustum->getOffset();
+            pScene->addMeshIndex(MESH::COLOR, pScene->debugFrustumOffset);
+        }
+
         // SHADOW BOX
         if (!suppress || false) {
             meshInfo = {};
@@ -173,7 +196,7 @@ void Scene::Handler::init() {
 
             instObj3dInfo = {};
             instObj3dInfo.data.push_back({helpers::moveAndRotateTo(
-                uniformHandler().lgtDefDirMgr().getTypedItem(0).direction * 1000.0f, {}, UP_VECTOR)});
+                {}, uniformHandler().lgtDefDirMgr().getTypedItem(0).direction * 1000.0f, UP_VECTOR)});
 
             defMatInfo = {};
             defMatInfo.flags |= Material::FLAG::MODE_FLAT_SHADE;
@@ -993,6 +1016,14 @@ void Scene::Handler::frame() {
         moonLight.direction = glm::mat3(moonRot) * moonLight.direction;
         moon->transform(moonRot);
         meshHandler().updateMesh(moon);
+    }
+
+    // DEBUG CAMERA
+    if (uniformHandler().hasDebugCamera() && pScene->debugFrustumOffset != Mesh::BAD_OFFSET) {
+        auto& debugCamera = uniformHandler().getDebugCamera();
+        auto& debugFrustum = meshHandler().getColorMesh(pScene->debugFrustumOffset);
+        debugFrustum->setModel(debugCamera.getModel());
+        meshHandler().updateMesh(debugFrustum);
     }
 }
 

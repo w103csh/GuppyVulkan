@@ -158,15 +158,30 @@ class Handler : public Game::Handler {
     void createVisualHelpers();
     void attachSwapchain();
 
-    // MAIN CAMERA
-    inline Camera::Perspective::Default::Base& getMainCamera() {
-        return std::ref(*(Camera::Perspective::Default::Base*)(camPersDefMgr().pItems[mainCameraOffset_].get()));
+    // CAMERAS
+    virtual_inline void cycleCamera() {
+        activeCameraOffset_ =
+            (hasDebugCamera() && activeCameraOffset_ == mainCameraOffset_) ? debugCameraOffset_ : mainCameraOffset_;
+    }
+    // ACTIVE
+    inline auto& getActiveCamera() {
+        return *static_cast<Camera::Perspective::Default::Base*>(camPersDefMgr().pItems[activeCameraOffset_].get());
+    }
+    // MAIN
+    inline auto& getMainCamera() {
+        return *static_cast<Camera::Perspective::Default::Base*>(camPersDefMgr().pItems[mainCameraOffset_].get());
+    }
+    // DEBUG
+    virtual_inline bool hasDebugCamera() const { return debugCameraOffset_ != BAD_OFFSET; }
+    inline auto& getDebugCamera() {
+        assert(hasDebugCamera());
+        return *static_cast<Camera::Perspective::Default::Base*>(camPersDefMgr().pItems[debugCameraOffset_].get());
     }
 
     // FIRST LIGHT
-    inline Light::Default::Positional::Base& getDefPosLight(const uint32_t index = 0) {
+    inline auto& getDefPosLight(const uint32_t index = 0) {
         assert(index < lgtDefPosMgr().pItems.size());
-        return std::ref(*(Light::Default::Positional::Base*)(lgtDefPosMgr().pItems[index].get()));
+        return *static_cast<Light::Default::Positional::Base*>(lgtDefPosMgr().pItems[index].get());
     }
 
     // SHADER
@@ -225,8 +240,11 @@ class Handler : public Game::Handler {
         }
     };
 
+    index activeCameraOffset_ = 0;
     index mainCameraOffset_ = 0;
-    bool hasVisualHelpers;
+    index debugCameraOffset_ = 0;
+
+    bool hasVisualHelpers_;
 };
 
 }  // namespace Uniform

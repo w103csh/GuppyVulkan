@@ -33,6 +33,10 @@ struct CreateInfo : public Mesh::CreateInfo {
 
 std::vector<Face> make(const Plane::Info& planeInfo = {}, const Mesh::Geometry::Info& geoInfo = {});
 
+// corners assumed order: bl, br, tl, tr
+// Note: uvs are not generated, and colors are fixed.
+std::vector<Face> make(const std::array<glm::vec3, 4>& corners, const Mesh::Geometry::Info& geoInfo = {});
+
 class Color : public Mesh::Color {
     friend class Mesh::Handler;  // clang
 

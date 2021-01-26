@@ -202,7 +202,10 @@ class Default : public ::Obj3d::AbstractBase, public Material::Base, public Buff
         setData();
     }
 
-    const glm::mat4& model(const uint32_t index = 0) const override { return pData_->model; }
+    const glm::mat4& getModel(const uint32_t index = 0) const override { return pData_->model; }
+
+   protected:
+    glm::mat4& model(const uint32_t index = 0) override { return pData_->model; }
 };
 
 }  // namespace Obj3d

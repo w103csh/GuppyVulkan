@@ -33,6 +33,7 @@ Scene::Base::Base(Scene::Handler& handler, const index offset, bool makeFaceSele
       moonOffset(Mesh::BAD_OFFSET),
       starsOffset(Mesh::BAD_OFFSET),
       posLgtCubeShdwOffset(Mesh::BAD_OFFSET),
+      debugFrustumOffset(Mesh::BAD_OFFSET),
       pSelectionManager_(std::make_unique<Selection::Manager>(handler, makeFaceSelection)) {}
 
 Scene::Base::~Base() = default;
