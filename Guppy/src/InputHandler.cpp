@@ -15,8 +15,8 @@
 #endif  // USE_XINPUT
 
 namespace {
-// These could be UI settings...
 constexpr float MOVE_SENSITIVITY = 0.25f;
+// These could be UI settings...
 constexpr float LOOK_SENSITIVITY = 0.05f;
 constexpr float MOUSE_LOOK_SENSITIVITY = LOOK_SENSITIVITY * 12.5f;
 }  // namespace
@@ -120,7 +120,7 @@ bool Input::MouseManager::update(const uint8_t player) {
     // Note: I am just going to ignore how much scrolling is happening because this will most likely only be debugging input.
     if (info.wheel) {
         hasInput = true;
-        playerInfo.moveDir.z = (info.wheel > 0.0f) ? 6.0f : -6.0f;
+        playerInfo.moveDir.z = (info.wheel > 0.0f) ? -1.0f : 1.0f;  // right-handed
         playerInfo.moveDir.z *= MOVE_SENSITIVITY * normFactor;
     }
 
@@ -148,8 +148,7 @@ bool Input::ControllerManager::update(const uint8_t player) {
 
 #ifdef USE_XINPUT
 bool Input::ControllerManager::updateXInput(const uint8_t player) {
-    constexpr float XINPUT_MOVE_FACTOR = MOVE_SENSITIVITY;
-    constexpr float XINPUT_LOOK_FACTOR = LOOK_SENSITIVITY;
+    constexpr float XINPUT_LOOK_SENSITIVITY = LOOK_SENSITIVITY;
 
     bool hasInput = false;
 
@@ -187,10 +186,10 @@ bool Input::ControllerManager::updateXInput(const uint8_t player) {
 
             playerInfo.moveDir.x = cntlr.thumbLNorm.x;
             playerInfo.moveDir.z = -cntlr.thumbLNorm.y;  // right-handed
-            playerInfo.moveDir *= XINPUT_MOVE_FACTOR * normFactor;
+            playerInfo.moveDir *= MOVE_SENSITIVITY * normFactor;
 
             playerInfo.lookDir = cntlr.thumbRNorm;
-            playerInfo.lookDir *= XINPUT_LOOK_FACTOR * normFactor;
+            playerInfo.lookDir *= XINPUT_LOOK_SENSITIVITY * normFactor;
 
             if (cntlr.hasChanges() && cntlr.getPrevState().Gamepad.wButtons)
                 playerInfo.buttons = cntlr.getCurrState().Gamepad.wButtons;
@@ -202,7 +201,7 @@ bool Input::ControllerManager::updateXInput(const uint8_t player) {
          * across all devices during this refactor, but I was not willing to put in the effort to make it work right yet. It
          * should be much closer now, but this workaround should not be necessary if a good solution to the problem is found.
          *
-         * I guess I should also mention that this only matters because I want the game to just pick up which ever input is
+         * I guess I should also mention that this only matters because I want the game to just pick up whichever input is
          * currently turned on and being used, which makes things more complex.
          */
         hadZeroState_ = glm::all(glm::equal(cntlr.thumbLNorm, glm::vec2())) &&  //

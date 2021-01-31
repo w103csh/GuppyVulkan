@@ -133,8 +133,6 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
     float viewRange_;
     float fovy_;
     glm::mat4 proj_;
-    float tanHalfFovy_;
-    float tanHalfFovx_;
     // view
     glm::vec3 eye_;
     glm::vec3 center_;
