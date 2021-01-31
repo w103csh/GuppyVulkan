@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -95,7 +95,7 @@ std::vector<Face> Frustum::make(const Mesh::Geometry::Info& geoInfo, const Camer
     std::vector<Face> faces;
 
     // Field of view is the total view angle with relation to the y-axis (glm::perspective).
-    float tanHalfFovy = tan(frustumInfo.fieldOfView / 2.0f);
+    float tanHalfFovy = tan(frustumInfo.fieldOfViewY / 2.0f);
 
     const float nearZ = frustumInfo.nearDistance;  // near distance from eye
     const float nearDistToPlaneY = tanHalfFovy * nearZ;

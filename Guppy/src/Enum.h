@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -9,68 +9,66 @@
 #include <variant>
 
 enum class GAME_KEY {
-    // VIRTUAL KEYS
-    KEY_SHUTDOWN,
-    // PHYSICAL KEYS
-    KEY_UNKNOWN,
-    KEY_ESC,
-    KEY_UP,
-    KEY_DOWN,
-    KEY_LEFT,
-    KEY_RIGHT,
-    KEY_SPACE,
-    KEY_TAB,
-    KEY_F,
-    KEY_W,
-    KEY_A,
-    KEY_S,
-    KEY_D,
-    KEY_E,
-    KEY_Q,
-    KEY_O,
-    KEY_P,
-    KEY_K,
-    KEY_L,
-    KEY_I,
+    UNKNOWN = 0,
+    ESC,
+    UP,
+    DOWN,
+    LEFT,
+    RIGHT,
+    SPACE,
+    TAB,
+    F,
+    W,
+    A,
+    S,
+    D,
+    E,
+    Q,
+    O,
+    P,
+    K,
+    L,
+    I,
     // BRACKET/BRACE KEYS
-    KEY_LEFT_BRACKET,
-    KEY_RIGHT_BRACKET,
+    LEFT_BRACKET,
+    RIGHT_BRACKET,
     // NUMBER KEYS
-    KEY_1,
-    KEY_2,
-    KEY_3,
-    KEY_4,
-    KEY_5,
-    KEY_6,
-    KEY_7,
-    KEY_8,
-    KEY_9,
-    KEY_0,
-    KEY_MINUS,
-    KEY_EQUALS,
-    KEY_BACKSPACE,
+    TOP_1,
+    TOP_2,
+    TOP_3,
+    TOP_4,
+    TOP_5,
+    TOP_6,
+    TOP_7,
+    TOP_8,
+    TOP_9,
+    TOP_0,
+    MINUS,
+    EQUALS,
+    BACKSPACE,
     // FUNCTION KEYS
-    KEY_F1,
-    KEY_F2,
-    KEY_F3,
-    KEY_F4,
-    KEY_F5,
-    KEY_F6,
-    KEY_F7,
-    KEY_F8,
-    KEY_F9,
-    KEY_F10,
-    KEY_F11,
-    KEY_F12,
+    F1,
+    F2,
+    F3,
+    F4,
+    F5,
+    F6,
+    F7,
+    F8,
+    F9,
+    F10,
+    F11,
+    F12,
     // MODIFIERS
-    KEY_ALT,
-    KEY_CTRL,
-    KEY_SHFT,
+    ALT,
+    CTRL,
+    SHFT,
 };
 
 // clang-format off
 using GameButtonBits = uint16_t;
 typedef enum GAME_BUTTON : GameButtonBits {
+    NONE            = 0x0000,
     // These are 1 to 1 the constants for XInput
     DPAD_UP         = 0x0001,
     DPAD_DOWN       = 0x0002,
@@ -126,13 +124,6 @@ enum class PUSH_CONSTANT {
     PRTCL_EULER,
     HFF_COLUMN,
     FFT_ROW_COL_OFFSET,
-};
-
-enum class INPUT_ACTION {
-    UP,
-    DOWN,
-    DBLCLK,
-    UNKNOWN,
 };
 
 enum class MESH {

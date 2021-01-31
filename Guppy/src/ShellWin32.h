@@ -1,5 +1,5 @@
 /*
- * Modifications copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Modifications copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  * -------------------------------
  * Copyright (C) 2016 Google, Inc.
@@ -61,9 +61,8 @@ class ShellWin32 : public Shell {
     void createWindow() override;
     vk::SurfaceKHR createSurface(vk::Instance instance);
 
-    GAME_KEY getKey(WPARAM wParam, INPUT_ACTION type);
-    void getMouse(UINT uMsg, LPARAM lParam);
-    void getMouseModifier(WPARAM wParam, LPARAM lParam);
+    bool translateKey(UINT uMsg, WPARAM wParam);
+    bool translateMouse(UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     static LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
         ShellWin32 *shell = reinterpret_cast<ShellWin32 *>(GetWindowLongPtr(hwnd, GWLP_USERDATA));

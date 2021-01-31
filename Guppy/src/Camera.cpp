@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -23,16 +23,16 @@ Base::Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo
       near_(pCreateInfo->n),
       far_(pCreateInfo->f),
       viewRange_(far_ - near_),
-      fov_(pCreateInfo->fov),
+      fovy_(pCreateInfo->fovy),
       eye_(pCreateInfo->eye),
       center_(pCreateInfo->center) {
     data_.view = glm::lookAt(pCreateInfo->eye, pCreateInfo->center, UP_VECTOR);
-    proj_ = glm::perspective(pCreateInfo->fov, pCreateInfo->aspect, near_, far_);
+    proj_ = glm::perspective(pCreateInfo->fovy, pCreateInfo->aspect, near_, far_);
     setProjectionData();
     update();
 }
 
-Ray Base::getRay(glm::vec2 &&position, const vk::Extent2D &extent, float distance) {
+Ray Base::getRay(const glm::vec2 &position, const vk::Extent2D &extent, float distance) {
     /*  Viewport appears to take x, y, w, h where:
             w, y - lower left
             w, h - width and height
@@ -113,14 +113,13 @@ frustumPlanes Base::getFrustumPlanes() const {
 
 void Base::setAspect(float aspect) {
     aspect_ = aspect;
-    proj_ = glm::perspective(fov_, aspect_, near_, far_);
+    proj_ = glm::perspective(fovy_, aspect_, near_, far_);
     setProjectionData();
     update();
 }
 
-void Base::update(const glm::vec3 &posDir, const glm::vec3 &lookDir, const uint32_t frameIndex) {
-    // bool wasUpdate = updateView(pos_dir, look_dir);  // This is triple buffered so just update always for now.
-    updateView(posDir, lookDir);
+void Base::update(const glm::vec3 &moveDir, const glm::vec2 &lookDir, const uint32_t frameIndex) {
+    updateView(moveDir, lookDir);
     update(frameIndex);
 }
 
@@ -133,32 +132,23 @@ void Base::update(const uint32_t frameIndex) {
     model_ = helpers::moveAndRotateTo(eye_, center_, UP_VECTOR);
 }
 
-bool Base::updateView(const glm::vec3 &posDir, const glm::vec3 &lookDir) {
-    bool updatePos = !glm::all(glm::equal(posDir, glm::vec3()));
-    bool updateLook = !glm::all(glm::equal(lookDir, glm::vec3()));
-    // If there is nothing to update then return ...
-    if (!updatePos && !updateLook) return false;
+bool Base::updateView(const glm::vec3 &moveDir, const glm::vec2 &lookDir) {
+    // if (glm::all(glm::equal(moveDir, glm::vec3())) && glm::all(glm::equal(lookDir, glm::vec2()))) return false;
 
-    // Get othonormal basis for camera view ...
-    glm::vec3 w = glm::row(data_.view, 2);
-    glm::vec3 u = glm::row(data_.view, 0);  // TODO: handle looking straight up
-    glm::vec3 v = glm::row(data_.view, 1);
+    // Get the orthonormal vectors from the previously calculated view matrix.
+    const glm::vec3 f = {data_.view[0][2], data_.view[1][2], data_.view[2][2]};  // forward
+    const glm::vec3 s = {data_.view[0][0], data_.view[1][0], data_.view[2][0]};  // right
+    const glm::vec3 u = {data_.view[0][1], data_.view[1][1], data_.view[2][1]};  // up
 
-    // MOVEMENT
-    if (updatePos) {
-        auto pos = w * (posDir.z * -1);  // w is pointing in -z direction
-        pos += u * posDir.x;
-        pos += v * posDir.y;
-        // update both eye_ & center_ so that movement doesn't affect look
-        eye_ += pos;
-        center_ += pos;
-    }
+    // MOVE
+    eye_ += f * moveDir.z;
+    eye_ += s * moveDir.x;
+    eye_ += u * moveDir.y;
+
     // LOOK
-    if (updateLook) {
-        auto look = u * lookDir.x;
-        look += v * lookDir.y;
-        center_ += look;
-    }
+    center_ = eye_ - f;
+    center_ += s * lookDir.x;
+    center_ += u * lookDir.y;
 
     data_.view = glm::lookAt(eye_, center_, UP_VECTOR);
 

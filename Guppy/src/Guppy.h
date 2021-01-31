@@ -1,5 +1,5 @@
 /*
- * Modifications copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Modifications copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  * Changed file name from "Hologram.h"
  * -------------------------------
@@ -28,8 +28,6 @@
 #include "Game.h"
 #include "RenderPass.h"
 
-class Base;
-struct MouseInput;
 class Shell;
 
 class Guppy : public Game {
@@ -37,24 +35,20 @@ class Guppy : public Game {
     Guppy(const std::vector<std::string>& args);
     ~Guppy();
 
-    // SHELL
-    void attachShell(Shell& sh) override;
+   private:
+    // LIFECYCLE
+    void attachShell() override;
+    void attachSwapchain() override;
+    void tick() override;
+    void frame() override;
+    void detachSwapchain() override;
     void detachShell() override;
 
-    // SWAPCHAIN
-    void attachSwapchain() override;
-    void detachSwapchain() override;
-
-    // GAME
-    void onTick() override;
-    void onFrame(float framePred) override;
-
     // INPUT
-    void onButton(const GameButtonBits buttons) override;
-    void onKey(const GAME_KEY key) override;
-    void onMouse(const MouseInput& input) override;
+    void processInput();
 
-   private:
+    bool paused_;
+
     // TODO: check Hologram for a good starting point for these...
     bool multithread_;
     bool use_push_constants_;

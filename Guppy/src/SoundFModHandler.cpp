@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -112,7 +112,7 @@ bool Sound::FModHandler::start(const TYPE type, const StartInfo *pStartInfo, con
     return true;
 }
 
-void Sound::FModHandler::update(const double) {
+void Sound::FModHandler::update() {
     FMOD_ERRCHECK(system_->update());
 
     FMOD_RESULT result;
@@ -195,7 +195,7 @@ void Sound::FModHandler::errorCheck(FMOD_RESULT result, const char *file, int li
     if (result != FMOD_OK) {
         std::stringstream ss;
         ss << file << "(" << line << "): FMOD error " << result << " - " << FMOD_ErrorString(result);
-        pShell_->log(Shell::LogPriority::LOG_ERR, ss.str().c_str());
+        shell().log(Shell::LogPriority::LOG_ERR, ss.str().c_str());
         assert(false);
     }
 }

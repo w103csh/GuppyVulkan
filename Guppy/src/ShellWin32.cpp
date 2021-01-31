@@ -1,5 +1,5 @@
 /*
- * Modifications copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Modifications copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  * -------------------------------
  * Copyright (C) 2016 Google, Inc.
@@ -151,6 +151,7 @@ vk::SurfaceKHR ShellWin32::createSurface(vk::Instance instance) {
 }
 
 LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    LRESULT result = 0;
     switch (uMsg) {
             // WINDOW EVENTS
         case WM_SIZE: {
@@ -168,272 +169,264 @@ LRESULT ShellWin32::handleMessage(UINT uMsg, WPARAM wParam, LPARAM lParam) {
                 } break;
             }
         } break;
-        case WM_CLOSE: {
-            game_.onKey(GAME_KEY::KEY_SHUTDOWN);
-        } break;
-            // MOUSE INPUT
-        case WM_MOUSEWHEEL:
-        case WM_MOUSEMOVE: {
-            getMouseModifier(wParam, lParam);
-        } break;
-        case WM_MOUSELEAVE: {
-            handlers_.pInput->mouseLeave();
-        } break;
-        case WM_LBUTTONDOWN:
-        case WM_LBUTTONUP:
-        case WM_LBUTTONDBLCLK: {
-            // get_mouse(Game::MOUSE::LEFT, uMsg, lParam);
-        } break;
-        case WM_MBUTTONDOWN:
-        case WM_MBUTTONUP:
-        case WM_MBUTTONDBLCLK: {
-            // get_mouse(Game::MOUSE::MIDDLE, uMsg, lParam);
-        } break;
-        case WM_RBUTTONDOWN:
-        case WM_RBUTTONUP:
-        case WM_RBUTTONDBLCLK: {
-            // get_mouse(Game::MOUSE::RIGHT, uMsg, lParam);
-        } break;
-        case WM_XBUTTONDOWN:
-        case WM_XBUTTONUP:
-        case WM_XBUTTONDBLCLK: {
-            // get_mouse(Game::MOUSE::X, uMsg, lParam);
-        } break;
-            // KEYBOARD INPUT
-        case WM_KEYUP: {
-            auto key = getKey(wParam, INPUT_ACTION::UP);
-        } break;
-        case WM_KEYDOWN: {
-            auto key = getKey(wParam, INPUT_ACTION::DOWN);
-            onKey(key);
-        } break;
-            // GENERAL
+        case WM_CLOSE:
         case WM_DESTROY: {
             quit();
         } break;
         default: {
-            return DefWindowProc(hwnd_, uMsg, wParam, lParam);
-        } break;
+            // TRANSLATE INPUT
+            if (translateKey(uMsg, wParam)) break;
+            if (translateMouse(uMsg, wParam, lParam)) break;
+            // Forward the information if nothing was used.
+            result = DefWindowProc(hwnd_, uMsg, wParam, lParam);
+        }
     }
 
-    return 0;
+    return result;
 }
 
-GAME_KEY ShellWin32::getKey(WPARAM wParam, INPUT_ACTION type) {
-    GAME_KEY key;
+bool ShellWin32::translateKey(UINT uMsg, WPARAM wParam) {
+    bool readInput = false;
+
+    GAME_KEY key = GAME_KEY::UNKNOWN;
     switch (wParam) {
         case VK_ESCAPE:
-            key = GAME_KEY::KEY_ESC;
+            key = GAME_KEY::ESC;
             break;
         case VK_UP:
-            key = GAME_KEY::KEY_UP;
+            key = GAME_KEY::UP;
             break;
         case VK_DOWN:
-            key = GAME_KEY::KEY_DOWN;
+            key = GAME_KEY::DOWN;
             break;
         case VK_LEFT:
-            key = GAME_KEY::KEY_LEFT;
+            key = GAME_KEY::LEFT;
             break;
         case VK_RIGHT:
-            key = GAME_KEY::KEY_RIGHT;
+            key = GAME_KEY::RIGHT;
             break;
         case VK_SPACE:
-            key = GAME_KEY::KEY_SPACE;
+            key = GAME_KEY::SPACE;
             break;
         case VK_TAB:
-            key = GAME_KEY::KEY_TAB;
+            key = GAME_KEY::TAB;
             break;
         case 'F':
         case 'f':
-            key = GAME_KEY::KEY_F;
+            key = GAME_KEY::F;
             break;
         case 'W':
         case 'w':
-            key = GAME_KEY::KEY_W;
-            break;
+            key = GAME_KEY::W;
             break;
         case 'A':
         case 'a':
-            key = GAME_KEY::KEY_A;
+            key = GAME_KEY::A;
             break;
         case 'S':
         case 's':
-            key = GAME_KEY::KEY_S;
+            key = GAME_KEY::S;
             break;
         case 'D':
         case 'd':
-            key = GAME_KEY::KEY_D;
+            key = GAME_KEY::D;
             break;
         case 'E':
         case 'e':
-            key = GAME_KEY::KEY_E;
+            key = GAME_KEY::E;
             break;
         case 'Q':
         case 'q':
-            key = GAME_KEY::KEY_Q;
+            key = GAME_KEY::Q;
+            break;
         case 'O':
-            key = GAME_KEY::KEY_O;
+            key = GAME_KEY::O;
+            break;
         case 'P':
-            key = GAME_KEY::KEY_P;
+            key = GAME_KEY::P;
             break;
         case 'K':
-            key = GAME_KEY::KEY_K;
+            key = GAME_KEY::K;
             break;
         case 'L':
-            key = GAME_KEY::KEY_L;
+            key = GAME_KEY::L;
             break;
         case 'I':
-            key = GAME_KEY::KEY_I;
+            key = GAME_KEY::I;
             break;
         // BRACKET/BRACE KEYS
         case '[':
-            key = GAME_KEY::KEY_LEFT_BRACKET;
+            key = GAME_KEY::LEFT_BRACKET;
             break;
         case ']':
-            key = GAME_KEY::KEY_RIGHT_BRACKET;
+            key = GAME_KEY::RIGHT_BRACKET;
             break;
         // NUMBER KEYS
         case '1':
-            key = GAME_KEY::KEY_1;
+            key = GAME_KEY::TOP_1;
             break;
         case '2':
-            key = GAME_KEY::KEY_2;
+            key = GAME_KEY::TOP_2;
             break;
         case '3':
-            key = GAME_KEY::KEY_3;
+            key = GAME_KEY::TOP_3;
             break;
         case '4':
-            key = GAME_KEY::KEY_4;
+            key = GAME_KEY::TOP_4;
             break;
         case '5':
-            key = GAME_KEY::KEY_5;
+            key = GAME_KEY::TOP_5;
             break;
         case '6':
-            key = GAME_KEY::KEY_6;
+            key = GAME_KEY::TOP_6;
             break;
         case '7':
-            key = GAME_KEY::KEY_7;
+            key = GAME_KEY::TOP_7;
             break;
         case '8':
-            key = GAME_KEY::KEY_8;
+            key = GAME_KEY::TOP_8;
             break;
         case '9':
-            key = GAME_KEY::KEY_9;
+            key = GAME_KEY::TOP_9;
             break;
         case '0':
-            key = GAME_KEY::KEY_0;
+            key = GAME_KEY::TOP_0;
             break;
         case '-':
-            key = GAME_KEY::KEY_MINUS;
+            key = GAME_KEY::MINUS;
             break;
         case '=':
-            key = GAME_KEY::KEY_EQUALS;
+            key = GAME_KEY::EQUALS;
             break;
         case VK_BACK:
-            key = GAME_KEY::KEY_BACKSPACE;
+            key = GAME_KEY::BACKSPACE;
             break;
         // FUNCTION KEYS
         case VK_F1:
-            key = GAME_KEY::KEY_F1;
+            key = GAME_KEY::F1;
             break;
             // case VK_F2:
-            //    key = GAME_KEY::KEY_F2;
+            //    key = GAME_KEY::F2;
             // break;
         case VK_F3:
-            key = GAME_KEY::KEY_F3;
+            key = GAME_KEY::F3;
             break;
             // case VK_F4:
-            //    key = GAME_KEY::KEY_F4;
+            //    key = GAME_KEY::F4;
             //    break;
         case VK_F5:
-            key = GAME_KEY::KEY_F5;
+            key = GAME_KEY::F5;
             break;
         case VK_F6:
-            key = GAME_KEY::KEY_F6;
+            key = GAME_KEY::F6;
             break;
         case VK_F7:
-            key = GAME_KEY::KEY_F7;
+            key = GAME_KEY::F7;
             break;
             // case VK_F8:
-            //    key = GAME_KEY::KEY_F8;
+            //    key = GAME_KEY::F8;
             //    break;
         case VK_F9:
-            key = GAME_KEY::KEY_F9;
+            key = GAME_KEY::F9;
             break;
         case VK_F10:
-            key = GAME_KEY::KEY_F10;
+            key = GAME_KEY::F10;
             break;
         case VK_F11:
-            key = GAME_KEY::KEY_F11;
+            key = GAME_KEY::F11;
             break;
         case VK_F12:
-            key = GAME_KEY::KEY_F12;
+            key = GAME_KEY::F12;
             break;
             // case MOD_ALT:
-            //    key = GAME_KEY::KEY_CTRL;
+            //    key = GAME_KEY::CTRL;
             //    break;
             // case MOD_CONTROL:
-            //    key = GAME_KEY::KEY_CTRL;
+            //    key = GAME_KEY::CTRL;
             //    break;
             // case MOD_SHIFT:
-            //    key = GAME_KEY::KEY_CTRL;
+            //    key = GAME_KEY::CTRL;
             //    break;
-        default:
-            key = GAME_KEY::KEY_UNKNOWN;
-            break;
+        default:;
     }
-    handlers_.pInput->updateKeyInput(key, type);
-    return key;
+
+    if (key != GAME_KEY::UNKNOWN) {
+        readInput = true;
+        switch (uMsg) {
+            case WM_KEYDOWN: {
+                inputHandler().keyboardMgr().keyDown(key);
+            } break;
+            case WM_KEYUP: {
+                inputHandler().keyboardMgr().keyUp(key);
+            } break;
+            default:;
+        }
+    }
+
+    return readInput;
 }
 
-void ShellWin32::getMouse(UINT uMsg, LPARAM lParam) {
+bool ShellWin32::translateMouse(UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    bool readInput = false;
+
+    auto& info = inputHandler().mouseMgr().info;
     switch (uMsg) {
-            // UP
-        case WM_LBUTTONUP:
-        case WM_MBUTTONUP:
-        case WM_RBUTTONUP:
-        case WM_XBUTTONUP: {
-            // nothing here yet...
+        case WM_MOUSEWHEEL: {
+            readInput = true;
+            info.wheel = static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam));
         } break;
-            // DOWN
-        case WM_LBUTTONDOWN:
+        case WM_MOUSEMOVE: {
+            readInput = true;
+            info.location.x = static_cast<float>(GET_X_LPARAM(lParam));
+            info.location.y = static_cast<float>(GET_Y_LPARAM(lParam));
+            switch (wParam) {
+                case MK_RBUTTON:
+                case MK_LBUTTON:
+                case MK_CONTROL:
+                case MK_MBUTTON:
+                case MK_SHIFT:
+                case MK_XBUTTON1:
+                case MK_XBUTTON2:
+                    break;
+            }
+        } break;
+        case WM_MOUSELEAVE: {
+            readInput = true;
+            inputHandler().mouseMgr().mouseLeave();
+        } break;
+        // UP
+        case WM_LBUTTONUP: {
+            readInput = true;
+            info.left = false;
+        } break;
+        case WM_RBUTTONUP: {
+            readInput = true;
+            info.right = false;
+        } break;
+        case WM_MBUTTONUP:
+        case WM_XBUTTONUP:
+            break;
+        // DOWN
+        case WM_LBUTTONDOWN: {
+            readInput = true;
+            info.left = true;
+        } break;
+        case WM_RBUTTONDOWN: {
+            readInput = true;
+            info.right = true;
+        } break;
         case WM_MBUTTONDOWN:
         case WM_XBUTTONDOWN:
             break;
-        case WM_RBUTTONDOWN: {
-            // float xPos = static_cast<float>(GET_X_LPARAM(lParam));
-            // float yPos = static_cast<float>(GET_Y_LPARAM(lParam));
-            // InputHandler::inst().addMouseInput(xPos, yPos);
-        } break;
-            // DOUBLE CLICK (SETTINGS TOGGLE)
+        // DOUBLE CLICK
         case WM_LBUTTONDBLCLK:
         case WM_MBUTTONDBLCLK:
         case WM_RBUTTONDBLCLK:
-        case WM_XBUTTONDBLCLK: {
-            // nothing here yet...
-        } break;
+        case WM_XBUTTONDBLCLK:
+            break;
     }
-}
 
-void ShellWin32::getMouseModifier(WPARAM wParam, LPARAM lParam) {
-    float xPos = static_cast<float>(GET_X_LPARAM(lParam));
-    float yPos = static_cast<float>(GET_Y_LPARAM(lParam));
-    float zDelta = static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam));
-    bool isLooking = false;
-    switch (wParam) {
-        case MK_RBUTTON: {
-            isLooking = true;
-        } break;
-        case MK_CONTROL:
-        case MK_LBUTTON:
-        case MK_MBUTTON:
-        case MK_SHIFT:
-        case MK_XBUTTON1:
-        case MK_XBUTTON2: {
-            // nothing here yet...
-        } break;
-    }
-    handlers_.pInput->updateMousePosition(xPos, yPos, zDelta, isLooking);
+    return readInput;
 }
 
 void ShellWin32::quit() const { PostQuitMessage(0); }
@@ -478,12 +471,15 @@ void ShellWin32::run() {
         } else {
             acquireBackBuffer();
 
-            double now = timer.get();
-            elapsedTime_ = now - currentTime_;
-            currentTime_ = now;
+            {  // Update timer related values.
+                double now = timer.get();
+                elapsedTime_ = now - currentTime_;
+                currentTime_ = now;
+                normalizedElapsedTime_ = elapsedTime_ / NORMALIZED_ELAPSED_TIME_FACTOR;
+            }
 
-            update(elapsedTime_);
-            addGameTime(static_cast<float>(elapsedTime_));
+            update();
+            addGameTime();
 
             presentBackBuffer();
         }
@@ -496,7 +492,7 @@ void ShellWin32::run() {
             if (settings_.enableDirectoryListener) asyncAlert(0);
         }
 
-        handlers_.pInput->clear();
+        inputHandler().reset();
     }
 
     // Free any directory listening handles

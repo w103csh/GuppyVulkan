@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -159,10 +159,7 @@ class Handler : public Game::Handler {
     void attachSwapchain();
 
     // CAMERAS
-    virtual_inline void cycleCamera() {
-        activeCameraOffset_ =
-            (hasDebugCamera() && activeCameraOffset_ == mainCameraOffset_) ? debugCameraOffset_ : mainCameraOffset_;
-    }
+    void cycleCamera();
     // ACTIVE
     inline auto& getActiveCamera() {
         return *static_cast<Camera::Perspective::Default::Base*>(camPersDefMgr().pItems[activeCameraOffset_].get());

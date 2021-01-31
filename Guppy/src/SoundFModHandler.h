@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -25,7 +25,7 @@ class FModHandler : public Handler {
 
     void init() override;
     bool start(const TYPE type, const StartInfo *pStartInfo, const EffectInfo *pEffectInfo = nullptr) override;
-    void update(const double) override;
+    void update() override;
     void pause(const TYPE type) override;
     void stop(const TYPE type) override;
     void destroy() override;

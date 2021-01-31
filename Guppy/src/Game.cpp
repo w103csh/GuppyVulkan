@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -24,18 +24,6 @@
 #include "TextureHandler.h"
 #include "UIHandler.h"
 #include "UniformHandler.h"
-
-Game::~Game() = default;
-
-Game::Game(const std::string& name, const std::vector<std::string>& args, Handlers&& handlers)
-    : handlers_(std::move(handlers)), settings_(), shell_(nullptr), frameCount_(0) {
-    settings_.name = name;
-    parse_args(args);
-}
-
-void Game::watchDirectory(const std::string& directory, std::function<void(std::string)> callback) {
-    shell_->watchDirectory(directory, callback);
-}
 
 Game::Settings::Settings()
     : name(""),
@@ -72,4 +60,16 @@ Game::Settings::Settings()
       enableDoubleClicks(false),
       enableDirectoryListener(true),
       assertOnRecompileShader(false) {
+}
+
+Game::~Game() = default;
+
+Game::Game(const std::string& name, const std::vector<std::string>& args, Handlers&& handlers)
+    : handlers_(std::move(handlers)), settings_(), pShell_(nullptr), frameCount_(0) {
+    settings_.name = name;
+    parse_args(args);
+}
+
+void Game::watchDirectory(const std::string& directory, std::function<void(std::string)> callback) {
+    pShell_->watchDirectory(directory, callback);
 }

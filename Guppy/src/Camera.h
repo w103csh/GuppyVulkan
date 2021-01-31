@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -26,12 +26,12 @@ constexpr glm::mat4 VULKAN_CLIP_MAT4 = glm::mat4{1.0f, 0.0f,  0.0f, 0.0f,   //
                                                  0.0f, 0.0f,  0.5f, 1.0f};  //
 
 struct FrustumInfo {
-    float fieldOfView;
-    float aspectRatio;
-    float nearDistance;
-    float farDistance;
+    float fieldOfViewY = 0.0f;
+    float aspectRatio = 0.0f;
+    float nearDistance = 0.0f;
+    float farDistance = 0.0f;
     // For testing...
-    frustumPlanes planes;
+    frustumPlanes planes = {};
 };
 
 namespace Perspective {
@@ -42,7 +42,7 @@ struct CreateInfo : public Buffer::CreateInfo {
     float aspect = (16.0f / 9.0f);
     glm::vec3 eye{2.0f, 2.0f, 4.0f};
     glm::vec3 center{0.0f, 0.0f, 0.0f};
-    float fov = glm::radians(45.0f);
+    float fovy = glm::radians(45.0f);
     float n = 0.1f;
     float f = 1000.0f;
 };
@@ -82,16 +82,14 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
 
     inline glm::mat4 getCameraSpaceToWorldSpaceTransform() const { return glm::inverse(data_.view); }
 
-    Ray getRay(glm::vec2 &&position, const vk::Extent2D &extent) {
-        return getRay(std::forward<glm::vec2>(position), extent, far_);
-    }
-    Ray getRay(glm::vec2 &&position, const vk::Extent2D &extent, float distance);
+    Ray getRay(const glm::vec2 &position, const vk::Extent2D &extent) { return getRay(position, extent, far_); }
+    Ray getRay(const glm::vec2 &position, const vk::Extent2D &extent, float distance);
 
     virtual_inline const auto &getMVP() const { return data_.viewProjection; }
     virtual_inline const auto &getMV() const { return data_.view; }
 
     void setAspect(float aspect);
-    void update(const glm::vec3 &posDir, const glm::vec3 &lookDir, const uint32_t frameIndex);
+    void update(const glm::vec3 &moveDir, const glm::vec2 &lookDir, const uint32_t frameIndex);
 
     frustumPlanes getFrustumPlanes() const;
     virtual_inline auto getPosition() const { return eye_; }
@@ -99,7 +97,7 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
 
     FrustumInfo getFrustumInfo() const {
         FrustumInfo info;
-        info.fieldOfView = fov_;
+        info.fieldOfViewY = fovy_;
         info.aspectRatio = aspect_;
         info.nearDistance = near_;
         info.farDistance = far_;
@@ -109,11 +107,18 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
 
     const glm::mat4 &getModel(const uint32_t index = 0) const override { return model_; }
 
+    // Something like this will be required for pauses... A flag should probably exist on PerFramebufferDataItems and
+    // BufferManagers should check it per frame, but I'm too lazy atm.
+    void updateAllFrames() {
+        dirty = true;
+        setData();
+    }
+
    protected:
     glm::mat4 &model(const uint32_t index = 0) override { return model_; }
 
    private:
-    bool updateView(const glm::vec3 &posDir, const glm::vec3 &lookDir);
+    bool updateView(const glm::vec3 &moveDir, const glm::vec2 &lookDir);
     void update(const uint32_t frameIndex = UINT32_MAX);
 
     // This should be the only way to set the projection data. Also,
@@ -126,10 +131,11 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
     float near_;
     float far_;
     float viewRange_;
-    float fov_;
+    float fovy_;
     glm::mat4 proj_;
+    float tanHalfFovy_;
+    float tanHalfFovx_;
     // view
-    // storing eye & center make the matrix creation faster?
     glm::vec3 eye_;
     glm::vec3 center_;
 };

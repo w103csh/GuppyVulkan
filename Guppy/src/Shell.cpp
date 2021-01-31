@@ -1,5 +1,5 @@
 /*
- * Modifications copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Modifications copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  * -------------------------------
  * Copyright (C) 2016 Google, Inc.
@@ -55,6 +55,7 @@ Shell::Shell(Game &game, Handlers &&handlers)
       },
       currentTime_(0.0),
       elapsedTime_(0.0),
+      normalizedElapsedTime_(0.0),
       handlers_(std::move(handlers)),
       ctx_(),
       gameTick_(1.0f / settings_.ticksPerSecond),
@@ -94,20 +95,30 @@ void Shell::log(LogPriority priority, const char *msg) const {
 void Shell::init() {
     initInstance();
     initPhysicalDevice();
-    // TODO: Add init functions here... inline ???
-    handlers_.pSound->init();
+    soundHandler().init();
+    inputHandler().init();
 }
 
-void Shell::update(const double elapsed) {
-    // TODO: Add update functions here... inline ???
-    handlers_.pSound->update(elapsed);
-    handlers_.pInput->updateInput(static_cast<float>(elapsed));  // remove me !!!!!
-    handlers_.pInput->update(elapsed);
+void Shell::update() {
+    soundHandler().update();
+    inputHandler().update();
+    processInput();
+}
+
+void Shell::addGameTime() {
+    int max_ticks = 1;
+
+    if (!settings_.noTick) gameTime_ += elapsedTime_;
+
+    while (gameTime_ >= gameTick_ && max_ticks--) {
+        game_.onTick();
+        gameTime_ -= gameTick_;
+    }
 }
 
 void Shell::destroy() {
-    // TODO: Add destroy functions here... inline ???
-    handlers_.pSound->destroy();
+    soundHandler().destroy();
+    inputHandler().destroy();
 }
 
 void Shell::cleanup() {
@@ -196,7 +207,7 @@ void Shell::createContext() {
     // need image count
     createBackBuffers();
 
-    game_.attachShell(*this);
+    game_.onAttachShell(*this);
 }
 
 void Shell::destroyContext() {
@@ -205,7 +216,7 @@ void Shell::destroyContext() {
     ctx_.dev.waitIdle();
 
     destroySwapchain();
-    game_.detachShell();
+    game_.onDetachShell();
     destroyBackBuffers();
 
     ctx_.destroyDevice();
@@ -277,32 +288,45 @@ void Shell::createSwapchain() {
 
 void Shell::destroySwapchain() {
     if (ctx_.swapchain) {
-        game_.detachSwapchain();
+        game_.onDetachSwapchain();
         ctx_.dev.destroySwapchainKHR(ctx_.swapchain, ctx_.pAllocator);
     }
     ctx_.instance.destroySurfaceKHR(ctx_.surface, ctx_.pAllocator);
 }
 
-void Shell::onButton(const GameButtonBits buttons) { game_.onButton(buttons); }
-
-void Shell::onKey(const GAME_KEY key) {
-    switch (key) {
-        case GAME_KEY::KEY_MINUS: {
-            if (framesPerSecondLimit > 1) framesPerSecondLimit--;
-        } break;
-        case GAME_KEY::KEY_EQUALS: {
-            if (framesPerSecondLimit < UINT8_MAX) framesPerSecondLimit++;
-        } break;
-        case GAME_KEY::KEY_BACKSPACE: {
-            limitFramerate = !limitFramerate;
-        } break;
-        default:;
+void Shell::processInput() {
+    const auto &pKeys = inputHandler().getInfo().players[0].pKeys;
+    if (pKeys) {
+        for (const auto &key : *pKeys) {
+            switch (key) {
+                case GAME_KEY::MINUS: {
+                    if (framesPerSecondLimit > 1) framesPerSecondLimit--;
+                } break;
+                case GAME_KEY::EQUALS: {
+                    if (framesPerSecondLimit < UINT8_MAX) framesPerSecondLimit++;
+                } break;
+                case GAME_KEY::BACKSPACE: {
+                    limitFramerate = !limitFramerate;
+                } break;
+                case GAME_KEY::ESC: {
+                    quit();
+                } break;
+                default:;
+            }
+        }
     }
-    game_.onKey(key);
 }
 
 void Shell::resizeSwapchain(uint32_t widthHint, uint32_t heightHint, bool refreshCapabilities) {
     if (determineSwapchainExtent(widthHint, heightHint, refreshCapabilities)) return;
+
+    {  // Create a normalized screen space transform.
+        ctx_.normalizedScreenSpace = glm::mat3(1.0f);
+        ctx_.normalizedScreenSpace[0][0] = (1.0f / static_cast<float>(ctx_.extent.width >> 1));    // x scale
+        ctx_.normalizedScreenSpace[2][1] = 1.0f;                                                   // x translate
+        ctx_.normalizedScreenSpace[1][1] = (-1.0f / static_cast<float>(ctx_.extent.height >> 1));  // y scale
+        ctx_.normalizedScreenSpace[2][0] = -1.0f;                                                  // y translate
+    }
 
     auto &caps = ctx_.surfaceProps.capabilities;
 
@@ -369,22 +393,11 @@ void Shell::resizeSwapchain(uint32_t widthHint, uint32_t heightHint, bool refres
     if (swapchainInfo.oldSwapchain) {
         ctx_.dev.waitIdle();
 
-        game_.detachSwapchain();
+        game_.onDetachSwapchain();
         ctx_.dev.destroySwapchainKHR(swapchainInfo.oldSwapchain, ctx_.pAllocator);
     }
 
-    game_.attachSwapchain();
-}
-
-void Shell::addGameTime(float time) {
-    int max_ticks = 1;
-
-    if (!settings_.noTick) gameTime_ += time;
-
-    while (gameTime_ >= gameTick_ && max_ticks--) {
-        game_.onTick();
-        gameTime_ -= gameTick_;
-    }
+    game_.onAttachSwapchain();
 }
 
 void Shell::acquireBackBuffer() {
@@ -418,7 +431,8 @@ void Shell::acquireBackBuffer() {
 void Shell::presentBackBuffer() {
     const auto &backBuffer = ctx_.acquiredBackBuffer;
 
-    if (!settings_.noRender) game_.onFrame(gameTime_ / gameTick_);
+    // if (!settings_.noRender) game_.onFrame(gameTime_ / gameTick_);
+    if (!settings_.noRender) game_.onFrame();
 
     vk::PresentInfoKHR presentInfo = {};
     presentInfo.waitSemaphoreCount = 1;

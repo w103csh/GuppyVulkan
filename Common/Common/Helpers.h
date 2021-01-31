@@ -1,5 +1,5 @@
 /*
- * Modifications copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Modifications copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  * -------------------------------
  * Copyright (C) 2016 Google, Inc.
@@ -209,7 +209,7 @@ glm::mat4 getBias();
 glm::mat3 makeArbitraryBasis(const glm::vec3 &dir);
 
 template <typename TVec>
-static std::string makeVecString(TVec v) {
+static std::string toString(TVec v) {
     std::string s = "(";
     for (auto i = 0; i < v.length(); i++) {
         s += std::to_string(v[i]);

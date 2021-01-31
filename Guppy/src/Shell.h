@@ -1,5 +1,5 @@
 /*
- * Modifications copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Modifications copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  * -------------------------------
  * Copyright (C) 2016 Google, Inc.
@@ -41,6 +41,9 @@ namespace Sound { class Handler; }
 
 class Shell {
    public:
+    // Used to peg time related things to fixed factor. Assume 60 fps is a decent target.
+    static constexpr double NORMALIZED_ELAPSED_TIME_FACTOR = 1.0 / 60.0;
+
     Shell(const Shell &sh) = delete;
     Shell &operator=(const Shell &sh) = delete;
     virtual ~Shell();
@@ -61,6 +64,11 @@ class Shell {
         static_assert(std::is_floating_point<T>::value, "T must be a floating point type");
         return static_cast<T>(elapsedTime_);
     }
+    template <typename T = double>
+    constexpr T getNormalizedElaspedTime() const {
+        static_assert(std::is_floating_point<T>::value, "T must be a floating point type");
+        return static_cast<T>(normalizedElapsedTime_);
+    }
 
     // LOGGING
     enum class LogPriority {
@@ -79,10 +87,6 @@ class Shell {
     virtual void checkDirectories() = 0;                 // TODO: think this through
     virtual void watchDirectory(const std::string &directory,
                                 const std::function<void(std::string)> callback) = 0;  // TODO: think this through
-
-    void onButton(const GameButtonBits buttons);
-    void onKey(const GAME_KEY key);
-    inline void onMouse(const MouseInput &input) { game_.onMouse(input); }  // TODO: think this through
 
     // SWAPCHAIN
     void resizeSwapchain(uint32_t widthHint, uint32_t heightHint, bool refreshCapabilities = true);
@@ -105,14 +109,18 @@ class Shell {
         inline Input::Handler &inputHandler() const { return std::ref(*pShell_->handlers_.pInput); }
         inline Sound::Handler &soundHandler() const { return std::ref(*pShell_->handlers_.pSound); }
 
+        const auto &shell() const { return *pShell_; }
+
        protected:
         Handler(Shell *pShell) : pShell_(pShell) {}
         virtual ~Handler() = default;
 
+        // LIFECYCLE
         virtual void init() = 0;
-        virtual void update(const double elapsed) = 0;
+        virtual void update() = 0;
         virtual void destroy() = 0;
 
+       private:
         Shell *pShell_;
     };
 
@@ -123,7 +131,8 @@ class Shell {
     Shell(Game &game, Handlers &&handlers);
 
     void init();
-    void update(const double elapsed);
+    void update();
+    void addGameTime();
     void destroy();
 
     virtual void setPlatformSpecificExtensions() = 0;
@@ -134,8 +143,6 @@ class Shell {
 
     void createContext();
     virtual void destroyContext();
-
-    void addGameTime(float time);
 
     // SWAPCHAIN
     void acquireBackBuffer();
@@ -149,10 +156,16 @@ class Shell {
     std::vector<LayerProperties> layerProps_;
     std::vector<vk::ExtensionProperties> instExtProps_;
 
-    double currentTime_, elapsedTime_;
+    // Values are relative to seconds.
+    double currentTime_;
+    double elapsedTime_;
+    double normalizedElapsedTime_;
+
     const Handlers handlers_;
 
    private:
+    void processInput();
+
     void assertAllInstanceLayers() const;
     void assertAllInstanceExtensions() const;
 
@@ -207,8 +220,8 @@ class Shell {
 
     Context ctx_;
 
-    const float gameTick_;
-    float gameTime_;
+    const double gameTick_;
+    double gameTime_;
 
     vk::DebugUtilsMessengerEXT debugUtilsMessenger_;
 };

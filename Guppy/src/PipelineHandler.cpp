@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -192,6 +192,15 @@ void Pipeline::Handler::tick() {
     passHandler().updateBindData(updateSet);
 
     needsUpdateSet_.clear();
+}
+
+void Pipeline::Handler::destroy() {
+    reset();
+    // Cleanup any left over pipelines.
+    for (auto& [frame, pipeline] : oldPipelines_) {
+        if (pipeline) shell().context().dev.destroyPipeline(pipeline, shell().context().pAllocator);
+    }
+    oldPipelines_.clear();
 }
 
 std::vector<vk::PushConstantRange> Pipeline::Handler::getPushConstantRanges(
@@ -416,13 +425,13 @@ void Pipeline::Handler::needsUpdate(const std::vector<SHADER> types) {
     }
 }
 
-// "frameIndex" of -1 means clean up regardless
-void Pipeline::Handler::cleanup(int frameIndex) {
+void Pipeline::Handler::cleanup() {
     if (oldPipelines_.empty()) return;
 
+    const auto frameIndex = passHandler().getFrameIndex();
     for (uint8_t i = 0; i < oldPipelines_.size(); i++) {
         auto& pair = oldPipelines_[i];
-        if (pair.first == frameIndex || frameIndex == -1) {
+        if (pair.first == frameIndex) {
             shell().context().dev.destroyPipeline(pair.second, shell().context().pAllocator);
             oldPipelines_.erase(oldPipelines_.begin() + i);
         } else if (pair.first == -1) {

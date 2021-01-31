@@ -1,201 +1,234 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
 #include "InputHandler.h"
 
-#include <sstream>
+#include <algorithm>
+#include <string>
 
 #include "Constants.h"
-
-/* All of this old input code needs an update (everything other than XInput). I wrote it when I
- *  barely knew C++. I am going to hold off on any major abstractions of the input until I have
- *  some kind of target for how interacting with the 3D scene is going to happen.
- */
-
-#define DEBUG_OLD 0
-#if DEBUG_OLD
-#include <sstream>
-#endif  // DEBUG_OLD
-
-namespace {
-
-// move
-constexpr float K_X_MOVE_FACT = 2.0f;
-constexpr float K_Y_MOVE_FACT = 2.0f;
-constexpr float K_Z_MOVE_FACT = 2.0f;
-// look
-constexpr float M_X_LOOK_FACT = 0.3f;
-constexpr float M_Y_LOOK_FACT = -0.3f;
-
-}  // namespace
-
-Input::Handler::Handler(Shell* pShell)
-    : Shell::Handler(pShell),
-      currKeyInput_(),
-      posDir_(),
-      isLooking_(false),
-      hasFocus_(false),
-      currMouseInput_{0.0f, 0.0f, 0.0f},
-      prevMouseInput_{0.0f, 0.0f, 0.0f},
-      lookDir_() {}
-
-void Input::Handler::updateInput(float elapsed) {
-    // reset();
-
-    updateKeyInput();
-    updateMouseInput();
-
-    // account for time
-    posDir_ *= elapsed;
-    // lookDir_ *= (0.001 / elapsed);
-
-#if DEBUG_OLD
-    if (glm::any(glm::notEqual(posDir_, glm::vec3(0.0f)))) {
-        std::stringstream ss;
-        ss << "move (" << elapsed << "): " << helpers::makeVecString(posDir_) << std::endl;
-        pShell_->log(Shell::LogPriority::LOG_INFO, ss.str().c_str());
-    }
-#endif  // DEBUG_OLD
-}
-
-void Input::Handler::updateKeyInput() {
-#if DEBUG_OLD
-    std::stringstream ss;
-#endif  // DEBUG_OLD
-
-    for (auto& key : currKeyInput_) {
-        switch (key) {
-                // FORWARD
-            case GAME_KEY::KEY_UP:
-            case GAME_KEY::KEY_W: {
-#if DEBUG_OLD
-                ss << " FORWARD ";
-#endif  // DEBUG_OLD
-                posDir_.z += K_Z_MOVE_FACT;
-            } break;
-                // BACK
-            case GAME_KEY::KEY_DOWN:
-            case GAME_KEY::KEY_S: {
-#if DEBUG_OLD
-                ss << " BACK ";
-#endif  // DEBUG_OLD
-                posDir_.z += K_Z_MOVE_FACT * -1;
-            } break;
-                // RIGHT
-            case GAME_KEY::KEY_RIGHT:
-            case GAME_KEY::KEY_D: {
-#if DEBUG_OLD
-                ss << " RIGHT ";
-#endif  // DEBUG_OLD
-                posDir_.x += K_X_MOVE_FACT;
-            } break;
-                // LEFT
-            case GAME_KEY::KEY_LEFT:
-            case GAME_KEY::KEY_A: {
-#if DEBUG_OLD
-                ss << " LEFT ";
-#endif  // DEBUG_OLD
-                posDir_.x += K_X_MOVE_FACT * -1;
-            } break;
-                // UP
-            case GAME_KEY::KEY_E: {
-#if DEBUG_OLD
-                ss << " UP ";
-#endif  // DEBUG_OLD
-                posDir_.y += K_Y_MOVE_FACT;
-            } break;
-                // DOWN
-            case GAME_KEY::KEY_Q: {
-#if DEBUG_OLD
-                ss << " DOWN ";
-#endif  // DEBUG_OLD
-                posDir_.y += K_Y_MOVE_FACT * -1;
-            } break;
-            default:;
-        }
-    }
-
-#if DEBUG_OLD
-    auto sMsg = ss.str();
-    if (sMsg.size() > 0) {
-        sMsg += "\n Y position direction: " + helpers::makeVecString(posDir_) + "\n";
-        pShell_->log(Shell::LogPriority::LOG_INFO, sMsg.c_str());
-    }
-#endif  // DEBUG_OLD
-}
-
-void Input::Handler::updateMouseInput() {
-    std::stringstream ss;
-
-    if (isLooking_) {
-        lookDir_.x = (currMouseInput_.xPos - prevMouseInput_.xPos) * M_X_LOOK_FACT;
-        lookDir_.y = (currMouseInput_.yPos - prevMouseInput_.yPos) * M_Y_LOOK_FACT;
-
-#if DEBUG_OLD
-        if (!helpers::almost_equal(lookDir_.x, 0.0f, 1) || !helpers::almost_equal(lookDir_.y, 0.0f, 1)) {
-            ss << "look direction: " << helpers::makeVecString(lookDir_) << std::endl;
-        }
-#endif  // DEBUG_OLD
-    }
-    if (currMouseInput_.zDelta) {
-        posDir_.z += currMouseInput_.zDelta > 0 ? K_Z_MOVE_FACT * 6 : K_Z_MOVE_FACT * -6;
-        currMouseInput_.zDelta = 0;  // reset zDelta here... this stuff is not great
-
-#if DEBUG_OLD
-        ss << "mouse wheel: " << helpers::makeVecString(posDir_) << std::endl;
-#endif  // DEBUG_OLD
-    }
-
-#if DEBUG_OLD
-    auto sMsg = ss.str();
-    if (sMsg.size()) pShell_->log(Shell::LogPriority::LOG_INFO, sMsg.c_str());
-#endif  // DEBUG_OLD
-
-    prevMouseInput_ = currMouseInput_;
-    isLooking_ = false;
-}
-
-void Input::Handler::reset() {
-    lookDir_ = {};
-    posDir_ = {};
-    currMouseInput_.moving = false;
-}
-
-// NEW SHIT
-
 #ifdef USE_XINPUT
 #include "XInputHelper.h"
 #define DEBUG_XINPUT 0
-#if DEBUG_XINPUT
-#include <sstream>
-#endif  // DEBUG_XINPUT
 #endif  // USE_XINPUT
 
-void Input::Handler::update(const double elapsed) {
-#ifdef USE_XINPUT
-    XInput::PollControllers(pShell_->getCurrentTime<float>());
-    if (XInput::PLAYER_0 != XInput::BAD_PLAYER) {
-        const auto& cntlr = XInput::CNTLRS[XInput::PLAYER_0];
-#if DEBUG_XINPUT
-        if (XInput::CNTLRS[XInput::PLAYER_0].hasChanges()) {
-            std::stringstream ss;
-            ss << "THUMB left: " << helpers::makeVecString(cntlr.thumbLNorm) << " " << glm::length(cntlr.thumbLNorm)
-               << " right: " << helpers::makeVecString(cntlr.thumbRNorm) << " " << glm::length(cntlr.thumbRNorm);
-            pShell_->log(Shell::LogPriority::LOG_DEBUG, ss.str().c_str());
+namespace {
+// These could be UI settings...
+constexpr float MOVE_SENSITIVITY = 0.25f;
+constexpr float LOOK_SENSITIVITY = 0.05f;
+constexpr float MOUSE_LOOK_SENSITIVITY = LOOK_SENSITIVITY * 12.5f;
+}  // namespace
+
+bool Input::KeyboardManager::update(const uint8_t player) {
+    const auto normFactor = handler().shell().getNormalizedElaspedTime<float>();
+    auto& playerInfo = handler().info_.players[player];
+
+    bool hasInput = false;
+
+    prepareKeys();
+
+    playerInfo.moveDir = {};
+    for (auto& key : keyDown_) {  // keyDown_ holds movement keys only after processInput.
+        switch (key) {
+            // FORWARD
+            case GAME_KEY::UP:
+            case GAME_KEY::W: {
+                hasInput = true;
+                playerInfo.moveDir.z--;  // right-handed
+            } break;
+            // BACK
+            case GAME_KEY::DOWN:
+            case GAME_KEY::S: {
+                hasInput = true;
+                playerInfo.moveDir.z++;  // right-handed
+            } break;
+            // RIGHT
+            case GAME_KEY::RIGHT:
+            case GAME_KEY::D: {
+                hasInput = true;
+                playerInfo.moveDir.x++;
+            } break;
+            // LEFT
+            case GAME_KEY::LEFT:
+            case GAME_KEY::A: {
+                hasInput = true;
+                playerInfo.moveDir.x--;
+            } break;
+            // UP
+            case GAME_KEY::E: {
+                hasInput = true;
+                playerInfo.moveDir.y++;
+            } break;
+            // DOWN
+            case GAME_KEY::Q: {
+                hasInput = true;
+                playerInfo.moveDir.y--;
+            } break;
+            default:
+                assert(false);
         }
-#endif  // DEBUG_XINPUT
-        if (cntlr.getCurrState().Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER) {
-            posDir_ += CARDINAL_Y * static_cast<float>(elapsed) * 1.5f;
-        }
-        if (cntlr.getCurrState().Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER) {
-            posDir_ += -CARDINAL_Y * static_cast<float>(elapsed) * 1.5f;
-        }
-        lookDir_ += glm::vec3{cntlr.thumbRNorm.x, cntlr.thumbRNorm.y, 0.0f} * static_cast<float>(elapsed) * 8.0f;
-        posDir_ += glm::vec3{cntlr.thumbLNorm.x, 0.0f, cntlr.thumbLNorm.y} * static_cast<float>(elapsed) * 2.5f;
-        if (cntlr.hasChanges() && cntlr.getPrevState().Gamepad.wButtons)
-            pShell_->onButton(cntlr.getCurrState().Gamepad.wButtons);
     }
+
+    playerInfo.moveDir *= MOVE_SENSITIVITY * normFactor;
+    playerInfo.pKeys = &keys_;
+
+    // Leave currentKeys_ alone. The shell handles currentKeys_ cleanup. If there were ever more than one "players" this
+    // wouldn't work.
+    static_assert(NUM_PLAYERS == 1, "Keyboard input needs to be re-examined.");
+
+    return hasInput;
+}
+
+void Input::KeyboardManager::prepareKeys() {
+    // keys_ should exclusively hold keys that were released prior to this frame update. This means that keyboard input only
+    // registers on key release (the keys_ vector has the only keys exposed to the Game). Movement keys are special cased
+    // because they can be held down. Other keys could be special cased if necessary but I was lazy at the end of the first
+    // input refactor, and didn't want to deal with it.
+    keys_.clear();
+    for (const auto& keyDown : keyUp_) keys_.push_back(keyDown);
+    for (auto it = keyDown_.begin(); it != keyDown_.end();) {
+        if (isMoveKey(*it) && (std::find(keyUp_.begin(), keyUp_.end(), *it) == keyUp_.end())) {
+            it++;
+        } else {
+            it = keyDown_.erase(it);
+        }
+    }
+    keyUp_.clear();
+}
+
+bool Input::MouseManager::update(const uint8_t player) {
+    const auto normFactor = handler().shell().getNormalizedElaspedTime<float>();
+    auto& playerInfo = handler().info_.players[player];
+
+    bool hasInput = false;
+
+    if (info.right) {
+        hasInput = true;
+        const auto& nssTransform = handler().shell().context().normalizedScreenSpace;
+        playerInfo.lookDir = nssTransform * glm::vec3((info.location - previousLocation_), 0.0f);
+        playerInfo.lookDir *= MOUSE_LOOK_SENSITIVITY;
+        switch (lookType_) {
+            case LOOK_TYPE::GRIP_CLICK:
+                playerInfo.lookDir *= -1.0f;
+                break;
+            default:;
+        }
+    }
+    // Use mouse wheel to move position.
+    // Note: I am just going to ignore how much scrolling is happening because this will most likely only be debugging input.
+    if (info.wheel) {
+        hasInput = true;
+        playerInfo.moveDir.z = (info.wheel > 0.0f) ? 6.0f : -6.0f;
+        playerInfo.moveDir.z *= MOVE_SENSITIVITY * normFactor;
+    }
+
+    playerInfo.pMouse = &info;
+
+    previousLocation_ = info.location;
+    info.wheel = 0.0f;
+
+    return hasInput;
+}
+
+void Input::ControllerManager::poll() {
+#ifdef USE_XINPUT
+    XInput::PollControllers(handler().shell().getCurrentTime<float>());
+#endif
+}
+
+bool Input::ControllerManager::update(const uint8_t player) {
+    bool hasInput = false;
+#ifdef USE_XINPUT
+    hasInput = updateXInput(player);
+#endif
+    return hasInput;
+}
+
+#ifdef USE_XINPUT
+bool Input::ControllerManager::updateXInput(const uint8_t player) {
+    constexpr float XINPUT_MOVE_FACTOR = MOVE_SENSITIVITY;
+    constexpr float XINPUT_LOOK_FACTOR = LOOK_SENSITIVITY;
+
+    bool hasInput = false;
+
+    uint8_t xInputPlayer = XInput::BAD_PLAYER;
+    switch (player) {
+        case 0:
+            xInputPlayer = XInput::PLAYER_0;
+        default:
+            assert("Input::ControllerManager::updateXInput can only handle player 0.");
+    }
+
+    if (xInputPlayer != XInput::BAD_PLAYER) {
+        const auto& cntlr = XInput::CNTLRS[xInputPlayer];
+
+        if (XInput::CNTLRS[XInput::PLAYER_0].hasChanges() || !hadZeroState_) {
+            const auto normFactor = handler().shell().getNormalizedElaspedTime<float>();
+            auto& playerInfo = handler().info_.players[player];
+
+            hasInput = true;
+            hadZeroState_ = false;
+
+#if DEBUG_XINPUT
+            std::string msg =
+                "THUMB left: " + helpers::toString(cntlr.thumbLNorm) + " " + std::to_string(glm::length(cntlr.thumbLNorm)) +
+                " right: " + helpers::toString(cntlr.thumbRNorm) + " " + std::to_string(glm::length(cntlr.thumbRNorm));
+            handler().shell().log(Shell::LogPriority::LOG_DEBUG, msg.c_str());
+#endif  // DEBUG_XINPUT
+
+            if (cntlr.getCurrState().Gamepad.wButtons & XINPUT_GAMEPAD_RIGHT_SHOULDER) {
+                playerInfo.moveDir.y++;
+            }
+            if (cntlr.getCurrState().Gamepad.wButtons & XINPUT_GAMEPAD_LEFT_SHOULDER) {
+                playerInfo.moveDir.y--;
+            }
+
+            playerInfo.moveDir.x = cntlr.thumbLNorm.x;
+            playerInfo.moveDir.z = -cntlr.thumbLNorm.y;  // right-handed
+            playerInfo.moveDir *= XINPUT_MOVE_FACTOR * normFactor;
+
+            playerInfo.lookDir = cntlr.thumbRNorm;
+            playerInfo.lookDir *= XINPUT_LOOK_FACTOR * normFactor;
+
+            if (cntlr.hasChanges() && cntlr.getPrevState().Gamepad.wButtons)
+                playerInfo.buttons = cntlr.getCurrState().Gamepad.wButtons;
+        }
+
+        /* This accounts for an XInput scenario where controller input is held constant. When this happens, no packet is sent
+         * so hasChanges() will return false, but we still need to account for the held constant input (e.g., holding right
+         * on a thumb stick very still). I was trying to implement a similar pattern for overwriting only new incoming input
+         * across all devices during this refactor, but I was not willing to put in the effort to make it work right yet. It
+         * should be much closer now, but this workaround should not be necessary if a good solution to the problem is found.
+         *
+         * I guess I should also mention that this only matters because I want the game to just pick up which ever input is
+         * currently turned on and being used, which makes things more complex.
+         */
+        hadZeroState_ = glm::all(glm::equal(cntlr.thumbLNorm, glm::vec2())) &&  //
+                        glm::all(glm::equal(cntlr.thumbRNorm, glm::vec2())) &&  //
+                        (cntlr.getCurrState().Gamepad.wButtons == 0);
+    }
+
+    return hasInput;
+}
 #endif  // USE_XINPUT
+
+Input::Handler::Handler(Shell* pShell)
+    : Shell::Handler(pShell),  //
+      keyboardMgr_(*this),
+      mouseMgr_(*this),
+      cntlrMgr_(*this),
+      info_() {}
+
+// After this function all the state we need to know from the input should be set/calculated, and ready for per frame
+// decisions.
+void Input::Handler::update() {
+    cntlrMgr().poll();
+
+    // There is only one "player" currently.
+    if (!cntlrMgr().update(0)) {
+        keyboardMgr().update(0);
+        mouseMgr().update(0);
+    }
 }

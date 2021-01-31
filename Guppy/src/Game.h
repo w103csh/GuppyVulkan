@@ -1,5 +1,5 @@
 /*
- * Modifications copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Modifications copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  * -------------------------------
  * Copyright (C) 2016 Google, Inc.
@@ -27,7 +27,6 @@
 
 #include "Enum.h"
 
-struct BufferResource;
 class Shell;
 // clang-format off
 namespace Command       { class Handler; }
@@ -48,17 +47,8 @@ namespace UI            { class Handler; }
 namespace Uniform       { class Handler; }
 // clang-format on
 
-struct MouseInput {
-    float xPos, yPos, zDelta;
-    bool moving, primary, secondary;
-};
-
 class Game {
    public:
-    Game(const Game &game) = delete;
-    Game &operator=(const Game &game) = delete;
-    virtual ~Game();
-
     struct Settings {
         Settings();
         std::string name;
@@ -92,29 +82,31 @@ class Game {
         bool assertOnRecompileShader;
     };
 
-    // SETTINGS
-    constexpr const auto &settings() const { return settings_; }
-
-    // SHELL
-    virtual void attachShell(Shell &shell) { shell_ = &shell; }
-    virtual void detachShell() { shell_ = nullptr; }
-    constexpr const auto &shell() const { return *shell_; }
-
-    // SWAPCHAIN
-    virtual void attachSwapchain() = 0;
-    virtual void detachSwapchain() = 0;
+    Game(const Game &game) = delete;
+    Game &operator=(const Game &game) = delete;
+    virtual ~Game();
 
     // LIFECYCLE
-    virtual void onTick() {}
-    virtual void onFrame(float framePred) { frameCount_++; }
-    virtual void onButton(const GameButtonBits buttons) {}  // TODO: bad design
-    virtual void onKey(const GAME_KEY key) {}               // TODO: bad design
-    virtual void onMouse(const MouseInput &input) {}        // TODO: bad design & misleading name
+    void onAttachShell(Shell &shell) {
+        pShell_ = &shell;
+        attachShell();
+    }
+    void onAttachSwapchain() { attachSwapchain(); }
+    void onTick() { tick(); }
+    void onFrame() {
+        frame();
+        frameCount_++;
+    }
+    void onDetachSwapchain() { detachSwapchain(); }
+    void onDetachShell() {
+        detachShell();
+        pShell_ = nullptr;
+    }
 
-    // STATE
+    constexpr const auto &settings() const { return settings_; }
+    constexpr const auto &shell() const { return *pShell_; }
     constexpr auto getFrameCount() const { return frameCount_; }
 
-    // HANDLER
     struct Handlers {
         std::unique_ptr<Command::Handler> pCommand;
         std::unique_ptr<Compute::Handler> pCompute;
@@ -143,25 +135,25 @@ class Game {
         virtual void frame() {}
         virtual void destroy() { reset(); };
 
-        constexpr const auto &settings() const { return pGame_->settings(); }
-        constexpr const auto &shell() const { return pGame_->shell(); }
         constexpr const auto &game() const { return *pGame_; }
+        constexpr const auto &shell() const { return pGame_->shell(); }
+        constexpr const auto &settings() const { return pGame_->settings(); }
 
-        inline Command::Handler &commandHandler() const { return std::ref(*pGame_->handlers_.pCommand); }
-        inline Compute::Handler &computeHandler() const { return std::ref(*pGame_->handlers_.pCompute); }
-        inline Descriptor::Handler &descriptorHandler() const { return std::ref(*pGame_->handlers_.pDescriptor); }
-        inline Loading::Handler &loadingHandler() const { return std::ref(*pGame_->handlers_.pLoading); }
-        inline Material::Handler &materialHandler() const { return std::ref(*pGame_->handlers_.pMaterial); }
-        inline Mesh::Handler &meshHandler() const { return std::ref(*pGame_->handlers_.pMesh); }
-        inline Model::Handler &modelHandler() const { return std::ref(*pGame_->handlers_.pModel); }
-        inline Particle::Handler &particleHandler() const { return std::ref(*pGame_->handlers_.pParticle); }
-        inline Pipeline::Handler &pipelineHandler() const { return std::ref(*pGame_->handlers_.pPipeline); }
-        inline RenderPass::Handler &passHandler() const { return std::ref(*pGame_->handlers_.pPass); }
-        inline Scene::Handler &sceneHandler() const { return std::ref(*pGame_->handlers_.pScene); }
-        inline Shader::Handler &shaderHandler() const { return std::ref(*pGame_->handlers_.pShader); }
-        inline Texture::Handler &textureHandler() const { return std::ref(*pGame_->handlers_.pTexture); }
-        inline UI::Handler &uiHandler() const { return std::ref(*pGame_->handlers_.pUI); }
-        inline Uniform::Handler &uniformHandler() const { return std::ref(*pGame_->handlers_.pUniform); }
+        inline auto &commandHandler() const { return *pGame_->handlers_.pCommand; }
+        inline auto &computeHandler() const { return *pGame_->handlers_.pCompute; }
+        inline auto &descriptorHandler() const { return *pGame_->handlers_.pDescriptor; }
+        inline auto &loadingHandler() const { return *pGame_->handlers_.pLoading; }
+        inline auto &materialHandler() const { return *pGame_->handlers_.pMaterial; }
+        inline auto &meshHandler() const { return *pGame_->handlers_.pMesh; }
+        inline auto &modelHandler() const { return *pGame_->handlers_.pModel; }
+        inline auto &particleHandler() const { return *pGame_->handlers_.pParticle; }
+        inline auto &pipelineHandler() const { return *pGame_->handlers_.pPipeline; }
+        inline auto &passHandler() const { return *pGame_->handlers_.pPass; }
+        inline auto &sceneHandler() const { return *pGame_->handlers_.pScene; }
+        inline auto &shaderHandler() const { return *pGame_->handlers_.pShader; }
+        inline auto &textureHandler() const { return *pGame_->handlers_.pTexture; }
+        inline auto &uiHandler() const { return *pGame_->handlers_.pUI; }
+        inline auto &uniformHandler() const { return *pGame_->handlers_.pUniform; }
 
        protected:
         Handler(Game *pGame) : pGame_(pGame) {}
@@ -175,18 +167,20 @@ class Game {
    protected:
     Game(const std::string &name, const std::vector<std::string> &args, Handlers &&handlers);
 
+    // LIFECYCLE
+    virtual void attachShell() {}
+    virtual void attachSwapchain() = 0;
+    virtual void tick() {}
+    virtual void frame() {}
+    virtual void detachSwapchain() = 0;
+    virtual void detachShell() {}
+
     // LISTENERS
     void watchDirectory(const std::string &directory, std::function<void(std::string)> callback);
 
-    // HANDLERS
     const Handlers handlers_;
 
    private:
-    Settings settings_;
-    Shell *shell_;
-
-    uint64_t frameCount_;
-
     void parse_args(const std::vector<std::string> &args) {
         for (auto it = args.begin(); it != args.end(); ++it) {
             if (*it == "-b") {
@@ -211,6 +205,10 @@ class Game {
             }
         }
     }
+
+    Settings settings_;
+    Shell *pShell_;
+    uint64_t frameCount_;
 };
 
 #endif  // GAME_H

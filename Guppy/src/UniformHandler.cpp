@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -201,11 +201,12 @@ void Uniform::Handler::reset() {
 
 void Uniform::Handler::frame() {
     const auto frameIndex = passHandler().getFrameIndex();
+    const auto& playerInfo = shell().inputHandler().getInfo().players[0];
 
     // ACTIVE CAMERA
     auto& camera = getActiveCamera();
     float movementFactor = 10.0f;
-    camera.update(shell().inputHandler().getPosDir() * movementFactor, shell().inputHandler().getLookDir(), frameIndex);
+    camera.update(playerInfo.moveDir, playerInfo.lookDir, frameIndex);
     update(camera, static_cast<int>(frameIndex));
 
     // DEFAULT DIRECTIONAL
@@ -593,6 +594,13 @@ void Uniform::Handler::attachSwapchain() {
     auto& geomWireframe = uniGeomDefMgr().getTypedItem(0);
     geomWireframe.updateViewport(shell().context().extent);
     update(geomWireframe);
+}
+
+void Uniform::Handler::cycleCamera() {
+    getActiveCamera().updateAllFrames();
+    update(getActiveCamera());
+    activeCameraOffset_ =
+        (hasDebugCamera() && activeCameraOffset_ == mainCameraOffset_) ? debugCameraOffset_ : mainCameraOffset_;
 }
 
 uint32_t Uniform::Handler::getDescriptorCount(const DESCRIPTOR& descType, const Uniform::offsets& offsets) {

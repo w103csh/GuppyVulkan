@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -75,15 +75,15 @@ class ShellGLFW : public TShell {
 
             TShell::acquireBackBuffer();
 
-            double now = glfwGetTime();
-            TShell::elapsedTime_ = now - TShell::currentTime_;
-            TShell::currentTime_ = now;
+            {  // Update timer related values.
+                double now = glfwGetTime();
+                TShell::elapsedTime_ = now - TShell::currentTime_;
+                TShell::currentTime_ = now;
+                TShell::normalizedElapsedTime_ = TShell::elapsedTime_ / NORMALIZED_ELAPSED_TIME_FACTOR;
+            }
 
-            TShell::update(TShell::elapsedTime_);
-
-            TShell::onMouse(TShell::handlers_.pInput->getMouseInput());  // TODO: this stuff is all out of whack
-
-            TShell::addGameTime(static_cast<float>(TShell::elapsedTime_));
+            TShell::update();
+            TShell::addGameTime();
 
             TShell::presentBackBuffer();
 
@@ -97,7 +97,7 @@ class ShellGLFW : public TShell {
 #endif
             }
 
-            TShell::handlers_.pInput->clear();
+            TShell::inputHandler().reset();
         }
 
         TShell::context().dev.waitIdle();

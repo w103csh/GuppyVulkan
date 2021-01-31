@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -44,6 +44,7 @@ Context::Context()
       samples{},
       imageCount(0),
       extent{},
+      normalizedScreenSpace{},
       depthFormat{},
       swapchain{},
       acquiredBackBuffer{},

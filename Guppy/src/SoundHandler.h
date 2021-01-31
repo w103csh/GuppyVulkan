@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -55,7 +55,7 @@ class Handler : public Shell::Handler {
     Handler(Shell *pShell);
 
     virtual void init() override {}
-    virtual void update(const double) override {}
+    virtual void update() override {}
     virtual bool start(const TYPE type, const StartInfo *pStartInfo, const EffectInfo *pEffectInfo = nullptr) {
         return false;
     }

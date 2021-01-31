@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -29,10 +29,7 @@ class Handler : public Game::Handler {
 
     void init() override;
     void tick() override;
-    inline void destroy() override {
-        reset();
-        cleanup();
-    }
+    void destroy() override;
 
     // CACHE
     constexpr const vk::PipelineCache &getPipelineCache() const { return cache_; }
@@ -63,7 +60,7 @@ class Handler : public Game::Handler {
 
     // CLEAN UP
     void needsUpdate(const std::vector<SHADER> types);
-    void cleanup(int frameIndex = -1);
+    void cleanup();
 
    private:
     void reset() override;
