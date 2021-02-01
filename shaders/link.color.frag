@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
  
@@ -15,8 +15,8 @@ bool isPerMaterialColor();
 bool isPerVertexColor();
 
 // IN
-layout(location=1) in vec3 fragNormal;
-layout(location=2) in vec4 fragColor;
+layout(location=1) in vec3 inNormal;
+layout(location=2) in vec4 inColor;
 
 // GLOBAL
 vec3    Ka, // ambient coefficient
@@ -26,13 +26,13 @@ vec3    Ka, // ambient coefficient
 float opacity;
 
 void setColorDefaults() {
-    n = normalize(fragNormal);
+    n = normalize(inNormal);
     
     if (isPerVertexColor()) {
-        Ka = fragColor.xyz;
-        Kd = fragColor.xyz;
+        Ka = inColor.xyz;
+        Kd = inColor.xyz;
         Ks = vec3(0.8, 0.8, 0.8);
-        opacity = fragColor.w;
+        opacity = inColor.w;
     } else if (isPerMaterialColor()) {
         Ka = getMaterialAmbient();
         Kd = getMaterialColor();

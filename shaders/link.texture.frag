@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
  
@@ -35,10 +35,10 @@ layout(set=_DS_SMP_DEF, binding=0) uniform sampler2DArray sampCh4;
 // layout(set=_DS_SMP_DEF, binding=2) uniform sampler2DArray sampCh2;
 // layout(set=_DS_SMP_DEF, binding=3) uniform sampler2DArray sampCh3;
 // IN
-layout(location=0) in vec3 fragPosition;  // (texture space)
-layout(location=1) in vec3 fragNormal;    // (texture space)
-layout(location=2) in vec2 fragTexCoord;  // (texture space)
-// layout(location=2) centroid in vec2 fragTexCoord;  // (texture space)
+layout(location=0) in vec3 inPosition;  // (texture space)
+layout(location=1) in vec3 inNormal;    // (texture space)
+layout(location=2) in vec2 inTexCoord;  // (texture space)
+// layout(location=2) centroid in vec2 inTexCoord;  // (texture space)
 // // OUT
 // layout(location=0) out vec4 outColor;
 
@@ -51,8 +51,8 @@ float opacity, height;
 bool TEX_COORD_SHADE = false;
 
 vec3 texCoordShade() {
-    float modX = floor(mod((fragTexCoord.x * 50), 2.0));
-    float modY = floor(mod((fragTexCoord.y * 50), 2.0));
+    float modX = floor(mod((inTexCoord.x * 50), 2.0));
+    float modY = floor(mod((inTexCoord.y * 50), 2.0));
     float total = modX + modY;
     if (total == 1.0) {
         return vec3(1.0);
@@ -93,7 +93,7 @@ void setTextureDefaults() {
         is incremented is important and should match the C++ enum. */
     vec4 samp;
     sampCh1Cnt = sampCh2Cnt = sampCh3Cnt = sampCh4Cnt = 0;
-    vec2 texCoord = vec2((fragTexCoord.x * xRepeat), (fragTexCoord.y * yRepeat));
+    vec2 texCoord = vec2((inTexCoord.x * xRepeat), (inTexCoord.y * yRepeat));
     if (!gl_FrontFacing) {
         // This will only work correctly for repeat address!!! I barely use it atm
         // so its fine for now.
@@ -116,11 +116,11 @@ void setTextureDefaults() {
         n = samp.xyz;
         n = 2.0 * n - 1.0;
     } else {
-	    n = fragNormal;
+	    n = inNormal;
     }
     n = normalize(n);
 
-    // outColor = vec4(fragNormal, 1.0);
+    // outColor = vec4(inNormal, 1.0);
     // outColor = vec4(n, 1.0);
     // outColor = vec4(vec3(opacity), 1.0);
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
  
@@ -46,7 +46,7 @@ layout(set=_DS_SMP_SCR_BLUR_A, binding=0) uniform sampler2D sampBlurA;
 
 
 // IN
-layout(location=0) in vec2 fragTexCoord;
+layout(location=0) in vec2 inTexCoord;
 // OUT
 layout(location=0) out vec4 outColor;
 
@@ -87,7 +87,7 @@ vec4 blurPass2() {
 
 #if _DS_SMP_SCR_DEF >= 0
 vec4 bright() {
-    vec4 color = texture(sampRender, fragTexCoord);
+    vec4 color = texture(sampRender, inTexCoord);
     if( luminance(color.rgb) > data.luminanceThreshold ) {
         return texelFetch(sampRender, ivec2(gl_FragCoord.xy), 0);
     } else {
@@ -137,7 +137,7 @@ vec4 getToneMapColor() {
 
     /////////////// Tone mapping ///////////////
     // Retrieve high-res color from texture
-    vec4 color = texture(sampRender, fragTexCoord);
+    vec4 color = texture(sampRender, inTexCoord);
     
     // Convert to XYZ
     vec3 xyzCol = rgb2xyz * vec3(color);
@@ -201,7 +201,7 @@ void main() {
     // Add bloom to HDR
     if ((pushConstantsBlock.flags & PASS_BLOOM) > 0) {
 #if _DS_SMP_SCR_BLUR_A >= 0
-        outColor += texture(sampBlurA, fragTexCoord);
+        outColor += texture(sampBlurA, inTexCoord);
 #endif
     }
 }

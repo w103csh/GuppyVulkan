@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -129,7 +129,7 @@ const Pipeline::CreateInfo CLOTH_COMP_CREATE_INFO = {
     COMPUTE::PRTCL_CLOTH,
     "Particle Cloth Compute Pipeline",
     {SHADER::PRTCL_CLOTH_COMP},
-    {DESCRIPTOR_SET::PRTCL_CLOTH},
+    {{DESCRIPTOR_SET::PRTCL_CLOTH, vk::ShaderStageFlagBits::eCompute}},
 };
 ClothCompute::ClothCompute(Pipeline::Handler& handler) : Compute(handler, &CLOTH_COMP_CREATE_INFO) {}
 
@@ -138,7 +138,7 @@ const Pipeline::CreateInfo CLOTH_NORM_COMP_CREATE_INFO = {
     COMPUTE::PRTCL_CLOTH_NORM,
     "Particle Cloth Normal Compute Pipeline",
     {SHADER::PRTCL_CLOTH_NORM_COMP},
-    {DESCRIPTOR_SET::PRTCL_CLOTH_NORM},
+    {{DESCRIPTOR_SET::PRTCL_CLOTH_NORM, vk::ShaderStageFlagBits::eCompute}},
 };
 ClothNormalCompute::ClothNormalCompute(Pipeline::Handler& handler) : Compute(handler, &CLOTH_NORM_COMP_CREATE_INFO) {}
 
@@ -148,8 +148,8 @@ const Pipeline::CreateInfo CLOTH_CREATE_INFO = {
     "Particle Cloth (Deferred) Pipeline",
     {SHADER::PRTCL_CLOTH_VERT, SHADER::DEFERRED_MRT_TEX_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_DEFAULT,
-        DESCRIPTOR_SET::SAMPLER_DEFAULT,
+        {DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_DEFAULT, vk::ShaderStageFlagBits::eFragment},
     },
 };
 Cloth::Cloth(Pipeline::Handler& handler) : Graphics(handler, &CLOTH_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}

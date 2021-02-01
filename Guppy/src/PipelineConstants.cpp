@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -170,9 +170,9 @@ const Pipeline::CreateInfo TRI_LIST_COLOR_CREATE_INFO = {
     "Default Triangle List Color",
     {SHADER::COLOR_VERT, SHADER::COLOR_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_DEFAULT,
+        {DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
 #if DO_PROJECTOR
-        DESCRIPTOR_SET::PROJECTOR_DEFAULT,
+        {DESCRIPTOR_SET::PROJECTOR_DEFAULT, vk::ShaderStageFlagBits::eFragment},
 #endif
     },
     // Descriptor::OffsetsMap::Type{
@@ -186,7 +186,7 @@ const Pipeline::CreateInfo LINE_CREATE_INFO = {
     GRAPHICS::LINE,
     "Default Line",
     {SHADER::COLOR_VERT, SHADER::LINE_FRAG},
-    {DESCRIPTOR_SET::UNIFORM_DEFAULT},
+    {{DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)}},
 };
 
 // POINT
@@ -194,7 +194,7 @@ const Pipeline::CreateInfo POINT_CREATE_INFO = {
     GRAPHICS::POINT,
     "Default Point",
     {SHADER::POINT_VERT, SHADER::LINE_FRAG},
-    {DESCRIPTOR_SET::UNIFORM_DEFAULT},
+    {{DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)}},
 };
 
 // TRIANGLE LIST TEXTURE
@@ -203,9 +203,9 @@ const Pipeline::CreateInfo TRI_LIST_TEX_CREATE_INFO = {
     "Default Triangle List Texture",
     {SHADER::TEX_VERT, SHADER::TEX_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_DEFAULT,  //
-        DESCRIPTOR_SET::SAMPLER_DEFAULT,
-        // DESCRIPTOR_SET::PROJECTOR_DEFAULT,
+        {DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_DEFAULT, vk::ShaderStageFlagBits::eFragment},
+        // {DESCRIPTOR_SET::PROJECTOR_DEFAULT, vk::ShaderStageFlagBits::eFragment},
     },
 };
 
@@ -215,8 +215,8 @@ const Pipeline::CreateInfo CUBE_CREATE_INFO = {
     "Cube Pipeline",
     {SHADER::CUBE_VERT, SHADER::CUBE_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_DEFAULT,
-        DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT,
+        {DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_CUBE_DEFAULT, vk::ShaderStageFlagBits::eFragment},
     },
 };
 
@@ -231,9 +231,9 @@ const Pipeline::CreateInfo TEX_CULL_NONE_CREATE_INFO = {
     "Blinn Phong Texture Cull None",
     {SHADER::TEX_VERT, SHADER::TEX_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_DEFAULT,  //
-        DESCRIPTOR_SET::SAMPLER_DEFAULT,
-        // DESCRIPTOR_SET::PROJECTOR_DEFAULT,
+        {DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_DEFAULT, vk::ShaderStageFlagBits::eFragment},
+        // {DESCRIPTOR_SET::PROJECTOR_DEFAULT, vk::ShaderStageFlagBits::eFragment},
     },
 };
 

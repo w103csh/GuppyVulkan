@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -282,7 +282,7 @@ const Pipeline::CreateInfo COLOR_CREATE_INFO = {
         SHADER::SHADOW_CUBE_GEOM,
         SHADER::SHADOW_FRAG,
     },
-    {DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY},
+    {{DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY, vk::ShaderStageFlagBits::eGeometry}},
 };
 Color::Color(Pipeline::Handler& handler) : Graphics(handler, &COLOR_CREATE_INFO) {}
 
@@ -299,7 +299,7 @@ const Pipeline::CreateInfo TEX_CREATE_INFO = {
         SHADER::SHADOW_CUBE_GEOM,
         SHADER::SHADOW_FRAG,
     },
-    {DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY},
+    {{DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY, vk::ShaderStageFlagBits::eGeometry}},
 };
 Texture::Texture(Pipeline::Handler& handler) : Graphics(handler, &TEX_CREATE_INFO) {}
 

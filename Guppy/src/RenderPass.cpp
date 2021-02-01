@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -300,6 +300,7 @@ void RenderPass::Base::createPass() {
     createInfo.dependencyCount = static_cast<uint32_t>(resources_.dependencies.size());
     createInfo.pDependencies = resources_.dependencies.data();
 
+    // handler().shell().log(Shell::LogPriority::LOG_INFO, ("Creating render pass: " + NAME).c_str());
     pass = handler().shell().context().dev.createRenderPass(createInfo, handler().shell().context().pAllocator);
     assert(pass);
     // handler().shell().context().dbg.setMarkerName(pass, NAME.c_str());

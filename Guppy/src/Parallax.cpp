@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -68,8 +68,8 @@ const Pipeline::CreateInfo SIMPLE_CREATE_INFO = {
     "Parallax Simple Pipeline",
     {SHADER::PARALLAX_VERT, SHADER::PARALLAX_SIMPLE_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_PARALLAX,
-        DESCRIPTOR_SET::SAMPLER_PARALLAX,
+        {DESCRIPTOR_SET::UNIFORM_PARALLAX, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_PARALLAX, vk::ShaderStageFlagBits::eFragment},
     },
 };
 
@@ -78,8 +78,8 @@ const Pipeline::CreateInfo STEEP_CREATE_INFO = {
     "Parallax Steep Pipeline",
     {SHADER::PARALLAX_VERT, SHADER::PARALLAX_STEEP_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_PARALLAX,
-        DESCRIPTOR_SET::SAMPLER_PARALLAX,
+        {DESCRIPTOR_SET::UNIFORM_PARALLAX, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_PARALLAX, vk::ShaderStageFlagBits::eFragment},
     },
 };
 

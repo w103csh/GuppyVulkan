@@ -41,8 +41,8 @@ class Handler : public Game::Handler {
     // PIPELINES
     void initPipelines();
     void createPipelines(const pipelinePassSet &set);
-    void createPipeline(const std::string &&name, vk::GraphicsPipelineCreateInfo &createInfo, vk::Pipeline &pipeline);
-    void createPipeline(const std::string &&name, vk::ComputePipelineCreateInfo &createInfo, vk::Pipeline &pipeline);
+    void createPipeline(const std::string name, vk::GraphicsPipelineCreateInfo &createInfo, vk::Pipeline &pipeline);
+    void createPipeline(const std::string name, vk::ComputePipelineCreateInfo &createInfo, vk::Pipeline &pipeline);
     constexpr const auto &getPipelineBindDataMap() const { return pipelineBindDataMap_; }
     bool checkVertexPipelineMap(VERTEX key, PIPELINE value) const;
 
@@ -56,7 +56,8 @@ class Handler : public Game::Handler {
     constexpr const std::map<PIPELINE, std::unique_ptr<Pipeline::Base>> &getPipelines() const { return pPipelines_; }
 
     // SHADER
-    void getShaderStages(const std::set<PIPELINE> &pipelineTypes, vk::ShaderStageFlags &stages);
+    void getShaderStages(const std::set<PIPELINE> &pipelineTypes, const DESCRIPTOR_SET &descSetType,
+                         vk::ShaderStageFlags &stages);
 
     // CLEAN UP
     void needsUpdate(const std::vector<SHADER> types);

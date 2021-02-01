@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -56,6 +56,7 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
 
     const auto& createInfo = ALL.at(std::get<0>(keyValue.first));
     std::vector<unsigned int> spv;
+    // shell().log(Shell::LogPriority::LOG_INFO, ("Compiling: " + std::string(createInfo.fileName)).c_str());
     bool success = GLSLtoSPV(static_cast<VkShaderStageFlagBits>(createInfo.stage), texts, spv);
 
     // Return or assert on fail
@@ -80,6 +81,7 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
     stageInfo = vk::PipelineShaderStageCreateInfo{};
     stageInfo.stage = createInfo.stage;
     stageInfo.pName = "main";
+    // shell().log(Shell::LogPriority::LOG_INFO, ("Creating shader module: " + std::string(createInfo.fileName)).c_str());
     stageInfo.module = shell().context().dev.createShaderModule(moduleInfo, shell().context().pAllocator);
     // shell().context().dbg.setMarkerName(stageInfo.module, createInfo.name.c_str());
 

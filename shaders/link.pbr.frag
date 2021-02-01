@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
  
@@ -34,8 +34,8 @@ layout(set=_DS_UNI_PBR, binding=2) uniform LightPBRPositional {
 #endif
 
 // IN
-layout(location=0) in vec3 fragPosition;  // (camera space)
-layout(location=1) in vec3 fragNormal;    // (texture space)
+layout(location=0) in vec3 inPosition;  // (camera space)
+layout(location=1) in vec3 inNormal;    // (texture space)
 // OUT
 layout(location=0) out vec4 outColor;
 
@@ -77,7 +77,7 @@ vec3 microfacetModel(int index) {
     //     l = normalize(light.position.xyz);
     // // Positional light
     // } else {
-        l = transform(lgtPos[index].position - fragPosition); // direction to light
+        l = transform(lgtPos[index].position - inPosition); // direction to light
         float dist = length(l);
         l = normalize(l);
         L /= (dist * dist);
@@ -132,7 +132,7 @@ bool epsilonEqual(vec3 v1, vec3 v2) {
 
 vec3 pbrShade() {
     vec3 sum = vec3(0.0);
-    v = normalize(transform(vec3(0.0) - fragPosition));
+    v = normalize(transform(vec3(0.0) - inPosition));
 
 #if _U_LGT_PBR_POS
     for (int i = 0; i < lgtPos.length(); i++) {

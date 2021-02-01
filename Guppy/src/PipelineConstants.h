@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -83,7 +83,7 @@ struct CreateInfo {
     PIPELINE type;
     std::string name = "";
     std::set<SHADER> shaderTypes;
-    std::vector<DESCRIPTOR_SET> descriptorSets;
+    Descriptor::Set::typeShaderStagePairs descSetStagePairs;
     Descriptor::OffsetsMap uniformOffsets;
     std::vector<PUSH_CONSTANT> pushConstantTypes;
     glm::uvec3 localSize{1, 1, 1};  // compute only

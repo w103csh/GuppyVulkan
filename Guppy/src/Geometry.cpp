@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -92,8 +92,8 @@ const Pipeline::CreateInfo SILHOUETTE_CREATE_INFO = {
         SHADER::DEFERRED_MRT_COLOR_FRAG,
     },
     {
-        DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT,
-        DESCRIPTOR_SET::UNIFORM_GEOMETRY_DEFAULT,
+        {DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT, vk::ShaderStageFlagBits::eVertex},
+        {DESCRIPTOR_SET::UNIFORM_GEOMETRY_DEFAULT, vk::ShaderStageFlagBits::eGeometry},
     },
     {},
     {PUSH_CONSTANT::DEFERRED},

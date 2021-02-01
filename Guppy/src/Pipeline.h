@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -46,7 +46,7 @@ class Base : public Handlee<Pipeline::Handler> {
     virtual void getShaderStageInfoResources(CreateInfoResources &createInfoRes) {}
 
     const vk::PipelineBindPoint BIND_POINT;
-    const std::vector<DESCRIPTOR_SET> DESCRIPTOR_SET_TYPES;
+    const Descriptor::Set::typeShaderStagePairs DESC_SET_STAGE_PAIRS;
     const std::string NAME;
     const std::vector<PUSH_CONSTANT> PUSH_CONSTANT_TYPES;
     const PIPELINE TYPE;

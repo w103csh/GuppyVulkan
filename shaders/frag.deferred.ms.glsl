@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
  
@@ -31,13 +31,13 @@ layout(set=_DS_UNI_DFR_COMB, binding=0) uniform CameraDefaultPerspective {
 layout(set=_DS_SHDW_CUBE_ALL, binding=0) uniform samplerCubeArrayShadow sampShadowArray;
 layout(set=_DS_SHDW_CUBE_ALL, binding=1) uniform sampler3D sampShadowOffset;
 
-layout(input_attachment_index=2, set=_DS_SMP_DFR, binding=0) uniform subpassInputMS posInput;
-layout(input_attachment_index=3, set=_DS_SMP_DFR, binding=1) uniform subpassInputMS normInput;
-layout(input_attachment_index=4, set=_DS_SMP_DFR, binding=2) uniform subpassInputMS diffInput;
-layout(input_attachment_index=5, set=_DS_SMP_DFR, binding=3) uniform subpassInputMS ambInput;
-layout(input_attachment_index=6, set=_DS_SMP_DFR, binding=4) uniform subpassInputMS specInput;
-layout(input_attachment_index=7, set=_DS_SMP_DFR, binding=5) uniform usubpassInputMS flagInput;
-// layout(input_attachment_index=8, set=_DS_SMP_DFR, binding=6) uniform subpassInputMS ssaoDataInput;
+layout(input_attachment_index=0, set=_DS_SMP_DFR, binding=0) uniform subpassInputMS posInput;
+layout(input_attachment_index=1, set=_DS_SMP_DFR, binding=1) uniform subpassInputMS normInput;
+layout(input_attachment_index=2, set=_DS_SMP_DFR, binding=2) uniform subpassInputMS diffInput;
+layout(input_attachment_index=3, set=_DS_SMP_DFR, binding=3) uniform subpassInputMS ambInput;
+layout(input_attachment_index=4, set=_DS_SMP_DFR, binding=4) uniform subpassInputMS specInput;
+layout(input_attachment_index=5, set=_DS_SMP_DFR, binding=5) uniform usubpassInputMS flagInput;
+// layout(input_attachment_index=6, set=_DS_SMP_DFR, binding=6) uniform subpassInputMS ssaoDataInput;
 
 // IN
 layout(location=0) in vec2 inTexCoord;

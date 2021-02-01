@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -316,10 +316,10 @@ const Pipeline::CreateInfo DEFAULT_CREATE_INFO = {
     "Screen Space Default Pipeline",
     {SHADER::SCREEN_SPACE_VERT, SHADER::SCREEN_SPACE_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT,
-        DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT,
-        DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_HDR_LOG_BLIT,
-        DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_BLUR_A,
+        {DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT, vk::ShaderStageFlagBits::eFragment},
+        {DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT, vk::ShaderStageFlagBits::eFragment},
+        {DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_HDR_LOG_BLIT, vk::ShaderStageFlagBits::eFragment},
+        {DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_BLUR_A, vk::ShaderStageFlagBits::eFragment},
     },
     {},
     {PUSH_CONSTANT::POST_PROCESS},
@@ -332,7 +332,7 @@ const Pipeline::CreateInfo HDR_LOG_CREATE_INFO = {
     "Screen Space HDR Log Pipeline",
     {SHADER::SCREEN_SPACE_VERT, SHADER::SCREEN_SPACE_HDR_LOG_FRAG},
     {
-        DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT,
+        {DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT, vk::ShaderStageFlagBits::eFragment},
     },
 };
 HdrLog::HdrLog(Pipeline::Handler& handler) : Graphics(handler, &HDR_LOG_CREATE_INFO) {}
@@ -343,8 +343,8 @@ const Pipeline::CreateInfo BRIGHT_CREATE_INFO = {
     "Screen Space Bright Pipeline",
     {SHADER::SCREEN_SPACE_VERT, SHADER::SCREEN_SPACE_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT,
-        DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT,
+        {DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT, vk::ShaderStageFlagBits::eFragment},
+        {DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT, vk::ShaderStageFlagBits::eFragment},
     },
     {},
     {PUSH_CONSTANT::POST_PROCESS},
@@ -357,8 +357,8 @@ const Pipeline::CreateInfo BLUR_A_CREATE_INFO = {
     "Screen Space Blur A Pipeline",
     {SHADER::SCREEN_SPACE_VERT, SHADER::SCREEN_SPACE_BLUR_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT,
-        DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_BLUR_A,
+        {DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT, vk::ShaderStageFlagBits::eFragment},
+        {DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_BLUR_A, vk::ShaderStageFlagBits::eFragment},
     },
     {},
     {PUSH_CONSTANT::POST_PROCESS},
@@ -371,8 +371,8 @@ const Pipeline::CreateInfo BLUR_B_CREATE_INFO = {
     "Screen Space Blur B Pipeline",
     {SHADER::SCREEN_SPACE_VERT, SHADER::SCREEN_SPACE_BLUR_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT,
-        DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_BLUR_B,
+        {DESCRIPTOR_SET::UNIFORM_SCREEN_SPACE_DEFAULT, vk::ShaderStageFlagBits::eFragment},
+        {DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_BLUR_B, vk::ShaderStageFlagBits::eFragment},
     },
     {},
     {PUSH_CONSTANT::POST_PROCESS},
@@ -385,9 +385,9 @@ const Pipeline::CreateInfo COMPUTE_DEFAULT_CREATE_INFO = {
     "Screen Space Compute Default Pipeline",
     {SHADER::SCREEN_SPACE_COMP},
     {
-        DESCRIPTOR_SET::STORAGE_SCREEN_SPACE_COMPUTE_POST_PROCESS,
-        DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT,
-        DESCRIPTOR_SET::SWAPCHAIN_IMAGE,
+        {DESCRIPTOR_SET::STORAGE_SCREEN_SPACE_COMPUTE_POST_PROCESS, vk::ShaderStageFlagBits::eCompute},
+        {DESCRIPTOR_SET::SAMPLER_SCREEN_SPACE_DEFAULT, vk::ShaderStageFlagBits::eCompute},
+        {DESCRIPTOR_SET::SWAPCHAIN_IMAGE, vk::ShaderStageFlagBits::eCompute},
     },
     {},
     {PUSH_CONSTANT::POST_PROCESS},

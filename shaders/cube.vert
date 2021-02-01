@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
  
@@ -27,8 +27,8 @@ layout(location=1) in vec3 inNormal;
 layout(location=2) in vec4 inColor;
 layout(location=3) in mat4 inModel;
 // OUT
-layout(location=0) out vec3 fragWorldPositionReflecionDir;
-layout(location=1) out vec3 fragRefractDir;
+layout(location=0) out vec3 outWorldPositionReflecionDir;
+layout(location=1) out vec3 outRefractDir;
 
 void main() {
     // TODO: move this to separate shader??
@@ -36,7 +36,7 @@ void main() {
         mat4 view = mat4(mat3(camera.view));
         vec4 pos = camera.projection * view * inModel * vec4(inPosition, 1.0);
 
-        fragWorldPositionReflecionDir = inPosition;
+        outWorldPositionReflecionDir = inPosition;
 
         gl_Position = pos.xyww;
     } else {
@@ -44,9 +44,9 @@ void main() {
         vec3 worldNorm = vec3(inModel * vec4(inNormal, 0.0));
         vec3 worldView = normalize(camera.worldPosition - worldPos.xyz);
 
-        fragWorldPositionReflecionDir = reflect(-worldView, normalize(worldNorm));
+        outWorldPositionReflecionDir = reflect(-worldView, normalize(worldNorm));
         if (isRefract())
-            fragRefractDir = refract(-worldView, normalize(worldNorm), getMaterialEta());
+            outRefractDir = refract(-worldView, normalize(worldNorm), getMaterialEta());
 
         gl_Position = camera.viewProjection * worldPos;
     }

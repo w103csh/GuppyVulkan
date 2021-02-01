@@ -263,16 +263,24 @@ void Pipeline::Handler::createPipelineCache(vk::PipelineCache& cache) {
     cache = shell().context().dev.createPipelineCache(createInfo, shell().context().pAllocator);
 }
 
-void Pipeline::Handler::createPipeline(const std::string&& name, vk::GraphicsPipelineCreateInfo& createInfo,
+#define PRINT_NAME_ON_CREATE false
+
+void Pipeline::Handler::createPipeline(const std::string name, vk::GraphicsPipelineCreateInfo& createInfo,
                                        vk::Pipeline& pipeline) {
+#if PRINT_NAME_ON_CREATE
+    shell().log(Shell::LogPriority::LOG_INFO, ("Creating pipeline: " + name).c_str());
+#endif
     auto resultValue = shell().context().dev.createGraphicsPipeline(cache_, createInfo, shell().context().pAllocator);
     assert(resultValue.result == vk::Result::eSuccess);
     pipeline = resultValue.value;
     // shell().context().dbg.setMarkerName(pipeline, name.c_str());
 }
 
-void Pipeline::Handler::createPipeline(const std::string&& name, vk::ComputePipelineCreateInfo& createInfo,
+void Pipeline::Handler::createPipeline(const std::string name, vk::ComputePipelineCreateInfo& createInfo,
                                        vk::Pipeline& pipeline) {
+#if PRINT_NAME_ON_CREATE
+    shell().log(Shell::LogPriority::LOG_INFO, ("Creating pipeline: " + name).c_str());
+#endif
     auto resultValue = shell().context().dev.createComputePipeline(cache_, createInfo, shell().context().pAllocator);
     assert(resultValue.result == vk::Result::eSuccess);
     pipeline = resultValue.value;
@@ -408,11 +416,44 @@ void Pipeline::Handler::makeShaderInfoMap(Shader::infoMap& map) {
     }
 }
 
-void Pipeline::Handler::getShaderStages(const std::set<PIPELINE>& pipelineTypes, vk::ShaderStageFlags& stages) {
-    for (const auto& [type, pPipeline] : pPipelines_) {
-        if (pipelineTypes.find(pPipeline->TYPE) == pipelineTypes.end()) continue;
-        stages |= shaderHandler().getStageFlags(pPipeline->getShaderTypes());
+void Pipeline::Handler::getShaderStages(const std::set<PIPELINE>& pipelineTypes, const DESCRIPTOR_SET& descSetType,
+                                        vk::ShaderStageFlags& stages) {
+    /* Find pipeline's descriptor set shader stage flags. Here I am just going to OR the flags together. TBH this just
+     * reveals how bad the whole algorithm for determining the uniqueness of descriptor sets is... I should really just scrap
+     * all this stuff at some point.
+     */
+    for (const auto& pipelineType : pipelineTypes) {
+        // If the pipeline type is ALL_ENUM then every pipeline that has the descriptor set needs to have its stages set.
+        if (std::visit(Pipeline::IsAll{}, pipelineType)) {
+            for (const auto& [type, pPipeline] : pPipelines_) {
+                // Filter out only the pipelines for each either GRAPHICS or COMPUTE ALL_ENUMs depending on the type were
+                // looking for.
+                if ((std::visit(Pipeline::IsGraphics{}, pipelineType) && std::visit(Pipeline::IsGraphics{}, type)) ||
+                    (std::visit(Pipeline::IsCompute{}, pipelineType) && std::visit(Pipeline::IsCompute{}, type))) {
+                    for (const auto& pair : pPipeline->DESC_SET_STAGE_PAIRS) {
+                        if (descSetType == pair.first) {
+                            stages |= pair.second;
+                        }
+                    }
+                }
+            }
+        } else {
+            // Add flags for the specific pipeline here.
+            auto it = pPipelines_.find(pipelineType);
+            assert(it != pPipelines_.end());
+            bool found = false;
+            for (const auto& pair : it->second->DESC_SET_STAGE_PAIRS) {
+                if (pair.first == descSetType) {
+                    found = true;
+                    stages |= pair.second;
+                }
+            }
+            // This assert hits when uncommented. Does this mean the algorithm doesn't work correctly? I can't remember what
+            // all it does.
+            // assert(found);
+        }
     }
+    assert(stages);
 }
 
 void Pipeline::Handler::needsUpdate(const std::vector<SHADER> types) {

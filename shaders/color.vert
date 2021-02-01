@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -29,22 +29,22 @@ layout(location=1) in vec3 inNormal;
 layout(location=2) in vec4 inColor;
 layout(location=3) in mat4 inModel;
 // OUT
-layout(location=0) out vec3 fragPosition;
-layout(location=1) out vec3 fragNormal;
-layout(location=2) out vec4 fragColor;
-// layout(location=3) out int fragVertexIndex;
+layout(location=0) out vec3 outPosition;
+layout(location=1) out vec3 outNormal;
+layout(location=2) out vec4 outColor;
+// layout(location=3) out int outVertexIndex;
 
 void main() {
     // This obviously can be much more efficient. (Can it??)
     mat4 viewModel = camera.view * inModel;
 
-    fragPosition = (viewModel * vec4(inPosition, 1.0)).xyz;
-    fragNormal = normalize(mat3(viewModel) * inNormal);
-    fragColor = inColor;
+    outPosition = (viewModel * vec4(inPosition, 1.0)).xyz;
+    outNormal = normalize(mat3(viewModel) * inNormal);
+    outColor = inColor;
     
     vec4 pos = inModel * vec4(inPosition, 1.0);
     setProjectorTexCoord(pos);
 
     gl_Position = camera.viewProjection * pos;
-    // fragVertexIndex = gl_VertexIndex;
+    // outVertexIndex = gl_VertexIndex;
 }

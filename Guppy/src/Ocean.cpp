@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -268,7 +268,7 @@ const CreateInfo DISP_CREATE_INFO = {
     COMPUTE::OCEAN_DISP,
     "Ocean Surface Dispersion Compute Pipeline",
     {SHADER::OCEAN_DISP_COMP},
-    {DESCRIPTOR_SET::OCEAN_DEFAULT},
+    {{DESCRIPTOR_SET::OCEAN_DEFAULT, vk::ShaderStageFlagBits::eCompute}},
     {},
     {},
     {::Ocean::DISP_LOCAL_SIZE, ::Ocean::DISP_LOCAL_SIZE, 1},
@@ -303,7 +303,7 @@ const CreateInfo FFT_CREATE_INFO = {
     COMPUTE::OCEAN_FFT,
     "Ocean Surface FFT Compute Pipeline",
     {SHADER::OCEAN_FFT_COMP},
-    {DESCRIPTOR_SET::OCEAN_DEFAULT},
+    {{DESCRIPTOR_SET::OCEAN_DEFAULT, vk::ShaderStageFlagBits::eCompute}},
     {},
     {PUSH_CONSTANT::FFT_ROW_COL_OFFSET},
     {::Ocean::FFT_LOCAL_SIZE, 1, 1},
@@ -315,7 +315,7 @@ const CreateInfo OCEAN_WF_CREATE_INFO = {
     GRAPHICS::OCEAN_WF_DEFERRED,
     "Ocean Surface Wireframe (Deferred) Pipeline",
     {SHADER::OCEAN_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
-    {DESCRIPTOR_SET::OCEAN_DEFAULT},
+    {{DESCRIPTOR_SET::OCEAN_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)}},
 };
 Wireframe::Wireframe(Handler& handler) : Graphics(handler, &OCEAN_WF_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
 
@@ -356,8 +356,14 @@ const CreateInfo OCEAN_SURFACE_CREATE_INFO = {
         SHADER::PHONG_TRI_COLOR_TESE,
         SHADER::OCEAN_DEFERRED_MRT_FRAG,
     },
-    {DESCRIPTOR_SET::OCEAN_DEFAULT, DESCRIPTOR_SET::TESS_PHONG},
-};
+    {
+        {DESCRIPTOR_SET::OCEAN_DEFAULT,
+         (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl |
+          vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::TESS_PHONG,
+         (vk::ShaderStageFlagBits::eTessellationControl | vk::ShaderStageFlagBits::eTessellationEvaluation)},
+    },
+};  // namespace Ocean
 Surface::Surface(Handler& handler)
     : Graphics(handler, &OCEAN_SURFACE_CREATE_INFO),
       DO_BLEND(false),

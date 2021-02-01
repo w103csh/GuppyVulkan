@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -40,7 +40,7 @@ namespace Set {
 namespace Tessellation {
 const CreateInfo DEFAULT_CREATE_INFO = {
     DESCRIPTOR_SET::TESS_DEFAULT,
-    "_DS_UNI_TESS_DEF",
+    "_DS_TESS_DEF",
     {{{0, 0}, {UNIFORM::TESS_DEFAULT}}},
 };
 const CreateInfo PHONG_CREATE_INFO = {
@@ -112,8 +112,11 @@ const Pipeline::CreateInfo BEZIER_4_CREATE_INFO = {
         SHADER::DEFERRED_MRT_COLOR_FRAG,
     },
     {
-        DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT,
-        DESCRIPTOR_SET::TESS_DEFAULT,
+        {DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT,
+         (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl |
+          vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::TESS_DEFAULT,
+         (vk::ShaderStageFlagBits::eTessellationControl | vk::ShaderStageFlagBits::eTessellationEvaluation)},
     },
     {},
     {PUSH_CONSTANT::DEFERRED},
@@ -130,7 +133,13 @@ const Pipeline::CreateInfo PHONG_TRI_DEFERRED_CREATE_INFO = {
         SHADER::PHONG_TRI_COLOR_TESE,
         SHADER::DEFERRED_MRT_COLOR_FRAG,
     },
-    {DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT, DESCRIPTOR_SET::TESS_PHONG},
+    {
+        {DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT,
+         (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl |
+          vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::TESS_PHONG,
+         (vk::ShaderStageFlagBits::eTessellationControl | vk::ShaderStageFlagBits::eTessellationEvaluation)},
+    },
     {},
     {PUSH_CONSTANT::DEFERRED},
 };

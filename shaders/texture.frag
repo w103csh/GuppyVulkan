@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
  
@@ -13,10 +13,10 @@ vec3 texCoordShade();
 vec4 gammaCorrect(const in vec3 color, const in float opacity);
 
 // IN
-layout(location=0) in vec3 fragPosition;  // (camera space)
-layout(location=1) in vec3 fragNormal;    // (texture space)
-layout(location=2) in vec2 fragTexCoord;  // (texture space)
-// layout(location=2) centroid in vec2 fragTexCoord;  // (texture space)
+layout(location=0) in vec3 inPosition;  // (camera space)
+layout(location=1) in vec3 inNormal;    // (texture space)
+layout(location=2) in vec2 inTexCoord;  // (texture space)
+// layout(location=2) centroid in vec2 inTexCoord;  // (texture space)
 layout(location=3) in mat3 TBN;
 // OUT
 layout(location=0) out vec4 outColor;
@@ -36,7 +36,7 @@ void main() {
     
     if (isModeFlatShade()) {
         outColor = vec4(Kd, opacity);
-        // outColor = vec4(fragNormal, 1.0);
+        // outColor = vec4(inNormal, 1.0);
     } else if (TEX_COORD_SHADE) {
         outColor = gammaCorrect(texCoordShade(), 1.0);
     } else {

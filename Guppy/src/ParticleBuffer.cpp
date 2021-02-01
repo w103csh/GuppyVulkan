@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -262,7 +262,8 @@ void Base::destroy() {
 
 const std::vector<Descriptor::Base*> Base::getSDynamicDataItems(const PIPELINE pipelineType) const {
     std::vector<Descriptor::Base*> pDescs;
-    for (const auto descSetType : handler().pipelineHandler().getPipeline(pipelineType)->DESCRIPTOR_SET_TYPES) {
+    for (const auto [descSetType, stageFlags] :
+         handler().pipelineHandler().getPipeline(pipelineType)->DESC_SET_STAGE_PAIRS) {
         const auto& descSet = handler().descriptorHandler().getDescriptorSet(descSetType);
         for (const auto& [key, bindingInfo] : descSet.getBindingMap()) {
             if (std::visit(Descriptor::IsDynamic{}, bindingInfo.descType)) {
@@ -271,7 +272,7 @@ const std::vector<Descriptor::Base*> Base::getSDynamicDataItems(const PIPELINE p
                     pDescs.push_back(pMaterial_.get());
                 } else {
                     auto it = std::find_if(pDescriptors_.begin(), pDescriptors_.end(),
-                                           [& bindingInfo = bindingInfo](const auto& pDesc) {
+                                           [&bindingInfo = bindingInfo](const auto& pDesc) {
                                                return pDesc->getDescriptorType() == bindingInfo.descType;
                                            });
                     if (it == pDescriptors_.end()) {

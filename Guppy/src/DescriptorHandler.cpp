@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -162,7 +162,7 @@ void Descriptor::Handler::createLayouts() {
 
         for (auto& res : pSet->resources_) {
             // Determine shader stages...
-            pipelineHandler().getShaderStages(res.pipelineTypes, res.stages);
+            pipelineHandler().getShaderStages(res.pipelineTypes, pSet->TYPE, res.stages);
 
             // Gather bindings...
             std::vector<vk::DescriptorSetLayoutBinding> bindings;
@@ -211,7 +211,7 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
     std::set<PIPELINE> pipelineTypes;
     // Gather all of the pipelines that need the set.
     for (const auto& [pipelineType, pPipeline] : pipelineHandler().getPipelines())
-        for (const auto& setType : pPipeline->DESCRIPTOR_SET_TYPES)
+        for (const auto& [setType, stageFlags] : pPipeline->DESC_SET_STAGE_PAIRS)
             if (pSet->TYPE == setType) pipelineTypes.insert(pPipeline->TYPE);
 
     // Determine the number of layouts needed based on unique offsets for uniforms. gatherDescriptorSetOffsets
@@ -469,11 +469,12 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
 }
 
 Descriptor::Set::resourceHelpers Descriptor::Handler::getResourceHelpers(
-    const std::set<PASS> passTypes, const PIPELINE& pipelineType, const std::vector<DESCRIPTOR_SET>& descSetTypes) const {
+    const std::set<PASS> passTypes, const PIPELINE& pipelineType,
+    const Descriptor::Set::typeShaderStagePairs& descSetStagePairs) const {
     // I don't care that this is redundant and slow atm.
 
     Set::resourceHelpers helpers;
-    for (const auto& setType : descSetTypes) {
+    for (const auto& [setType, stageFlags] : descSetStagePairs) {
         const auto& set = getDescriptorSet(setType);
 
         // Organize the descriptor set layout resources in a temporary structure that
@@ -562,7 +563,7 @@ void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::
 
     // Get the same descriptor sets info as the pipeline layouts.
     auto resHelpers =
-        getResourceHelpers(passTypes, pipelineType, pipelineHandler().getPipeline(pipelineType)->DESCRIPTOR_SET_TYPES);
+        getResourceHelpers(passTypes, pipelineType, pipelineHandler().getPipeline(pipelineType)->DESC_SET_STAGE_PAIRS);
 
     for (const auto& helpers : resHelpers) {
         assert(helpers.size());

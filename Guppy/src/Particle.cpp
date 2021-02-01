@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -257,8 +257,8 @@ const CreateInfo WAVE_CREATE_INFO = {
         SHADER::DEFERRED_MRT_COLOR_FRAG,
     },
     {
-        DESCRIPTOR_SET::UNIFORM_DEFAULT,
-        DESCRIPTOR_SET::UNIFORM_PRTCL_WAVE,
+        {DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::UNIFORM_PRTCL_WAVE, vk::ShaderStageFlagBits::eVertex},
     },
 };
 Wave::Wave(Handler& handler, bool isDeferred) : Graphics(handler, &WAVE_CREATE_INFO), IS_DEFERRED(isDeferred) {}
@@ -285,9 +285,9 @@ const CreateInfo FOUNTAIN_CREATE_INFO = {
         SHADER::PRTCL_FOUNTAIN_DEFERRED_MRT_FRAG,
     },
     {
-        DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4,
-        DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN,
-        DESCRIPTOR_SET::SAMPLER_DEFAULT,
+        {DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_DEFAULT, vk::ShaderStageFlagBits::eFragment},
     },
 };
 Fountain::Fountain(Handler& handler, bool isDeferred)
@@ -326,8 +326,8 @@ const Pipeline::CreateInfo EULER_CREATE_INFO = {
     "Particle Euler Compute Pipeline",
     {SHADER::PRTCL_EULER_COMP},
     {
-        DESCRIPTOR_SET::PRTCL_EULER,
-        DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN,
+        {DESCRIPTOR_SET::PRTCL_EULER, vk::ShaderStageFlagBits::eCompute},
+        {DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN, vk::ShaderStageFlagBits::eCompute},
     },
     {},
     {PUSH_CONSTANT::PRTCL_EULER},
@@ -343,9 +343,9 @@ const CreateInfo FOUNTAIN_EULER_CREATE_INFO = {
         SHADER::PRTCL_FOUNTAIN_DEFERRED_MRT_FRAG,
     },
     {
-        DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4,
-        DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN,
-        DESCRIPTOR_SET::SAMPLER_DEFAULT,
+        {DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_DEFAULT, vk::ShaderStageFlagBits::eFragment},
     },
     {},
     {PUSH_CONSTANT::PRTCL_EULER},
@@ -376,9 +376,9 @@ const Pipeline::CreateInfo SHADOW_FOUNTAIN_EULER_CREATE_INFO = {
         SHADER::SHADOW_FRAG,
     },
     {
-        DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4,
-        DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN,
-        DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY,
+        {DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::UNIFORM_PRTCL_FOUNTAIN, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY, vk::ShaderStageFlagBits::eFragment},
     },
 };
 ShadowFountainEuler::ShadowFountainEuler(Pipeline::Handler& handler)
@@ -397,7 +397,7 @@ const Pipeline::CreateInfo ATTR_CREATE_INFO = {
     COMPUTE::PRTCL_ATTR,
     "Particle Attractor Compute Pipeline",
     {SHADER::PRTCL_ATTR_COMP},
-    {DESCRIPTOR_SET::PRTCL_ATTRACTOR},
+    {{DESCRIPTOR_SET::PRTCL_ATTRACTOR, vk::ShaderStageFlagBits::eCompute}},
 };
 AttractorCompute::AttractorCompute(Pipeline::Handler& handler) : Compute(handler, &ATTR_CREATE_INFO) {}
 
@@ -406,7 +406,7 @@ const Pipeline::CreateInfo ATTR_PT_CREATE_INFO = {
     GRAPHICS::PRTCL_ATTR_PT_DEFERRED,
     "Particle Attractor Point (Deferred) Pipeline",
     {SHADER::PRTCL_ATTR_VERT, SHADER::DEFERRED_MRT_POINT_FRAG},
-    {DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4},
+    {{DESCRIPTOR_SET::UNIFORM_DEFCAM_DEFMAT_MX4, vk::ShaderStageFlagBits::eVertex}},
 };
 AttractorPoint::AttractorPoint(Pipeline::Handler& handler, const bool doBlend, const bool isDeferred)
     : Graphics(handler, &ATTR_PT_CREATE_INFO), DO_BLEND(doBlend), IS_DEFERRED(isDeferred) {}

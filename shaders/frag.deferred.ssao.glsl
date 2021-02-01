@@ -30,8 +30,8 @@ layout(set=_DS_UNI_DFR_SSAO, binding=1) uniform SSAO {
 
 layout(set=_DS_SMP_DFR_SSAO_RAND, binding=0) uniform sampler2D sampSSAORand;
 
-layout(input_attachment_index=2, set=_DS_SMP_DFR_POS, binding=0) uniform subpassInput posInput;
-layout(input_attachment_index=3, set=_DS_SMP_DFR_NORM, binding=0) uniform subpassInput normInput;
+layout(input_attachment_index=0, set=_DS_SMP_DFR_POS, binding=0) uniform subpassInput posInput;
+layout(input_attachment_index=1, set=_DS_SMP_DFR_NORM, binding=1) uniform subpassInput normInput;
 
 // IN
 layout(location=0) in vec2 inTexCoord;

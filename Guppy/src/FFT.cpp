@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -127,7 +127,7 @@ const CreateInfo FFT_ONE_COMP_CREATE_INFO = {
     COMPUTE::FFT_ONE,
     "Fast Fourier Transform One Component Compute Pipeline",
     {SHADER::FFT_ONE_COMP},
-    {DESCRIPTOR_SET::FFT_DEFAULT},
+    {{DESCRIPTOR_SET::FFT_DEFAULT, vk::ShaderStageFlagBits::eCompute}},
 };
 OneComponent::OneComponent(Handler& handler) : Compute(handler, &FFT_ONE_COMP_CREATE_INFO) {}
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -119,7 +119,7 @@ const Pipeline::CreateInfo COLOR_CREATE_INFO = {
     GRAPHICS::PBR_COLOR,
     "PBR Color Pipeline",
     {SHADER::COLOR_VERT, SHADER::PBR_COLOR_FRAG},
-    {DESCRIPTOR_SET::UNIFORM_PBR},
+    {{DESCRIPTOR_SET::UNIFORM_PBR, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)}},
 };
 
 Pipeline::PBR::Color::Color(Pipeline::Handler& handler) : Graphics(handler, &COLOR_CREATE_INFO) {}
@@ -129,8 +129,8 @@ const Pipeline::CreateInfo TEX_CREATE_INFO = {
     "PBR Texture Pipeline",
     {SHADER::TEX_VERT, SHADER::PBR_TEX_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_PBR,
-        DESCRIPTOR_SET::SAMPLER_DEFAULT,
+        {DESCRIPTOR_SET::UNIFORM_PBR, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_DEFAULT, vk::ShaderStageFlagBits::eFragment},
     },
 };
 

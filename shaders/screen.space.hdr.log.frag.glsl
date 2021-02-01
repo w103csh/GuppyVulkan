@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
  
@@ -10,7 +10,7 @@
 layout(set=_DS_SMP_SCR_DEF, binding=0) uniform sampler2D sampRender;
 
 // IN
-layout(location=0) in vec2 fragTexCoord;
+layout(location=0) in vec2 inTexCoord;
 // OUT
 layout(location=0) out float outLog;
 

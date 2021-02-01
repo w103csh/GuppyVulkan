@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -348,6 +348,8 @@ namespace Set {
 
 constexpr std::string_view MACRO_ID_PREFIX = "_DS_";
 extern const std::set<DESCRIPTOR_SET> ALL;
+
+using typeShaderStagePairs = std::vector<std::pair<DESCRIPTOR_SET, vk::ShaderStageFlags>>;
 
 struct CreateInfo {
     DESCRIPTOR_SET type;

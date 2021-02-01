@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -73,7 +73,7 @@ void Pipeline::GetDefaultScreenQuadInputAssemblyInfoResources(CreateInfoResource
 Pipeline::Base::Base(Handler& handler, const vk::PipelineBindPoint&& bindPoint, const CreateInfo* pCreateInfo)
     : Handlee(handler),
       BIND_POINT(bindPoint),
-      DESCRIPTOR_SET_TYPES(pCreateInfo->descriptorSets),
+      DESC_SET_STAGE_PAIRS(pCreateInfo->descSetStagePairs),
       NAME(pCreateInfo->name),
       PUSH_CONSTANT_TYPES(pCreateInfo->pushConstantTypes),
       TYPE(pCreateInfo->type),
@@ -114,7 +114,12 @@ bool Pipeline::Base::checkTextureStatus(const std::string& id) {
 }
 
 void Pipeline::Base::validatePipelineDescriptorSets() {
-    for (const auto& setType : DESCRIPTOR_SET_TYPES) {
+    for (const auto& [setType, stageFlags] : DESC_SET_STAGE_PAIRS) {
+        // Make sure the descriptor set shader stage flags make sense for the pipeline.
+        auto x = handler().shaderHandler().getStageFlags(getShaderTypes());
+        auto y = TYPE;
+        assert((stageFlags & handler().shaderHandler().getStageFlags(getShaderTypes())) == stageFlags);
+
         const auto& descSet = handler().descriptorHandler().getDescriptorSet(setType);
         for (const auto& [key, bindingInfo] : descSet.getBindingMap()) {
             bool hasPipelineSampler = std::visit(Descriptor::IsPipelineImage{}, bindingInfo.descType);
@@ -156,7 +161,7 @@ void Pipeline::Base::prepareDescriptorSetInfo() {
     handler().computeHandler().getActivePassTypes(passTypes, TYPE);
 
     // Gather a culled list of resources.
-    auto helpers = handler().descriptorHandler().getResourceHelpers(passTypes, TYPE, DESCRIPTOR_SET_TYPES);
+    auto helpers = handler().descriptorHandler().getResourceHelpers(passTypes, TYPE, DESC_SET_STAGE_PAIRS);
 
     for (auto resourceIndex = 0; resourceIndex < helpers.front().size(); resourceIndex++) {
         // Loop through each layer of descriptor set resources at resourceIndex
@@ -191,9 +196,9 @@ void Pipeline::Base::prepareDescriptorSetInfo() {
         }
     }
 
-    for (const auto& keyValue : shaderTextReplaceInfoMap_) assert(keyValue.second.size() == DESCRIPTOR_SET_TYPES.size());
+    for (const auto& keyValue : shaderTextReplaceInfoMap_) assert(keyValue.second.size() == DESC_SET_STAGE_PAIRS.size());
     assert(layoutsMap_.size() == helpers.front().size());
-    for (const auto& keyValue : layoutsMap_) assert(keyValue.second.descSetLayouts.size() == DESCRIPTOR_SET_TYPES.size());
+    for (const auto& keyValue : layoutsMap_) assert(keyValue.second.descSetLayouts.size() == DESC_SET_STAGE_PAIRS.size());
 }
 
 std::shared_ptr<Pipeline::BindData> Pipeline::Base::makeBindData(const vk::PipelineLayout& layout) {
@@ -597,7 +602,9 @@ std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapColor(Pipeline::Ha
     info.name = "Cube Map Color";
     info.type = GRAPHICS::CUBE_MAP_COLOR;
     info.shaderTypes = {SHADER::VERT_COLOR_CUBE_MAP, SHADER::GEOM_COLOR_CUBE_MAP, SHADER::COLOR_FRAG};
-    info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
+    info.descSetStagePairs.push_back(
+        {DESCRIPTOR_SET::CAMERA_CUBE_MAP,
+         (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)});
     return std::make_unique<TriListColorCube>(handler, &info);
 }
 Pipeline::Default::TriListColorCube::TriListColorCube(Pipeline::Handler& handler, const CreateInfo* pCreateInfo)
@@ -613,7 +620,9 @@ std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapLine(Pipeline::Han
     info.name = "Cube Map Line";
     info.type = GRAPHICS::CUBE_MAP_LINE;
     info.shaderTypes = {SHADER::VERT_COLOR_CUBE_MAP, SHADER::GEOM_COLOR_CUBE_MAP, SHADER::LINE_FRAG};
-    info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
+    info.descSetStagePairs.push_back(
+        {DESCRIPTOR_SET::CAMERA_CUBE_MAP,
+         (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)});
     return std::make_unique<LineCube>(handler, &info);
 }
 Pipeline::Default::LineCube::LineCube(Pipeline::Handler& handler, const CreateInfo* pCreateInfo)
@@ -629,7 +638,9 @@ std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapPoint(Pipeline::Ha
     info.name = "Cube Map Point";
     info.type = GRAPHICS::CUBE_MAP_PT;
     info.shaderTypes = {SHADER::VERT_PT_CUBE_MAP, SHADER::GEOM_PT_CUBE_MAP, SHADER::LINE_FRAG};
-    info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
+    info.descSetStagePairs.push_back(
+        {DESCRIPTOR_SET::CAMERA_CUBE_MAP,
+         (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)});
     return std::make_unique<PointCube>(handler, &info);
 }
 Pipeline::Default::PointCube::PointCube(Pipeline::Handler& handler, const CreateInfo* pCreateInfo)
@@ -645,7 +656,9 @@ std::unique_ptr<Pipeline::Base> Pipeline::Default::MakeCubeMapTexture(Pipeline::
     info.name = "Cube Map Texture";
     info.type = GRAPHICS::CUBE_MAP_TEX;
     info.shaderTypes = {SHADER::VERT_TEX_CUBE_MAP, SHADER::GEOM_TEX_CUBE_MAP, SHADER::TEX_FRAG};
-    info.descriptorSets.push_back(DESCRIPTOR_SET::CAMERA_CUBE_MAP);
+    info.descSetStagePairs.push_back(
+        {DESCRIPTOR_SET::CAMERA_CUBE_MAP,
+         (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eGeometry | vk::ShaderStageFlagBits::eFragment)});
     return std::make_unique<TriListTextureCube>(handler, &info);
 }
 Pipeline::Default::TriListTextureCube::TriListTextureCube(Pipeline::Handler& handler, const CreateInfo* pCreateInfo)

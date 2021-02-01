@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
  
@@ -99,13 +99,11 @@ layout(set=_DS_PRJ_DEF, binding=0) uniform sampler2D sampProjector;
 #endif
 
 // IN
-layout(location=0) in vec3 fragPosition;
+layout(location=0) in vec3 inPosition;
 #if _DS_PRJ_DEF > -1
-layout(location=6) in vec4 fragProjTexCoord;
-layout(location=7) in vec4 fragTest;
+layout(location=6) in vec4 inProjTexCoord;
+layout(location=7) in vec4 inTest;
 #endif
-// OUT
-layout(location=0) out vec4 outColor;
 
 // GLOBAL
 vec3    Ka,     // ambient coefficient
@@ -131,8 +129,8 @@ vec3 toonShade(
 
 float fogFactor() {
     float f = 0.0f;
-    // float dist = abs(fragPosition.z); // faster version
-    float z = length(fragPosition.xyz);
+    // float dist = abs(inPosition.z); // faster version
+    float z = length(inPosition.xyz);
 
     // Each of below has slightly different properties. Read
     // the book again if you want to hear their explanation.
@@ -150,8 +148,8 @@ float fogFactor() {
 
 void addProjectorTexColor(inout vec3 color) {
 #if _DS_PRJ_DEF > -1
-    if(fragProjTexCoord.z > 0.0) {
-        vec3 projColor = textureProj(sampProjector, fragProjTexCoord).rgb;
+    if(inProjTexCoord.z > 0.0) {
+        vec3 projColor = textureProj(sampProjector, inProjTexCoord).rgb;
         color += projColor * 0.8;
         // if (any(notEqual(projColor, vec3(0.0))))
         //     color = projColor * 0.5;
@@ -164,7 +162,7 @@ void addProjectorTexColor(inout vec3 color) {
 vec3 blinnPhongShade() {
     vec3 color = vec3(0.0);
     uint lightCount = 0;
-    v = normalize(transform(vec3(0.0) - fragPosition));
+    v = normalize(transform(vec3(0.0) - inPosition));
     float shininess = getMaterialShininess();
 
 #if _U_LGT_DEF_POS
@@ -176,7 +174,7 @@ vec3 blinnPhongShade() {
                 color += toonShade(
                     pow(lgtPos[i].La, vec3(++lightCount)),
                     lgtPos[i].L,
-                    normalize(transform(lgtPos[i].position - fragPosition))
+                    normalize(transform(lgtPos[i].position - inPosition))
                 );
 
             } else {
@@ -184,7 +182,7 @@ vec3 blinnPhongShade() {
                 color += blinnPhongPositional(
                     pow(lgtPos[i].La, vec3(++lightCount)),
                     lgtPos[i].L,
-                    normalize(transform(lgtPos[i].position - fragPosition)),
+                    normalize(transform(lgtPos[i].position - inPosition)),
                     shininess
                 );
 
@@ -201,7 +199,7 @@ vec3 blinnPhongShade() {
             color += blinnPhongSpot(
                 pow(lgtSpot[i].La, vec3(++lightCount)),
                 lgtSpot[i].L,
-                normalize(transform(lgtSpot[i].position - fragPosition)),
+                normalize(transform(lgtSpot[i].position - inPosition)),
                 shininess,
                 normalize(transform(lgtSpot[i].direction)),
                 lgtSpot[i].cutoff,

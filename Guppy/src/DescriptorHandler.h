@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -42,8 +42,9 @@ class Handler : public Game::Handler {
         assert(false);
         throw std::runtime_error("Unrecognized set type");
     }
-    Descriptor::Set::resourceHelpers getResourceHelpers(const std::set<PASS> passTypes, const PIPELINE& pipelineType,
-                                                        const std::vector<DESCRIPTOR_SET>& descSetTypes) const;
+    Descriptor::Set::resourceHelpers getResourceHelpers(
+        const std::set<PASS> passTypes, const PIPELINE& pipelineType,
+        const Descriptor::Set::typeShaderStagePairs& descSetStagePairs) const;
 
     // DESCRIPTOR
     void getBindData(const PIPELINE& pipelineType, Descriptor::Set::bindDataMap& bindDataMap,

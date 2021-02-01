@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
  
@@ -36,37 +36,37 @@ layout(set=_DS_SMP_SCR_BLUR_B, binding=0) uniform sampler2D sampBlurB;
 #endif
 
 // IN
-layout(location=0) in vec2 fragTexCoord;
+layout(location=0) in vec2 inTexCoord;
 // OUT
 layout(location=0) out vec4 outColor;
 
 #if _DS_SMP_SCR_BLUR_A >= 0
 vec4 blurPass1() {
     float dy = 1.0 / textureSize(sampBlurA, 0).y;
-    vec3 sum = texture(sampBlurA, fragTexCoord).rgb * data.weights0_3[0];
+    vec3 sum = texture(sampBlurA, inTexCoord).rgb * data.weights0_3[0];
     {
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 1.0) * dy).rgb * data.weights0_3[1];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 1.0) * dy).rgb * data.weights0_3[1];
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 2.0) * dy).rgb * data.weights0_3[2];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 2.0) * dy).rgb * data.weights0_3[2];
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 3.0) * dy).rgb * data.weights0_3[3];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 3.0) * dy).rgb * data.weights0_3[3];
+        sum += texture(sampBlurA, inTexCoord + vec2(0.0, 1.0) * dy).rgb * data.weights0_3[1];
+        sum += texture(sampBlurA, inTexCoord - vec2(0.0, 1.0) * dy).rgb * data.weights0_3[1];
+        sum += texture(sampBlurA, inTexCoord + vec2(0.0, 2.0) * dy).rgb * data.weights0_3[2];
+        sum += texture(sampBlurA, inTexCoord - vec2(0.0, 2.0) * dy).rgb * data.weights0_3[2];
+        sum += texture(sampBlurA, inTexCoord + vec2(0.0, 3.0) * dy).rgb * data.weights0_3[3];
+        sum += texture(sampBlurA, inTexCoord - vec2(0.0, 3.0) * dy).rgb * data.weights0_3[3];
     }
     {
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 4.0) * dy).rgb * data.weights4_7[0];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 4.0) * dy).rgb * data.weights4_7[0];
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 5.0) * dy).rgb * data.weights4_7[1];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 5.0) * dy).rgb * data.weights4_7[1];
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 6.0) * dy).rgb * data.weights4_7[2];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 6.0) * dy).rgb * data.weights4_7[2];
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 7.0) * dy).rgb * data.weights4_7[3];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 7.0) * dy).rgb * data.weights4_7[3];
+        sum += texture(sampBlurA, inTexCoord + vec2(0.0, 4.0) * dy).rgb * data.weights4_7[0];
+        sum += texture(sampBlurA, inTexCoord - vec2(0.0, 4.0) * dy).rgb * data.weights4_7[0];
+        sum += texture(sampBlurA, inTexCoord + vec2(0.0, 5.0) * dy).rgb * data.weights4_7[1];
+        sum += texture(sampBlurA, inTexCoord - vec2(0.0, 5.0) * dy).rgb * data.weights4_7[1];
+        sum += texture(sampBlurA, inTexCoord + vec2(0.0, 6.0) * dy).rgb * data.weights4_7[2];
+        sum += texture(sampBlurA, inTexCoord - vec2(0.0, 6.0) * dy).rgb * data.weights4_7[2];
+        sum += texture(sampBlurA, inTexCoord + vec2(0.0, 7.0) * dy).rgb * data.weights4_7[3];
+        sum += texture(sampBlurA, inTexCoord - vec2(0.0, 7.0) * dy).rgb * data.weights4_7[3];
     }
     {
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 8.0) * dy).rgb * data.weights8_9[0];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 8.0) * dy).rgb * data.weights8_9[0];
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 9.0) * dy).rgb * data.weights8_9[1];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 9.0) * dy).rgb * data.weights8_9[1];
+        sum += texture(sampBlurA, inTexCoord + vec2(0.0, 8.0) * dy).rgb * data.weights8_9[0];
+        sum += texture(sampBlurA, inTexCoord - vec2(0.0, 8.0) * dy).rgb * data.weights8_9[0];
+        sum += texture(sampBlurA, inTexCoord + vec2(0.0, 9.0) * dy).rgb * data.weights8_9[1];
+        sum += texture(sampBlurA, inTexCoord - vec2(0.0, 9.0) * dy).rgb * data.weights8_9[1];
     }
     return vec4(sum, 1.0);
 }
@@ -75,30 +75,30 @@ vec4 blurPass1() {
 #if _DS_SMP_SCR_BLUR_B >= 0
 vec4 blurPass2() {
     float dx = 1.0 / textureSize(sampBlurB, 0).x;
-    vec3 sum = texture(sampBlurB, fragTexCoord).rbg * data.weights0_3[0];
+    vec3 sum = texture(sampBlurB, inTexCoord).rbg * data.weights0_3[0];
     {
-        sum += texture(sampBlurB, fragTexCoord + vec2(1.0, 0.0) * dx).rgb * data.weights0_3[1];
-        sum += texture(sampBlurB, fragTexCoord - vec2(1.0, 0.0) * dx).rgb * data.weights0_3[1];
-        sum += texture(sampBlurB, fragTexCoord + vec2(2.0, 0.0) * dx).rgb * data.weights0_3[2];
-        sum += texture(sampBlurB, fragTexCoord - vec2(2.0, 0.0) * dx).rgb * data.weights0_3[2];
-        sum += texture(sampBlurB, fragTexCoord + vec2(3.0, 0.0) * dx).rgb * data.weights0_3[3];
-        sum += texture(sampBlurB, fragTexCoord - vec2(3.0, 0.0) * dx).rgb * data.weights0_3[3];
+        sum += texture(sampBlurB, inTexCoord + vec2(1.0, 0.0) * dx).rgb * data.weights0_3[1];
+        sum += texture(sampBlurB, inTexCoord - vec2(1.0, 0.0) * dx).rgb * data.weights0_3[1];
+        sum += texture(sampBlurB, inTexCoord + vec2(2.0, 0.0) * dx).rgb * data.weights0_3[2];
+        sum += texture(sampBlurB, inTexCoord - vec2(2.0, 0.0) * dx).rgb * data.weights0_3[2];
+        sum += texture(sampBlurB, inTexCoord + vec2(3.0, 0.0) * dx).rgb * data.weights0_3[3];
+        sum += texture(sampBlurB, inTexCoord - vec2(3.0, 0.0) * dx).rgb * data.weights0_3[3];
     }
     {
-        sum += texture(sampBlurB, fragTexCoord + vec2(4.0, 0.0) * dx).rgb * data.weights4_7[0];
-        sum += texture(sampBlurB, fragTexCoord - vec2(4.0, 0.0) * dx).rgb * data.weights4_7[0];
-        sum += texture(sampBlurB, fragTexCoord + vec2(5.0, 0.0) * dx).rgb * data.weights4_7[1];
-        sum += texture(sampBlurB, fragTexCoord - vec2(5.0, 0.0) * dx).rgb * data.weights4_7[1];
-        sum += texture(sampBlurB, fragTexCoord + vec2(6.0, 0.0) * dx).rgb * data.weights4_7[2];
-        sum += texture(sampBlurB, fragTexCoord - vec2(6.0, 0.0) * dx).rgb * data.weights4_7[2];
-        sum += texture(sampBlurB, fragTexCoord + vec2(7.0, 0.0) * dx).rgb * data.weights4_7[3];
-        sum += texture(sampBlurB, fragTexCoord - vec2(7.0, 0.0) * dx).rgb * data.weights4_7[3];
+        sum += texture(sampBlurB, inTexCoord + vec2(4.0, 0.0) * dx).rgb * data.weights4_7[0];
+        sum += texture(sampBlurB, inTexCoord - vec2(4.0, 0.0) * dx).rgb * data.weights4_7[0];
+        sum += texture(sampBlurB, inTexCoord + vec2(5.0, 0.0) * dx).rgb * data.weights4_7[1];
+        sum += texture(sampBlurB, inTexCoord - vec2(5.0, 0.0) * dx).rgb * data.weights4_7[1];
+        sum += texture(sampBlurB, inTexCoord + vec2(6.0, 0.0) * dx).rgb * data.weights4_7[2];
+        sum += texture(sampBlurB, inTexCoord - vec2(6.0, 0.0) * dx).rgb * data.weights4_7[2];
+        sum += texture(sampBlurB, inTexCoord + vec2(7.0, 0.0) * dx).rgb * data.weights4_7[3];
+        sum += texture(sampBlurB, inTexCoord - vec2(7.0, 0.0) * dx).rgb * data.weights4_7[3];
     }
     {
-        sum += texture(sampBlurB, fragTexCoord + vec2(8.0, 0.0) * dx).rgb * data.weights8_9[0];
-        sum += texture(sampBlurB, fragTexCoord - vec2(8.0, 0.0) * dx).rgb * data.weights8_9[0];
-        sum += texture(sampBlurB, fragTexCoord + vec2(9.0, 0.0) * dx).rgb * data.weights8_9[1];
-        sum += texture(sampBlurB, fragTexCoord - vec2(9.0, 0.0) * dx).rgb * data.weights8_9[1];
+        sum += texture(sampBlurB, inTexCoord + vec2(8.0, 0.0) * dx).rgb * data.weights8_9[0];
+        sum += texture(sampBlurB, inTexCoord - vec2(8.0, 0.0) * dx).rgb * data.weights8_9[0];
+        sum += texture(sampBlurB, inTexCoord + vec2(9.0, 0.0) * dx).rgb * data.weights8_9[1];
+        sum += texture(sampBlurB, inTexCoord - vec2(9.0, 0.0) * dx).rgb * data.weights8_9[1];
     }
     return vec4(sum, 1.0);
 }

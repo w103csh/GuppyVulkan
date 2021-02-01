@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -11,9 +11,9 @@ vec3 pbrShade();
 vec4 gammaCorrect(const in vec3 color, const in float opacity);
 
 // IN
-layout(location=0) in vec3 fragPosition;
-layout(location=1) in vec3 fragNormal;
-layout(location=2) in vec4 fragColor;
+layout(location=0) in vec3 inPosition;
+layout(location=1) in vec3 inNormal;
+layout(location=2) in vec4 inColor;
 // OUT
 layout(location=0) out vec4 outColor;
 

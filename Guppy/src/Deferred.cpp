@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -499,9 +499,9 @@ const Pipeline::CreateInfo MRT_TEX_CREATE_INFO = {
         SHADER::DEFERRED_MRT_TEX_FRAG,
     },
     {
-        // DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT,
-        DESCRIPTOR_SET::UNIFORM_DEFAULT,
-        DESCRIPTOR_SET::SAMPLER_DEFAULT,
+        // {DESCRIPTOR_SET::UNIFORM_DEFERRED_MRT, vk::ShaderStageFlagBits::eVertex},
+        {DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_DEFAULT, vk::ShaderStageFlagBits::eFragment},
     },
 };
 MRTTexture::MRTTexture(Pipeline::Handler& handler) : Graphics(handler, &MRT_TEX_CREATE_INFO) {}
@@ -523,7 +523,7 @@ const Pipeline::CreateInfo MRT_COLOR_CREATE_INFO = {
     GRAPHICS::DEFERRED_MRT_COLOR,
     "Deferred Multiple Render Target Color Pipeline",
     {SHADER::VERT_COLOR, SHADER::DEFERRED_MRT_COLOR_FRAG},
-    {DESCRIPTOR_SET::UNIFORM_DEFAULT},
+    {{DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)}},
     {},
     {PUSH_CONSTANT::DEFERRED},
 };
@@ -544,8 +544,8 @@ const Pipeline::CreateInfo MRT_COLOR_WF_CREATE_INFO = {
         SHADER::DEFERRED_MRT_COLOR_FRAG,
     },
     {
-        DESCRIPTOR_SET::UNIFORM_DEFAULT,
-        DESCRIPTOR_SET::UNIFORM_GEOMETRY_DEFAULT,
+        {DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        //{DESCRIPTOR_SET::UNIFORM_GEOMETRY_DEFAULT, vk::ShaderStageFlagBits::eGeometry},
     },
     {},
     {PUSH_CONSTANT::DEFERRED},
@@ -562,7 +562,7 @@ const Pipeline::CreateInfo MRT_PT_CREATE_INFO = {
     GRAPHICS::DEFERRED_MRT_PT,
     "Deferred Multiple Render Target Point Pipeline",
     {SHADER::VERT_POINT, SHADER::DEFERRED_MRT_COLOR_FRAG},
-    {DESCRIPTOR_SET::UNIFORM_DEFAULT},
+    {{DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)}},
     {},
     {PUSH_CONSTANT::DEFERRED},
 };
@@ -580,7 +580,7 @@ const Pipeline::CreateInfo MRT_LINE_CREATE_INFO = {
     GRAPHICS::DEFERRED_MRT_LINE,
     "Deferred Multiple Render Target Line Pipeline",
     {SHADER::VERT_COLOR, SHADER::DEFERRED_MRT_COLOR_FRAG},
-    {DESCRIPTOR_SET::UNIFORM_DEFAULT},
+    {{DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)}},
     {},
     {PUSH_CONSTANT::DEFERRED},
 };
@@ -601,8 +601,8 @@ const Pipeline::CreateInfo MRT_COLOR_RFL_RFR_CREATE_INFO = {
     "Deferred Multiple Render Target Color Reflect Refract Pipeline",
     {SHADER::VERT_COLOR, SHADER::DEFERRED_MRT_COLOR_RFL_RFR_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_DEFAULT,
-        DESCRIPTOR_SET::SAMPLER_DEFAULT,
+        {DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_DEFAULT, vk::ShaderStageFlagBits::eFragment},
     },
     {},
     {PUSH_CONSTANT::DEFERRED},
@@ -620,8 +620,8 @@ const Pipeline::CreateInfo MRT_SKYBOX_CREATE_INFO = {
     "Deferred Multiple Render Target Skybox Pipeline",
     {SHADER::VERT_SKYBOX, SHADER::DEFERRED_MRT_SKYBOX_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_DEFAULT,
-        DESCRIPTOR_SET::SAMPLER_DEFAULT,
+        {DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_DEFAULT, vk::ShaderStageFlagBits::eFragment},
     },
 };
 MRTSkybox::MRTSkybox(Pipeline::Handler& handler) : Graphics(handler, &MRT_SKYBOX_CREATE_INFO) {}
@@ -636,9 +636,9 @@ const Pipeline::CreateInfo AO_CREATE_INFO = {
     "Deferred SSAO Pipeline",
     {SHADER::DEFERRED_VERT, SHADER::DEFERRED_SSAO_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_DEFERRED_SSAO,
-        DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO_RANDOM,
-        DESCRIPTOR_SET::SAMPLER_DEFERRED,
+        {DESCRIPTOR_SET::UNIFORM_DEFERRED_SSAO, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO_RANDOM, vk::ShaderStageFlagBits::eFragment},
+        {DESCRIPTOR_SET::SAMPLER_DEFERRED, vk::ShaderStageFlagBits::eFragment},
     },
 };
 SSAO::SSAO(Pipeline::Handler& handler) : Graphics(handler, &AO_CREATE_INFO) {}
@@ -649,9 +649,9 @@ const Pipeline::CreateInfo COMBINE_CREATE_INFO = {
     "Deferred Combine Pipeline",
     {SHADER::DEFERRED_VERT, SHADER::DEFERRED_MS_FRAG},
     {
-        DESCRIPTOR_SET::UNIFORM_DEFERRED_COMBINE,
-        DESCRIPTOR_SET::SHADOW_CUBE_ALL,
-        DESCRIPTOR_SET::SAMPLER_DEFERRED,
+        {DESCRIPTOR_SET::UNIFORM_DEFERRED_COMBINE, vk::ShaderStageFlagBits::eFragment},
+        {DESCRIPTOR_SET::SHADOW_CUBE_ALL, vk::ShaderStageFlagBits::eFragment},
+        {DESCRIPTOR_SET::SAMPLER_DEFERRED, vk::ShaderStageFlagBits::eFragment},
     },
 };
 Combine::Combine(Pipeline::Handler& handler) : Graphics(handler, &COMBINE_CREATE_INFO), doMSAA_(::Deferred::DO_MSAA) {}

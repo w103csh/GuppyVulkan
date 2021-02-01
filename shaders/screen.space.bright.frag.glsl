@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
  
@@ -20,7 +20,7 @@ layout(set=_DS_UNI_SCR_DEF, binding=0) uniform ScreenSpaceDefault {
 layout(set=_DS_SMP_SCR_DEF, binding=0) uniform sampler2D sampRender;
 
 // IN
-layout(location=0) in vec2 fragTexCoord;
+layout(location=0) in vec2 inTexCoord;
 // OUT
 layout(location=0) out vec4 outColor;
 
@@ -28,7 +28,7 @@ const vec3 LUMINANCE = vec3(0.2126, 0.7152, 0.0722);
 float luminance(const in vec3 color) { return max(dot(LUMINANCE, color), 0.0); }
 
 void main() {
-    vec4 color = texture(sampRender, fragTexCoord);
+    vec4 color = texture(sampRender, inTexCoord);
     if( luminance(color.rgb) > data.luminanceThreshold ) {
         outColor = color;
     } else {

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
  
@@ -29,11 +29,11 @@ layout(location=3) in vec3 inTangent;
 layout(location=4) in vec3 inBinormal;
 layout(location=5) in mat4 inModel;
 // OUT
-layout(location=0) out vec3 fragPosition; // (camera space)
-layout(location=1) out vec3 fragNormal;   // (texture space)
-layout(location=2) out vec2 fragTexCoord; // (texture space)
-// layout(location=2) centroid out vec2 fragTexCoord; // (texture space)
-layout(location=3) out mat3 TBN;
+layout(location=0) out vec3 outPosition; // (camera space)
+layout(location=1) out vec3 outNormal;   // (texture space)
+layout(location=2) out vec2 outTexCoord; // (texture space)
+// layout(location=2) centroid out vec2 outTexCoord; // (texture space)
+layout(location=3) out mat3 outTBN;
 
 void main() {
     // Camera space transforms
@@ -50,10 +50,10 @@ void main() {
     gl_Position = camera.viewProjection * pos;
 
     // Camera space to tangent space
-    // TBN = inverse(mat3(CS_binormal, CS_tangent, CS_normal));
-    TBN = transpose(mat3(CS_binormal, CS_tangent, CS_normal));
+    // outTBN = inverse(mat3(CS_binormal, CS_tangent, CS_normal));
+    outTBN = transpose(mat3(CS_binormal, CS_tangent, CS_normal));
 
-    fragPosition = (viewModel * vec4(inPosition, 1.0)).xyz;
-    fragNormal = TBN * CS_normal;
-    fragTexCoord = inTexCoord;
+    outPosition = (viewModel * vec4(inPosition, 1.0)).xyz;
+    outNormal = outTBN * CS_normal;
+    outTexCoord = inTexCoord;
 }

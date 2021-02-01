@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -150,7 +150,7 @@ const CreateInfo HFF_COMP_CREATE_INFO = {
     COMPUTE::HFF_HGHT,
     "Height Fluid Field Compute Pipeline",
     {SHADER::HFF_HGHT_COMP},
-    {DESCRIPTOR_SET::HFF},
+    {{DESCRIPTOR_SET::HFF, vk::ShaderStageFlagBits::eCompute}},
 };
 Height::Height(Handler& handler) : Compute(handler, &HFF_COMP_CREATE_INFO) {}
 
@@ -159,7 +159,7 @@ const CreateInfo HFF_NORM_COMP_CREATE_INFO = {
     COMPUTE::HFF_NORM,
     "Height Fluid Field Normal Compute Pipeline",
     {SHADER::HFF_NORM_COMP},
-    {DESCRIPTOR_SET::HFF},
+    {{DESCRIPTOR_SET::HFF, vk::ShaderStageFlagBits::eCompute}},
 };
 Normal::Normal(Handler& handler) : Compute(handler, &HFF_NORM_COMP_CREATE_INFO) {}
 
@@ -168,7 +168,7 @@ const CreateInfo HFF_CLMN_CREATE_INFO = {
     GRAPHICS::HFF_CLMN_DEFERRED,
     "Height Field Fluid Column (Deferred) Pipeline",
     {SHADER::HFF_CLMN_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
-    {DESCRIPTOR_SET::HFF_DEF},
+    {{DESCRIPTOR_SET::HFF_DEF, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)}},
     {},
     {PUSH_CONSTANT::HFF_COLUMN},
 };
@@ -204,7 +204,7 @@ const CreateInfo HFF_WF_CREATE_INFO = {
     GRAPHICS::HFF_WF_DEFERRED,
     "Height Field Fluid Wireframe (Deferred) Pipeline",
     {SHADER::HFF_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
-    {DESCRIPTOR_SET::HFF_DEF},
+    {{DESCRIPTOR_SET::HFF_DEF, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)}},
 };
 Wireframe::Wireframe(Handler& handler) : Graphics(handler, &HFF_WF_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
 
@@ -244,8 +244,8 @@ const CreateInfo HFF_OCEAN_CREATE_INFO = {
         // SHADER::DEFERRED_MRT_COLOR_FRAG,
     },
     {
-        DESCRIPTOR_SET::HFF_DEF,
-        DESCRIPTOR_SET::SAMPLER_DEFAULT,
+        {DESCRIPTOR_SET::HFF_DEF, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_DEFAULT, vk::ShaderStageFlagBits::eFragment},
     },
 };
 Ocean::Ocean(Handler& handler) : Graphics(handler, &HFF_OCEAN_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
