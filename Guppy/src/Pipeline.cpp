@@ -116,8 +116,6 @@ bool Pipeline::Base::checkTextureStatus(const std::string& id) {
 void Pipeline::Base::validatePipelineDescriptorSets() {
     for (const auto& [setType, stageFlags] : DESC_SET_STAGE_PAIRS) {
         // Make sure the descriptor set shader stage flags make sense for the pipeline.
-        auto x = handler().shaderHandler().getStageFlags(getShaderTypes());
-        auto y = TYPE;
         assert((stageFlags & handler().shaderHandler().getStageFlags(getShaderTypes())) == stageFlags);
 
         const auto& descSet = handler().descriptorHandler().getDescriptorSet(setType);
