@@ -113,7 +113,7 @@ void Context::initDevice() {
     deviceFeatures.geometryShader = geometryShadingEnabled;
     deviceFeatures.fillModeNonSolid = wireframeShadingEnabled;
     deviceFeatures.independentBlend = independentBlendEnabled;
-    deviceFeatures.imageCubeArray = independentBlendEnabled;
+    deviceFeatures.imageCubeArray = imageCubeArrayEnabled;
 
     // Phyiscal device extensions names
     auto &phyDevProps = physicalDevProps[physicalDevIndex];
