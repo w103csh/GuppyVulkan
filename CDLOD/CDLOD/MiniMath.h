@@ -61,6 +61,50 @@ struct AABB {
                  (other.Min.y > this->Max.y) || (other.Max.z < this->Min.z) || (other.Min.z > this->Max.z));
     }
 
+    // IntersectType TestInBoundingPlanes2(const glm::vec4 planes[]) {  // CH
+    //    assert(false);  // Look at http://www.cse.chalmers.se/~uffe/vfc_bbox.pdf for a potential better solution.
+
+    //    // glm::vec3 corners[8];
+    //    // GetCornerPoints(corners);
+
+    //    // for (int c = 0; c < 8; c++) {
+    //    //    // [0] left
+    //    //    // [1] right
+    //    //    // [2] top
+    //    //    // [3] bottom
+    //    //    // [4] near
+    //    //    // [5] far
+    //    //    bool testIn[6];
+
+    //    //    testIn[0] = (glm::dot(planes[0], glm::vec4(corners[c], 1)) > 0.0f) ? 1 : 0;
+    //    //    testIn[1] = (glm::dot(planes[1], glm::vec4(corners[c], 1)) > 0.0f) ? 1 : 0;
+    //    //    testIn[2] = (glm::dot(planes[2], glm::vec4(corners[c], 1)) > 0.0f) ? 1 : 0;
+    //    //    testIn[3] = (glm::dot(planes[3], glm::vec4(corners[c], 1)) > 0.0f) ? 1 : 0;
+    //    //    testIn[4] = (glm::dot(planes[4], glm::vec4(corners[c], 1)) > 0.0f) ? 1 : 0;
+    //    //    testIn[5] = (glm::dot(planes[5], glm::vec4(corners[c], 1)) > 0.0f) ? 1 : 0;
+
+    //    //    if (testIn[0] && testIn [1] && testIn[2] && testIn[3] && testIn[4] && testIn[5])  //
+    //    //        return IT_Inside;
+    //    //    //// test right
+    //    //    //if (testIn[1] && (testIn[2] && testIn[3] && testIn[4] && testIn[5]))  //
+    //    //    //    return IT_Inside;
+    //    //    //// test top
+    //    //    //if (testIn[2] && (testIn[0] && testIn[1] && testIn[4] && testIn[5]))  //
+    //    //    //    return IT_Inside;
+    //    //    //// test bottom
+    //    //    //if (testIn[3] && (testIn[0] && testIn[1] && testIn[4] && testIn[5]))  //
+    //    //    //    return IT_Inside;
+    //    //    //// test near
+    //    //    //if (testIn[4] && (testIn[0] && testIn[1] && testIn[2] && testIn[3]))  //
+    //    //    //    return IT_Inside;
+    //    //    //// test far
+    //    //    //if (testIn[5] && (testIn[0] && testIn[1] && testIn[2] && testIn[3]))  //
+    //    //    //    return IT_Inside;
+    //    //}
+
+    //    // return IT_Outside;
+    //}
+
     IntersectType TestInBoundingPlanes(const glm::vec4 planes[]) {
         glm::vec3 corners[9];
         GetCornerPoints(corners);
@@ -88,7 +132,8 @@ struct AABB {
             for (int i = 0; i < 9; ++i) {
                 // test this point against the planes
                 float distance = glm::dot(planes[p], glm::vec4(corners[i], 1));
-                if (distance < -size) {
+                // if (distance < -size) {
+                if (distance < 0.0f) {
                     ptIn = 0;
                     inCount--;
                 }

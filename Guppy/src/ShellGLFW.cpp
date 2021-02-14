@@ -194,6 +194,24 @@ void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, in
             // case MOD_SHIFT:
             //    gKey = GAME_KEY::CTRL;
             //    break;
+            case GLFW_KEY_COMMA:
+                gKey = GAME_KEY::COMMA;
+                break;
+            case GLFW_KEY_PERIOD:
+                gKey = GAME_KEY::PERIOD;
+                break;
+            case GLFW_KEY_SLASH:
+                gKey = GAME_KEY::SLASH;
+                break;
+            case GLFW_KEY_LEFT_SHIFT:
+                gKey = GAME_KEY::LEFT_SHFT;
+                break;
+            case GLFW_KEY_LEFT_CONTROL:
+                gKey = GAME_KEY::LEFT_CTRL;
+                break;
+            case GLFW_KEY_LEFT_ALT:
+                gKey = GAME_KEY::LEFT_ALT;
+                break;
             default:
                 gKey = GAME_KEY::UNKNOWN;
                 break;

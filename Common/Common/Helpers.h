@@ -153,6 +153,8 @@ constexpr bool isPowerOfTwo(const T value) {
     return (value != 0) && ((value & (value - 1)) == 0);
 }
 
+constexpr glm::vec3 convertToZupLH(glm::vec3 v) { return {v.x, v.z, v.y}; }
+
 glm::mat4 moveAndRotateTo(const glm::vec3 eye, const glm::vec3 center, const glm::vec3 up);
 
 // The point of this is to turn the glm::lookAt into an affine transform for
@@ -339,6 +341,8 @@ void globalDebugBarrierWriteToRead(BarrierResource &resource);
 
 void recordBarriers(const BarrierResource &resource, const vk::CommandBuffer &cmd, const vk::PipelineStageFlags srcStageMask,
                     const vk::PipelineStageFlags dstStageMask, const vk::DependencyFlags dependencyFlags = {});
+
+inline void normalizePlane(plane &plane) { plane /= glm::length(glm::vec3(plane.x, plane.y, plane.z)); }
 
 }  // namespace helpers
 

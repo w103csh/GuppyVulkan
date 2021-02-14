@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -10,12 +10,14 @@
 #include <string_view>
 #include <vulkan/vulkan.hpp>
 
+#include <CDLOD/Common.h>
 #include <CDLOD/CDLODQuadTree.h>
 #include <CDLOD/CDLODRenderer.h>
 
 #include "ConstantsAll.h"
 #include "DescriptorManager.h"
 #include "HeightFieldFluid.h"
+#include "OceanRenderer.h"
 #include "ParticleBuffer.h"
 #include "Pipeline.h"
 
@@ -37,7 +39,7 @@ constexpr uint32_t DISP_WORKGROUP_SIZE = N / DISP_LOCAL_SIZE;
 constexpr float T = 200.0f;  // wave repeat time
 constexpr float g = 9.81f;   // gravity
 
-struct SurfaceCreateInfo {
+struct SurfaceCreateInfo : public IHeightmapSource {
     SurfaceCreateInfo()
         : Lx(1000.0f),  //
           Lz(1000.0f),
@@ -50,6 +52,13 @@ struct SurfaceCreateInfo {
           L(),
           lambda(-1.0f) {
         L = (V * V) / g;
+        // IHeightMapSource
+        mapDims.SizeX = 40960.0f;
+        mapDims.SizeY = 20480.0f;
+        mapDims.SizeZ = 1200.0f;
+        mapDims.MinX = -0.5f * mapDims.SizeX;  //-20480.0; CH
+        mapDims.MinY = -0.5f * mapDims.SizeY;  //-10240.0; CH
+        mapDims.MinZ = -0.5f * mapDims.SizeZ;  //-600.00;  CH
     }
     float Lx;         // grid size (meters)
     float Lz;         // grid size (meters)
@@ -61,6 +70,34 @@ struct SurfaceCreateInfo {
     float A;          // Phillips spectrum constant (wave amplitude?)
     float L;          // largest possible waves from continuous wind speed V
     float lambda;     // horizontal displacement scale factor
+
+    // IHeightMapSource
+    int GetSizeX() const override {
+        // return static_cast<int>(Lx);
+        return 4096;
+    }
+    int GetSizeY() const override {
+        // return static_cast<int>(Lz);
+        return 2048;
+    }
+    // I am not sure if I need to return meaningful values for below. Doing so will obviously be a challenge.
+    unsigned short GetHeightAt(int x, int y) const override { return NormalizeForZ(0.0f); }
+    void GetAreaMinMaxZ(int x, int y, int sizeX, int sizeY, unsigned short& minZ, unsigned short& maxZ) const override {
+        // Just fix the values between +/-50.
+        minZ = NormalizeForZ(-50.0f);
+        maxZ = NormalizeForZ(50.0f);
+    }
+    // CDLOD wants to normalize dimension values to the range of an unsigned short.
+    unsigned short NormalizeForX(float x) const {
+        return static_cast<unsigned short>((x - mapDims.MinX) * 65535.0f / mapDims.SizeX);
+    }
+    unsigned short NormalizeForY(float y) const {
+        return static_cast<unsigned short>((y - mapDims.MinY) * 65535.0f / mapDims.SizeY);
+    }
+    unsigned short NormalizeForZ(float z) const {
+        return static_cast<unsigned short>((z - mapDims.MinZ) * 65535.0f / mapDims.SizeZ);
+    }
+    MapDimensions mapDims = {};
 };
 
 }  // namespace Ocean
@@ -80,7 +117,7 @@ class Handler;
 struct CreateInfo;
 namespace Ocean {
 constexpr std::string_view DATA_ID = "Ocean Data Texture";
-void MakTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info);
+void MakeTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info);
 }  // namespace Ocean
 }  // namespace Texture
 
@@ -96,22 +133,8 @@ extern const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO;
 }  // namespace Ocean
 }  // namespace Shader
 
-namespace Uniform {
-namespace CDLOD {
-namespace QuadTree {
-using DATA = CDLODRenderer::UniformData;
-class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
-   public:
-    Base(const Buffer::Info&& info, DATA* pData);
-};
-}  // namespace QuadTree
-}  // namespace CDLOD
-
-}  // namespace Uniform
-
 // UNIFORM DYNAMIC
 namespace UniformDynamic {
-
 namespace Ocean {
 namespace Simulation {
 struct DATA {
@@ -129,19 +152,6 @@ class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA
 };
 }  // namespace Simulation
 }  // namespace Ocean
-
-namespace CDLOD {
-namespace Grid {
-using DATA = CDLODRendererBatchInfo::UniformDynamicData;
-class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
-   public:
-    Base(const Buffer::Info&& info, DATA* pData, const Buffer::CreateInfo* pCreateInfo);
-    void updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) override;
-};
-using Manager = Descriptor::Manager<Descriptor::Base, Base, std::shared_ptr>;
-}  // namespace Grid
-}  // namespace CDLOD
-
 }  // namespace UniformDynamic
 
 // DESCRIPTOR SET
@@ -217,6 +227,8 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
            std::shared_ptr<Material::Base>& pMaterial, const std::vector<std::shared_ptr<Descriptor::Base>>& pDescriptors,
            std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData);
 
+    void update(const float time, const float elapsed, const uint32_t frameIndex) override;
+
     virtual void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                       const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                       const uint8_t frameIndex) const override;
@@ -238,11 +250,7 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
     BufferResource indexWFRes_;
 
     SurfaceCreateInfo info_;
-
-    // CDLOD
-    void initCDLOD();
-    CDLODQuadTree cdlodQuadTree_;
-    CDLODRenderer cdlodRenderer_;
+    Renderer::Basic renderer_;
 };
 
 }  // namespace Ocean

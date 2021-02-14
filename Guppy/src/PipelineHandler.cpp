@@ -5,6 +5,7 @@
 
 #include "PipelineHandler.h"
 
+#include "CDLOD.h"
 #include "Cloth.h"
 #include "ConstantsAll.h"
 #include "Deferred.h"
@@ -104,6 +105,7 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(), maxPus
                 case GRAPHICS::HFF_OCEAN_DEFERRED:              insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluid::Ocean>(std::ref(*this))}); break;
                 case GRAPHICS::OCEAN_WF_DEFERRED:               insertPair = pPipelines_.insert({type, std::make_unique<Ocean::Wireframe>(std::ref(*this))}); break;
                 case GRAPHICS::OCEAN_SURFACE_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Ocean::Surface>(std::ref(*this))}); break;
+                case GRAPHICS::CDLOD_WF_DEFERRED:               insertPair = pPipelines_.insert({type, std::make_unique<CDLOD::Wireframe>(std::ref(*this))}); break;
                 default: assert(false);  // add new pipelines here
             }
             // clang-format on
@@ -220,6 +222,7 @@ std::vector<vk::PushConstantRange> Pipeline::Handler::getPushConstantRanges(
             case PUSH_CONSTANT::PRTCL_EULER:        range.size = sizeof(::Particle::Euler::PushConstant); break;
             case PUSH_CONSTANT::HFF_COLUMN:         range.size = sizeof(HeightFieldFluid::Column::PushConstant); break;
             case PUSH_CONSTANT::FFT_ROW_COL_OFFSET: range.size = sizeof(::FFT::RowColumnOffset); break;
+            case PUSH_CONSTANT::CDLOD:              range.size = sizeof(::CDLOD::PushConstant); break;
             default: assert(false && "Unknown push constant"); exit(EXIT_FAILURE);
         }
         // clang-format on

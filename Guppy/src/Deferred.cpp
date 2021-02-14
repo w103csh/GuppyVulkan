@@ -527,11 +527,13 @@ const Pipeline::CreateInfo MRT_COLOR_CREATE_INFO = {
     {},
     {PUSH_CONSTANT::DEFERRED},
 };
-MRTColor::MRTColor(Pipeline::Handler& handler) : Graphics(handler, &MRT_COLOR_CREATE_INFO) {}
-MRTColor::MRTColor(Pipeline::Handler& handler, const CreateInfo* pCreateInfo) : Graphics(handler, pCreateInfo) {}
+MRTColor::MRTColor(Pipeline::Handler& handler) : Graphics(handler, &MRT_COLOR_CREATE_INFO), DO_BLEND(true) {}
+MRTColor::MRTColor(Pipeline::Handler& handler, const CreateInfo* pCreateInfo)
+    : Graphics(handler, pCreateInfo), DO_BLEND(true) {}
 
 void MRTColor::getBlendInfoResources(CreateInfoResources& createInfoRes) {
-    GetBlendInfoResources(createInfoRes);  //
+    if (DO_BLEND) assert(handler().shell().context().independentBlendEnabled);
+    GetBlendInfoResources(createInfoRes, DO_BLEND);
 }
 
 // MRT (COLOR WIREFRAME)
@@ -550,7 +552,13 @@ const Pipeline::CreateInfo MRT_COLOR_WF_CREATE_INFO = {
     {},
     {PUSH_CONSTANT::DEFERRED},
 };
-MRTColorWireframe::MRTColorWireframe(Handler& handler) : MRTColor(handler, &MRT_COLOR_WF_CREATE_INFO) {}
+MRTColorWireframe::MRTColorWireframe(Handler& handler) : MRTColor(handler, &MRT_COLOR_WF_CREATE_INFO), DO_BLEND(true) {}
+
+void MRTColorWireframe::getBlendInfoResources(CreateInfoResources& createInfoRes) {
+    if (DO_BLEND) assert(handler().shell().context().independentBlendEnabled);
+    GetBlendInfoResources(createInfoRes, DO_BLEND);
+}
+
 void MRTColorWireframe::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     MRTColor::getRasterizationStateInfoResources(createInfoRes);
     createInfoRes.rasterizationStateInfo.polygonMode = vk::PolygonMode::eLine;

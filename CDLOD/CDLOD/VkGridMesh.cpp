@@ -30,7 +30,35 @@ vk::Result VkGridMesh::OnCreateDevice(LoadingResource& ldgRes) {
     if (m_pContext == nullptr) return vk::Result::eNotReady;
     if (m_dimension == 0) return vk::Result::eSuccess;
 
-    std::string name = "VkGridMesh(" + std::to_string(m_dimension) + ")";
+    /* Examples:
+     *  2x2
+     *    (0,0)     (0,1)
+     *      0----1----2
+     *      | TL | TR |     o Numbers are the vertex order
+     *      3----4----5     o Indices are in TL->TR->BL->BR order
+     *      | BL | BR |     o Note: The TL is actually the bottom left coordiante wise
+     *      6----7----8
+     *    (0,1)     (1,1)
+     *
+     *      Index buffer: 0,1,3,1,4,3,1,2,4,2,5,4,3,4,6...
+     *
+     *  4x4
+     *   0----1----2----3----4
+     *   | TL | TL | TR | TR |
+     *   5----6----7----8----9
+     *   | TL | TL | TR | TR |
+     *   10---11---12---13---14
+     *   | BL | BL | BR | BR |
+     *   15---16---17---18---19
+     *   | BL | BL | BR | BR |
+     *   20---21---22---23---24
+     *
+     *      Index buffer: 0,1,5,1,6,5,1,2,6,2,7,6,5,6,10...
+     *  CH
+     */
+
+    std::string dimStr = std::to_string(m_dimension);
+    std::string name = "VkGridMesh(" + dimStr + "x" + dimStr + ")";
 
     const int gridDim = m_dimension;
 
@@ -38,7 +66,7 @@ vk::Result VkGridMesh::OnCreateDevice(LoadingResource& ldgRes) {
     assert(totalVertices <= 65535);
     std::vector<glm::vec3> vertices(totalVertices);
 
-    int totalIndices = gridDim * gridDim * 2 * 3;
+    int totalIndices = gridDim * gridDim * 6;
     std::vector<IndexBufferType> indices(totalIndices);
 
     int vertDim = gridDim + 1;

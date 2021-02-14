@@ -105,6 +105,8 @@ enum class SHADER {
     OCEAN_FFT_COMP,
     OCEAN_VERT,
     OCEAN_DEFERRED_MRT_FRAG,
+    // CDLOD
+    CDLOD_VERT,
     // Add new to SHADER_ALL and SHADER_LINK_MAP.
 };
 

@@ -233,7 +233,7 @@ struct insertion_ordered_unique_keyvalue_list {
     std::vector<TKey> keyList_;
 };
 
-/**
+/*
  *  Just using a glm::vec4 to represent the equation for a plane:
  *      Ax + By + Cz + D = 0
  *  So for now,
@@ -244,8 +244,17 @@ struct insertion_ordered_unique_keyvalue_list {
  */
 using plane = glm::vec4;
 
-inline void normalizePlane(plane &plane) { plane /= glm::length(glm::vec3(plane.x, plane.y, plane.z)); }
-
+/*
+ * Its hard to enforce the order below, but I should try to follow it.
+ * [0] left
+ * [1] right
+ * [2] top
+ * [3] bottom
+ * [4] near
+ * [5] far
+ */
 using frustumPlanes = std::array<plane, 6>;
+
+using box = std::array<glm::vec3, 8>;
 
 #endif  //! TYPE_H

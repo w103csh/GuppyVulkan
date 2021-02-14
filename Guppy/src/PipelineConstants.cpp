@@ -69,6 +69,7 @@ const std::vector<PIPELINE> ALL = {
     COMPUTE::OCEAN_FFT,
     GRAPHICS::OCEAN_WF_DEFERRED,
     GRAPHICS::OCEAN_SURFACE_DEFERRED,
+    GRAPHICS::CDLOD_WF_DEFERRED,
 };
 
 const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
@@ -98,6 +99,7 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
             GRAPHICS::PRTCL_FOUNTAIN_DEFERRED,
             GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED,
             GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER,
+            GRAPHICS::CDLOD_WF_DEFERRED,
         },
     },
     {

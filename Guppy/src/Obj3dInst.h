@@ -64,6 +64,10 @@ class Instance : public Obj3d::Interface {
         pInstObj3d_->setModel(std::forward<const glm::mat4>(m), std::forward<const uint32_t>(index));
     }
 
+    // INSTANCE
+    inline auto getActiveCount() const { return pInstObj3d_->getActiveCount(); }
+    inline void setActiveCount(const uint32_t count) { pInstObj3d_->setActiveCount(std::forward<const uint32_t>(count)); }
+
    protected:
     std::shared_ptr<::Instance::Obj3d::Base> pInstObj3d_;
 };

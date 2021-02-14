@@ -10,6 +10,31 @@
 #include "ConstantsAll.h"
 #include "InputHandler.h"
 
+namespace {
+void setFrustumBox(Camera::FrustumInfo &info) {
+    // Field of view is the total view angle with relation to the y-axis (glm::perspective).
+    float tanHalfFovy = tan(info.fieldOfViewY / 2.0f);
+
+    const float nearZ = info.nearDistance;  // near distance from eye
+    const float nearDistToPlaneY = tanHalfFovy * nearZ;
+    const float nearDistToPlaneX = nearDistToPlaneY * info.aspectRatio;
+
+    const float farZ = info.farDistance;  // far distance from eye
+    const float farDistToPlaneY = tanHalfFovy * farZ;
+    const float farDistToPlaneX = farDistToPlaneY * info.aspectRatio;
+
+    // Positions that bound the frustum
+    info.box[0] = {-nearDistToPlaneX, nearDistToPlaneY, nearZ};   // nearTL
+    info.box[1] = {nearDistToPlaneX, nearDistToPlaneY, nearZ};    // nearTR
+    info.box[2] = {-nearDistToPlaneX, -nearDistToPlaneY, nearZ};  // nearBL
+    info.box[3] = {nearDistToPlaneX, -nearDistToPlaneY, nearZ};   // nearBR
+    info.box[4] = {-farDistToPlaneX, farDistToPlaneY, farZ};      // farTL
+    info.box[5] = {farDistToPlaneX, farDistToPlaneY, farZ};       // farTR
+    info.box[6] = {-farDistToPlaneX, -farDistToPlaneY, farZ};     // farBL
+    info.box[7] = {farDistToPlaneX, -farDistToPlaneY, farZ};      // farBR
+}
+}  // namespace
+
 namespace Camera {
 namespace Perspective {
 
@@ -22,12 +47,11 @@ Base::Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo
       aspect_(pCreateInfo->aspect),
       near_(pCreateInfo->n),
       far_(pCreateInfo->f),
-      viewRange_(far_ - near_),
       fovy_(pCreateInfo->fovy),
       eye_(pCreateInfo->eye),
       center_(pCreateInfo->center) {
-    data_.view = glm::lookAt(pCreateInfo->eye, pCreateInfo->center, UP_VECTOR);
-    proj_ = glm::perspective(pCreateInfo->fovy, pCreateInfo->aspect, near_, far_);
+    data_.view = glm::lookAt(eye_, center_, UP_VECTOR);
+    proj_ = glm::perspective(fovy_, aspect_, near_, far_);
     setProjectionData();
     update();
 }
@@ -70,16 +94,16 @@ frustumPlanes Base::getFrustumPlanes() const {
     frustumPlanes planes;
 
     // Left clipping plane
-    planes[0].x = data_.viewProjection[0][3] - data_.viewProjection[0][0];
-    planes[0].y = data_.viewProjection[1][3] - data_.viewProjection[1][0];
-    planes[0].z = data_.viewProjection[2][3] - data_.viewProjection[2][0];
-    planes[0].w = data_.viewProjection[3][3] - data_.viewProjection[3][0];
+    planes[0].x = data_.viewProjection[0][3] + data_.viewProjection[0][0];
+    planes[0].y = data_.viewProjection[1][3] + data_.viewProjection[1][0];
+    planes[0].z = data_.viewProjection[2][3] + data_.viewProjection[2][0];
+    planes[0].w = data_.viewProjection[3][3] + data_.viewProjection[3][0];
 
     // Right clipping plane
-    planes[1].x = data_.viewProjection[0][3] + data_.viewProjection[0][0];
-    planes[1].y = data_.viewProjection[1][3] + data_.viewProjection[1][0];
-    planes[1].z = data_.viewProjection[2][3] + data_.viewProjection[2][0];
-    planes[1].w = data_.viewProjection[3][3] + data_.viewProjection[3][0];
+    planes[1].x = data_.viewProjection[0][3] - data_.viewProjection[0][0];
+    planes[1].y = data_.viewProjection[1][3] - data_.viewProjection[1][0];
+    planes[1].z = data_.viewProjection[2][3] - data_.viewProjection[2][0];
+    planes[1].w = data_.viewProjection[3][3] - data_.viewProjection[3][0];
 
     // Top clipping plane
     planes[2].x = data_.viewProjection[0][3] + data_.viewProjection[0][1];
@@ -106,9 +130,76 @@ frustumPlanes Base::getFrustumPlanes() const {
     planes[5].w = data_.viewProjection[3][3] - data_.viewProjection[3][2];
 
     // Normalize the plane equations
-    for (auto &p : planes) normalizePlane(p);
+    for (auto &p : planes) helpers::normalizePlane(p);
 
     return planes;
+}
+
+frustumPlanes Base::getFrustumPlanesZupLH() const {
+    assert(GLM_CONFIG_CLIP_CONTROL == GLM_CLIP_CONTROL_RH_NO);
+
+    frustumPlanes planes;
+
+    // Left clipping plane
+    planes[0].x = data_.viewProjection[0][3] + data_.viewProjection[0][0];
+    planes[0].y = data_.viewProjection[2][3] + data_.viewProjection[2][0];
+    planes[0].z = data_.viewProjection[1][3] + data_.viewProjection[1][0];
+    planes[0].w = data_.viewProjection[3][3] + data_.viewProjection[3][0];
+    // Right clipping plane
+    planes[1].x = data_.viewProjection[0][3] - data_.viewProjection[0][0];
+    planes[1].y = data_.viewProjection[2][3] - data_.viewProjection[2][0];
+    planes[1].z = data_.viewProjection[1][3] - data_.viewProjection[1][0];
+    planes[1].w = data_.viewProjection[3][3] - data_.viewProjection[3][0];
+    // Top clipping plane
+    planes[2].x = data_.viewProjection[0][3] + data_.viewProjection[0][1];
+    planes[2].y = data_.viewProjection[2][3] + data_.viewProjection[2][1];
+    planes[2].z = data_.viewProjection[1][3] + data_.viewProjection[1][1];
+    planes[2].w = data_.viewProjection[3][3] + data_.viewProjection[3][1];
+    // Bottom clipping plane
+    planes[3].x = data_.viewProjection[0][3] - data_.viewProjection[0][1];
+    planes[3].y = data_.viewProjection[2][3] - data_.viewProjection[2][1];
+    planes[3].z = data_.viewProjection[1][3] - data_.viewProjection[1][1];
+    planes[3].w = data_.viewProjection[3][3] - data_.viewProjection[3][1];
+    // Near clipping plane
+    planes[4].x = data_.viewProjection[0][2];
+    planes[4].y = data_.viewProjection[2][2];
+    planes[4].z = data_.viewProjection[1][2];
+    planes[4].w = data_.viewProjection[3][2];
+    // Far clipping plane
+    planes[5].x = data_.viewProjection[0][3] - data_.viewProjection[0][2];
+    planes[5].y = data_.viewProjection[2][3] - data_.viewProjection[2][2];
+    planes[5].z = data_.viewProjection[1][3] - data_.viewProjection[1][2];
+    planes[5].w = data_.viewProjection[3][3] - data_.viewProjection[3][2];
+
+    // Normalize the plane equations
+    for (auto &p : planes) helpers::normalizePlane(p);
+
+    return planes;
+}
+
+FrustumInfo Base::getFrustumInfo() const {
+    FrustumInfo info;
+    info.fieldOfViewY = fovy_;
+    info.aspectRatio = aspect_;
+    info.nearDistance = near_;
+    info.farDistance = far_;
+    info.eye = eye_;
+    info.planes = getFrustumPlanes();
+    setFrustumBox(info);
+    return info;
+}
+
+FrustumInfo Base::getFrustumInfoZupLH() const {
+    FrustumInfo info;
+    info.fieldOfViewY = fovy_;
+    info.aspectRatio = aspect_;
+    info.nearDistance = near_;
+    info.farDistance = far_;
+    info.eye = helpers::convertToZupLH(eye_);
+    info.planes = getFrustumPlanesZupLH();
+    setFrustumBox(info);
+    for (auto it = info.box.begin(); it != info.box.end(); it++) *it = helpers::convertToZupLH(*it);
+    return info;
 }
 
 void Base::setAspect(float aspect) {
@@ -130,6 +221,12 @@ void Base::update(const uint32_t frameIndex) {
     // For now there is no model matrix. The camera is never transformed but is always reconstructed using glm::lookAt().
     // Currently, this is only used by the debug camera, which makes this an unecessary per frame update.
     model_ = helpers::moveAndRotateTo(eye_, center_, UP_VECTOR);
+}
+
+void Base::takeCameraData(const Base &camera) {
+    eye_ = camera.getPosition();
+    data_.view = camera.getMV();
+    updateView({}, {});
 }
 
 bool Base::updateView(const glm::vec3 &moveDir, const glm::vec2 &lookDir) {

@@ -29,9 +29,14 @@ enum class GAME_KEY {
     K,
     L,
     I,
-    // BRACKET/BRACE KEYS
     LEFT_BRACKET,
     RIGHT_BRACKET,
+    COMMA,
+    PERIOD,
+    SLASH,
+    LEFT_SHFT,
+    LEFT_CTRL,
+    LEFT_ALT,
     // NUMBER KEYS
     TOP_1,
     TOP_2,
@@ -60,9 +65,9 @@ enum class GAME_KEY {
     F11,
     F12,
     // MODIFIERS
-    ALT,
-    CTRL,
     SHFT,
+    CTRL,
+    ALT,
 };
 
 // clang-format off
@@ -124,6 +129,7 @@ enum class PUSH_CONSTANT {
     PRTCL_EULER,
     HFF_COLUMN,
     FFT_ROW_COL_OFFSET,
+    CDLOD,
 };
 
 enum class MESH {
@@ -328,6 +334,8 @@ enum class GRAPHICS : uint32_t {
     // OCEAN
     OCEAN_WF_DEFERRED,
     OCEAN_SURFACE_DEFERRED,
+    // CDLOD
+    CDLOD_WF_DEFERRED,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in PipelineConstants.cpp

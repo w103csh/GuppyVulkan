@@ -1,11 +1,53 @@
 //////////////////////////////////////////////////////////////////////
-// Modifications copyright(C) 2020 Colin Hughes<colin.s.hughes @gmail.com>
+// Modifications copyright(C) 2021 Colin Hughes<colin.s.hughes @gmail.com>
 // -------------------------------
 // Copyright (C) 2009 - Filip Strugar.
 // Distributed under the zlib License (see readme.txt)
 //////////////////////////////////////////////////////////////////////
 
 #include "CDLODQuadTree.h"
+
+// CH
+#define DEBUG_PRINT false
+#if DEBUG_PRINT
+namespace {
+#pragma warning(disable : 4996)
+#include <stdio.h>
+constexpr bool LOG_TO_FILE = true;
+static FILE *pLogFile = nullptr;
+void logStart() {
+    if (LOG_TO_FILE) {
+        pLogFile = fopen("cdlod_create.log", "w+");
+        assert(pLogFile);
+    }
+}
+template <typename... Args>
+void log(char *s, Args... args) {
+    if (LOG_TO_FILE) {
+        assert(pLogFile != nullptr);
+        fprintf(pLogFile, s, args...);
+    } else {
+        printf(s, args...);
+    }
+}
+void logEnd() {
+    assert(pLogFile != nullptr);
+    fclose(pLogFile);
+}
+}  // namespace
+#else
+namespace {
+void logStart() {}
+template <typename... Args>
+void log(char *s, Args... args) {}
+void logEnd() {}
+}  // namespace
+#endif
+
+using CreateDesc = CDLODQuadTree::CreateDesc;
+using Node = CDLODQuadTree::Node;
+using SelectedNode = CDLODQuadTree::SelectedNode;
+using LODSelection = CDLODQuadTree::LODSelection;
 
 CDLODQuadTree::CDLODQuadTree() {
     m_allNodesBuffer = NULL;
@@ -15,6 +57,143 @@ CDLODQuadTree::CDLODQuadTree() {
 CDLODQuadTree::~CDLODQuadTree() { Clean(); }
 //
 bool CDLODQuadTree::Create(const CreateDesc &desc) {
+    const auto printInfo = [&](int totalNodeCount) {  // CH
+#if DEBUG_PRINT
+        log("*************************************************************************************\n");
+        log("**  CDLODQuadTree::Create                                                          **\n");
+        log("*************************************************************************************\n");
+        log("CreateDesc:\n");
+        log("  LeafRenderNodeSize: %d\n", desc.LeafRenderNodeSize);
+        log("  LODLevelCount:      %d\n", desc.LODLevelCount);
+        log("  MapDimensions:\n");
+        log("    Size:  (%.3f, %.3f, %.3f)\n", desc.MapDims.SizeX, desc.MapDims.SizeY, desc.MapDims.SizeZ);
+        log("    Min:   (%.3f, %.3f, %.3f)\n", desc.MapDims.MinX, desc.MapDims.MinY, desc.MapDims.MinZ);
+        log("    Max:   (%.3f, %.3f, %.3f)\n", desc.MapDims.MaxX(), desc.MapDims.MaxY(), desc.MapDims.MaxZ());
+        log("Members:\n");
+        log("  m_rasterSizeX:        %d\n", m_rasterSizeX);
+        log("  m_rasterSizeY:        %d\n", m_rasterSizeY);
+        log("    (desc.LeafRenderNodeSize * desc.MapDims.SizeX / (float)m_rasterSizeX))\n");
+        log("  m_leafNodeWorldSizeX: %.3f\n", m_leafNodeWorldSizeX);
+        log("  m_leafNodeWorldSizeY: %.3f\n", m_leafNodeWorldSizeY);
+        log("  m_topNodeSize: %d\n", m_topNodeSize);
+        log("    m_LODLevelNodeDiagSizes:\n");
+        int test = 0;
+        for (int i = 0; i < m_desc.LODLevelCount; i++) {
+            int factor = (desc.LeafRenderNodeSize << i);
+            int nodeCountX = ((m_rasterSizeX - 1) / factor) + 1;
+            int nodeCountY = ((m_rasterSizeY - 1) / factor) + 1;
+            test += (nodeCountX * nodeCountY);
+            log("      %d: %.3f - nodeCount (x: %d *  y: %d): %d\n", i, m_LODLevelNodeDiagSizes[i], nodeCountX, nodeCountY,
+                (nodeCountX * nodeCountY));
+        }
+        assert(test == totalNodeCount);
+        log("  m_allNodesCount: %d\n", totalNodeCount);
+        log("  m_topNodeCountX: %d\n", m_topNodeCountX);
+        log("  m_topNodeCountY: %d\n", m_topNodeCountY);
+        log("\n        starting node creation loop ... \n");
+#endif
+    };
+
+    /*
+     * Example:
+     *
+     * NOTE!!!!!!
+     *      CDLOD uses a left-handed z-up coordinate system.
+     *
+     * Paramters:
+     *
+     *   CreateDesc:
+     *     LeafRenderNodeSize: 8
+     *     LODLevelCount:      8
+     *     MapDimensions:
+     *       Size:  (40960.000, 20480.000, 1200.000)
+     *       Min:   (-20480.000, -10240.000, -600.000)
+     *       Max:   (20480.000, 10240.000, 600.000)
+     *   Members:
+     *     m_rasterSizeX:        4096
+     *     m_rasterSizeY:        2048
+     *
+     * Produces the following:
+     *
+     *   m_leafNodeWorldSizeX: 80.000 (LeafRenderNodeSize * MapDims.SizeX / (float)m_rasterSizeX))
+     *   m_leafNodeWorldSizeY: 80.000
+     *   m_topNodeSize: 1024          for (i=0;i<LODLevelCount;i++) (LeafRenderNodeSize << 1)
+     *     m_LODLevelNodeDiagSizes:
+     *       0: 113.137 - nodeCount (x: 512 *  y: 256): 131072
+     *       1: 226.274 - nodeCount (x: 256 *  y: 128): 32768
+     *       2: 452.548 - nodeCount (x: 128 *  y: 64): 8192
+     *       3: 905.097 - nodeCount (x: 64 *  y: 32): 2048
+     *       4: 1810.193 - nodeCount (x: 32 *  y: 16): 512
+     *       5: 3620.387 - nodeCount (x: 16 *  y: 8): 128
+     *       6: 7240.773 - nodeCount (x: 8 *  y: 4): 32
+     *       7: 14481.547 - nodeCount (x: 4 *  y: 2): 8
+     *   m_allNodesCount: 174760
+     *   m_topNodeCountX: 4
+     *   m_topNodeCountY: 2
+     *
+     * Top-level nodes (LOD level 0):
+     *
+     *     (-20480.00, -10240.00)
+     *               0       1024       2048       3072       4096
+     *             0 +----------+----------+----------+----------+
+     *               |          |          |          |          |
+     *               |          |          |          |          |
+     *               |          |          |          |          |
+     *          1024 +----------+----------+----------+----------+
+     *               |          |          |          |          |
+     *               |          |          |          |          |
+     *               |          |          |          |          |
+     *          2048 +----------+----------+----------+----------+
+     *                                                  (20490.00, 10250.00)
+     *                                                  This number seems wrong?...
+     *
+     *     (-20480.00, -10240.00)
+     *               0             1024             2048             3072             4096
+     *             0 +----------------+----------------+----------------+----------------+
+     *               |                |                |                |                |
+     *               |                |                |                |                |
+     *               |                |                |                |                |
+     *               |                |                |                |                |
+     *               |                |                |                |                |
+     *               |                |                |                |                |
+     *          1024 +----------------+----------------+----------------+----------------+
+     *               |                |                |e               |                |
+     *               |                |                |                |                |
+     *               |                |                |                |                |
+     *               |                |                |                |                |
+     *               |                |                |                |                |
+     *               |                |                |                |                |
+     *          2048 +----------------+----------------+----------------+----------------+
+     *                                                                          (20490.00, 10250.00)
+     *
+     *    Each top-level node is a single square in the picture above. I believe nodes must always be square and are also
+     *   called quads. Each quad has four pointers to child quads which equally subdivide the space spanned by their parent.
+     *   The following list should explain how the subdivision algorithm works:
+     *
+     *      Note: For some reason the LOD levels are inverted from the tree nodes to the selection nodes.
+     *
+     *    +---------------+-----------------+---------------+-----------------------+-------------------------------+
+     *    |  LOD #(tree)  |  LOD #(select)  |  Raster dims  |  Diagonal world size  |                      # nodes  |
+     *    +---------------+-----------------+---------------+-----------------------+-------------------------------+
+     *    |            0  |              7  |  1024 x 1024  |            14481.547  |  (x: 4   *  y: 2):         8  |
+     *    |            1  |              6  |    512 x 512  |             7240.773  |  (x: 8   *  y: 4):        32  |
+     *    |            2  |              5  |    256 x 256  |             3620.387  |  (x: 16  *  y: 8):       128  |
+     *    |            3  |              4  |    128 x 128  |             1810.193  |  (x: 32  *  y: 16):      512  |
+     *    |            4  |              3  |      64 x 64  |              905.097  |  (x: 64  *  y: 32):     2048  |
+     *    |            5  |              2  |      32 x 32  |              452.548  |  (x: 128 *  y: 64):     8192  |
+     *    |            6  |              1  |      16 x 16  |              226.274  |  (x: 256 *  y: 128):   32768  |
+     *    |            7  |              0  |        8 x 8  |              113.137  |  (x: 512 *  y: 256):  131072  |
+     *    +---------------+-----------------+---------------+-----------------------+-------------------------------+
+     *
+     *  Diagonal size calculation:
+     *      diagSize = sqrt( pow( ( rasterX / rasterSizeX ) * mapDimSizeX ), 2) +
+     *                       pow( ( rasterY / rasterSizeY ) * mapDimSizeY ), 2) )
+     *    LOD #(tree: 7, select: 0):
+     *       113.137 = sqrt(pow((8 / 4096) * 40960.0, 2) + pow((8 / 2048) * 20480.0, 2))
+     *
+     *  CH
+     */
+
     Clean();
 
     m_desc = desc;
@@ -63,17 +242,23 @@ bool CDLODQuadTree::Create(const CreateDesc &desc) {
     //
     m_topNodeCountX = (m_rasterSizeX - 1) / m_topNodeSize + 1;
     m_topNodeCountY = (m_rasterSizeY - 1) / m_topNodeSize + 1;
+    logStart();                 // CH
+    printInfo(totalNodeCount);  // CH
     m_topLevelNodes = new Node **[m_topNodeCountY];
     for (int y = 0; y < m_topNodeCountY; y++) {
         m_topLevelNodes[y] = new Node *[m_topNodeCountX];
+        log("\n");  // CH
         for (int x = 0; x < m_topNodeCountX; x++) {
             m_topLevelNodes[y][x] = &m_allNodesBuffer[nodeCounter];
             nodeCounter++;
 
+            log("Main create loop: (x: %d, y: %d) offsets? (x: %d, y: %d) nodeCounter: %d\n", x, y, x * m_topNodeSize,
+                y * m_topNodeSize, nodeCounter);  // CH
             m_topLevelNodes[y][x]->Create(x * m_topNodeSize, y * m_topNodeSize, m_topNodeSize, 0, m_desc, m_allNodesBuffer,
                                           nodeCounter);
         }
     }
+    logEnd();  // CH
     m_allNodesCount = nodeCounter;
     assert(nodeCounter == totalNodeCount);
 
@@ -86,12 +271,29 @@ bool CDLODQuadTree::Create(const CreateDesc &desc) {
 //
 void CDLODQuadTree::Node::Create(int x, int y, int size, int level, const CreateDesc &createDesc, Node *allNodesBuffer,
                                  int &allNodesBufferLastIndex) {
+    const auto printInfo = [&](char *type) {  // CH
+#if DEBUG_PRINT
+        int rasterSizeX = createDesc.pHeightmap->GetSizeX();
+        int rasterSizeY = createDesc.pHeightmap->GetSizeY();
+        float WorldMinX = createDesc.MapDims.MinX + (x / (float)(rasterSizeX - 1)) * createDesc.MapDims.SizeX;
+        float WorldMinY = createDesc.MapDims.MinY + (y / (float)(rasterSizeY - 1)) * createDesc.MapDims.SizeY;
+        float WorldMaxX = createDesc.MapDims.MinX + ((x + size) / (float)(rasterSizeX - 1)) * createDesc.MapDims.SizeX;
+        float WorldMaxY = createDesc.MapDims.MinY + ((y + size) / (float)(rasterSizeY - 1)) * createDesc.MapDims.SizeY;
+        float WorldMinZ = createDesc.MapDims.MinZ + this->MinZ * createDesc.MapDims.SizeZ / 65535.0f;
+        float WorldMaxZ = createDesc.MapDims.MinZ + this->MaxZ * createDesc.MapDims.SizeZ / 65535.0f;
+        log("%*c%s X: %d, Y: %d Size: %d Level: %d MinZ: %d MaxZ: %d - world min(%.2f, %.2f, %.2f) max(%.2f, %.2f, %.2f)\n",
+            (level + 1) * 4, ' ', type, X, Y, Size, Level, MinZ, MaxZ, WorldMinX, WorldMinY, WorldMinZ, WorldMaxX, WorldMaxY,
+            WorldMaxZ);  // CH
+#endif
+    };
+    log("%*cNode::Create params - level: %d y: %d x: %d size: %d index: %d\n", (level + 1) * 4, ' ', level, x, y, size,
+        allNodesBufferLastIndex);  // CH
     this->X = (unsigned short)x;
     assert(x >= 0 && x < 65535);
     this->Y = (unsigned short)y;
     assert(y >= 0 && y < 65535);
     this->Level = (unsigned short)level;
-    assert(level >= 0 && level < 16);
+    assert(level >= 0 && level < 16);  // Is 16 here related to c_maxLODLevels? CH
     this->Size = (unsigned short)size;
     assert(size >= 0 && level < 32768);
 
@@ -142,6 +344,7 @@ void CDLODQuadTree::Node::Create(int x, int y, int size, int level, const Create
             *pBRZ = createDesc.MapDims.MinZ +
                     createDesc.pHeightmap->GetHeightAt(limitX, limitY) * createDesc.MapDims.SizeZ / 65535.0f;
         }
+        printInfo("-LEAF-");  // CH
     } else {
         int subSize = size / 2;
 
@@ -179,6 +382,7 @@ void CDLODQuadTree::Node::Create(int x, int y, int size, int level, const Create
             // this->WorldMinZ = (std::min)( this->WorldMinZ, this->SubBR->WorldMinZ );
             // this->WorldMaxZ = (std::max)( this->WorldMaxZ, this->SubBR->WorldMaxZ );
         }
+        printInfo("-NON-LEAF-");  // CH
     }
 }
 
@@ -199,11 +403,14 @@ CDLODQuadTree::Node::LODSelectResult CDLODQuadTree::Node::LODSelect(LODSelectInf
     // GetBSphere( boundingSphereCenter, boundingSphereRadiusSq, quadTree );
 
     const glm::vec4 *frustumPlanes = lodSelectInfo.SelectionObj->m_frustumPlanes;
+    const glm::vec3 *frustumBox = lodSelectInfo.SelectionObj->m_frustumBox;
     const glm::vec3 &observerPos = lodSelectInfo.SelectionObj->m_observerPos;
     const int maxSelectionCount = lodSelectInfo.SelectionObj->m_maxSelectionCount;
     float *lodRanges = lodSelectInfo.SelectionObj->m_visibilityRanges;
 
     IntersectType frustumIt = (parentCompletelyInFrustum) ? (IT_Inside) : (boundingBox.TestInBoundingPlanes(frustumPlanes));
+    // IntersectType frustumIt = (parentCompletelyInFrustum) ? (IT_Inside) :
+    // (boundingBox.TestInBoundingPlanes2(frustumPlanes)); // CH
     if (frustumIt == IT_Outside) return IT_OutOfFrustum;
 
     float distanceLimit = lodRanges[this->GetLevel()];
@@ -237,9 +444,13 @@ CDLODQuadTree::Node::LODSelectResult CDLODQuadTree::Node::LODSelect(LODSelectInf
     assert(lodSelectInfo.SelectionCount < maxSelectionCount);
     if (!(bRemoveSubTL && bRemoveSubTR && bRemoveSubBL && bRemoveSubBR) &&
         (lodSelectInfo.SelectionCount < maxSelectionCount)) {
-        int LODLevel = lodSelectInfo.StopAtLevel - this->GetLevel();
+        int LODLevel = lodSelectInfo.StopAtLevel - this->GetLevel();  // The LOD level is inverted here... Why? CH
         lodSelectInfo.SelectionObj->m_selectionBuffer[lodSelectInfo.SelectionCount++] =
             SelectedNode(this, LODLevel, !bRemoveSubTL, !bRemoveSubTR, !bRemoveSubBL, !bRemoveSubBR);
+
+        // if (boundingBox.TestInBoundingPlanes2(frustumPlanes) == IT_Outside) {  // CH
+        //    printf("\n\nOutside: %d\n\n", lodSelectInfo.SelectionCount);
+        //}
 
         // This should be calculated somehow better, but brute force will work for now
         if (
@@ -268,8 +479,27 @@ CDLODQuadTree::Node::LODSelectResult CDLODQuadTree::Node::LODSelect(LODSelectInf
     if ((SubTLSelRes == IT_Selected) || (SubTRSelRes == IT_Selected) || (SubBLSelRes == IT_Selected) ||
         (SubBRSelRes == IT_Selected))
         return IT_Selected;
-    else
+    else {
+        // assert(false); // Why is this a thing?
+
+        // auto resX = boundingBox.TestInBoundingPlanes(frustumPlanes);
+
+        // AABB aabbTL;
+        // SubTL->GetAABB(aabbTL, lodSelectInfo.RasterSizeX, lodSelectInfo.RasterSizeY, lodSelectInfo.MapDims);
+        // AABB aabbTR;
+        // SubTR->GetAABB(aabbTR, lodSelectInfo.RasterSizeX, lodSelectInfo.RasterSizeY, lodSelectInfo.MapDims);
+        // AABB aabbBL;
+        // SubTL->GetAABB(aabbBL, lodSelectInfo.RasterSizeX, lodSelectInfo.RasterSizeY, lodSelectInfo.MapDims);
+        // AABB aabbBR;
+        // SubTL->GetAABB(aabbBR, lodSelectInfo.RasterSizeX, lodSelectInfo.RasterSizeY, lodSelectInfo.MapDims);
+
+        // auto res0 = aabbTL.TestInBoundingPlanes(frustumPlanes);
+        // auto res1 = aabbTR.TestInBoundingPlanes(frustumPlanes);
+        // auto res2 = aabbBL.TestInBoundingPlanes(frustumPlanes);
+        // auto res3 = aabbBR.TestInBoundingPlanes(frustumPlanes);
+
         return IT_OutOfFrustum;
+    }
 }
 
 void CDLODQuadTree::Clean() {
@@ -642,13 +872,14 @@ bool CDLODQuadTree::IntersectRay(const glm::vec3 &rayOrigin, const glm::vec3 &ra
 }
 //
 CDLODQuadTree::LODSelection::LODSelection(SelectedNode *selectionBuffer, int maxSelectionCount, const glm::vec3 &observerPos,
-                                          float visibilityDistance, glm::vec4 frustumPlanes[6], float LODDistanceRatio,
-                                          float morphStartRatio, bool sortByDistance) {
+                                          float visibilityDistance, glm::vec4 frustumPlanes[6], glm::vec3 frustumBox[8],
+                                          float LODDistanceRatio, float morphStartRatio, bool sortByDistance) {
     m_selectionBuffer = selectionBuffer;
     m_maxSelectionCount = maxSelectionCount;
     m_observerPos = observerPos;
     m_visibilityDistance = visibilityDistance;
     memcpy(m_frustumPlanes, frustumPlanes, sizeof(m_frustumPlanes));
+    memcpy(m_frustumBox, frustumBox, sizeof(m_frustumBox));
     m_selectionCount = 0;
     m_visDistTooSmall = false;
     m_quadTree = NULL;

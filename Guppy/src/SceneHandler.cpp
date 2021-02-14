@@ -119,21 +119,24 @@ void Scene::Handler::init() {
         if (!suppress || uniformHandler().hasDebugCamera()) {
             const auto& debugCamera = uniformHandler().getDebugCamera();
             // Set the frustum mesh info.
-            Mesh::Frustum::CreateInfo frustumMeshInfo = {};
-            frustumMeshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_WF_COLOR;
-            frustumMeshInfo.selectable = false;
-            frustumMeshInfo.settings.geometryInfo.doubleSided = true;
-            frustumMeshInfo.frustumInfo = debugCamera.getFrustumInfo();
+            Mesh::Frustum::CreateInfo frustumInfo = {};
+            // frustumInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
+            frustumInfo.pipelineType = GRAPHICS::DEFERRED_MRT_WF_COLOR;
+            frustumInfo.selectable = false;
+            frustumInfo.settings.geometryInfo.doubleSided = true;
+            frustumInfo.frustumInfo = debugCamera.getFrustumInfo();
+            frustumInfo.frustumInfo.farDistance = 100.0f;
             // Set the material info.
             defMatInfo = {};
             defMatInfo.shininess = Material::SHININESS_EGGSHELL;
             defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::MODE_FLAT_SHADE;
             defMatInfo.color = {0.0f, 1.0f, 0.0f};
+            defMatInfo.opacity = 1.0f;
             // Set the 3d object info, which in this case comes from the debug camera.
             instObj3dInfo = {};
             instObj3dInfo.data.push_back({debugCamera.getModel()});
             // Make the mesh and add it to the scene.
-            auto& pFrustum = meshHandler().makeColorMesh<Mesh::Frustum::Base>(&frustumMeshInfo, &defMatInfo, &instObj3dInfo);
+            auto& pFrustum = meshHandler().makeColorMesh<Mesh::Frustum::Base>(&frustumInfo, &defMatInfo, &instObj3dInfo);
             pScene->debugFrustumOffset = pFrustum->getOffset();
             pScene->addMeshIndex(MESH::COLOR, pScene->debugFrustumOffset);
         }

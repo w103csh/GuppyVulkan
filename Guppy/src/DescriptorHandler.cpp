@@ -81,6 +81,7 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_() {
             case DESCRIPTOR_SET::HFF_DEF:                                   pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::HFF_DEF_CREATE_INFO)); break;
             case DESCRIPTOR_SET::FFT_DEFAULT:                               pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::FFT_DEFAULT_CREATE_INFO)); break;
             case DESCRIPTOR_SET::OCEAN_DEFAULT:                             pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::OCEAN_DEFAULT_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::CDLOD_DEFAULT:                             pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::CDLOD_DEFAULT_CREATE_INFO)); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on

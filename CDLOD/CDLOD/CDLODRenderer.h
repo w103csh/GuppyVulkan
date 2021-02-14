@@ -49,12 +49,15 @@ struct CDLODRendererBatchInfo {
     // D3DXHANDLE VSQuadScaleHandle;
     // D3DXHANDLE VSQuadOffsetHandle;
     // D3DXHANDLE VSMorphConstsHandle;
-    struct UniformDynamicData {
-        // float3 g_gridDim;  // .x = gridDim, .y = gridDimHalf, .z = oneOverGridDimHalf
+    struct PerDrawData {
+        // float4 g_quadScale;  // .z holds the current LOD level
+        glm::vec4 quadScale;
+        // float g_quadOffset;  // .z holds the z center of the AABB
+        glm::vec4 quadOffset;
+        // float4 g_morphConsts;
+        glm::vec4 morphConsts;
+        // float3 g_gridDim;    // .x = gridDim, .y = gridDimHalf, .z = oneOverGridDimHalf
         glm::vec3 gridDim;
-        int quadScale;
-        int quadOffset;
-        int morphConsts;
     };
 
     // D3DXHANDLE VSUseDetailMapHandle;
@@ -77,7 +80,7 @@ class CDLODRenderer {
    public:
     std::vector<VkGridMesh> m_gridMeshes;
 
-    struct UniformData {
+    struct PerQuadTreeData {
         glm::vec4 terrainScale;
         glm::vec4 terrainOffset;
         glm::vec4 heightmapTextureInfo;
@@ -89,12 +92,13 @@ class CDLODRenderer {
     CDLODRenderer(const Context& context);
     ~CDLODRenderer(void);
     //
-   public:
+    // public:
+   protected:
     //
-    void SetIndependentGlobalVertexShaderConsts(UniformData& data, const CDLODQuadTree& cdlodQuadTree) const;
+    void SetIndependentGlobalVertexShaderConsts(PerQuadTreeData& data, const CDLODQuadTree& cdlodQuadTree) const;
     vk::Result Render(const CDLODRendererBatchInfo& batchInfo, CDLODRenderStats* renderStats = NULL) const;
     //
-   protected:
+    // protected:
     //
     const VkGridMesh* PickGridMesh(int dimensions) const;
     //

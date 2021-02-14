@@ -30,8 +30,9 @@ struct FrustumInfo {
     float aspectRatio = 0.0f;
     float nearDistance = 0.0f;
     float farDistance = 0.0f;
-    // For testing...
+    glm::vec3 eye = {};
     frustumPlanes planes = {};
+    box box = {};
 };
 
 namespace Perspective {
@@ -92,18 +93,11 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
     void update(const glm::vec3 &moveDir, const glm::vec2 &lookDir, const uint32_t frameIndex);
 
     frustumPlanes getFrustumPlanes() const;
+    frustumPlanes getFrustumPlanesZupLH() const;
     virtual_inline auto getPosition() const { return eye_; }
-    virtual_inline auto getViewRange() const { return viewRange_; }
-
-    FrustumInfo getFrustumInfo() const {
-        FrustumInfo info;
-        info.fieldOfViewY = fovy_;
-        info.aspectRatio = aspect_;
-        info.nearDistance = near_;
-        info.farDistance = far_;
-        info.planes = getFrustumPlanes();
-        return info;
-    }
+    virtual_inline auto getFarDistance() const { return far_; }
+    FrustumInfo getFrustumInfo() const;
+    FrustumInfo getFrustumInfoZupLH() const;
 
     const glm::mat4 &getModel(const uint32_t index = 0) const override { return model_; }
 
@@ -113,6 +107,8 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
         dirty = true;
         setData();
     }
+
+    void takeCameraData(const Base &camera);
 
    protected:
     glm::mat4 &model(const uint32_t index = 0) override { return model_; }

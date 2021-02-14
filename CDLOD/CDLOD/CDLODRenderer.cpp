@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// Modifications copyright(C) 2020 Colin Hughes<colin.s.hughes @gmail.com>
+// Modifications copyright(C) 2021 Colin Hughes<colin.s.hughes @gmail.com>
 // -------------------------------
 // Copyright (C) 2009 - Filip Strugar.
 // Distributed under the zlib License (see readme.txt)
@@ -29,7 +29,7 @@ const VkGridMesh* CDLODRenderer::PickGridMesh(int dimensions) const {
     return NULL;
 }
 //
-void CDLODRenderer::SetIndependentGlobalVertexShaderConsts(UniformData& data, const CDLODQuadTree& cdlodQuadTree) const {
+void CDLODRenderer::SetIndependentGlobalVertexShaderConsts(PerQuadTreeData& data, const CDLODQuadTree& cdlodQuadTree) const {
     int textureWidth = cdlodQuadTree.GetRasterSizeX();
     int textureHeight = cdlodQuadTree.GetRasterSizeY();
 
@@ -67,8 +67,6 @@ vk::Result CDLODRenderer::Render(const CDLODRendererBatchInfo& batchInfo, CDLODR
     //    batchInfo.VertexShader->SetFloatArray(batchInfo.VSGridDimHandle, (float)gridMesh->GetDimensions(),
     //                                          gridMesh->GetDimensions() * 0.5f, 2.0f / gridMesh->GetDimensions(), 0.0f);
     //}
-    assert(false);
-    // bindVertextBuffers????
     //////////////////////////////////////////////////////////////////////////
 
     const CDLODQuadTree::SelectedNode* selectionArray = batchInfo.CDLODSelection->GetSelection();

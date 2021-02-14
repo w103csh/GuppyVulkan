@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 2.8.11)
 set(SOURCE
     Camera.cpp
     Camera.h
+    CDLOD.cpp
+    CDLOD.h
     Cloth.cpp
     Cloth.h
     CommandHandler.cpp
@@ -39,8 +41,6 @@ set(SOURCE
     Material.h
     MaterialHandler.cpp
     MaterialHandler.h
-    Ocean.cpp
-    Ocean.h
     Parallax.cpp
     Parallax.h
     PBR.cpp
@@ -137,6 +137,11 @@ set(SOURCE
     Obj3d.h
     Obj3dDrawInst.h
     Obj3dInst.h
+    # Ocean
+    Ocean.cpp
+    Ocean.h
+    OceanRenderer.cpp
+    OceanRenderer.h
     # Particle
     Particle.cpp
     Particle.h

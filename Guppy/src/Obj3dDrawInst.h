@@ -6,6 +6,7 @@
 #ifndef OBJ_DRAW_INST_3D_H
 #define OBJ_DRAW_INST_3D_H
 
+#include <algorithm>
 #include <memory>
 #include <vulkan/vulkan.hpp>
 
@@ -14,7 +15,7 @@
 namespace Obj3d {
 class InstanceDraw : public Obj3d::Instance {
    public:
-    InstanceDraw(std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData) : Obj3d::Instance(pInstanceData) {}
+    InstanceDraw(std::shared_ptr<::Instance::Obj3d::Base>& pInstObj3d) : Obj3d::Instance(pInstObj3d) {}
 
     // bindVertexBuffers
     inline uint32_t getInstanceFirstBinding() const { return 1; }
@@ -23,7 +24,7 @@ class InstanceDraw : public Obj3d::Instance {
     inline const vk::DeviceSize* getInstanceOffsets() const { return &pInstObj3d_->BUFFER_INFO.memoryOffset; }
 
     // drawIndexed, draw
-    inline uint32_t getInstanceCount() const { return pInstObj3d_->BUFFER_INFO.count; }
+    inline uint32_t getInstanceCount() const { return pInstObj3d_->getActiveCount(); }
     inline uint32_t getInstanceFirstInstance() const { return 0; }
 };
 }  // namespace Obj3d

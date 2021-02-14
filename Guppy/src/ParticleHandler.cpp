@@ -126,7 +126,7 @@ void Particle::Handler::create() {
     bool suppress = true;
 
     // OCEAN
-    if (!suppress || false) {
+    if (!suppress || true) {
         ::Ocean::SurfaceCreateInfo info = {};
         info.l = 1.0f;
         info.A = 2e-6f;

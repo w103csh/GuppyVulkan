@@ -94,54 +94,33 @@ Box::Texture::Texture(Handler& handler, const index&& offset, CreateInfo* pCreat
 std::vector<Face> Frustum::make(const Mesh::Geometry::Info& geoInfo, const Camera::FrustumInfo& frustumInfo) {
     std::vector<Face> faces;
 
-    // Field of view is the total view angle with relation to the y-axis (glm::perspective).
-    float tanHalfFovy = tan(frustumInfo.fieldOfViewY / 2.0f);
-
-    const float nearZ = frustumInfo.nearDistance;  // near distance from eye
-    const float nearDistToPlaneY = tanHalfFovy * nearZ;
-    const float nearDistToPlaneX = nearDistToPlaneY * frustumInfo.aspectRatio;
-
-    const float farZ = 5.0f;  // far distance from eye
-    const float farDistToPlaneY = tanHalfFovy * farZ;
-    const float farDistToPlaneX = farDistToPlaneY * frustumInfo.aspectRatio;
-
-    // Positions on frustum
-    glm::vec3 nearTL = {-nearDistToPlaneX, nearDistToPlaneY, nearZ};
-    glm::vec3 nearTR = {nearDistToPlaneX, nearDistToPlaneY, nearZ};
-    glm::vec3 nearBL = {-nearDistToPlaneX, -nearDistToPlaneY, nearZ};
-    glm::vec3 nearBR = {nearDistToPlaneX, -nearDistToPlaneY, nearZ};
-    glm::vec3 farTL = {-farDistToPlaneX, farDistToPlaneY, farZ};
-    glm::vec3 farTR = {farDistToPlaneX, farDistToPlaneY, farZ};
-    glm::vec3 farBL = {-farDistToPlaneX, -farDistToPlaneY, farZ};
-    glm::vec3 farBR = {farDistToPlaneX, -farDistToPlaneY, farZ};
-
     std::array<glm::vec3, 4> corners;
     std::vector<Face> temp;
 
     // The orders below are kind of arbitrary. There are no uvs for this so it doesn't really matter atm.
 
     // near
-    corners = {nearBL, nearBR, nearTL, nearTR};
+    corners = {frustumInfo.box[2], frustumInfo.box[3], frustumInfo.box[0], frustumInfo.box[1]};
     temp = Plane::make(corners, geoInfo);
     faces.insert(faces.end(), temp.begin(), temp.end());
     // far
-    corners = {farBR, farBL, farTR, farTL};
+    corners = {frustumInfo.box[7], frustumInfo.box[6], frustumInfo.box[5], frustumInfo.box[4]};
     temp = Plane::make(corners, geoInfo);
     faces.insert(faces.end(), temp.begin(), temp.end());
     // top
-    corners = {nearTL, nearTR, farTL, farTR};
+    corners = {frustumInfo.box[0], frustumInfo.box[1], frustumInfo.box[4], frustumInfo.box[5]};
     temp = Plane::make(corners, geoInfo);
     faces.insert(faces.end(), temp.begin(), temp.end());
     // bottom
-    corners = {farBL, farBR, nearBL, nearBR};
+    corners = {frustumInfo.box[6], frustumInfo.box[7], frustumInfo.box[2], frustumInfo.box[3]};
     temp = Plane::make(corners, geoInfo);
     faces.insert(faces.end(), temp.begin(), temp.end());
     // right
-    corners = {nearBR, farBR, nearTR, farTR};
+    corners = {frustumInfo.box[3], frustumInfo.box[7], frustumInfo.box[1], frustumInfo.box[5]};
     temp = Plane::make(corners, geoInfo);
     faces.insert(faces.end(), temp.begin(), temp.end());
     // left
-    corners = {farBL, nearBL, farTL, nearTL};
+    corners = {frustumInfo.box[6], frustumInfo.box[2], frustumInfo.box[4], frustumInfo.box[0]};
     temp = Plane::make(corners, geoInfo);
     faces.insert(faces.end(), temp.begin(), temp.end());
 

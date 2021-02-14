@@ -18,14 +18,14 @@
 //////////////////////////////////////////////////////////////////////////
 class IHeightmapSource {
    public:
-    virtual int GetSizeX() = 0;
-    virtual int GetSizeY() = 0;
+    virtual int GetSizeX() const = 0;
+    virtual int GetSizeY() const = 0;
 
     // returned value is converted to height using following formula:
     // 'WorldHeight = WorldMinZ + GetHeightAt(,) * WorldSizeZ / 65535.0f'
-    virtual unsigned short GetHeightAt(int x, int y) = 0;
+    virtual unsigned short GetHeightAt(int x, int y) const = 0;
 
-    virtual void GetAreaMinMaxZ(int x, int y, int sizeX, int sizeY, unsigned short& minZ, unsigned short& maxZ) = 0;
+    virtual void GetAreaMinMaxZ(int x, int y, int sizeX, int sizeY, unsigned short& minZ, unsigned short& maxZ) const = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -38,7 +38,7 @@ class CDLODQuadTree {
     struct Node;
 
     struct CreateDesc {
-        IHeightmapSource* pHeightmap;
+        const IHeightmapSource* pHeightmap;
 
         int LeafRenderNodeSize;
 
@@ -80,7 +80,10 @@ class CDLODQuadTree {
         glm::vec3 m_observerPos;
         float m_visibilityDistance;
         glm::vec4 m_frustumPlanes[6];
-        float m_LODDistanceRatio;
+        glm::vec3 m_frustumBox[8];  // CH
+        float m_LODDistanceRatio;   // This is a value used by a calcuation for LOD levels. Its essentially a multiplicative
+                                    // factor for its size (m_visibilityRanges) as it relates to the number levels and camera
+                                    // view distance. Morph ratio below is a percentage of the "visibility ranges". CH
         float m_morphStartRatio;  // [0, 1] - when to start morphing to the next (lower-detailed) LOD level; default is 0.667
                                   // - first 0.667 part will not be morphed, and the morph will go from 0.667 to 1.0
         bool m_sortByDistance;
@@ -96,8 +99,11 @@ class CDLODQuadTree {
         int m_maxSelectedLODLevel;
 
        public:
+        // LODSelection(SelectedNode* selectionBuffer, int maxSelectionCount, const glm::vec3& observerPos,
+        //             float visibilityDistance, glm::vec4 frustumPlanes[6], float LODDistanceRatio,
+        //             float morphStartRatio = 0.66f, bool sortByDistance = false);
         LODSelection(SelectedNode* selectionBuffer, int maxSelectionCount, const glm::vec3& observerPos,
-                     float visibilityDistance, glm::vec4 frustumPlanes[6], float LODDistanceRatio,
+                     float visibilityDistance, glm::vec4 frustumPlanes[6], glm::vec3 frustumBox[8], float LODDistanceRatio,
                      float morphStartRatio = 0.66f, bool sortByDistance = false);
         ~LODSelection();
 
@@ -124,10 +130,15 @@ class CDLODQuadTree {
         SelectedNode m_selectionBufferOnStack[maxSelectionCount];
 
        public:
+        // LODSelectionOnStack(const glm::vec3& observerPos, float visibilityDistance, glm::vec4 frustumPlanes[6],
+        //                    float LODDistanceRatio, float morphStartRatio = 0.66f, bool sortByDistance = false)
+        //    : LODSelection(m_selectionBufferOnStack, maxSelectionCount, observerPos, visibilityDistance, frustumPlanes,
+        //                   LODDistanceRatio, morphStartRatio, sortByDistance) {}
         LODSelectionOnStack(const glm::vec3& observerPos, float visibilityDistance, glm::vec4 frustumPlanes[6],
-                            float LODDistanceRatio, float morphStartRatio = 0.66f, bool sortByDistance = false)
+                            glm::vec3 frustumBox[8], float LODDistanceRatio, float morphStartRatio = 0.66f,
+                            bool sortByDistance = false)
             : LODSelection(m_selectionBufferOnStack, maxSelectionCount, observerPos, visibilityDistance, frustumPlanes,
-                           LODDistanceRatio, morphStartRatio, sortByDistance) {}
+                           frustumBox, LODDistanceRatio, morphStartRatio, sortByDistance) {}  // CH
     };
 
     // Although relatively small (28 bytes) the Node struct can use a lot of memory when used on

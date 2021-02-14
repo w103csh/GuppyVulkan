@@ -143,6 +143,8 @@ class MRTTexture : public Graphics {
 // MRT (COLOR)
 class MRTColor : public Graphics {
    public:
+    const bool DO_BLEND;
+
     MRTColor(Handler& handler);
 
    protected:
@@ -155,9 +157,12 @@ class MRTColor : public Graphics {
 // MRT (COLOR WIREFRAME)
 class MRTColorWireframe : public MRTColor {
    public:
+    const bool DO_BLEND;
+
     MRTColorWireframe(Handler& handler);
 
    private:
+    void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
     void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
 };
 

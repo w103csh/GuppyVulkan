@@ -382,6 +382,7 @@ void Mesh::Base::updateTangentSpaceData() {
 }
 
 bool Mesh::Base::shouldDraw(const PASS& passTypeComp, const PIPELINE& pipelineType) const {
+    if (getInstanceCount() == 0) return false;
     if (pipelineType != PIPELINE_TYPE) return false;
     if (status_ != STATUS::READY) return false;
     for (const auto& passType : PASS_TYPES)

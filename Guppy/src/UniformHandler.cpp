@@ -85,9 +85,9 @@ Uniform::Handler::Handler(Game* pGame)
           // TESSELLATION
           UniformDynamic::Tessellation::Phong::Manager  //
           {"Tessellation Phong Data", UNIFORM_DYNAMIC::TESS_PHONG, 10, true, "_UD_TESS_PHONG"},
-          // TESSELLATION
-          UniformDynamic::CDLOD::Grid::Manager  //
-          {"CDLOD Grid Data", UNIFORM_DYNAMIC::CDLOD_GRID, 30, true, "_UD_CDLOD_GRID"},
+          //
+          // UniformDynamic::CDLOD::Grid::Manager  //
+          //{"CDLOD Grid Data", UNIFORM_DYNAMIC::CDLOD_GRID, 30, true, "_UD_CDLOD_GRID"},
       },
       activeCameraOffset_(BAD_OFFSET),
       mainCameraOffset_(BAD_OFFSET),
@@ -161,7 +161,7 @@ void Uniform::Handler::init() {
     cdlodQdTrMgr().init(shell().context());     ++count;
     // DYNAMIC
     tessPhongMgr().init(shell().context());     ++count;
-    cdlodGridMgr().init(shell().context());     ++count;
+    //cdlodGridMgr().init(shell().context());     ++count;
     assert(count == managers_.size() + managersDynamic_.size());
     // clang-format on
 
@@ -194,7 +194,7 @@ void Uniform::Handler::reset() {
     cdlodQdTrMgr().destroy(shell().context());    ++count;
     // DYNAMIC
     tessPhongMgr().destroy(shell().context());    ++count;
-    cdlodGridMgr().destroy(shell().context());    ++count;
+    //cdlodGridMgr().destroy(shell().context());    ++count;
     assert(count == managers_.size() + managersDynamic_.size());
     // clang-format on
 }
@@ -317,9 +317,9 @@ void Uniform::Handler::createCameras() {
     // 0 (MAIN)
     {
         defInfo.aspect = static_cast<float>(settings().initialWidth) / static_cast<float>(settings().initialHeight);
-        // createInfo.center = glm::vec3{-0.5f, 2.0f, 1.0f};
         // defInfo.eye = {4.0f, 6.0f, 4.0f};
         defInfo.eye = {100.0f, 100.0f, 100.0f};
+        defInfo.f = 55000.0f;
         camPersDefMgr().insert(dev, &defInfo);
         mainCameraOffset_ = camPersDefMgr().pItems.size() - 1;
         activeCameraOffset_ = mainCameraOffset_;
@@ -360,6 +360,12 @@ void Uniform::Handler::createCameras() {
         defInfo.aspect = static_cast<float>(settings().initialWidth) / static_cast<float>(settings().initialHeight);
         defInfo.eye = {50.0f, 50.0f, 50.0f};
         defInfo.center = {};
+        defInfo.n = 0.1f;
+        defInfo.f = 45000.0f;
+        // defInfo.eye = {0.0f, 0.0f, 1.0f};
+        // defInfo.center = {};
+        // defInfo.n = 0.000001f;
+        // defInfo.f = 2.0f;
         camPersDefMgr().insert(dev, &defInfo);
         debugCameraOffset_ = camPersDefMgr().pItems.size() - 1;
     }
@@ -601,6 +607,11 @@ void Uniform::Handler::cycleCamera() {
     update(getActiveCamera());
     activeCameraOffset_ =
         (hasDebugCamera() && activeCameraOffset_ == mainCameraOffset_) ? debugCameraOffset_ : mainCameraOffset_;
+}
+
+void Uniform::Handler::moveToDebugCamera() {
+    assert(hasDebugCamera());
+    getMainCamera().takeCameraData(getDebugCamera());
 }
 
 uint32_t Uniform::Handler::getDescriptorCount(const DESCRIPTOR& descType, const Uniform::offsets& offsets) {

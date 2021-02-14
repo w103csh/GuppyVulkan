@@ -77,6 +77,8 @@ enum class DESCRIPTOR_SET {
     FFT_DEFAULT,
     // OCEAN
     OCEAN_DEFAULT,
+    // CDLOD
+    CDLOD_DEFAULT,
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 
