@@ -21,7 +21,6 @@
 #include "SceneHandler.h"
 #include "UniformHandler.h"
 
-// CH
 #define DEBUG_PRINT false
 #if DEBUG_PRINT
 #pragma warning(disable : 4996)
@@ -70,7 +69,7 @@ Base::Base(Scene::Handler& handler)
       pHeightmap_(nullptr),
       cdlodQuadTree_(),
       useDebugCamera_(true),
-      useDebugBoxes_(true),
+      useDebugBoxes_(false),
       useDebugWireframe_(true),
       whiteBoxOffset_(Mesh::BAD_OFFSET),
       redBoxOffset_(Mesh::BAD_OFFSET),
