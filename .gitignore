@@ -265,3 +265,4 @@ build
 *.spv
 data/models/AS12_Murraya_koenigii_Curry_Leaf_Tree_obj/**/*
 dragon.obj
+!cdlod_create.log
