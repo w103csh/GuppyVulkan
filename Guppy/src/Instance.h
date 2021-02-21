@@ -1,11 +1,12 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
 #ifndef INSTANCE_H
 #define INSTANCE_H
 
+#include <algorithm>
 #include <glm/glm.hpp>
 #include <memory>
 #include <vector>
@@ -25,8 +26,19 @@ namespace Instance {
 // BASE
 
 class Base : public virtual Buffer::Item {
+   public:
+    // The concept of active count is a quick and dirty way to get a dynamic number of instances for draws. I don't feel like
+    // doing anything more complicated atm.
+    constexpr auto getActiveCount() const { return activeCount_; }
+    constexpr void setActiveCount(uint32_t count) {
+        assert(count < BUFFER_INFO.count);
+        activeCount_ = (std::min)(count, BUFFER_INFO.count);
+    }
+
    protected:
-    Base() {}
+    Base() : activeCount_(BUFFER_INFO.count) {}
+
+    uint32_t activeCount_;
 };
 
 template <typename TDATA, typename TBase>

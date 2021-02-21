@@ -250,6 +250,6 @@ void Context::createBuffer(const vk::CommandBuffer &cmd, const vk::BufferUsageFl
 }
 
 void Context::destroyBuffer(BufferResource &res) const {
-    dev.destroyBuffer(res.buffer, pAllocator);
-    dev.freeMemory(res.memory, pAllocator);
+    if (res.buffer) dev.destroyBuffer(res.buffer, pAllocator);
+    if (res.memory) dev.freeMemory(res.memory, pAllocator);
 }

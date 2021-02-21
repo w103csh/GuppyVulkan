@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -11,6 +11,7 @@
 
 #include <Common/Helpers.h>
 
+#include "CdlodRenderer.h"
 #include "ConstantsAll.h"
 #include "Mesh.h"
 #include "Scene.h"
@@ -43,10 +44,16 @@ class Handler : public Game::Handler {
     std::unique_ptr<Mesh::Line>& getLineMesh(size_t sceneOffset, size_t meshOffset);
     std::unique_ptr<Mesh::Texture>& getTextureMesh(size_t sceneOffset, size_t meshOffset);
 
+    void recordRenderer(const PASS passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+                        const vk::CommandBuffer& cmd);
+
     void cleanup();
 
    private:
     void reset() override;
+
+    // RENDERERS
+    Cdlod::Renderer::Base cdlodDbgRenderer_;
 
     index activeSceneIndex_;
     std::vector<std::unique_ptr<Scene::Base>> pScenes_;

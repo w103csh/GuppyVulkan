@@ -20,27 +20,8 @@
 #include "ParticleHandler.h"
 #include "PipelineHandler.h"
 #include "TextureHandler.h"
-#include "UniformHandler.h"
 
 namespace {
-
-class OceanHeightmapSource : public IHeightmapSource {
-   public:
-    // OceanHeightmapSource(::Ocean::SurfaceCreateInfo& info) : info_(info) {}
-    OceanHeightmapSource() = default;
-
-    // inline int GetSizeX() override { return info_.N; }
-    inline int GetSizeX() override { return 4096; }
-    // inline int GetSizeY() override { return info_.M; }
-    inline int GetSizeY() override { return 2048; }
-
-    unsigned short GetHeightAt(int x, int y) override { return 0; }
-
-    void GetAreaMinMaxZ(int x, int y, int sizeX, int sizeY, unsigned short& minZ, unsigned short& maxZ) override {}
-
-   private:
-    //::Ocean::SurfaceCreateInfo& info_;
-};
 
 float phillipsSpectrum(const glm::vec2 k, const float kMagnitude, const Ocean::SurfaceCreateInfo& info) {
     if (kMagnitude < 1e-5f) return 0.0f;
@@ -58,7 +39,7 @@ float phillipsSpectrum(const glm::vec2 k, const float kMagnitude, const Ocean::S
 namespace Texture {
 namespace Ocean {
 
-void MakTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info) {
+void MakeTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info) {
     assert(helpers::isPowerOfTwo(info.N) && helpers::isPowerOfTwo(info.M));
 
     std::default_random_engine gen;
@@ -186,22 +167,8 @@ const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO = {
 }  // namespace Ocean
 }  // namespace Shader
 
-namespace Uniform {
-namespace CDLOD {
-namespace QuadTree {
-Base::Base(const Buffer::Info&& info, DATA* pData)
-    : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-      Descriptor::Base(UNIFORM::CDLOD_QUAD_TREE),
-      Buffer::DataItem<DATA>(pData) {
-    dirty = true;
-}
-}  // namespace QuadTree
-}  // namespace CDLOD
-}  // namespace Uniform
-
 // UNIFORM DYNAMIC
 namespace UniformDynamic {
-
 namespace Ocean {
 namespace Simulation {
 Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
@@ -221,22 +188,6 @@ void Base::updatePerFrame(const float time, const float elapsed, const uint32_t 
 }
 }  // namespace Simulation
 }  // namespace Ocean
-
-namespace CDLOD {
-namespace Grid {
-Base::Base(const Buffer::Info&& info, DATA* pData, const Buffer::CreateInfo* pCreateInfo)
-    : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Descriptor::Base(UNIFORM_DYNAMIC::OCEAN),
-      Buffer::PerFramebufferDataItem<DATA>(pData) {
-    setData();
-}
-void Base::updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) {
-    assert(false);
-    setData(frameIndex);
-}
-}  // namespace Grid
-}  // namespace CDLOD
-
 }  // namespace UniformDynamic
 
 // DESCRIPTOR SET
@@ -430,9 +381,7 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
       drawMode(GRAPHICS::OCEAN_SURFACE_DEFERRED),
       normalOffset_(Particle::Buffer::BAD_OFFSET),
       indexWFRes_{},
-      info_(pCreateInfo->info),
-      cdlodQuadTree_(),
-      cdlodRenderer_(handler.shell().context()) {
+      info_(pCreateInfo->info) {
     assert(info_.N == info_.M);  // Needs to be square currently.
     assert(info_.N == FFT_LOCAL_SIZE * FFT_WORKGROUP_SIZE);
     assert(info_.N == DISP_LOCAL_SIZE * DISP_WORKGROUP_SIZE);
@@ -447,9 +396,7 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
 
     // IMAGE
     // TODO: move the loop inside this function into the constructor here.
-    Texture::Ocean::MakTextures(handler.textureHandler(), info_);
-
-    initCDLOD();
+    Texture::Ocean::MakeTextures(handler.textureHandler(), info_);
 
     // BUFFER VIEWS
     {
@@ -533,41 +480,6 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
     status_ |= STATUS::PENDING_BUFFERS;
     draw_ = true;
     paused_ = false;
-}
-
-void Buffer::loadBuffers() {
-    const auto& ctx = handler().shell().context();
-    pLdgRes_ = handler().loadingHandler().createLoadingResources();
-
-    // VERTEX
-    BufferResource stgRes = {};
-    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
-                     sizeof(HeightFieldFluid::VertexData) * verticesHFF_.size(), NAME + " vertex", stgRes, verticesHFFRes_,
-                     verticesHFF_.data());
-    pLdgRes_->stgResources.push_back(std::move(stgRes));
-
-    // INDEX (SURFACE)
-    assert(indices_.size());
-    stgRes = {};
-    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-                     sizeof(IndexBufferType) * indices_.size(), NAME + " index (surface)", stgRes, indexRes_,
-                     indices_.data());
-    pLdgRes_->stgResources.push_back(std::move(stgRes));
-
-    // INDEX (WIREFRAME)
-    assert(indicesWF_.size());
-    stgRes = {};
-    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-                     sizeof(IndexBufferType) * indicesWF_.size(), NAME + " index (wireframe)", stgRes, indexWFRes_,
-                     indicesWF_.data());
-    pLdgRes_->stgResources.push_back(std::move(stgRes));
-}
-
-void Buffer::destroy() {
-    Base::destroy();
-    const auto& ctx = handler().shell().context();
-    if (verticesHFF_.size()) ctx.destroyBuffer(verticesHFFRes_);
-    if (indicesWF_.size()) ctx.destroyBuffer(indexWFRes_);
 }
 
 void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
@@ -714,125 +626,39 @@ void Buffer::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::Bind
     }
 }
 
-void Buffer::initCDLOD() {
-    struct Settings {
-        int LeafQuadTreeNodeSize;
-        int RenderGridResolutionMult;
-        int LODLevelCount;
-        float MinViewRange = 35000.0f;
-        float MaxViewRange = 100000.0f;
-        float LODLevelDistanceRatio = 2.0f;
-        // DemoRenderer members
-        int maxRenderGridResolutionMult;
-        int terrainGridMeshDims;
-    } settings;
+void Buffer::loadBuffers() {
+    const auto& ctx = handler().shell().context();
+    pLdgRes_ = handler().loadingHandler().createLoadingResources();
 
-    // SETUP
-    {
-        // RENDERER
-        for (auto& gridMesh : cdlodRenderer_.m_gridMeshes) {
-            auto pLdgRes = handler().loadingHandler().createLoadingResources();
-            gridMesh.CreateBuffers(*pLdgRes.get());
-            handler().loadingHandler().loadSubmit(std::move(pLdgRes));
-        }
+    // VERTEX
+    BufferResource stgRes = {};
+    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+                     sizeof(HeightFieldFluid::VertexData) * verticesHFF_.size(), NAME + " vertex", stgRes, verticesHFFRes_,
+                     verticesHFF_.data());
+    pLdgRes_->stgResources.push_back(std::move(stgRes));
 
-        settings.LeafQuadTreeNodeSize = 8;
-        settings.RenderGridResolutionMult = 4;
-        settings.LODLevelCount = 8;
+    // INDEX (SURFACE)
+    assert(indices_.size());
+    stgRes = {};
+    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+                     sizeof(IndexBufferType) * indices_.size(), NAME + " index (surface)", stgRes, indexRes_,
+                     indices_.data());
+    pLdgRes_->stgResources.push_back(std::move(stgRes));
 
-        // SETUP/VALIDATION
-        {
-            if (!helpers::isPowerOfTwo(settings.LeafQuadTreeNodeSize) || (settings.LeafQuadTreeNodeSize < 2) ||
-                (settings.LeafQuadTreeNodeSize > 1024)) {
-                assert(false && "CDLOD:LeafQuadTreeNodeSize setting is incorrect");
-                abort();
-            }
+    // INDEX (WIREFRAME)
+    assert(indicesWF_.size());
+    stgRes = {};
+    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+                     sizeof(IndexBufferType) * indicesWF_.size(), NAME + " index (wireframe)", stgRes, indexWFRes_,
+                     indicesWF_.data());
+    pLdgRes_->stgResources.push_back(std::move(stgRes));
+}
 
-            settings.maxRenderGridResolutionMult = 1;
-            while (settings.maxRenderGridResolutionMult * settings.LeafQuadTreeNodeSize <= 128)
-                settings.maxRenderGridResolutionMult *= 2;
-            settings.maxRenderGridResolutionMult /= 2;
-
-            if (!helpers::isPowerOfTwo(settings.RenderGridResolutionMult) || (settings.RenderGridResolutionMult < 1) ||
-                (settings.LeafQuadTreeNodeSize > settings.maxRenderGridResolutionMult)) {
-                assert(false && "CDLOD:RenderGridResolutionMult setting is incorrect");
-                abort();
-            }
-
-            if ((settings.LODLevelCount < 2) || (settings.LODLevelCount > CDLODQuadTree::c_maxLODLevels)) {
-                assert(false && "CDLOD:LODLevelCount setting is incorrect");
-                abort();
-            }
-
-            if ((settings.MinViewRange < 1.0f) || (settings.MinViewRange > 10000000.0f)) {
-                assert(false && "MinViewRange setting is incorrect");
-                abort();
-            }
-            if ((settings.MaxViewRange < 1.0f) || (settings.MaxViewRange > 10000000.0f) ||
-                (settings.MinViewRange > settings.MaxViewRange)) {
-                assert(false && "MaxViewRange setting is incorrect");
-                abort();
-            }
-
-            if ((settings.LODLevelDistanceRatio < 1.5f) || (settings.LODLevelDistanceRatio > 16.0f)) {
-                assert(false && "LODLevelDistanceRatio setting is incorrect");
-                abort();
-            }
-
-            settings.terrainGridMeshDims = settings.LeafQuadTreeNodeSize * settings.RenderGridResolutionMult;
-        }
-
-        // CREATE
-        {
-            MapDimensions mapDims = {};
-            mapDims.MinX = -20480.0;
-            mapDims.MinY = -10240.0;
-            mapDims.MinZ = -600.00;
-            mapDims.SizeX = 40960.0;
-            mapDims.SizeY = 20480.0;
-            mapDims.SizeZ = 600.00;
-
-            // OceanHeightmapSource heightMapSrc(info_);
-            OceanHeightmapSource heightMapSrc;
-
-            CDLODQuadTree::CreateDesc createDesc = {};
-            createDesc.pHeightmap = &heightMapSrc;
-            createDesc.LeafRenderNodeSize = settings.LeafQuadTreeNodeSize;
-            createDesc.LODLevelCount = settings.LODLevelCount;
-            createDesc.MapDims = mapDims;
-
-            assert(createDesc.pHeightmap);
-
-            cdlodQuadTree_.Create(createDesc);
-        }
-
-        // UNIFORM
-        {
-            CDLODRenderer::UniformData quadTreeData;
-            cdlodRenderer_.SetIndependentGlobalVertexShaderConsts(quadTreeData, cdlodQuadTree_);
-            handler().uniformHandler().cdlodQdTrMgr().insert(handler().shell().context().dev, true, {quadTreeData});
-        }
-    }
-
-    // RENDER
-    {
-        const auto& camera = handler().uniformHandler().getMainCamera();
-        auto planes = camera.getFrustumPlanes();
-
-        CDLODQuadTree::LODSelectionOnStack<4096> cdlodSelection(camera.getPosition(), camera.getViewRange() * 30.0f,
-                                                                planes.data(), settings.LODLevelDistanceRatio);
-
-        cdlodQuadTree_.LODSelect(&cdlodSelection);
-
-        //
-        // Check if we have too small visibility distance that causes morph between LOD levels to be incorrect.
-        if (cdlodSelection.IsVisDistTooSmall()) {
-            assert(false && "Visibility distance might be too low for LOD morph to work correctly!");
-        }
-        //////////////////////////////////////////////////////////////////////////
-
-        // cdlodRenderer_.Render();
-    }
+void Buffer::destroy() {
+    Base::destroy();
+    const auto& ctx = handler().shell().context();
+    if (verticesHFF_.size()) ctx.destroyBuffer(verticesHFFRes_);
+    if (indicesWF_.size()) ctx.destroyBuffer(indexWFRes_);
 }
 
 }  // namespace Ocean

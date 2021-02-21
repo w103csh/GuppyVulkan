@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -77,9 +77,6 @@ class Handler : public Game::Handler {
 
     void updateTexture(const std::shared_ptr<Texture::Base> &pTexture);
 
-   private:
-    void reset() override;
-
     template <typename TMaterialCreateInfo>
     std::shared_ptr<Material::Base> &makeMaterial(TMaterialCreateInfo *pCreateInfo) {
         /*static_assert(false, "Not implemented");*/
@@ -102,6 +99,9 @@ class Handler : public Game::Handler {
         obj3dMgr_.insert(shell().context().dev, pCreateInfo);
         return obj3dMgr_.pItems.back();
     }
+
+   private:
+    void reset() override;
 
     // clang-format off
     template <class T> inline Manager<T>& getManager() { /*static_assert(false, "Not implemented");*/ }

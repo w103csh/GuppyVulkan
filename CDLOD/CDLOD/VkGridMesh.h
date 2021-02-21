@@ -6,8 +6,8 @@
 //// Distributed under the zlib License (see readme.txt)
 ////////////////////////////////////////////////////////////////////////
 
-#ifndef VK_GRID_MESH_H
-#define VK_GRID_MESH_H
+#ifndef _VK_GRID_MESH_H_
+#define _VK_GRID_MESH_H_
 
 #include <memory>
 #include <vulkan/vulkan.hpp>
@@ -29,6 +29,8 @@ class VkGridMesh {
     VkGridMesh(const Context& context);
     ~VkGridMesh(void);
     //
+    void destroy() { OnDestroyDevice(); }
+    //
     void SetDimensions(int dim);
     int GetDimensions() const { return m_dimension; }
     //
@@ -39,7 +41,7 @@ class VkGridMesh {
     int GetIndexEndBL() const { return m_indexEndBL; }
     int GetIndexEndBR() const { return m_indexEndBR; }
     //
-    void CreateBuffers(LoadingResource& pLdgRes);
+    void CreateBuffers(LoadingResource& ldgRes);
     //
    private:
     //
@@ -47,4 +49,4 @@ class VkGridMesh {
     virtual void OnDestroyDevice();
 };
 
-#endif  // !VK_GRID_MESH_H
+#endif  // !_VK_GRID_MESH_H_

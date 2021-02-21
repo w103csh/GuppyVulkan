@@ -44,9 +44,18 @@ class KeyboardManager : public ManagerBase {
     // would be completely removed in a user binding layer situation, and the platform shells would just map the input to
     // GAME_ACTIONs or something.
     constexpr bool isMoveKey(GAME_KEY key) {
-        return (key == GAME_KEY::UP || key == GAME_KEY::W || key == GAME_KEY::DOWN || key == GAME_KEY::S ||
-                key == GAME_KEY::RIGHT || key == GAME_KEY::D || key == GAME_KEY::LEFT || key == GAME_KEY::A ||
-                key == GAME_KEY::E || key == GAME_KEY::Q);
+        return (key == GAME_KEY::UP            //
+                || key == GAME_KEY::W          //
+                || key == GAME_KEY::DOWN       //
+                || key == GAME_KEY::S          //
+                || key == GAME_KEY::RIGHT      //
+                || key == GAME_KEY::D          //
+                || key == GAME_KEY::LEFT       //
+                || key == GAME_KEY::A          //
+                || key == GAME_KEY::E          //
+                || key == GAME_KEY::Q          //
+                || key == GAME_KEY::LEFT_SHFT  //
+        );
     }
 
     std::vector<GAME_KEY> keys_;

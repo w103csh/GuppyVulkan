@@ -251,6 +251,7 @@ void Guppy::processInput() {
                 case GAME_KEY::F: {
                 } break;
                 case GAME_KEY::TOP_1: {
+                    handlers_.pUniform->moveToDebugCamera();
                 } break;
                 case GAME_KEY::TOP_2: {
                 } break;

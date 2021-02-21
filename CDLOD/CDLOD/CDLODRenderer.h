@@ -1,15 +1,16 @@
 //////////////////////////////////////////////////////////////////////
-// Modifications copyright(C) 2020 Colin Hughes<colin.s.hughes @gmail.com>
+// Modifications copyright(C) 2021 Colin Hughes<colin.s.hughes @gmail.com>
 // -------------------------------
 // Copyright (C) 2009 - Filip Strugar.
 // Distributed under the zlib License (see readme.txt)
 //////////////////////////////////////////////////////////////////////
 
-#ifndef CDLOD_RENDERER_H
-#define CDLOD_RENDERER_H
+#ifndef _CDLOD_RENDERER_H_
+#define _CDLOD_RENDERER_H_
 
 #include <glm/glm.hpp>
 #include <vector>
+#include <vulkan/vulkan.hpp>
 
 #include "Common.h"
 #include "VkGridMesh.h"
@@ -44,17 +45,25 @@ struct CDLODRendererBatchInfo {
 
     // DxVertexShader* VertexShader;
     // DxPixelShader* PixelShader;
+    struct RenderData {
+        vk::CommandBuffer cmd;
+        vk::PipelineLayout pipelineLayout;
+        vk::ShaderStageFlags pushConstantStages;
+        glm::vec3 dbgCamPos;
+    } renderData;
 
     // D3DXHANDLE VSGridDimHandle;
     // D3DXHANDLE VSQuadScaleHandle;
     // D3DXHANDLE VSQuadOffsetHandle;
     // D3DXHANDLE VSMorphConstsHandle;
-    struct UniformDynamicData {
-        // float3 g_gridDim;  // .x = gridDim, .y = gridDimHalf, .z = oneOverGridDimHalf
-        glm::vec3 gridDim;
-        int quadScale;
-        int quadOffset;
-        int morphConsts;
+    struct PerDrawData {
+        glm::vec4 data0;  // gridDim:         .x (dimension), .y (dimension/2), .z (2/dimension)
+                          //                  .w (LODLevel)
+        glm::vec4 data1;  // morph constants: .x (start), .y (1/(end-start)), .z (end/(end-start))
+                          //                  .w ((aabb.minZ+aabb.maxZ)/2)
+        glm::vec4 data2;  // quadOffset:      .x (aabb.minX), .y (aabb.minY)
+                          // quadScale:       .z (aabb.sizeX), .w (aabb.sizeY)
+        glm::vec4 data3;  // dbg camera:      .x (wpos.x), .y (wpos.y), .z (wpos.z)
     };
 
     // D3DXHANDLE VSUseDetailMapHandle;
@@ -75,29 +84,41 @@ class CDLODRenderer {
     const Context* m_pContext;
 
    public:
+    /* This confused me greatly. Only one grid mesh is ever used in the demo. The grid mesh that is used is determined by
+     * CDLODRendererBatchInfo::MeshGridDimensions via terrainGridMeshDims_, which is in turn determined by
+     * LeafQuadTreeNodeSize * RenderGridResolutionMult (.ini settings). I'm guessing the original idea here was people would
+     * have different settings in their .ini files, and instead of creating the meshes based on those values just have a
+     * predetermined list??? I don't know. CH
+     */
     std::vector<VkGridMesh> m_gridMeshes;
 
-    struct UniformData {
+    struct PerQuadTreeData {
         glm::vec4 terrainScale;
         glm::vec4 terrainOffset;
         glm::vec4 heightmapTextureInfo;
-        glm::vec2 worldMax;  // .xy max used to clamp triangles outside of world range
-        glm::vec2 samplerWorldToTextureScale;
+        // glm::vec2 quadWorldMax;  // .xy max used to clamp triangles outside of world range
+        // glm::vec2 samplerWorldToTextureScale;
+        glm::vec4 data0;
     };
 
    public:
-    CDLODRenderer(const Context& context);
+    CDLODRenderer(void);
     ~CDLODRenderer(void);
+    //
+    void init(const Context& context);
+    virtual void destroy() { reset(); }
     //
    public:
     //
-    void SetIndependentGlobalVertexShaderConsts(UniformData& data, const CDLODQuadTree& cdlodQuadTree) const;
+    void SetIndependentGlobalVertexShaderConsts(PerQuadTreeData& data, const CDLODQuadTree& cdlodQuadTree) const;
     vk::Result Render(const CDLODRendererBatchInfo& batchInfo, CDLODRenderStats* renderStats = NULL) const;
     //
    protected:
     //
     const VkGridMesh* PickGridMesh(int dimensions) const;
     //
+   private:
+    void reset();
 };
 
-#endif  // !CDLOD_RENDERER_H
+#endif  // !_CDLOD_RENDERER_H_

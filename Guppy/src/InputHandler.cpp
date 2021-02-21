@@ -29,6 +29,8 @@ bool Input::KeyboardManager::update(const uint8_t player) {
 
     prepareKeys();
 
+    float moveSpeedMultiplier = 1.0f;
+
     playerInfo.moveDir = {};
     for (auto& key : keyDown_) {  // keyDown_ holds movement keys only after processInput.
         switch (key) {
@@ -66,12 +68,16 @@ bool Input::KeyboardManager::update(const uint8_t player) {
                 hasInput = true;
                 playerInfo.moveDir.y--;
             } break;
+            // SPRINT
+            case GAME_KEY::LEFT_SHFT: {
+                moveSpeedMultiplier = 10.0f;
+            } break;
             default:
                 assert(false);
         }
     }
 
-    playerInfo.moveDir *= MOVE_SENSITIVITY * normFactor;
+    playerInfo.moveDir *= MOVE_SENSITIVITY * normFactor * moveSpeedMultiplier;
     playerInfo.pKeys = &keys_;
 
     // Leave currentKeys_ alone. The shell handles currentKeys_ cleanup. If there were ever more than one "players" this

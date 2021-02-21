@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// Modifications copyright(C) 2020 Colin Hughes<colin.s.hughes @gmail.com>
+// Modifications copyright(C) 2021 Colin Hughes<colin.s.hughes @gmail.com>
 // -------------------------------
 // Copyright (C) 2009 - Filip Strugar.
 // Distributed under the zlib License (see readme.txt)
@@ -14,14 +14,25 @@
 constexpr int NUM_GRID_MESHES = 7;
 
 //
-CDLODRenderer::CDLODRenderer(const Context& context) : m_pContext(&context) {
-    m_gridMeshes.assign(NUM_GRID_MESHES, context);
-    for (int i = 0, dim = 2; i < NUM_GRID_MESHES; i++, dim *= 2) {
-        m_gridMeshes[i].SetDimensions(dim);
-    }
-}
+CDLODRenderer::CDLODRenderer() : m_pContext(nullptr) {}
 //
 CDLODRenderer::~CDLODRenderer(void) {}
+//
+void CDLODRenderer::init(const Context& context) {
+    reset();
+    m_pContext = &context;
+    m_gridMeshes.reserve(NUM_GRID_MESHES);
+    for (int i = 0, dim = 2; i < NUM_GRID_MESHES; i++, dim *= 2) {
+        m_gridMeshes.emplace_back(context);
+        m_gridMeshes.back().SetDimensions(dim);
+    }
+}
+void CDLODRenderer::reset() {
+    if (m_pContext != nullptr) {
+        for (auto& gridMesh : m_gridMeshes) gridMesh.destroy();
+        m_pContext = nullptr;
+    }
+}
 //
 const VkGridMesh* CDLODRenderer::PickGridMesh(int dimensions) const {
     for (auto& gridMesh : m_gridMeshes)
@@ -29,7 +40,7 @@ const VkGridMesh* CDLODRenderer::PickGridMesh(int dimensions) const {
     return NULL;
 }
 //
-void CDLODRenderer::SetIndependentGlobalVertexShaderConsts(UniformData& data, const CDLODQuadTree& cdlodQuadTree) const {
+void CDLODRenderer::SetIndependentGlobalVertexShaderConsts(PerQuadTreeData& data, const CDLODQuadTree& cdlodQuadTree) const {
     int textureWidth = cdlodQuadTree.GetRasterSizeX();
     int textureHeight = cdlodQuadTree.GetRasterSizeY();
 
@@ -38,12 +49,13 @@ void CDLODRenderer::SetIndependentGlobalVertexShaderConsts(UniformData& data, co
     data = {};
 
     // Used to clamp edges to correct terrain size (only max-es needs clamping, min-s are clamped implicitly)
-    data.worldMax = {mapDims.MaxX(), mapDims.MaxY()};
+    data.data0.x = mapDims.MaxX();  // quadWorldMax
+    data.data0.y = mapDims.MaxY();  // quadWorldMax
 
     data.terrainScale = {mapDims.SizeX, mapDims.SizeY, mapDims.SizeZ, 0.0f};
     data.terrainOffset = {mapDims.MinX, mapDims.MinY, mapDims.MinZ, 0.0f};
-    data.samplerWorldToTextureScale = {(textureWidth - 1.0f) / (float)textureWidth,
-                                       (textureHeight - 1.0f) / (float)textureHeight};
+    data.data0.z = (textureWidth - 1.0f) / (float)textureWidth;    // samplerWorldToTextureScale
+    data.data0.w = (textureHeight - 1.0f) / (float)textureHeight;  // samplerWorldToTextureScale
     data.heightmapTextureInfo = {(float)textureWidth, (float)textureHeight, 1.0f / (float)textureWidth,
                                  1.0f / (float)textureHeight};
 }
@@ -58,17 +70,22 @@ vk::Result CDLODRenderer::Render(const CDLODRendererBatchInfo& batchInfo, CDLODR
 
     if (renderStats != NULL) renderStats->Reset();
 
+    CDLODRendererBatchInfo::PerDrawData perDrawData = {};  // CH
+
     //////////////////////////////////////////////////////////////////////////
     // Setup mesh
     // V(device->SetStreamSource(0, (IDirect3DVertexBuffer9*)gridMesh->GetVertexBuffer(), 0, sizeof(PositionVertex)));
+    vk::DeviceSize offset = 0;
+    batchInfo.renderData.cmd.bindVertexBuffers(0, 1, &gridMesh->GetVertexBuffer().buffer, &offset);
     // V(device->SetIndices((IDirect3DIndexBuffer9*)gridMesh->GetIndexBuffer()));
+    batchInfo.renderData.cmd.bindIndexBuffer(gridMesh->GetIndexBuffer().buffer, 0, vk::IndexType::eUint32);
     // V(device->SetFVF(PositionVertex::FVF));
     //{
     //    batchInfo.VertexShader->SetFloatArray(batchInfo.VSGridDimHandle, (float)gridMesh->GetDimensions(),
     //                                          gridMesh->GetDimensions() * 0.5f, 2.0f / gridMesh->GetDimensions(), 0.0f);
     //}
-    assert(false);
-    // bindVertextBuffers????
+    perDrawData.data0 = {(float)gridMesh->GetDimensions(), gridMesh->GetDimensions() * 0.5f,
+                         2.0f / gridMesh->GetDimensions(), 0.0};
     //////////////////////////////////////////////////////////////////////////
 
     const CDLODQuadTree::SelectedNode* selectionArray = batchInfo.CDLODSelection->GetSelection();
@@ -89,13 +106,11 @@ vk::Result CDLODRenderer::Render(const CDLODRendererBatchInfo& batchInfo, CDLODR
         // sorted)
         if (prevMorphConstLevelSet != nodeSel.LODLevel) {
             prevMorphConstLevelSet = nodeSel.LODLevel;
-            float v[4];
-            batchInfo.CDLODSelection->GetMorphConsts(prevMorphConstLevelSet, v);
-            assert(false);
+            batchInfo.CDLODSelection->GetMorphConsts(prevMorphConstLevelSet, perDrawData.data1);
+            perDrawData.data0.w = (float)nodeSel.LODLevel;
             // batchInfo.VertexShader->SetFloatArray(batchInfo.VSMorphConstsHandle, v, 4);
 
-            bool useDetailMap = batchInfo.DetailMeshLODLevelsAffected > nodeSel.LODLevel;
-            assert(false);
+            // bool useDetailMap = batchInfo.DetailMeshLODLevelsAffected > nodeSel.LODLevel;
             // if (batchInfo.VSUseDetailMapHandle != NULL) {
             //    V(batchInfo.VertexShader->SetBool(batchInfo.VSUseDetailMapHandle, useDetailMap));
             //}
@@ -110,58 +125,64 @@ vk::Result CDLODRenderer::Render(const CDLODRendererBatchInfo& batchInfo, CDLODR
         AABB boundingBox;
         nodeSel.GetAABB(boundingBox, qtRasterX, qtRasterY, mapDims);
 
-        assert(false);
         // V(batchInfo.VertexShader->SetFloatArray(batchInfo.VSQuadScaleHandle, (boundingBox.Max.x - boundingBox.Min.x),
         //                                        (boundingBox.Max.y - boundingBox.Min.y), (float)nodeSel.LODLevel, 0.0f));
 
-        assert(false);
         // V(batchInfo.VertexShader->SetFloatArray(batchInfo.VSQuadOffsetHandle, boundingBox.Min.x, boundingBox.Min.y,
         //                                        (boundingBox.Min.z + boundingBox.Max.z) * 0.5f, 0.0f));
 
+        perDrawData.data1.w = (boundingBox.Min.z + boundingBox.Max.z) * 0.5f;
+        perDrawData.data2 = {boundingBox.Min.x, boundingBox.Min.y, (boundingBox.Max.x - boundingBox.Min.x),
+                             (boundingBox.Max.y - boundingBox.Min.y)};
+
+        batchInfo.renderData.cmd.pushConstants(batchInfo.renderData.pipelineLayout, batchInfo.renderData.pushConstantStages,
+                                               0, sizeof(CDLODRendererBatchInfo::PerDrawData), &perDrawData);
+
         int gridDim = gridMesh->GetDimensions();
 
-        int renderedTriangles = 0;
+        // int renderedTriangles = 0;
 
-        int totalVertices = (gridDim + 1) * (gridDim + 1);
+        // int totalVertices = (gridDim + 1) * (gridDim + 1);
         int totalIndices = gridDim * gridDim * 2 * 3;
         if (drawFull) {
-            assert(false);
             // V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, 0, totalIndices / 3));
-            renderedTriangles += totalIndices / 3;
+            batchInfo.renderData.cmd.drawIndexed(totalIndices, 1, 0, 0, 0);
+            // renderedTriangles += totalIndices / 3;
         } else {
-            int halfd = ((gridDim + 1) / 2) * ((gridDim + 1) / 2) * 2;
+            // int halfd = ((gridDim + 1) / 2) * ((gridDim + 1) / 2) * 2;
+            int halfd = (gridDim / 2) * (gridDim / 2) * 2 * 3;
 
             // can be optimized by combining calls
             if (nodeSel.TL) {
-                assert(false);
                 // V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, 0, halfd));
-                renderedTriangles += halfd;
+                batchInfo.renderData.cmd.drawIndexed(halfd, 1, 0, 0, 0);
+                // renderedTriangles += halfd;
             }
             if (nodeSel.TR) {
-                assert(false);
                 // V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, gridMesh->GetIndexEndTL(),
                 // halfd));
-                renderedTriangles += halfd;
+                batchInfo.renderData.cmd.drawIndexed(halfd, 1, gridMesh->GetIndexEndTL(), 0, 0);
+                // renderedTriangles += halfd;
             }
             if (nodeSel.BL) {
-                assert(false);
                 // V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, gridMesh->GetIndexEndTR(),
                 // halfd));
-                renderedTriangles += halfd;
+                batchInfo.renderData.cmd.drawIndexed(halfd, 1, gridMesh->GetIndexEndTR(), 0, 0);
+                // renderedTriangles += halfd;
             }
             if (nodeSel.BR) {
-                assert(false);
                 // V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, gridMesh->GetIndexEndBL(),
                 // halfd));
-                renderedTriangles += halfd;
+                batchInfo.renderData.cmd.drawIndexed(halfd, 1, gridMesh->GetIndexEndBL(), 0, 0);
+                // renderedTriangles += halfd;
             }
         }
 
-        if (renderStats != NULL) {
-            renderStats->RenderedQuads[nodeSel.LODLevel]++;
-            renderStats->TotalRenderedQuads++;
-            renderStats->TotalRenderedTriangles += renderedTriangles;
-        }
+        // if (renderStats != NULL) {
+        //    renderStats->RenderedQuads[nodeSel.LODLevel]++;
+        //    renderStats->TotalRenderedQuads++;
+        //    renderStats->TotalRenderedTriangles += renderedTriangles;
+        //}
     }
 
     return vk::Result::eSuccess;

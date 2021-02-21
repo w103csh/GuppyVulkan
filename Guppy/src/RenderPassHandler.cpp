@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -51,7 +51,11 @@ const std::vector<PASS> DEFAULT = {
 }  // namespace
 
 RenderPass::Handler::Handler(Game* pGame)
-    : Game::Handler(pGame), frameIndex_(0), swpchnRes_{}, submitResources_{}, screenQuadOffset_(Mesh::BAD_OFFSET) {
+    : Game::Handler(pGame),  //
+      frameIndex_(0),
+      swpchnRes_{},
+      submitResources_{},
+      screenQuadOffset_(Mesh::BAD_OFFSET) {
     for (const auto& type : RenderPass::ALL) {
         // clang-format off
         switch (type) {

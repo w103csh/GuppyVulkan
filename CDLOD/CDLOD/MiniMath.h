@@ -1,12 +1,12 @@
 //////////////////////////////////////////////////////////////////////
-// Modifications copyright(C) 2020 Colin Hughes<colin.s.hughes @gmail.com>
+// Modifications copyright(C) 2021 Colin Hughes<colin.s.hughes @gmail.com>
 // -------------------------------
 // Copyright (C) 2009 - Filip Strugar.
 // Distributed under the zlib License (see readme.txt)
 //////////////////////////////////////////////////////////////////////
 
-#ifndef MINI_MATH_H
-#define MINI_MATH_H
+#ifndef _MINI_MATH_H_
+#define _MINI_MATH_H_
 
 #include <algorithm>
 #include <glm/glm.hpp>
@@ -88,7 +88,8 @@ struct AABB {
             for (int i = 0; i < 9; ++i) {
                 // test this point against the planes
                 float distance = glm::dot(planes[p], glm::vec4(corners[i], 1));
-                if (distance < -size) {
+                // if (distance < -size) {
+                if (distance < 0.0f) {  // Cull more stuff? CH
                     ptIn = 0;
                     inCount--;
                 }
@@ -229,4 +230,4 @@ struct AABB {
     }
 };
 
-#endif  // !MINI_MATH_H
+#endif  // !_MINI_MATH_H_

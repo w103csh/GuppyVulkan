@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -39,6 +39,7 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         GRAPHICS::HFF_OCEAN_DEFERRED,
         GRAPHICS::OCEAN_WF_DEFERRED,
         GRAPHICS::OCEAN_SURFACE_DEFERRED,
+        GRAPHICS::CDLOD_WF_DEFERRED,
 #ifndef VK_USE_PLATFORM_MACOS_MVK
         GRAPHICS::DEFERRED_MRT_WF_COLOR,
 #endif
@@ -194,6 +195,11 @@ void Base::record(const uint8_t frameIndex) {
                     case GRAPHICS::PRTCL_FOUNTAIN_DEFERRED: {
                         // PARTICLE GRAPHICS
                         handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
+                        priCmd.nextSubpass(vk::SubpassContents::eInline);
+                    } break;
+                    case GRAPHICS::CDLOD_WF_DEFERRED: {
+                        // SCENE RENDERERS
+                        handler().sceneHandler().recordRenderer(TYPE, pPipelineBindData, priCmd);
                         priCmd.nextSubpass(vk::SubpassContents::eInline);
                     } break;
                     default: {

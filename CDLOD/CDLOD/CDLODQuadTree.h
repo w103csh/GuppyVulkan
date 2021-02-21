@@ -1,12 +1,12 @@
 //////////////////////////////////////////////////////////////////////
-// Modifications copyright(C) 2020 Colin Hughes<colin.s.hughes @gmail.com>
+// Modifications copyright(C) 2021 Colin Hughes<colin.s.hughes @gmail.com>
 // -------------------------------
 // Copyright (C) 2009 - Filip Strugar.
 // Distributed under the zlib License (see readme.txt)
 //////////////////////////////////////////////////////////////////////
 
-#ifndef QUAD_TREE_H
-#define QUAD_TREE_H
+#ifndef _CDLOD_QUAD_TREE_H_
+#define _CDLOD_QUAD_TREE_H_
 
 #include <glm/glm.hpp>
 
@@ -18,14 +18,14 @@
 //////////////////////////////////////////////////////////////////////////
 class IHeightmapSource {
    public:
-    virtual int GetSizeX() = 0;
-    virtual int GetSizeY() = 0;
+    virtual int GetSizeX() const = 0;
+    virtual int GetSizeY() const = 0;
 
     // returned value is converted to height using following formula:
     // 'WorldHeight = WorldMinZ + GetHeightAt(,) * WorldSizeZ / 65535.0f'
-    virtual unsigned short GetHeightAt(int x, int y) = 0;
+    virtual unsigned short GetHeightAt(int x, int y) const = 0;
 
-    virtual void GetAreaMinMaxZ(int x, int y, int sizeX, int sizeY, unsigned short& minZ, unsigned short& maxZ) = 0;
+    virtual void GetAreaMinMaxZ(int x, int y, int sizeX, int sizeY, unsigned short& minZ, unsigned short& maxZ) const = 0;
 };
 
 //////////////////////////////////////////////////////////////////////////
@@ -38,7 +38,7 @@ class CDLODQuadTree {
     struct Node;
 
     struct CreateDesc {
-        IHeightmapSource* pHeightmap;
+        const IHeightmapSource* pHeightmap;
 
         int LeafRenderNodeSize;
 
@@ -80,7 +80,9 @@ class CDLODQuadTree {
         glm::vec3 m_observerPos;
         float m_visibilityDistance;
         glm::vec4 m_frustumPlanes[6];
-        float m_LODDistanceRatio;
+        float m_LODDistanceRatio;  // This is a value used by a calcuation for LOD levels. Its essentially a multiplicative
+                                   // factor for its size (m_visibilityRanges) as it relates to the number levels and camera
+                                   // view distance. Morph ratio below is a percentage of the "visibility ranges". CH
         float m_morphStartRatio;  // [0, 1] - when to start morphing to the next (lower-detailed) LOD level; default is 0.667
                                   // - first 0.667 part will not be morphed, and the morph will go from 0.667 to 1.0
         bool m_sortByDistance;
@@ -103,7 +105,7 @@ class CDLODQuadTree {
 
         const CDLODQuadTree* GetQuadTree() const { return m_quadTree; }
 
-        void GetMorphConsts(int LODLevel, float consts[4]) const;
+        void GetMorphConsts(int LODLevel, glm::vec4& data2) const;
 
         inline const SelectedNode* GetSelection() const { return m_selectionBuffer; }
         inline int GetSelectionCount() const { return m_selectionCount; }
@@ -326,4 +328,4 @@ inline CDLODQuadTree::SelectedNode::SelectedNode(const Node* node, int LODLevel,
 }
 //
 
-#endif  // !QUAD_TREE_H
+#endif  // !_CDLOD_QUAD_TREE_H_

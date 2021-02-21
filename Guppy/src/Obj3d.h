@@ -15,14 +15,16 @@
 
 namespace Obj3d {
 
-struct BoundingBoxMinMax {
+struct BoundingBoxMinMax {  // Use VkAabbPositionsKHR ?
     float xMin, xMax;
     float yMin, yMax;
     float zMin, zMax;
 };
 
+// I feel like I can remove this?
 using BoundingBox = std::array<glm::vec3, 6>;
 
+// I feel like I can remove this?
 const BoundingBox DEFAULT_BOUNDING_BOX = {
     glm::vec3{FLT_MAX, 0.0f, 0.0f},   // xMin
     glm::vec3{-FLT_MAX, 0.0f, 0.0f},  // xMax

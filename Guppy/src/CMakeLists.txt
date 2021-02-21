@@ -39,8 +39,6 @@ set(SOURCE
     Material.h
     MaterialHandler.cpp
     MaterialHandler.h
-    Ocean.cpp
-    Ocean.h
     Parallax.cpp
     Parallax.h
     PBR.cpp
@@ -73,6 +71,11 @@ set(SOURCE
     # Buffer
     BufferItem.h
     BufferManager.h
+    # Cdlod
+    Cdlod.cpp
+    Cdlod.h
+    CdlodRenderer.cpp
+    CdlodRenderer.h
     # Compute
     Compute.cpp
     Compute.h
@@ -137,6 +140,9 @@ set(SOURCE
     Obj3d.h
     Obj3dDrawInst.h
     Obj3dInst.h
+    # Ocean
+    Ocean.cpp
+    Ocean.h
     # Particle
     Particle.cpp
     Particle.h
@@ -206,7 +212,7 @@ file(GLOB UTILS
     utils/*.cpp
     utils/*.h
     utils/*.hpp
-    ) 
+    )
 
 # # utils folder (mimice directory structure?)
 # file(GLOB UTILS_SOURCE
@@ -224,7 +230,7 @@ set(LINKS
     ${CDLOD_LIB}
     ${COMMON_LIB}
     )
-    
+
 # target includes
 set(INCLUDES
     utils

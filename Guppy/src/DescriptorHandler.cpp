@@ -81,6 +81,7 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_() {
             case DESCRIPTOR_SET::HFF_DEF:                                   pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::HFF_DEF_CREATE_INFO)); break;
             case DESCRIPTOR_SET::FFT_DEFAULT:                               pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::FFT_DEFAULT_CREATE_INFO)); break;
             case DESCRIPTOR_SET::OCEAN_DEFAULT:                             pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::OCEAN_DEFAULT_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::CDLOD_DEFAULT:                             pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::CDLOD_DEFAULT_CREATE_INFO)); break;
             default: assert(false);  // add new pipelines here
         }
         // clang-format on
@@ -743,7 +744,7 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
                 if (itDynItm == pDynamicItems.begin()) {
                     /**
                      * This might lead to confusion in the future but I am going to do it now because its just taking up too
-                     * much of my time at the moment. Here I am only going advance the itDynItm pointer to the first hit
+                     * much of my time at the moment. Here, I am only going to advance the itDynItm pointer to the first hit
                      * if it is at the beginning of the list. The reason this is necessary is because some draw buffers have
                      * dynamic uniforms in different descriptor sets now. This is essentially trying to find the start of the
                      * list for a specific descriptor set while still trying to enforce the ordering of the descriptors in

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -9,9 +9,6 @@
 #include <glm/glm.hpp>
 #include <string_view>
 #include <vulkan/vulkan.hpp>
-
-#include <CDLOD/CDLODQuadTree.h>
-#include <CDLOD/CDLODRenderer.h>
 
 #include "ConstantsAll.h"
 #include "DescriptorManager.h"
@@ -80,7 +77,7 @@ class Handler;
 struct CreateInfo;
 namespace Ocean {
 constexpr std::string_view DATA_ID = "Ocean Data Texture";
-void MakTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info);
+void MakeTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info);
 }  // namespace Ocean
 }  // namespace Texture
 
@@ -96,22 +93,8 @@ extern const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO;
 }  // namespace Ocean
 }  // namespace Shader
 
-namespace Uniform {
-namespace CDLOD {
-namespace QuadTree {
-using DATA = CDLODRenderer::UniformData;
-class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
-   public:
-    Base(const Buffer::Info&& info, DATA* pData);
-};
-}  // namespace QuadTree
-}  // namespace CDLOD
-
-}  // namespace Uniform
-
 // UNIFORM DYNAMIC
 namespace UniformDynamic {
-
 namespace Ocean {
 namespace Simulation {
 struct DATA {
@@ -129,19 +112,6 @@ class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA
 };
 }  // namespace Simulation
 }  // namespace Ocean
-
-namespace CDLOD {
-namespace Grid {
-using DATA = CDLODRendererBatchInfo::UniformDynamicData;
-class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
-   public:
-    Base(const Buffer::Info&& info, DATA* pData, const Buffer::CreateInfo* pCreateInfo);
-    void updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) override;
-};
-using Manager = Descriptor::Manager<Descriptor::Base, Base, std::shared_ptr>;
-}  // namespace Grid
-}  // namespace CDLOD
-
 }  // namespace UniformDynamic
 
 // DESCRIPTOR SET
@@ -238,11 +208,6 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
     BufferResource indexWFRes_;
 
     SurfaceCreateInfo info_;
-
-    // CDLOD
-    void initCDLOD();
-    CDLODQuadTree cdlodQuadTree_;
-    CDLODRenderer cdlodRenderer_;
 };
 
 }  // namespace Ocean

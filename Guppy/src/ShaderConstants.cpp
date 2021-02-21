@@ -1,10 +1,11 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
 #include "ShaderConstants.h"
 
+#include "Cdlod.h"
 #include "Cloth.h"
 #include "Deferred.h"
 #include "FFT.h"
@@ -363,6 +364,8 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     {SHADER::OCEAN_FFT_COMP, Shader::Ocean::FFT_COMP_CREATE_INFO},
     {SHADER::OCEAN_VERT, Shader::Ocean::VERT_CREATE_INFO},
     {SHADER::OCEAN_DEFERRED_MRT_FRAG, Shader::Ocean::DEFERRED_MRT_FRAG_CREATE_INFO},
+    // CDLOD
+    {SHADER::CDLOD_VERT, Shader::Cdlod::VERT_CREATE_INFO},
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {

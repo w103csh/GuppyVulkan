@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -13,7 +13,7 @@
 
 namespace {
 const std::string MACRO_REPLACE_PREFIX = "MACRO_REPLACE_PREFIX";
-const std::string MACRO_REGEX_TEMPLATE = "(#define)\\s+(" + MACRO_REPLACE_PREFIX + "(.+))\\s+([\\-]?\\d+)";
+const std::string MACRO_REGEX_TEMPLATE = "(#define)\\s+(" + MACRO_REPLACE_PREFIX + "(\\S+))\\s+([\\-]?\\d+)";
 }  // namespace
 
 namespace helpers {

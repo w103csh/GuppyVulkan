@@ -48,6 +48,8 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
     auto& stageInfo = keyValue.second.second;
     if (isInit && stageInfo.module) return false;
 
+    // if (std::get<0>(keyValue.first) == SHADER::CDLOD_VERT)  //
+    //    auto pause = 1;
     auto stringTexts = loadText(keyValue);
 
     // I can't figure out how else to do this atm.
@@ -56,6 +58,8 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
 
     const auto& createInfo = ALL.at(std::get<0>(keyValue.first));
     std::vector<unsigned int> spv;
+    // if (std::get<0>(keyValue.first) == SHADER::CDLOD_VERT)  //
+    //    auto pause = 1;
     // shell().log(Shell::LogPriority::LOG_INFO, ("Compiling: " + std::string(createInfo.fileName)).c_str());
     bool success = GLSLtoSPV(static_cast<VkShaderStageFlagBits>(createInfo.stage), texts, spv);
 

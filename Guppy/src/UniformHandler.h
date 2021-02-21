@@ -20,6 +20,7 @@
 #include <Common/Helpers.h>
 
 #include "Camera.h"
+#include "Cdlod.h"
 #include "ConstantsAll.h"
 #include "Deferred.h"
 #include "Descriptor.h"
@@ -86,10 +87,9 @@ class Handler : public Game::Handler {
     virtual_inline auto& uniGeomDefMgr() { return std::get<Uniform::Manager<Geometry::Default::Base>>(managers_[14]);};
     virtual_inline auto& uniWaveMgr() { return std::get<Uniform::Manager<Particle::Wave::Base>>(managers_[15]);};
     virtual_inline auto& strPstPrcMgr() { return std::get<Uniform::Manager<Storage::PostProcess::Base>>(managers_[16]);};
-    virtual_inline auto& cdlodQdTrMgr() { return std::get<Uniform::Manager<Uniform::CDLOD::QuadTree::Base>>(managers_[17]);};
+    virtual_inline auto& cdlodQdTrMgr() { return std::get<Uniform::Manager<Cdlod::QuadTree::Base>>(managers_[17]);};
     // DYNAMIC
     virtual_inline auto& tessPhongMgr() { return std::get<UniformDynamic::Tessellation::Phong::Manager>(managersDynamic_[0]);};
-    virtual_inline auto& cdlodGridMgr() { return std::get<UniformDynamic::CDLOD::Grid::Manager>(managersDynamic_[1]);};
     
    private:
     template <class T> virtual_inline Manager<T>& getManager() { assert(false); }
@@ -110,6 +110,7 @@ class Handler : public Game::Handler {
     template <> virtual_inline Manager<Geometry::Default::Base>& getManager() { return uniGeomDefMgr(); }
     template <> virtual_inline Manager<Particle::Wave::Base>& getManager() { return uniWaveMgr(); }
     template <> virtual_inline Manager<Storage::PostProcess::Base>& getManager() { return strPstPrcMgr(); }
+    template <> virtual_inline Manager<Cdlod::QuadTree::Base>& getManager() { return cdlodQdTrMgr(); }
     // clang-format on
 
     // BUFFER MANAGERS
@@ -131,15 +132,14 @@ class Handler : public Game::Handler {
         Manager<Geometry::Default::Base>,             //
         Manager<Particle::Wave::Base>,                //
         Manager<Storage::PostProcess::Base>,          //
-        Manager<Uniform::CDLOD::QuadTree::Base>       //
+        Manager<Cdlod::QuadTree::Base>                //
         >;
     std::array<Manager, 18> managers_;
     // DYNAMIC
-    using ManagerDynamic = std::variant<               //
-        UniformDynamic::Tessellation::Phong::Manager,  //
-        UniformDynamic::CDLOD::Grid::Manager           //
+    using ManagerDynamic = std::variant<              //
+        UniformDynamic::Tessellation::Phong::Manager  //
         >;
-    std::array<ManagerDynamic, 2> managersDynamic_;
+    std::array<ManagerDynamic, 1> managersDynamic_;
 
     std::vector<std::unique_ptr<Descriptor::Base>>& getItems(const DESCRIPTOR& type);
 
@@ -160,6 +160,7 @@ class Handler : public Game::Handler {
 
     // CAMERAS
     void cycleCamera();
+    void moveToDebugCamera();
     // ACTIVE
     inline auto& getActiveCamera() {
         return *static_cast<Camera::Perspective::Default::Base*>(camPersDefMgr().pItems[activeCameraOffset_].get());

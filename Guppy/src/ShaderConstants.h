@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -105,6 +105,8 @@ enum class SHADER {
     OCEAN_FFT_COMP,
     OCEAN_VERT,
     OCEAN_DEFERRED_MRT_FRAG,
+    // CDLOD
+    CDLOD_VERT,
     // Add new to SHADER_ALL and SHADER_LINK_MAP.
 };
 

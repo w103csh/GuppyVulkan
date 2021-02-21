@@ -192,7 +192,7 @@ void Shell::initPhysicalDevice() {
     pickPhysicalDevice();
     if (!ctx_.physicalDev) {
         printf("failed to find any capable Vulkan physical device");
-        abort();
+        exit(EXIT_FAILURE);
     }
 }
 

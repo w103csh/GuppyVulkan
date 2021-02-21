@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -26,7 +26,10 @@
 #include "TextureHandler.h"
 #include "UniformHandler.h"
 
-Scene::Handler::Handler(Game* pGame) : Game::Handler(pGame), activeSceneIndex_() {}
+Scene::Handler::Handler(Game* pGame)
+    : Game::Handler(pGame),  //
+      cdlodDbgRenderer_(*this),
+      activeSceneIndex_() {}
 
 // Required in this file for inner-class forward declaration of SelectionManager
 Scene::Handler::~Handler() = default;
@@ -49,6 +52,9 @@ void Scene::Handler::init() {
 #endif
 
     auto& pScene = makeScene(true, makeFaceSelectionMesh);
+
+    // RENDERERS
+    cdlodDbgRenderer_.init(nullptr, nullptr);
 
     if (deferred) {
         Mesh::Arc::CreateInfo arcInfo;
@@ -120,6 +126,7 @@ void Scene::Handler::init() {
             const auto& debugCamera = uniformHandler().getDebugCamera();
             // Set the frustum mesh info.
             Mesh::Frustum::CreateInfo frustumMeshInfo = {};
+            // frustumMeshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
             frustumMeshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_WF_COLOR;
             frustumMeshInfo.selectable = false;
             frustumMeshInfo.settings.geometryInfo.doubleSided = true;
@@ -1029,6 +1036,7 @@ void Scene::Handler::frame() {
 
 void Scene::Handler::reset() {
     for (auto& scene : pScenes_) scene->destroy();
+    cdlodDbgRenderer_.destroy();
     pScenes_.clear();
 }
 
@@ -1058,6 +1066,22 @@ std::unique_ptr<Mesh::Texture>& Scene::Handler::getTextureMesh(size_t sceneOffse
     // return pScenes_[sceneOffset]->getTextureMesh(meshOffset);
     assert(false);
     return meshHandler().getTextureMesh(meshOffset);
+}
+
+void Scene::Handler::recordRenderer(const PASS passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+                                    const vk::CommandBuffer& cmd) {
+    if (std::visit(Pipeline::IsGraphics{}, pPipelineBindData->type)) {
+        auto graphicsType = std::visit(Pipeline::GetGraphics{}, pPipelineBindData->type);
+        switch (graphicsType) {
+            case GRAPHICS::CDLOD_WF_DEFERRED:
+                cdlodDbgRenderer_.update(pPipelineBindData, cmd);
+                break;
+            default:
+                assert(false);
+        }
+    } else {
+        assert(false);
+    }
 }
 
 void Scene::Handler::cleanup() {

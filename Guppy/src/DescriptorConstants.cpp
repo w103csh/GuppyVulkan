@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -83,6 +83,8 @@ const std::set<DESCRIPTOR_SET> ALL = {
     DESCRIPTOR_SET::FFT_DEFAULT,
     // OCEAN
     DESCRIPTOR_SET::OCEAN_DEFAULT,
+    // CDLOD
+    DESCRIPTOR_SET::CDLOD_DEFAULT,
 };
 
 void ResourceInfo::setWriteInfo(const uint32_t index, vk::WriteDescriptorSet& write) const {
