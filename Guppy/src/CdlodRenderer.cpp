@@ -19,6 +19,7 @@
 #include "MeshHandler.h"
 #include "RenderPassHandler.h"
 #include "SceneHandler.h"
+#include "TextureHandler.h"
 #include "UniformHandler.h"
 
 #define DEBUG_PRINT false
@@ -68,9 +69,11 @@ Base::Base(Scene::Handler& handler)
       terrainGridMeshDims_(0),
       pHeightmap_(nullptr),
       cdlodQuadTree_(),
+      enableDebug_(true),
       useDebugCamera_(true),
       useDebugBoxes_(false),
-      useDebugWireframe_(true),
+      useDebugWireframe_(false),
+      useDebugTexture_(true),
       whiteBoxOffset_(Mesh::BAD_OFFSET),
       redBoxOffset_(Mesh::BAD_OFFSET),
       greenBoxOffset_(Mesh::BAD_OFFSET),
@@ -104,19 +107,6 @@ void Base::init(const IHeightmapSource* pHeightmap, const MapDimensions* pMapDim
         settings_.LODLevelDistanceRatio = 2.0f;
     }
 
-    {  // Create four materials for debugging grid mesh lod levels. (CDLOD::Renderer::Base only)
-        Material::Default::CreateInfo matInfo = {};
-        matInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::MODE_FLAT_SHADE;
-        matInfo.color = COLOR_WHITE;
-        pMaterials_[0] = handler().materialHandler().makeMaterial(&matInfo).get();
-        matInfo.color = COLOR_RED;
-        pMaterials_[1] = handler().materialHandler().makeMaterial(&matInfo).get();
-        matInfo.color = COLOR_GREEN;
-        pMaterials_[2] = handler().materialHandler().makeMaterial(&matInfo).get();
-        matInfo.color = COLOR_BLUE;
-        pMaterials_[3] = handler().materialHandler().makeMaterial(&matInfo).get();
-    }
-
     // GRID MESHES
     for (auto& gridMesh : m_gridMeshes) {
         auto pLdgRes = handler().loadingHandler().createLoadingResources();
@@ -124,43 +114,44 @@ void Base::init(const IHeightmapSource* pHeightmap, const MapDimensions* pMapDim
         handler().loadingHandler().loadSubmit(std::move(pLdgRes));
     }
 
-    // VALIDATION
-    if (!helpers::isPowerOfTwo(settings_.LeafQuadTreeNodeSize) || (settings_.LeafQuadTreeNodeSize < 2) ||
-        (settings_.LeafQuadTreeNodeSize > 1024)) {
-        assert(false && "CDLOD:LeafQuadTreeNodeSize setting is incorrect");
-        exit(EXIT_FAILURE);
-    }
-
     maxRenderGridResolutionMult_ = 1;
     while (maxRenderGridResolutionMult_ * settings_.LeafQuadTreeNodeSize <= 128) maxRenderGridResolutionMult_ *= 2;
     maxRenderGridResolutionMult_ /= 2;
 
-    if (!helpers::isPowerOfTwo(settings_.RenderGridResolutionMult) || (settings_.RenderGridResolutionMult < 1) ||
-        (settings_.LeafQuadTreeNodeSize > maxRenderGridResolutionMult_)) {
-        assert(false && "CDLOD:RenderGridResolutionMult setting is incorrect");
-        exit(EXIT_FAILURE);
-    }
+    {  // VALIDATION
+        if (!helpers::isPowerOfTwo(settings_.LeafQuadTreeNodeSize) || (settings_.LeafQuadTreeNodeSize < 2) ||
+            (settings_.LeafQuadTreeNodeSize > 1024)) {
+            assert(false && "CDLOD:LeafQuadTreeNodeSize setting is incorrect");
+            exit(EXIT_FAILURE);
+        }
 
-    // Is less than 2 incorrect because the smallest grid size is 2x2 maybe? If this is the case then
-    // c_maxLODLevels probably wouldn't be 15. CH
-    if ((settings_.LODLevelCount < 2) || (settings_.LODLevelCount > CDLODQuadTree::c_maxLODLevels)) {
-        assert(false && "CDLOD:LODLevelCount setting is incorrect");
-        exit(EXIT_FAILURE);
-    }
+        if (!helpers::isPowerOfTwo(settings_.RenderGridResolutionMult) || (settings_.RenderGridResolutionMult < 1) ||
+            (settings_.LeafQuadTreeNodeSize > maxRenderGridResolutionMult_)) {
+            assert(false && "CDLOD:RenderGridResolutionMult setting is incorrect");
+            exit(EXIT_FAILURE);
+        }
 
-    if ((settings_.MinViewRange < 1.0f) || (settings_.MinViewRange > 10000000.0f)) {
-        assert(false && "MinViewRange setting is incorrect");
-        exit(EXIT_FAILURE);
-    }
-    if ((settings_.MaxViewRange < 1.0f) || (settings_.MaxViewRange > 10000000.0f) ||
-        (settings_.MinViewRange > settings_.MaxViewRange)) {
-        assert(false && "MaxViewRange setting is incorrect");
-        exit(EXIT_FAILURE);
-    }
+        // Is less than 2 incorrect because the smallest grid size is 2x2 maybe? If this is the case then
+        // c_maxLODLevels probably wouldn't be 15. CH
+        if ((settings_.LODLevelCount < 2) || (settings_.LODLevelCount > CDLODQuadTree::c_maxLODLevels)) {
+            assert(false && "CDLOD:LODLevelCount setting is incorrect");
+            exit(EXIT_FAILURE);
+        }
 
-    if ((settings_.LODLevelDistanceRatio < 1.5f) || (settings_.LODLevelDistanceRatio > 16.0f)) {
-        assert(false && "LODLevelDistanceRatio setting is incorrect");
-        exit(EXIT_FAILURE);
+        if ((settings_.MinViewRange < 1.0f) || (settings_.MinViewRange > 10000000.0f)) {
+            assert(false && "MinViewRange setting is incorrect");
+            exit(EXIT_FAILURE);
+        }
+        if ((settings_.MaxViewRange < 1.0f) || (settings_.MaxViewRange > 10000000.0f) ||
+            (settings_.MinViewRange > settings_.MaxViewRange)) {
+            assert(false && "MaxViewRange setting is incorrect");
+            exit(EXIT_FAILURE);
+        }
+
+        if ((settings_.LODLevelDistanceRatio < 1.5f) || (settings_.LODLevelDistanceRatio > 16.0f)) {
+            assert(false && "LODLevelDistanceRatio setting is incorrect");
+            exit(EXIT_FAILURE);
+        }
     }
 
     terrainGridMeshDims_ = settings_.LeafQuadTreeNodeSize * settings_.RenderGridResolutionMult;
@@ -173,59 +164,90 @@ void Base::init(const IHeightmapSource* pHeightmap, const MapDimensions* pMapDim
     createDesc.MapDims = mapDims_;
     assert(createDesc.pHeightmap);
     cdlodQuadTree_.Create(createDesc);
-
-    // UNIFORM
+    // Initialize the quad tree uniform data.
     handler().uniformHandler().cdlodQdTrMgr().insert(handler().shell().context().dev, true);
 
     // DEBUG
-    if (useDebugBoxes_) {
-        Mesh::CreateInfo boxInfo = {};
-        boxInfo.pipelineType = GRAPHICS::DEFERRED_MRT_WF_COLOR;
-        boxInfo.settings.geometryInfo.doubleSided = true;
+    if (enableDebug_) {
+        {  // Create four materials for debugging grid mesh lod levels.
+            Material::Default::CreateInfo matInfo = {};
+            matInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::MODE_FLAT_SHADE;
+            matInfo.color = COLOR_WHITE;
+            pMaterials_[0] = handler().materialHandler().makeMaterial(&matInfo).get();
+            matInfo.color = COLOR_RED;
+            pMaterials_[1] = handler().materialHandler().makeMaterial(&matInfo).get();
+            matInfo.color = COLOR_GREEN;
+            pMaterials_[2] = handler().materialHandler().makeMaterial(&matInfo).get();
+            matInfo.color = COLOR_BLUE;
+            pMaterials_[3] = handler().materialHandler().makeMaterial(&matInfo).get();
+        }
 
-        Instance::Obj3d::CreateInfo instObj3dInfo = {};
-        instObj3dInfo.data.assign(75, {});
-        instObj3dInfo.update = false;
+        if (useDebugBoxes_) {
+            Mesh::CreateInfo boxInfo = {};
+            boxInfo.pipelineType = GRAPHICS::DEFERRED_MRT_WF_COLOR;
+            boxInfo.settings.geometryInfo.doubleSided = true;
 
-        Material::Default::CreateInfo defMatInfo = {};
-        defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::MODE_FLAT_SHADE;
+            Instance::Obj3d::CreateInfo instObj3dInfo = {};
+            instObj3dInfo.data.assign(75, {});
+            instObj3dInfo.update = false;
 
-        // WHITE
-        defMatInfo.color = COLOR_WHITE;
-        auto& pW = handler().meshHandler().makeColorMesh<Mesh::Box::Color>(&boxInfo, &defMatInfo, &instObj3dInfo);
-        instObj3dInfo.pSharedData = nullptr;  // Make sure we don't share the instance data!
-        pW->setActiveCount(0);
-        handler().sceneHandler().getActiveScene()->addMeshIndex(MESH::COLOR, pW->getOffset());
-        whiteBoxOffset_ = pW->getOffset();
-        // RED
-        defMatInfo.color = COLOR_RED;
-        auto& pR = handler().meshHandler().makeColorMesh<Mesh::Box::Color>(&boxInfo, &defMatInfo, &instObj3dInfo);
-        instObj3dInfo.pSharedData = nullptr;  // Make sure we don't share the instance data!
-        pR->setActiveCount(0);
-        handler().sceneHandler().getActiveScene()->addMeshIndex(MESH::COLOR, pR->getOffset());
-        redBoxOffset_ = pR->getOffset();
-        // GREEN
-        defMatInfo.color = COLOR_GREEN;
-        auto& pG = handler().meshHandler().makeColorMesh<Mesh::Box::Color>(&boxInfo, &defMatInfo, &instObj3dInfo);
-        instObj3dInfo.pSharedData = nullptr;  // Make sure we don't share the instance data!
-        pG->setActiveCount(0);
-        handler().sceneHandler().getActiveScene()->addMeshIndex(MESH::COLOR, pG->getOffset());
-        greenBoxOffset_ = pG->getOffset();
-        // BLUE
-        defMatInfo.color = COLOR_BLUE;
-        auto& pB = handler().meshHandler().makeColorMesh<Mesh::Box::Color>(&boxInfo, &defMatInfo, &instObj3dInfo);
-        instObj3dInfo.pSharedData = nullptr;  // Make sure we don't share the instance data!
-        pB->setActiveCount(0);
-        handler().sceneHandler().getActiveScene()->addMeshIndex(MESH::COLOR, pB->getOffset());
-        blueBoxOffset_ = pB->getOffset();
+            Material::Default::CreateInfo defMatInfo = {};
+            defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR | Material::FLAG::MODE_FLAT_SHADE;
+
+            // WHITE
+            defMatInfo.color = COLOR_WHITE;
+            auto& pW = handler().meshHandler().makeColorMesh<Mesh::Box::Color>(&boxInfo, &defMatInfo, &instObj3dInfo);
+            instObj3dInfo.pSharedData = nullptr;  // Make sure we don't share the instance data!
+            pW->setActiveCount(0);
+            handler().sceneHandler().getActiveScene()->addMeshIndex(MESH::COLOR, pW->getOffset());
+            whiteBoxOffset_ = pW->getOffset();
+            // RED
+            defMatInfo.color = COLOR_RED;
+            auto& pR = handler().meshHandler().makeColorMesh<Mesh::Box::Color>(&boxInfo, &defMatInfo, &instObj3dInfo);
+            instObj3dInfo.pSharedData = nullptr;  // Make sure we don't share the instance data!
+            pR->setActiveCount(0);
+            handler().sceneHandler().getActiveScene()->addMeshIndex(MESH::COLOR, pR->getOffset());
+            redBoxOffset_ = pR->getOffset();
+            // GREEN
+            defMatInfo.color = COLOR_GREEN;
+            auto& pG = handler().meshHandler().makeColorMesh<Mesh::Box::Color>(&boxInfo, &defMatInfo, &instObj3dInfo);
+            instObj3dInfo.pSharedData = nullptr;  // Make sure we don't share the instance data!
+            pG->setActiveCount(0);
+            handler().sceneHandler().getActiveScene()->addMeshIndex(MESH::COLOR, pG->getOffset());
+            greenBoxOffset_ = pG->getOffset();
+            // BLUE
+            defMatInfo.color = COLOR_BLUE;
+            auto& pB = handler().meshHandler().makeColorMesh<Mesh::Box::Color>(&boxInfo, &defMatInfo, &instObj3dInfo);
+            instObj3dInfo.pSharedData = nullptr;  // Make sure we don't share the instance data!
+            pB->setActiveCount(0);
+            handler().sceneHandler().getActiveScene()->addMeshIndex(MESH::COLOR, pB->getOffset());
+            blueBoxOffset_ = pB->getOffset();
+        }
+
+        if (useDebugTexture_) {
+            // Create a material for debugging texture coordinates
+            Material::Default::CreateInfo matInfo = {};
+            matInfo = {};
+            matInfo.pTexture = handler().textureHandler().getTexture(Texture::CIRCLES_ID);
+            pMaterials_[4] = handler().materialHandler().makeMaterial(&matInfo).get();
+            // Add the debug texture info settings
+            settings_.dbgTexScale = 20.0f;
+        }
     }
 }
 
 void Cdlod::Renderer::Base::update(const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                                    const vk::CommandBuffer& cmd) {
-    //
+    if (pPipelineBindData->type == PIPELINE{GRAPHICS::CDLOD_WF_DEFERRED}) {
+        if (!enableDebug_ || !useDebugWireframe_) return;
+    } else if (pPipelineBindData->type == PIPELINE{GRAPHICS::CDLOD_TEX_DEFERRED}) {
+        if (!enableDebug_ || !useDebugTexture_) return;
+    } else {
+        return;
+    }
+
     Camera::FrustumInfo frustumInfo;
-    if (useDebugCamera_) {
+    if (enableDebug_ && useDebugCamera_) {
         assert(handler().uniformHandler().hasDebugCamera());
         frustumInfo = handler().uniformHandler().getDebugCamera().getFrustumInfoZupLH();
     } else {
@@ -296,7 +318,7 @@ void Base::renderTerrain(const CDLODQuadTree::LODSelection& cdlodSelection,
     // V(device->SetVertexShader(m_vsTerrainSimple));
 
     // This contains all settings used to do rendering through CDLODRenderer
-    CDLODRendererBatchInfo cdlodBatchInfo;
+    CDLODRendererBatchInfo cdlodBatchInfo = {};
 
     // cdlodBatchInfo.VertexShader = &m_vsTerrainSimple;
     // cdlodBatchInfo.VSGridDimHandle = m_vsTerrainSimple.GetConstantTable()->GetConstantByName(NULL, "g_gridDim");
@@ -309,7 +331,9 @@ void Base::renderTerrain(const CDLODQuadTree::LODSelection& cdlodSelection,
     cdlodBatchInfo.renderData.cmd = cmd;
     cdlodBatchInfo.renderData.pipelineLayout = pPipelineBindData->layout;
     cdlodBatchInfo.renderData.pushConstantStages = pPipelineBindData->pushConstantStages;
-    cdlodBatchInfo.renderData.dbgCamPos = handler().uniformHandler().getDebugCamera().getPosition();
+    if (enableDebug_ && useDebugCamera_) {
+        cdlodBatchInfo.renderData.dbgCamData = glm::vec4(handler().uniformHandler().getDebugCamera().getPosition(), 1.0f);
+    }
 
     // D3DTEXTUREFILTERTYPE vertexTextureFilterType =
     //    (vaGetBilinearVertexTextureFilterSupport()) ? (D3DTEXF_LINEAR) : (D3DTEXF_POINT);
@@ -317,12 +341,12 @@ void Base::renderTerrain(const CDLODQuadTree::LODSelection& cdlodSelection,
     //////////////////////////////////////////////////////////////////////////
     // Setup global shader settings
     //
+    auto& quadTreeItem = handler().uniformHandler().cdlodQdTrMgr().getTypedItem(0);
+    quadTreeItem.dirty = true;
+    auto& quadTreeData = quadTreeItem.getData();
     // m_dlodRenderer.SetIndependentGlobalVertexShaderConsts(m_vsTerrainSimple, m_terrainQuadTree, viewProj,
     //                                                      camera->GetPosition());
-    auto& quadTreeItem = handler().uniformHandler().cdlodQdTrMgr().getTypedItem(0);
-    SetIndependentGlobalVertexShaderConsts(quadTreeItem.getData(), cdlodQuadTree_);
-    quadTreeItem.dirty = true;
-    handler().uniformHandler().update(quadTreeItem);
+    SetIndependentGlobalVertexShaderConsts(quadTreeData, cdlodQuadTree_);
     //
     // setup detail heightmap globals if any
     // if (m_settings.DetailHeightmapEnabled) {
@@ -342,6 +366,11 @@ void Base::renderTerrain(const CDLODQuadTree::LODSelection& cdlodSelection,
     //    m_vsTerrainSimple.SetFloatArray("g_detailConsts", sizeX, sizeY, m_settings.DetailHeightmapZSize,
     //                                    (float)m_settings.DetailMeshLODLevelsAffected);
     //}
+    if (useDebugTexture_) {
+        // The aspect of the texture is dealt with by the material. Material::SetDefaultTextureData() has an example of a
+        // way to deal with non-square textures if this renderer needs to implement something similar.
+        quadTreeData.data1.x = settings_.dbgTexScale;
+    }
     //
     // if (m_settings.ShadowmapEnabled) {
     //    m_psTerrainFlat.SetTexture("g_noiseTexture", m_noiseTexture, D3DTADDRESS_WRAP, D3DTADDRESS_WRAP, D3DTEXF_POINT,
@@ -378,6 +407,7 @@ void Base::renderTerrain(const CDLODQuadTree::LODSelection& cdlodSelection,
     //
     // end of global shader settings
     //////////////////////////////////////////////////////////////////////////
+    handler().uniformHandler().update(quadTreeItem);
 
     //////////////////////////////////////////////////////////////////////////
     // Connect selection to our render batch info
@@ -389,7 +419,7 @@ void Base::renderTerrain(const CDLODQuadTree::LODSelection& cdlodSelection,
 
     //////////////////////////////////////////////////////////////////////////
     // Debug view
-    if (useDebugBoxes_) {
+    if (enableDebug_ && useDebugBoxes_) {
         log("\n");
         log("*************************************************************************************\n");
         log("**     Debug View (frame count: %d)\n", handler().game().getFrameCount());
@@ -533,9 +563,15 @@ void Base::renderTerrain(const CDLODQuadTree::LODSelection& cdlodSelection,
         //}
 
         {  // CH
-            auto debugLodLevel = i % 4;
-            handler().descriptorHandler().getBindData(pPipelineBindData->type, wfDescSetBindDataMap_,
-                                                      {pMaterials_[debugLodLevel]});
+            if (pPipelineBindData->type == PIPELINE{GRAPHICS::CDLOD_WF_DEFERRED}) {
+                auto debugLodLevel = i % 4;
+                handler().descriptorHandler().getBindData(pPipelineBindData->type, wfDescSetBindDataMap_,
+                                                          {pMaterials_[debugLodLevel]});
+            } else if (pPipelineBindData->type == PIPELINE{GRAPHICS::CDLOD_TEX_DEFERRED}) {
+                handler().descriptorHandler().getBindData(pPipelineBindData->type, wfDescSetBindDataMap_, {pMaterials_[4]});
+            } else {
+                assert(false);
+            }
             assert(wfDescSetBindDataMap_.size() == 1);
             const auto& descSetBindData = wfDescSetBindDataMap_.begin()->second;
             const auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1),

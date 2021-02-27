@@ -86,7 +86,7 @@ vk::Result CDLODRenderer::Render(const CDLODRendererBatchInfo& batchInfo, CDLODR
     //}
     perDrawData.data0 = {(float)gridMesh->GetDimensions(), gridMesh->GetDimensions() * 0.5f,
                          2.0f / gridMesh->GetDimensions(), 0.0};
-    perDrawData.data3 = glm::vec4(batchInfo.renderData.dbgCamPos, 0.0f);
+    perDrawData.data3 = batchInfo.renderData.dbgCamData;
     //////////////////////////////////////////////////////////////////////////
 
     const CDLODQuadTree::SelectedNode* selectionArray = batchInfo.CDLODSelection->GetSelection();

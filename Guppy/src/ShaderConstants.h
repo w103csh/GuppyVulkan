@@ -107,6 +107,7 @@ enum class SHADER {
     OCEAN_DEFERRED_MRT_FRAG,
     // CDLOD
     CDLOD_VERT,
+    CDLOD_TEX_VERT,
     // Add new to SHADER_ALL and SHADER_LINK_MAP.
 };
 
@@ -123,6 +124,7 @@ enum class SHADER_LINK {
     PBR_MATERIAL,
     GEOMETRY_FRAG,
     PRTCL_FOUNTAIN,
+    CDLOD,
     // Add new to SHADER_LINK_ALL and SHADER_LINK_MAP.
 };
 

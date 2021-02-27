@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -70,6 +70,12 @@ const CreateInfo FABRIC_BROWN_CREATE_INFO = {
 const CreateInfo BRIGHT_MOON_CREATE_INFO = {
     std::string(BRIGHT_MOON_ID),
     {Sampler::BRIGHT_MOON_CREATE_INFO},
+};
+
+// CIRCLES
+const CreateInfo CIRCLES_CREATE_INFO = {
+    std::string(CIRCLES_ID),
+    {Sampler::CIRCLES_CREATE_INFO},
 };
 
 // MEDIEVAL HOUSE

@@ -16,8 +16,14 @@
 
 // SHADER
 namespace Shader {
+namespace Link {
+namespace Cdlod {
+extern const CreateInfo CREATE_INFO;
+}  // namespace Cdlod
+}  // namespace Link
 namespace Cdlod {
 extern const CreateInfo VERT_CREATE_INFO;
+extern const CreateInfo VERT_TEX_CREATE_INFO;
 }  // namespace Cdlod
 }  // namespace Shader
 
@@ -51,7 +57,9 @@ extern const CreateInfo CDLOD_DEFAULT_CREATE_INFO;
 namespace Pipeline {
 class Handler;
 namespace Cdlod {
-// MRT (COLOR WIREFRAME)
+
+static void GetCdlodInputAssemblyInfoResource(Pipeline::CreateInfoResources& createInfoRes);
+
 class Wireframe : public Deferred::MRTColor {
    public:
     Wireframe(Handler& handler);
@@ -60,6 +68,16 @@ class Wireframe : public Deferred::MRTColor {
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
     void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
 };
+
+class Texture : public Deferred::MRTTexture {
+   public:
+    Texture(Handler& handler);
+
+   private:
+    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
+    void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
+};
+
 }  // namespace Cdlod
 }  // namespace Pipeline
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -49,6 +49,7 @@ void Texture::Handler::init() {
         &Texture::STAR_CREATE_INFO,
         &Texture::FABRIC_BROWN_CREATE_INFO,
         &Texture::BRIGHT_MOON_CREATE_INFO,
+        &Texture::CIRCLES_CREATE_INFO,
         &Texture::MEDIEVAL_HOUSE_CREATE_INFO,
         &Texture::WOOD_CREATE_INFO,
         &Texture::MYBRICK_CREATE_INFO,

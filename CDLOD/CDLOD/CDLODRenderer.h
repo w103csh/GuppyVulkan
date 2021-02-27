@@ -49,7 +49,7 @@ struct CDLODRendererBatchInfo {
         vk::CommandBuffer cmd;
         vk::PipelineLayout pipelineLayout;
         vk::ShaderStageFlags pushConstantStages;
-        glm::vec3 dbgCamPos;
+        glm::vec4 dbgCamData;  // .x,.y,.z world position, .w use camera
     } renderData;
 
     // D3DXHANDLE VSGridDimHandle;
@@ -63,7 +63,7 @@ struct CDLODRendererBatchInfo {
                           //                  .w ((aabb.minZ+aabb.maxZ)/2)
         glm::vec4 data2;  // quadOffset:      .x (aabb.minX), .y (aabb.minY)
                           // quadScale:       .z (aabb.sizeX), .w (aabb.sizeY)
-        glm::vec4 data3;  // dbg camera:      .x (wpos.x), .y (wpos.y), .z (wpos.z)
+        glm::vec4 data3;  // dbg camera:      .x (wpos.x), .y (wpos.y), .z (wpos.z), .w (use camera)
     };
 
     // D3DXHANDLE VSUseDetailMapHandle;
@@ -99,6 +99,7 @@ class CDLODRenderer {
         // glm::vec2 quadWorldMax;  // .xy max used to clamp triangles outside of world range
         // glm::vec2 samplerWorldToTextureScale;
         glm::vec4 data0;
+        glm::vec4 data1;  // .x (dbgTexScale)
     };
 
    public:

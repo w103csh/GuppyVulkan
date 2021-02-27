@@ -371,7 +371,20 @@ void Scene::Handler::init() {
 
         // BOX
         if (!suppress || false) {
-            if (true) {
+            if (false) {
+                meshInfo = {};
+                meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_WF_COLOR;
+                instObj3dInfo = {};
+                instObj3dInfo.data.push_back({helpers::affine(glm::vec3{20.0f}, glm::vec3{-10.0f, 10.0f, -10.0f})});
+                instObj3dInfo.data.push_back({helpers::affine(glm::vec3{14.0f}, glm::vec3{-7.0f, 7.0f, -7.0f})});
+                defMatInfo = {};
+                defMatInfo.flags = Material::FLAG::PER_MATERIAL_COLOR;
+                defMatInfo.color = {0.0f, 0.0f, 1.0f};
+                auto& boxColor = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &instObj3dInfo);
+                auto offset = boxColor->getOffset();
+                pScene->addMeshIndex(MESH::COLOR, offset);
+            }
+            if (false) {
                 meshInfo = {};
                 meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
                 instObj3dInfo = {};
@@ -1074,6 +1087,7 @@ void Scene::Handler::recordRenderer(const PASS passType, const std::shared_ptr<P
         auto graphicsType = std::visit(Pipeline::GetGraphics{}, pPipelineBindData->type);
         switch (graphicsType) {
             case GRAPHICS::CDLOD_WF_DEFERRED:
+            case GRAPHICS::CDLOD_TEX_DEFERRED:
                 cdlodDbgRenderer_.update(pPipelineBindData, cmd);
                 break;
             default:

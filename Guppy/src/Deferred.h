@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -126,19 +126,12 @@ class MRTTexture : public Graphics {
    public:
     MRTTexture(Handler& handler);
 
+   protected:
+    MRTTexture(Handler& handler, const CreateInfo* pCreateInfo);
+
    private:
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
-
-    // protected:
-    // MRTTexture(Handler& handler, const CreateInfo& pCreateInfo);
 };
-
-//// MRT (TEXTURE WIREFRAME)
-// class MRTTextureWireframe : public MRTTexture {
-//   public:
-//    MRTTextureWireframe(Handler& handler);
-//    void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
-//};
 
 // MRT (COLOR)
 class MRTColor : public Graphics {

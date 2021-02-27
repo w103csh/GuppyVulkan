@@ -97,6 +97,9 @@ class Base : public Handlee<Scene::Handler>, public CDLODRenderer {
         // (in average) for all distances.
         // Values above 2.0 will result in more triangles on more distant areas, and vice versa.
         float LODLevelDistanceRatio;
+
+        // DEBUG
+        float dbgTexScale;  // Scale of texture (1,1) to world space
     };
 
     Base(Scene::Handler& handler);
@@ -129,10 +132,17 @@ class Base : public Handlee<Scene::Handler>, public CDLODRenderer {
     void debugResetBoxes();
     void debugUpdateBoxes();
     void debugAddBox(const int lodLevel, const AABB& aabb);
+    bool enableDebug_;
     bool useDebugCamera_;
     bool useDebugBoxes_;
     bool useDebugWireframe_;
-    std::array<Descriptor::Base*, 4> pMaterials_;
+    bool useDebugTexture_;
+    // [0]: white
+    // [1]: red
+    // [2]: green
+    // [3]: blue
+    // [4]: texture
+    std::array<Descriptor::Base*, 5> pMaterials_;
     Descriptor::Set::bindDataMap wfDescSetBindDataMap_;
     DebugHeightmap dbgHeighmap_;
     Mesh::index whiteBoxOffset_;

@@ -31,7 +31,10 @@ layout(location=0) in vec3 inPosition;
 // OUT
 layout(location=0) out vec3 outPosition;    // (world space)
 layout(location=1) out vec3 outNormal;      // (world space)
-layout(location=2) out vec4 outColor;
+layout(location=2) out vec2 outTexCoord;
+layout(location=3) out vec3 outTangent;     // (world space)
+layout(location=4) out vec3 outBinormal;    // (world space)
+layout(location=5) out flat uint outFlags;
 
 void main()
 {
@@ -49,4 +52,9 @@ void main()
     gl_Position = camera.viewProjection * vec4(outPosition, 1.0);
     // Normal
     outNormal = vec3(0.0, 1.0, 0.0);
+    // Texture coordinate
+    // outTexCoord = globalUV;
+    outTexCoord = detailUV;
+    // Flags
+    outFlags = 0x00u;
 }

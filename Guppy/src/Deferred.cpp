@@ -505,18 +505,11 @@ const Pipeline::CreateInfo MRT_TEX_CREATE_INFO = {
     },
 };
 MRTTexture::MRTTexture(Pipeline::Handler& handler) : Graphics(handler, &MRT_TEX_CREATE_INFO) {}
+MRTTexture::MRTTexture(Pipeline::Handler& handler, const CreateInfo* pCreateInfo) : Graphics(handler, pCreateInfo) {}
 
 void MRTTexture::getBlendInfoResources(CreateInfoResources& createInfoRes) {
     GetBlendInfoResources(createInfoRes, true);  //
 }
-
-//// MRT (TEXTURE WIREFRAME)
-// MRTTextureWireframe::MRTTextureWireframe(Handler& handler) : MRTTexture(handler) {}
-// void MRTTextureWireframe::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
-//    MRTTexture::getRasterizationStateInfoResources(createInfoRes);
-//    createInfoRes.rasterizationStateInfo.polygonMode = vk::PolygonMode::eLine;
-//    createInfoRes.rasterizationStateInfo.cullMode = vk::CullModeFlagBits::eNone;
-//}
 
 // MRT (COLOR)
 const Pipeline::CreateInfo MRT_COLOR_CREATE_INFO = {

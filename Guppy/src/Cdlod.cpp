@@ -12,12 +12,28 @@
 
 // SHADER
 namespace Shader {
+namespace Link {
+namespace Cdlod {
+const CreateInfo CREATE_INFO = {
+    SHADER_LINK::CDLOD,
+    "link.cdlod.glsl",
+};
+}  // namespace Cdlod
+}  // namespace Link
 namespace Cdlod {
 const CreateInfo VERT_CREATE_INFO = {
-    SHADER::CDLOD_VERT,  //
-    "CDLOD Vertex Shader",
+    SHADER::CDLOD_VERT,
+    "Cdlod Vertex Shader",
     "vert.cdlod.glsl",
-    vk::ShaderStageFlagBits::eVertex,
+    vk::ShaderStageFlagBits::eVertex,  //
+    {SHADER_LINK::CDLOD},
+};
+const CreateInfo VERT_TEX_CREATE_INFO = {
+    SHADER::CDLOD_TEX_VERT,
+    "Cdlod Texture Vertex Shader",
+    "vert.cdlod.texture.glsl",
+    vk::ShaderStageFlagBits::eVertex,  //
+    {SHADER_LINK::CDLOD},
 };
 }  // namespace Cdlod
 }  // namespace Shader
@@ -53,23 +69,7 @@ const CreateInfo CDLOD_DEFAULT_CREATE_INFO = {
 namespace Pipeline {
 namespace Cdlod {
 
-const Pipeline::CreateInfo WF_CREATE_INFO = {
-    GRAPHICS::CDLOD_WF_DEFERRED,
-    "CDLOD Deferred Wireframe Pipeline",
-    {
-        SHADER::CDLOD_VERT,
-        SHADER::DEFERRED_MRT_COLOR_FRAG,
-    },
-    {
-        {DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
-        {DESCRIPTOR_SET::CDLOD_DEFAULT, (vk::ShaderStageFlagBits::eVertex)},
-    },
-    {},
-    {PUSH_CONSTANT::CDLOD},
-};
-Wireframe::Wireframe(Handler& handler) : MRTColor(handler, &WF_CREATE_INFO) {}
-
-void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+void GetCdlodInputAssemblyInfoResource(Pipeline::CreateInfoResources& createInfoRes) {
     {  // description
         const auto BINDING = static_cast<uint32_t>(createInfoRes.bindDescs.size());
         createInfoRes.bindDescs.push_back({});
@@ -98,10 +98,52 @@ void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes
     createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eTriangleList;
 }
 
+const Pipeline::CreateInfo WF_CREATE_INFO = {
+    GRAPHICS::CDLOD_WF_DEFERRED,
+    "Cdlod Deferred Wireframe Pipeline",
+    {
+        SHADER::CDLOD_VERT,
+        SHADER::DEFERRED_MRT_COLOR_FRAG,
+    },
+    {
+        {DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::CDLOD_DEFAULT, (vk::ShaderStageFlagBits::eVertex)},
+    },
+    {},
+    {PUSH_CONSTANT::CDLOD},
+};
+Wireframe::Wireframe(Handler& handler) : MRTColor(handler, &WF_CREATE_INFO) {}
+void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    GetCdlodInputAssemblyInfoResource(createInfoRes);
+}
 void Wireframe::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     MRTColor::getRasterizationStateInfoResources(createInfoRes);
     createInfoRes.rasterizationStateInfo.polygonMode = vk::PolygonMode::eLine;
     createInfoRes.rasterizationStateInfo.cullMode = vk::CullModeFlagBits::eNone;
+}
+
+const Pipeline::CreateInfo TEX_CREATE_INFO = {
+    GRAPHICS::CDLOD_TEX_DEFERRED,
+    "Cdlod Deferred Texture Pipeline",
+    {
+        SHADER::CDLOD_TEX_VERT,
+        SHADER::DEFERRED_MRT_TEX_FRAG,
+    },
+    {
+        {DESCRIPTOR_SET::UNIFORM_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::SAMPLER_DEFAULT, vk::ShaderStageFlagBits::eFragment},
+        {DESCRIPTOR_SET::CDLOD_DEFAULT, (vk::ShaderStageFlagBits::eVertex)},
+    },
+    {},
+    {PUSH_CONSTANT::CDLOD},
+};
+Texture::Texture(Handler& handler) : MRTTexture(handler, &TEX_CREATE_INFO) {}
+void Texture::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    GetCdlodInputAssemblyInfoResource(createInfoRes);
+}
+void Texture::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+    MRTTexture::getRasterizationStateInfoResources(createInfoRes);
+    createInfoRes.rasterizationStateInfo.frontFace = vk::FrontFace::eClockwise;
 }
 
 }  // namespace Cdlod

@@ -366,6 +366,7 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     {SHADER::OCEAN_DEFERRED_MRT_FRAG, Shader::Ocean::DEFERRED_MRT_FRAG_CREATE_INFO},
     // CDLOD
     {SHADER::CDLOD_VERT, Shader::Cdlod::VERT_CREATE_INFO},
+    {SHADER::CDLOD_TEX_VERT, Shader::Cdlod::VERT_TEX_CREATE_INFO},
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {
@@ -384,6 +385,8 @@ const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {
     {SHADER_LINK::GEOMETRY_FRAG, Shader::Link::Geometry::WIREFRAME_CREATE_INFO},
     // PARTICLE
     {SHADER_LINK::PRTCL_FOUNTAIN, Shader::Link::Particle::FOUNTAIN_CREATE_INFO},
+    // CDLOD
+    {SHADER_LINK::CDLOD, Shader::Link::Cdlod::CREATE_INFO},
 };
 
 const std::map<SHADER, std::set<SHADER_LINK>> LINK_MAP = {
@@ -485,6 +488,14 @@ const std::map<SHADER, std::set<SHADER_LINK>> LINK_MAP = {
     {SHADER::PRTCL_ATTR_VERT,
      {
          SHADER_LINK::DEFAULT_MATERIAL,
+     }},
+    {SHADER::CDLOD_VERT,
+     {
+         SHADER_LINK::CDLOD,
+     }},
+    {SHADER::CDLOD_TEX_VERT,
+     {
+         SHADER_LINK::CDLOD,
      }},
 };
 

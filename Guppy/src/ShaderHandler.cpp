@@ -48,6 +48,12 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
     auto& stageInfo = keyValue.second.second;
     if (isInit && stageInfo.module) return false;
 
+    const auto& createInfo = ALL.at(std::get<0>(keyValue.first));
+    if (!isInit) {
+        shell().log(Shell::LogPriority::LOG_INFO,
+                    ("Recompiling shader: \"" + std::string(createInfo.fileName) + "\"").c_str());
+    }
+
     // if (std::get<0>(keyValue.first) == SHADER::CDLOD_VERT)  //
     //    auto pause = 1;
     auto stringTexts = loadText(keyValue);
@@ -56,7 +62,6 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
     std::vector<const char*> texts;
     for (auto& s : stringTexts) texts.push_back(s.c_str());
 
-    const auto& createInfo = ALL.at(std::get<0>(keyValue.first));
     std::vector<unsigned int> spv;
     // if (std::get<0>(keyValue.first) == SHADER::CDLOD_VERT)  //
     //    auto pause = 1;
@@ -65,9 +70,8 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
 
     // Return or assert on fail
     if (!success) {
+        shell().log(Shell::LogPriority::LOG_ERR, ("Error compiling: " + std::string(createInfo.fileName)).c_str());
         if (doAssert) {
-            if (!success)
-                shell().log(Shell::LogPriority::LOG_ERR, ("Error compiling: " + std::string(createInfo.fileName)).c_str());
             assert(success);
         } else {
             return false;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -141,6 +141,7 @@ extern const CreateInfo SMOKE_CREATE_INFO;
 extern const CreateInfo STAR_CREATE_INFO;
 extern const CreateInfo FABRIC_BROWN_CREATE_INFO;
 extern const CreateInfo BRIGHT_MOON_CREATE_INFO;
+extern const CreateInfo CIRCLES_CREATE_INFO;
 extern const CreateInfo MEDIEVAL_HOUSE_CREATE_INFO;
 extern const CreateInfo WOOD_CREATE_INFO;
 extern const CreateInfo MYBRICK_COLOR_CREATE_INFO;

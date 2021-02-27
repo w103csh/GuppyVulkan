@@ -239,7 +239,7 @@ bool CDLODQuadTree::Create(const CreateDesc &desc) {
     assert(nodeCounter == totalNodeCount);
 
     int sizeInMemory = totalNodeCount * sizeof(Node);
-    printf("CDLODQuadTree created, size in memory: ~%.2fKb", sizeInMemory / 1024.0f);
+    printf("CDLODQuadTree created, size in memory: ~%.2fKb\n", sizeInMemory / 1024.0f);
     //////////////////////////////////////////////////////////////////////////
 
     return true;

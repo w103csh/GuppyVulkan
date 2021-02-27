@@ -336,6 +336,7 @@ enum class GRAPHICS : uint32_t {
     OCEAN_SURFACE_DEFERRED,
     // CDLOD
     CDLOD_WF_DEFERRED,
+    CDLOD_TEX_DEFERRED,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in PipelineConstants.cpp
