@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -11,7 +11,7 @@ namespace Uniform {
 
 const offsets DEFAULT_SINGLE_SET = {0};
 const offsets DEFAULT_ALL_SET = {UINT32_MAX};
-const std::set<PASS> PASS_ALL_SET = {PASS::ALL_ENUM};
+const std::set<PASS> PASS_ALL_SET = {PASS{RENDER_PASS::ALL_ENUM}};
 
 // DEFAULT MAP
 const std::map<DESCRIPTOR, offsets> DEFAULT_OFFSETS_MAP = {
@@ -42,7 +42,7 @@ const std::map<DESCRIPTOR, offsets> DEFAULT_OFFSETS_MAP = {
     {UNIFORM::OBJ3D, DEFAULT_SINGLE_SET},
     // STORAGE
     {STORAGE_BUFFER::POST_PROCESS, DEFAULT_SINGLE_SET},
-    //
+    // CDLOD
     {UNIFORM::CDLOD_QUAD_TREE, DEFAULT_SINGLE_SET},
 };
 

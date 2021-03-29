@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -8,44 +8,47 @@
 
 #include <memory>
 #include <set>
+#include <string>
 #include <utility>
 #include <vector>
 
+#include "Compute.h"
 #include "ConstantsAll.h"
-#include "Game.h"
 #include "Mesh.h"
+#include "PassHandler.h"
 #include "RenderPass.h"
 
 namespace RenderPass {
 
-class Handler : public Game::Handler {
-    friend RenderPass::Base;
+class Manager : public Pass::Manager {
+    friend Base;
 
    public:
-    Handler(Game* pGame);
+    Manager(Pass::Handler& handler);
 
     Uniform::offsetsMap makeUniformOffsetsMap();
 
     constexpr const auto& getPasses() { return pPasses_; }
     // NOTE: this is not in order!!!
-    void getActivePassTypes(std::set<PASS>& types, const PIPELINE& pipelineTypeIn = GRAPHICS::ALL_ENUM);
+    void getActivePassTypes(const PIPELINE& pipelineTypeIn, std::set<PASS>& types);
 
     void init() override;
     void frame() override;
     void destroy() override;
+    void reset() override;
 
     void acquireBackBuffer();
-    void recordPasses();
     void updateFrameIndex();
 
     inline const auto& getPass(const index& offset) { return pPasses_.at(offset); }
-    inline const auto& getPass(const PASS& type) {
+    inline const auto& getPass(const RENDER_PASS& type) {
         for (const auto& pPass : pPasses_)
             if (pPass->TYPE == type) return pPass;
         assert(false);
         exit(EXIT_FAILURE);
     }
-    inline uint8_t getFrameIndex() const { return frameIndex_; }
+    constexpr auto getFrameIndex() const { return frameIndex_; }
+    inline const auto& getFrameFence() const { return frameFences_[frameIndex_]; }
 
     void attachSwapchain();
     void detachSwapchain();
@@ -55,20 +58,17 @@ class Handler : public Game::Handler {
     inline const auto* getSwapchainViews() const { return swpchnRes_.views.data(); }
 
     // TARGET
-    bool isClearTargetPass(const std::string& targetId, const PASS type);
-    bool isFinalTargetPass(const std::string& targetId, const PASS type);
+    bool isClearTargetPass(const std::string& targetId, const RENDER_PASS type);
+    bool isFinalTargetPass(const std::string& targetId, const RENDER_PASS type);
 
     // PIPELINE
     void addPipelinePassPairs(pipelinePassSet& set);
-    void updateBindData(const pipelinePassSet& set);
 
     inline const auto& getFrameFence(const uint8_t frameIndex) const { return frameFences_[frameIndex]; }
 
     const std::unique_ptr<Mesh::Texture>& getScreenQuad();
 
    private:
-    void reset() override;
-
     uint8_t frameIndex_;
 
     // COMMANDS
@@ -89,8 +89,8 @@ class Handler : public Game::Handler {
     SwapchainResources swpchnRes_;
 
     // CLEAR
-    std::map<std::string, PASS> clearTargetMap_;
-    std::map<std::string, PASS> finalTargetMap_;
+    std::map<std::string, RENDER_PASS> clearTargetMap_;
+    std::map<std::string, RENDER_PASS> finalTargetMap_;
 
     // BARRIER
     BarrierResource barrierResource_;
@@ -100,8 +100,8 @@ class Handler : public Game::Handler {
     SubmitResources submitResources_;
     std::vector<vk::SubmitInfo> submitInfos_;
 
-    std::vector<std::unique_ptr<RenderPass::Base>> pPasses_;
-    std::set<std::pair<PASS, index>> activeTypeOffsetPairs_;
+    std::vector<std::unique_ptr<Base>> pPasses_;
+    std::set<std::pair<RENDER_PASS, index>> activeTypeOffsetPairs_;
     std::vector<index> mainLoopOffsets_;
 
     Mesh::index screenQuadOffset_;

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -11,15 +11,18 @@
 
 #include "RenderPass.h"
 
+// clang-format off
+namespace Pass { class Handler; }
+// clang-format on
+
 namespace RenderPass {
 struct CreateInfo;
-class Handler;
 namespace CubeMap {
 
 // BASE
 class Base : public RenderPass::Base {
    protected:
-    Base(Handler& handler, const index&& offset, const CreateInfo* pCreateInfo);
+    Base(Pass::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo);
 
    private:
     void createAttachments() override;
@@ -29,7 +32,7 @@ class Base : public RenderPass::Base {
 // SKYBOX NIGHT
 class SkyboxNight : public Base {
    public:
-    SkyboxNight(Handler& handler, const index&& offset);
+    SkyboxNight(Pass::Handler& handler, const index&& offset);
     void record(const uint8_t frameIndex, const vk::CommandBuffer& priCmd);
 };
 

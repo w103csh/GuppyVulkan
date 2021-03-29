@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -124,8 +124,8 @@ class Base : public NonCopyable, public Handlee<Handler> {
 
     const std::string NAME;
     const glm::uvec3 LOCAL_SIZE;
-    const std::vector<COMPUTE> COMPUTE_PIPELINE_TYPES;
-    const std::vector<GRAPHICS> GRAPHICS_PIPELINE_TYPES;
+    const std::vector<COMPUTE> COMPUTE_TYPES;
+    const std::vector<GRAPHICS> GRAPHICS_TYPES;
     const GRAPHICS SHADOW_PIPELINE_TYPE;
 
     inline void toggle() {
@@ -150,7 +150,7 @@ class Base : public NonCopyable, public Handlee<Handler> {
     constexpr const auto& getPaused() const { return paused_; }
     constexpr const auto& getDraw() const { return draw_; }
 
-    const std::vector<Descriptor::Base*> getSDynamicDataItems(const PIPELINE pipelineType) const;
+    const std::vector<Descriptor::Base*> getDynamicDataItems(const PIPELINE pipelineType) const;
 
     // TODO: These are directly copied from Mesh::Base. Changed getDescriptorSetBindData slightly.
     virtual void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,

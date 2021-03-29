@@ -5,25 +5,29 @@
 
 #include "RenderPassDeferred.h"
 
+#include "Ocean.h"  // Included for macro OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+#include "ComputeWorkManager.h"
+#endif
 #include "ConstantsAll.h"
 #include "Deferred.h"
 #include "RenderPassCubeMap.h"
+#include "RenderPassManager.h"
 #include "RenderPassShadow.h"
 // HANDLERS
 #include "ParticleHandler.h"
 #include "PipelineHandler.h"
 #include "DescriptorHandler.h"
-#include "RenderPassHandler.h"
+#include "PassHandler.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
 
 namespace RenderPass {
 namespace Deferred {
 
-// DEFERRED
-
+// clang-format off
 const CreateInfo DEFERRED_CREATE_INFO = {
-    PASS::DEFERRED,
+    RENDER_PASS::DEFERRED,
     "Deferred Render Pass",
     {
         GRAPHICS::DEFERRED_MRT_PT,
@@ -70,8 +74,10 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         COMPUTE::PRTCL_CLOTH_NORM,
         COMPUTE::HFF_HGHT,
         COMPUTE::HFF_NORM,
+#if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
         COMPUTE::OCEAN_DISP,
         COMPUTE::OCEAN_FFT,
+#endif
     },
     (FLAG::SWAPCHAIN | FLAG::DEPTH | /*FLAG::DEPTH_INPUT_ATTACHMENT |*/
      (::Deferred::DO_MSAA ? FLAG::MULTISAMPLE : FLAG::NONE)),
@@ -86,18 +92,24 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         // std::string(Texture::Deferred::SPECULAR_2D_ID),
     },
     {
-        PASS::SHADOW,
-        PASS::SKYBOX_NIGHT,
+        RENDER_PASS::SHADOW,
+        RENDER_PASS::SKYBOX_NIGHT,
     },
 };
+// clang-format on
 
-Base::Base(RenderPass::Handler& handler, const index&& offset)
+Base::Base(Pass::Handler& handler, const index&& offset)
     : RenderPass::Base{handler, std::forward<const index>(offset), &DEFERRED_CREATE_INFO},
       inputAttachmentOffset_(0),
       inputAttachmentCount_(0),
       combinePassIndex_(0),
-      doSSAO_(false) {
-    status_ = STATUS::PENDING_MESH | STATUS::PENDING_PIPELINE;
+      doSSAO_(false),
+      pOceanSignalSemaphores_(nullptr) {
+    status_ = (STATUS::PENDING_MESH |
+#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+               STATUS::PENDING_POINTER |
+#endif
+               STATUS::PENDING_PIPELINE);
 }
 
 // TODO: should something like this be on the base class????
@@ -109,7 +121,7 @@ void Base::init() {
         if (passType == TYPE) {
             RenderPass::Base::init();
         } else {
-            const auto& pPass = handler().getPass(offset);
+            const auto& pPass = handler().renderPassMgr().getPass(offset);
             if (!pPass->isIntialized()) const_cast<RenderPass::Base*>(pPass.get())->init();
         }
     }
@@ -135,15 +147,15 @@ void Base::record(const uint8_t frameIndex) {
 
         // SKYBOX
         if (true) {
-            const auto& pPass = handler().getPass(dependentTypeOffsetPairs_[1].second);
-            assert(pPass->TYPE == PASS::SKYBOX_NIGHT);
+            const auto& pPass = handler().renderPassMgr().getPass(dependentTypeOffsetPairs_[1].second);
+            assert(pPass->TYPE == RENDER_PASS::SKYBOX_NIGHT);
             static_cast<RenderPass::CubeMap::SkyboxNight*>(pPass.get())->record(frameIndex, priCmd);
         }
 
         // SHADOW
         if (true) {
-            const auto& pPass = handler().getPass(dependentTypeOffsetPairs_[0].second);
-            assert(pPass->TYPE == PASS::SHADOW);
+            const auto& pPass = handler().renderPassMgr().getPass(dependentTypeOffsetPairs_[0].second);
+            assert(pPass->TYPE == RENDER_PASS::SHADOW);
             std::vector<PIPELINE> pipelineTypes;
             pipelineTypes.reserve(pipelineBindDataList_.size());
             for (const auto& [pipelineType, value] : pipelineBindDataList_.getKeyOffsetMap())
@@ -212,9 +224,9 @@ void Base::record(const uint8_t frameIndex) {
                     } break;
                     case GRAPHICS::DEFERRED_COMBINE: {
                         // TODO: this definitely only needs to be recorded once per swapchain creation!!!
-                        handler().getScreenQuad()->draw(TYPE, pipelineBindDataList_.getValue(pPipelineBindData->type),
-                                                        getDescSetBindDataMap(pPipelineBindData->type).begin()->second,
-                                                        priCmd, frameIndex);
+                        handler().renderPassMgr().getScreenQuad()->draw(
+                            TYPE, pipelineBindDataList_.getValue(pPipelineBindData->type),
+                            getDescSetBindDataMap(pPipelineBindData->type).begin()->second, priCmd, frameIndex);
                     } break;
                 }
             }
@@ -226,11 +238,35 @@ void Base::record(const uint8_t frameIndex) {
 }
 
 void Base::update(const std::vector<Descriptor::Base*> pDynamicItems) {
+#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+    if (status_ & STATUS::PENDING_POINTER) {
+        pOceanSignalSemaphores_ = &handler().compWorkMgr().getWork(COMPUTE_WORK::OCEAN)->resources.semaphores;
+        status_ ^= STATUS::PENDING_POINTER;
+    }
+#endif
     // Check the mesh status.
-    if (handler().getScreenQuad()->getStatus() == STATUS::READY) {
+    if (handler().renderPassMgr().getScreenQuad()->getStatus() == STATUS::READY) {
         status_ ^= STATUS::PENDING_MESH;
         RenderPass::Base::update(pDynamicItems);
     }
+}
+
+void Base::updateSubmitResource(SubmitResource& resource, const uint8_t frameIndex) const {
+#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+    // TODO: There should be a better way to check if there is a semaphore that needs to be waited on. This is going to
+    // break as soon as the ocean surface needs to be paused. I'll cross that bridge when I get there...
+    if (handler().game().getFrameCount() > 0) {
+        // Wait for previous frame's compute work to finish before using the image copy.
+        const auto semIndex = ((frameIndex + handler().shell().context().imageCount - 1) % 3);
+        resource.waitSemaphores[resource.waitSemaphoreCount] = (*pOceanSignalSemaphores_)[semIndex];
+        resource.waitDstStageMasks[resource.waitSemaphoreCount] = vk::PipelineStageFlagBits::eVertexShader;
+        resource.waitSemaphoreCount++;
+        // Signal to the compute work that this frame no longer needs the image copy.
+        resource.signalSemaphores[resource.signalSemaphoreCount] = data.semaphores[frameIndex];
+        resource.signalSemaphoreCount++;
+    }
+#endif
+    ::RenderPass::Base::updateSubmitResource(resource, frameIndex);
 }
 
 void Base::createAttachments() {
@@ -438,9 +474,15 @@ void Base::createDependencies() {
                 vk::DependencyFlagBits::eByRegion,
             });
         }
-        if (pipelineType == PIPELINE{GRAPHICS::HFF_CLMN_DEFERRED} || pipelineType == PIPELINE{GRAPHICS::HFF_WF_DEFERRED} ||
+        if (pipelineType == PIPELINE{GRAPHICS::HFF_CLMN_DEFERRED} ||  //
+            pipelineType == PIPELINE{GRAPHICS::HFF_WF_DEFERRED} ||
+#if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
             pipelineType == PIPELINE{GRAPHICS::OCEAN_WF_DEFERRED} ||
-            pipelineType == PIPELINE{GRAPHICS::OCEAN_SURFACE_DEFERRED}) {
+            pipelineType == PIPELINE { GRAPHICS::OCEAN_SURFACE_DEFERRED }
+#else
+            false
+#endif
+        ) {
             // Dispatch writes into a storage buffer. Draw consumes that buffer as a shader object.
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,
@@ -560,7 +602,7 @@ void Base::createFramebuffers() {
         }
 
         // SWAPCHAIN
-        attachmentViews.push_back(handler().getSwapchainViews()[frameIndex]);
+        attachmentViews.push_back(handler().renderPassMgr().getSwapchainViews()[frameIndex]);
         assert(attachmentViews.back());
 
         // POSITION

@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -36,7 +36,7 @@ class Handler : public Game::Handler {
     void reset() override;
 
     bool make(infoMapKeyValue &keyValue, bool doAssert, bool isInit);
-    std::vector<std::string> loadText(const infoMapKeyValue &keyValue);
+    std::vector<std::string> loadText(const infoMapKeyValue &keyValue, const std::map<std::string, std::string> &replaceMap);
     void textReplaceDescSet(const Descriptor::Set::textReplaceTuples &replaceTuples, std::string &text) const;
     void textReplacePipeline(const PIPELINE pipelineType, std::string &text) const;
 

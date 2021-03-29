@@ -5,6 +5,8 @@
 
 #include "PipelineHandler.h"
 
+#include <variant>
+
 #include "Cdlod.h"
 #include "Cloth.h"
 #include "ConstantsAll.h"
@@ -15,19 +17,20 @@
 #include "Material.h"
 #include "Mesh.h"
 #include "Ocean.h"
+#include "OceanComputeWork.h"
 #include "Parallax.h"
 #include "Particle.h"
 #include "PBR.h"
 #include "Pipeline.h"
+#include "RenderPassManager.h"
 #include "ScreenSpace.h"
 #include "Shadow.h"
 #include "Shell.h"
 #include "Tessellation.h"
 // HANDLERS
-#include "ComputeHandler.h"
 #include "DescriptorHandler.h"
 #include "TextureHandler.h"
-#include "RenderPassHandler.h"
+#include "PassHandler.h"
 #include "SceneHandler.h"
 #include "ShaderHandler.h"
 
@@ -218,7 +221,7 @@ std::vector<vk::PushConstantRange> Pipeline::Handler::getPushConstantRanges(
         // clang-format off
         switch (type) {
             case PUSH_CONSTANT::DEFAULT:            range.size = sizeof(Pipeline::Default::PushConstant); break;
-            case PUSH_CONSTANT::POST_PROCESS:       range.size = sizeof(::Compute::PostProcess::PushConstant); break;
+            //case PUSH_CONSTANT::POST_PROCESS:       range.size = sizeof(::Compute::PostProcess::PushConstant); break;
             case PUSH_CONSTANT::DEFERRED:           range.size = sizeof(::Deferred::PushConstant); break;
             case PUSH_CONSTANT::PRTCL_EULER:        range.size = sizeof(::Particle::Euler::PushConstant); break;
             case PUSH_CONSTANT::HFF_COLUMN:         range.size = sizeof(HeightFieldFluid::Column::PushConstant); break;
@@ -268,26 +271,33 @@ void Pipeline::Handler::createPipelineCache(vk::PipelineCache& cache) {
 }
 
 #define PRINT_NAME_ON_CREATE false
+#if PRINT_NAME_ON_CREATE
+#include <sstream>
+#endif
 
 void Pipeline::Handler::createPipeline(const std::string name, vk::GraphicsPipelineCreateInfo& createInfo,
                                        vk::Pipeline& pipeline) {
-#if PRINT_NAME_ON_CREATE
-    shell().log(Shell::LogPriority::LOG_INFO, ("Creating pipeline: " + name).c_str());
-#endif
     auto resultValue = shell().context().dev.createGraphicsPipeline(cache_, createInfo, shell().context().pAllocator);
     assert(resultValue.result == vk::Result::eSuccess);
     pipeline = resultValue.value;
+#if PRINT_NAME_ON_CREATE
+    std::stringstream ss;
+    ss << "Creating pipeline: " << name << " 0x" << pipeline;
+    shell().log(Shell::LogPriority::LOG_INFO, ss.str().c_str());
+#endif
     // shell().context().dbg.setMarkerName(pipeline, name.c_str());
 }
 
 void Pipeline::Handler::createPipeline(const std::string name, vk::ComputePipelineCreateInfo& createInfo,
                                        vk::Pipeline& pipeline) {
-#if PRINT_NAME_ON_CREATE
-    shell().log(Shell::LogPriority::LOG_INFO, ("Creating pipeline: " + name).c_str());
-#endif
     auto resultValue = shell().context().dev.createComputePipeline(cache_, createInfo, shell().context().pAllocator);
     assert(resultValue.result == vk::Result::eSuccess);
     pipeline = resultValue.value;
+#if PRINT_NAME_ON_CREATE
+    std::stringstream ss;
+    ss << "Creating pipeline: " << name << " 0x" << pipeline;
+    shell().log(Shell::LogPriority::LOG_INFO, ss.str().c_str());
+#endif
     // shell().context().dbg.setMarkerName(pipeline, name.c_str());
 }
 
@@ -302,12 +312,8 @@ bool Pipeline::Handler::checkVertexPipelineMap(VERTEX key, PIPELINE value) const
 
 void Pipeline::Handler::initPipelines() {
     pipelinePassSet set;
-    computeHandler().addPipelinePassPairs(set);
     passHandler().addPipelinePassPairs(set);
-
     createPipelines(set);
-
-    computeHandler().updateBindData(set);
     passHandler().updateBindData(set);
 }
 
@@ -351,7 +357,8 @@ void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
             switch (pPipelineBindData->bindPoint) {
                 // GRAPHICS
                 case vk::PipelineBindPoint::eGraphics: {
-                    const auto& pPass = passHandler().getPass(it->second);
+                    assert(std::visit(Pass::IsRender{}, it->second));
+                    const auto& pPass = passHandler().renderPassMgr().getPass(std::visit(Pass::GetRender{}, it->second));
 
                     setBase(pPipelineBindData->pipeline, graphicsCreateInfo, hasBase);
 
@@ -370,7 +377,7 @@ void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
                     // Save the old pipeline for clean up if necessary
                     if (pPipelineBindData->pipeline) oldPipelines_.push_back({-1, pPipelineBindData->pipeline});
 
-                    createPipeline(pPipeline->NAME + " " + std::to_string(static_cast<uint32_t>(it->second)),
+                    createPipeline(pPipeline->NAME + " (" + std::visit(Pass::GetTypeString{}, it->second) + ")",
                                    graphicsCreateInfo, pPipelineBindData->pipeline);
 
                     setBase(pPipelineBindData->pipeline, graphicsCreateInfo, hasBase);
@@ -386,7 +393,7 @@ void Pipeline::Handler::createPipelines(const pipelinePassSet& set) {
                     // Save the old pipeline for clean up if necessary
                     if (pPipelineBindData->pipeline) oldPipelines_.push_back({-1, pPipelineBindData->pipeline});
 
-                    createPipeline(pPipeline->NAME + " " + std::to_string(static_cast<uint32_t>(it->second)),
+                    createPipeline(pPipeline->NAME + " (" + std::visit(Pass::GetTypeString{}, it->second) + ")",
                                    computeCreateInfo, pPipelineBindData->pipeline);
 
                     setBase(pPipelineBindData->pipeline, computeCreateInfo, hasBase);
@@ -473,7 +480,7 @@ void Pipeline::Handler::needsUpdate(const std::vector<SHADER> types) {
 void Pipeline::Handler::cleanup() {
     if (oldPipelines_.empty()) return;
 
-    const auto frameIndex = passHandler().getFrameIndex();
+    const auto frameIndex = passHandler().renderPassMgr().getFrameIndex();
     for (uint8_t i = 0; i < oldPipelines_.size(); i++) {
         auto& pair = oldPipelines_[i];
         if (pair.first == frameIndex) {

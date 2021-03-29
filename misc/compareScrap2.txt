@@ -1,33 +1,12 @@
-vec4 blurPass1() {
-#if _DS_SMP_SCR_BLUR_A > 0
-    float dy = 1.0 / textureSize(sampBlurA, 0).y;
-    vec3 sum = texture(sampBlurA, fragTexCoord).rgb * data.weights0_3[0];
-    {
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 1.0) * dy).rgb * data.weights0_3[1];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 1.0) * dy).rgb * data.weights0_3[1];
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 2.0) * dy).rgb * data.weights0_3[2];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 2.0) * dy).rgb * data.weights0_3[2];
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 3.0) * dy).rgb * data.weights0_3[3];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 3.0) * dy).rgb * data.weights0_3[3];
-    }
-    {
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 4.0) * dy).rgb * data.weights4_7[0];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 4.0) * dy).rgb * data.weights4_7[0];
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 5.0) * dy).rgb * data.weights4_7[1];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 5.0) * dy).rgb * data.weights4_7[1];
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 6.0) * dy).rgb * data.weights4_7[2];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 6.0) * dy).rgb * data.weights4_7[2];
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 7.0) * dy).rgb * data.weights4_7[3];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 7.0) * dy).rgb * data.weights4_7[3];
-    }
-    {
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 8.0) * dy).rgb * data.weights8_9[0];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 8.0) * dy).rgb * data.weights8_9[0];
-        sum += texture(sampBlurA, fragTexCoord + vec2(0.0, 9.0) * dy).rgb * data.weights8_9[1];
-        sum += texture(sampBlurA, fragTexCoord - vec2(0.0, 9.0) * dy).rgb * data.weights8_9[1];
-    }
-    return vec4(sum, 1.0);
-#else
-    return vec4(0.0);
-#endif
-}
+WIN32
+_WINDOWS
+_CRT_SECURE_NO_WARNINGS
+_USE_MATH_DEFINES
+API_NAME="Vulkan"
+USE_FMOD
+GUPPY_BASE_DIR="C:/Users/cloin/source/repos/GuppyVulkan"
+VK_USE_PLATFORM_WIN32_KHR
+WIN32_LEAN_AND_MEAN
+USE_XINPUT
+CMAKE_INTDIR="Debug"
+%(PreprocessorDefinitions)

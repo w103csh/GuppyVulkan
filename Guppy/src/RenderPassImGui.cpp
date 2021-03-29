@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -12,18 +12,19 @@
 #include <Common/Helpers.h>
 
 #include "ConstantsAll.h"
+#include "RenderPassManager.h"
 // HANDLERS
 #include "CommandHandler.h"
 #include "DescriptorHandler.h"
 #include "PipelineHandler.h"
-#include "RenderPassHandler.h"
+#include "PassHandler.h"
 #include "UIHandler.h"
 
 namespace {
-const RenderPass::CreateInfo CREATE_INFO = {PASS::IMGUI, "ImGui", {}, RenderPass::FLAG::SWAPCHAIN};
+const RenderPass::CreateInfo CREATE_INFO = {RENDER_PASS::IMGUI, "ImGui", {}, RenderPass::FLAG::SWAPCHAIN};
 }  // namespace
 
-RenderPass::ImGui::ImGui(RenderPass::Handler& handler, const uint32_t&& offset)
+RenderPass::ImGui::ImGui(Pass::Handler& handler, const uint32_t&& offset)
     : RenderPass::Base{handler, std::forward<const uint32_t>(offset), &CREATE_INFO} {}
 
 void RenderPass::ImGui::postCreate() {
@@ -93,7 +94,7 @@ void RenderPass::ImGui::createAttachments() {
         so unfortunately their code cannot be used as is.
     */
 
-    bool isClear = handler().isClearTargetPass(getTargetId(), TYPE);
+    bool isClear = handler().renderPassMgr().isClearTargetPass(getTargetId(), TYPE);
 
     vk::AttachmentDescription attachment = {};
     attachment.format = getFormat();

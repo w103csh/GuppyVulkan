@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -11,11 +11,12 @@
 #include "ConstantsAll.h"
 #include "RenderPass.h"
 
+// clang-format off
+namespace Pass { class Handler; }
+// clang-format on
+
 namespace RenderPass {
-
 struct CreateInfo;
-class Handler;
-
 namespace ScreenSpace {
 
 extern const CreateInfo CREATE_INFO;
@@ -23,7 +24,7 @@ extern const CreateInfo CREATE_INFO;
 // BASE
 class Base : public RenderPass::Base {
    public:
-    Base(Handler& handler, const index&& offset, const CreateInfo* pCreateInfo);
+    Base(Pass::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo);
 
     virtual void init() override;
     void update(const std::vector<Descriptor::Base*> pDynamicItems = {}) override;
@@ -35,27 +36,27 @@ class Base : public RenderPass::Base {
 // BRIGHT
 class Bright : public RenderPass::ScreenSpace::Base {
    public:
-    Bright(Handler& handler, const index&& offset);
+    Bright(Pass::Handler& handler, const index&& offset);
     void record(const uint8_t frameIndex) override {}
 };
 
 // BLUR
 class BlurA : public RenderPass::ScreenSpace::Base {
    public:
-    BlurA(Handler& handler, const index&& offset);
+    BlurA(Pass::Handler& handler, const index&& offset);
     void record(const uint8_t frameIndex) override {}
 };
 
 class BlurB : public RenderPass::ScreenSpace::Base {
    public:
-    BlurB(Handler& handler, const index&& offset);
+    BlurB(Pass::Handler& handler, const index&& offset);
     void record(const uint8_t frameIndex) override {}
 };
 
 // HDR LOG
 class HdrLog : public RenderPass::ScreenSpace::Base {
    public:
-    HdrLog(Handler& handler, const index&& offset);
+    HdrLog(Pass::Handler& handler, const index&& offset);
 
     void record(const uint8_t frameIndex) override {}
     void downSample(const vk::CommandBuffer& priCmd, const uint8_t frameIndex);
@@ -66,7 +67,6 @@ class HdrLog : public RenderPass::ScreenSpace::Base {
 };
 
 }  // namespace ScreenSpace
-
 }  // namespace RenderPass
 
 #endif  // !RENDER_PASS_SCREEN_SPACE_H

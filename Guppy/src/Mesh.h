@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -97,9 +97,9 @@ class Base : public NonCopyable, public Handlee<Mesh::Handler>, public Obj3d::In
 
     // DRAWING
     bool shouldDraw(const PASS& passTypeComp, const PIPELINE& pipelineType) const;
-    void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+    void draw(const RENDER_PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
               const vk::CommandBuffer& cmd, const uint8_t frameIndex) const;
-    void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+    void draw(const RENDER_PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
               const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
               const uint8_t frameIndex) const;
 

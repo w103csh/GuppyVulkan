@@ -1,17 +1,18 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
 #include "RenderPassScreenSpace.h"
 
+#include "RenderPassManager.h"
 #include "Sampler.h"
 #include "ScreenSpace.h"
 // HANDLERS
 #include "CommandHandler.h"
 #include "DescriptorHandler.h"
 #include "PipelineHandler.h"
-#include "RenderPassHandler.h"
+#include "PassHandler.h"
 #include "TextureHandler.h"
 
 namespace RenderPass {
@@ -20,7 +21,7 @@ namespace ScreenSpace {
 // CREATE INFO
 
 const CreateInfo CREATE_INFO = {
-    PASS::SCREEN_SPACE,
+    RENDER_PASS::SCREEN_SPACE,
     "Screen Space Swapchain Render Pass",
     {
         GRAPHICS::SCREEN_SPACE_DEFAULT,
@@ -28,16 +29,16 @@ const CreateInfo CREATE_INFO = {
     FLAG::SWAPCHAIN,
     {},
     {
-        PASS::SCREEN_SPACE_HDR_LOG,
-        PASS::SCREEN_SPACE_BRIGHT,
-        PASS::SCREEN_SPACE_BLUR_A,
-        PASS::SCREEN_SPACE_BLUR_B,
+        RENDER_PASS::SCREEN_SPACE_HDR_LOG,
+        RENDER_PASS::SCREEN_SPACE_BRIGHT,
+        RENDER_PASS::SCREEN_SPACE_BLUR_A,
+        RENDER_PASS::SCREEN_SPACE_BLUR_B,
     },
 };
 
 // BASE
 
-Base::Base(RenderPass::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo)
+Base::Base(Pass::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo)
     : RenderPass::Base{handler, std::forward<const index>(offset), pCreateInfo} {
     status_ = STATUS::PENDING_MESH | STATUS::PENDING_PIPELINE;
     // Validate the pipelines used are in the right spot in the vertex map.
@@ -54,7 +55,7 @@ void Base::init() {
         if (passType == TYPE) {
             RenderPass::Base::init();
         } else {
-            const auto& pPass = handler().getPass(offset);
+            const auto& pPass = handler().renderPassMgr().getPass(offset);
             if (!pPass->isIntialized()) const_cast<RenderPass::Base*>(pPass.get())->init();
         }
     }
@@ -80,7 +81,7 @@ void Base::record(const uint8_t frameIndex) {
 
         // HDR LOG BLIT
         {
-            const auto& pPass = handler().getPass(dependentTypeOffsetPairs_[passIndex++].second);
+            const auto& pPass = handler().renderPassMgr().getPass(dependentTypeOffsetPairs_[passIndex++].second);
             if (pPass->getStatus() != STATUS::READY) const_cast<RenderPass::Base*>(pPass.get())->update();
             if (pPass->getStatus() == STATUS::READY) {
                 pPass->beginPass(priCmd, frameIndex);
@@ -91,18 +92,18 @@ void Base::record(const uint8_t frameIndex) {
                 //                   sizeof(::ScreenSpace::PushConstant), &pc);
 
                 auto it = pPass->getPipelineBindDataList().getValues().begin();
-                handler().getScreenQuad()->draw(TYPE, (*it), pPass->getDescSetBindDataMap((*it)->type).begin()->second,
-                                                priCmd, frameIndex);
+                handler().renderPassMgr().getScreenQuad()->draw(
+                    TYPE, (*it), pPass->getDescSetBindDataMap((*it)->type).begin()->second, priCmd, frameIndex);
                 pPass->endPass(priCmd);
 
-                assert(pPass->TYPE == PASS::SCREEN_SPACE_HDR_LOG);
+                assert(pPass->TYPE == RENDER_PASS::SCREEN_SPACE_HDR_LOG);
                 ((HdrLog*)pPass.get())->downSample(priCmd, frameIndex);
             }
         }
 
         // BRIGHT
         {
-            const auto& pPass = handler().getPass(dependentTypeOffsetPairs_[passIndex++].second);
+            const auto& pPass = handler().renderPassMgr().getPass(dependentTypeOffsetPairs_[passIndex++].second);
             if (pPass->getStatus() != STATUS::READY) const_cast<RenderPass::Base*>(pPass.get())->update();
             if (pPass->getStatus() == STATUS::READY) {
                 pPass->beginPass(priCmd, frameIndex);
@@ -112,15 +113,15 @@ void Base::record(const uint8_t frameIndex) {
                 priCmd.pushConstants((*it)->layout, (*it)->pushConstantStages, 0,
                                      static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
 
-                handler().getScreenQuad()->draw(TYPE, (*it), pPass->getDescSetBindDataMap((*it)->type).begin()->second,
-                                                priCmd, frameIndex);
+                handler().renderPassMgr().getScreenQuad()->draw(
+                    TYPE, (*it), pPass->getDescSetBindDataMap((*it)->type).begin()->second, priCmd, frameIndex);
                 pPass->endPass(priCmd);
             }
         }
 
         // BLUR A
         {
-            const auto& pPass = handler().getPass(dependentTypeOffsetPairs_[passIndex++].second);
+            const auto& pPass = handler().renderPassMgr().getPass(dependentTypeOffsetPairs_[passIndex++].second);
             if (pPass->getStatus() != STATUS::READY) const_cast<RenderPass::Base*>(pPass.get())->update();
             if (pPass->getStatus() == STATUS::READY) {
                 pPass->beginPass(priCmd, frameIndex);
@@ -130,8 +131,8 @@ void Base::record(const uint8_t frameIndex) {
                 priCmd.pushConstants((*it)->layout, (*it)->pushConstantStages, 0,
                                      static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
 
-                handler().getScreenQuad()->draw(TYPE, (*it), pPass->getDescSetBindDataMap((*it)->type).begin()->second,
-                                                priCmd, frameIndex);
+                handler().renderPassMgr().getScreenQuad()->draw(
+                    TYPE, (*it), pPass->getDescSetBindDataMap((*it)->type).begin()->second, priCmd, frameIndex);
                 pPass->endPass(priCmd);
             }
         }
@@ -145,7 +146,7 @@ void Base::record(const uint8_t frameIndex) {
 
         // BLUR B
         {
-            const auto& pPass = handler().getPass(dependentTypeOffsetPairs_[passIndex++].second);
+            const auto& pPass = handler().renderPassMgr().getPass(dependentTypeOffsetPairs_[passIndex++].second);
             if (pPass->getStatus() != STATUS::READY) const_cast<RenderPass::Base*>(pPass.get())->update();
             if (pPass->getStatus() == STATUS::READY) {
                 pPass->beginPass(priCmd, frameIndex);
@@ -155,8 +156,8 @@ void Base::record(const uint8_t frameIndex) {
                 priCmd.pushConstants((*it)->layout, (*it)->pushConstantStages, 0,
                                      static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
 
-                handler().getScreenQuad()->draw(TYPE, (*it), pPass->getDescSetBindDataMap((*it)->type).begin()->second,
-                                                priCmd, frameIndex);
+                handler().renderPassMgr().getScreenQuad()->draw(
+                    TYPE, (*it), pPass->getDescSetBindDataMap((*it)->type).begin()->second, priCmd, frameIndex);
                 pPass->endPass(priCmd);
             }
         }
@@ -170,8 +171,8 @@ void Base::record(const uint8_t frameIndex) {
             priCmd.pushConstants((*it)->layout, (*it)->pushConstantStages, 0,
                                  static_cast<uint32_t>(sizeof(::ScreenSpace::PushConstant)), &pushConstant);
 
-            handler().getScreenQuad()->draw(TYPE, (*it), pipelineDescSetBindDataMap_.at((*it)->type).begin()->second, priCmd,
-                                            frameIndex);
+            handler().renderPassMgr().getScreenQuad()->draw(
+                TYPE, (*it), pipelineDescSetBindDataMap_.at((*it)->type).begin()->second, priCmd, frameIndex);
 
             endPass(priCmd);
         }
@@ -182,7 +183,7 @@ void Base::record(const uint8_t frameIndex) {
 
 void Base::update(const std::vector<Descriptor::Base*> pDynamicItems) {
     // Check the mesh status.
-    if (handler().getScreenQuad()->getStatus() == STATUS::READY) {
+    if (handler().renderPassMgr().getScreenQuad()->getStatus() == STATUS::READY) {
         status_ ^= STATUS::PENDING_MESH;
         RenderPass::Base::update(pDynamicItems);
     }
@@ -190,7 +191,7 @@ void Base::update(const std::vector<Descriptor::Base*> pDynamicItems) {
 
 // BRIGHT
 const CreateInfo BRIGHT_CREATE_INFO = {
-    PASS::SCREEN_SPACE_BRIGHT,
+    RENDER_PASS::SCREEN_SPACE_BRIGHT,
     "Screen Space Bright Render Pass",
     {
         GRAPHICS::SCREEN_SPACE_BRIGHT,
@@ -202,12 +203,12 @@ const CreateInfo BRIGHT_CREATE_INFO = {
     vk::ImageLayout::eColorAttachmentOptimal,
     vk::ImageLayout::eShaderReadOnlyOptimal,
 };
-Bright::Bright(RenderPass::Handler& handler, const index&& offset)
+Bright::Bright(Pass::Handler& handler, const index&& offset)
     : RenderPass::ScreenSpace::Base{handler, std::forward<const index>(offset), &BRIGHT_CREATE_INFO} {}
 
 // BLUR A
 const CreateInfo BLUR_A_CREATE_INFO = {
-    PASS::SCREEN_SPACE_BLUR_A,
+    RENDER_PASS::SCREEN_SPACE_BLUR_A,
     "Screen Space Blur A Render Pass",
     {
         GRAPHICS::SCREEN_SPACE_BLUR_A,
@@ -219,12 +220,12 @@ const CreateInfo BLUR_A_CREATE_INFO = {
     vk::ImageLayout::eColorAttachmentOptimal,
     vk::ImageLayout::eShaderReadOnlyOptimal,
 };
-BlurA::BlurA(RenderPass::Handler& handler, const index&& offset)
+BlurA::BlurA(Pass::Handler& handler, const index&& offset)
     : RenderPass::ScreenSpace::Base{handler, std::forward<const index>(offset), &BLUR_A_CREATE_INFO} {}
 
 // BLUR B
 const CreateInfo BLUR_B_CREATE_INFO = {
-    PASS::SCREEN_SPACE_BLUR_B,
+    RENDER_PASS::SCREEN_SPACE_BLUR_B,
     "Screen Space Blur B Render Pass",
     {
         GRAPHICS::SCREEN_SPACE_BLUR_B,
@@ -236,13 +237,13 @@ const CreateInfo BLUR_B_CREATE_INFO = {
     vk::ImageLayout::eShaderReadOnlyOptimal,
     vk::ImageLayout::eShaderReadOnlyOptimal,
 };
-BlurB::BlurB(RenderPass::Handler& handler, const index&& offset)
+BlurB::BlurB(Pass::Handler& handler, const index&& offset)
     : RenderPass::ScreenSpace::Base{handler, std::forward<const index>(offset), &BLUR_B_CREATE_INFO} {}
 
 // HDR LOG
 
 const CreateInfo HDR_LOG_CREATE_INFO = {
-    PASS::SCREEN_SPACE_HDR_LOG,
+    RENDER_PASS::SCREEN_SPACE_HDR_LOG,
     "Screen Space HDR Log Render Pass",
     {
         GRAPHICS::SCREEN_SPACE_HDR_LOG,
@@ -255,7 +256,7 @@ const CreateInfo HDR_LOG_CREATE_INFO = {
     vk::ImageLayout::eTransferSrcOptimal,
 };
 
-HdrLog::HdrLog(RenderPass::Handler& handler, const index&& offset)
+HdrLog::HdrLog(Pass::Handler& handler, const index&& offset)
     : RenderPass::ScreenSpace::Base{handler, std::forward<const index>(offset), &HDR_LOG_CREATE_INFO} {}
 
 void transferAllToTransDst(const vk::CommandBuffer& cmd, const Sampler::Base& sampler, BarrierResource& res,

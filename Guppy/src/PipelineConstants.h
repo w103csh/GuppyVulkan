@@ -19,7 +19,6 @@
 
 enum class DESCRIPTOR_SET;
 enum class PUSH_CONSTANT;
-enum class PASS : uint32_t;
 enum class SHADER;
 enum class VERTEX;
 

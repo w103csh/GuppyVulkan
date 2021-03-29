@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -8,18 +8,22 @@
 
 #include "RenderPass.h"
 
+// clang-format off
+namespace Pass { class Handler; }
+// clang-format on
+
 namespace RenderPass {
 struct CreateInfo;
-class Handler;
 namespace Deferred {
 
 class Base : public RenderPass::Base {
    public:
-    Base(Handler& handler, const index&& offset);
+    Base(Pass::Handler& handler, const index&& offset);
 
     void init() override;
     void record(const uint8_t frameIndex) override;
     void update(const std::vector<Descriptor::Base*> pDynamicItems = {}) override;
+    void updateSubmitResource(SubmitResource& resource, const uint8_t frameIndex) const override;
 
    private:
     void createAttachments() override;
@@ -32,6 +36,9 @@ class Base : public RenderPass::Base {
     uint32_t inputAttachmentCount_;
     uint32_t combinePassIndex_;
     bool doSSAO_;
+
+    // TODO: Rename this class to Default, and move this pointer to a different "scene-specific" render pass class.
+    const std::vector<vk::Semaphore>* pOceanSignalSemaphores_;
 };
 
 }  // namespace Deferred

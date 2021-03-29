@@ -2,7 +2,7 @@
  * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
- 
+
 #version 450
 
 #define _DS_SMP_DEF 0
@@ -108,7 +108,7 @@ void setTextureDefaults() {
         // an ambient texture layer yet...
         Ka = Kd;
     }
-    
+
     // outColor = vec4(Kd, 1.0);
 
     // NORMAL
@@ -144,7 +144,7 @@ void setTextureDefaults() {
 
         THERE MIGHT BE A WAY TO CLEAN THIS UP ELSEWHERE IN VkPipelineColorBlendAttachmentState
         OR SOME OTHER SETTING!!!
-        
+
         If there isn't then there should probably be shaders dedicated to dropping
         the transparent fragments aggressively, and one dedicated to blending
         them properly, OR A TEXTURE FLAG!
@@ -152,11 +152,11 @@ void setTextureDefaults() {
         From OpenGL4 Shading Language Cookbook p.153:
             "... However, That requires us to make the depth buffer read-only and render
             all of out polygons from back to front in order to avoid blending problems.
-            We would need to sort our polygons from based on the camera position and 
+            We would need to sort our polygons from based on the camera position and
             then render them in the correct order."
         They then recommend using a value 0.15 for discard so, I guess my approach
         wasn't too far fetched.
-        
+
         I stored the alpha map value in the diffuse texture's 4th channel, so we look for
         it here (but I could change that if it produces better results).
     */

@@ -8,16 +8,17 @@
 #include <Common/Helpers.h>
 
 #include "Box.h"
+#include "Cdlod.h"
+#include "Instance.h"
 #include "Material.h"
 #include "MeshConstants.h"
-#include "Instance.h"
-#include "Cdlod.h"
+#include "RenderPassManager.h"
 // HANDLERS
 #include "DescriptorHandler.h"
 #include "LoadingHandler.h"
 #include "MaterialHandler.h"
 #include "MeshHandler.h"
-#include "RenderPassHandler.h"
+#include "PassHandler.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
 #include "UniformHandler.h"
@@ -69,7 +70,7 @@ Base::Base(Scene::Handler& handler)
       terrainGridMeshDims_(0),
       pHeightmap_(nullptr),
       cdlodQuadTree_(),
-      enableDebug_(true),
+      enableDebug_(false),
       useDebugCamera_(true),
       useDebugBoxes_(false),
       useDebugWireframe_(false),
@@ -575,7 +576,7 @@ void Base::renderTerrain(const CDLODQuadTree::LODSelection& cdlodSelection,
             assert(wfDescSetBindDataMap_.size() == 1);
             const auto& descSetBindData = wfDescSetBindDataMap_.begin()->second;
             const auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1),
-                                             handler().passHandler().getFrameIndex());
+                                             handler().passHandler().renderPassMgr().getFrameIndex());
             cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
                                    descSetBindData.descriptorSets[setIndex], descSetBindData.dynamicOffsets);
         }

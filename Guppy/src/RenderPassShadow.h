@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -12,15 +12,18 @@
 
 #include "RenderPass.h"
 
+// clang-format off
+namespace Pass { class Handler; }
+// clang-format on
+
 namespace RenderPass {
 struct CreateInfo;
-class Handler;
 namespace Shadow {
 
 // BASE
 class Base : public RenderPass::Base {
    protected:
-    Base(Handler& handler, const index&& offset, const CreateInfo* pCreateInfo);
+    Base(Pass::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo);
 
    private:
     void createAttachments() override;
@@ -31,14 +34,14 @@ class Base : public RenderPass::Base {
     void record(const uint8_t) override { assert(false); }
 
    public:
-    void record(const uint8_t frameIndex, const PASS& surrogatePassType, std::vector<PIPELINE>& surrogatePipelineTypes,
-                const vk::CommandBuffer& priCmd);
+    void record(const uint8_t frameIndex, const RENDER_PASS& surrogatePassType,
+                std::vector<PIPELINE>& surrogatePipelineTypes, const vk::CommandBuffer& priCmd);
 };
 
 // DEFAULT
 class Default : public RenderPass::Shadow::Base {
    public:
-    Default(Handler& handler, const index&& offset);
+    Default(Pass::Handler& handler, const index&& offset);
 };
 
 }  // namespace Shadow

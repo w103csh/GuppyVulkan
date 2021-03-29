@@ -10,15 +10,14 @@
 
 // HANDLERS
 #include "CommandHandler.h"
-#include "ComputeHandler.h"
 #include "DescriptorHandler.h"
 #include "LoadingHandler.h"
 #include "MaterialHandler.h"
 #include "MeshHandler.h"
 #include "ModelHandler.h"
 #include "ParticleHandler.h"
+#include "PassHandler.h"
 #include "PipelineHandler.h"
-#include "RenderPassHandler.h"
 #include "SceneHandler.h"
 #include "ShaderHandler.h"
 #include "TextureHandler.h"

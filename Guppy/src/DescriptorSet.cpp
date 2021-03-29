@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2019 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -85,7 +85,7 @@ void Descriptor::Set::Base::updateOffsets(const Uniform::offsetsMap offsetsMap, 
     searchOffsetsMap = offsetsMap.find({descType, GRAPHICS::ALL_ENUM});
     assert(searchOffsetsMap != offsetsMap.end());
     for (const auto& [offsets, passTypes] : searchOffsetsMap->second) {
-        if (passTypes.find(PASS::ALL_ENUM) != passTypes.end()) {
+        if (passTypes.find(PASS{RENDER_PASS::ALL_ENUM}) != passTypes.end()) {
             // Make sure the default is the proper set. The default is added immediately, so
             // no need to re-add it to the layout resource.
             assert(passTypes == Uniform::PASS_ALL_SET);

@@ -5,6 +5,8 @@
 
 #include "Mesh.h"
 
+#include <variant>
+
 #include "Face.h"
 #include "FileLoader.h"
 #include "PBR.h"  // TODO: this is bad
@@ -56,6 +58,12 @@ Mesh::Base::Base(Mesh::Handler& handler, const index&& offset, const MESH&& type
         assert(PASS_TYPES.size());
         assert(!std::visit(Pipeline::IsAll{}, PIPELINE_TYPE));
         assert(Mesh::Base::handler().pipelineHandler().checkVertexPipelineMap(VERTEX_TYPE, PIPELINE_TYPE));
+    }
+    // Warn that this won't do anything, and functionality probably needs to be added.
+    for (const auto& passType : PASS_TYPES) {
+        if (std::visit(Pass::IsCompute{}, passType)) {
+            assert(std::visit(Pipeline::IsCompute{}, PIPELINE_TYPE));
+        }
     }
     assert(pInstObj3d_ != nullptr);
     assert(pMaterial_ != nullptr);
@@ -386,16 +394,16 @@ bool Mesh::Base::shouldDraw(const PASS& passTypeComp, const PIPELINE& pipelineTy
     if (pipelineType != PIPELINE_TYPE) return false;
     if (status_ != STATUS::READY) return false;
     for (const auto& passType : PASS_TYPES)
-        if (passType == PASS::ALL_ENUM || passType == passTypeComp) return true;
+        if (std::visit(Pass::IsAll{}, passType) || passType == passTypeComp) return true;
     return false;
 }
 
-void Mesh::Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+void Mesh::Base::draw(const RENDER_PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                       const vk::CommandBuffer& cmd, const uint8_t frameIndex) const {
     draw(passType, pPipelineBindData, getDescriptorSetBindData(passType), cmd, frameIndex);
 }
 
-void Mesh::Base::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+void Mesh::Base::draw(const RENDER_PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                       const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                       const uint8_t frameIndex) const {
     auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);

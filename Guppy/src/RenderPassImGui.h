@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -9,13 +9,14 @@
 #include "ConstantsAll.h"
 #include "RenderPass.h"
 
+// clang-format off
+namespace Pass { class Handler; }
+// clang-format on
+
 namespace RenderPass {
-
-class Handler;
-
 class ImGui : public Base {
    public:
-    ImGui(Handler& handler, const uint32_t&& offset);
+    ImGui(Pass::Handler& handler, const uint32_t&& offset);
 
     void postCreate() override;
     void record(const uint8_t frameIndex) override;
@@ -26,7 +27,6 @@ class ImGui : public Base {
     void createDependencies() override;
     void updateClearValues() override;
 };
-
 }  // namespace RenderPass
 
 #endif  // !RENDER_PASS_IMGUI_H

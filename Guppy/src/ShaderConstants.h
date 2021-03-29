@@ -15,8 +15,6 @@
 
 #include "DescriptorConstants.h"
 
-enum class PASS : uint32_t;
-
 enum class SHADER {
     LINK = -1,
     // These are index values, so the order here
@@ -139,6 +137,7 @@ struct CreateInfo {
     std::string_view fileName;
     vk::ShaderStageFlagBits stage;
     std::set<SHADER_LINK> linkTypes;
+    std::map<std::string, std::string> replaceMap;
 };
 
 // Pipeline shader stage create info map
@@ -152,6 +151,7 @@ namespace Link {
 struct CreateInfo {
     SHADER_LINK type;
     std::string_view fileName;
+    std::map<std::string, std::string> replaceMap;
 };
 
 }  // namespace Link

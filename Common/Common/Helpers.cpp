@@ -43,6 +43,16 @@ void macroReplace(const macroInfo &info, int itemCount, std::string &text) {
     replaceFirstOccurrence(std::get<1>(info), replaceStr, text);
 }
 
+void textReplaceFromMap(const std::map<std::string, std::string> &map, std::string &text) {
+    for (const auto &[key, value] : map) {
+        std::string::size_type spot = 0;
+        while ((spot = text.find(key, spot)) != std::string::npos) {
+            text.replace(spot, key.size(), value);
+            spot += value.size();
+        }
+    }
+}
+
 glm::mat4 moveAndRotateTo(const glm::vec3 eye, const glm::vec3 center, const glm::vec3 up) {
     auto const z(glm::normalize(center - eye));
     auto const x(glm::normalize(cross(z, up)));

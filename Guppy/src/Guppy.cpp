@@ -27,9 +27,9 @@
 #include "Game.h"
 #include "Guppy.h"
 #include "Shell.h"
+#include "RenderPassManager.h"
 // HANDLERS
 #include "CommandHandler.h"
-#include "ComputeHandler.h"
 #include "DescriptorHandler.h"
 #include "InputHandler.h"  // (shell)
 #include "LoadingHandler.h"
@@ -37,8 +37,8 @@
 #include "MeshHandler.h"
 #include "ModelHandler.h"
 #include "ParticleHandler.h"
+#include "PassHandler.h"
 #include "PipelineHandler.h"
-#include "RenderPassHandler.h"
 #include "SceneHandler.h"
 #include "ShaderHandler.h"
 #include "SoundHandler.h"  // (shell)
@@ -57,15 +57,14 @@
 Guppy::Guppy(const std::vector<std::string>& args)
     : Game("Guppy", args, Game::Handlers{
         std::make_unique<Command::Handler>(this),
-        std::make_unique<Compute::Handler>(this),
         std::make_unique<Descriptor::Handler>(this),
         std::make_unique<Loading::Handler>(this),
         std::make_unique<Material::Handler>(this),
         std::make_unique<Mesh::Handler>(this),
         std::make_unique<Model::Handler>(this),
         std::make_unique<Particle::Handler>(this),
+        std::make_unique<Pass::Handler>(this),
         std::make_unique<Pipeline::Handler>(this),
-        std::make_unique<RenderPass::Handler>(this),
         std::make_unique<Scene::Handler>(this),
         std::make_unique<Shader::Handler>(this),
         std::make_unique<Texture::Handler>(this),
@@ -93,10 +92,6 @@ Guppy::Guppy(const std::vector<std::string>& args)
             use_push_constants_ = true;
     }
 
-    // VALIDATION
-    auto it = std::find_first_of(RenderPass::ALL.begin(), RenderPass::ALL.end(), Compute::ALL.begin(), Compute::ALL.end());
-    assert(it == RenderPass::ALL.end());
-
     // init_workers();
 }
 
@@ -112,10 +107,9 @@ void Guppy::attachShell() {
     handlers_.pDescriptor->init();
     handlers_.pMesh->init();
     handlers_.pParticle->init();
-    handlers_.pCompute->init();
+    handlers_.pPass->init();
     handlers_.pPipeline->init();
     handlers_.pShader->init();
-    handlers_.pPass->init();
     handlers_.pPipeline->initPipelines();
     handlers_.pUI->init();
     handlers_.pModel->init();
@@ -137,8 +131,7 @@ void Guppy::attachSwapchain() {
 
     handlers_.pUniform->attachSwapchain();
     handlers_.pTexture->attachSwapchain();
-    handlers_.pCompute->attachSwapchain();
-    handlers_.pPass->attachSwapchain();
+    handlers_.pPass->renderPassMgr().attachSwapchain();
 
     // ASPECT
     float aspect = 1.0f;
@@ -165,13 +158,15 @@ void Guppy::tick() {
     handlers_.pPipeline->tick();
     handlers_.pMesh->tick();
     handlers_.pParticle->tick();
-    handlers_.pCompute->tick();
+
+    // ComputeWorkManager assumes this is at least called once per frame, and before each frame.
+    handlers_.pPass->tick();
 
     // for (auto &worker : workers_) worker->update_simulation();
 }
 
 void Guppy::frame() {
-    handlers_.pPass->acquireBackBuffer();
+    handlers_.pPass->renderPassMgr().acquireBackBuffer();
     handlers_.pUI->frame();
 
     processInput();
@@ -183,20 +178,19 @@ void Guppy::frame() {
     handlers_.pScene->frame();
     handlers_.pParticle->frame();
     // DRAW
-    handlers_.pPass->recordPasses();
+    handlers_.pPass->frame();
     // POST-DRAW
     handlers_.pShader->cleanup();
     handlers_.pPipeline->cleanup();
     handlers_.pScene->cleanup();
 
     // **********************
-    handlers_.pPass->updateFrameIndex();
+    handlers_.pPass->renderPassMgr().updateFrameIndex();
 }
 
 void Guppy::detachSwapchain() {
     handlers_.pTexture->detachSwapchain();
-    handlers_.pCompute->detachSwapchain();
-    handlers_.pPass->detachSwapchain();
+    handlers_.pPass->renderPassMgr().detachSwapchain();
     handlers_.pUI->reset();
     handlers_.pCommand->resetCmdBuffers();
 }
@@ -217,7 +211,6 @@ void Guppy::detachShell() {
     handlers_.pMaterial->destroy();
     handlers_.pMesh->destroy();
     handlers_.pParticle->destroy();
-    handlers_.pCompute->destroy();
     handlers_.pScene->destroy();
     handlers_.pUI->destroy();
     handlers_.pPass->destroy();

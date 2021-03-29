@@ -14,6 +14,9 @@
 
 #include "Deferred.h"
 #include "FFT.h"
+#if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+#include "OceanComputeWork.h"
+#endif
 #include "Tessellation.h"
 // HANDLERS
 #include "LoadingHandler.h"
@@ -33,14 +36,57 @@ float phillipsSpectrum(const glm::vec2 k, const float kMagnitude, const Ocean::S
     return phk;
 }
 
+Sampler::CreateInfo getDefaultOceanSampCreateInfo(const std::string&& name, const uint32_t N, const uint32_t M,
+                                                  const vk::ImageUsageFlags usageFlags) {
+    return {
+        name,
+        {{
+             {::Sampler::USAGE::HEIGHT},     // fourier domain dispersion relation (height)
+             {::Sampler::USAGE::NORMAL},     // fourier domain dispersion relation (slope)
+             {::Sampler::USAGE::DONT_CARE},  // fourier domain dispersion relation (differential)
+         },
+         true,
+         true},
+        vk::ImageViewType::e2DArray,
+        {N, M, 1},
+        {},
+        {},
+        SAMPLER::DEFAULT_NEAREST,
+        usageFlags,
+        {{false, false}, 1},
+        vk::Format::eR32G32B32A32Sfloat,
+        Sampler::CHANNELS::_4,
+        sizeof(float),
+    };
+}
+
 }  // namespace
+
+// BUFFER VIEW
+namespace BufferView {
+namespace Ocean {
+void MakeResources(Texture::Handler& handler, const ::Ocean::SurfaceCreateInfo& info) {
+    auto bitRevOffsets = ::FFT::MakeBitReversalOffsets(info.N);
+    handler.makeBufferView(BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_N_ID, vk::Format::eR16Sint,
+                           sizeof(uint16_t) * bitRevOffsets.size(), bitRevOffsets.data());
+    if (info.N != info.M) bitRevOffsets = ::FFT::MakeBitReversalOffsets(info.N);
+    handler.makeBufferView(BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_M_ID, vk::Format::eR16Sint,
+                           sizeof(uint16_t) * bitRevOffsets.size(), bitRevOffsets.data());
+    auto twiddleFactors = ::FFT::MakeTwiddleFactors((std::max)(info.N, info.M));
+    handler.makeBufferView(BufferView::Ocean::FFT_TWIDDLE_FACTORS_ID, vk::Format::eR32G32Sfloat,
+                           sizeof(float) * twiddleFactors.size(), twiddleFactors.data());
+}
+}  // namespace Ocean
+}  // namespace BufferView
 
 // TEXUTRE
 namespace Texture {
 namespace Ocean {
 
-void MakeTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info) {
+void MakeResources(Texture::Handler& handler, const ::Ocean::SurfaceCreateInfo& info) {
     assert(helpers::isPowerOfTwo(info.N) && helpers::isPowerOfTwo(info.M));
+
+    using namespace Texture::Ocean;
 
     std::default_random_engine gen;
     std::normal_distribution<float> dist(0.0, 1.0);
@@ -94,16 +140,13 @@ void MakeTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info) {
         }
     }
 
-    // Create texture
-    {
+    {  // Create textures
+        // Wave and fourier data
         Sampler::CreateInfo sampInfo = {
-            std::string(DATA_ID) + " Sampler",
+            std::string(WAVE_FOURIER_ID) + " Sampler",
             {{
                  {::Sampler::USAGE::DONT_CARE},  // wave vector
                  {::Sampler::USAGE::DONT_CARE},  // fourier domain
-                 {::Sampler::USAGE::HEIGHT},     // fourier domain dispersion relation (height)
-                 {::Sampler::USAGE::NORMAL},     // fourier domain dispersion relation (slope)
-                 {::Sampler::USAGE::DONT_CARE},  // fourier domain dispersion relation (differential)
              },
              true,
              true},
@@ -111,27 +154,35 @@ void MakeTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info) {
             {info.N, info.M, 1},
             {},
             {},
-            SAMPLER::DEFAULT_NEAREST,  // Maybe this texture should be split up for filtering layers separately?
-            vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eSampled,
+            SAMPLER::DEFAULT_NEAREST,
+            vk::ImageUsageFlagBits::eSampled,
             {{false, false}, 1},
             vk::Format::eR32G32B32A32Sfloat,
             Sampler::CHANNELS::_4,
             sizeof(float),
         };
+        sampInfo.layersInfo.infos.at(0).pPixel = pWave;
+        sampInfo.layersInfo.infos.at(1).pPixel = pHTilde0;
+        Texture::CreateInfo texInfo = {std::string(WAVE_FOURIER_ID), {sampInfo}, false, false, COMBINED_SAMPLER::PIPELINE};
+        handler.make(&texInfo);
 
-        for (size_t i = 0; i < sampInfo.layersInfo.infos.size(); i++) {
-            if (i == 0)
-                sampInfo.layersInfo.infos[i].pPixel = pWave;
-            else if (i == 1)
-                sampInfo.layersInfo.infos[i].pPixel = pHTilde0;
-            else
-                sampInfo.layersInfo.infos[i].pPixel = (float*)malloc(dataSize);  // TODO: this shouldn't be necessary
-        }
-
-        Texture::CreateInfo waveTexInfo = {std::string(DATA_ID), {sampInfo}, false, false, STORAGE_IMAGE::DONT_CARE};
-        handler.make(&waveTexInfo);
+        // Dispersion relation
+        sampInfo = getDefaultOceanSampCreateInfo(std::string(DISP_REL_ID) + " Sampler", info.N, info.M,
+                                                 (vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferSrc));
+        // sampInfo.type = Something; // TODO: Experiment with filters... I'll try to remember.
+        texInfo = {std::string(DISP_REL_ID), {sampInfo}, false, false, STORAGE_IMAGE::PIPELINE};
+        handler.make(&texInfo);
     }
 }
+
+#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+CreateInfo MakeCopyTexInfo(const uint32_t N, const uint32_t M) {
+    auto sampInfo = getDefaultOceanSampCreateInfo(std::string(DISP_REL_COPY_ID) + " Sampler", N, M,
+                                                  (vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled));
+    // sampInfo.type = Something; // TODO: Experiment with filters... I'll try to remember.
+    return {std::string(DISP_REL_COPY_ID), {sampInfo}, false, true, COMBINED_SAMPLER::PIPELINE};
+}
+#endif
 
 }  // namespace Ocean
 }  // namespace Texture
@@ -139,23 +190,13 @@ void MakeTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info) {
 // SHADER
 namespace Shader {
 namespace Ocean {
-const CreateInfo DISP_COMP_CREATE_INFO = {
-    SHADER::OCEAN_DISP_COMP,  //
-    "Ocean Sufrace Dispersion Compute Shader",
-    "comp.ocean.dispersion.glsl",
-    vk::ShaderStageFlagBits::eCompute,
-};
-const CreateInfo FFT_COMP_CREATE_INFO = {
-    SHADER::OCEAN_FFT_COMP,  //
-    "Ocean Surface Fast Fourier Transform Compute Shader",
-    "comp.ocean.fft.glsl",
-    vk::ShaderStageFlagBits::eCompute,
-};
 const CreateInfo VERT_CREATE_INFO = {
     SHADER::OCEAN_VERT,  //
     "Ocean Surface Vertex Shader",
     "vert.ocean.glsl",
     vk::ShaderStageFlagBits::eVertex,
+    {},
+    {{"_DISPATCH_ON_COMPUTE_QUEUE", OCEAN_USE_COMPUTE_QUEUE_DISPATCH ? "1" : "0"}},
 };
 const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO = {
     SHADER::OCEAN_DEFERRED_MRT_FRAG,                                  //
@@ -193,17 +234,18 @@ void Base::updatePerFrame(const float time, const float elapsed, const uint32_t 
 // DESCRIPTOR SET
 namespace Descriptor {
 namespace Set {
-const CreateInfo OCEAN_DEFAULT_CREATE_INFO = {
-    DESCRIPTOR_SET::OCEAN_DEFAULT,
+const CreateInfo OCEAN_DRAW_CREATE_INFO = {
+    DESCRIPTOR_SET::OCEAN_DRAW,
     "_DS_OCEAN",
     {
         {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
         {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_DEFAULT}},
         {{2, 0}, {UNIFORM_DYNAMIC::OCEAN}},
-        {{3, 0}, {STORAGE_IMAGE::PIPELINE, Texture::Ocean::DATA_ID}},
-        {{4, 0}, {UNIFORM_TEXEL_BUFFER::PIPELINE, BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_N_ID}},
-        {{5, 0}, {UNIFORM_TEXEL_BUFFER::PIPELINE, BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_M_ID}},
-        {{6, 0}, {UNIFORM_TEXEL_BUFFER::PIPELINE, BufferView::Ocean::FFT_TWIDDLE_FACTORS_ID}},
+#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+        {{3, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Ocean::DISP_REL_COPY_ID}},
+#else
+        {{3, 0}, {STORAGE_IMAGE::PIPELINE, Texture::Ocean::DISP_REL_ID}},
+#endif
     },
 };
 }  // namespace Set
@@ -214,59 +256,14 @@ namespace Pipeline {
 
 namespace Ocean {
 
-// DISPERSION (COMPUTE)
-const CreateInfo DISP_CREATE_INFO = {
-    COMPUTE::OCEAN_DISP,
-    "Ocean Surface Dispersion Compute Pipeline",
-    {SHADER::OCEAN_DISP_COMP},
-    {{DESCRIPTOR_SET::OCEAN_DEFAULT, vk::ShaderStageFlagBits::eCompute}},
-    {},
-    {},
-    {::Ocean::DISP_LOCAL_SIZE, ::Ocean::DISP_LOCAL_SIZE, 1},
-};
-
-Dispersion::Dispersion(Handler& handler)
-    : Compute(handler, &DISP_CREATE_INFO), omega0_(2.0f * glm::pi<float>() / ::Ocean::T) {}
-
-void Dispersion::getShaderStageInfoResources(CreateInfoResources& createInfoRes) {
-    createInfoRes.specializationMapEntries.push_back({{}});
-
-    // Use specialization constants to pass number of samples to the shader (used for MSAA resolve)
-    createInfoRes.specializationMapEntries.back().back().constantID = 0;
-    createInfoRes.specializationMapEntries.back().back().offset = 0;
-    createInfoRes.specializationMapEntries.back().back().size = sizeof(omega0_);
-
-    createInfoRes.specializationInfo.push_back({});
-    createInfoRes.specializationInfo.back().mapEntryCount =
-        static_cast<uint32_t>(createInfoRes.specializationMapEntries.back().size());
-    createInfoRes.specializationInfo.back().pMapEntries = createInfoRes.specializationMapEntries.back().data();
-    createInfoRes.specializationInfo.back().dataSize = sizeof(omega0_);
-    createInfoRes.specializationInfo.back().pData = &omega0_;
-
-    assert(createInfoRes.shaderStageInfos.size() == 1 &&
-           createInfoRes.shaderStageInfos[0].stage == vk::ShaderStageFlagBits::eCompute);
-    // Add the specialization to the shader info.
-    createInfoRes.shaderStageInfos[0].pSpecializationInfo = &createInfoRes.specializationInfo.back();
-}
-
-// FFT (COMPUTE)
-const CreateInfo FFT_CREATE_INFO = {
-    COMPUTE::OCEAN_FFT,
-    "Ocean Surface FFT Compute Pipeline",
-    {SHADER::OCEAN_FFT_COMP},
-    {{DESCRIPTOR_SET::OCEAN_DEFAULT, vk::ShaderStageFlagBits::eCompute}},
-    {},
-    {PUSH_CONSTANT::FFT_ROW_COL_OFFSET},
-    {::Ocean::FFT_LOCAL_SIZE, 1, 1},
-};
-FFT::FFT(Handler& handler) : Compute(handler, &FFT_CREATE_INFO) {}
-
 // WIREFRAME
 const CreateInfo OCEAN_WF_CREATE_INFO = {
     GRAPHICS::OCEAN_WF_DEFERRED,
     "Ocean Surface Wireframe (Deferred) Pipeline",
     {SHADER::OCEAN_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
-    {{DESCRIPTOR_SET::OCEAN_DEFAULT, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)}},
+    {
+        {DESCRIPTOR_SET::OCEAN_DRAW, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+    },
 };
 Wireframe::Wireframe(Handler& handler) : Graphics(handler, &OCEAN_WF_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
 
@@ -308,13 +305,13 @@ const CreateInfo OCEAN_SURFACE_CREATE_INFO = {
         SHADER::OCEAN_DEFERRED_MRT_FRAG,
     },
     {
-        {DESCRIPTOR_SET::OCEAN_DEFAULT,
+        {DESCRIPTOR_SET::OCEAN_DRAW,
          (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl |
           vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment)},
         {DESCRIPTOR_SET::TESS_PHONG,
          (vk::ShaderStageFlagBits::eTessellationControl | vk::ShaderStageFlagBits::eTessellationEvaluation)},
     },
-};  // namespace Ocean
+};
 Surface::Surface(Handler& handler)
     : Graphics(handler, &OCEAN_SURFACE_CREATE_INFO),
       DO_BLEND(false),
@@ -394,23 +391,6 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
         if (pDescriptors[i]->getDescriptorType() == DESCRIPTOR{STORAGE_BUFFER_DYNAMIC::NORMAL}) normalOffset_ = i;
     assert(normalOffset_ != Particle::Buffer::BAD_OFFSET);
 
-    // IMAGE
-    // TODO: move the loop inside this function into the constructor here.
-    Texture::Ocean::MakeTextures(handler.textureHandler(), info_);
-
-    // BUFFER VIEWS
-    {
-        auto bitRevOffsets = FFT::MakeBitReversalOffsets(N);
-        handler.textureHandler().makeBufferView(BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_N_ID, vk::Format::eR16Sint,
-                                                sizeof(uint16_t) * bitRevOffsets.size(), bitRevOffsets.data());
-        if (N != M) bitRevOffsets = FFT::MakeBitReversalOffsets(N);
-        handler.textureHandler().makeBufferView(BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_M_ID, vk::Format::eR16Sint,
-                                                sizeof(uint16_t) * bitRevOffsets.size(), bitRevOffsets.data());
-        auto twiddleFactors = FFT::MakeTwiddleFactors((std::max)(N, M));
-        handler.textureHandler().makeBufferView(BufferView::Ocean::FFT_TWIDDLE_FACTORS_ID, vk::Format::eR32G32Sfloat,
-                                                sizeof(float) * twiddleFactors.size(), twiddleFactors.data());
-    }
-
     const int halfN = N / 2, halfM = M / 2;
     verticesHFF_.reserve(N * M);
     verticesHFF_.reserve(N * M);
@@ -485,9 +465,11 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
 void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                   const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                   const uint8_t frameIndex) const {
-    if (pPipelineBindData->type != PIPELINE{drawMode}) return;
+    // TODO: Checking the frame count here is a bad solution. If the simulation needs to be paused then the draw should
+    // always delayed a frame while waiting for the compute queue work. I'm just going to leave this for now.
+    if (handler().game().getFrameCount() == 0 || pPipelineBindData->type != PIPELINE{drawMode}) return;
 
-    auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
+    const auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
 
     switch (drawMode) {
         case GRAPHICS::OCEAN_WF_DEFERRED: {
@@ -507,13 +489,11 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
             };
             cmd.bindVertexBuffers(0, buffers, offsets);
             cmd.bindIndexBuffer(indexWFRes_.buffer, 0, vk::IndexType::eUint32);
-            cmd.drawIndexed(                               //
-                static_cast<uint32_t>(indicesWF_.size()),  // uint32_t indexCount
-                pInstObj3d_->BUFFER_INFO.count,            // uint32_t instanceCount
-                0,                                         // uint32_t firstIndex
-                0,                                         // int32_t vertexOffset
-                0                                          // uint32_t firstInstance
-            );
+            cmd.drawIndexed(static_cast<uint32_t>(indicesWF_.size()),  // uint32_t indexCount
+                            pInstObj3d_->BUFFER_INFO.count,            // uint32_t instanceCount
+                            0,                                         // uint32_t firstIndex
+                            0,                                         // int32_t vertexOffset
+                            0);                                        // uint32_t firstInstance
         } break;
         case GRAPHICS::OCEAN_SURFACE_DEFERRED: {
             cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
@@ -534,13 +514,11 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
             };
             cmd.bindVertexBuffers(0, buffers, offsets);
             cmd.bindIndexBuffer(indexRes_.buffer, 0, vk::IndexType::eUint32);
-            cmd.drawIndexed(                             //
-                static_cast<uint32_t>(indices_.size()),  // uint32_t indexCount
-                pInstObj3d_->BUFFER_INFO.count,          // uint32_t instanceCount
-                0,                                       // uint32_t firstIndex
-                0,                                       // int32_t vertexOffset
-                0                                        // uint32_t firstInstance
-            );
+            cmd.drawIndexed(static_cast<uint32_t>(indices_.size()),  // uint32_t indexCount
+                            pInstObj3d_->BUFFER_INFO.count,          // uint32_t instanceCount
+                            0,                                       // uint32_t firstIndex
+                            0,                                       // int32_t vertexOffset
+                            0);                                      // uint32_t firstInstance
         } break;
         default: {
             assert(false);
@@ -551,79 +529,9 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
 void Buffer::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                       const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                       const uint8_t frameIndex) const {
-    auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
-
-    const vk::MemoryBarrier memoryBarrierCompute = {
-        vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead,  // srcAccessMask
-        vk::AccessFlagBits::eShaderWrite | vk::AccessFlagBits::eShaderRead,  // dstAccessMask
-    };
-
-    switch (std::visit(Pipeline::GetCompute{}, pPipelineBindData->type)) {
-        case COMPUTE::FFT_ONE: {
-            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
-
-            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                   static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                                   descSetBindData.descriptorSets[setIndex].data(),
-                                   static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                                   descSetBindData.dynamicOffsets.data());
-
-            cmd.dispatch(1, 4, 1);
-
-            cmd.pipelineBarrier(                            //
-                vk::PipelineStageFlagBits::eComputeShader,  // srcStageMask
-                vk::PipelineStageFlagBits::eComputeShader,  // dstStageMask
-                {},                                         // dependencyFlags
-                {memoryBarrierCompute},                     // pMemoryBarriers
-                {}, {});
-
-            cmd.dispatch(4, 1, 1);
-
-        } break;
-        case COMPUTE::OCEAN_DISP: {
-            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
-
-            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                   static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                                   descSetBindData.descriptorSets[setIndex].data(),
-                                   static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                                   descSetBindData.dynamicOffsets.data());
-
-            cmd.dispatch(DISP_WORKGROUP_SIZE, DISP_WORKGROUP_SIZE, 1);
-
-            cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-                                {memoryBarrierCompute}, {}, {});
-
-        } break;
-        case COMPUTE::OCEAN_FFT: {
-            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
-
-            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                   static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                                   descSetBindData.descriptorSets[setIndex].data(),
-                                   static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                                   descSetBindData.dynamicOffsets.data());
-
-            FFT::RowColumnOffset offset = 1;  // row
-            cmd.pushConstants(pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
-                              static_cast<uint32_t>(sizeof(FFT::RowColumnOffset)), &offset);
-
-            cmd.dispatch(FFT_WORKGROUP_SIZE, 1, 1);
-
-            cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
-                                {memoryBarrierCompute}, {}, {});
-
-            offset = 0;  // column
-            cmd.pushConstants(pPipelineBindData->layout, pPipelineBindData->pushConstantStages, 0,
-                              static_cast<uint32_t>(sizeof(FFT::RowColumnOffset)), &offset);
-
-            cmd.dispatch(FFT_WORKGROUP_SIZE, 1, 1);
-
-        } break;
-        default: {
-            assert(false);
-        } break;
-    }
+#if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+    ComputeWork::Ocean::dispatch(passType, pPipelineBindData, descSetBindData, cmd, std::forward<const uint8_t>(frameIndex));
+#endif
 }
 
 void Buffer::loadBuffers() {

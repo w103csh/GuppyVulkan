@@ -433,7 +433,7 @@ void Base::getComputeDescSetBindData() {
     std::vector<Descriptor::Base*> pDynamicItems;
 
     // CLOTH
-    assert(COMPUTE_PIPELINE_TYPES.at(0) == COMPUTE::PRTCL_CLOTH);
+    assert(COMPUTE_TYPES.at(0) == COMPUTE::PRTCL_CLOTH);
     for (const auto& pDesc : pDescriptors_) pDynamicItems.push_back(pDesc.get());
     // Read from pos/vel 0 write to pos/vel 1
     pDynamicItems.push_back(pPosBuffs_[0].get());
@@ -441,25 +441,22 @@ void Base::getComputeDescSetBindData() {
     pDynamicItems.push_back(pVelBuffs_[0].get());
     pDynamicItems.push_back(pVelBuffs_[1].get());
     computeDescSetBindDataMaps_.emplace_back();
-    handler().descriptorHandler().getBindData(COMPUTE_PIPELINE_TYPES.at(0), computeDescSetBindDataMaps_.back(),
-                                              pDynamicItems);
+    handler().descriptorHandler().getBindData(COMPUTE_TYPES.at(0), computeDescSetBindDataMaps_.back(), pDynamicItems);
 
     // Read from pos/vel 1 write to pos/vel 0
     std::swap(pDynamicItems[1], pDynamicItems[2]);
     std::swap(pDynamicItems[3], pDynamicItems[4]);
     computeDescSetBindDataMaps_.emplace_back();
-    handler().descriptorHandler().getBindData(COMPUTE_PIPELINE_TYPES.at(0), computeDescSetBindDataMaps_.back(),
-                                              pDynamicItems);
+    handler().descriptorHandler().getBindData(COMPUTE_TYPES.at(0), computeDescSetBindDataMaps_.back(), pDynamicItems);
 
     // CLOTH NORMAL
-    assert(COMPUTE_PIPELINE_TYPES.at(1) == COMPUTE::PRTCL_CLOTH_NORM && computeDescSetBindDataMaps_.size() == 2);
+    assert(COMPUTE_TYPES.at(1) == COMPUTE::PRTCL_CLOTH_NORM && computeDescSetBindDataMaps_.size() == 2);
     pDynamicItems.clear();
     // Read from pos 0 write to norm
     pDynamicItems.push_back(pPosBuffs_[0].get());
     pDynamicItems.push_back(pNormBuff_.get());
     computeDescSetBindDataMaps_.emplace_back();
-    handler().descriptorHandler().getBindData(COMPUTE_PIPELINE_TYPES.at(1), computeDescSetBindDataMaps_.back(),
-                                              pDynamicItems);
+    handler().descriptorHandler().getBindData(COMPUTE_TYPES.at(1), computeDescSetBindDataMaps_.back(), pDynamicItems);
 }
 
 }  // namespace Cloth

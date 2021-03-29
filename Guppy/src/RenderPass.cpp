@@ -8,17 +8,18 @@
 #include <Common/Helpers.h>
 
 #include "Descriptor.h"
+#include "RenderPassManager.h"
 #include "Shell.h"
 // HANDLERS
 #include "CommandHandler.h"
 #include "DescriptorHandler.h"
 #include "MaterialHandler.h"
 #include "PipelineHandler.h"
-#include "RenderPassHandler.h"
+#include "PassHandler.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
 
-RenderPass::Base::Base(RenderPass::Handler& handler, const uint32_t&& offset, const RenderPass::CreateInfo* pCreateInfo)
+RenderPass::Base::Base(Pass::Handler& handler, const uint32_t&& offset, const CreateInfo* pCreateInfo)
     : Handlee(handler),
       FLAGS(pCreateInfo->flags),
       NAME(pCreateInfo->name),
@@ -126,10 +127,10 @@ void RenderPass::Base::init() {
     commandCount_ = ctx.imageCount;
 
     // CLEAR
-    if (handler().clearTargetMap_.count(getTargetId()) == 0)  //
-        handler().clearTargetMap_[getTargetId()] = TYPE;
+    if (handler().renderPassMgr().clearTargetMap_.count(getTargetId()) == 0)  //
+        handler().renderPassMgr().clearTargetMap_[getTargetId()] = TYPE;
     // FINAL
-    handler().finalTargetMap_[getTargetId()] = TYPE;
+    handler().renderPassMgr().finalTargetMap_[getTargetId()] = TYPE;
 
     isInitialized_ = true;
 }
@@ -138,7 +139,7 @@ void RenderPass::Base::create() {
     assert(isInitialized_);
 
     // Update some settings based on the clear map.
-    if (hasTargetSwapchain() && handler().isFinalTargetPass(getTargetId(), TYPE)) {
+    if (hasTargetSwapchain() && handler().renderPassMgr().isFinalTargetPass(getTargetId(), TYPE)) {
         finalLayout_ = vk::ImageLayout::ePresentSrcKHR;
     }
     // Not sure if this makes sense anymore
@@ -375,7 +376,7 @@ void RenderPass::Base::createAttachments() {
         });
     }
 
-    bool isClear = handler().isClearTargetPass(getTargetId(), TYPE);
+    bool isClear = handler().renderPassMgr().isClearTargetPass(getTargetId(), TYPE);
 
     // COLOR ATTACHMENT
     resources_.attachments.push_back({});
@@ -614,7 +615,7 @@ void RenderPass::Base::createFramebuffers() {
         // TARGET
         if (hasTargetSwapchain()) {
             // SWAPCHAIN
-            attachmentViews.push_back(handler().getSwapchainViews()[frameIndex]);
+            attachmentViews.push_back(handler().renderPassMgr().getSwapchainViews()[frameIndex]);
         } else {
             // SAMPLER
             auto texIndex = (std::min)(static_cast<uint8_t>(pTextures_.size() - 1), frameIndex);
@@ -708,22 +709,6 @@ void RenderPass::Base::endSecondary(const uint8_t frameIndex, const vk::CommandB
 }
 
 void RenderPass::Base::updateSubmitResource(SubmitResource& resource, const uint8_t frameIndex) const {
-    if (TYPE == PASS::SCREEN_SPACE_HDR_LOG) {
-        resource.signalSemaphores[resource.signalSemaphoreCount] = data.semaphores[frameIndex];
-        resource.signalSrcStageMasks[resource.signalSemaphoreCount] = vk::PipelineStageFlagBits::eFragmentShader;
-        resource.signalSemaphoreCount++;
-    }
-    // if (data.signalSrcStageMask != {}) {
-    //    std::memcpy(                                                    //
-    //        &resource.signalSemaphores[resource.signalSemaphoreCount],  //
-    //        &data.semaphores[frameIndex], sizeof(vk::Semaphore)           //
-    //    );
-    //    std::memcpy(                                                       //
-    //        &resource.signalSrcStageMasks[resource.signalSemaphoreCount],  //
-    //        &data.signalSrcStageMask, sizeof(vk::PipelineStageFlags)         //
-    //    );
-    //    resource.signalSemaphoreCount++;
-    //}
     std::memcpy(                                                //
         &resource.commandBuffers[resource.commandBufferCount],  //
         &data.priCmds[frameIndex], sizeof(vk::CommandBuffer)    //

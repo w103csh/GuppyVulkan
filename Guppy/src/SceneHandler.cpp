@@ -22,7 +22,7 @@
 #include "ModelHandler.h"
 #include "ParticleHandler.h"
 // Remove me after pass dependent things are no longer in the scene.
-#include "RenderPassHandler.h"
+#include "PassHandler.h"
 #include "TextureHandler.h"
 #include "UniformHandler.h"
 
@@ -644,7 +644,8 @@ void Scene::Handler::init() {
             std::set<PASS> activePassTypes;
             passHandler().getActivePassTypes(activePassTypes);
             // TODO: these types of checks are not great. The active passes should be able to change at runtime.
-            if (std::find(activePassTypes.begin(), activePassTypes.end(), PASS::SAMPLER_PROJECT) != activePassTypes.end()) {
+            if (std::find(activePassTypes.begin(), activePassTypes.end(), PASS{RENDER_PASS::SAMPLER_PROJECT}) !=
+                activePassTypes.end()) {
                 planeInfo = {};
                 planeInfo.pipelineType = GRAPHICS::TRI_LIST_TEX;
                 planeInfo.selectable = false;

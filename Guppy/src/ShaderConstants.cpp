@@ -12,6 +12,7 @@
 #include "Geometry.h"
 #include "HeightFieldFluid.h"
 #include "Ocean.h"
+#include "OceanComputeWork.h"
 #include "PBR.h"
 #include "Parallax.h"
 #include "Particle.h"

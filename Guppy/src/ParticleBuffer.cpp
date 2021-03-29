@@ -15,7 +15,7 @@
 #include "LoadingHandler.h"
 #include "ParticleHandler.h"
 #include "PipelineHandler.h"
-#include "RenderPassHandler.h"
+#include "PassHandler.h"
 
 namespace Particle {
 
@@ -135,8 +135,8 @@ Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCr
     : Handlee(handler),
       NAME(pCreateInfo->name),
       LOCAL_SIZE(pCreateInfo->localSize),
-      COMPUTE_PIPELINE_TYPES(pCreateInfo->computePipelineTypes),
-      GRAPHICS_PIPELINE_TYPES(pCreateInfo->graphicsPipelineTypes),
+      COMPUTE_TYPES(pCreateInfo->computePipelineTypes),
+      GRAPHICS_TYPES(pCreateInfo->graphicsPipelineTypes),
       SHADOW_PIPELINE_TYPE(shadowPipelineType),
       status_(STATUS::READY),
       draw_(false),
@@ -152,9 +152,9 @@ Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCr
       pLdgRes_(nullptr),
       offset_(offset),
       descTimeOffset_(BAD_OFFSET) {
-    for (const auto& type : COMPUTE_PIPELINE_TYPES) assert(type != COMPUTE::ALL_ENUM);
-    for (const auto& type : GRAPHICS_PIPELINE_TYPES) assert(type != GRAPHICS::ALL_ENUM);
-    assert(!(COMPUTE_PIPELINE_TYPES.empty() && GRAPHICS_PIPELINE_TYPES.empty()));
+    for (const auto& type : COMPUTE_TYPES) assert(type != COMPUTE::ALL_ENUM);
+    for (const auto& type : GRAPHICS_TYPES) assert(type != GRAPHICS::ALL_ENUM);
+    assert(!(COMPUTE_TYPES.empty() && GRAPHICS_TYPES.empty()));
 
     // TODO: better validation on these types
     for (uint32_t i = 0; i < static_cast<uint32_t>(pDescriptors_.size()); i++) {
@@ -211,8 +211,8 @@ void Base::prepare() {
 
     // TODO: see comment in Mesh::Base::prepare about descriptors.
     if (status_ == STATUS::READY) {
-        if (COMPUTE_PIPELINE_TYPES.size()) getComputeDescSetBindData();
-        if (GRAPHICS_PIPELINE_TYPES.size()) getGraphicsDescSetBindData();
+        if (COMPUTE_TYPES.size()) getComputeDescSetBindData();
+        if (GRAPHICS_TYPES.size()) getGraphicsDescSetBindData();
         if (SHADOW_PIPELINE_TYPE != GRAPHICS::ALL_ENUM) getShadowDescSetBindData();
     } else {
         handler().ldgOffsets_.insert(getOffset());
@@ -260,7 +260,7 @@ void Base::destroy() {
     if (texCoords_.size()) ctx.destroyBuffer(texCoordRes_);
 }
 
-const std::vector<Descriptor::Base*> Base::getSDynamicDataItems(const PIPELINE pipelineType) const {
+const std::vector<Descriptor::Base*> Base::getDynamicDataItems(const PIPELINE pipelineType) const {
     std::vector<Descriptor::Base*> pDescs;
     for (const auto [descSetType, stageFlags] :
          handler().pipelineHandler().getPipeline(pipelineType)->DESC_SET_STAGE_PAIRS) {
@@ -296,18 +296,18 @@ const Descriptor::Set::BindData& Base::getDescriptorSetBindData(const PASS& pass
 }
 
 void Base::getComputeDescSetBindData() {
-    for (const auto& pipelineType : COMPUTE_PIPELINE_TYPES) {
+    for (const auto& pipelineType : COMPUTE_TYPES) {
         computeDescSetBindDataMaps_.emplace_back();
         handler().descriptorHandler().getBindData(pipelineType, computeDescSetBindDataMaps_.back(),
-                                                  getSDynamicDataItems(pipelineType));
+                                                  getDynamicDataItems(pipelineType));
     }
 }
 
 void Base::getGraphicsDescSetBindData() {
-    for (const auto& pipelineType : GRAPHICS_PIPELINE_TYPES) {
+    for (const auto& pipelineType : GRAPHICS_TYPES) {
         graphicsDescSetBindDataMaps_.emplace_back();
         handler().descriptorHandler().getBindData(pipelineType, graphicsDescSetBindDataMaps_.back(),
-                                                  getSDynamicDataItems(pipelineType));
+                                                  getDynamicDataItems(pipelineType));
     }
 }
 
@@ -316,7 +316,7 @@ void Base::getShadowDescSetBindData() {
     handler().passHandler().getActivePassTypes(passTypes, SHADOW_PIPELINE_TYPE);
     if (passTypes.size()) {
         handler().descriptorHandler().getBindData(SHADOW_PIPELINE_TYPE, shadowDescSetBindDataMap_,
-                                                  getSDynamicDataItems(SHADOW_PIPELINE_TYPE));
+                                                  getDynamicDataItems(SHADOW_PIPELINE_TYPE));
     }
 }
 

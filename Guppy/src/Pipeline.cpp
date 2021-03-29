@@ -14,10 +14,9 @@
 #include "Instance.h"
 #include "Vertex.h"
 // HANDLERS
-#include "ComputeHandler.h"
 #include "DescriptorHandler.h"
 #include "PipelineHandler.h"
-#include "RenderPassHandler.h"
+#include "PassHandler.h"
 #include "ShaderHandler.h"
 #include "TextureHandler.h"
 
@@ -156,7 +155,6 @@ void Pipeline::Base::prepareDescriptorSetInfo() {
     // Get a list of active passes for the pipeline type.
     std::set<PASS> passTypes;
     handler().passHandler().getActivePassTypes(passTypes, TYPE);
-    handler().computeHandler().getActivePassTypes(passTypes, TYPE);
 
     // Gather a culled list of resources.
     auto helpers = handler().descriptorHandler().getResourceHelpers(passTypes, TYPE, DESC_SET_STAGE_PAIRS);
@@ -262,16 +260,13 @@ const std::shared_ptr<Pipeline::BindData>& Pipeline::Base::getBindData(const PAS
         if (tempSet.size() != itBindData->first.size()) {
             // Compare the pipeline data to see if the pipeline bind data is compatible.
             bool isCompatible = true;
-            for (const auto& bindDataPassType : tempSet) {
+            for (const PASS& bindDataPassType : tempSet) {
                 // The set difference should filter out the ALL_ENUM. If it doesn't
                 // I am not sure if the algorithm will work right.
-                assert(bindDataPassType != PASS::ALL_ENUM);
-                if (RenderPass::ALL.count(passType)) {
-                    const auto& pPass = handler().passHandler().getPass(passType);
-                    if (!handler().passHandler().getPass(bindDataPassType)->comparePipelineData(pPass)) {
-                        isCompatible = false;
-                        break;
-                    }
+                assert(!std::visit(Pass::IsAll{}, bindDataPassType));
+                if (!handler().passHandler().comparePipelineData(passType, bindDataPassType)) {
+                    isCompatible = false;
+                    break;
                 }
             }
 

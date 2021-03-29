@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -11,8 +11,6 @@
 #include <utility>
 
 #include "Enum.h"
-
-enum class PASS : uint32_t;
 
 namespace Uniform {
 

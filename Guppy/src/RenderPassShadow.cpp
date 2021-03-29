@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -14,7 +14,7 @@
 #include "PipelineHandler.h"
 #include "DescriptorHandler.h"
 #include "ParticleHandler.h"
-#include "RenderPassHandler.h"
+#include "PassHandler.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
 #include "UniformHandler.h"
@@ -22,7 +22,7 @@
 namespace RenderPass {
 namespace Shadow {
 
-Base::Base(RenderPass::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo)
+Base::Base(Pass::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo)
     : RenderPass::Base{handler, std::forward<const index>(offset), pCreateInfo} {
     status_ = STATUS::PENDING_PIPELINE;
 }
@@ -105,8 +105,8 @@ std::array<PIPELINE, 2> TEX_LIST = {
 };
 }  // namespace
 
-void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::vector<PIPELINE>& surrogatePipelineTypes,
-                  const vk::CommandBuffer& priCmd) {
+void Base::record(const uint8_t frameIndex, const RENDER_PASS& surrogatePassType,
+                  std::vector<PIPELINE>& surrogatePipelineTypes, const vk::CommandBuffer& priCmd) {
     if (getStatus() != STATUS::READY) update();
     if (getStatus() == STATUS::READY) {
         beginPass(priCmd, frameIndex, vk::SubpassContents::eInline);
@@ -156,7 +156,7 @@ void Base::record(const uint8_t frameIndex, const PASS& surrogatePassType, std::
 
 // DEFAULT
 const CreateInfo DEFAULT_CREATE_INFO = {
-    PASS::SHADOW,
+    RENDER_PASS::SHADOW,
     "Shadow Render Pass",
     {
         GRAPHICS::SHADOW_COLOR,
@@ -168,7 +168,7 @@ const CreateInfo DEFAULT_CREATE_INFO = {
         std::string(Texture::Shadow::MAP_CUBE_ARRAY_ID),
     },
 };
-Default::Default(Handler& handler, const index&& offset)
+Default::Default(Pass::Handler& handler, const index&& offset)
     : RenderPass::Shadow::Base{handler, std::forward<const index>(offset), &DEFAULT_CREATE_INFO} {}
 
 }  // namespace Shadow

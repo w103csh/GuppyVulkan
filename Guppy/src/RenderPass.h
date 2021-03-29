@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -21,24 +21,23 @@
 
 // clang-format off
 namespace Descriptor { class Base; }
-namespace Pipeline { class Graphics; }
+namespace Pass       { class Handler; }
+namespace Pipeline   { class Graphics; }
 // clang-format on
 
 namespace RenderPass {
 
-class Handler;
-
-class Base : public Handlee<RenderPass::Handler> {
+class Base : public Handlee<Pass::Handler> {
     friend class Pipeline::Graphics;
 
    public:
-    Base(RenderPass::Handler &handler, const index &&offset, const RenderPass::CreateInfo *pCreateInfo);
+    Base(Pass::Handler &handler, const index &&offset, const CreateInfo *pCreateInfo);
     virtual ~Base() = default;
 
     const FlagBits FLAGS;
     const std::string NAME;
     const index OFFSET;
-    const PASS TYPE;
+    const RENDER_PASS TYPE;
 
     virtual void init();
     constexpr bool isIntialized() const { return isInitialized_; }
@@ -98,9 +97,6 @@ class Base : public Handlee<RenderPass::Handler> {
     inline void addPipelineTypes(std::set<PIPELINE> &pipelineTypes) const {
         for (const auto &keyValue : pipelineBindDataList_.getKeyOffsetMap()) pipelineTypes.insert(keyValue.first);
     }
-    constexpr bool comparePipelineData(const std::unique_ptr<Base> &pOther) const {
-        return pipelineData_ == pOther->getPipelineData();
-    }
     void setBindData(const PIPELINE &pipelineType, const std::shared_ptr<Pipeline::BindData> &pBindData);
 
     // DESCRIPTOR SET
@@ -124,7 +120,7 @@ class Base : public Handlee<RenderPass::Handler> {
     FlagBits status_;
 
     // PIPELINE
-    PipelineData pipelineData_;
+    Pass::PipelineData pipelineData_;
     Pipeline::pipelineBindDataList pipelineBindDataList_;  // Is this still necessary?
 
     // DESCRIPTOR SET
@@ -144,7 +140,7 @@ class Base : public Handlee<RenderPass::Handler> {
     virtual void createSubpassDescriptions();
     virtual void createDependencies();
     Resources resources_;
-    std::vector<std::pair<PASS, index>> dependentTypeOffsetPairs_;
+    std::vector<std::pair<RENDER_PASS, index>> dependentTypeOffsetPairs_;
 
     // FRAME DATA
     virtual void createCommandBuffers();

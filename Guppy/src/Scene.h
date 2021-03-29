@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -32,7 +32,7 @@ class Base : public Handlee<Scene::Handler> {
     void addMeshIndex(const MESH type, const Mesh::index offset);
     void addModelIndex(const Model::index offset);
 
-    void record(const PASS& passType, const PIPELINE& pipelineType,
+    void record(const RENDER_PASS& passType, const PIPELINE& pipelineType,
                 const std::shared_ptr<Pipeline::BindData>& pipelineBindData, const vk::CommandBuffer& priCmd,
                 const vk::CommandBuffer& secCmd, const uint8_t frameIndex,
                 const Descriptor::Set::BindData* pDescSetBindData = nullptr);

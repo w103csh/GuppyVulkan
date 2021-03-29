@@ -44,6 +44,12 @@ void Shader::Handler::reset() {
     cleanup();
 }
 
+#define PRINT_NAME_ON_COMPILE false
+#define PRINT_NAME_ON_CREATE false
+#if PRINT_NAME_ON_CREATE
+#include <sstream>
+#endif
+
 bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit) {
     auto& stageInfo = keyValue.second.second;
     if (isInit && stageInfo.module) return false;
@@ -54,28 +60,29 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
                     ("Recompiling shader: \"" + std::string(createInfo.fileName) + "\"").c_str());
     }
 
-    // if (std::get<0>(keyValue.first) == SHADER::CDLOD_VERT)  //
-    //    auto pause = 1;
-    auto stringTexts = loadText(keyValue);
+    // if (std::get<0>(keyValue.first) == SHADER::OCEAN_VERT)  //
+    //    auto pause = true;
+    auto stringTexts = loadText(keyValue, createInfo.replaceMap);
 
     // I can't figure out how else to do this atm.
     std::vector<const char*> texts;
     for (auto& s : stringTexts) texts.push_back(s.c_str());
 
     std::vector<unsigned int> spv;
-    // if (std::get<0>(keyValue.first) == SHADER::CDLOD_VERT)  //
-    //    auto pause = 1;
-    // shell().log(Shell::LogPriority::LOG_INFO, ("Compiling: " + std::string(createInfo.fileName)).c_str());
+    if (std::get<0>(keyValue.first) == SHADER::TEX_FRAG)  //
+        auto pause = true;
+#if PRINT_NAME_ON_COMPILE
+    shell().log(Shell::LogPriority::LOG_INFO, ("Compiling shader: " + std::string(createInfo.fileName)).c_str());
+#endif
     bool success = GLSLtoSPV(static_cast<VkShaderStageFlagBits>(createInfo.stage), texts, spv);
 
     // Return or assert on fail
     if (!success) {
-        shell().log(Shell::LogPriority::LOG_ERR, ("Error compiling: " + std::string(createInfo.fileName)).c_str());
+        shell().log(Shell::LogPriority::LOG_ERR, ("Error compiling shader: " + std::string(createInfo.fileName)).c_str());
         if (doAssert) {
             assert(success);
-        } else {
-            return false;
         }
+        return false;
     }
 
     vk::ShaderModuleCreateInfo moduleInfo = {};
@@ -89,14 +96,19 @@ bool Shader::Handler::make(infoMapKeyValue& keyValue, bool doAssert, bool isInit
     stageInfo = vk::PipelineShaderStageCreateInfo{};
     stageInfo.stage = createInfo.stage;
     stageInfo.pName = "main";
-    // shell().log(Shell::LogPriority::LOG_INFO, ("Creating shader module: " + std::string(createInfo.fileName)).c_str());
     stageInfo.module = shell().context().dev.createShaderModule(moduleInfo, shell().context().pAllocator);
+#if PRINT_NAME_ON_CREATE
+    std::stringstream ss;
+    ss << "Creating shader module: " << createInfo.fileName << " 0x" << stageInfo.module;
+    shell().log(Shell::LogPriority::LOG_INFO, ss.str().c_str());
+#endif
     // shell().context().dbg.setMarkerName(stageInfo.module, createInfo.name.c_str());
 
     return needsUpdate;
 }
 
-std::vector<std::string> Shader::Handler::loadText(const infoMapKeyValue& keyValue) {
+std::vector<std::string> Shader::Handler::loadText(const infoMapKeyValue& keyValue,
+                                                   const std::map<std::string, std::string>& replaceMap) {
     std::vector<std::string> texts;
     const auto& createInfo = ALL.at(std::get<0>(keyValue.first));
 
@@ -106,6 +118,7 @@ std::vector<std::string> Shader::Handler::loadText(const infoMapKeyValue& keyVal
     }
     texts.push_back(shaderTexts_.at(std::get<0>(keyValue.first)));
     // TEXT REPLACE
+    helpers::textReplaceFromMap(replaceMap, texts.back());
     textReplaceDescSet(keyValue.second.first, texts.back());
     uniformHandler().textReplaceShader(keyValue.second.first, Shader::ALL.at(std::get<0>(keyValue.first)).fileName,
                                        texts.back());
@@ -119,6 +132,7 @@ std::vector<std::string> Shader::Handler::loadText(const infoMapKeyValue& keyVal
         }
         texts.push_back(shaderLinkTexts_.at(linkShaderType));
         // TEXT REPLACE
+        helpers::textReplaceFromMap(linkCreateInfo.replaceMap, texts.back());
         textReplaceDescSet(keyValue.second.first, texts.back());
         uniformHandler().textReplaceShader(keyValue.second.first, Shader::LINK_ALL.at(linkShaderType).fileName,
                                            texts.back());
@@ -141,8 +155,7 @@ void Shader::Handler::textReplaceDescSet(const Descriptor::Set::textReplaceTuple
 
 void Shader::Handler::textReplacePipeline(const PIPELINE pipelineType, std::string& text) const {
     if (!std::visit(Pipeline::IsCompute{}, pipelineType)) return;
-    // LOCAL SIZE
-    {
+    {  // LOCAL SIZE
         const auto localSize =
             static_cast<const Pipeline::Compute*>(pipelineHandler().getPipeline(pipelineType).get())->getLocalSize();
         auto replaceInfo = helpers::getMacroReplaceInfo(Pipeline::LOCAL_SIZE_MACRO_ID_PREFIX, text);

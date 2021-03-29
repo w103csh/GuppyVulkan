@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -17,8 +17,11 @@
 #include <vector>
 #include <vulkan/vulkan.hpp>
 
+#include <Common/Types.h>
+
 #include "DescriptorConstants.h"
 #include "Enum.h"
+#include "PassConstants.h"
 
 enum class DESCRIPTOR_SET;
 enum class SHADER;
@@ -27,12 +30,9 @@ namespace Sampler { struct CreateInfo; }
 namespace Texture { struct CreateInfo; }
 // clang-format on
 
-// Why is this a multiset?
-using pipelinePassSet = std::multiset<std::pair<PIPELINE, PASS>>;
-
 // const glm::vec4 CLEAR_COLOR = {190.0f / 256.0f, 223.0f / 256.0f, 246.0f / 256.0f, 1.0f};
-//const glm::vec4 CLEAR_COLOR = {0.69f, 0.84f, 1.0f, 1.0f};
- const glm::vec4 CLEAR_COLOR = {};
+// const glm::vec4 CLEAR_COLOR = {0.69f, 0.84f, 1.0f, 1.0f};
+const glm::vec4 CLEAR_COLOR = {};
 const vk::ClearColorValue DEFAULT_CLEAR_COLOR_VALUE =
     std::array<float, 4>{CLEAR_COLOR.x, CLEAR_COLOR.y, CLEAR_COLOR.z, CLEAR_COLOR.w};
 
@@ -50,9 +50,9 @@ using SubmitResources = std::array<SubmitResource, RESOURCE_SIZE>;
 
 using descriptorPipelineOffsetsMap = std::map<Uniform::offsetsMapKey, Uniform::offsets>;
 
-using orderedPassTypeOffsetPairs = insertion_ordered_unique_list<std::pair<PASS, RenderPass::index>>;
+using orderedPassTypeOffsetPairs = insertion_ordered_unique_list<std::pair<RENDER_PASS, index>>;
 
-extern const std::set<PASS> ALL;
+extern const std::set<RENDER_PASS> ALL;
 
 // clang-format off
 using FLAG = enum : FlagBits {
@@ -64,16 +64,6 @@ using FLAG = enum : FlagBits {
     DEPTH_INPUT_ATTACHMENT =    0x00000010,
 };
 // clang-format off
-
-struct PipelineData {
-    constexpr bool operator==(const PipelineData &other) const {
-        return usesDepth == other.usesDepth &&  //
-               samples == other.samples;
-    }
-    constexpr bool operator!=(const PipelineData &other) { return !(*this == other); }
-    vk::Bool32 usesDepth;
-    vk::SampleCountFlagBits samples;
-};
 
 struct SwapchainResources {
     std::vector<vk::Image> images;
@@ -102,13 +92,13 @@ struct Resources {
 };
 
 struct CreateInfo {
-    PASS type;
+    RENDER_PASS type;
     std::string name;
     std::list<PIPELINE> pipelineTypes;
     FlagBits flags = (FLAG::SWAPCHAIN | FLAG::DEPTH | FLAG::MULTISAMPLE);
     std::vector<std::string> textureIds;
-    std::vector<PASS> prePassTypes;
-    std::vector<PASS> postPassTypes;
+    std::vector<RENDER_PASS> prePassTypes;
+    std::vector<RENDER_PASS> postPassTypes;
     vk::ImageLayout initialLayout = vk::ImageLayout::eColorAttachmentOptimal;
     vk::ImageLayout finalLayout = vk::ImageLayout::eColorAttachmentOptimal;
     descriptorPipelineOffsetsMap descPipelineOffsets;

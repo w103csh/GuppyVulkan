@@ -41,6 +41,9 @@ set(SOURCE
     MaterialHandler.h
     Parallax.cpp
     Parallax.h
+    PassConstants.h
+    PassHandler.cpp
+    PassHandler.h
     PBR.cpp
     PBR.h
     Random.h
@@ -79,8 +82,11 @@ set(SOURCE
     # Compute
     Compute.cpp
     Compute.h
-    ComputeHandler.cpp
-    ComputeHandler.h
+    ComputeWork.cpp
+    ComputeWork.h
+    ComputeWorkConstants.h
+    ComputeWorkManager.cpp
+    ComputeWorkManager.h
     # Deferred
     Deferred.cpp
     Deferred.h
@@ -143,6 +149,8 @@ set(SOURCE
     # Ocean
     Ocean.cpp
     Ocean.h
+    OceanComputeWork.cpp
+    OceanComputeWork.h
     # Particle
     Particle.cpp
     Particle.h
@@ -163,8 +171,8 @@ set(SOURCE
     RenderPass.h
     RenderPassConstants.cpp
     RenderPassConstants.h
-    RenderPassHandler.cpp
-    RenderPassHandler.h
+    RenderPassManager.cpp
+    RenderPassManager.h
     # Screen Space
     ScreenSpace.cpp
     ScreenSpace.h

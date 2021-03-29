@@ -147,8 +147,6 @@ struct SubmitResource {
     std::array<vk::CommandBuffer, size> commandBuffers = {};
     uint32_t signalSemaphoreCount = 0;
     std::array<vk::Semaphore, size> signalSemaphores = {};
-    // Set below for stages the signal semaphores should wait on.
-    std::array<vk::PipelineStageFlags, size> signalSrcStageMasks = {};
     QUEUE queueType;
     void resetCount() {
         waitSemaphoreCount = 0;

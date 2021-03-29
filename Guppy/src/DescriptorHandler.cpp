@@ -18,6 +18,7 @@
 #include "HeightFieldFluid.h"
 #include "Mesh.h"
 #include "Ocean.h"
+#include "OceanComputeWork.h"
 #include "Parallax.h"
 #include "Particle.h"
 #include "PBR.h"
@@ -27,10 +28,9 @@
 #include "Shadow.h"
 #include "Tessellation.h"
 // HANDLERS
-#include "ComputeHandler.h"
 #include "ParticleHandler.h"
 #include "PipelineHandler.h"
-#include "RenderPassHandler.h"
+#include "PassHandler.h"
 #include "ShaderHandler.h"
 #include "TextureHandler.h"
 #include "UniformHandler.h"
@@ -80,7 +80,8 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_() {
             case DESCRIPTOR_SET::HFF:                                       pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::HFF_CREATE_INFO)); break;
             case DESCRIPTOR_SET::HFF_DEF:                                   pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::HFF_DEF_CREATE_INFO)); break;
             case DESCRIPTOR_SET::FFT_DEFAULT:                               pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::FFT_DEFAULT_CREATE_INFO)); break;
-            case DESCRIPTOR_SET::OCEAN_DEFAULT:                             pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::OCEAN_DEFAULT_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::OCEAN_DISPATCH:                            pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::OCEAN_DISPATCH_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::OCEAN_DRAW:                                pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::OCEAN_DRAW_CREATE_INFO)); break;
             case DESCRIPTOR_SET::CDLOD_DEFAULT:                             pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::CDLOD_DEFAULT_CREATE_INFO)); break;
             default: assert(false);  // add new pipelines here
         }
@@ -254,8 +255,8 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
 
                 // Add the specific types that need to be iterated through for ALL_ENUM.
                 for (const auto& passType : passTypes) {
-                    assert(passType != PASS::ALL_ENUM);
-                    passHandler().getPass(passType)->addPipelineTypes(pipelineTypes);
+                    assert(passType != PASS{RENDER_PASS::ALL_ENUM});
+                    passHandler().addPipelineTypes(passType, pipelineTypes);
                 }
             }
 
@@ -266,9 +267,9 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
              *      the pipeline.
              *
              *      GRAPHICS::ALL_ENUM should NOT be used.
-             *      PASS::ALL_ENUM is required.
+             *      RENDER_PASS::ALL_ENUM is required.
              *
-             *      (ex: GRAPHICS::TRI_LIST_COLOR, PASS::ALL_ENUM)
+             *      (ex: GRAPHICS::TRI_LIST_COLOR, RENDER_PASS::ALL_ENUM)
              *
              *      TODO: add the create info stuff mentioned above, and validate the types.
              *
@@ -277,9 +278,9 @@ void Descriptor::Handler::prepareDescriptorSet(std::unique_ptr<Descriptor::Set::
              *      be declared in the create info for the pass.
              *
              *      GRAPHICS::ALL_ENUM can be used.
-             *      PASS::ALL_ENUM should NOT be used.
+             *      RENDER_PASS::ALL_ENUM should NOT be used.
              *
-             *      (ex: GRAPHICS::ALL_ENUM, PASS::SAMPLER)
+             *      (ex: GRAPHICS::ALL_ENUM, RENDER_PASS::SAMPLER)
              *
              *   Non-defaults should override any pipeline defaults, and pipeline defaults
              *   should override the main defaults declared in the OffsetsManager map.
@@ -558,7 +559,6 @@ void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::
     // Get a list of active passes for the pipeline type.
     std::set<PASS> passTypes;
     passHandler().getActivePassTypes(passTypes, pipelineType);
-    computeHandler().getActivePassTypes(passTypes, pipelineType);
 
     assert(passTypes.size() && "No active pass types contain the pipeline type");
 

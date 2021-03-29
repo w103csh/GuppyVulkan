@@ -29,22 +29,21 @@
 
 class Shell;
 // clang-format off
-namespace Command       { class Handler; }
-namespace Compute       { class Handler; }
-namespace Descriptor    { class Handler; }
-namespace Loading       { class Handler; }
-namespace Material      { class Handler; }
-namespace Mesh          { class Handler; }
-namespace Model         { class Handler; }
-namespace Particle      { class Handler; }
-namespace Pipeline      { class Handler; }
-namespace RenderPass    { class Handler; }
-namespace Scene         { class Handler; }
-namespace Shader        { class Handler; }
-namespace Storage       { class Handler; }
-namespace Texture       { class Handler; }
-namespace UI            { class Handler; }
-namespace Uniform       { class Handler; }
+namespace Command    { class Handler; }
+namespace Descriptor { class Handler; }
+namespace Loading    { class Handler; }
+namespace Material   { class Handler; }
+namespace Mesh       { class Handler; }
+namespace Model      { class Handler; }
+namespace Particle   { class Handler; }
+namespace Pass       { class Handler; }
+namespace Pipeline   { class Handler; }
+namespace Scene      { class Handler; }
+namespace Shader     { class Handler; }
+namespace Storage    { class Handler; }
+namespace Texture    { class Handler; }
+namespace UI         { class Handler; }
+namespace Uniform    { class Handler; }
 // clang-format on
 
 class Game {
@@ -109,15 +108,14 @@ class Game {
 
     struct Handlers {
         std::unique_ptr<Command::Handler> pCommand;
-        std::unique_ptr<Compute::Handler> pCompute;
         std::unique_ptr<Descriptor::Handler> pDescriptor;
         std::unique_ptr<Loading::Handler> pLoading;
         std::unique_ptr<Material::Handler> pMaterial;
         std::unique_ptr<Mesh::Handler> pMesh;
         std::unique_ptr<Model::Handler> pModel;
         std::unique_ptr<Particle::Handler> pParticle;
+        std::unique_ptr<Pass::Handler> pPass;
         std::unique_ptr<Pipeline::Handler> pPipeline;
-        std::unique_ptr<RenderPass::Handler> pPass;
         std::unique_ptr<Scene::Handler> pScene;
         std::unique_ptr<Shader::Handler> pShader;
         std::unique_ptr<Texture::Handler> pTexture;
@@ -140,15 +138,14 @@ class Game {
         constexpr const auto &settings() const { return pGame_->settings(); }
 
         inline auto &commandHandler() const { return *pGame_->handlers_.pCommand; }
-        inline auto &computeHandler() const { return *pGame_->handlers_.pCompute; }
         inline auto &descriptorHandler() const { return *pGame_->handlers_.pDescriptor; }
         inline auto &loadingHandler() const { return *pGame_->handlers_.pLoading; }
         inline auto &materialHandler() const { return *pGame_->handlers_.pMaterial; }
         inline auto &meshHandler() const { return *pGame_->handlers_.pMesh; }
         inline auto &modelHandler() const { return *pGame_->handlers_.pModel; }
         inline auto &particleHandler() const { return *pGame_->handlers_.pParticle; }
-        inline auto &pipelineHandler() const { return *pGame_->handlers_.pPipeline; }
         inline auto &passHandler() const { return *pGame_->handlers_.pPass; }
+        inline auto &pipelineHandler() const { return *pGame_->handlers_.pPipeline; }
         inline auto &sceneHandler() const { return *pGame_->handlers_.pScene; }
         inline auto &shaderHandler() const { return *pGame_->handlers_.pShader; }
         inline auto &textureHandler() const { return *pGame_->handlers_.pTexture; }

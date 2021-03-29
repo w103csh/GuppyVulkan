@@ -16,7 +16,6 @@
 
 #include "UniformConstants.h"
 
-enum class PASS : uint32_t;
 // clang-format off
 namespace Buffer { struct Info; }
 // clang-format on
@@ -76,7 +75,8 @@ enum class DESCRIPTOR_SET {
     // FFT
     FFT_DEFAULT,
     // OCEAN
-    OCEAN_DEFAULT,
+    OCEAN_DISPATCH,
+    OCEAN_DRAW,
     // CDLOD
     CDLOD_DEFAULT,
     // Add new to DESCRIPTOR_SET_ALL in code file.
@@ -185,11 +185,16 @@ struct IsImage {
     bool operator()(const STORAGE_IMAGE&) const { return true; }
 };
 struct IsPipelineImage {
-    template <typename T> bool operator()(const T&) const { return false; }
-    bool operator()(const COMBINED_SAMPLER& type)       const { return type == COMBINED_SAMPLER::PIPELINE; }
-    bool operator()(const STORAGE_IMAGE& type)          const { return type == STORAGE_IMAGE::PIPELINE; }
-    bool operator()(const UNIFORM_TEXEL_BUFFER& type)   const { return type == UNIFORM_TEXEL_BUFFER::PIPELINE; }
-    bool operator()(const INPUT_ATTACHMENT&)            const { return true; }
+    template <typename T> bool operator()(const T&)   const { return false; }
+    bool operator()(const COMBINED_SAMPLER& type)     const { return type == COMBINED_SAMPLER::PIPELINE; }
+    bool operator()(const STORAGE_IMAGE& type)        const { return type == STORAGE_IMAGE::PIPELINE; }
+    bool operator()(const UNIFORM_TEXEL_BUFFER& type) const { return type == UNIFORM_TEXEL_BUFFER::PIPELINE; }
+    bool operator()(const INPUT_ATTACHMENT&)          const { return true; }
+};
+struct GetImageInitalTransitionLayout {
+    template <typename T> vk::ImageLayout operator()(const T&) const { assert(false); return vk::ImageLayout::eGeneral; }
+    vk::ImageLayout operator()(const COMBINED_SAMPLER& type)   const { return vk::ImageLayout::eShaderReadOnlyOptimal; }
+    vk::ImageLayout operator()(const STORAGE_IMAGE& type)      const { return vk::ImageLayout::eGeneral; }
 };
 struct HasPerFramebufferData {
     template <typename T> bool operator()(const T&) const { return false; }

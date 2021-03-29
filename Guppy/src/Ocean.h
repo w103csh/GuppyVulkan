@@ -16,6 +16,14 @@
 #include "ParticleBuffer.h"
 #include "Pipeline.h"
 
+// clang-format off
+namespace Pass    { class Handler; }
+namespace Texture { class Base; }
+namespace Texture { class Handler; }
+// clang-format on
+
+#define OCEAN_USE_COMPUTE_QUEUE_DISPATCH true
+
 namespace Ocean {
 
 /**
@@ -68,6 +76,7 @@ namespace Ocean {
 constexpr std::string_view FFT_BIT_REVERSAL_OFFSETS_N_ID = "Ocean FFT BRO N";
 constexpr std::string_view FFT_BIT_REVERSAL_OFFSETS_M_ID = "Ocean FFT BRO M";
 constexpr std::string_view FFT_TWIDDLE_FACTORS_ID = "Ocean FFT TF";
+void MakeResources(Texture::Handler& handler, const ::Ocean::SurfaceCreateInfo& info);
 }  // namespace Ocean
 }  // namespace BufferView
 
@@ -76,18 +85,19 @@ namespace Texture {
 class Handler;
 struct CreateInfo;
 namespace Ocean {
-constexpr std::string_view DATA_ID = "Ocean Data Texture";
-void MakeTextures(Handler& handler, const ::Ocean::SurfaceCreateInfo& info);
+constexpr std::string_view WAVE_FOURIER_ID = "Ocean Wave & Fourier Data Texture";
+constexpr std::string_view DISP_REL_ID = "Ocean Dispersion Relation Data Texture";
+void MakeResources(Texture::Handler& handler, const ::Ocean::SurfaceCreateInfo& info);
+#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+constexpr std::string_view DISP_REL_COPY_ID = "Ocean Dispersion Relation Copy Data Texture";
+CreateInfo MakeCopyTexInfo(const uint32_t N, const uint32_t M);
+#endif
 }  // namespace Ocean
 }  // namespace Texture
 
 // SHADER
 namespace Shader {
 namespace Ocean {
-extern const CreateInfo DISP_COMP_CREATE_INFO;
-extern const CreateInfo FFT_COMP_CREATE_INFO;
-extern const CreateInfo FFT_ROW_COMP_CREATE_INFO;
-extern const CreateInfo FFT_COL_COMP_CREATE_INFO;
 extern const CreateInfo VERT_CREATE_INFO;
 extern const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO;
 }  // namespace Ocean
@@ -117,7 +127,7 @@ class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA
 // DESCRIPTOR SET
 namespace Descriptor {
 namespace Set {
-extern const CreateInfo OCEAN_DEFAULT_CREATE_INFO;
+extern const CreateInfo OCEAN_DRAW_CREATE_INFO;
 }  // namespace Set
 }  // namespace Descriptor
 
@@ -125,23 +135,6 @@ extern const CreateInfo OCEAN_DEFAULT_CREATE_INFO;
 namespace Pipeline {
 class Handler;
 namespace Ocean {
-
-// DISPERSION
-class Dispersion : public Compute {
-   public:
-    Dispersion(Handler& handler);
-
-   private:
-    void getShaderStageInfoResources(CreateInfoResources& createInfoRes);
-
-    float omega0_;
-};
-
-// FFT
-class FFT : public Compute {
-   public:
-    FFT(Handler& handler);
-};
 
 // WIREFRAME
 class Wireframe : public Graphics {
@@ -187,9 +180,9 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
            std::shared_ptr<Material::Base>& pMaterial, const std::vector<std::shared_ptr<Descriptor::Base>>& pDescriptors,
            std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData);
 
-    virtual void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                      const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
-                      const uint8_t frameIndex) const override;
+    void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+              const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
+              const uint8_t frameIndex) const override;
     void dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                   const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                   const uint8_t frameIndex) const override;

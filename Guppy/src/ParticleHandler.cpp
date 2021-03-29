@@ -5,11 +5,12 @@
 
 #include "ParticleHandler.h"
 
+#include "RenderPassManager.h"
 #include "Shell.h"
 #include "Tessellation.h"
 // HANDLER
 #include "MeshHandler.h"
-#include "RenderPassHandler.h"
+#include "PassHandler.h"
 #include "TextureHandler.h"
 #include "UniformHandler.h"
 
@@ -79,7 +80,7 @@ void Particle::Handler::tick() {
 void Particle::Handler::frame() {
     if (!doUpdate_) return;
 
-    const auto frameIndex = passHandler().getFrameIndex();
+    const auto frameIndex = passHandler().renderPassMgr().getFrameIndex();
 
     // WAVE
     {
@@ -126,7 +127,7 @@ void Particle::Handler::create() {
     bool suppress = true;
 
     // OCEAN
-    if (!suppress || false) {
+    if (!suppress || true) {
         ::Ocean::SurfaceCreateInfo info = {};
         info.l = 1.0f;
         info.A = 2e-6f;
@@ -137,13 +138,20 @@ void Particle::Handler::create() {
         // info.V = 12.8f;
         // info.omega = {0, 1};
 
+        {  // Make the ocean resources owned by the texture handler. All this ocean stuff still doesn't have a proper home,
+           // and should probably not be in the particle handler at all.
+            BufferView::Ocean::MakeResources(textureHandler(), info);
+            Texture::Ocean::MakeResources(textureHandler(), info);
+        }
+
         // BUFFER
         Ocean::CreateInfo buffOcnInfo = {};
         buffOcnInfo.name = "Ocean Surface Buffer";
         buffOcnInfo.computePipelineTypes = {
-            // COMPUTE::FFT_ONE,
+#if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
             COMPUTE::OCEAN_DISP,
             COMPUTE::OCEAN_FFT,
+#endif
         };
         buffOcnInfo.graphicsPipelineTypes = {
             GRAPHICS::OCEAN_WF_DEFERRED,
@@ -520,8 +528,8 @@ void Particle::Handler::recordDraw(const PASS passType, const std::shared_ptr<Pi
                                    const vk::CommandBuffer& cmd, const uint8_t frameIndex) {
     // TODO: This is slow.
     for (const auto& pBuffer : pBuffers_) {
-        for (auto i = 0; i < pBuffer->GRAPHICS_PIPELINE_TYPES.size(); i++) {
-            if (PIPELINE{pBuffer->GRAPHICS_PIPELINE_TYPES[i]} == pPipelineBindData->type) {
+        for (auto i = 0; i < pBuffer->GRAPHICS_TYPES.size(); i++) {
+            if (PIPELINE{pBuffer->GRAPHICS_TYPES[i]} == pPipelineBindData->type) {
                 if (pBuffer->getStatus() == STATUS::READY) {
                     if (pBuffer->shouldDraw()) {
                         pBuffer->draw(
@@ -548,8 +556,8 @@ void Particle::Handler::recordDispatch(const PASS passType, const std::shared_pt
                                        const vk::CommandBuffer& cmd, const uint8_t frameIndex) {
     // TODO: This is slow.
     for (const auto& pBuffer : pBuffers_) {
-        for (auto i = 0; i < pBuffer->COMPUTE_PIPELINE_TYPES.size(); i++) {
-            if (PIPELINE{pBuffer->COMPUTE_PIPELINE_TYPES[i]} == pPipelineBindData->type) {
+        for (auto i = 0; i < pBuffer->COMPUTE_TYPES.size(); i++) {
+            if (PIPELINE{pBuffer->COMPUTE_TYPES[i]} == pPipelineBindData->type) {
                 if (pBuffer->getStatus() == STATUS::READY) {
                     if (pBuffer->shouldDispatch()) {
                         pBuffer->dispatch(

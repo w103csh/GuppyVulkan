@@ -3,7 +3,7 @@
  * All Rights Reserved
  */
 
-#include "RenderPassHandler.h"
+#include "RenderPassManager.h"
 
 #include <algorithm>
 
@@ -19,67 +19,67 @@
 #include "Shell.h"
 // HANDLERS
 #include "CommandHandler.h"
-#include "ComputeHandler.h"
 #include "DescriptorHandler.h"
 #include "LoadingHandler.h"
 #include "MeshHandler.h"
+#include "PassHandler.h"
 #include "PipelineHandler.h"
 #include "TextureHandler.h"
 
 namespace {
-
 // clang-format off
-const std::vector<PASS> DEFAULT = {
+const std::vector<RENDER_PASS> DEFAULT = {
 #if VK_USE_PLATFORM_MACOS_MVK || false
 #if DO_PROJECTOR
-    PASS::SAMPLER_PROJECT,
+    RENDER_PASS::SAMPLER_PROJECT,
 #endif
-    PASS::DEFAULT,
-    //PASS::SAMPLER_DEFAULT,
-    //PASS::SCREEN_SPACE,
+    RENDER_PASS::DEFAULT,
+    //RENDER_PASS::SAMPLER_DEFAULT,
+    //RENDER_PASS::SCREEN_SPACE,
 #else
-    PASS::DEFERRED,
+    RENDER_PASS::DEFERRED,
 #endif
 // UI pass needs to always be last since it
 // is optional
 #ifdef USE_DEBUG_UI
-    PASS::IMGUI,
+    RENDER_PASS::IMGUI,
 #endif
 };
 // clang-format on
-
 }  // namespace
 
-RenderPass::Handler::Handler(Game* pGame)
-    : Game::Handler(pGame),  //
+namespace RenderPass {
+
+Manager::Manager(Pass::Handler& handler)
+    : Pass::Manager(handler),  //
       frameIndex_(0),
       swpchnRes_{},
       submitResources_{},
       screenQuadOffset_(Mesh::BAD_OFFSET) {
-    for (const auto& type : RenderPass::ALL) {
+    for (const auto& type : ALL) {
         // clang-format off
         switch (type) {
-            case PASS::DEFAULT:                 pPasses_.emplace_back(std::make_unique<RenderPass::Base>                (std::ref(*this), static_cast<index>(pPasses_.size()), &RenderPass::DEFAULT_CREATE_INFO)); break;
-            case PASS::SAMPLER_PROJECT:         pPasses_.emplace_back(std::make_unique<RenderPass::Base>                (std::ref(*this), static_cast<index>(pPasses_.size()), &RenderPass::PROJECT_CREATE_INFO)); break;
-            case PASS::SAMPLER_DEFAULT:         pPasses_.emplace_back(std::make_unique<RenderPass::Base>                (std::ref(*this), static_cast<index>(pPasses_.size()), &RenderPass::SAMPLER_DEFAULT_CREATE_INFO)); break;
-            case PASS::SCREEN_SPACE:            pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::Base>   (std::ref(*this), static_cast<index>(pPasses_.size()), &RenderPass::ScreenSpace::CREATE_INFO)); break;
-            case PASS::SCREEN_SPACE_HDR_LOG:    pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::HdrLog> (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
-            case PASS::SCREEN_SPACE_BRIGHT:     pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::Bright> (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
-            case PASS::SCREEN_SPACE_BLUR_A:     pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::BlurA>  (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
-            case PASS::SCREEN_SPACE_BLUR_B:     pPasses_.emplace_back(std::make_unique<RenderPass::ScreenSpace::BlurB>  (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
-            case PASS::DEFERRED:                pPasses_.emplace_back(std::make_unique<RenderPass::Deferred::Base>      (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
-            case PASS::SHADOW:                  pPasses_.emplace_back(std::make_unique<RenderPass::Shadow::Default>     (std::ref(*this), static_cast<index>(pPasses_.size()))); break;
-            case PASS::SKYBOX_NIGHT:            pPasses_.emplace_back(std::make_unique<RenderPass::CubeMap::SkyboxNight>(std::ref(*this), static_cast<index>(pPasses_.size()))); break;
-            case PASS::IMGUI:
+            case RENDER_PASS::DEFAULT:              pPasses_.emplace_back(std::make_unique<Base>                (handler, static_cast<index>(pPasses_.size()), &DEFAULT_CREATE_INFO)); break;
+            case RENDER_PASS::SAMPLER_PROJECT:      pPasses_.emplace_back(std::make_unique<Base>                (handler, static_cast<index>(pPasses_.size()), &PROJECT_CREATE_INFO)); break;
+            case RENDER_PASS::SAMPLER_DEFAULT:      pPasses_.emplace_back(std::make_unique<Base>                (handler, static_cast<index>(pPasses_.size()), &SAMPLER_DEFAULT_CREATE_INFO)); break;
+            case RENDER_PASS::SCREEN_SPACE:         pPasses_.emplace_back(std::make_unique<ScreenSpace::Base>   (handler, static_cast<index>(pPasses_.size()), &ScreenSpace::CREATE_INFO)); break;
+            case RENDER_PASS::SCREEN_SPACE_HDR_LOG: pPasses_.emplace_back(std::make_unique<ScreenSpace::HdrLog> (handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::SCREEN_SPACE_BRIGHT:  pPasses_.emplace_back(std::make_unique<ScreenSpace::Bright> (handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::SCREEN_SPACE_BLUR_A:  pPasses_.emplace_back(std::make_unique<ScreenSpace::BlurA>  (handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::SCREEN_SPACE_BLUR_B:  pPasses_.emplace_back(std::make_unique<ScreenSpace::BlurB>  (handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::DEFERRED:             pPasses_.emplace_back(std::make_unique<Deferred::Base>      (handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::SHADOW:               pPasses_.emplace_back(std::make_unique<Shadow::Default>     (handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::SKYBOX_NIGHT:         pPasses_.emplace_back(std::make_unique<CubeMap::SkyboxNight>(handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::IMGUI:
 #ifdef USE_DEBUG_UI
-                                                pPasses_.emplace_back(std::make_unique<RenderPass::ImGui>(              std::ref(*this), static_cast<index>(pPasses_.size())));
+                                                    pPasses_.emplace_back(std::make_unique<ImGui>               (handler, static_cast<index>(pPasses_.size())));
 #endif
                 break;
-            default: assert(false && "Unhandled pass type"); exit(EXIT_FAILURE);
+            default: assert(false && "Unhandled RENDER_PASS type"); exit(EXIT_FAILURE);
         }
         // clang-format on
         assert(pPasses_.back()->TYPE == type);
-        assert(RenderPass::ALL.count(pPasses_.back()->TYPE));
+        assert(ALL.count(pPasses_.back()->TYPE));
     }
 
     // Update subpass offsets
@@ -108,7 +108,7 @@ RenderPass::Handler::Handler(Game* pGame)
     assert(activeTypeOffsetPairs_.size() <= RESOURCE_SIZE);
 }
 
-void RenderPass::Handler::init() {
+void Manager::init() {
     // LIFECYCLE
     clearTargetMap_.clear();
     // Initialize the passes first to create the clear target offset map.
@@ -144,15 +144,43 @@ void RenderPass::Handler::init() {
 
     // Create the default screen quad.
     screenQuadOffset_ =
-        meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&planeInfo, &defMatInfo, &instObj3dInfo)->getOffset();
+        handler().meshHandler().makeTextureMesh<Mesh::Plane::Texture>(&planeInfo, &defMatInfo, &instObj3dInfo)->getOffset();
     assert(screenQuadOffset_ != Mesh::BAD_OFFSET);
 }
 
-void RenderPass::Handler::frame() {
-    // At one point something was here
+void Manager::frame() {
+    const auto& ctx = handler().shell().context();
+    auto frameIndex = getFrameIndex();
+
+    uint8_t passIndex = 0, resIndex = 0;
+    for (; passIndex < mainLoopOffsets_.size(); passIndex++, resIndex++) {
+        const auto& offset = mainLoopOffsets_[passIndex];
+        SubmitResource* pResource = &submitResources_[resIndex];
+        pResource->resetCount();
+
+        if (passIndex == 0) {
+            // Wait for back buffer
+            pResource->waitSemaphores[pResource->waitSemaphoreCount] = ctx.acquiredBackBuffer.acquireSemaphore;
+            pResource->waitDstStageMasks[pResource->waitSemaphoreCount] = ctx.waitDstStageMask;
+            pResource->waitSemaphoreCount++;
+        }
+
+        // Record the pass and update the resources
+        pPasses_[offset]->record(frameIndex);
+        pPasses_[offset]->updateSubmitResource(*pResource, frameIndex);
+
+        // Always add the render semaphore to the last pass
+        if ((static_cast<size_t>(passIndex) + 1) == mainLoopOffsets_.size()) {
+            // Signal back buffer
+            pResource->signalSemaphores[pResource->signalSemaphoreCount] = ctx.acquiredBackBuffer.renderSemaphore;
+            pResource->signalSemaphoreCount++;
+        }
+    }
+
+    submit(resIndex);
 }
 
-Uniform::offsetsMap RenderPass::Handler::makeUniformOffsetsMap() {
+Uniform::offsetsMap Manager::makeUniformOffsetsMap() {
     // TODO: validation? This is actually merging things.
     Uniform::offsetsMap map;
     for (const auto& pPass : pPasses_) {
@@ -173,11 +201,19 @@ Uniform::offsetsMap RenderPass::Handler::makeUniformOffsetsMap() {
     return map;
 }
 
-void RenderPass::Handler::getActivePassTypes(std::set<PASS>& types, const PIPELINE& pipelineTypeIn) {
-    // This is obviously to slow if ever used for anything meaningful.
+void Manager::getActivePassTypes(const PIPELINE& pipelineTypeIn, std::set<PASS>& types) {
+    /* TODO: I don't think this works as it should atm. I believe passing in GRAPHICS::ALL_ENUM is a shortcut for rendering
+     * shadow maps, but I am pretty sure this code would add all the compute only passes to the set that is returned. This
+     * might or might not be wanted/necessary. I would have to audit all the passes to find out.
+     */
+
+    // This is obviously too slow if ever used for anything meaningful.
     for (const auto& [passType, offset] : activeTypeOffsetPairs_) {
-        if (passType == PASS::IMGUI) continue;
-        if (pipelineTypeIn == PIPELINE{GRAPHICS::ALL_ENUM}) {
+        if (passType == RENDER_PASS::IMGUI) continue;
+        if (pipelineTypeIn == PIPELINE{COMPUTE::ALL_ENUM}) {
+            // This could be made to work, but it doesn't currently...
+            assert(false && "Pipeline type COMPUTE::ALL_ENUM not handled");
+        } else if (pipelineTypeIn == PIPELINE{GRAPHICS::ALL_ENUM}) {
             types.insert(pPasses_[offset]->TYPE);
         } else {
             for (const auto& pipelineType : pPasses_[offset]->getPipelineTypes())
@@ -186,7 +222,7 @@ void RenderPass::Handler::getActivePassTypes(std::set<PASS>& types, const PIPELI
     }
 }
 
-void RenderPass::Handler::addPipelinePassPairs(pipelinePassSet& set) {
+void Manager::addPipelinePassPairs(pipelinePassSet& set) {
     /* Create pipeline to pass offset map. This way pipeline cache stuff
      *  can potentially be used to speed up creation or caching???? I am
      *  not going to worry about it other than this atm though.
@@ -198,34 +234,27 @@ void RenderPass::Handler::addPipelinePassPairs(pipelinePassSet& set) {
     }
 }
 
-void RenderPass::Handler::updateBindData(const pipelinePassSet& set) {
-    const auto& bindDataMap = pipelineHandler().getPipelineBindDataMap();
-    // Update pipeline bind data for all render passes.
-    for (const auto& pair : set) {
-        if (RenderPass::ALL.count(pair.second))  //
-            getPass(pair.second)->setBindData(pair.first, bindDataMap.at(pair));
-    }
-}
-
-void RenderPass::Handler::createCmds() {
+void Manager::createCmds() {
     cmdList_.resize(10);
     for (auto& cmds : cmdList_) {
         cmds.resize(1);
-        commandHandler().createCmdBuffers(QUEUE::GRAPHICS, cmds.data(), vk::CommandBufferLevel::ePrimary, cmds.size());
+        handler().commandHandler().createCmdBuffers(QUEUE::GRAPHICS, cmds.data(), vk::CommandBufferLevel::ePrimary,
+                                                    cmds.size());
     }
 }
 
-void RenderPass::Handler::createFences(vk::FenceCreateFlags flags) {
-    frameFences_.resize(shell().context().imageCount);
+void Manager::createFences(vk::FenceCreateFlags flags) {
+    const auto& ctx = handler().shell().context();
+    frameFences_.resize(ctx.imageCount);
     vk::FenceCreateInfo fenceInfo = {flags};
-    for (auto& fence : frameFences_) fence = shell().context().dev.createFence(fenceInfo, shell().context().pAllocator);
+    for (auto& fence : frameFences_) fence = ctx.dev.createFence(fenceInfo, ctx.pAllocator);
 }
 
-const std::unique_ptr<Mesh::Texture>& RenderPass::Handler::getScreenQuad() {
-    return meshHandler().getTextureMesh(screenQuadOffset_);
+const std::unique_ptr<Mesh::Texture>& Manager::getScreenQuad() {
+    return handler().meshHandler().getTextureMesh(screenQuadOffset_);
 }
 
-void RenderPass::Handler::attachSwapchain() {
+void Manager::attachSwapchain() {
     // SWAPCHAIN
     createSwapchainResources();
 
@@ -235,20 +264,20 @@ void RenderPass::Handler::attachSwapchain() {
     }
 }
 
-void RenderPass::Handler::detachSwapchain() {
+void Manager::detachSwapchain() {
     reset();
     destroySwapchainResources();
 }
 
-RenderPass::orderedPassTypeOffsetPairs RenderPass::Handler::getActivePassTypeOffsetPairs() {
+orderedPassTypeOffsetPairs Manager::getActivePassTypeOffsetPairs() {
     orderedPassTypeOffsetPairs pairs;
     for (const auto& offset : mainLoopOffsets_)
         for (const auto& pair : pPasses_[offset]->getDependentTypeOffsetPairs()) pairs.insert(pair);
     return pairs;
 }
 
-void RenderPass::Handler::createSwapchainResources() {
-    const auto& ctx = shell().context();
+void Manager::createSwapchainResources() {
+    const auto& ctx = handler().shell().context();
 
     // Get the image resources from the swapchain...
     swpchnRes_.images = ctx.dev.getSwapchainImagesKHR(ctx.swapchain);
@@ -259,10 +288,10 @@ void RenderPass::Handler::createSwapchainResources() {
         vk::ImageSubresourceRange range = {vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1};
 
         helpers::createImageView(ctx.dev, swpchnRes_.images[i], ctx.surfaceFormat.format, vk::ImageViewType::e2D, range,
-                                 swpchnRes_.views[i], shell().context().pAllocator);
+                                 swpchnRes_.views[i], ctx.pAllocator);
 
         // TEXTURE
-        auto pTexture = textureHandler().getTexture(SWAPCHAIN_TARGET_ID, i);
+        auto pTexture = handler().textureHandler().getTexture(SWAPCHAIN_TARGET_ID, i);
         assert(pTexture && pTexture->status != STATUS::READY);
         // Check if the swapchain was destroy before being recreated.
         wasTexDestroyed = pTexture->status == STATUS::DESTROYED;
@@ -275,18 +304,18 @@ void RenderPass::Handler::createSwapchainResources() {
 
         pTexture->status = STATUS::READY;
     }
-    if (wasTexDestroyed) descriptorHandler().updateBindData({(std::string(SWAPCHAIN_TARGET_ID))});
+    if (wasTexDestroyed) handler().descriptorHandler().updateBindData({(std::string(SWAPCHAIN_TARGET_ID))});
 
-    assert(shell().context().imageCount == swpchnRes_.images.size());
+    assert(ctx.imageCount == swpchnRes_.images.size());
     assert(swpchnRes_.images.size() == swpchnRes_.views.size());
 }
 
-void RenderPass::Handler::acquireBackBuffer() {
-    const auto& ctx = shell().context();
+void Manager::acquireBackBuffer() {
+    const auto& ctx = handler().shell().context();
     fences_.clear();
 
     // TODO: Use the semaphores. This just waits for everything.
-    loadingHandler().getFences(fences_);
+    handler().loadingHandler().getFences(fences_);
     fences_.push_back(frameFences_[frameIndex_]);
 
     // wait for the last submission since we reuse frame data.
@@ -296,63 +325,7 @@ void RenderPass::Handler::acquireBackBuffer() {
     assert(result == vk::Result::eSuccess);
 }
 
-void RenderPass::Handler::recordPasses() {
-    const auto& ctx = shell().context();
-    auto frameIndex = getFrameIndex();
-
-    // auto& cmd = cmdList_[frameIndex][0];
-    // cmd.reset({});
-    // vk::CommandBufferBeginInfo bufferInfo = {};
-    //// bufferInfo.flags = vk::CommandBufferUsageFlagBits::eOneTimeSubmit;
-    // bufferInfo.flags = vk::CommandBufferUsageFlagBits::eSimultaneousUse;
-    // cmd.begin(bufferInfo);
-
-    uint8_t passIndex = 0, resIndex = 0;
-    for (; passIndex < mainLoopOffsets_.size(); passIndex++, resIndex++) {
-        const auto& offset = mainLoopOffsets_[passIndex];
-        SubmitResource* pResource = &submitResources_[resIndex];
-        pResource->resetCount();
-
-        if (passIndex == 0) {
-            // wait for back buffer...
-            pResource->waitSemaphores[pResource->waitSemaphoreCount] = ctx.acquiredBackBuffer.acquireSemaphore;
-            // back buffer flags...
-            pResource->waitDstStageMasks[pResource->waitSemaphoreCount] = ctx.waitDstStageMask;
-            pResource->waitSemaphoreCount++;
-        } else if (submitResources_[resIndex - 1].signalSemaphoreCount) {
-            // Take the signals from the previous pass
-            std::memcpy(                                                                     //
-                &pResource->waitSemaphores[pResource->waitSemaphoreCount],                   //
-                submitResources_[resIndex - 1].signalSemaphores.data(),                      //
-                sizeof(vk::Semaphore) * submitResources_[resIndex - 1].signalSemaphoreCount  //
-            );
-            std::memcpy(                                                                              //
-                &pResource->waitDstStageMasks[pResource->waitSemaphoreCount],                         //
-                submitResources_[resIndex - 1].signalSrcStageMasks.data(),                            //
-                sizeof(vk::PipelineStageFlags) * submitResources_[resIndex - 1].signalSemaphoreCount  //
-            );
-            pResource->waitSemaphoreCount += submitResources_[resIndex - 1].signalSemaphoreCount;
-        }
-
-        // Record the pass and update the resources
-        pPasses_[offset]->record(frameIndex);
-        pPasses_[offset]->updateSubmitResource(*pResource, frameIndex);
-
-        // Check if a compute pass is needed.
-        // computeHandler().recordPasses(pPasses_[offset]->TYPE, *pResource);
-
-        // Always add the render semaphore to the last pass
-        if ((static_cast<size_t>(passIndex) + 1) == mainLoopOffsets_.size()) {
-            // signal back buffer...
-            pResource->signalSemaphores[pResource->signalSemaphoreCount] = ctx.acquiredBackBuffer.renderSemaphore;
-            pResource->signalSemaphoreCount++;
-        }
-    }
-
-    submit(resIndex);
-}
-
-void RenderPass::Handler::submit(const uint8_t submitCount) {
+void Manager::submit(const uint8_t submitCount) {
     const SubmitResource* pResource;
     vk::SubmitInfo* pInfo;
     for (uint8_t i = 0; i < submitCount; i++) {
@@ -369,29 +342,31 @@ void RenderPass::Handler::submit(const uint8_t submitCount) {
         pInfo->pSignalSemaphores = pResource->signalSemaphores.data();
     }
 
-    helpers::checkVkResult(
-        commandHandler().graphicsQueue().submit(submitCount, submitInfos_.data(), frameFences_[frameIndex_]));
+    auto result =
+        handler().commandHandler().graphicsQueue().submit(submitCount, submitInfos_.data(), frameFences_[frameIndex_]);
+    assert(result == vk::Result::eSuccess);
 }
 
-void RenderPass::Handler::updateFrameIndex() {
-    frameIndex_ = (frameIndex_ + 1) % static_cast<uint8_t>(shell().context().imageCount);
+void Manager::updateFrameIndex() {
+    frameIndex_ = (frameIndex_ + 1) % static_cast<uint8_t>(handler().shell().context().imageCount);
 }
 
-bool RenderPass::Handler::isClearTargetPass(const std::string& targetId, const PASS type) {
+bool Manager::isClearTargetPass(const std::string& targetId, const RENDER_PASS type) {
     if (clearTargetMap_.at(targetId) == type) return true;
     return false;
 }
 
-bool RenderPass::Handler::isFinalTargetPass(const std::string& targetId, const PASS type) {
+bool Manager::isFinalTargetPass(const std::string& targetId, const RENDER_PASS type) {
     if (finalTargetMap_.at(targetId) == type) return true;
     return false;
 }
 
-void RenderPass::Handler::destroySwapchainResources() {
+void Manager::destroySwapchainResources() {
+    const auto& ctx = handler().shell().context();
     for (uint32_t i = 0; i < swpchnRes_.views.size(); i++) {
-        shell().context().dev.destroyImageView(swpchnRes_.views[i], shell().context().pAllocator);
+        ctx.dev.destroyImageView(swpchnRes_.views[i], ctx.pAllocator);
         // Update swapchain texture status.
-        auto pTexture = textureHandler().getTexture(SWAPCHAIN_TARGET_ID, i);
+        auto pTexture = handler().textureHandler().getTexture(SWAPCHAIN_TARGET_ID, i);
         assert(pTexture);
         pTexture->status = STATUS::DESTROYED;
     }
@@ -400,8 +375,9 @@ void RenderPass::Handler::destroySwapchainResources() {
     swpchnRes_.images.clear();
 }
 
-void RenderPass::Handler::destroy() {
-    // PASS
+void Manager::destroy() {
+    const auto& ctx = handler().shell().context();
+    // RENDER PASS
     for (auto& pPass : pPasses_) {
         if (!pPass->usesSwapchain() || std::find(activeTypeOffsetPairs_.begin(), activeTypeOffsetPairs_.end(),
                                                  std::pair{pPass->TYPE, pPass->OFFSET}) == activeTypeOffsetPairs_.end()) {
@@ -409,18 +385,19 @@ void RenderPass::Handler::destroy() {
         }
         pPass->destroy();
     }
+    pPasses_.clear();
     // COMMAND
     for (auto& cmds : cmdList_) {
-        helpers::destroyCommandBuffers(shell().context().dev, commandHandler().graphicsCmdPool(), cmds);
+        helpers::destroyCommandBuffers(ctx.dev, handler().commandHandler().graphicsCmdPool(), cmds);
         cmds.clear();
     }
     cmdList_.clear();
     // FENCE
-    for (auto& fence : frameFences_) shell().context().dev.destroyFence(fence, shell().context().pAllocator);
+    for (auto& fence : frameFences_) ctx.dev.destroyFence(fence, ctx.pAllocator);
     frameFences_.clear();
 }
 
-void RenderPass::Handler::reset() {
+void Manager::reset() {
     for (auto& pPass : pPasses_) {
         if (pPass->usesSwapchain() && std::find(activeTypeOffsetPairs_.begin(), activeTypeOffsetPairs_.end(),
                                                 std::pair{pPass->TYPE, pPass->OFFSET}) != activeTypeOffsetPairs_.end()) {
@@ -428,3 +405,5 @@ void RenderPass::Handler::reset() {
         }
     }
 }
+
+}  // namespace RenderPass

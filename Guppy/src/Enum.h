@@ -102,6 +102,7 @@ typedef enum STATUS {
     PENDING_PIPELINE =      0x00000010,
     PENDING_SWAPCHAIN =     0x00000020,
     PENDING_MESH =          0x00000040,
+    PENDING_POINTER =       0x00000080,
     REDRAW =                0x00000100,
     UPDATE_BUFFERS =        0x00001000,
     DESTROYED =             0x00010000,
@@ -141,7 +142,7 @@ enum class MESH {
 };
 
 // Add new to either RenderPass::ALL & Compute::ALL
-enum class PASS : uint32_t {  // TODO: make this a bitmask
+enum class RENDER_PASS : uint32_t {  // TODO: make this a bitmask
     // SWAPCHAIN
     DEFAULT = 0,
     IMGUI,
@@ -163,6 +164,12 @@ enum class PASS : uint32_t {  // TODO: make this a bitmask
     //
     SKYBOX_NIGHT,
     // Used to indicate "all" in uniform offsets
+    ALL_ENUM = UINT32_MAX,
+};
+
+enum class COMPUTE_WORK : uint32_t {
+    OCEAN,
+    // Not currently used. Added for parity with RENDER_PASS.
     ALL_ENUM = UINT32_MAX,
 };
 
@@ -365,8 +372,6 @@ enum class COMPUTE : uint32_t {
 
 // VARIANTS
 
-using PIPELINE = std::variant<GRAPHICS, COMPUTE>;
-
 using DESCRIPTOR = std::variant<  //
     UNIFORM,                      //
     UNIFORM_DYNAMIC,              //
@@ -377,5 +382,9 @@ using DESCRIPTOR = std::variant<  //
     STORAGE_BUFFER_DYNAMIC,       //
     INPUT_ATTACHMENT              //
     >;
+
+using PIPELINE = std::variant<GRAPHICS, COMPUTE>;
+
+using PASS = std::variant<RENDER_PASS, COMPUTE_WORK>;
 
 #endif  // !ENUM_H

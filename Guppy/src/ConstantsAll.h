@@ -13,10 +13,12 @@
 
 #include <Common/Types.h>
 
+#include "ComputeWorkConstants.h"
 #include "DescriptorConstants.h"
 #include "MeshConstants.h"
 #include "ModelConstants.h"
 #include "ParticleConstants.h"
+#include "PassConstants.h"
 #include "PipelineConstants.h"
 #include "RenderPassConstants.h"
 #include "SamplerConstants.h"

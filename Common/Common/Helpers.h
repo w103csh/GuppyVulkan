@@ -31,7 +31,9 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <limits>
+#include <map>
 #include <sstream>
+#include <string>
 #include <string_view>
 #include <stdio.h>
 #include <vector>
@@ -59,6 +61,15 @@ typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type almost_
            || std::abs(x - y) < (std::numeric_limits<T>::min)();
 }
 
+template <typename T>
+constexpr bool checkInterval(const T t, const T interval, T &lastTick) {
+    if (t - interval > lastTick) {
+        lastTick = t;
+        return true;
+    }
+    return false;
+}
+
 static std::string replaceFirstOccurrence(const std::string &toReplace, const std::string_view &replaceWith,
                                           std::string &s) {
     std::size_t pos = s.find(toReplace);
@@ -78,18 +89,11 @@ static std::string textReplace(std::string &text, std::string s1, std::string s2
 // { macro identifier, line to replace, line to append to, value }
 typedef std::tuple<std::string, std::string, std::string, int> macroInfo;
 
-template <typename T>
-constexpr bool checkInterval(const T t, const T interval, T &lastTick) {
-    if (t - interval > lastTick) {
-        lastTick = t;
-        return true;
-    }
-    return false;
-}
-
 std::vector<macroInfo> getMacroReplaceInfo(const std::string_view &macroIdentifierPrefix, const std::string &text);
 
 void macroReplace(const macroInfo &info, int itemCount, std::string &text);
+
+void textReplaceFromMap(const std::map<std::string, std::string> &map, std::string &text);
 
 template <typename T>
 std::vector<T> &&slice(const std::vector<T> &v, int m, int n) {
@@ -338,6 +342,22 @@ void bufferBarrierWriteToRead(const vk::DescriptorBufferInfo &bufferInfo, Barrie
                               const uint32_t dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED);
 
 void globalDebugBarrierWriteToRead(BarrierResource &resource);
+
+static void globalDebugBarrier(const vk::CommandBuffer &cmd) {
+    constexpr vk::AccessFlags all =
+        vk::AccessFlagBits::eIndirectCommandRead | vk::AccessFlagBits::eIndexRead |
+        vk::AccessFlagBits::eVertexAttributeRead | vk::AccessFlagBits::eUniformRead |
+        vk::AccessFlagBits::eInputAttachmentRead | vk::AccessFlagBits::eShaderRead | vk::AccessFlagBits::eShaderWrite |
+        vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite |
+        vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite |
+        vk::AccessFlagBits::eTransferRead | vk::AccessFlagBits::eTransferWrite | vk::AccessFlagBits::eHostRead |
+        vk::AccessFlagBits::eHostWrite | vk::AccessFlagBits::eMemoryRead | vk::AccessFlagBits::eMemoryWrite;
+    vk::MemoryBarrier barrier = {};
+    barrier.srcAccessMask = all;
+    barrier.dstAccessMask = all;
+    cmd.pipelineBarrier(vk::PipelineStageFlagBits::eAllCommands, vk::PipelineStageFlagBits::eAllCommands, {}, {barrier}, {},
+                        {});
+}
 
 void recordBarriers(const BarrierResource &resource, const vk::CommandBuffer &cmd, const vk::PipelineStageFlags srcStageMask,
                     const vk::PipelineStageFlags dstStageMask, const vk::DependencyFlags dependencyFlags = {});

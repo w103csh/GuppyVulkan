@@ -1,8 +1,8 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
- 
+
 #version 450
 
 #define _DS_OCEAN 0
@@ -15,34 +15,34 @@ layout(push_constant) uniform PushBlock {
     int rowColOffset;
 } pc;
 // BINDINGS
-layout(set=_DS_OCEAN, binding=2) uniform Simulation {
+layout(set=_DS_OCEAN, binding=0) uniform Simulation {
     uvec2 nmLog2;   // log2 of discrete dimensions
     float lambda;   // horizontal displacement scale factor
     float t;        // time
 } sim;
-layout(set=_DS_OCEAN, binding=3, rgba32f) uniform image2DArray imgOcean;
-layout(set=_DS_OCEAN, binding=6) uniform samplerBuffer sampTwiddle;
+layout(set=_DS_OCEAN, binding=2, rgba32f) uniform image2DArray imgDisp;
+layout(set=_DS_OCEAN, binding=5) uniform samplerBuffer sampTwiddle;
 // IN
 layout(local_size_x=_LS_X) in;
 
 const float PI = 3.14159265358979323846;
-const int LAYER_HEIGHT          = 2;
-const int LAYER_SLOPE           = 3;
-const int LAYER_DIFFERENTIAL    = 4;
+const int LAYER_HEIGHT          = 0;
+const int LAYER_SLOPE           = 1;
+const int LAYER_DIFFERENTIAL    = 2;
 
 void transform2(const ivec2 pixA, const ivec2 pixB, const vec2 w, const in int layer) {
-    vec2 t0 = complexMul(w, imageLoad(imgOcean, ivec3(pixB, layer)).rg);
-    vec2 t1 = imageLoad(imgOcean, ivec3(pixA, layer)).rg;
-    imageStore(imgOcean, ivec3(pixB, layer), vec4(t1 - t0, 0, 0));
-    imageStore(imgOcean, ivec3(pixA, layer), vec4(t1 + t0, 0, 0));
+    vec2 t0 = complexMul(w, imageLoad(imgDisp, ivec3(pixB, layer)).rg);
+    vec2 t1 = imageLoad(imgDisp, ivec3(pixA, layer)).rg;
+    imageStore(imgDisp, ivec3(pixB, layer), vec4(t1 - t0, 0, 0));
+    imageStore(imgDisp, ivec3(pixA, layer), vec4(t1 + t0, 0, 0));
 }
 
 void transform4(const ivec2 pixA, const ivec2 pixB, const vec2 w, const in int layer) {
-    vec4 t0 = imageLoad(imgOcean, ivec3(pixB, layer));
+    vec4 t0 = imageLoad(imgDisp, ivec3(pixB, layer));
     t0 = vec4(complexMul(w, t0.xy), complexMul(w, t0.zw));
-    vec4 t1 = imageLoad(imgOcean, ivec3(pixA, layer));
-    imageStore(imgOcean, ivec3(pixB, layer), t1 - t0);
-    imageStore(imgOcean, ivec3(pixA, layer), t1 + t0);
+    vec4 t1 = imageLoad(imgDisp, ivec3(pixA, layer));
+    imageStore(imgDisp, ivec3(pixB, layer), t1 - t0);
+    imageStore(imgDisp, ivec3(pixA, layer), t1 + t0);
 }
 
 void main() {
@@ -52,7 +52,7 @@ void main() {
 
     int i, m, m2, j, k,
         offset = pc.rowColOffset ^ 1,
-        n = imageSize(imgOcean)[offset];
+        n = imageSize(imgDisp)[offset];
 
     vec2 twiddle;
 
@@ -68,8 +68,6 @@ void main() {
                 transform4(pixA, pixB, twiddle, LAYER_SLOPE);
                 transform4(pixA, pixB, twiddle, LAYER_DIFFERENTIAL);
             }
-
         }
     }
-
 }

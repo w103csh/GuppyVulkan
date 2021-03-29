@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -18,20 +18,20 @@ namespace RenderPass {
 
 // clang-format off
 
-const std::set<PASS> ALL = {
-    PASS::DEFAULT,
-    PASS::SAMPLER_DEFAULT,
-    PASS::SAMPLER_PROJECT,
-    PASS::SCREEN_SPACE,
-    PASS::SCREEN_SPACE_HDR_LOG,
-    PASS::SCREEN_SPACE_BRIGHT,
-    PASS::SCREEN_SPACE_BLUR_A,
-    PASS::SCREEN_SPACE_BLUR_B,
-    PASS::DEFERRED,
-    PASS::SHADOW,
-    PASS::SKYBOX_NIGHT,
+const std::set<RENDER_PASS> ALL = {
+    RENDER_PASS::DEFAULT,
+    RENDER_PASS::SAMPLER_DEFAULT,
+    RENDER_PASS::SAMPLER_PROJECT,
+    RENDER_PASS::SCREEN_SPACE,
+    RENDER_PASS::SCREEN_SPACE_HDR_LOG,
+    RENDER_PASS::SCREEN_SPACE_BRIGHT,
+    RENDER_PASS::SCREEN_SPACE_BLUR_A,
+    RENDER_PASS::SCREEN_SPACE_BLUR_B,
+    RENDER_PASS::DEFERRED,
+    RENDER_PASS::SHADOW,
+    RENDER_PASS::SKYBOX_NIGHT,
 #ifdef USE_DEBUG_UI
-    PASS::IMGUI,
+    RENDER_PASS::IMGUI,
 #endif
 };
 
@@ -113,7 +113,7 @@ const Texture::CreateInfo SWAPCHAIN_TARGET_TEXTURE_CREATE_INFO = {
 
 // DEFAULT
 const CreateInfo DEFAULT_CREATE_INFO = {
-    PASS::DEFAULT,
+    RENDER_PASS::DEFAULT,
     "Default Render Pass",
     {
         // Order of the subpasses
@@ -141,7 +141,7 @@ const CreateInfo DEFAULT_CREATE_INFO = {
 
 // SAMPLER DEFAULT
 const CreateInfo SAMPLER_DEFAULT_CREATE_INFO = {
-    PASS::SAMPLER_DEFAULT,
+    RENDER_PASS::SAMPLER_DEFAULT,
     "Sampler Default Render Pass",
     {
         // Order of the subpasses
@@ -165,7 +165,7 @@ const CreateInfo SAMPLER_DEFAULT_CREATE_INFO = {
 
 // PROJECT
 const CreateInfo PROJECT_CREATE_INFO = {
-    PASS::SAMPLER_PROJECT,
+    RENDER_PASS::SAMPLER_PROJECT,
     "Project Render Pass",
     {
         GRAPHICS::TRI_LIST_COLOR,

@@ -8,12 +8,13 @@
 #include <glm/glm.hpp>
 #include <sstream>
 
+#include "RenderPassManager.h"
 #include "Shell.h"
 // HANDLERS
 #include "InputHandler.h"
 #include "MeshHandler.h"
 #include "PipelineHandler.h"
-#include "RenderPassHandler.h"
+#include "PassHandler.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
 
@@ -132,7 +133,7 @@ void Uniform::Handler::init() {
      *  handlers, so that when the descriptor set layouts are created
      *  the offsets manager is ready.
      */
-    auto passOffsets = passHandler().makeUniformOffsetsMap();
+    auto passOffsets = passHandler().renderPassMgr().makeUniformOffsetsMap();
     offsetsManager_.addOffsets(passOffsets, OffsetsManager::ADD_TYPE::RenderPass);
     passOffsets = pipelineHandler().makeUniformOffsetsMap();
     offsetsManager_.addOffsets(passOffsets, OffsetsManager::ADD_TYPE::Pipeline);
@@ -196,7 +197,7 @@ void Uniform::Handler::reset() {
 }
 
 void Uniform::Handler::frame() {
-    const auto frameIndex = passHandler().getFrameIndex();
+    const auto frameIndex = passHandler().renderPassMgr().getFrameIndex();
     const auto& playerInfo = shell().inputHandler().getInfo().players[0];
 
     // ACTIVE CAMERA

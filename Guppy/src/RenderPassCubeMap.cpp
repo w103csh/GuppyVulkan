@@ -1,12 +1,12 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
 #include "RenderPassCubeMap.h"
 
 // HANDLERS
-#include "RenderPassHandler.h"
+#include "PassHandler.h"
 #include "MeshHandler.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
@@ -14,7 +14,7 @@
 namespace RenderPass {
 namespace CubeMap {
 
-Base::Base(RenderPass::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo)
+Base::Base(Pass::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo)
     : RenderPass::Base(handler, std::forward<const index>(offset), pCreateInfo) {
     status_ = STATUS::PENDING_PIPELINE;
 }
@@ -80,7 +80,7 @@ void Base::createFramebuffers() {
 
 // SKYBOX NIGHT
 const CreateInfo SKYBOX_NIGHT_CREATE_INFO = {
-    PASS::SKYBOX_NIGHT,
+    RENDER_PASS::SKYBOX_NIGHT,
     "Skybox Night Render Pass",
     {
         GRAPHICS::CUBE_MAP_PT, GRAPHICS::CUBE_MAP_TEX,
@@ -90,7 +90,7 @@ const CreateInfo SKYBOX_NIGHT_CREATE_INFO = {
     FLAG::NONE,
     {std::string(Texture::SKYBOX_NIGHT_ID)},
 };
-SkyboxNight::SkyboxNight(Handler& handler, const index&& offset)
+SkyboxNight::SkyboxNight(Pass::Handler& handler, const index&& offset)
     : Base(handler, std::forward<const index>(offset), &SKYBOX_NIGHT_CREATE_INFO) {}
 
 void SkyboxNight::record(const uint8_t frameIndex, const vk::CommandBuffer& priCmd) {

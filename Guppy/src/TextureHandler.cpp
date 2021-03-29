@@ -35,6 +35,9 @@ void Texture::Handler::init() {
     auto shadowOffsetTexCreateInfo = Shadow::MakeOffsetTex();
     auto skyboxNightTexCreateInfo = Texture::MakeCubeMapTex(Texture::SKYBOX_NIGHT_ID, SAMPLER::DEFAULT_NEAREST, 1024);
     auto fftTestTexCreateInfo = Texture::FFT::MakeTestTex();
+#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+    auto oceanBltTexInfo = Texture::Ocean::MakeCopyTexInfo(::Ocean::N, ::Ocean::M);
+#endif
 
     // Transition storage images. I can't think of a better time to do this. Its
     // not great but oh well.
@@ -79,6 +82,9 @@ void Texture::Handler::init() {
         &shadowOffsetTexCreateInfo,
         &skyboxNightTexCreateInfo,
         &fftTestTexCreateInfo,
+#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+        &oceanBltTexInfo,
+#endif
     };
 
     // I think this does not get set properly, so I am not sure where the texture generation
@@ -334,15 +340,25 @@ void Texture::Handler::makeTexture(std::shared_ptr<Texture::Base>& pTexture, Sam
 
     if (sampler.mipmapInfo.generateMipmaps && sampler.imgCreateInfo.mipLevels > 1) {
         generateMipmaps(sampler, pTexture->pLdgRes);
-    } else if (std::visit(Descriptor::IsInputAttachment{}, pTexture->DESCRIPTOR_TYPE)) {
-        // TODO: Test this once the framerate gets slower to see if using vk::ImageLayout::eColorAttachmentOptimal as
-        // the initial layout is faster.
-
-        // helpers::transitionImageLayout(commandHandler().graphicsCmd(), sampler.image, sampler.imgCreateInfo.format,
-        //                               vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
-        //                               vk::PipelineStageFlagBits::eTopOfPipe,
-        //                               vk::PipelineStageFlagBits::eColorAttachmentOutput, sampler.imgCreateInfo.mipLevels,
-        //                               sampler.imgCreateInfo.arrayLayers);
+    } else if (pTexture->pLdgRes == nullptr) {
+        if (!std::visit(Descriptor::IsInputAttachment{}, pTexture->DESCRIPTOR_TYPE)) {
+            // shell().log(Shell::LogPriority::LOG_INFO, ("Transitioning image: " + pTexture->NAME).c_str());
+            vk::ImageMemoryBarrier barrier = {};
+            barrier.srcAccessMask = {};
+            barrier.dstAccessMask = {};
+            barrier.oldLayout = vk::ImageLayout::eUndefined;
+            barrier.newLayout = std::visit(Descriptor::GetImageInitalTransitionLayout{}, pTexture->DESCRIPTOR_TYPE);
+            barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;  // ignored for now
+            barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;  // ignored for now
+            barrier.image = sampler.image;
+            barrier.subresourceRange.aspectMask = (pTexture->DESCRIPTOR_TYPE == DESCRIPTOR{COMBINED_SAMPLER::PIPELINE_DEPTH})
+                                                      ? vk::ImageAspectFlagBits::eDepth
+                                                      : vk::ImageAspectFlagBits::eColor;
+            barrier.subresourceRange.levelCount = sampler.imgCreateInfo.mipLevels;
+            barrier.subresourceRange.layerCount = sampler.imgCreateInfo.arrayLayers;
+            commandHandler().transferCmd().pipelineBarrier(vk::PipelineStageFlagBits::eTransfer,
+                                                           vk::PipelineStageFlagBits::eTransfer, {}, {}, {}, {barrier});
+        }
     } else if (pTexture->pLdgRes != nullptr) {
         /* As of now there are memory barries (transitions) in "createImages", "generateMipmaps",
          *	and here. Its kind of confusing and should potentionally be combined into one call
