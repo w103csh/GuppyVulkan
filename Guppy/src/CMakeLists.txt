@@ -267,8 +267,7 @@ if(WIN32)
 
     list(APPEND LINKS
         ${GLSLANG_LIBRARIES}
-        ${Vulkan_LIBRARY} # ${VULKAN_LOADER} # Used to use the loader here instead...
-        ${SPIRV_TOOLS_LIBRARIES}
+        ${Vulkan_LIBRARY}
         XInput
         )
 

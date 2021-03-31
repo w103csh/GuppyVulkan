@@ -2,7 +2,7 @@
  * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
- 
+
 #version 450
 
 #define _U_LGT_DEF_POS 0
@@ -49,16 +49,16 @@ const uint FOG_EXP2         = 0x00000004u;
 const uint _FOG_SHOW        = 0x0000000Fu;
 
 // BINDINGS
-layout(set=_DS_UNI_DEF, binding=0, std140) uniform CameraDefaultPerspective {
+layout(set=_DS_UNI_DEF, binding=0) uniform CameraDefaultPerspective {
     mat4 view;
     mat4 projection;
     mat4 viewProjection;
     vec3 worldPosition;
 } camera;
 
-layout(set=_DS_UNI_DEF, binding=2, std140) uniform UniformDefaultFog {
+layout(set=_DS_UNI_DEF, binding=2) uniform UniformDefaultFog {
     float minDistance;
-    float maxDistance; 
+    float maxDistance;
     float density;
     uint flags;
     // 16
