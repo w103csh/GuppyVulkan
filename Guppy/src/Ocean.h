@@ -8,6 +8,7 @@
 
 #include <glm/glm.hpp>
 #include <string_view>
+#include <type_traits>
 #include <vulkan/vulkan.hpp>
 
 #include "ConstantsAll.h"
@@ -106,21 +107,19 @@ extern const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO;
 // UNIFORM DYNAMIC
 namespace UniformDynamic {
 namespace Ocean {
-namespace Simulation {
+namespace SimulationDraw {
 struct DATA {
-    uint32_t nLog2, mLog2;  // log2 of discrete dimensions
-    float lambda;           // horizontal displacement scale factor
-    float t;                // time
+    float lambda;  // horizontal displacement scale factor
 };
 struct CreateInfo : Buffer::CreateInfo {
     ::Ocean::SurfaceCreateInfo info;
 };
-class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
+class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
    public:
     Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo);
-    void updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) override;
 };
-}  // namespace Simulation
+using Manager = Descriptor::Manager<Descriptor::Base, Base, std::shared_ptr>;
+}  // namespace SimulationDraw
 }  // namespace Ocean
 }  // namespace UniformDynamic
 
@@ -187,6 +186,9 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
                   const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                   const uint8_t frameIndex) const override;
 
+    // There is no more per-frame draw data.
+    void update(const float time, const float elapsed, const uint32_t frameIndex) override {}
+
     GRAPHICS drawMode;
 
    private:
@@ -202,6 +204,10 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
 
     SurfaceCreateInfo info_;
 };
+
+static_assert(std::is_base_of<Particle::Buffer::Base, Buffer>::value,
+              "If/when the base changes removed the assert condition \"NAME == \"Ocean Surface Buffer\"\
+              from Particle::Buffer::Base constructor.");
 
 }  // namespace Ocean
 

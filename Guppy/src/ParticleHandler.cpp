@@ -5,6 +5,8 @@
 
 #include "ParticleHandler.h"
 
+#include "Ocean.h"
+#include "OceanComputeWork.h"
 #include "RenderPassManager.h"
 #include "Shell.h"
 #include "Tessellation.h"
@@ -31,7 +33,6 @@ Particle::Handler::Handler(Game* pGame)
       mat4Mgr{"Matrix4 Data", UNIFORM_DYNAMIC::MATRIX_4, 30, true, "_UD_MAT4"},
       vec4Mgr{"Particle Vector4 Data", STORAGE_BUFFER_DYNAMIC::VERTEX, 1000000, false, "_UD_VEC4"},
       hffMgr{"Height Field Fluid Data", UNIFORM_DYNAMIC::HFF, 3, true, "_UD_HFF"},
-      ocnMgr{"Ocean Simulation Data", UNIFORM_DYNAMIC::OCEAN, 3, true, "_UD_OCEAN"},
       waterOffset(Buffer::BAD_OFFSET),
       doUpdate_(false),
       instFntnMgr_{"Particle Fountain Instance Data", 8000 * 5, false},
@@ -46,7 +47,6 @@ void Particle::Handler::init() {
     mat4Mgr.init(shell().context());
     vec4Mgr.init(shell().context());
     hffMgr.init(shell().context());
-    ocnMgr.init(shell().context());
     instFntnMgr_.init(shell().context());
     if (hasInstFntnEulerMgr()) pInstFntnEulerMgr_->init(shell().context());
 
@@ -160,12 +160,15 @@ void Particle::Handler::create() {
         buffOcnInfo.info = info;
 
         // OCEAN
-        UniformDynamic::Ocean::Simulation::CreateInfo simInfo = {};
-        assert(shell().context().imageCount == 3);  // Potential imageCount problem
-        simInfo.dataCount = shell().context().imageCount;
+        UniformDynamic::Ocean::SimulationDraw::CreateInfo simInfo = {};
         simInfo.info = info;
-        ocnMgr.insert(shell().context().dev, &simInfo);
-        pDescriptors.push_back(ocnMgr.pItems.back());
+        uniformHandler().ocnSimDrawMgr().insert(dev, &simInfo);
+        pDescriptors.push_back(uniformHandler().ocnSimDrawMgr().pItems.back());
+        // Do this here until there is a proper ocean place. This is because I want the SurfaceInfo to not
+        // be a global for god knows what reason.
+        UniformDynamic::Ocean::SimulationDispatch::CreateInfo simDpchInfo = {};
+        simDpchInfo.info = info;
+        uniformHandler().ocnSimDpchMgr().insert(dev, &simDpchInfo);
 
         // MATERIAL
         matInfo = {};
@@ -581,7 +584,6 @@ void Particle::Handler::reset() {
     mat4Mgr.destroy(shell().context());
     vec4Mgr.destroy(shell().context());
     hffMgr.destroy(shell().context());
-    ocnMgr.destroy(shell().context());
     instFntnMgr_.destroy(shell().context());
     if (pInstFntnEulerMgr_ == nullptr && shell().context().computeShadingEnabled) {
         pInstFntnEulerMgr_ =

@@ -73,7 +73,7 @@ void Manager::frame() {
 }
 
 void Manager::reset() {
-    for (auto& pWork : pWorkloads_) pWork->destroy();
+    for (auto& pWork : pWorkloads_) pWork->onDestroy();
     pWorkloads_.clear();
 }
 

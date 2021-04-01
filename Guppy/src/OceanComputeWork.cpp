@@ -5,13 +5,14 @@
 
 #include "OceanComputeWork.h"
 
+#include "Descriptor.h"
 #include "FFT.h"
 #include "Ocean.h"
 #include "RenderPassManager.h"
 // HANLDERS
 #include "PassHandler.h"
-#include "ParticleHandler.h"
 #include "TextureHandler.h"
+#include "UniformHandler.h"
 
 // SHADER
 namespace Shader {
@@ -31,6 +32,28 @@ const CreateInfo FFT_COMP_CREATE_INFO = {
 }  // namespace Ocean
 }  // namespace Shader
 
+// UNIFORM DYNAMIC
+namespace UniformDynamic {
+namespace Ocean {
+namespace SimulationDispatch {
+Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),
+      Descriptor::Base(UNIFORM_DYNAMIC::OCEAN_DISPATCH),
+      Buffer::DataItem<DATA>(pData) {
+    assert(helpers::isPowerOfTwo(pCreateInfo->info.N) && helpers::isPowerOfTwo(pCreateInfo->info.M));
+    pData_->nLog2 = static_cast<uint32_t>(log2(pCreateInfo->info.N));
+    pData_->mLog2 = static_cast<uint32_t>(log2(pCreateInfo->info.M));
+    pData_->t = 0.0f;
+    dirty = true;
+}
+void Base::update(const float time) {
+    pData_->t = time;
+    dirty = true;
+}
+}  // namespace SimulationDispatch
+}  // namespace Ocean
+}  // namespace UniformDynamic
+
 // DESCRIPTOR SET
 namespace Descriptor {
 namespace Set {
@@ -38,7 +61,7 @@ const CreateInfo OCEAN_DISPATCH_CREATE_INFO = {
     DESCRIPTOR_SET::OCEAN_DISPATCH,
     "_DS_OCEAN",
     {
-        {{0, 0}, {UNIFORM_DYNAMIC::OCEAN}},
+        {{0, 0}, {UNIFORM_DYNAMIC::OCEAN_DISPATCH}},
         {{1, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Ocean::WAVE_FOURIER_ID}},
         {{2, 0}, {STORAGE_IMAGE::PIPELINE, Texture::Ocean::DISP_REL_ID}},
         {{3, 0}, {UNIFORM_TEXEL_BUFFER::PIPELINE, BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_N_ID}},
@@ -114,6 +137,7 @@ const CreateInfo CREATE_INFO = {
 
 Ocean::Ocean(Pass::Handler& handler, const index&& offset)
     : Base(handler, std::forward<const index>(offset), &CREATE_INFO),
+      pOcnSimDpch_(nullptr),
       pRenderSignalSemaphores_(nullptr),
       pDispRelTex_(nullptr),
       pDispRelTexCopies_{nullptr, nullptr, nullptr} {}
@@ -153,15 +177,18 @@ void Ocean::record() {
     assert(status_ == STATUS::READY);
 
     {  // Prepare submit resources
-        // TODO: I think that the update to the simulation time should be done after this wait. I believe this is why there
-        // are micro-stutters occaisionally.
         vk::Result result = ctx.dev.waitForFences(fence, VK_TRUE, UINT64_MAX);
         assert(result == vk::Result::eSuccess);
         ctx.dev.resetFences({fence});
         cmd.begin(vk::CommandBufferBeginInfo{});
     }
 
-    {  // Record command buffers
+    {  // Update shader resources
+        pOcnSimDpch_->update(handler().shell().getCurrentTime<float>());
+        handler().uniformHandler().ocnSimDpchMgr().updateData(ctx.dev, pOcnSimDpch_->BUFFER_INFO);
+    }
+
+    {  // Record command buffer
         const auto& pipelineBindDataList = getPipelineBindDataList();
         assert(pipelineBindDataList.size() == 2);  // OCEAN_DISP/OCEAN_FFT
 
@@ -190,12 +217,14 @@ void Ocean::record() {
 }
 
 const std::vector<Descriptor::Base*> Ocean::getDynamicDataItems(const PIPELINE pipelineType) const {
-    /* TODO: The particle handler owns the only dynamic item we need. The ownership should probably move to a better
-     * location - especially if there is more than one is ever created (which is why its dynamic in the first place...).
-     * Also, doesn't this need to have memory barriers protecting it? Maybe this is the source of the micro-stutters. Really
-     * there should be a separation of dispatch/draw data, so that there are no memory barriers required.
-     */
-    return {handler().particleHandler().ocnMgr.pItems.at(0).get()};
+    if (pOcnSimDpch_ == nullptr) {
+        // This is created in the particle handler currently... Fix this and the const_cast if you ever see a
+        // good opportunity.
+        assert(handler().uniformHandler().ocnSimDpchMgr().pItems.size());
+        const_cast<UniformDynamic::Ocean::SimulationDispatch::Base*>(pOcnSimDpch_) =
+            &handler().uniformHandler().ocnSimDpchMgr().getTypedItem(0);
+    }
+    return {pOcnSimDpch_};
 }
 
 void Ocean::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
@@ -242,17 +271,6 @@ void Ocean::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindD
             assert(false);
         } break;
     }
-}
-
-void Ocean::init() {
-    const auto& ctx = handler().shell().context();
-    // RESOURCES
-    createCommandBuffers(ctx.imageCount);
-    createSemaphores(ctx.imageCount);
-    createFences(ctx.imageCount);
-    // The following submit resources are always the same so set the sizes.
-    resources.submit.commandBuffers.resize(1);
-    resources.submit.signalSemaphores.resize(1);
 }
 
 void Ocean::copyDispRelImg(const vk::CommandBuffer cmd, const uint8_t frameIndex) {
@@ -308,6 +326,24 @@ void Ocean::copyDispRelImg(const vk::CommandBuffer cmd, const uint8_t frameIndex
         cmd.pipelineBarrier(vk::PipelineStageFlagBits::eTransfer, vk::PipelineStageFlagBits::eBottomOfPipe, {}, {}, {},
                             {imgBarrier});
     }
+}
+
+void Ocean::init() {
+    const auto& ctx = handler().shell().context();
+    // RESOURCES
+    createCommandBuffers(ctx.imageCount);
+    createSemaphores(ctx.imageCount);
+    createFences(ctx.imageCount);
+    // The following submit resources are always the same so set the sizes.
+    resources.submit.commandBuffers.resize(1);
+    resources.submit.signalSemaphores.resize(1);
+}
+
+void Ocean::destroy() {
+    pOcnSimDpch_ = nullptr;
+    pRenderSignalSemaphores_ = {};
+    pDispRelTex_ = nullptr;
+    pDispRelTexCopies_ = {};
 }
 
 }  // namespace ComputeWork

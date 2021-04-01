@@ -16,9 +16,8 @@ layout(constant_id = 0) const float OMEGA_0    = 0.03141592653; // dispersion re
 layout(constant_id = 1) const int N            = 256;
 layout(constant_id = 2) const int M            = 256;
 // BINDINGS
-layout(set=_DS_OCEAN, binding=0) uniform Simulation {
+layout(set=_DS_OCEAN, binding=0) uniform SimulationDispatch {
     uvec2 nmLog2;   // log2 of discrete dimensions
-    float lambda;   // horizontal displacement scale factor
     float t;        // time
 } sim;
 layout(set=_DS_OCEAN, binding=1) uniform sampler2DArray sampWaveFourier;

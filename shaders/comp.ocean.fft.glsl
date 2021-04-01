@@ -15,9 +15,8 @@ layout(push_constant) uniform PushBlock {
     int rowColOffset;
 } pc;
 // BINDINGS
-layout(set=_DS_OCEAN, binding=0) uniform Simulation {
+layout(set=_DS_OCEAN, binding=0) uniform SimulationDispatch {
     uvec2 nmLog2;   // log2 of discrete dimensions
-    float lambda;   // horizontal displacement scale factor
     float t;        // time
 } sim;
 layout(set=_DS_OCEAN, binding=2, rgba32f) uniform image2DArray imgDisp;

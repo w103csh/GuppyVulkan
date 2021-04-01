@@ -162,7 +162,6 @@ Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCr
         if (pDescriptors_[i]->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_FOUNTAIN} ||
             pDescriptors_[i]->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_ATTRACTOR} ||
             pDescriptors_[i]->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::HFF} ||
-            pDescriptors_[i]->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::OCEAN} ||
             pDescriptors_[i]->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::PRTCL_CLOTH}) {
             if (descTimeOffset_ == BAD_OFFSET) {
                 descTimeOffset_ = i;
@@ -177,7 +176,7 @@ Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCr
             descInstOffset_ = i;
         }
     }
-    assert(descTimeOffset_ != BAD_OFFSET);
+    assert(NAME == "Ocean Surface Buffer" || descTimeOffset_ != BAD_OFFSET);
 
     if (pMaterial_ != nullptr) status_ |= STATUS::PENDING_MATERIAL;
 }

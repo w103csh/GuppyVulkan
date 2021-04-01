@@ -1,0 +1,12 @@
+  o Experiment with texture filter/tessellation ocean. I think I can move the normal fetch to the
+    fragment shader so that its interpolated. This will allow me to remove the tessallation
+    hopefully. I could also do vert/frag fetch based on distance from the camera or CDLOD level.
+  o Fix subpass dependencies. I think this is also covered by best practices.
+  o Turn on validation layers (best practices, etc.)
+  o If sky box is going to be a cubemap I render to then render the cubemap one frame and sample the
+    the cubemap the next frame, so I can remove all dependencies from the cubemap rendering.
+  o Add screen space volumetric lighting.
+  o Add cloud generation.
+  o Add boat.
+  o Add PhysX around time of boat.
+  o Fix command buffers re-recording when they don't need to.

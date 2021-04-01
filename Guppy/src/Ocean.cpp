@@ -211,23 +211,15 @@ const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO = {
 // UNIFORM DYNAMIC
 namespace UniformDynamic {
 namespace Ocean {
-namespace Simulation {
+namespace SimulationDraw {
 Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
-      Descriptor::Base(UNIFORM_DYNAMIC::OCEAN),
-      Buffer::PerFramebufferDataItem<DATA>(pData) {
-    assert(helpers::isPowerOfTwo(pCreateInfo->info.N) && helpers::isPowerOfTwo(pCreateInfo->info.M));
-    data_.nLog2 = static_cast<uint32_t>(log2(pCreateInfo->info.N));
-    data_.mLog2 = static_cast<uint32_t>(log2(pCreateInfo->info.M));
-    data_.lambda = pCreateInfo->info.lambda;
-    data_.t = 0.0f;
-    setData();
+      Descriptor::Base(UNIFORM_DYNAMIC::OCEAN_DRAW),
+      Buffer::DataItem<DATA>(pData) {
+    pData->lambda = pCreateInfo->info.lambda;
+    dirty = true;
 }
-void Base::updatePerFrame(const float time, const float elapsed, const uint32_t frameIndex) {
-    data_.t = time;
-    setData(frameIndex);
-}
-}  // namespace Simulation
+}  // namespace SimulationDraw
 }  // namespace Ocean
 }  // namespace UniformDynamic
 
@@ -240,7 +232,7 @@ const CreateInfo OCEAN_DRAW_CREATE_INFO = {
     {
         {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
         {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_DEFAULT}},
-        {{2, 0}, {UNIFORM_DYNAMIC::OCEAN}},
+        {{2, 0}, {UNIFORM_DYNAMIC::OCEAN_DRAW}},
 #if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
         {{3, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Ocean::DISP_REL_COPY_ID}},
 #else

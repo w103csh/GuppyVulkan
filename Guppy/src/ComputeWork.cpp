@@ -79,7 +79,7 @@ void Base::createFences(const uint32_t n) {
     }
 }
 
-void Base::destroy() {
+void Base::onDestroy() {
     const auto& ctx = handler().shell().context();
     // CMDS
     ctx.dev.freeCommandBuffers(handler().commandHandler().computeCmdPool(), resources.cmds);

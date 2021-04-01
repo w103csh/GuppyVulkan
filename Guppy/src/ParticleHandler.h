@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -21,7 +21,6 @@
 #include "Instance.h"
 #include "InstanceManager.h"
 #include "MaterialHandler.h"  // This is sketchy...
-#include "Ocean.h"
 #include "ParticleBuffer.h"
 #include "Storage.h"
 #include "Uniform.h"
@@ -79,8 +78,6 @@ class Handler : public Game::Handler {
             mat4Mgr.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
         } else if (pUniform->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::HFF}) {
             hffMgr.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
-        } else if (pUniform->getDescriptorType() == DESCRIPTOR{UNIFORM_DYNAMIC::OCEAN}) {
-            ocnMgr.updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
         } else {
             assert(false && "Unhandled uniform type");
             exit(EXIT_FAILURE);
@@ -98,7 +95,6 @@ class Handler : public Game::Handler {
     Descriptor::Manager<Descriptor::Base, UniformDynamic::Matrix4::Base, std::shared_ptr> mat4Mgr;
     Descriptor::Manager<Descriptor::Base, Storage::Vector4::Base, std::shared_ptr> vec4Mgr;
     Descriptor::Manager<Descriptor::Base, UniformDynamic::HeightFieldFluid::Simulation::Base, std::shared_ptr> hffMgr;
-    Descriptor::Manager<Descriptor::Base, UniformDynamic::Ocean::Simulation::Base, std::shared_ptr> ocnMgr;
 
     auto &getBuffer(const Buffer::index offset) { return pBuffers_.at(offset); }
 

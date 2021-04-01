@@ -29,6 +29,7 @@
 #include "Geometry.h"
 #include "Light.h"
 #include "Ocean.h"
+#include "OceanComputeWork.h"
 #include "Particle.h"
 #include "PBR.h"
 #include "ScreenSpace.h"
@@ -90,7 +91,9 @@ class Handler : public Game::Handler {
     virtual_inline auto& cdlodQdTrMgr() { return std::get<Uniform::Manager<Cdlod::QuadTree::Base>>(managers_[17]);};
     // DYNAMIC
     virtual_inline auto& tessPhongMgr() { return std::get<UniformDynamic::Tessellation::Phong::Manager>(managersDynamic_[0]);};
-    
+    virtual_inline auto& ocnSimDpchMgr() { return std::get<UniformDynamic::Ocean::SimulationDispatch::Manager>(managersDynamic_[1]);};
+    virtual_inline auto& ocnSimDrawMgr() { return std::get<UniformDynamic::Ocean::SimulationDraw::Manager>(managersDynamic_[2]);};
+
    private:
     template <class T> virtual_inline Manager<T>& getManager() { assert(false); }
     template <> virtual_inline Manager<Camera::Perspective::Default::Base>& getManager() { return camPersDefMgr(); }
@@ -136,10 +139,12 @@ class Handler : public Game::Handler {
         >;
     std::array<Manager, 18> managers_;
     // DYNAMIC
-    using ManagerDynamic = std::variant<              //
-        UniformDynamic::Tessellation::Phong::Manager  //
+    using ManagerDynamic = std::variant<                     //
+        UniformDynamic::Tessellation::Phong::Manager,        //
+        UniformDynamic::Ocean::SimulationDispatch::Manager,  //
+        UniformDynamic::Ocean::SimulationDraw::Manager       //
         >;
-    std::array<ManagerDynamic, 1> managersDynamic_;
+    std::array<ManagerDynamic, 3> managersDynamic_;
 
     std::vector<std::unique_ptr<Descriptor::Base>>& getItems(const DESCRIPTOR& type);
 

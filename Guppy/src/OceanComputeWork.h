@@ -13,7 +13,13 @@
 
 #include "ComputeWork.h"
 #include "ConstantsAll.h"
+#include "DescriptorManager.h"
+#include "Ocean.h"
 #include "Pipeline.h"
+
+// clang-format off
+namespace Descriptor { class Base; }
+// clang-format on
 
 // SHADER
 namespace Shader {
@@ -22,6 +28,28 @@ extern const CreateInfo DISP_COMP_CREATE_INFO;
 extern const CreateInfo FFT_COMP_CREATE_INFO;
 }  // namespace Ocean
 }  // namespace Shader
+
+// UNIFORM DYNAMIC
+namespace UniformDynamic {
+namespace Ocean {
+namespace SimulationDispatch {
+struct DATA {
+    uint32_t nLog2;  // log2 of discrete dimension N
+    uint32_t mLog2;  // log2 of discrete dimension M
+    float t;         // time
+};
+struct CreateInfo : Buffer::CreateInfo {
+    ::Ocean::SurfaceCreateInfo info;
+};
+class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
+   public:
+    Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo);
+    void update(const float time);
+};
+using Manager = Descriptor::Manager<Descriptor::Base, Base, std::shared_ptr>;
+}  // namespace SimulationDispatch
+}  // namespace Ocean
+}  // namespace UniformDynamic
 
 // DESCRIPTOR SET
 namespace Descriptor {
@@ -67,13 +95,16 @@ class Ocean : public Base {
                          const uint8_t frameIndex);
 
    private:
-    void init() override;
     void copyDispRelImg(const vk::CommandBuffer cmd, const uint8_t frameIndex);
 
+    void init() override;
+    void destroy() override;
+
     // Convenience pointers
+    UniformDynamic::Ocean::SimulationDispatch::Base* pOcnSimDpch_;
     const std::vector<vk::Semaphore>* pRenderSignalSemaphores_;
-    Texture::Base* pDispRelTex_;
-    std::array<Texture::Base*, 3> pDispRelTexCopies_;
+    const Texture::Base* pDispRelTex_;
+    std::array<const Texture::Base*, 3> pDispRelTexCopies_;
 };
 }  // namespace ComputeWork
 

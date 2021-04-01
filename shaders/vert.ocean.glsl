@@ -15,10 +15,8 @@ layout(set=_DS_OCEAN, binding=0) uniform CameraDefaultPerspective {
     mat4 viewProjection;
     vec3 worldPosition;
 } camera;
-layout(set=_DS_OCEAN, binding=2) uniform Simulation {
-    uvec2 nmLog2;   // log2 of discrete dimensions
+layout(set=_DS_OCEAN, binding=2) uniform SimulationDraw {
     float lambda;   // horizontal displacement scale factor
-    float t;        // time
 } sim;
 #if _USE_DISP_SAMP
 layout(set=_DS_OCEAN, binding=3) uniform sampler2DArray sampDisp;

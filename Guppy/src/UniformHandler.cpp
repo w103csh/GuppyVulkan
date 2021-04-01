@@ -77,7 +77,7 @@ Uniform::Handler::Handler(Game* pGame)
           // STORAGE
           Uniform::Manager<Storage::PostProcess::Base>  //
           {"Post Process Data", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
-          //
+          // CDLOD
           Uniform::Manager<Uniform::Cdlod::QuadTree::Base>  //
           {"CDLOD Quad Tree Data", UNIFORM::CDLOD_QUAD_TREE, 1, "_U_CDLOD_QDTR"},
           //
@@ -86,6 +86,11 @@ Uniform::Handler::Handler(Game* pGame)
           // TESSELLATION
           UniformDynamic::Tessellation::Phong::Manager  //
           {"Tessellation Phong Data", UNIFORM_DYNAMIC::TESS_PHONG, 10, true, "_UD_TESS_PHONG"},
+          // OCEAN
+          UniformDynamic::Ocean::SimulationDispatch::Manager  //
+          {"Ocean Simulation Dispatch Data", UNIFORM_DYNAMIC::OCEAN_DISPATCH, 2, true, "_UD_OCN_DISPATCH"},
+          UniformDynamic::Ocean::SimulationDraw::Manager  //
+          {"Ocean Simulation Draw Data", UNIFORM_DYNAMIC::OCEAN_DRAW, 6, true, "_UD_OCN_DRAW"},
       },
       activeCameraOffset_(BAD_OFFSET),
       mainCameraOffset_(BAD_OFFSET),
@@ -160,6 +165,8 @@ void Uniform::Handler::init() {
     cdlodQdTrMgr().init(shell().context());     ++count;
     // DYNAMIC
     tessPhongMgr().init(shell().context());     ++count;
+    ocnSimDpchMgr().init(shell().context());    ++count;
+    ocnSimDrawMgr().init(shell().context());    ++count;
     assert(count == managers_.size() + managersDynamic_.size());
     // clang-format on
 
@@ -192,6 +199,8 @@ void Uniform::Handler::reset() {
     cdlodQdTrMgr().destroy(shell().context());    ++count;
     // DYNAMIC
     tessPhongMgr().destroy(shell().context());    ++count;
+    ocnSimDpchMgr().destroy(shell().context());   ++count;
+    ocnSimDrawMgr().destroy(shell().context());   ++count;
     assert(count == managers_.size() + managersDynamic_.size());
     // clang-format on
 }

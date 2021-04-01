@@ -250,7 +250,8 @@ enum class UNIFORM_DYNAMIC {
     CDLOD_GRID,
     // WATER
     HFF,
-    OCEAN,
+    OCEAN_DISPATCH,
+    OCEAN_DRAW,
     //
     DONT_CARE,
 };

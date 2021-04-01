@@ -37,7 +37,7 @@ class Base : public Handlee<Pass::Handler> {
 
     void onInit() { init(); }
     void onRecord();
-    void destroy();
+    void onDestroy();
 
     virtual void prepare() { status_ = STATUS::READY; }
     virtual void record() = 0;
@@ -71,6 +71,7 @@ class Base : public Handlee<Pass::Handler> {
 
    protected:
     virtual void init() {}
+    virtual void destroy() {}
 
     void createCommandBuffers(const uint32_t n);
     void createSemaphores(const uint32_t n);

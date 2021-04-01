@@ -229,7 +229,6 @@ struct HasPerFramebufferData {
             case UNIFORM_DYNAMIC::PRTCL_CLOTH:
             case UNIFORM_DYNAMIC::MATRIX_4:
             case UNIFORM_DYNAMIC::HFF:
-            case UNIFORM_DYNAMIC::OCEAN:
                 return true;
             default:
                 return false;
