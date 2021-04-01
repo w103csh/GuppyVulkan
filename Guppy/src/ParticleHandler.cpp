@@ -151,24 +151,30 @@ void Particle::Handler::create() {
 #if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
             COMPUTE::OCEAN_DISP,
             COMPUTE::OCEAN_FFT,
+            COMPUTE::OCEAN_VERT_INPUT,
 #endif
         };
         buffOcnInfo.graphicsPipelineTypes = {
             GRAPHICS::OCEAN_WF_DEFERRED,
             GRAPHICS::OCEAN_SURFACE_DEFERRED,
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+            GRAPHICS::OCEAN_WF_TESS_DEFERRED,
+            GRAPHICS::OCEAN_TESS_SURFACE_DEFERRED,
+#endif
         };
         buffOcnInfo.info = info;
 
         // OCEAN
-        UniformDynamic::Ocean::SimulationDraw::CreateInfo simInfo = {};
-        simInfo.info = info;
-        uniformHandler().ocnSimDrawMgr().insert(dev, &simInfo);
-        pDescriptors.push_back(uniformHandler().ocnSimDrawMgr().pItems.back());
-        // Do this here until there is a proper ocean place. This is because I want the SurfaceInfo to not
+        // NOTE: Do this here until there is a proper ocean place. This is because I want the SurfaceInfo to not
         // be a global for god knows what reason.
         UniformDynamic::Ocean::SimulationDispatch::CreateInfo simDpchInfo = {};
         simDpchInfo.info = info;
         uniformHandler().ocnSimDpchMgr().insert(dev, &simDpchInfo);
+#if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+        shell().log(Shell::LogPriority::LOG_WARN,
+                    "Ocean dispatch data needs to have per-frame state when not using async compute?");
+        pDescriptors.push_back(uniformHandler().ocnSimDpchMgr().pItems.back());
+#endif
 
         // MATERIAL
         matInfo = {};
@@ -180,12 +186,15 @@ void Particle::Handler::create() {
 
         // TESSELLATION
         UniformDynamic::Tessellation::Phong::DATA data = {};
-        data.maxLevel = 2.0f;
+        data.data0[0] = 2.0f;  // maxLevel
+        data.data0[2] = 3.0f;  // innerLevel
+        data.data0[3] = 2.0f;  // outerLevel
         uniformHandler().tessPhongMgr().insert(dev, true, {data});
         pDescriptors.push_back(uniformHandler().tessPhongMgr().pItems.back());
 
         // INSTANCE
         Instance::Obj3d::CreateInfo instInfo = {};
+        instInfo.data.push_back({helpers::affine({1.0f, 1.0f, 1.0f}, {-info.Lx / 2.0f, 0.0f, -info.Lz / 2.0f})});
         auto& pInstanceData = meshHandler().makeInstanceObj3d(&instInfo);
 
         // NORMAL

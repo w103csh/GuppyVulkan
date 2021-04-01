@@ -2,10 +2,10 @@
  * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
- 
+
 #version 450
 
-// DECLARATIONS 
+// DECLARATIONS
 vec3 getMaterialAmbient();
 vec3 getMaterialColor();
 vec3 getMaterialSpecular();
@@ -27,7 +27,7 @@ float opacity;
 
 void setColorDefaults() {
     n = normalize(inNormal);
-    
+
     if (isPerVertexColor()) {
         Ka = inColor.xyz;
         Kd = inColor.xyz;

@@ -88,9 +88,10 @@ struct CreateInfo;
 namespace Ocean {
 constexpr std::string_view WAVE_FOURIER_ID = "Ocean Wave & Fourier Data Texture";
 constexpr std::string_view DISP_REL_ID = "Ocean Dispersion Relation Data Texture";
+constexpr std::string_view VERT_INPUT_ID = "Ocean Vertex Shader Input Texture";
 void MakeResources(Texture::Handler& handler, const ::Ocean::SurfaceCreateInfo& info);
 #if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-constexpr std::string_view DISP_REL_COPY_ID = "Ocean Dispersion Relation Copy Data Texture";
+constexpr std::string_view VERT_INPUT_COPY_ID = "Ocean Vertex Shader Input Copy Texture";
 CreateInfo MakeCopyTexInfo(const uint32_t N, const uint32_t M);
 #endif
 }  // namespace Ocean
@@ -109,7 +110,7 @@ namespace UniformDynamic {
 namespace Ocean {
 namespace SimulationDraw {
 struct DATA {
-    float lambda;  // horizontal displacement scale factor
+    bool NOTHING;  // This whole thing is unused atm.
 };
 struct CreateInfo : Buffer::CreateInfo {
     ::Ocean::SurfaceCreateInfo info;
@@ -138,30 +139,59 @@ namespace Ocean {
 // WIREFRAME
 class Wireframe : public Graphics {
    public:
-    const bool DO_BLEND;
-    const bool IS_DEFERRED;
+    const bool DO_BLEND = false;
+    const bool IS_DEFERRED = true;
 
     Wireframe(Handler& handler);
 
-   private:
+   protected:
+    Wireframe(Handler& handler, const CreateInfo* pCreateInfo);
+
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
+    void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
 };
+
+// WIREFRAME (TESSELLLATION)
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+class WireframeTess : public Wireframe {
+   public:
+    WireframeTess(Handler& handler);
+
+   private:
+    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
+    void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
+    void getTessellationInfoResources(CreateInfoResources& createInfoRes) override;
+};
+#endif
 
 // SURFACE
 class Surface : public Graphics {
    public:
-    const bool DO_BLEND;
-    const bool DO_TESSELLATE;
-    const bool IS_DEFERRED;
+    const bool DO_BLEND = false;
+    const bool IS_DEFERRED = true;
 
     Surface(Handler& handler);
 
-   private:
+   protected:
+    Surface(Handler& handler, const CreateInfo* pCreateInfo);
+
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
-    void getTesselationInfoResources(CreateInfoResources& createInfoRes) override;
 };
+
+// SURFACE (TESSELLATION)
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+class SurfaceTess : public Surface {
+   public:
+    SurfaceTess(Handler& handler);
+
+   private:
+    void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
+    void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
+    void getTessellationInfoResources(CreateInfoResources& createInfoRes) override;
+};
+#endif
 
 }  // namespace Ocean
 }  // namespace Pipeline
@@ -186,8 +216,11 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
                   const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                   const uint8_t frameIndex) const override;
 
-    // There is no more per-frame draw data.
+#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
     void update(const float time, const float elapsed, const uint32_t frameIndex) override {}
+#else
+    void update(const float time, const float elapsed, const uint32_t frameIndex) override;
+#endif
 
     GRAPHICS drawMode;
 
@@ -197,10 +230,17 @@ class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
 
     uint32_t normalOffset_;
 
-    std::vector<HeightFieldFluid::VertexData> verticesHFF_;
-    BufferResource verticesHFFRes_;
-    std::vector<IndexBufferType> indicesWF_;
-    BufferResource indexWFRes_;
+    struct {
+        uint32_t indexCount;
+        BufferResource vertex;
+        BufferResource index;
+    } triSpripRes_;
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+    struct {
+        uint32_t vertexCount;
+        BufferResource vertex;
+    } patchListRes_;
+#endif
 
     SurfaceCreateInfo info_;
 };

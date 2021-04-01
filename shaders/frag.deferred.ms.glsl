@@ -2,7 +2,7 @@
  * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
- 
+
  #version 450
 
 #define _DS_UNI_DFR_COMB 0
@@ -45,11 +45,11 @@ layout(location=0) in vec2 inTexCoord;
 layout(location=0) out vec4 outColor;
 
 vec4 resolve(const in subpassInputMS attachment) {
-    vec4 result = vec4(0.0);	   
+    vec4 result = vec4(0.0);
 	for (int i = 0; i < NUM_SAMPLES; i++) {
 		vec4 val = subpassLoad(attachment, i);
 		result += val;
-	}    
+	}
 	// Average resolved samples
 	return result / float(NUM_SAMPLES);
 }
@@ -286,7 +286,7 @@ void main() {
     vec3 posWS,     // world space position
         posCS,      // camera space position
         normWS,     // world space normal
-        normCS;     // camera space normal      
+        normCS;     // camera space normal
 
     if ((flagInput_ & IA_CAMERA_SPACE) > 0) {
         posCS = posInput_.xyz;
@@ -310,7 +310,7 @@ void main() {
             v,
             diffInput_.rgb,
             // Ambient colors are all grey atm, so using the ambient makes its look bad.
-            diffInput_.rgb, // ambInput_.rgb, 
+            diffInput_.rgb, // ambInput_.rgb,
             specInput_.rgb,
             normInput_.w
         );

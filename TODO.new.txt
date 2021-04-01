@@ -1,8 +1,16 @@
-  o Experiment with texture filter/tessellation ocean. I think I can move the normal fetch to the
-    fragment shader so that its interpolated. This will allow me to remove the tessallation
-    hopefully. I could also do vert/frag fetch based on distance from the camera or CDLOD level.
+  o Hook up CDLOD to the ocean surface heightmap.
+  o Fix smoothing issues with the surface.
+    o I currently think that the chopiness factor (lamda) is causing this problem. The calculation
+      that determines the height also displaces the position laterally, which is not accounted for
+      in the normal.
+        o Re-read the paper and see if there is something in there about this.
+        o Try a smoothing compute convolution pass?
   o Fix subpass dependencies. I think this is also covered by best practices.
   o Turn on validation layers (best practices, etc.)
+  o Move static CreatInfo out of struct and just set in constructors of handlee's (NAME, TYPE, etc.)
+    and have all handlee's take the CreateInfo in an Init function. This way the reset/init pattern
+    can be used to create dynamic pipelines and things easier. At this point I should probably move
+    closer to the OnInit/init, OnReset/reset, etc. pattern.
   o If sky box is going to be a cubemap I render to then render the cubemap one frame and sample the
     the cubemap the next frame, so I can remove all dependencies from the cubemap rendering.
   o Add screen space volumetric lighting.

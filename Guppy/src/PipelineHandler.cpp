@@ -108,6 +108,10 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(), maxPus
                 case GRAPHICS::HFF_OCEAN_DEFERRED:              insertPair = pPipelines_.insert({type, std::make_unique<HeightFieldFluid::Ocean>(std::ref(*this))}); break;
                 case GRAPHICS::OCEAN_WF_DEFERRED:               insertPair = pPipelines_.insert({type, std::make_unique<Ocean::Wireframe>(std::ref(*this))}); break;
                 case GRAPHICS::OCEAN_SURFACE_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Ocean::Surface>(std::ref(*this))}); break;
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+                case GRAPHICS::OCEAN_WF_TESS_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Ocean::WireframeTess>(std::ref(*this))}); break;
+                case GRAPHICS::OCEAN_TESS_SURFACE_DEFERRED:     insertPair = pPipelines_.insert({type, std::make_unique<Ocean::SurfaceTess>(std::ref(*this))}); break;
+#endif
                 case GRAPHICS::CDLOD_WF_DEFERRED:               insertPair = pPipelines_.insert({type, std::make_unique<Cdlod::Wireframe>(std::ref(*this))}); break;
                 case GRAPHICS::CDLOD_TEX_DEFERRED:              insertPair = pPipelines_.insert({type, std::make_unique<Cdlod::Texture>(std::ref(*this))}); break;
                 default: assert(false);  // add new pipelines here
@@ -126,6 +130,7 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(), maxPus
                 case COMPUTE::FFT_ONE:                  insertPair = pPipelines_.insert({type, std::make_unique<FFT::OneComponent>(std::ref(*this))}); break;
                 case COMPUTE::OCEAN_DISP:               insertPair = pPipelines_.insert({type, std::make_unique<Ocean::Dispersion>(std::ref(*this))}); break;
                 case COMPUTE::OCEAN_FFT:                insertPair = pPipelines_.insert({type, std::make_unique<Ocean::FFT>(std::ref(*this))}); break;
+                case COMPUTE::OCEAN_VERT_INPUT:         insertPair = pPipelines_.insert({type, std::make_unique<Ocean::VertexInput>(std::ref(*this))}); break;
                 default: assert(false);  // add new pipelines here
             }
             // clang-format on
@@ -270,19 +275,23 @@ void Pipeline::Handler::createPipelineCache(vk::PipelineCache& cache) {
     cache = shell().context().dev.createPipelineCache(createInfo, shell().context().pAllocator);
 }
 
-#define PRINT_NAME_ON_CREATE false
-#if PRINT_NAME_ON_CREATE
+#define PRINT_NAME_BEFORE_CREATE false
+#define PRINT_NAME_AFTER_CREATE false
+#if PRINT_NAME_AFTER_CREATE
 #include <sstream>
 #endif
 
 void Pipeline::Handler::createPipeline(const std::string name, vk::GraphicsPipelineCreateInfo& createInfo,
                                        vk::Pipeline& pipeline) {
+#if PRINT_NAME_BEFORE_CREATE
+    shell().log(Shell::LogPriority::LOG_INFO, std::string("Creating pipeline: " + name).c_str());
+#endif
     auto resultValue = shell().context().dev.createGraphicsPipeline(cache_, createInfo, shell().context().pAllocator);
     assert(resultValue.result == vk::Result::eSuccess);
     pipeline = resultValue.value;
-#if PRINT_NAME_ON_CREATE
+#if PRINT_NAME_AFTER_CREATE
     std::stringstream ss;
-    ss << "Creating pipeline: " << name << " 0x" << pipeline;
+    ss << "Created pipeline: " << name << " 0x" << pipeline;
     shell().log(Shell::LogPriority::LOG_INFO, ss.str().c_str());
 #endif
     // shell().context().dbg.setMarkerName(pipeline, name.c_str());
@@ -290,10 +299,13 @@ void Pipeline::Handler::createPipeline(const std::string name, vk::GraphicsPipel
 
 void Pipeline::Handler::createPipeline(const std::string name, vk::ComputePipelineCreateInfo& createInfo,
                                        vk::Pipeline& pipeline) {
+#if PRINT_NAME_BEFORE_CREATE
+    shell().log(Shell::LogPriority::LOG_INFO, std::string("Creating pipeline: " + name).c_str());
+#endif
     auto resultValue = shell().context().dev.createComputePipeline(cache_, createInfo, shell().context().pAllocator);
     assert(resultValue.result == vk::Result::eSuccess);
     pipeline = resultValue.value;
-#if PRINT_NAME_ON_CREATE
+#if PRINT_NAME_AFTER_CREATE
     std::stringstream ss;
     ss << "Creating pipeline: " << name << " 0x" << pipeline;
     shell().log(Shell::LogPriority::LOG_INFO, ss.str().c_str());

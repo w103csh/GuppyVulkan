@@ -81,9 +81,12 @@ namespace UniformDynamic {
 namespace Tessellation {
 namespace Phong {
 struct DATA {
-    float maxLevel = 1.0f;
-    float alpha = 0.75f;
-    alignas(8) float _padding;  // rem 8
+    glm::vec4 data0 = {
+        1.0f,   // [0] maxLevel (adaptive)
+        0.75f,  // [1] alpha (adaptive)
+        1.0f,   // [2] innerLevel
+        1.0f    // [3] outerLevel
+    };
 };
 class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
    public:
@@ -118,7 +121,7 @@ class Base : public Graphics {
     void getBlendInfoResources(CreateInfoResources& createInfoRes) override;
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
     void getShaderStageInfoResources(CreateInfoResources& createInfoRes) override;
-    void getTesselationInfoResources(CreateInfoResources& createInfoRes) override;
+    void getTessellationInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
 // BEZIER 4 (DEFERRED)

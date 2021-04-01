@@ -364,7 +364,7 @@ void Pipeline::Graphics::setInfo(CreateInfoResources& createInfoRes, vk::Graphic
     getMultisampleStateInfoResources(createInfoRes);
     getRasterizationStateInfoResources(createInfoRes);
     getShaderStageInfoResources(createInfoRes);
-    getTesselationInfoResources(createInfoRes);
+    getTessellationInfoResources(createInfoRes);
     getViewportStateInfoResources(createInfoRes);
     getDynamicStateInfoResources(createInfoRes);
 
@@ -556,7 +556,7 @@ void Pipeline::Graphics::getDepthInfoResources(CreateInfoResources& createInfoRe
     // dss.front = ds.back;
 }
 
-void Pipeline::Graphics::getTesselationInfoResources(CreateInfoResources& createInfoRes) {
+void Pipeline::Graphics::getTessellationInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.useTessellationInfo = false;
     createInfoRes.tessellationStateInfo = vk::PipelineTessellationStateCreateInfo{};
 }

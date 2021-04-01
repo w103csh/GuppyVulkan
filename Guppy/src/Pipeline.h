@@ -131,7 +131,7 @@ class Graphics : public Base {
     virtual void getInputAssemblyInfoResources(CreateInfoResources &createInfoRes);
     virtual void getMultisampleStateInfoResources(CreateInfoResources &createInfoRes);
     virtual void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes);
-    virtual void getTesselationInfoResources(CreateInfoResources &createInfoRes);
+    virtual void getTessellationInfoResources(CreateInfoResources &createInfoRes);
     virtual void getViewportStateInfoResources(CreateInfoResources &createInfoRes);
 
    private:

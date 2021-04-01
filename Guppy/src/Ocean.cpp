@@ -23,6 +23,9 @@
 #include "ParticleHandler.h"
 #include "PipelineHandler.h"
 #include "TextureHandler.h"
+#if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+#include "UniformHandler.h"
+#endif
 
 namespace {
 
@@ -37,16 +40,11 @@ float phillipsSpectrum(const glm::vec2 k, const float kMagnitude, const Ocean::S
 }
 
 Sampler::CreateInfo getDefaultOceanSampCreateInfo(const std::string&& name, const uint32_t N, const uint32_t M,
-                                                  const vk::ImageUsageFlags usageFlags) {
+                                                  const vk::ImageUsageFlags usageFlags,
+                                                  const std::vector<Sampler::LayerInfo> layerInfos) {
     return {
         name,
-        {{
-             {::Sampler::USAGE::HEIGHT},     // fourier domain dispersion relation (height)
-             {::Sampler::USAGE::NORMAL},     // fourier domain dispersion relation (slope)
-             {::Sampler::USAGE::DONT_CARE},  // fourier domain dispersion relation (differential)
-         },
-         true,
-         true},
+        {layerInfos, true, true},
         vk::ImageViewType::e2DArray,
         {N, M, 1},
         {},
@@ -58,6 +56,17 @@ Sampler::CreateInfo getDefaultOceanSampCreateInfo(const std::string&& name, cons
         Sampler::CHANNELS::_4,
         sizeof(float),
     };
+}
+
+Texture::CreateInfo makeDefaultVertInputSampCreateInfo(const std::string&& name, const uint32_t N, const uint32_t M,
+                                                       const vk::ImageUsageFlags usageFlags,
+                                                       const DESCRIPTOR descriptorType) {
+    const std::vector<Sampler::LayerInfo> layerInfos = {
+        {::Sampler::USAGE::POSITION},  // position
+        {::Sampler::USAGE::NORMAL},    // normal
+    };
+    auto sampInfo = getDefaultOceanSampCreateInfo(name + " Sampler", N, M, usageFlags, layerInfos);
+    return {name, {sampInfo}, false, false, descriptorType};
 }
 
 }  // namespace
@@ -110,8 +119,7 @@ void MakeResources(Texture::Handler& handler, const ::Ocean::SurfaceCreateInfo& 
         for (int j = 0, n = -halfN; j < static_cast<int>(info.N); j++, n++) {
             idx = (i * info.N * 4) + (j * 4);
 
-            // Wave vector data
-            {
+            {  // Wave vector data
                 kx = 2.0f * glm::pi<float>() * n / info.Lx;
                 kz = 2.0f * glm::pi<float>() * m / info.Lz;
                 kMagnitude = sqrt(kx * kx + kz * kz);
@@ -122,8 +130,7 @@ void MakeResources(Texture::Handler& handler, const ::Ocean::SurfaceCreateInfo& 
                 pWave[idx + 3] = sqrt(::Ocean::g * kMagnitude);
             }
 
-            // Fourier domain data
-            {
+            {  // Fourier domain data
                 phk = phillipsSpectrum({kx, kz}, kMagnitude, info);
                 xhi = {dist(gen), dist(gen)};
                 hTilde0 = xhi * sqrt(phk / 2.0f);
@@ -167,20 +174,31 @@ void MakeResources(Texture::Handler& handler, const ::Ocean::SurfaceCreateInfo& 
         handler.make(&texInfo);
 
         // Dispersion relation
+        std::vector<Sampler::LayerInfo> layerInfos = {
+            {::Sampler::USAGE::HEIGHT},    // fourier domain dispersion relation (height)
+            {::Sampler::USAGE::NORMAL},    // fourier domain dispersion relation (slope)
+            {::Sampler::USAGE::DONT_CARE}  // fourier domain dispersion relation (differential)
+        };
         sampInfo = getDefaultOceanSampCreateInfo(std::string(DISP_REL_ID) + " Sampler", info.N, info.M,
-                                                 (vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferSrc));
-        // sampInfo.type = Something; // TODO: Experiment with filters... I'll try to remember.
+                                                 vk::ImageUsageFlagBits::eStorage, layerInfos);
         texInfo = {std::string(DISP_REL_ID), {sampInfo}, false, false, STORAGE_IMAGE::PIPELINE};
+        handler.make(&texInfo);
+
+        // Vertex shader input
+        texInfo = makeDefaultVertInputSampCreateInfo(
+            std::string(VERT_INPUT_ID), info.N, info.M,
+            (vk::ImageUsageFlagBits::eStorage | vk::ImageUsageFlagBits::eTransferSrc), STORAGE_IMAGE::PIPELINE);
         handler.make(&texInfo);
     }
 }
 
 #if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
 CreateInfo MakeCopyTexInfo(const uint32_t N, const uint32_t M) {
-    auto sampInfo = getDefaultOceanSampCreateInfo(std::string(DISP_REL_COPY_ID) + " Sampler", N, M,
-                                                  (vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled));
-    // sampInfo.type = Something; // TODO: Experiment with filters... I'll try to remember.
-    return {std::string(DISP_REL_COPY_ID), {sampInfo}, false, true, COMBINED_SAMPLER::PIPELINE};
+    auto texInfo = makeDefaultVertInputSampCreateInfo(
+        std::string(VERT_INPUT_COPY_ID), N, M, (vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled),
+        COMBINED_SAMPLER::PIPELINE);
+    texInfo.perFramebuffer = true;
+    return texInfo;
 }
 #endif
 
@@ -216,7 +234,6 @@ Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo
     : Buffer::Item(std::forward<const Buffer::Info>(info)),
       Descriptor::Base(UNIFORM_DYNAMIC::OCEAN_DRAW),
       Buffer::DataItem<DATA>(pData) {
-    pData->lambda = pCreateInfo->info.lambda;
     dirty = true;
 }
 }  // namespace SimulationDraw
@@ -232,11 +249,10 @@ const CreateInfo OCEAN_DRAW_CREATE_INFO = {
     {
         {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
         {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_DEFAULT}},
-        {{2, 0}, {UNIFORM_DYNAMIC::OCEAN_DRAW}},
 #if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-        {{3, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Ocean::DISP_REL_COPY_ID}},
+        {{2, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Ocean::VERT_INPUT_COPY_ID}},
 #else
-        {{3, 0}, {STORAGE_IMAGE::PIPELINE, Texture::Ocean::DISP_REL_ID}},
+        {{2, 0}, {STORAGE_IMAGE::PIPELINE, Texture::Ocean::VERT_INPUT_ID}},
 #endif
     },
 };
@@ -248,30 +264,23 @@ namespace Pipeline {
 
 namespace Ocean {
 
-// WIREFRAME
-const CreateInfo OCEAN_WF_CREATE_INFO = {
-    GRAPHICS::OCEAN_WF_DEFERRED,
-    "Ocean Surface Wireframe (Deferred) Pipeline",
-    {SHADER::OCEAN_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
-    {
-        {DESCRIPTOR_SET::OCEAN_DRAW, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
-    },
-};
-Wireframe::Wireframe(Handler& handler) : Graphics(handler, &OCEAN_WF_CREATE_INFO), DO_BLEND(false), IS_DEFERRED(true) {}
+void getDefaultInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    {  // binding description
+        const auto BINDING = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+        createInfoRes.bindDescs.push_back({});
+        createInfoRes.bindDescs.back().binding = BINDING;
+        createInfoRes.bindDescs.back().stride = sizeof(glm::ivec2);
+        createInfoRes.bindDescs.back().inputRate = vk::VertexInputRate::eVertex;
 
-void Wireframe::getBlendInfoResources(CreateInfoResources& createInfoRes) {
-    if (IS_DEFERRED) {
-        if (DO_BLEND) assert(handler().shell().context().independentBlendEnabled);
-        Deferred::GetBlendInfoResources(createInfoRes, DO_BLEND);
-    } else {
-        Graphics::getBlendInfoResources(createInfoRes);
+        // imageOffset
+        createInfoRes.attrDescs.push_back({});
+        createInfoRes.attrDescs.back().binding = BINDING;
+        createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
+        createInfoRes.attrDescs.back().format = vk::Format::eR32G32Sint;  // ivec2
+        createInfoRes.attrDescs.back().offset = 0;
+
+        Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
     }
-}
-
-void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    ::HeightFieldFluid::VertexData::getInputDescriptions(createInfoRes, vk::VertexInputRate::eVertex);
-    Storage::Vector4::GetInputDescriptions(createInfoRes, vk::VertexInputRate::eVertex);  // Not used
-    Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
 
     // bindings
     createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
@@ -283,13 +292,99 @@ void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes
     // topology
     createInfoRes.inputAssemblyStateInfo = vk::PipelineInputAssemblyStateCreateInfo{};
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_TRUE;
-    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eLineStrip;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eTriangleStrip;
 }
+
+// WIREFRAME
+const CreateInfo OCEAN_WF_CREATE_INFO = {
+    GRAPHICS::OCEAN_WF_DEFERRED,
+    "Ocean Surface Wireframe (Deferred) Pipeline",
+    {SHADER::OCEAN_VERT, SHADER::DEFERRED_MRT_COLOR_FRAG},
+    {{DESCRIPTOR_SET::OCEAN_DRAW, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)}},
+};
+Wireframe::Wireframe(Handler& handler) : Graphics(handler, &OCEAN_WF_CREATE_INFO) {}
+Wireframe::Wireframe(Handler& handler, const CreateInfo* pCreateInfo) : Graphics(handler, pCreateInfo) {}
+void Wireframe::getBlendInfoResources(CreateInfoResources& createInfoRes) {
+    if (IS_DEFERRED) {
+        if (DO_BLEND) assert(handler().shell().context().independentBlendEnabled);
+        Deferred::GetBlendInfoResources(createInfoRes, DO_BLEND);
+    } else {
+        Graphics::getBlendInfoResources(createInfoRes);
+    }
+}
+void Wireframe::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    getDefaultInputAssemblyInfoResources(createInfoRes);
+}
+void Wireframe::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+    Graphics::getRasterizationStateInfoResources(createInfoRes);
+    createInfoRes.rasterizationStateInfo.polygonMode = vk::PolygonMode::eLine;
+    createInfoRes.rasterizationStateInfo.lineWidth = 1.0f;
+    // createInfoRes.rasterizationStateInfo.cullMode = vk::CullModeFlagBits::eNone;
+}
+
+// WIREFRAME (TESSELLATION)
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+const CreateInfo OCEAN_WF_TESS_CREATE_INFO = {
+    GRAPHICS::OCEAN_WF_TESS_DEFERRED,
+    "Ocean Surface Wireframe Tessellation (Deferred) Pipeline",
+    {
+        SHADER::OCEAN_VERT,
+        SHADER::PHONG_TRI_COLOR_TESC,
+        SHADER::PHONG_TRI_COLOR_TESE,
+        SHADER::DEFERRED_MRT_COLOR_FRAG,
+    },
+    {
+        {DESCRIPTOR_SET::OCEAN_DRAW,
+         (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eTessellationControl |
+          vk::ShaderStageFlagBits::eTessellationEvaluation | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::TESS_PHONG,
+         (vk::ShaderStageFlagBits::eTessellationControl | vk::ShaderStageFlagBits::eTessellationEvaluation)},
+    },
+};
+WireframeTess::WireframeTess(Handler& handler) : Wireframe(handler, &OCEAN_WF_TESS_CREATE_INFO) {}
+void WireframeTess::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    Wireframe::getInputAssemblyInfoResources(createInfoRes);
+    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::ePatchList;
+}
+void WireframeTess::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+    Wireframe::getRasterizationStateInfoResources(createInfoRes);
+    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::ePatchList;
+}
+void WireframeTess::getTessellationInfoResources(CreateInfoResources& createInfoRes) {
+    createInfoRes.useTessellationInfo = true;
+    createInfoRes.tessellationStateInfo = vk::PipelineTessellationStateCreateInfo{};
+    createInfoRes.tessellationStateInfo.patchControlPoints = 3;
+}
+#endif
 
 // SURFACE
 const CreateInfo OCEAN_SURFACE_CREATE_INFO = {
     GRAPHICS::OCEAN_SURFACE_DEFERRED,
     "Ocean Surface (Deferred) Pipeline",
+    {SHADER::OCEAN_VERT, SHADER::OCEAN_DEFERRED_MRT_FRAG},
+    {{DESCRIPTOR_SET::OCEAN_DRAW, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)}},
+};
+Surface::Surface(Handler& handler) : Graphics(handler, &OCEAN_SURFACE_CREATE_INFO) {}
+Surface::Surface(Handler& handler, const CreateInfo* pCreateInfo) : Graphics(handler, pCreateInfo) {}
+void Surface::getBlendInfoResources(CreateInfoResources& createInfoRes) {
+    if (IS_DEFERRED) {
+        if (DO_BLEND) assert(handler().shell().context().independentBlendEnabled);
+        Deferred::GetBlendInfoResources(createInfoRes, DO_BLEND);
+    } else {
+        Graphics::getBlendInfoResources(createInfoRes);
+    }
+}
+void Surface::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    getDefaultInputAssemblyInfoResources(createInfoRes);
+}
+
+// SURFACE (TESSELLATION)
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+const CreateInfo OCEAN_TESS_SURFACE_CREATE_INFO = {
+    GRAPHICS::OCEAN_TESS_SURFACE_DEFERRED,
+    "Ocean Surface Tessellation (Deferred) Pipeline",
     {
         SHADER::OCEAN_VERT,
         SHADER::PHONG_TRI_COLOR_TESC,
@@ -304,59 +399,100 @@ const CreateInfo OCEAN_SURFACE_CREATE_INFO = {
          (vk::ShaderStageFlagBits::eTessellationControl | vk::ShaderStageFlagBits::eTessellationEvaluation)},
     },
 };
-Surface::Surface(Handler& handler)
-    : Graphics(handler, &OCEAN_SURFACE_CREATE_INFO),
-      DO_BLEND(false),
-#if (defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-      DO_TESSELLATE(false),
-#else
-      DO_TESSELLATE(true),
-#endif
-      IS_DEFERRED(true) {
+SurfaceTess::SurfaceTess(Handler& handler) : Surface(handler, &OCEAN_TESS_SURFACE_CREATE_INFO) {}
+void SurfaceTess::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
+    Surface::getInputAssemblyInfoResources(createInfoRes);
+    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::ePatchList;
 }
-
-void Surface::getBlendInfoResources(CreateInfoResources& createInfoRes) {
-    if (IS_DEFERRED) {
-        if (DO_BLEND) assert(handler().shell().context().independentBlendEnabled);
-        Deferred::GetBlendInfoResources(createInfoRes, DO_BLEND);
-    } else {
-        Graphics::getBlendInfoResources(createInfoRes);
-    }
+void SurfaceTess::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+    Surface::getRasterizationStateInfoResources(createInfoRes);
+    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::ePatchList;
 }
-
-void Surface::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
-    ::HeightFieldFluid::VertexData::getInputDescriptions(createInfoRes, vk::VertexInputRate::eVertex);
-    Storage::Vector4::GetInputDescriptions(createInfoRes, vk::VertexInputRate::eVertex);  // Not used
-    Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
-
-    // bindings
-    createInfoRes.vertexInputStateInfo.vertexBindingDescriptionCount = static_cast<uint32_t>(createInfoRes.bindDescs.size());
-    createInfoRes.vertexInputStateInfo.pVertexBindingDescriptions = createInfoRes.bindDescs.data();
-    // attributes
-    createInfoRes.vertexInputStateInfo.vertexAttributeDescriptionCount =
-        static_cast<uint32_t>(createInfoRes.attrDescs.size());
-    createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
-    // topology
-    createInfoRes.inputAssemblyStateInfo = vk::PipelineInputAssemblyStateCreateInfo{};
-    if (DO_TESSELLATE) {
-        createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
-        createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::ePatchList;
-    } else {
-        createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_TRUE;
-        createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eTriangleStrip;
-    }
-}
-
-void Surface::getTesselationInfoResources(CreateInfoResources& createInfoRes) {
-    if (!DO_TESSELLATE) return;
+void SurfaceTess::getTessellationInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.useTessellationInfo = true;
     createInfoRes.tessellationStateInfo = vk::PipelineTessellationStateCreateInfo{};
     createInfoRes.tessellationStateInfo.patchControlPoints = 3;
 }
+#endif
 
 }  // namespace Ocean
 
 }  // namespace Pipeline
+
+template <typename TVertex, typename TIndex>
+void MakeHeightmapVertexInput(const uint32_t X,                     //
+                              const uint32_t Y,                     //
+                              std::vector<TVertex>& triStripVerts,  //
+                              std::vector<TIndex>& triStripIdxs,    //
+                              std::vector<TVertex>& patchListVerts  //
+) {
+    /*
+     * Vulkan texture space uv's:
+     *      (0,0)------------->(size.x,0)
+     *        |                       |
+     *        |                       |
+     *        |                       |
+     *        V                       V
+     *      (0,size.y)-------->(size.x,size.y)
+     *
+     * Example: 4x4
+     *
+     *  Note: I use counterclockwise as default winding. Not sure why I do this, but this diagram follows that. Maybe I used
+     *        counterclockwise because its value is zero making it the defacto default??
+     *
+     * 0--2--4--6  0xFF
+     * | /| /| /|
+     * |/ |/ |/ |
+     * 1--3--5--7  0xFF
+     * | /| /| /|
+     * |/ |/ |/ |
+     * 8--9--10-11 0xFF
+     * | /| /| /|
+     * |/ |/ |/ |
+     * 12-13-14-15
+     *
+     */
+    assert((X > 1) && (Y > 1));
+
+    // bool doPatchList = (pPatchListVerts != nullptr);  // Patch list
+    const uint32_t indicesPerRow = X * 2u;  // Triangle strip
+
+    for (uint32_t y = 0; y < (Y - 1); y++) {
+        const uint32_t previousRowOffset = ((y - 1u) *      // Triangle strip: Previous row
+                                            indicesPerRow)  // * Indices per row
+                                           + (y - 1u);      // + number of primitive reset markers.
+        for (uint32_t x = 0; x < X; x++) {
+            {  // Triangle strip
+                if (y == 0) {
+                    triStripVerts.push_back({x, y});
+                    triStripIdxs.push_back(static_cast<uint32_t>(triStripIdxs.size()));
+                    triStripVerts.push_back({x, y + 1u});
+                    triStripIdxs.push_back(static_cast<uint32_t>(triStripIdxs.size()));
+                } else {
+                    // Odd indices from previous row.
+                    triStripIdxs.push_back(triStripIdxs[previousRowOffset + (x * 2u) + 1]);
+                    triStripVerts.push_back({x, y + 1u});
+                    triStripIdxs.push_back(((y + 1) * X) + x);
+                }
+            }
+            {  // Patch list
+                if (x < (X - 1)) {
+                    // Create a square with two triangles per iteration.
+                    patchListVerts.push_back({x, y});            // 0
+                    patchListVerts.push_back({x, y + 1u});       // 1
+                    patchListVerts.push_back({x + 1u, y});       // 2
+                    patchListVerts.push_back({x + 1u, y + 1u});  // 3
+                    patchListVerts.push_back({x + 1u, y});       // 2
+                    patchListVerts.push_back({x, y + 1u});       // 1 ... etc.
+                }
+            }
+        }
+        // Restart the strip each row.
+        triStripIdxs.push_back(VB_INDEX_PRIMITIVE_RESTART);
+    }
+}
 
 // BUFFER
 namespace Ocean {
@@ -369,7 +505,8 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
       Obj3d::InstanceDraw(pInstanceData),
       drawMode(GRAPHICS::OCEAN_SURFACE_DEFERRED),
       normalOffset_(Particle::Buffer::BAD_OFFSET),
-      indexWFRes_{},
+      triSpripRes_(),
+      patchListRes_(),
       info_(pCreateInfo->info) {
     assert(info_.N == info_.M);  // Needs to be square currently.
     assert(info_.N == FFT_LOCAL_SIZE * FFT_WORKGROUP_SIZE);
@@ -382,72 +519,6 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
     for (uint32_t i = 0; i < static_cast<uint32_t>(pDescriptors_.size()); i++)
         if (pDescriptors[i]->getDescriptorType() == DESCRIPTOR{STORAGE_BUFFER_DYNAMIC::NORMAL}) normalOffset_ = i;
     assert(normalOffset_ != Particle::Buffer::BAD_OFFSET);
-
-    const int halfN = N / 2, halfM = M / 2;
-    verticesHFF_.reserve(N * M);
-    verticesHFF_.reserve(N * M);
-    for (int i = 0, m = -halfM; i < static_cast<int>(M); i++, m++) {
-        for (int j = 0, n = -halfN; j < static_cast<int>(N); j++, n++) {
-            // VERTEX
-            verticesHFF_.push_back({
-                // position
-                {
-                    n * info_.Lx / N,
-                    0.0f,
-                    m * info_.Lz / M,
-                },
-                // normal
-                // image offset
-                {static_cast<int>(j), static_cast<int>(i)},
-            });
-        }
-    }
-
-    // INDEX
-    {
-        bool doPatchList = true;
-        if (!doPatchList) {
-            size_t numIndices = static_cast<size_t>(static_cast<size_t>(N) * (2 + ((static_cast<size_t>(M) - 2) * 2)) +
-                                                    static_cast<size_t>(M) - 1);
-            indices_.resize(numIndices);
-        } else {
-            indices_.reserve((N - 1) * (M - 1) * 6);
-        }
-
-        size_t index = 0;
-        for (uint32_t row = 0; row < M - 1; row++) {
-            auto rowOffset = row * N;
-            for (uint32_t col = 0; col < N; col++) {
-                if (!doPatchList) {
-                    // Triangle strip indices (surface)
-                    indices_[index + 1] = (row + 1) * N + col;
-                    indices_[index] = row * N + col;
-                    index += 2;
-                } else {
-                    // Patch list (surface)
-                    if (col < N - 1) {
-                        indices_.push_back(col + rowOffset);
-                        indices_.push_back(col + rowOffset + N);
-                        indices_.push_back(col + rowOffset + 1);
-                        indices_.push_back(col + rowOffset + 1);
-                        indices_.push_back(col + rowOffset + N);
-                        indices_.push_back(col + rowOffset + N + 1);
-                    }
-                }
-                // Line strip indices (wireframe)
-                indicesWF_.push_back(row * N + col + N);
-                indicesWF_.push_back(indicesWF_[indicesWF_.size() - 1] - N);
-                if (col + 1 < N) {
-                    indicesWF_.push_back(indicesWF_[indicesWF_.size() - 1] + 1);
-                    indicesWF_.push_back(indicesWF_[indicesWF_.size() - 3]);
-                }
-            }
-            if (!doPatchList) {
-                indices_[index++] = VB_INDEX_PRIMITIVE_RESTART;
-            }
-            indicesWF_.push_back(VB_INDEX_PRIMITIVE_RESTART);
-        }
-    }
 
     status_ |= STATUS::PENDING_BUFFERS;
     draw_ = true;
@@ -463,54 +534,35 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
 
     const auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
 
-    switch (drawMode) {
-        case GRAPHICS::OCEAN_WF_DEFERRED: {
-            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
-            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                   descSetBindData.descriptorSets[setIndex], descSetBindData.dynamicOffsets);
-            const std::array<vk::Buffer, 3> buffers = {
-                verticesHFFRes_.buffer,
-                pDescriptors_[normalOffset_]->BUFFER_INFO.bufferInfo.buffer,  // Not used
-                pInstObj3d_->BUFFER_INFO.bufferInfo.buffer,
+    cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
+    cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                           descSetBindData.descriptorSets[setIndex], descSetBindData.dynamicOffsets);
 
-            };
-            const std::array<vk::DeviceSize, 3> offsets = {
-                0,
-                pDescriptors_[normalOffset_]->BUFFER_INFO.memoryOffset,  // Not used
-                pInstObj3d_->BUFFER_INFO.memoryOffset,
-            };
+    switch (drawMode) {
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+        case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
+        case GRAPHICS::OCEAN_TESS_SURFACE_DEFERRED: {
+            const std::vector<vk::Buffer> buffers = {patchListRes_.vertex.buffer,
+                                                     pInstObj3d_->BUFFER_INFO.bufferInfo.buffer};
+            const std::vector<vk::DeviceSize> offsets = {0, pInstObj3d_->BUFFER_INFO.memoryOffset};
             cmd.bindVertexBuffers(0, buffers, offsets);
-            cmd.bindIndexBuffer(indexWFRes_.buffer, 0, vk::IndexType::eUint32);
-            cmd.drawIndexed(static_cast<uint32_t>(indicesWF_.size()),  // uint32_t indexCount
-                            pInstObj3d_->BUFFER_INFO.count,            // uint32_t instanceCount
-                            0,                                         // uint32_t firstIndex
-                            0,                                         // int32_t vertexOffset
-                            0);                                        // uint32_t firstInstance
+            cmd.draw(patchListRes_.vertexCount,       // uint32_t vertexCount
+                     pInstObj3d_->BUFFER_INFO.count,  // uint32_t instanceCount
+                     0,                               // uint32_t firstVertex
+                     0);                              // uint32_t firstInstance
         } break;
+#endif
+        case GRAPHICS::OCEAN_WF_DEFERRED:
         case GRAPHICS::OCEAN_SURFACE_DEFERRED: {
-            cmd.bindPipeline(pPipelineBindData->bindPoint, pPipelineBindData->pipeline);
-            cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
-                                   static_cast<uint32_t>(descSetBindData.descriptorSets[setIndex].size()),
-                                   descSetBindData.descriptorSets[setIndex].data(),
-                                   static_cast<uint32_t>(descSetBindData.dynamicOffsets.size()),
-                                   descSetBindData.dynamicOffsets.data());
-            const std::array<vk::Buffer, 3> buffers = {
-                verticesHFFRes_.buffer,
-                pDescriptors_[normalOffset_]->BUFFER_INFO.bufferInfo.buffer,
-                pInstObj3d_->BUFFER_INFO.bufferInfo.buffer,
-            };
-            const std::array<vk::DeviceSize, 3> offsets = {
-                0,
-                pDescriptors_[normalOffset_]->BUFFER_INFO.memoryOffset,
-                pInstObj3d_->BUFFER_INFO.memoryOffset,
-            };
+            const std::vector<vk::Buffer> buffers = {triSpripRes_.vertex.buffer, pInstObj3d_->BUFFER_INFO.bufferInfo.buffer};
+            const std::vector<vk::DeviceSize> offsets = {0, pInstObj3d_->BUFFER_INFO.memoryOffset};
             cmd.bindVertexBuffers(0, buffers, offsets);
-            cmd.bindIndexBuffer(indexRes_.buffer, 0, vk::IndexType::eUint32);
-            cmd.drawIndexed(static_cast<uint32_t>(indices_.size()),  // uint32_t indexCount
-                            pInstObj3d_->BUFFER_INFO.count,          // uint32_t instanceCount
-                            0,                                       // uint32_t firstIndex
-                            0,                                       // int32_t vertexOffset
-                            0);                                      // uint32_t firstInstance
+            cmd.bindIndexBuffer(triSpripRes_.index.buffer, 0, vk::IndexType::eUint32);
+            cmd.drawIndexed(triSpripRes_.indexCount,         // uint32_t indexCount
+                            pInstObj3d_->BUFFER_INFO.count,  // uint32_t instanceCount
+                            0,                               // uint32_t firstIndex
+                            0,                               // int32_t vertexOffset
+                            0);                              // uint32_t firstInstance
         } break;
         default: {
             assert(false);
@@ -526,39 +578,64 @@ void Buffer::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::Bind
 #endif
 }
 
+#if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+void Buffer::update(const float time, const float elapsed, const uint32_t frameIndex) {
+    assert(handler().uniformHandler().ocnSimDpchMgr().pItems.size() == 1);
+    auto& dpch = handler().uniformHandler().ocnSimDpchMgr().getTypedItem(0);
+    dpch.update(time);
+    handler().uniformHandler().ocnSimDpchMgr().updateData(handler().shell().context().dev, dpch.BUFFER_INFO);
+}
+#endif
+
 void Buffer::loadBuffers() {
     const auto& ctx = handler().shell().context();
     pLdgRes_ = handler().loadingHandler().createLoadingResources();
 
-    // VERTEX
-    BufferResource stgRes = {};
-    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
-                     sizeof(HeightFieldFluid::VertexData) * verticesHFF_.size(), NAME + " vertex", stgRes, verticesHFFRes_,
-                     verticesHFF_.data());
-    pLdgRes_->stgResources.push_back(std::move(stgRes));
+    using VertexBufferType = glm::ivec2;
 
-    // INDEX (SURFACE)
-    assert(indices_.size());
-    stgRes = {};
-    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-                     sizeof(IndexBufferType) * indices_.size(), NAME + " index (surface)", stgRes, indexRes_,
-                     indices_.data());
-    pLdgRes_->stgResources.push_back(std::move(stgRes));
+    std::vector<VertexBufferType> triStripVerts;
+    std::vector<IndexBufferType> triStripIdxs;
+    std::vector<VertexBufferType> patchListVerts;
+    MakeHeightmapVertexInput(info_.N, info_.M, triStripVerts, triStripIdxs, patchListVerts);
+    assert(triStripVerts.size() && triStripIdxs.size() && patchListVerts.size());
 
-    // INDEX (WIREFRAME)
-    assert(indicesWF_.size());
-    stgRes = {};
-    ctx.createBuffer(pLdgRes_->transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-                     sizeof(IndexBufferType) * indicesWF_.size(), NAME + " index (wireframe)", stgRes, indexWFRes_,
-                     indicesWF_.data());
-    pLdgRes_->stgResources.push_back(std::move(stgRes));
+    // TODO: These buffers should all use the same memory... but this is an application wide issue.
+
+    BufferResource stgRes;
+    {  // Triangle strip
+        triSpripRes_.indexCount = static_cast<uint32_t>(triStripIdxs.size());
+        stgRes = {};
+        ctx.createBuffer(pLdgRes_->transferCmd,
+                         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+                         sizeof(VertexBufferType) * triStripVerts.size(), NAME + " vertex (tri strip)", stgRes,
+                         triSpripRes_.vertex, triStripVerts.data());
+        pLdgRes_->stgResources.push_back(std::move(stgRes));
+        stgRes = {};
+        ctx.createBuffer(pLdgRes_->transferCmd,
+                         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
+                         sizeof(IndexBufferType) * triStripIdxs.size(), NAME + " index (tri strip)", stgRes,
+                         triSpripRes_.index, triStripIdxs.data());
+        pLdgRes_->stgResources.push_back(std::move(stgRes));
+    }
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+    {  // Patch list (tessellation)
+        patchListRes_.vertexCount = static_cast<uint32_t>(patchListVerts.size());
+        stgRes = {};
+        ctx.createBuffer(pLdgRes_->transferCmd,
+                         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+                         sizeof(VertexBufferType) * patchListVerts.size(), NAME + " vertex (patch list)", stgRes,
+                         patchListRes_.vertex, patchListVerts.data());
+        pLdgRes_->stgResources.push_back(std::move(stgRes));
+    }
+#endif
 }
 
 void Buffer::destroy() {
     Base::destroy();
     const auto& ctx = handler().shell().context();
-    if (verticesHFF_.size()) ctx.destroyBuffer(verticesHFFRes_);
-    if (indicesWF_.size()) ctx.destroyBuffer(indexWFRes_);
+    ctx.destroyBuffer(triSpripRes_.vertex);
+    ctx.destroyBuffer(triSpripRes_.index);
+    ctx.destroyBuffer(patchListRes_.vertex);
 }
 
 }  // namespace Ocean

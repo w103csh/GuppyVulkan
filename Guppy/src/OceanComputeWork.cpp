@@ -29,6 +29,12 @@ const CreateInfo FFT_COMP_CREATE_INFO = {
     "comp.ocean.fft.glsl",
     vk::ShaderStageFlagBits::eCompute,
 };
+const CreateInfo VERT_INPUT_COMP_CREATE_INFO = {
+    SHADER::OCEAN_VERT_INPUT_COMP,
+    "Ocean Surface Vertex Input Compute Shader",
+    "comp.ocean.vertInput.glsl",
+    vk::ShaderStageFlagBits::eCompute,
+};
 }  // namespace Ocean
 }  // namespace Shader
 
@@ -41,13 +47,16 @@ Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo
       Descriptor::Base(UNIFORM_DYNAMIC::OCEAN_DISPATCH),
       Buffer::DataItem<DATA>(pData) {
     assert(helpers::isPowerOfTwo(pCreateInfo->info.N) && helpers::isPowerOfTwo(pCreateInfo->info.M));
-    pData_->nLog2 = static_cast<uint32_t>(log2(pCreateInfo->info.N));
-    pData_->mLog2 = static_cast<uint32_t>(log2(pCreateInfo->info.M));
-    pData_->t = 0.0f;
+    pData_->data0[0] = pCreateInfo->info.lambda;                                          // lambda
+    pData_->data0[1] = 0.0f;                                                              // time
+    pData_->data0[2] = (pCreateInfo->info.Lx / static_cast<float>(pCreateInfo->info.N));  // Lx scale
+    pData_->data0[3] = (pCreateInfo->info.Lz / static_cast<float>(pCreateInfo->info.M));  // Lz scale
+    pData_->data1[0] = static_cast<uint32_t>(log2(pCreateInfo->info.N));                  // log2(N)
+    pData_->data1[1] = static_cast<uint32_t>(log2(pCreateInfo->info.M));                  // log2(M)
     dirty = true;
 }
 void Base::update(const float time) {
-    pData_->t = time;
+    pData_->data0[1] = time;
     dirty = true;
 }
 }  // namespace SimulationDispatch
@@ -67,6 +76,7 @@ const CreateInfo OCEAN_DISPATCH_CREATE_INFO = {
         {{3, 0}, {UNIFORM_TEXEL_BUFFER::PIPELINE, BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_N_ID}},
         {{4, 0}, {UNIFORM_TEXEL_BUFFER::PIPELINE, BufferView::Ocean::FFT_BIT_REVERSAL_OFFSETS_M_ID}},
         {{5, 0}, {UNIFORM_TEXEL_BUFFER::PIPELINE, BufferView::Ocean::FFT_TWIDDLE_FACTORS_ID}},
+        {{6, 0}, {STORAGE_IMAGE::PIPELINE, Texture::Ocean::VERT_INPUT_ID}},
     },
 };
 }  // namespace Set
@@ -123,6 +133,18 @@ const CreateInfo FFT_CREATE_INFO = {
 };
 FFT::FFT(Handler& handler) : Compute(handler, &FFT_CREATE_INFO) {}
 
+// VERTEX INPUT (COMPUTE)
+const CreateInfo VERTEX_INPUT_CREATE_INFO = {
+    COMPUTE::OCEAN_VERT_INPUT,
+    "Ocean Surface Vertex Input Compute Pipeline",
+    {SHADER::OCEAN_VERT_INPUT_COMP},
+    {{DESCRIPTOR_SET::OCEAN_DISPATCH, vk::ShaderStageFlagBits::eCompute}},
+    {},
+    {},
+    {::Ocean::DISP_LOCAL_SIZE, ::Ocean::DISP_LOCAL_SIZE, 1},
+};
+VertexInput::VertexInput(Handler& handler) : Compute(handler, &VERTEX_INPUT_CREATE_INFO) {}
+
 }  // namespace Ocean
 
 }  // namespace Pipeline
@@ -131,32 +153,38 @@ namespace ComputeWork {
 
 const CreateInfo CREATE_INFO = {
     COMPUTE_WORK::OCEAN,
-    "Ocean Surface Simulation Compute Pass",
-    {COMPUTE::OCEAN_DISP, COMPUTE::OCEAN_FFT},
+    "Ocean Surface Simulation Compute Work",
+    {
+        COMPUTE::OCEAN_DISP,
+        COMPUTE::OCEAN_FFT,
+        COMPUTE::OCEAN_VERT_INPUT,
+    },
 };
 
 Ocean::Ocean(Pass::Handler& handler, const index&& offset)
     : Base(handler, std::forward<const index>(offset), &CREATE_INFO),
       pOcnSimDpch_(nullptr),
       pRenderSignalSemaphores_(nullptr),
-      pDispRelTex_(nullptr),
-      pDispRelTexCopies_{nullptr, nullptr, nullptr} {}
+      pVertInputTex_(nullptr),
+      pVertInputTexCopies_{nullptr, nullptr, nullptr} {}
 
 void Ocean::prepare() {
     if (status_ != STATUS::READY) {
         const auto& ctx = handler().shell().context();
 
+#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
         // Store pointers to the dispersion relationship textures for convenience/speed.
-        pDispRelTex_ = handler().textureHandler().getTexture(Texture::Ocean::DISP_REL_ID).get();
-        assert(pDispRelTex_ != nullptr);
+        pVertInputTex_ = handler().textureHandler().getTexture(Texture::Ocean::VERT_INPUT_ID).get();
+        assert(pVertInputTex_ != nullptr);
         assert(ctx.imageCount == 3);  // Potential image count problem.
         for (uint32_t i = 0; i < ctx.imageCount; i++) {
-            pDispRelTexCopies_[i] = handler().textureHandler().getTexture(Texture::Ocean::DISP_REL_COPY_ID, i).get();
-            assert(pDispRelTexCopies_[i] != nullptr);
+            pVertInputTexCopies_[i] = handler().textureHandler().getTexture(Texture::Ocean::VERT_INPUT_COPY_ID, i).get();
+            assert(pVertInputTexCopies_[i] != nullptr);
         }
 
         // Store a pointer to the RENDER_PASS::DEFERRED signal semapores.
         pRenderSignalSemaphores_ = &handler().renderPassMgr().getPass(RENDER_PASS::DEFERRED)->data.semaphores;
+#endif
 
         // Set the descriptor set bind data. This function should be called on first tick at earliest.
         assert(getDescSetBindDataMaps().empty());
@@ -190,14 +218,15 @@ void Ocean::record() {
 
     {  // Record command buffer
         const auto& pipelineBindDataList = getPipelineBindDataList();
-        assert(pipelineBindDataList.size() == 2);  // OCEAN_DISP/OCEAN_FFT
+        assert(pipelineBindDataList.size() == 3);  // OCEAN_DISP/OCEAN_FFT
 
         // Dispatches
         dispatch(TYPE, pipelineBindDataList.getValue(0), getDescSetBindData(TYPE, 0), cmd, frameIndex);  // OCEAN_DISP
         dispatch(TYPE, pipelineBindDataList.getValue(1), getDescSetBindData(TYPE, 1), cmd, frameIndex);  // OCEAN_FFT
+        dispatch(TYPE, pipelineBindDataList.getValue(2), getDescSetBindData(TYPE, 1), cmd, frameIndex);  // OCEAN_VERT_INPUT
 
-        // Copy the dispersion relationship data image
-        copyDispRelImg(cmd, frameIndex);
+        // Copy the compute work data to a per-frame image for drawing.
+        copyImage(cmd, frameIndex);
     }
 
     {  // Finalize submit resources
@@ -267,13 +296,21 @@ void Ocean::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindD
 
             cmd.dispatch(::Ocean::FFT_WORKGROUP_SIZE, 1, 1);
         } break;
+        case COMPUTE::OCEAN_VERT_INPUT: {
+            // Barrier for second fft pass
+            vk::MemoryBarrier barrier = {vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eShaderRead};
+            cmd.pipelineBarrier(vk::PipelineStageFlagBits::eComputeShader, vk::PipelineStageFlagBits::eComputeShader, {},
+                                {barrier}, {}, {});
+
+            cmd.dispatch(::Ocean::DISP_WORKGROUP_SIZE, ::Ocean::DISP_WORKGROUP_SIZE, 1);
+        } break;
         default: {
             assert(false);
         } break;
     }
 }
 
-void Ocean::copyDispRelImg(const vk::CommandBuffer cmd, const uint8_t frameIndex) {
+void Ocean::copyImage(const vk::CommandBuffer cmd, const uint8_t frameIndex) {
     const auto& ctx = handler().shell().context();
 
     /* Copy the current dispersion relation data to an image for the next frame. This means the ocean surface draws
@@ -281,8 +318,8 @@ void Ocean::copyDispRelImg(const vk::CommandBuffer cmd, const uint8_t frameIndex
      * easier).
      */
     const auto copyFrameIndex = ((frameIndex + 1) % ctx.imageCount);
-    const auto& srcSampler = pDispRelTex_->samplers[0];
-    const auto& dstSampler = pDispRelTexCopies_[copyFrameIndex]->samplers[0];
+    const auto& srcSampler = pVertInputTex_->samplers[0];
+    const auto& dstSampler = pVertInputTexCopies_[copyFrameIndex]->samplers[0];
 
     // Set values that don't change first.
     vk::ImageMemoryBarrier imgBarrier = {};
@@ -293,7 +330,7 @@ void Ocean::copyDispRelImg(const vk::CommandBuffer cmd, const uint8_t frameIndex
     imgBarrier.subresourceRange.layerCount = dstSampler.imgCreateInfo.arrayLayers;
     imgBarrier.subresourceRange.levelCount = 1;
 
-    {  // Barrier for second fft pass, and image transition for the copy.
+    {  // Barrier for final compute work, and image transition for the copy.
         vk::MemoryBarrier memBarrier = {vk::AccessFlagBits::eShaderWrite, vk::AccessFlagBits::eTransferRead};
 
         imgBarrier.oldLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
@@ -342,8 +379,8 @@ void Ocean::init() {
 void Ocean::destroy() {
     pOcnSimDpch_ = nullptr;
     pRenderSignalSemaphores_ = {};
-    pDispRelTex_ = nullptr;
-    pDispRelTexCopies_ = {};
+    pVertInputTex_ = nullptr;
+    pVertInputTexCopies_ = {};
 }
 
 }  // namespace ComputeWork

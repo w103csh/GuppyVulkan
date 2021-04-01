@@ -15,63 +15,39 @@ layout(set=_DS_OCEAN, binding=0) uniform CameraDefaultPerspective {
     mat4 viewProjection;
     vec3 worldPosition;
 } camera;
-layout(set=_DS_OCEAN, binding=2) uniform SimulationDraw {
-    float lambda;   // horizontal displacement scale factor
-} sim;
 #if _USE_DISP_SAMP
-layout(set=_DS_OCEAN, binding=3) uniform sampler2DArray sampDisp;
+layout(set=_DS_OCEAN, binding=2) uniform sampler2DArray sampVertInput;
 #else
-layout(set=_DS_OCEAN, binding=3, rgba32f) uniform readonly image2DArray imgDisp;
+layout(set=_DS_OCEAN, binding=2, rgba32f) uniform readonly image2DArray imgVertInput;
 #endif
 
 // IN
-layout(location=0) in vec3 inPosition;
-layout(location=1) in ivec2 inImageOffset;
-layout(location=2) in vec4 inNormal;
-layout(location=3) in mat4 inModel;
+layout(location=0) in ivec2 inImageOffset;
+layout(location=1) in mat4 inModel;
 
 // OUT
 layout(location=0) out vec3 outPosition; // (world space)
 layout(location=1) out vec3 outNormal;   // (world space)
 layout(location=2) out vec4 outColor;
 
-const int LAYER_HEIGHT          = 0;
-const int LAYER_SLOPE           = 1;
-const int LAYER_DIFFERENTIAL    = 2;
+const int LAYER_POSITION  = 0;
+const int LAYER_NORMAL    = 1;
 
 void main() {
-    const bool flipSign = ((inImageOffset.x + inImageOffset.y) & 1) > 0;
-
-    // Differential
-#if _USE_DISP_SAMP
-    vec4 dxdz = texelFetch(sampDisp, ivec3(inImageOffset, LAYER_DIFFERENTIAL), 0);
-#else
-    vec4 dxdz = imageLoad(imgDisp, ivec3(inImageOffset, LAYER_DIFFERENTIAL));
-#endif
-    dxdz.x = flipSign ? -dxdz.x : dxdz.x;
-    dxdz.z = flipSign ? -dxdz.z : dxdz.z;
-
     // Position
-    outPosition = vec3(
-        inPosition.x + dxdz.x * sim.lambda,                            // x horizontal displacement (choppiness)
 #if _USE_DISP_SAMP
-        texelFetch(sampDisp, ivec3(inImageOffset, LAYER_HEIGHT), 0).r, // height
+    vec4 position = texelFetch(sampVertInput, ivec3(inImageOffset, LAYER_POSITION), 0);
 #else
-        imageLoad(imgDisp, ivec3(inImageOffset, LAYER_HEIGHT)).r,      // height
+    vec4 position = imageLoad(imgVertInput, ivec3(inImageOffset, LAYER_POSITION));
 #endif
-        inPosition.z + dxdz.z * sim.lambda                             // z horizontal displacement (choppiness)
-    );
-    outPosition.y = flipSign ? -outPosition.y : outPosition.y;
-    outPosition = (inModel * vec4(outPosition, 1.0)).xyz;
+    outPosition = (inModel * position).xyz;
     gl_Position = camera.viewProjection * vec4(outPosition, 1.0);
 
     // Normal
 #if _USE_DISP_SAMP
-    outNormal = texelFetch(sampDisp, ivec3(inImageOffset, LAYER_SLOPE), 0).rgb;
+    outNormal = texelFetch(sampVertInput, ivec3(inImageOffset, LAYER_NORMAL), 0).xyz;
 #else
-    outNormal = imageLoad(imgDisp, ivec3(inImageOffset, LAYER_SLOPE)).rgb;
+    outNormal = imageLoad(imgVertInput, ivec3(inImageOffset, LAYER_NORMAL)).xyz;
 #endif
-    outNormal = flipSign ? -outNormal : outNormal;
-    outNormal = normalize(vec3(-outNormal.x, 1.0, -outNormal.z));
     outNormal = normalize(mat3(inModel) * outNormal); // normal matrix ??
 }

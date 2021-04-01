@@ -342,6 +342,10 @@ enum class GRAPHICS : uint32_t {
     // OCEAN
     OCEAN_WF_DEFERRED,
     OCEAN_SURFACE_DEFERRED,
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+    OCEAN_WF_TESS_DEFERRED,
+    OCEAN_TESS_SURFACE_DEFERRED,
+#endif
     // CDLOD
     CDLOD_WF_DEFERRED,
     CDLOD_TEX_DEFERRED,
@@ -366,6 +370,7 @@ enum class COMPUTE : uint32_t {
     // OCEAN
     OCEAN_DISP,
     OCEAN_FFT,
+    OCEAN_VERT_INPUT,
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in PipelineConstants.cpp

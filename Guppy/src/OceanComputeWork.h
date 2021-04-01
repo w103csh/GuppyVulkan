@@ -26,6 +26,7 @@ namespace Shader {
 namespace Ocean {
 extern const CreateInfo DISP_COMP_CREATE_INFO;
 extern const CreateInfo FFT_COMP_CREATE_INFO;
+extern const CreateInfo VERT_INPUT_COMP_CREATE_INFO;
 }  // namespace Ocean
 }  // namespace Shader
 
@@ -34,9 +35,12 @@ namespace UniformDynamic {
 namespace Ocean {
 namespace SimulationDispatch {
 struct DATA {
-    uint32_t nLog2;  // log2 of discrete dimension N
-    uint32_t mLog2;  // log2 of discrete dimension M
-    float t;         // time
+    glm::vec4 data0;   // [0] horizontal displacement scale factor
+                       // [1] time
+                       // [2] grid scale (Lx)
+                       // [3] grid scale (Lz)
+    glm::uvec2 data1;  // [0] log2 of discrete dimension N
+                       // [1] log2 of discrete dimension M
 };
 struct CreateInfo : Buffer::CreateInfo {
     ::Ocean::SurfaceCreateInfo info;
@@ -77,6 +81,11 @@ class FFT : public Compute {
    public:
     FFT(Handler& handler);
 };
+// VERTEX INPUT
+class VertexInput : public Compute {
+   public:
+    VertexInput(Handler& handler);
+};
 }  // namespace Ocean
 }  // namespace Pipeline
 
@@ -95,7 +104,7 @@ class Ocean : public Base {
                          const uint8_t frameIndex);
 
    private:
-    void copyDispRelImg(const vk::CommandBuffer cmd, const uint8_t frameIndex);
+    void copyImage(const vk::CommandBuffer cmd, const uint8_t frameIndex);
 
     void init() override;
     void destroy() override;
@@ -103,8 +112,8 @@ class Ocean : public Base {
     // Convenience pointers
     UniformDynamic::Ocean::SimulationDispatch::Base* pOcnSimDpch_;
     const std::vector<vk::Semaphore>* pRenderSignalSemaphores_;
-    const Texture::Base* pDispRelTex_;
-    std::array<const Texture::Base*, 3> pDispRelTexCopies_;
+    const Texture::Base* pVertInputTex_;
+    std::array<const Texture::Base*, 3> pVertInputTexCopies_;
 };
 }  // namespace ComputeWork
 

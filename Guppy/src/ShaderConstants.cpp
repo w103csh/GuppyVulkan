@@ -223,25 +223,25 @@ const CreateInfo COLOR_VERT_CREATE_INFO = {
 };
 const CreateInfo BEZIER_4_TESC_CREATE_INFO = {
     SHADER::BEZIER_4_TESC,
-    "Bezier 4 Control Point Tesselation Control Shader",
+    "Bezier 4 Control Point Tessellation Control Shader",
     "tesc.bezier4.glsl",
     vk::ShaderStageFlagBits::eTessellationControl,
 };
 const CreateInfo BEZIER_4_TESE_CREATE_INFO = {
     SHADER::BEZIER_4_TESE,
-    "Bezier 4 Control Point Tesselation Evaluation Shader",
+    "Bezier 4 Control Point Tessellation Evaluation Shader",
     "tese.bezier4.glsl",
     vk::ShaderStageFlagBits::eTessellationEvaluation,
 };
 const CreateInfo PHONG_TRI_COLOR_TESC_CREATE_INFO = {
     SHADER::PHONG_TRI_COLOR_TESC,
-    "Phong Tesselation Triangle Color Control Shader",
+    "Phong Tessellation Triangle Color Control Shader",
     "tesc.phong.triangle.color.glsl",
     vk::ShaderStageFlagBits::eTessellationControl,
 };
 const CreateInfo PHONG_TRI_COLOR_TESE_CREATE_INFO = {
     SHADER::PHONG_TRI_COLOR_TESE,  //
-    "Phong Tesselation Triangle Color Evaluation Shader",
+    "Phong Tessellation Triangle Color Evaluation Shader",
     "tese.phong.triangle.color.glsl",
     vk::ShaderStageFlagBits::eTessellationEvaluation,
 };
@@ -363,6 +363,7 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     // OCEAN
     {SHADER::OCEAN_DISP_COMP, Shader::Ocean::DISP_COMP_CREATE_INFO},
     {SHADER::OCEAN_FFT_COMP, Shader::Ocean::FFT_COMP_CREATE_INFO},
+    {SHADER::OCEAN_VERT_INPUT_COMP, Shader::Ocean::VERT_INPUT_COMP_CREATE_INFO},
     {SHADER::OCEAN_VERT, Shader::Ocean::VERT_CREATE_INFO},
     {SHADER::OCEAN_DEFERRED_MRT_FRAG, Shader::Ocean::DEFERRED_MRT_FRAG_CREATE_INFO},
     // CDLOD

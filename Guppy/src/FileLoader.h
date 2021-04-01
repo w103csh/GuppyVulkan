@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -121,16 +121,16 @@ void loadObjData(const tinyobj_data &data, std::vector<TVertex *> &pMeshes, cons
                     face[2].texCoord[k] = data.attrib.texcoords[2 * static_cast<size_t>(index2.texcoord_index) + k];
                     if (k == 1) {
                         /*  Vulkan texture coordinates are different from .obj format, so you
-                            have to convert the v.
-                                 (0,1)--------------------------->(1,1)    (0,0)--------------------------->(1,0)
-                                   ^                                ^        |                                |
-                                   |                                |        |                                |
-                            from   |                                |   to   |                                |
-                                   |                                |        |                                |
-                                   |                                |        |                                |
-                                   |                                |        V                                V
-                                 (0,0)--------------------------->(1,0)    (0,1)--------------------------->(1,1)
-                        */
+                         *  have to convert the v.
+                         *       (0,1)--------------------------->(1,1)    (0,0)--------------------------->(1,0)
+                         *         ^                                ^        |                                |
+                         *         |                                |        |                                |
+                         *  from   |                                |   to   |                                |
+                         *         |                                |        |                                |
+                         *         |                                |        |                                |
+                         *         |                                |        V                                V
+                         *       (0,0)--------------------------->(1,0)    (0,1)--------------------------->(1,1)
+                         */
                         face[0].texCoord[k] = 1.0f - face[0].texCoord[k];
                         face[1].texCoord[k] = 1.0f - face[1].texCoord[k];
                         face[2].texCoord[k] = 1.0f - face[2].texCoord[k];

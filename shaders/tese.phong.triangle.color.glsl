@@ -2,7 +2,7 @@
  * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
- 
+
 #version 450
 
 #define _DS_UNI_DFR_MRT 0
@@ -20,8 +20,10 @@ layout(set=_DS_UNI_DFR_MRT, binding=0) uniform CameraDefaultPerspective {
     vec3 worldPosition;
 } camera;
 layout(set=_DS_TESS_PHONG, binding=0) uniform Phong {
-    float maxLevel;
-    float alpha;
+    vec4 data0;  // [0] maxLevel
+                 // [1] alpha
+                 // [2] innerLevel
+                 // [3] outerLevel
 } tess;
 
 struct PhongPatch {
@@ -68,7 +70,7 @@ void main() {
                + gl_TessCoord.z * gl_TessCoord.x * termKI;
 
     // Depth measurement factor
-    float d_alpha = tess.alpha;
+    float d_alpha = tess.data0[1];
     if (false) {
         // This needs more thought. See the comment in the control shader.
         const float d = inPhongPatch[0].di * gl_TessCoord.x

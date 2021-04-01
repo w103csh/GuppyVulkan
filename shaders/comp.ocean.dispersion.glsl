@@ -17,8 +17,12 @@ layout(constant_id = 1) const int N            = 256;
 layout(constant_id = 2) const int M            = 256;
 // BINDINGS
 layout(set=_DS_OCEAN, binding=0) uniform SimulationDispatch {
-    uvec2 nmLog2;   // log2 of discrete dimensions
-    float t;        // time
+    vec4 data0;   // [0] horizontal displacement scale factor
+                  // [1] time
+                  // [2] grid scale (Lx)
+                  // [3] grid scale (Lz)
+    uvec2 data1;  // [0] log2 of discrete dimension N
+                  // [1] log2 of discrete dimension M
 } sim;
 layout(set=_DS_OCEAN, binding=1) uniform sampler2DArray sampWaveFourier;
 layout(set=_DS_OCEAN, binding=2, rgba32f) uniform image2DArray imgDisp;
@@ -51,7 +55,7 @@ void main() {
 
     // Dispersion relation
     const float omega_kt = floor(kData.w / OMEGA_0) // take the integer part of [[a]]
-        * OMEGA_0 * sim.t;
+                           * OMEGA_0 * sim.data0[1];
 
     const float cos_omega_kt = cos(omega_kt);
     const float sin_omega_kt = sin(omega_kt);

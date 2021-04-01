@@ -95,7 +95,7 @@ void Base::getShaderStageInfoResources(CreateInfoResources& createInfoRes) {
     // createInfoRes.shaderStageInfos[2].pSpecializationInfo = &createInfoRes.specializationInfo.back();
 }
 
-void Base::getTesselationInfoResources(CreateInfoResources& createInfoRes) {
+void Base::getTessellationInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.useTessellationInfo = true;
     createInfoRes.tessellationStateInfo = vk::PipelineTessellationStateCreateInfo{};
     createInfoRes.tessellationStateInfo.patchControlPoints = PATCH_CONTROL_POINTS;

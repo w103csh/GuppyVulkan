@@ -43,6 +43,10 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         GRAPHICS::HFF_OCEAN_DEFERRED,
         GRAPHICS::OCEAN_WF_DEFERRED,
         GRAPHICS::OCEAN_SURFACE_DEFERRED,
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+        GRAPHICS::OCEAN_WF_TESS_DEFERRED,
+        GRAPHICS::OCEAN_TESS_SURFACE_DEFERRED,
+#endif
         GRAPHICS::CDLOD_TEX_DEFERRED,
         GRAPHICS::CDLOD_WF_DEFERRED,
 #ifndef VK_USE_PLATFORM_MACOS_MVK
@@ -77,6 +81,7 @@ const CreateInfo DEFERRED_CREATE_INFO = {
 #if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
         COMPUTE::OCEAN_DISP,
         COMPUTE::OCEAN_FFT,
+        COMPUTE::OCEAN_VERT_INPUT,
 #endif
     },
     (FLAG::SWAPCHAIN | FLAG::DEPTH | /*FLAG::DEPTH_INPUT_ATTACHMENT |*/
@@ -205,6 +210,10 @@ void Base::record(const uint8_t frameIndex) {
                     case GRAPHICS::HFF_OCEAN_DEFERRED:
                     case GRAPHICS::OCEAN_WF_DEFERRED:
                     case GRAPHICS::OCEAN_SURFACE_DEFERRED:
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+                    case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
+                    case GRAPHICS::OCEAN_TESS_SURFACE_DEFERRED:
+#endif
                     case GRAPHICS::PRTCL_FOUNTAIN_DEFERRED: {
                         // PARTICLE GRAPHICS
                         handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
@@ -478,7 +487,9 @@ void Base::createDependencies() {
             pipelineType == PIPELINE{GRAPHICS::HFF_WF_DEFERRED} ||
 #if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
             pipelineType == PIPELINE{GRAPHICS::OCEAN_WF_DEFERRED} ||
-            pipelineType == PIPELINE { GRAPHICS::OCEAN_SURFACE_DEFERRED }
+            pipelineType == PIPELINE{GRAPHICS::OCEAN_SURFACE_DEFERRED} ||
+            pipelineType == PIPELINE{GRAPHICS::OCEAN_WF_TESS_DEFERRED} ||
+            pipelineType == PIPELINE { GRAPHICS::OCEAN_TESS_SURFACE_DEFERRED }
 #else
             false
 #endif

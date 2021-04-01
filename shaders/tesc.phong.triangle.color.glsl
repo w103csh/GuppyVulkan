@@ -2,7 +2,7 @@
  * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
- 
+
 #version 450
 
 #define _DS_UNI_DFR_MRT 0
@@ -17,8 +17,10 @@ layout(set=_DS_UNI_DFR_MRT, binding=0) uniform CameraDefaultPerspective {
     vec3 worldPosition;
 } camera;
 layout(set=_DS_TESS_PHONG, binding=0) uniform Phong {
-    float maxLevel;
-    float alpha;
+    vec4 data0;  // [0] maxLevel
+                 // [1] alpha
+                 // [2] innerLevel
+                 // [3] outerLevel
 } tess;
 
 struct PhongPatch {
@@ -53,7 +55,7 @@ float PIi(const in int i, const in vec3 q) {
 }
 
 float phongTessAdaptive(const in vec3 p, const in vec3 n) {
-    return (1.0 - dot(n, normalize(camera.worldPosition - p))) * tess.maxLevel;
+    return (1.0 - dot(n, normalize(camera.worldPosition - p))) * tess.data0[0];
 }
 
 void main() {
@@ -76,9 +78,9 @@ void main() {
         gl_TessLevelInner[0] = (gl_TessLevelOuter[0] +
                                 gl_TessLevelOuter[1] +
                                 gl_TessLevelOuter[2]) / 3.0;
-        outPhongPatch[gl_InvocationID].di = gl_TessLevelOuter[gl_InvocationID] / tess.maxLevel;
+        outPhongPatch[gl_InvocationID].di = gl_TessLevelOuter[gl_InvocationID] / tess.data0[0];
     } else {
-        gl_TessLevelOuter[gl_InvocationID] = tess.maxLevel;
-        gl_TessLevelInner[0] = tess.maxLevel;
+        gl_TessLevelOuter[gl_InvocationID] = tess.data0[3];
+        gl_TessLevelInner[0] = tess.data0[2];
     }
 }

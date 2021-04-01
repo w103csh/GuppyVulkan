@@ -16,8 +16,12 @@ layout(push_constant) uniform PushBlock {
 } pc;
 // BINDINGS
 layout(set=_DS_OCEAN, binding=0) uniform SimulationDispatch {
-    uvec2 nmLog2;   // log2 of discrete dimensions
-    float t;        // time
+    vec4 data0;   // [0] horizontal displacement scale factor
+                  // [1] time
+                  // [2] grid scale (Lx)
+                  // [3] grid scale (Lz)
+    uvec2 data1;  // [0] log2 of discrete dimension N
+                  // [1] log2 of discrete dimension M
 } sim;
 layout(set=_DS_OCEAN, binding=2, rgba32f) uniform image2DArray imgDisp;
 layout(set=_DS_OCEAN, binding=5) uniform samplerBuffer sampTwiddle;
@@ -55,7 +59,7 @@ void main() {
 
     vec2 twiddle;
 
-    for (int s = 1; s <= sim.nmLog2[offset]; ++s) {
+    for (int s = 1; s <= sim.data1[offset]; ++s) {
         m = 1 << s;
         m2 = m >> 1;
         for (j = 0; j < m2; ++j) {
