@@ -18,3 +18,14 @@
   o Add boat.
   o Add PhysX around time of boat.
   o Fix command buffers re-recording when they don't need to.
+  o Waiting on fences for compute work is a terrible idea - especially in the frame() functions (like
+    in ComputeWork::Ocean). I shouldn't have to enumerate all of the problems with this here, but I
+    want a record of the fact that I did this somewhere, so I don't forget. It will probably never
+    matter.
+
+
+  o If I pause and unpause the ocean simulation super quick then the validation layers bark about
+    semaphores.
+  o It just dawned on me that the onX() x() pattern for lifecycle function inheritance I am trying to
+    start has the names backwards. For example, onFrame() should be the virtual function and frame()
+    should be the non-virtual function. I don't know what I was thinking.

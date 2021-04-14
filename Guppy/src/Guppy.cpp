@@ -23,6 +23,7 @@
 #include <functional>
 #include <queue>
 
+#include "ComputeWorkManager.h"
 #include "ConstantsAll.h"
 #include "Game.h"
 #include "Guppy.h"
@@ -332,6 +333,10 @@ void Guppy::processInput() {
                     auto& tessData = handlers_.pUniform->uniTessDefMgr().getTypedItem(1);
                     tessData.noTessTriangle();
                     handlers_.pUniform->update(tessData);
+                } break;
+                case GAME_KEY::T: {
+                    static_cast<ComputeWork::Ocean*>(handlers_.pPass->compWorkMgr().getWork(COMPUTE_WORK::OCEAN).get())
+                        ->onTogglePause();
                 } break;
                 default:
                     break;

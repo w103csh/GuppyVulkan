@@ -36,9 +36,6 @@ class Base : public RenderPass::Base {
     uint32_t inputAttachmentCount_;
     uint32_t combinePassIndex_;
     bool doSSAO_;
-
-    // TODO: Rename this class to Default, and move this pointer to a different "scene-specific" render pass class.
-    const std::vector<vk::Semaphore>* pOceanSignalSemaphores_;
 };
 
 }  // namespace Deferred

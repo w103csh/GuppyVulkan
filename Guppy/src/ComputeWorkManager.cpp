@@ -61,14 +61,24 @@ void Manager::init() {
 }
 
 void Manager::tick() {
-    for (const auto& [passType, offset] : activeTypeOffsetPairs_) pWorkloads_[offset]->prepare();
+    for (const auto& [passType, offset] : activeTypeOffsetPairs_) {
+        auto& pWorkload = pWorkloads_[offset];
+        pWorkload->onTick();
+        if (pWorkload->resources.hasData) {
+            submit(pWorkload->resources.submit);
+            pWorkload->resources.hasData = false;
+        }
+    }
 }
 
 void Manager::frame() {
     for (const auto& [passType, offset] : activeTypeOffsetPairs_) {
         auto& pWorkload = pWorkloads_[offset];
-        pWorkload->record();
-        submit(pWorkload->resources.submit);
+        pWorkload->onFrame();
+        if (pWorkload->resources.hasData) {
+            submit(pWorkload->resources.submit);
+            pWorkload->resources.hasData = false;
+        }
     }
 }
 

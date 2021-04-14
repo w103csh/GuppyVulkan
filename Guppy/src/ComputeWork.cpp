@@ -20,7 +20,9 @@ Base::Base(Pass::Handler& handler, const index&& offset, const CreateInfo* pCrea
       NAME(pCreateInfo->name),
       OFFSET(offset),
       TYPE(pCreateInfo->type),
+      resources{false},
       status_(STATUS::UNKNOWN),
+      paused_(true),
       pipelineData_{} {
     for (const auto& pipelineType : pCreateInfo->pipelineTypes) {
         // If changed from unique list (set) then a lot of work needs to be done, so I am
@@ -30,10 +32,9 @@ Base::Base(Pass::Handler& handler, const index&& offset, const CreateInfo* pCrea
     }
 }
 
-void Base::onRecord() {
-    record();
-    // There should be at least one command buffer.
-    assert(resources.submit.commandBuffers.size());
+void Base::onTogglePause() {
+    paused_ = !paused_;
+    togglePause();
 }
 
 void Base::setDescSetBindData() {
@@ -56,25 +57,29 @@ void Base::setBindData(const PIPELINE& pipelineType, const std::shared_ptr<Pipel
     pipelineBindDataList_.insert(pipelineType, pBindData);
 }
 
-void Base::createCommandBuffers(const uint32_t n) {
+void Base::createCommandBuffers(const uint32_t count) {
     assert(resources.cmds.empty());
-    resources.cmds.assign(n, nullptr);
+    resources.cmds.assign(count, nullptr);
     handler().commandHandler().createCmdBuffers(QUEUE::COMPUTE, resources.cmds.data(), vk::CommandBufferLevel::ePrimary,
                                                 resources.cmds.size());
 }
 
-void Base::createSemaphores(const uint32_t n) {
+void Base::createSemaphores(const uint32_t count, const uint32_t drawCount) {
     const auto& ctx = handler().shell().context();
     assert(resources.semaphores.empty());
-    for (uint32_t i = 0; i < n; i++) {
+    for (uint32_t i = 0; i < count; i++) {
         resources.semaphores.push_back(ctx.dev.createSemaphore({}, ctx.pAllocator));
+    }
+    assert(resources.drawSemaphores.empty());
+    for (uint32_t i = 0; i < drawCount; i++) {
+        resources.drawSemaphores.push_back(ctx.dev.createSemaphore({}, ctx.pAllocator));
     }
 }
 
-void Base::createFences(const uint32_t n) {
+void Base::createFences(const uint32_t count) {
     const auto& ctx = handler().shell().context();
     assert(resources.fences.empty());
-    for (uint32_t i = 0; i < n; i++) {
+    for (uint32_t i = 0; i < count; i++) {
         resources.fences.push_back(ctx.dev.createFence({vk::FenceCreateFlagBits::eSignaled}, ctx.pAllocator));
     }
 }
@@ -87,6 +92,8 @@ void Base::onDestroy() {
     // SEMAPHORES
     for (const auto& s : resources.semaphores) ctx.dev.destroy(s, ctx.pAllocator);
     resources.semaphores.clear();
+    for (const auto& s : resources.drawSemaphores) ctx.dev.destroy(s, ctx.pAllocator);
+    resources.drawSemaphores.clear();
     // FENCES
     auto result = ctx.dev.waitForFences(resources.fences, VK_TRUE, UINT64_MAX);
     assert(result == vk::Result::eSuccess);

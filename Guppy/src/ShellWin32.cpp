@@ -254,6 +254,9 @@ bool ShellWin32::translateKey(UINT uMsg, WPARAM wParam) {
         case 'I':
             key = GAME_KEY::I;
             break;
+        case 'T':
+            key = GAME_KEY::T;
+            break;
         // BRACKET/BRACE KEYS
         case '[':
             key = GAME_KEY::LEFT_BRACKET;

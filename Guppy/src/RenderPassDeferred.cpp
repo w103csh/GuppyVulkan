@@ -5,10 +5,6 @@
 
 #include "RenderPassDeferred.h"
 
-#include "Ocean.h"  // Included for macro OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-#include "ComputeWorkManager.h"
-#endif
 #include "ConstantsAll.h"
 #include "Deferred.h"
 #include "RenderPassCubeMap.h"
@@ -21,6 +17,12 @@
 #include "PassHandler.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
+
+#include "Ocean.h"  // Included for macro OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+#include "ComputeWorkManager.h"
+#include "OceanComputeWork.h"
+#endif
 
 namespace RenderPass {
 namespace Deferred {
@@ -108,13 +110,8 @@ Base::Base(Pass::Handler& handler, const index&& offset)
       inputAttachmentOffset_(0),
       inputAttachmentCount_(0),
       combinePassIndex_(0),
-      doSSAO_(false),
-      pOceanSignalSemaphores_(nullptr) {
-    status_ = (STATUS::PENDING_MESH |
-#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-               STATUS::PENDING_POINTER |
-#endif
-               STATUS::PENDING_PIPELINE);
+      doSSAO_(false) {
+    status_ = (STATUS::PENDING_MESH | STATUS::PENDING_PIPELINE);
 }
 
 // TODO: should something like this be on the base class????
@@ -247,12 +244,6 @@ void Base::record(const uint8_t frameIndex) {
 }
 
 void Base::update(const std::vector<Descriptor::Base*> pDynamicItems) {
-#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-    if (status_ & STATUS::PENDING_POINTER) {
-        pOceanSignalSemaphores_ = &handler().compWorkMgr().getWork(COMPUTE_WORK::OCEAN)->resources.semaphores;
-        status_ ^= STATUS::PENDING_POINTER;
-    }
-#endif
     // Check the mesh status.
     if (handler().renderPassMgr().getScreenQuad()->getStatus() == STATUS::READY) {
         status_ ^= STATUS::PENDING_MESH;
@@ -262,18 +253,8 @@ void Base::update(const std::vector<Descriptor::Base*> pDynamicItems) {
 
 void Base::updateSubmitResource(SubmitResource& resource, const uint8_t frameIndex) const {
 #if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-    // TODO: There should be a better way to check if there is a semaphore that needs to be waited on. This is going to
-    // break as soon as the ocean surface needs to be paused. I'll cross that bridge when I get there...
-    if (handler().game().getFrameCount() > 0) {
-        // Wait for previous frame's compute work to finish before using the image copy.
-        const auto semIndex = ((frameIndex + handler().shell().context().imageCount - 1) % 3);
-        resource.waitSemaphores[resource.waitSemaphoreCount] = (*pOceanSignalSemaphores_)[semIndex];
-        resource.waitDstStageMasks[resource.waitSemaphoreCount] = vk::PipelineStageFlagBits::eVertexShader;
-        resource.waitSemaphoreCount++;
-        // Signal to the compute work that this frame no longer needs the image copy.
-        resource.signalSemaphores[resource.signalSemaphoreCount] = data.semaphores[frameIndex];
-        resource.signalSemaphoreCount++;
-    }
+    static_cast<ComputeWork::Ocean*>(handler().compWorkMgr().getWork(COMPUTE_WORK::OCEAN).get())
+        ->updateDrawSubmitResources(resource, frameIndex);
 #endif
     ::RenderPass::Base::updateSubmitResource(resource, frameIndex);
 }

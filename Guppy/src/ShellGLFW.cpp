@@ -101,6 +101,9 @@ void glfw_key_callback(GLFWwindow* window, int key, int scancode, int action, in
             case GLFW_KEY_I:
                 gKey = GAME_KEY::I;
                 break;
+            case GLFW_KEY_T:
+                gKey = GAME_KEY::T;
+                break;
             // BRACKET/BRACE KEYS
             case GLFW_KEY_LEFT_BRACKET:
                 gKey = GAME_KEY::LEFT_BRACKET;

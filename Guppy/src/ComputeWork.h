@@ -36,14 +36,15 @@ class Base : public Handlee<Pass::Handler> {
     Base(Pass::Handler& handler, const index&& offset, const CreateInfo* pCreateInfo);
 
     void onInit() { init(); }
-    void onRecord();
+    void onTick() { tick(); }
+    void onFrame() { frame(); }
+    void onTogglePause();
     void onDestroy();
 
-    virtual void prepare() { status_ = STATUS::READY; }
-    virtual void record() = 0;
-    virtual const std::vector<Descriptor::Base*> getDynamicDataItems(const PIPELINE pipelineType) const { return {}; }
+    inline bool isPaused() const { return paused_; }
 
     // DESCRIPTOR SET
+    virtual const std::vector<Descriptor::Base*> getDynamicDataItems(const PIPELINE pipelineType) const { return {}; }
     constexpr const auto& getDescSetBindDataMaps() const { return descSetBindDataMaps_; }
     void setDescSetBindData();
     const Descriptor::Set::BindData& getDescSetBindData(const PASS& passType, const uint32_t index) const;
@@ -63,25 +64,31 @@ class Base : public Handlee<Pass::Handler> {
 
     // RESOURCES
     struct Resources {
+        bool hasData;
         std::vector<vk::CommandBuffer> cmds;
         std::vector<vk::Semaphore> semaphores;
+        std::vector<vk::Semaphore> drawSemaphores;
         std::vector<vk::Fence> fences;
         SubmitResource submit;
     } resources;
 
    protected:
     virtual void init() {}
+    virtual void tick() { status_ = STATUS::READY; }
+    virtual void frame() {}
+    virtual void togglePause() {}
     virtual void destroy() {}
 
-    void createCommandBuffers(const uint32_t n);
-    void createSemaphores(const uint32_t n);
-    void createFences(const uint32_t n);
+    void createCommandBuffers(const uint32_t count);
+    void createSemaphores(const uint32_t count, const uint32_t drawCount);
+    void createFences(const uint32_t count);
 
     FlagBits status_;
 
    private:
+    bool paused_;  // TODO: Add paused status?
+    // DESCRIPTOR SET
     std::vector<Descriptor::Set::bindDataMap> descSetBindDataMaps_;
-
     // PIPELINE
     Pass::PipelineData pipelineData_;
     Pipeline::pipelineBindDataList pipelineBindDataList_;

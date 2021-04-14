@@ -521,16 +521,12 @@ Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offse
     assert(normalOffset_ != Particle::Buffer::BAD_OFFSET);
 
     status_ |= STATUS::PENDING_BUFFERS;
-    draw_ = true;
-    paused_ = false;
 }
 
 void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                   const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                   const uint8_t frameIndex) const {
-    // TODO: Checking the frame count here is a bad solution. If the simulation needs to be paused then the draw should
-    // always delayed a frame while waiting for the compute queue work. I'm just going to leave this for now.
-    if (handler().game().getFrameCount() == 0 || pPipelineBindData->type != PIPELINE{drawMode}) return;
+    if (pPipelineBindData->type != PIPELINE{drawMode}) return;
 
     const auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
 

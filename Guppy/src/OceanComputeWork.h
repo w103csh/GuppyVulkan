@@ -48,7 +48,10 @@ struct CreateInfo : Buffer::CreateInfo {
 class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
    public:
     Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo);
-    void update(const float time);
+    void update(const float elapsedTime);
+
+   private:
+    float internalTime_;
 };
 using Manager = Descriptor::Manager<Descriptor::Base, Base, std::shared_ptr>;
 }  // namespace SimulationDispatch
@@ -95,23 +98,30 @@ class Ocean : public Base {
    public:
     Ocean(Pass::Handler& handler, const index&& offset);
 
-    void prepare() override;
-    void record() override;
     const std::vector<Descriptor::Base*> getDynamicDataItems(const PIPELINE pipelineType) const override;
 
     static void dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                          const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                          const uint8_t frameIndex);
 
+    void updateDrawSubmitResources(RenderPass::SubmitResource& resource, const uint8_t frameIndex) const;
+
    private:
     void copyImage(const vk::CommandBuffer cmd, const uint8_t frameIndex);
 
     void init() override;
+    void tick() override;
+    void frame() override;
+    void togglePause() override;
     void destroy() override;
 
+    // PAUSE
+    uint64_t startFrameCount_;
+    uint64_t pauseFrameCount_;
+
     // Convenience pointers
+    Particle::Buffer::Base* pOcnBuffer_;
     UniformDynamic::Ocean::SimulationDispatch::Base* pOcnSimDpch_;
-    const std::vector<vk::Semaphore>* pRenderSignalSemaphores_;
     const Texture::Base* pVertInputTex_;
     std::array<const Texture::Base*, 3> pVertInputTexCopies_;
 };

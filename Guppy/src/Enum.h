@@ -29,6 +29,7 @@ enum class GAME_KEY {
     K,
     L,
     I,
+    T,
     LEFT_BRACKET,
     RIGHT_BRACKET,
     COMMA,
