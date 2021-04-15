@@ -41,7 +41,7 @@ class Base : public Handlee<Pass::Handler> {
     void onTogglePause();
     void onDestroy();
 
-    inline bool isPaused() const { return paused_; }
+    inline bool getPaused() const { return paused_; }
 
     // DESCRIPTOR SET
     virtual const std::vector<Descriptor::Base*> getDynamicDataItems(const PIPELINE pipelineType) const { return {}; }

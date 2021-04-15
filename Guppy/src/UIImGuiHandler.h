@@ -27,6 +27,7 @@ class ImGuiHandler : public UI::Handler {
     void appMainMenuBar();
     void menuFile();
     void menuWater();
+    void menuOcean();
     void menuShowWindows();
     void showSelectionInfoWindow(bool* p_open);
 
@@ -35,9 +36,17 @@ class ImGuiHandler : public UI::Handler {
 
     bool showDemoWindow_;
     bool showSelectionInfoWindow_;
-    bool waterColumns_;
-    bool waterWireframe_;
-    bool waterFlat_;
+    struct {
+        bool columns;
+        bool wireframe;
+        bool flat;
+    } water_;
+    struct {
+        bool wireframe;
+        bool wireframeTess;
+        bool deferred;
+        bool deferredTess;
+    } ocean_;
 };
 
 }  // namespace UI

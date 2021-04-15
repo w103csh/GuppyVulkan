@@ -383,7 +383,7 @@ void Surface::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) 
 // SURFACE (TESSELLATION)
 #if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
 const CreateInfo OCEAN_TESS_SURFACE_CREATE_INFO = {
-    GRAPHICS::OCEAN_TESS_SURFACE_DEFERRED,
+    GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED,
     "Ocean Surface Tessellation (Deferred) Pipeline",
     {
         SHADER::OCEAN_VERT,
@@ -537,7 +537,7 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
     switch (drawMode) {
 #if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
         case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
-        case GRAPHICS::OCEAN_TESS_SURFACE_DEFERRED: {
+        case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED: {
             const std::vector<vk::Buffer> buffers = {patchListRes_.vertex.buffer,
                                                      pInstObj3d_->BUFFER_INFO.bufferInfo.buffer};
             const std::vector<vk::DeviceSize> offsets = {0, pInstObj3d_->BUFFER_INFO.memoryOffset};

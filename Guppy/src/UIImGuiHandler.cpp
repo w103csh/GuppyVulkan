@@ -12,8 +12,11 @@
 
 #include <Common/Helpers.h>
 
+#include "ComputeWorkManager.h"
 #include "Face.h"
 #include "HeightFieldFluid.h"
+#include "Ocean.h"
+#include "OceanComputeWork.h"
 // HANDLERS
 #include "CommandHandler.h"
 #include "DescriptorHandler.h"
@@ -26,9 +29,8 @@ UI::ImGuiHandler::ImGuiHandler(Game* pGame)
     : UI::Handler(pGame),  //
       showDemoWindow_(false),
       showSelectionInfoWindow_(false),
-      waterColumns_(false),
-      waterWireframe_(false),
-      waterFlat_(false) {}
+      water_(),
+      ocean_() {}
 
 void UI::ImGuiHandler::frame() {
     // Start the Dear ImGui frame
@@ -69,8 +71,12 @@ void UI::ImGuiHandler::appMainMenuBar() {
             }
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu("Water")) {
-            menuWater();
+        // if (ImGui::BeginMenu("Water")) {
+        //    menuWater();
+        //    ImGui::EndMenu();
+        //}
+        if (ImGui::BeginMenu("Ocean Surface")) {
+            menuOcean();
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu("Show Windows")) {
@@ -115,31 +121,31 @@ void UI::ImGuiHandler::menuFile() {
 
 void UI::ImGuiHandler::menuWater() {
     auto pWater = static_cast<HeightFieldFluid::Buffer*>(particleHandler().getBuffer(particleHandler().waterOffset).get());
-    waterColumns_ = false;
-    waterWireframe_ = false;
-    waterFlat_ = false;
+    water_.columns = false;
+    water_.wireframe = false;
+    water_.flat = false;
     switch (pWater->drawMode) {
         case GRAPHICS::HFF_CLMN_DEFERRED:
-            waterColumns_ = true;
+            water_.columns = true;
             break;
         case GRAPHICS::HFF_WF_DEFERRED:
-            waterWireframe_ = true;
+            water_.wireframe = true;
             break;
         case GRAPHICS::HFF_OCEAN_DEFERRED:
-            waterFlat_ = true;
+            water_.flat = true;
             break;
         default:
             assert(false && "Unhandled or invalid case");
             exit(EXIT_FAILURE);
             break;
     }
-    if (ImGui::MenuItem("Columns", nullptr, &waterColumns_)) {
+    if (ImGui::MenuItem("Columns", nullptr, &water_.columns)) {
         pWater->drawMode = GRAPHICS::HFF_CLMN_DEFERRED;
     }
-    if (ImGui::MenuItem("Wireframe", nullptr, &waterWireframe_)) {
+    if (ImGui::MenuItem("Wireframe", nullptr, &water_.wireframe)) {
         pWater->drawMode = GRAPHICS::HFF_WF_DEFERRED;
     }
-    if (ImGui::MenuItem("Flat", nullptr, &waterFlat_)) {
+    if (ImGui::MenuItem("Flat", nullptr, &water_.flat)) {
         pWater->drawMode = GRAPHICS::HFF_OCEAN_DEFERRED;
     }
 
@@ -152,6 +158,64 @@ void UI::ImGuiHandler::menuWater() {
     static bool pause = pWater->getPaused();
     if (ImGui::Checkbox("Pause", &pause)) {
         pWater->togglePause();
+    }
+}
+
+void UI::ImGuiHandler::menuOcean() {
+    auto pBuffer = static_cast<Ocean::Buffer*>(particleHandler().getBuffer(particleHandler().waterOffset).get());
+
+    ocean_.wireframe = false;
+    ocean_.wireframeTess = false;
+    ocean_.deferred = false;
+    ocean_.deferredTess = false;
+
+    switch (pBuffer->drawMode) {
+        case GRAPHICS::OCEAN_WF_DEFERRED:
+            ocean_.wireframe = true;
+            break;
+        case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
+            ocean_.wireframeTess = true;
+            break;
+        case GRAPHICS::OCEAN_SURFACE_DEFERRED:
+            ocean_.deferred = true;
+            break;
+        case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED:
+            ocean_.deferredTess = true;
+            break;
+        default:
+            assert(false && "Unhandled or invalid case");
+            exit(EXIT_FAILURE);
+            break;
+    }
+
+    if (ImGui::MenuItem("Default", nullptr, &ocean_.deferred)) {
+        pBuffer->drawMode = GRAPHICS::OCEAN_SURFACE_DEFERRED;
+    }
+    if (ImGui::MenuItem("Wireframe", nullptr, &ocean_.wireframe)) {
+        pBuffer->drawMode = GRAPHICS::OCEAN_WF_DEFERRED;
+    }
+
+    ImGui::Separator();
+
+    if (ImGui::MenuItem("Default Tessellated", nullptr, &ocean_.deferredTess)) {
+        pBuffer->drawMode = GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED;
+    }
+    if (ImGui::MenuItem("Wireframe Tessellated", nullptr, &ocean_.wireframeTess)) {
+        pBuffer->drawMode = GRAPHICS::OCEAN_WF_TESS_DEFERRED;
+    }
+
+    ImGui::Separator();
+
+    // static bool draw = pOcean->getDraw();
+    // if (ImGui::Checkbox("Draw", &draw)) {
+    //    pOcean->toggleDraw();
+    //}
+
+    auto pWork = static_cast<ComputeWork::Ocean*>(passHandler().compWorkMgr().getWork(COMPUTE_WORK::OCEAN).get());
+
+    static bool pause = pWork->getPaused();
+    if (ImGui::Checkbox("Pause", &pause)) {
+        pWork->onTogglePause();
     }
 }
 

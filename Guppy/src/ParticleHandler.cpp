@@ -159,7 +159,7 @@ void Particle::Handler::create() {
             GRAPHICS::OCEAN_SURFACE_DEFERRED,
 #if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
             GRAPHICS::OCEAN_WF_TESS_DEFERRED,
-            GRAPHICS::OCEAN_TESS_SURFACE_DEFERRED,
+            GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED,
 #endif
         };
         buffOcnInfo.info = info;

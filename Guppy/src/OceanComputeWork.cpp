@@ -243,11 +243,11 @@ void Ocean::updateDrawSubmitResources(RenderPass::SubmitResource& resource, cons
         const auto& ctx = handler().shell().context();
         const auto frameCount = handler().game().getFrameCount();
 
-        const bool notPausedNotFirstFrame = (!isPaused() && (startFrameCount_ != frameCount));
+        const bool notPausedNotFirstFrame = (!getPaused() && (startFrameCount_ != frameCount));
 
         // When the simulation starts draw needs wait after the first frame because it lags a single frame behind. Also, when
         // the simulation is paused we need to keep waiting until all copies are done.
-        if (notPausedNotFirstFrame || (isPaused() && ((frameCount - pauseFrameCount_) < ctx.imageCount))) {
+        if (notPausedNotFirstFrame || (getPaused() && ((frameCount - pauseFrameCount_) < ctx.imageCount))) {
             const auto workIndex = ((frameIndex + handler().shell().context().imageCount - 1) % 3);
             resource.waitSemaphores[resource.waitSemaphoreCount] = resources.semaphores[workIndex];
             resource.waitDstStageMasks[resource.waitSemaphoreCount] = vk::PipelineStageFlagBits::eVertexShader;
@@ -366,7 +366,7 @@ void Ocean::frame() {
 
     // Need to copy for (imageCount - 1) frames after pause so that all image layers have the last set of dispatch's data. A
     // dispatch is only ever needed when a copy is also required.
-    const bool needCopy = (!isPaused() || ((frameCount - pauseFrameCount_) < (ctx.imageCount - 1)));
+    const bool needCopy = (!getPaused() || ((frameCount - pauseFrameCount_) < (ctx.imageCount - 1)));
 
     // Wait for fence every frame, or the if the simulation was just paused.
     if (needCopy) {
@@ -382,7 +382,7 @@ void Ocean::frame() {
     }
 
     // Update shader resources when simulation is not paused.
-    if (!isPaused()) {
+    if (!getPaused()) {
         pOcnSimDpch_->update(handler().shell().getElapsedTime<float>());
         handler().uniformHandler().ocnSimDpchMgr().updateData(ctx.dev, pOcnSimDpch_->BUFFER_INFO);
     }
@@ -392,7 +392,7 @@ void Ocean::frame() {
         cmd.begin(vk::CommandBufferBeginInfo{});
 
         // Dispatch if not paused.
-        if (!isPaused()) {
+        if (!getPaused()) {
             const auto& pipelineBindDataList = getPipelineBindDataList();
             assert(pipelineBindDataList.size() == 3);  // OCEAN_DISP/OCEAN_FFT/OCEAN_VERT_INPUT
             dispatch(TYPE, pipelineBindDataList.getValue(0), getDescSetBindData(TYPE, 0), cmd, frameIndex);  // DISP
@@ -415,7 +415,7 @@ void Ocean::frame() {
              * Note: This class governs the use of the render semaphores, so this should be safe.
              */
             resources.submit.waitSemaphores.clear();
-            const bool needWait = (!isPaused() && ((frameCount - startFrameCount_) > (ctx.imageCount - 1))) || isPaused();
+            const bool needWait = (!getPaused() && ((frameCount - startFrameCount_) > (ctx.imageCount - 1))) || getPaused();
             if (needWait) {
                 const auto drawIndex = ((frameIndex + 1) % 3);
                 resources.submit.waitSemaphores.push_back(resources.drawSemaphores[drawIndex]);
@@ -429,8 +429,8 @@ void Ocean::frame() {
 
 void Ocean::togglePause() {
     const auto frameCount = handler().game().getFrameCount();
-    startFrameCount_ = isPaused() ? UINT64_MAX : frameCount;
-    pauseFrameCount_ = isPaused() ? frameCount : UINT64_MAX;
+    startFrameCount_ = getPaused() ? UINT64_MAX : frameCount;
+    pauseFrameCount_ = getPaused() ? frameCount : UINT64_MAX;
 }
 
 void Ocean::destroy() {

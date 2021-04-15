@@ -110,7 +110,7 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(), maxPus
                 case GRAPHICS::OCEAN_SURFACE_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Ocean::Surface>(std::ref(*this))}); break;
 #if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
                 case GRAPHICS::OCEAN_WF_TESS_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Ocean::WireframeTess>(std::ref(*this))}); break;
-                case GRAPHICS::OCEAN_TESS_SURFACE_DEFERRED:     insertPair = pPipelines_.insert({type, std::make_unique<Ocean::SurfaceTess>(std::ref(*this))}); break;
+                case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED:     insertPair = pPipelines_.insert({type, std::make_unique<Ocean::SurfaceTess>(std::ref(*this))}); break;
 #endif
                 case GRAPHICS::CDLOD_WF_DEFERRED:               insertPair = pPipelines_.insert({type, std::make_unique<Cdlod::Wireframe>(std::ref(*this))}); break;
                 case GRAPHICS::CDLOD_TEX_DEFERRED:              insertPair = pPipelines_.insert({type, std::make_unique<Cdlod::Texture>(std::ref(*this))}); break;
