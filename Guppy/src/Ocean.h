@@ -7,23 +7,23 @@
 #define OCEAN_H
 
 #include <glm/glm.hpp>
+#include <memory>
 #include <string_view>
-#include <type_traits>
 #include <vulkan/vulkan.hpp>
+
+#include <CDLOD/VkGridMesh.h>
 
 #include "ConstantsAll.h"
 #include "DescriptorManager.h"
-#include "HeightFieldFluid.h"
-#include "ParticleBuffer.h"
+#include "GraphicsWork.h"
+#include "Instance.h"
 #include "Pipeline.h"
 
 // clang-format off
+namespace Ocean   { class Renderer; }
 namespace Pass    { class Handler; }
-namespace Texture { class Base; }
 namespace Texture { class Handler; }
 // clang-format on
-
-#define OCEAN_USE_COMPUTE_QUEUE_DISPATCH true
 
 namespace Ocean {
 
@@ -86,14 +86,15 @@ namespace Texture {
 class Handler;
 struct CreateInfo;
 namespace Ocean {
+
 constexpr std::string_view WAVE_FOURIER_ID = "Ocean Wave & Fourier Data Texture";
 constexpr std::string_view DISP_REL_ID = "Ocean Dispersion Relation Data Texture";
 constexpr std::string_view VERT_INPUT_ID = "Ocean Vertex Shader Input Texture";
 void MakeResources(Texture::Handler& handler, const ::Ocean::SurfaceCreateInfo& info);
-#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
+
 constexpr std::string_view VERT_INPUT_COPY_ID = "Ocean Vertex Shader Input Copy Texture";
 CreateInfo MakeCopyTexInfo(const uint32_t N, const uint32_t M);
-#endif
+
 }  // namespace Ocean
 }  // namespace Texture
 
@@ -196,59 +197,56 @@ class SurfaceTess : public Surface {
 }  // namespace Ocean
 }  // namespace Pipeline
 
-// BUFFER
+// INSTANCE
+namespace Instance {
+namespace Cdlod {
 namespace Ocean {
+struct DATA {
+    static void getInputDescriptions(Pipeline::CreateInfoResources& createInfoRes);
+    glm::vec4 data0;  // quadOffset: .x.y
+                      // quadScale:  .z.w
+    glm::vec4 data1;  // uvOffset:   .x.y
+                      // uvScale:    .z.w
+};
+class Base;
+struct CreateInfo : public Instance::CreateInfo<DATA, Base> {};
+class Base : public Buffer::DataItem<DATA>, public Instance::Base {
+   public:
+    Base(const Buffer::Info&& info, DATA* pData);
+};
+}  // namespace Ocean
+}  // namespace Cdlod
+}  // namespace Instance
 
-struct CreateInfo : Particle::Buffer::CreateInfo {
-    SurfaceCreateInfo info;
+// GRAPHICS WORK
+namespace GraphicsWork {
+
+struct OceanCreateInfo : CreateInfo {
+    OceanCreateInfo() : CreateInfo() {}
+    Ocean::SurfaceCreateInfo surfaceInfo;
 };
 
-class Buffer : public Particle::Buffer::Base, public Obj3d::InstanceDraw {
+class OceanSurface : public Base {
    public:
-    Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offset, const CreateInfo* pCreateInfo,
-           std::shared_ptr<Material::Base>& pMaterial, const std::vector<std::shared_ptr<Descriptor::Base>>& pDescriptors,
-           std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData);
+    OceanSurface(Pass::Handler& handler, const OceanCreateInfo* pCreateInfo, Ocean::Renderer* pRenderer);
 
-    void draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-              const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
-              const uint8_t frameIndex) const override;
-    void dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                  const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
-                  const uint8_t frameIndex) const override;
+    void init();
+    void destroy();
 
-#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-    void update(const float time, const float elapsed, const uint32_t frameIndex) override {}
-#else
-    void update(const float time, const float elapsed, const uint32_t frameIndex) override;
-#endif
-
-    GRAPHICS drawMode;
+    void record(const PASS passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+                const vk::CommandBuffer& cmd) override;
 
    private:
-    void loadBuffers() override;
-    void destroy() override;
+    void load(std::unique_ptr<LoadingResource>& pLdgRes) override;
 
-    uint32_t normalOffset_;
-
-    struct {
-        uint32_t indexCount;
-        BufferResource vertex;
-        BufferResource index;
-    } triSpripRes_;
-#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-    struct {
-        uint32_t vertexCount;
-        BufferResource vertex;
-    } patchListRes_;
-#endif
-
-    SurfaceCreateInfo info_;
+    Ocean::Renderer* pRenderer_;
+    Ocean::SurfaceCreateInfo surfaceInfo_;
+    // DEBUG
+    uint32_t gridMeshDims_;
+    VkGridMesh gridMesh_;
+    std::shared_ptr<Instance::Cdlod::Ocean::Base> pInstanceData_;
 };
 
-static_assert(std::is_base_of<Particle::Buffer::Base, Buffer>::value,
-              "If/when the base changes removed the assert condition \"NAME == \"Ocean Surface Buffer\"\
-              from Particle::Buffer::Base constructor.");
-
-}  // namespace Ocean
+}  // namespace GraphicsWork
 
 #endif  //! OCEAN_H

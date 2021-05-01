@@ -12,6 +12,7 @@
 // HANLDERS
 #include "ParticleHandler.h"
 #include "PassHandler.h"
+#include "SceneHandler.h"
 #include "TextureHandler.h"
 #include "UniformHandler.h"
 
@@ -168,7 +169,7 @@ Ocean::Ocean(Pass::Handler& handler, const index&& offset)
     : Base(handler, std::forward<const index>(offset), &CREATE_INFO),
       startFrameCount_(UINT64_MAX),
       pauseFrameCount_(UINT64_MAX),
-      pOcnBuffer_(nullptr),
+      pGraphicsWork_(nullptr),
       pOcnSimDpch_(nullptr),
       pVertInputTex_(nullptr),
       pVertInputTexCopies_{nullptr, nullptr, nullptr} {}
@@ -238,7 +239,7 @@ void Ocean::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindD
     }
 }
 
-void Ocean::updateDrawSubmitResources(RenderPass::SubmitResource& resource, const uint8_t frameIndex) const {
+void Ocean::updateRenderPassSubmitResource(RenderPass::SubmitResource& resource, const uint8_t frameIndex) const {
     if (status_ == STATUS::READY) {
         const auto& ctx = handler().shell().context();
         const auto frameCount = handler().game().getFrameCount();
@@ -333,7 +334,6 @@ void Ocean::tick() {
     if (status_ != STATUS::READY) {
         const auto& ctx = handler().shell().context();
 
-#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
         // Store pointers to the dispersion relationship textures for convenience/speed.
         pVertInputTex_ = handler().textureHandler().getTexture(Texture::Ocean::VERT_INPUT_ID).get();
         assert(pVertInputTex_ != nullptr);
@@ -342,8 +342,9 @@ void Ocean::tick() {
             pVertInputTexCopies_[i] = handler().textureHandler().getTexture(Texture::Ocean::VERT_INPUT_COPY_ID, i).get();
             assert(pVertInputTexCopies_[i] != nullptr);
         }
-#endif
-        pOcnBuffer_ = handler().particleHandler().getBuffer(handler().particleHandler().waterOffset).get();
+
+        // Store a pointer to the graphics work for convenience.
+        pGraphicsWork_ = handler().sceneHandler().ocnRenderer.pGraphicsWork.get();
 
         // Set the descriptor set bind data. This function should be called on first tick at earliest.
         assert(getDescSetBindDataMaps().empty());
@@ -378,7 +379,7 @@ void Ocean::frame() {
         ctx.dev.resetFences({fence});
 
         // TODO: This concept needs some work obviously...
-        if (!pOcnBuffer_->getDraw()) pOcnBuffer_->toggleDraw();
+        if (!pGraphicsWork_->getDraw()) pGraphicsWork_->toggleDraw();
     }
 
     // Update shader resources when simulation is not paused.

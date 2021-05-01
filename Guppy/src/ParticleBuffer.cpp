@@ -176,7 +176,7 @@ Base::Base(Particle::Handler& handler, const index offset, const CreateInfo* pCr
             descInstOffset_ = i;
         }
     }
-    assert(NAME == "Ocean Surface Buffer" || descTimeOffset_ != BAD_OFFSET);
+    assert(descTimeOffset_ != BAD_OFFSET);
 
     if (pMaterial_ != nullptr) status_ |= STATUS::PENDING_MATERIAL;
 }

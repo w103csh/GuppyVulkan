@@ -14,6 +14,7 @@
 #include "CdlodRenderer.h"
 #include "ConstantsAll.h"
 #include "Mesh.h"
+#include "OceanRenderer.h"
 #include "Scene.h"
 #include "Game.h"
 
@@ -28,11 +29,9 @@ class Handler : public Game::Handler {
     ~Handler();
 
     void init() override;
+    void destroy() override;
+    void tick() override;
     void frame() override;
-    inline void destroy() override {
-        reset();
-        cleanup();
-    }
 
     std::unique_ptr<Scene::Base>& makeScene(bool setActive = false, bool makeFaceSelection = false);
     inline std::unique_ptr<Scene::Base>& getActiveScene() {
@@ -49,11 +48,12 @@ class Handler : public Game::Handler {
 
     void cleanup();
 
+    // RENDERERS
+    Cdlod::Renderer::Debug cdlodDbgRenderer;
+    Ocean::Renderer ocnRenderer;
+
    private:
     void reset() override;
-
-    // RENDERERS
-    Cdlod::Renderer::Base cdlodDbgRenderer_;
 
     index activeSceneIndex_;
     std::vector<std::unique_ptr<Scene::Base>> pScenes_;

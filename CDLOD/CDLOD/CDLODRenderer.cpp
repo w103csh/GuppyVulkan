@@ -40,10 +40,9 @@ const VkGridMesh* CDLODRenderer::PickGridMesh(int dimensions) const {
     return NULL;
 }
 //
-void CDLODRenderer::SetIndependentGlobalVertexShaderConsts(PerQuadTreeData& data, const CDLODQuadTree& cdlodQuadTree) const {
-    int textureWidth = cdlodQuadTree.GetRasterSizeX();
-    int textureHeight = cdlodQuadTree.GetRasterSizeY();
-
+void CDLODRenderer::SetIndependentGlobalVertexShaderConsts(const CDLODQuadTree& cdlodQuadTree, PerQuadTreeData& data) const {
+    const int textureWidth = cdlodQuadTree.GetRasterSizeX();
+    const int textureHeight = cdlodQuadTree.GetRasterSizeY();
     const MapDimensions& mapDims = cdlodQuadTree.GetWorldMapDims();
 
     data = {};

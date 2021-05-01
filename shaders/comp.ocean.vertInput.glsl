@@ -46,13 +46,13 @@ void main() {
     dxdz.x = flipSign ? -dxdz.x : dxdz.x;
     dxdz.z = flipSign ? -dxdz.z : dxdz.z;
 
-    // Position
+    // Position (displacement/height)
     vec3 position = vec3(
-        (pix.x * sim.data0[2]) + (dxdz.x * sim.data0[0]),     // x horizontal displacement (choppiness)
-        imageLoad(imgDisp, ivec3(pix, DISP_LAYER_HEIGHT)).x,  // height
-        (pix.y * sim.data0[3]) + (dxdz.z * sim.data0[0])      // z horizontal displacement (choppiness)
+        (dxdz.x * sim.data0[0]),  // x horizontal displacement (choppiness)
+        (dxdz.z * sim.data0[0]),  // z horizontal displacement (choppiness)
+        imageLoad(imgDisp, ivec3(pix, DISP_LAYER_HEIGHT)).x  // height
     );
-    position.y = flipSign ? -position.y : position.y;
+    position.z = flipSign ? -position.z : position.z;
 
     // Normal
     vec3 normal = imageLoad(imgDisp, ivec3(pix, DISP_LAYER_SLOPE)).xyz;
@@ -60,6 +60,6 @@ void main() {
     normal = normalize(vec3(-normal.x, 1.0, -normal.z));
 
     imageStore(imgVertInput, ivec3(pix, INPUT_LAYER_POSITION), vec4(position, 1));
-    imageStore(imgVertInput, ivec3(pix, INPUT_LAYER_NORMAL), vec4(normal, 0));
+    imageStore(imgVertInput, ivec3(pix, INPUT_LAYER_NORMAL),   vec4(normal, 0));
 #endif
 }

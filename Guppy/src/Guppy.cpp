@@ -159,6 +159,7 @@ void Guppy::tick() {
     handlers_.pPipeline->tick();
     handlers_.pMesh->tick();
     handlers_.pParticle->tick();
+    handlers_.pScene->tick();
 
     // ComputeWorkManager assumes this is at least called once per frame, and before each frame.
     handlers_.pPass->tick();
@@ -203,7 +204,6 @@ void Guppy::detachShell() {
         // for (auto &worker : workers_) worker->stop();
     }
 
-    handlers_.pScene->destroy();
     handlers_.pPipeline->destroy();
     handlers_.pShader->destroy();
     handlers_.pDescriptor->destroy();

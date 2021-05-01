@@ -58,9 +58,7 @@ namespace Set {
 const CreateInfo CDLOD_DEFAULT_CREATE_INFO = {
     DESCRIPTOR_SET::CDLOD_DEFAULT,
     "_DS_CDLOD",
-    {
-        {{0, 0}, {UNIFORM::CDLOD_QUAD_TREE}},
-    },
+    {{{0, 0}, {UNIFORM::CDLOD_QUAD_TREE}}},
 };
 }  // namespace Set
 }  // namespace Descriptor
@@ -81,7 +79,7 @@ void GetCdlodInputAssemblyInfoResource(Pipeline::CreateInfoResources& createInfo
         createInfoRes.attrDescs.push_back({});
         createInfoRes.attrDescs.back().binding = BINDING;
         createInfoRes.attrDescs.back().location = 0;
-        createInfoRes.attrDescs.back().format = vk::Format::eR32G32B32Sfloat;  // vec3
+        createInfoRes.attrDescs.back().format = vk::Format::eR32G32Sfloat;  // vec2
         createInfoRes.attrDescs.back().offset = 0;
     }
 

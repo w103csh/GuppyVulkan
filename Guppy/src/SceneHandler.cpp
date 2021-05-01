@@ -28,7 +28,8 @@
 
 Scene::Handler::Handler(Game* pGame)
     : Game::Handler(pGame),  //
-      cdlodDbgRenderer_(*this),
+      cdlodDbgRenderer(*this),
+      ocnRenderer(*this),
       activeSceneIndex_() {}
 
 // Required in this file for inner-class forward declaration of SelectionManager
@@ -54,7 +55,8 @@ void Scene::Handler::init() {
     auto& pScene = makeScene(true, makeFaceSelectionMesh);
 
     // RENDERERS
-    cdlodDbgRenderer_.init(nullptr, nullptr);
+    cdlodDbgRenderer.onInit();
+    ocnRenderer.onInit();
 
     if (deferred) {
         Mesh::Arc::CreateInfo arcInfo;
@@ -1017,6 +1019,18 @@ void Scene::Handler::init() {
     }
 }
 
+void Scene::Handler::destroy() {
+    cdlodDbgRenderer.destroy();
+    ocnRenderer.destroy();
+    reset();
+    cleanup();
+}
+
+void Scene::Handler::tick() {
+    cdlodDbgRenderer.tick();
+    ocnRenderer.tick();
+}
+
 void Scene::Handler::frame() {
     auto& pScene = pScenes_.at(activeSceneIndex_);
     const auto elapsed = shell().getElapsedTime<float>();
@@ -1046,11 +1060,13 @@ void Scene::Handler::frame() {
         debugFrustum->setModel(debugCamera.getModel());
         meshHandler().updateMesh(debugFrustum);
     }
+
+    cdlodDbgRenderer.frame();
+    ocnRenderer.frame();
 }
 
 void Scene::Handler::reset() {
     for (auto& scene : pScenes_) scene->destroy();
-    cdlodDbgRenderer_.destroy();
     pScenes_.clear();
 }
 
@@ -1087,9 +1103,21 @@ void Scene::Handler::recordRenderer(const PASS passType, const std::shared_ptr<P
     if (std::visit(Pipeline::IsGraphics{}, pPipelineBindData->type)) {
         auto graphicsType = std::visit(Pipeline::GetGraphics{}, pPipelineBindData->type);
         switch (graphicsType) {
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+            case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
+            case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED:
+#endif
+            case GRAPHICS::OCEAN_WF_DEFERRED:
+            case GRAPHICS::OCEAN_SURFACE_DEFERRED:
+                if (ocnRenderer.shouldDraw(pPipelineBindData->type)) {
+                    ocnRenderer.record(passType, pPipelineBindData, cmd);
+                }
+                break;
             case GRAPHICS::CDLOD_WF_DEFERRED:
             case GRAPHICS::CDLOD_TEX_DEFERRED:
-                cdlodDbgRenderer_.update(pPipelineBindData, cmd);
+                if (cdlodDbgRenderer.shouldDraw(pPipelineBindData->type)) {
+                    cdlodDbgRenderer.record(passType, pPipelineBindData, cmd);
+                }
                 break;
             default:
                 assert(false);

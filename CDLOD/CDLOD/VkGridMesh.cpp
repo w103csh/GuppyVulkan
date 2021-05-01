@@ -1,5 +1,5 @@
 //////////////////////////////////////////////////////////////////////
-// Modifications copyright(C) 2020 Colin Hughes<colin.s.hughes @gmail.com>
+// Modifications copyright(C) 2021 Colin Hughes<colin.s.hughes @gmail.com>
 //      This concept came from DxGridMesh
 // -------------------------------
 // Copyright (C) 2009 - Filip Strugar.
@@ -64,7 +64,7 @@ vk::Result VkGridMesh::OnCreateDevice(LoadingResource& ldgRes) {
 
     int totalVertices = (gridDim + 1) * (gridDim + 1);
     assert(totalVertices <= 65535);
-    std::vector<glm::vec3> vertices(totalVertices);
+    std::vector<VertexBufferType> vertices(totalVertices);
 
     int totalIndices = gridDim * gridDim * 2 * 3;
     std::vector<IndexBufferType> indices(totalIndices);
@@ -75,12 +75,12 @@ vk::Result VkGridMesh::OnCreateDevice(LoadingResource& ldgRes) {
         // Make a grid of (gridDim+1) * (gridDim+1) vertices
 
         for (int y = 0; y < vertDim; y++)
-            for (int x = 0; x < vertDim; x++) vertices[x + vertDim * y] = {x / (float)(gridDim), y / (float)(gridDim), 0};
+            for (int x = 0; x < vertDim; x++) vertices[x + vertDim * y] = {x / (float)(gridDim), y / (float)(gridDim)};
 
         BufferResource stgRes = {};
-        m_pContext->createBuffer(ldgRes.transferCmd,
-                                 vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
-                                 sizeof(glm::vec3) * vertices.size(), name.c_str(), stgRes, m_vertexBuffer, vertices.data());
+        m_pContext->createBuffer(
+            ldgRes.transferCmd, vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
+            sizeof(VertexBufferType) * vertices.size(), name.c_str(), stgRes, m_vertexBuffer, vertices.data());
         ldgRes.stgResources.push_back(std::move(stgRes));
     }
 
@@ -97,11 +97,11 @@ vk::Result VkGridMesh::OnCreateDevice(LoadingResource& ldgRes) {
         for (int y = 0; y < halfd; y++) {
             for (int x = 0; x < halfd; x++) {
                 indices[index++] = (unsigned short)(x + vertDim * y);
-                indices[index++] = (unsigned short)((x + 1) + vertDim * y);
                 indices[index++] = (unsigned short)(x + vertDim * (y + 1));
                 indices[index++] = (unsigned short)((x + 1) + vertDim * y);
+                indices[index++] = (unsigned short)((x + 1) + vertDim * y);
+                indices[index++] = (unsigned short)(x + vertDim * (y + 1));
                 indices[index++] = (unsigned short)((x + 1) + vertDim * (y + 1));
-                indices[index++] = (unsigned short)(x + vertDim * (y + 1));
             }
         }
         m_indexEndTL = index;
@@ -110,11 +110,11 @@ vk::Result VkGridMesh::OnCreateDevice(LoadingResource& ldgRes) {
         for (int y = 0; y < halfd; y++) {
             for (int x = halfd; x < fulld; x++) {
                 indices[index++] = (unsigned short)(x + vertDim * y);
-                indices[index++] = (unsigned short)((x + 1) + vertDim * y);
                 indices[index++] = (unsigned short)(x + vertDim * (y + 1));
                 indices[index++] = (unsigned short)((x + 1) + vertDim * y);
+                indices[index++] = (unsigned short)((x + 1) + vertDim * y);
+                indices[index++] = (unsigned short)(x + vertDim * (y + 1));
                 indices[index++] = (unsigned short)((x + 1) + vertDim * (y + 1));
-                indices[index++] = (unsigned short)(x + vertDim * (y + 1));
             }
         }
         m_indexEndTR = index;
@@ -123,11 +123,11 @@ vk::Result VkGridMesh::OnCreateDevice(LoadingResource& ldgRes) {
         for (int y = halfd; y < fulld; y++) {
             for (int x = 0; x < halfd; x++) {
                 indices[index++] = (unsigned short)(x + vertDim * y);
-                indices[index++] = (unsigned short)((x + 1) + vertDim * y);
                 indices[index++] = (unsigned short)(x + vertDim * (y + 1));
                 indices[index++] = (unsigned short)((x + 1) + vertDim * y);
+                indices[index++] = (unsigned short)((x + 1) + vertDim * y);
+                indices[index++] = (unsigned short)(x + vertDim * (y + 1));
                 indices[index++] = (unsigned short)((x + 1) + vertDim * (y + 1));
-                indices[index++] = (unsigned short)(x + vertDim * (y + 1));
             }
         }
         m_indexEndBL = index;
@@ -136,11 +136,11 @@ vk::Result VkGridMesh::OnCreateDevice(LoadingResource& ldgRes) {
         for (int y = halfd; y < fulld; y++) {
             for (int x = halfd; x < fulld; x++) {
                 indices[index++] = (unsigned short)(x + vertDim * y);
-                indices[index++] = (unsigned short)((x + 1) + vertDim * y);
                 indices[index++] = (unsigned short)(x + vertDim * (y + 1));
                 indices[index++] = (unsigned short)((x + 1) + vertDim * y);
+                indices[index++] = (unsigned short)((x + 1) + vertDim * y);
+                indices[index++] = (unsigned short)(x + vertDim * (y + 1));
                 indices[index++] = (unsigned short)((x + 1) + vertDim * (y + 1));
-                indices[index++] = (unsigned short)(x + vertDim * (y + 1));
             }
         }
         m_indexEndBR = index;

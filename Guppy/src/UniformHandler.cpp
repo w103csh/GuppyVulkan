@@ -79,7 +79,7 @@ Uniform::Handler::Handler(Game* pGame)
           {"Post Process Data", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
           // CDLOD
           Uniform::Manager<Uniform::Cdlod::QuadTree::Base>  //
-          {"CDLOD Quad Tree Data", UNIFORM::CDLOD_QUAD_TREE, 1, "_U_CDLOD_QDTR"},
+          {"CDLOD Quad Tree Data", UNIFORM::CDLOD_QUAD_TREE, 2, "_U_CDLOD_QDTR"},
           //
       },
       managersDynamic_{

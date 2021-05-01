@@ -6,6 +6,7 @@
 #version 450
 
 #define _DS_OCEAN 0
+#define _DS_CDLOD 0
 
 // BINDINGS
 layout(set=_DS_OCEAN, binding=0) uniform CameraDefaultPerspective {
@@ -15,6 +16,25 @@ layout(set=_DS_OCEAN, binding=0) uniform CameraDefaultPerspective {
     vec3 worldPosition;
 } camera;
 layout(set=_DS_OCEAN, binding=2) uniform sampler2DArray sampVertInput;
+layout(set=_DS_CDLOD, binding=0) uniform CdlodQuadTree {
+    vec4 terrainScale;
+    vec4 terrainOffset;
+    vec4 heightmapTextureInfo;
+    vec2 quadWorldMax;  // .xy max used to clamp triangles outside of world range
+    vec2 samplerWorldToTextureScale;
+    vec4 data1; // .x (dbgTexScale)
+} qTree;
+
+// PUSH CONSTANTS
+layout(push_constant) uniform PushBlock {
+    vec4 data0;  // gridDim:         .x (dimension), .y (dimension/2), .z (2/dimension)
+                 //                  .w (LODLevel)
+    vec4 data1;  // morph constants: .x (start), .y (1/(end-start)), .z (end/(end-start))
+                 //                  .w ((aabb.minZ+aabb.maxZ)/2)
+    vec4 data2;  // quadOffset:      .x (aabb.minX), .y (aabb.minY)
+                 // quadScale:       .z (aabb.sizeX), .w (aabb.sizeY)
+    vec4 data3;  // dbg camera:      .x (wpos.x), .y (wpos.y), .z (wpos.z)
+} pc;
 
 // IN
 layout(location=0) in vec2 inPosition;
@@ -37,15 +57,5 @@ const int LAYER_NORMAL    = 1;
 #define UV_SCALE_V2    data1.zw
 
 void main() {
-    const vec2 texCoord = (inPosition * UV_SCALE_V2) + (UV_OFFSET_V2);
-
-    // Position
-    vec4 posData = texture(sampVertInput, vec3(texCoord, LAYER_POSITION));  // .xy: displacement
-                                                                            // .z:  height
-    vec2 xz = (inPosition * QUAD_SCALE_V2) + (QUAD_OFFSET_V2 + posData.xy);
-    outPosition = vec3(xz.x, posData.z, xz.y);
-    gl_Position = camera.viewProjection * vec4(outPosition, 1.0);
-
-    // Normal
-    outNormal = texture(sampVertInput, vec3(texCoord, LAYER_NORMAL)).xyz;
+    // Nothing here yet.
 }

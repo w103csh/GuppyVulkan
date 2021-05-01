@@ -10,7 +10,8 @@
   o Move static CreatInfo out of struct and just set in constructors of handlee's (NAME, TYPE, etc.)
     and have all handlee's take the CreateInfo in an Init function. This way the reset/init pattern
     can be used to create dynamic pipelines and things easier. At this point I should probably move
-    closer to the OnInit/init, OnReset/reset, etc. pattern.
+    closer to the OnInit/init, OnReset/reset, etc. pattern. *** I think this would require two
+    Init's: EarlyInit() (instantiate things), LateInit() (do work that depends on instantiation). ***
   o If sky box is going to be a cubemap I render to then render the cubemap one frame and sample the
     the cubemap the next frame, so I can remove all dependencies from the cubemap rendering.
   o Add screen space volumetric lighting.

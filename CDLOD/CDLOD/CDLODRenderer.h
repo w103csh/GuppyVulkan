@@ -111,7 +111,7 @@ class CDLODRenderer {
     //
    public:
     //
-    void SetIndependentGlobalVertexShaderConsts(PerQuadTreeData& data, const CDLODQuadTree& cdlodQuadTree) const;
+    void SetIndependentGlobalVertexShaderConsts(const CDLODQuadTree& cdlodQuadTree, PerQuadTreeData& data) const;
     vk::Result Render(const CDLODRendererBatchInfo& batchInfo, CDLODRenderStats* renderStats = NULL) const;
     //
    protected:

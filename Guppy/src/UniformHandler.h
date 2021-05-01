@@ -202,6 +202,10 @@ class Handler : public Game::Handler {
     inline void update(T& uniform, const int index = -1) {
         getManager<T>().updateData(shell().context().dev, uniform.BUFFER_INFO, index);
     }
+    template <class T>
+    inline void update(T* pUniform, const int index = -1) {
+        getManager<T>().updateData(shell().context().dev, pUniform->BUFFER_INFO, index);
+    }
 
     // DESCRIPTOR
     inline const auto& getOffsetsMgr() const { return offsetsManager_; }

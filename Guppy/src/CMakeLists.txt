@@ -11,6 +11,8 @@ set(SOURCE
     Constants.cpp
     Constants.h
     ConstantsAll.h
+    GraphicsWork.cpp
+    GraphicsWork.h
     Enum.h
     EventHandlers.h
     Face.cpp
@@ -151,6 +153,8 @@ set(SOURCE
     Ocean.h
     OceanComputeWork.cpp
     OceanComputeWork.h
+    OceanRenderer.cpp
+    OceanRenderer.h
     # Particle
     Particle.cpp
     Particle.h

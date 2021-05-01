@@ -5,6 +5,7 @@
 
 #include "RenderPassDeferred.h"
 
+#include "ComputeWorkManager.h"
 #include "ConstantsAll.h"
 #include "Deferred.h"
 #include "RenderPassCubeMap.h"
@@ -17,12 +18,6 @@
 #include "PassHandler.h"
 #include "SceneHandler.h"
 #include "TextureHandler.h"
-
-#include "Ocean.h"  // Included for macro OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-#include "ComputeWorkManager.h"
-#include "OceanComputeWork.h"
-#endif
 
 namespace RenderPass {
 namespace Deferred {
@@ -80,11 +75,6 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         COMPUTE::PRTCL_CLOTH_NORM,
         COMPUTE::HFF_HGHT,
         COMPUTE::HFF_NORM,
-#if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-        COMPUTE::OCEAN_DISP,
-        COMPUTE::OCEAN_FFT,
-        COMPUTE::OCEAN_VERT_INPUT,
-#endif
     },
     (FLAG::SWAPCHAIN | FLAG::DEPTH | /*FLAG::DEPTH_INPUT_ATTACHMENT |*/
      (::Deferred::DO_MSAA ? FLAG::MULTISAMPLE : FLAG::NONE)),
@@ -205,17 +195,17 @@ void Base::record(const uint8_t frameIndex) {
                     case GRAPHICS::HFF_CLMN_DEFERRED:
                     case GRAPHICS::HFF_WF_DEFERRED:
                     case GRAPHICS::HFF_OCEAN_DEFERRED:
-                    case GRAPHICS::OCEAN_WF_DEFERRED:
-                    case GRAPHICS::OCEAN_SURFACE_DEFERRED:
-#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-                    case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
-                    case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED:
-#endif
                     case GRAPHICS::PRTCL_FOUNTAIN_DEFERRED: {
                         // PARTICLE GRAPHICS
                         handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
                         priCmd.nextSubpass(vk::SubpassContents::eInline);
                     } break;
+#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
+                    case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
+                    case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED:
+#endif
+                    case GRAPHICS::OCEAN_WF_DEFERRED:
+                    case GRAPHICS::OCEAN_SURFACE_DEFERRED:
                     case GRAPHICS::CDLOD_WF_DEFERRED:
                     case GRAPHICS::CDLOD_TEX_DEFERRED: {
                         // SCENE RENDERERS
@@ -252,10 +242,7 @@ void Base::update(const std::vector<Descriptor::Base*> pDynamicItems) {
 }
 
 void Base::updateSubmitResource(SubmitResource& resource, const uint8_t frameIndex) const {
-#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-    static_cast<ComputeWork::Ocean*>(handler().compWorkMgr().getWork(COMPUTE_WORK::OCEAN).get())
-        ->updateDrawSubmitResources(resource, frameIndex);
-#endif
+    handler().compWorkMgr().updateRenderPassSubmitResource(TYPE, resource, frameIndex);
     ::RenderPass::Base::updateSubmitResource(resource, frameIndex);
 }
 
@@ -465,16 +452,7 @@ void Base::createDependencies() {
             });
         }
         if (pipelineType == PIPELINE{GRAPHICS::HFF_CLMN_DEFERRED} ||  //
-            pipelineType == PIPELINE{GRAPHICS::HFF_WF_DEFERRED} ||
-#if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-            pipelineType == PIPELINE{GRAPHICS::OCEAN_WF_DEFERRED} ||
-            pipelineType == PIPELINE{GRAPHICS::OCEAN_SURFACE_DEFERRED} ||
-            pipelineType == PIPELINE{GRAPHICS::OCEAN_WF_TESS_DEFERRED} ||
-            pipelineType == PIPELINE { GRAPHICS::OCEAN_TESS_SURFACE_DEFERRED }
-#else
-            false
-#endif
-        ) {
+            pipelineType == PIPELINE{GRAPHICS::HFF_WF_DEFERRED}) {
             // Dispatch writes into a storage buffer. Draw consumes that buffer as a shader object.
             resources_.dependencies.push_back({
                 VK_SUBPASS_EXTERNAL,

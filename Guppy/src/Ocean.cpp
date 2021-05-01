@@ -14,18 +14,14 @@
 
 #include "Deferred.h"
 #include "FFT.h"
-#if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-#include "OceanComputeWork.h"
-#endif
+#include "OceanRenderer.h"
+#include "RenderPassManager.h"
 #include "Tessellation.h"
 // HANDLERS
 #include "LoadingHandler.h"
-#include "ParticleHandler.h"
 #include "PipelineHandler.h"
+#include "PassHandler.h"
 #include "TextureHandler.h"
-#if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-#include "UniformHandler.h"
-#endif
 
 namespace {
 
@@ -69,6 +65,83 @@ Texture::CreateInfo makeDefaultVertInputSampCreateInfo(const std::string&& name,
     return {name, {sampInfo}, false, false, descriptorType};
 }
 
+// This is no longer used. I'm keeping it around because I like the comments. I use VkGridMesh for this instead.
+// NOTE: I finally figured out how to use an index buffer for tessellation, which makes this function extra not useful. The
+// way you do a patch list with an index buffer is just make a list topology, and call vkCmdDrawIndexed the way you normally
+// would! Ugh, its so obvious now, but it was not obvious for a very, very long time.
+template <typename TVertex, typename TIndex>
+void MakeHeightmapVertexInput(const uint32_t X,                     //
+                              const uint32_t Y,                     //
+                              std::vector<TVertex>& triStripVerts,  //
+                              std::vector<TIndex>& triStripIdxs,    //
+                              std::vector<TVertex>& patchListVerts  //
+) {
+    /*
+     * Vulkan texture space uv's:
+     *      (0,0)------------->(size.x,0)
+     *        |                       |
+     *        |                       |
+     *        |                       |
+     *        V                       V
+     *      (0,size.y)-------->(size.x,size.y)
+     *
+     * Example: 4x4
+     *
+     *  Note: I use counterclockwise as default winding. Not sure why I do this, but this diagram follows that. Maybe I used
+     *        counterclockwise because its value is zero making it the defacto default??
+     *
+     * 0--2--4--6  0xFF
+     * | /| /| /|
+     * |/ |/ |/ |
+     * 1--3--5--7  0xFF
+     * | /| /| /|
+     * |/ |/ |/ |
+     * 8--9--10-11 0xFF
+     * | /| /| /|
+     * |/ |/ |/ |
+     * 12-13-14-15
+     *
+     */
+    assert((X > 1) && (Y > 1));
+
+    // bool doPatchList = (pPatchListVerts != nullptr);  // Patch list
+    const uint32_t indicesPerRow = X * 2u;  // Triangle strip
+
+    for (uint32_t y = 0; y < (Y - 1); y++) {
+        const uint32_t previousRowOffset = ((y - 1u) *      // Triangle strip: Previous row
+                                            indicesPerRow)  // * Indices per row
+                                           + (y - 1u);      // + number of primitive reset markers.
+        for (uint32_t x = 0; x < X; x++) {
+            {  // Triangle strip
+                if (y == 0) {
+                    triStripVerts.push_back({x, y});
+                    triStripIdxs.push_back(static_cast<uint32_t>(triStripIdxs.size()));
+                    triStripVerts.push_back({x, y + 1u});
+                    triStripIdxs.push_back(static_cast<uint32_t>(triStripIdxs.size()));
+                } else {
+                    // Odd indices from previous row.
+                    triStripIdxs.push_back(triStripIdxs[previousRowOffset + (x * 2u) + 1]);
+                    triStripVerts.push_back({x, y + 1u});
+                    triStripIdxs.push_back(((y + 1) * X) + x);
+                }
+            }
+            {  // Patch list
+                if (x < (X - 1)) {
+                    // Create a square with two triangles per iteration.
+                    patchListVerts.push_back({x, y});            // 0
+                    patchListVerts.push_back({x, y + 1u});       // 1
+                    patchListVerts.push_back({x + 1u, y});       // 2
+                    patchListVerts.push_back({x + 1u, y + 1u});  // 3
+                    patchListVerts.push_back({x + 1u, y});       // 2
+                    patchListVerts.push_back({x, y + 1u});       // 1 ... etc.
+                }
+            }
+        }
+        // Restart the strip each row.
+        triStripIdxs.push_back(VB_INDEX_PRIMITIVE_RESTART);
+    }
+}
+
 }  // namespace
 
 // BUFFER VIEW
@@ -91,7 +164,6 @@ void MakeResources(Texture::Handler& handler, const ::Ocean::SurfaceCreateInfo& 
 // TEXUTRE
 namespace Texture {
 namespace Ocean {
-
 void MakeResources(Texture::Handler& handler, const ::Ocean::SurfaceCreateInfo& info) {
     assert(helpers::isPowerOfTwo(info.N) && helpers::isPowerOfTwo(info.M));
 
@@ -191,8 +263,6 @@ void MakeResources(Texture::Handler& handler, const ::Ocean::SurfaceCreateInfo& 
         handler.make(&texInfo);
     }
 }
-
-#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
 CreateInfo MakeCopyTexInfo(const uint32_t N, const uint32_t M) {
     auto texInfo = makeDefaultVertInputSampCreateInfo(
         std::string(VERT_INPUT_COPY_ID), N, M, (vk::ImageUsageFlagBits::eTransferDst | vk::ImageUsageFlagBits::eSampled),
@@ -200,8 +270,6 @@ CreateInfo MakeCopyTexInfo(const uint32_t N, const uint32_t M) {
     texInfo.perFramebuffer = true;
     return texInfo;
 }
-#endif
-
 }  // namespace Ocean
 }  // namespace Texture
 
@@ -213,8 +281,6 @@ const CreateInfo VERT_CREATE_INFO = {
     "Ocean Surface Vertex Shader",
     "vert.ocean.glsl",
     vk::ShaderStageFlagBits::eVertex,
-    {},
-    {{"_DISPATCH_ON_COMPUTE_QUEUE", OCEAN_USE_COMPUTE_QUEUE_DISPATCH ? "1" : "0"}},
 };
 const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO = {
     SHADER::OCEAN_DEFERRED_MRT_FRAG,                                  //
@@ -249,11 +315,7 @@ const CreateInfo OCEAN_DRAW_CREATE_INFO = {
     {
         {{0, 0}, {UNIFORM::CAMERA_PERSPECTIVE_DEFAULT}},
         {{1, 0}, {UNIFORM_DYNAMIC::MATERIAL_DEFAULT}},
-#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
         {{2, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Ocean::VERT_INPUT_COPY_ID}},
-#else
-        {{2, 0}, {STORAGE_IMAGE::PIPELINE, Texture::Ocean::VERT_INPUT_ID}},
-#endif
     },
 };
 }  // namespace Set
@@ -269,17 +331,17 @@ void getDefaultInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
         const auto BINDING = static_cast<uint32_t>(createInfoRes.bindDescs.size());
         createInfoRes.bindDescs.push_back({});
         createInfoRes.bindDescs.back().binding = BINDING;
-        createInfoRes.bindDescs.back().stride = sizeof(glm::ivec2);
+        createInfoRes.bindDescs.back().stride = sizeof(glm::vec2);
         createInfoRes.bindDescs.back().inputRate = vk::VertexInputRate::eVertex;
 
         // imageOffset
         createInfoRes.attrDescs.push_back({});
         createInfoRes.attrDescs.back().binding = BINDING;
         createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
-        createInfoRes.attrDescs.back().format = vk::Format::eR32G32Sint;  // ivec2
+        createInfoRes.attrDescs.back().format = vk::Format::eR32G32Sfloat;  // vec2
         createInfoRes.attrDescs.back().offset = 0;
 
-        Instance::Obj3d::DATA::getInputDescriptions(createInfoRes);
+        Instance::Cdlod::Ocean::DATA::getInputDescriptions(createInfoRes);
     }
 
     // bindings
@@ -291,8 +353,8 @@ void getDefaultInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     createInfoRes.vertexInputStateInfo.pVertexAttributeDescriptions = createInfoRes.attrDescs.data();
     // topology
     createInfoRes.inputAssemblyStateInfo = vk::PipelineInputAssemblyStateCreateInfo{};
-    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_TRUE;
-    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eTriangleStrip;
+    createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
+    createInfoRes.inputAssemblyStateInfo.topology = vk::PrimitiveTopology::eTriangleList;
 }
 
 // WIREFRAME
@@ -421,112 +483,112 @@ void SurfaceTess::getTessellationInfoResources(CreateInfoResources& createInfoRe
 
 }  // namespace Pipeline
 
-template <typename TVertex, typename TIndex>
-void MakeHeightmapVertexInput(const uint32_t X,                     //
-                              const uint32_t Y,                     //
-                              std::vector<TVertex>& triStripVerts,  //
-                              std::vector<TIndex>& triStripIdxs,    //
-                              std::vector<TVertex>& patchListVerts  //
-) {
-    /*
-     * Vulkan texture space uv's:
-     *      (0,0)------------->(size.x,0)
-     *        |                       |
-     *        |                       |
-     *        |                       |
-     *        V                       V
-     *      (0,size.y)-------->(size.x,size.y)
-     *
-     * Example: 4x4
-     *
-     *  Note: I use counterclockwise as default winding. Not sure why I do this, but this diagram follows that. Maybe I used
-     *        counterclockwise because its value is zero making it the defacto default??
-     *
-     * 0--2--4--6  0xFF
-     * | /| /| /|
-     * |/ |/ |/ |
-     * 1--3--5--7  0xFF
-     * | /| /| /|
-     * |/ |/ |/ |
-     * 8--9--10-11 0xFF
-     * | /| /| /|
-     * |/ |/ |/ |
-     * 12-13-14-15
-     *
-     */
-    assert((X > 1) && (Y > 1));
-
-    // bool doPatchList = (pPatchListVerts != nullptr);  // Patch list
-    const uint32_t indicesPerRow = X * 2u;  // Triangle strip
-
-    for (uint32_t y = 0; y < (Y - 1); y++) {
-        const uint32_t previousRowOffset = ((y - 1u) *      // Triangle strip: Previous row
-                                            indicesPerRow)  // * Indices per row
-                                           + (y - 1u);      // + number of primitive reset markers.
-        for (uint32_t x = 0; x < X; x++) {
-            {  // Triangle strip
-                if (y == 0) {
-                    triStripVerts.push_back({x, y});
-                    triStripIdxs.push_back(static_cast<uint32_t>(triStripIdxs.size()));
-                    triStripVerts.push_back({x, y + 1u});
-                    triStripIdxs.push_back(static_cast<uint32_t>(triStripIdxs.size()));
-                } else {
-                    // Odd indices from previous row.
-                    triStripIdxs.push_back(triStripIdxs[previousRowOffset + (x * 2u) + 1]);
-                    triStripVerts.push_back({x, y + 1u});
-                    triStripIdxs.push_back(((y + 1) * X) + x);
-                }
-            }
-            {  // Patch list
-                if (x < (X - 1)) {
-                    // Create a square with two triangles per iteration.
-                    patchListVerts.push_back({x, y});            // 0
-                    patchListVerts.push_back({x, y + 1u});       // 1
-                    patchListVerts.push_back({x + 1u, y});       // 2
-                    patchListVerts.push_back({x + 1u, y + 1u});  // 3
-                    patchListVerts.push_back({x + 1u, y});       // 2
-                    patchListVerts.push_back({x, y + 1u});       // 1 ... etc.
-                }
-            }
-        }
-        // Restart the strip each row.
-        triStripIdxs.push_back(VB_INDEX_PRIMITIVE_RESTART);
-    }
-}
-
-// BUFFER
+// INSTANCE
+namespace Instance {
+namespace Cdlod {
 namespace Ocean {
+void DATA::getInputDescriptions(Pipeline::CreateInfoResources& createInfoRes) {
+    const auto BINDING = static_cast<uint32_t>(createInfoRes.bindDescs.size());
+    createInfoRes.bindDescs.push_back({});
+    createInfoRes.bindDescs.back().binding = BINDING;
+    createInfoRes.bindDescs.back().stride = sizeof(DATA);
+    createInfoRes.bindDescs.back().inputRate = vk::VertexInputRate::eInstance;
 
-Buffer::Buffer(Particle::Handler& handler, const Particle::Buffer::index&& offset, const CreateInfo* pCreateInfo,
-               std::shared_ptr<Material::Base>& pMaterial,
-               const std::vector<std::shared_ptr<Descriptor::Base>>& pDescriptors,
-               std::shared_ptr<::Instance::Obj3d::Base>& pInstanceData)
-    : Buffer::Base(handler, std::forward<const Particle::Buffer::index>(offset), pCreateInfo, pMaterial, pDescriptors),
-      Obj3d::InstanceDraw(pInstanceData),
-      drawMode(GRAPHICS::OCEAN_SURFACE_DEFERRED),
-      normalOffset_(Particle::Buffer::BAD_OFFSET),
-      triSpripRes_(),
-      patchListRes_(),
-      info_(pCreateInfo->info) {
-    assert(info_.N == info_.M);  // Needs to be square currently.
-    assert(info_.N == FFT_LOCAL_SIZE * FFT_WORKGROUP_SIZE);
-    assert(info_.N == DISP_LOCAL_SIZE * DISP_WORKGROUP_SIZE);
-    assert(helpers::isPowerOfTwo(info_.N) && helpers::isPowerOfTwo(info_.M));
+    // data0
+    auto offset = offsetof(DATA, data0);
+    createInfoRes.attrDescs.push_back({});
+    createInfoRes.attrDescs.back().binding = BINDING;
+    createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
+    createInfoRes.attrDescs.back().format = vk::Format::eR32G32B32A32Sfloat;  // vec4
+    createInfoRes.attrDescs.back().offset = static_cast<uint32_t>(offset);
 
-    const auto& N = info_.N;
-    const auto& M = info_.M;
+    // data1
+    offset = offsetof(DATA, data1);
+    createInfoRes.attrDescs.push_back({});
+    createInfoRes.attrDescs.back().binding = BINDING;
+    createInfoRes.attrDescs.back().location = static_cast<uint32_t>(createInfoRes.attrDescs.size() - 1);
+    createInfoRes.attrDescs.back().format = vk::Format::eR32G32B32A32Sfloat;  // vec4
+    createInfoRes.attrDescs.back().offset = static_cast<uint32_t>(offset);
+}
+Base::Base(const Buffer::Info&& info, DATA* pData)
+    : Buffer::Item(std::forward<const Buffer::Info>(info)), Buffer::DataItem<DATA>(pData) {
+    dirty = true;
+}
+}  // namespace Ocean
+}  // namespace Cdlod
+}  // namespace Instance
 
-    for (uint32_t i = 0; i < static_cast<uint32_t>(pDescriptors_.size()); i++)
-        if (pDescriptors[i]->getDescriptorType() == DESCRIPTOR{STORAGE_BUFFER_DYNAMIC::NORMAL}) normalOffset_ = i;
-    assert(normalOffset_ != Particle::Buffer::BAD_OFFSET);
+// GRAPHICS WORK
+namespace GraphicsWork {
 
+OceanSurface::OceanSurface(Pass::Handler& handler, const OceanCreateInfo* pCreateInfo, ::Ocean::Renderer* pRenderer)
+    : Base(handler, pCreateInfo),
+      pRenderer_(pRenderer),
+      surfaceInfo_(pCreateInfo->surfaceInfo),
+      gridMeshDims_(0),
+      gridMesh_(handler.shell().context()),
+      pInstanceData_(nullptr) {
+    // Validate the surface info.
+    assert(surfaceInfo_.N == surfaceInfo_.M);  // Needs to be square currently.
+    assert(surfaceInfo_.N == ::Ocean::FFT_LOCAL_SIZE * ::Ocean::FFT_WORKGROUP_SIZE);
+    assert(surfaceInfo_.N == ::Ocean::DISP_LOCAL_SIZE * ::Ocean::DISP_WORKGROUP_SIZE);
+    assert(helpers::isPowerOfTwo(surfaceInfo_.N) && helpers::isPowerOfTwo(surfaceInfo_.M));
+
+    drawMode = GRAPHICS::OCEAN_SURFACE_DEFERRED;
     status_ |= STATUS::PENDING_BUFFERS;
 }
 
-void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                  const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
-                  const uint8_t frameIndex) const {
-    if (pPipelineBindData->type != PIPELINE{drawMode}) return;
+void OceanSurface::init() {
+    {  // Create the instance data
+        assert(surfaceInfo_.N == surfaceInfo_.M);
+        gridMeshDims_ = 32;
+
+        const uint32_t instanceCount = surfaceInfo_.N / gridMeshDims_;
+        // This is just for testing. I removed the model matrix from the vertex input, so this is what centers the debug
+        // ocean quad.
+        const glm::vec2 offset = {-(surfaceInfo_.Lx / 2.0f), -(surfaceInfo_.Lz / 2.0f)};
+
+        Instance::Cdlod::Ocean::CreateInfo instInfo = {};
+        Instance::Cdlod::Ocean::DATA instData = {};
+
+        // Scale (This is really uniform (dynamic) data)
+        instData.data0.z = surfaceInfo_.Lx / instanceCount;
+        instData.data0.w = surfaceInfo_.Lz / instanceCount;
+        instData.data1.z = 1.0f / instanceCount;
+        instData.data1.w = 1.0f / instanceCount;
+
+        for (float y = 0; y < instanceCount; y++) {
+            float v = glm::mix(0.0f, 1.0f, (y / instanceCount));
+            for (float x = 0; x < instanceCount; x++) {
+                float u = glm::mix(0.0f, 1.0f, (x / instanceCount));
+
+                // Offset
+                instData.data0.x = glm::mix(0.0f, surfaceInfo_.Lx, u) + offset.x;
+                instData.data0.y = glm::mix(0.0f, surfaceInfo_.Lz, v) + offset.y;
+                instData.data1.x = u;
+                instData.data1.y = v;
+
+                instInfo.data.push_back(instData);
+            }
+        }
+
+        pInstanceData_ = pRenderer_->makeInstance(&instInfo);
+    }
+}
+
+void OceanSurface::destroy() {
+    pRenderer_ = nullptr;
+    surfaceInfo_ = {};
+    gridMeshDims_ = 0;
+    gridMesh_.destroy();
+    assert(pInstanceData_.use_count() == 1);
+    pInstanceData_ = nullptr;
+}
+
+void OceanSurface::record(const PASS passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+                          const vk::CommandBuffer& cmd) {
+    const auto frameIndex = handler().passHandler().renderPassMgr().getFrameIndex();
+    const auto& descSetBindData = getDescriptorSetBindData(pPipelineBindData->type);
 
     const auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1), frameIndex);
 
@@ -537,28 +599,18 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
     switch (drawMode) {
 #if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
         case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
-        case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED: {
-            const std::vector<vk::Buffer> buffers = {patchListRes_.vertex.buffer,
-                                                     pInstObj3d_->BUFFER_INFO.bufferInfo.buffer};
-            const std::vector<vk::DeviceSize> offsets = {0, pInstObj3d_->BUFFER_INFO.memoryOffset};
-            cmd.bindVertexBuffers(0, buffers, offsets);
-            cmd.draw(patchListRes_.vertexCount,       // uint32_t vertexCount
-                     pInstObj3d_->BUFFER_INFO.count,  // uint32_t instanceCount
-                     0,                               // uint32_t firstVertex
-                     0);                              // uint32_t firstInstance
-        } break;
+        case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED:
 #endif
         case GRAPHICS::OCEAN_WF_DEFERRED:
         case GRAPHICS::OCEAN_SURFACE_DEFERRED: {
-            const std::vector<vk::Buffer> buffers = {triSpripRes_.vertex.buffer, pInstObj3d_->BUFFER_INFO.bufferInfo.buffer};
-            const std::vector<vk::DeviceSize> offsets = {0, pInstObj3d_->BUFFER_INFO.memoryOffset};
+            const std::vector<vk::Buffer> buffers = {gridMesh_.GetVertexBuffer().buffer,
+                                                     pInstanceData_->BUFFER_INFO.bufferInfo.buffer};
+            const std::vector<vk::DeviceSize> offsets = {0, pInstanceData_->BUFFER_INFO.memoryOffset};
             cmd.bindVertexBuffers(0, buffers, offsets);
-            cmd.bindIndexBuffer(triSpripRes_.index.buffer, 0, vk::IndexType::eUint32);
-            cmd.drawIndexed(triSpripRes_.indexCount,         // uint32_t indexCount
-                            pInstObj3d_->BUFFER_INFO.count,  // uint32_t instanceCount
-                            0,                               // uint32_t firstIndex
-                            0,                               // int32_t vertexOffset
-                            0);                              // uint32_t firstInstance
+            cmd.bindIndexBuffer(gridMesh_.GetIndexBuffer().buffer, 0, vk::IndexType::eUint32);
+
+            const int totalIndices = gridMesh_.GetDimensions() * gridMesh_.GetDimensions() * 2 * 3;
+            cmd.drawIndexed(totalIndices, pInstanceData_->BUFFER_INFO.count, 0, 0, 0);
         } break;
         default: {
             assert(false);
@@ -566,72 +618,12 @@ void Buffer::draw(const PASS& passType, const std::shared_ptr<Pipeline::BindData
     }
 }
 
-void Buffer::dispatch(const PASS& passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                      const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
-                      const uint8_t frameIndex) const {
-#if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-    ComputeWork::Ocean::dispatch(passType, pPipelineBindData, descSetBindData, cmd, std::forward<const uint8_t>(frameIndex));
-#endif
-}
-
-#if !OCEAN_USE_COMPUTE_QUEUE_DISPATCH
-void Buffer::update(const float time, const float elapsed, const uint32_t frameIndex) {
-    assert(handler().uniformHandler().ocnSimDpchMgr().pItems.size() == 1);
-    auto& dpch = handler().uniformHandler().ocnSimDpchMgr().getTypedItem(0);
-    dpch.update(time);
-    handler().uniformHandler().ocnSimDpchMgr().updateData(handler().shell().context().dev, dpch.BUFFER_INFO);
-}
-#endif
-
-void Buffer::loadBuffers() {
+void OceanSurface::load(std::unique_ptr<LoadingResource>& pLdgRes) {
     const auto& ctx = handler().shell().context();
-    pLdgRes_ = handler().loadingHandler().createLoadingResources();
 
-    using VertexBufferType = glm::ivec2;
-
-    std::vector<VertexBufferType> triStripVerts;
-    std::vector<IndexBufferType> triStripIdxs;
-    std::vector<VertexBufferType> patchListVerts;
-    MakeHeightmapVertexInput(info_.N, info_.M, triStripVerts, triStripIdxs, patchListVerts);
-    assert(triStripVerts.size() && triStripIdxs.size() && patchListVerts.size());
-
-    // TODO: These buffers should all use the same memory... but this is an application wide issue.
-
-    BufferResource stgRes;
-    {  // Triangle strip
-        triSpripRes_.indexCount = static_cast<uint32_t>(triStripIdxs.size());
-        stgRes = {};
-        ctx.createBuffer(pLdgRes_->transferCmd,
-                         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
-                         sizeof(VertexBufferType) * triStripVerts.size(), NAME + " vertex (tri strip)", stgRes,
-                         triSpripRes_.vertex, triStripVerts.data());
-        pLdgRes_->stgResources.push_back(std::move(stgRes));
-        stgRes = {};
-        ctx.createBuffer(pLdgRes_->transferCmd,
-                         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eIndexBuffer,
-                         sizeof(IndexBufferType) * triStripIdxs.size(), NAME + " index (tri strip)", stgRes,
-                         triSpripRes_.index, triStripIdxs.data());
-        pLdgRes_->stgResources.push_back(std::move(stgRes));
-    }
-#if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-    {  // Patch list (tessellation)
-        patchListRes_.vertexCount = static_cast<uint32_t>(patchListVerts.size());
-        stgRes = {};
-        ctx.createBuffer(pLdgRes_->transferCmd,
-                         vk::BufferUsageFlagBits::eTransferDst | vk::BufferUsageFlagBits::eVertexBuffer,
-                         sizeof(VertexBufferType) * patchListVerts.size(), NAME + " vertex (patch list)", stgRes,
-                         patchListRes_.vertex, patchListVerts.data());
-        pLdgRes_->stgResources.push_back(std::move(stgRes));
-    }
-#endif
+    assert(surfaceInfo_.N == surfaceInfo_.M);
+    gridMesh_.SetDimensions(gridMeshDims_);
+    gridMesh_.CreateBuffers(*pLdgRes);
 }
 
-void Buffer::destroy() {
-    Base::destroy();
-    const auto& ctx = handler().shell().context();
-    ctx.destroyBuffer(triSpripRes_.vertex);
-    ctx.destroyBuffer(triSpripRes_.index);
-    ctx.destroyBuffer(patchListRes_.vertex);
-}
-
-}  // namespace Ocean
+}  // namespace GraphicsWork

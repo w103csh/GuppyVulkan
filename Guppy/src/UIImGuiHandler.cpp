@@ -162,60 +162,63 @@ void UI::ImGuiHandler::menuWater() {
 }
 
 void UI::ImGuiHandler::menuOcean() {
-    auto pBuffer = static_cast<Ocean::Buffer*>(particleHandler().getBuffer(particleHandler().waterOffset).get());
+    // GRAPHICS
+    auto& pGraphicsWork = sceneHandler().ocnRenderer.pGraphicsWork;
+    if (pGraphicsWork != nullptr) {
+        ocean_.wireframe = false;
+        ocean_.wireframeTess = false;
+        ocean_.deferred = false;
+        ocean_.deferredTess = false;
 
-    ocean_.wireframe = false;
-    ocean_.wireframeTess = false;
-    ocean_.deferred = false;
-    ocean_.deferredTess = false;
+        switch (pGraphicsWork->drawMode) {
+            case GRAPHICS::OCEAN_WF_DEFERRED:
+                ocean_.wireframe = true;
+                break;
+            case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
+                ocean_.wireframeTess = true;
+                break;
+            case GRAPHICS::OCEAN_SURFACE_DEFERRED:
+                ocean_.deferred = true;
+                break;
+            case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED:
+                ocean_.deferredTess = true;
+                break;
+            default:
+                assert(false && "Unhandled or invalid case");
+                exit(EXIT_FAILURE);
+                break;
+        }
 
-    switch (pBuffer->drawMode) {
-        case GRAPHICS::OCEAN_WF_DEFERRED:
-            ocean_.wireframe = true;
-            break;
-        case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
-            ocean_.wireframeTess = true;
-            break;
-        case GRAPHICS::OCEAN_SURFACE_DEFERRED:
-            ocean_.deferred = true;
-            break;
-        case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED:
-            ocean_.deferredTess = true;
-            break;
-        default:
-            assert(false && "Unhandled or invalid case");
-            exit(EXIT_FAILURE);
-            break;
+        if (ImGui::MenuItem("Default", nullptr, &ocean_.deferred)) {
+            pGraphicsWork->drawMode = GRAPHICS::OCEAN_SURFACE_DEFERRED;
+        }
+        if (ImGui::MenuItem("Wireframe", nullptr, &ocean_.wireframe)) {
+            pGraphicsWork->drawMode = GRAPHICS::OCEAN_WF_DEFERRED;
+        }
+
+        ImGui::Separator();
+
+        if (ImGui::MenuItem("Default Tessellated", nullptr, &ocean_.deferredTess)) {
+            pGraphicsWork->drawMode = GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED;
+        }
+        if (ImGui::MenuItem("Wireframe Tessellated", nullptr, &ocean_.wireframeTess)) {
+            pGraphicsWork->drawMode = GRAPHICS::OCEAN_WF_TESS_DEFERRED;
+        }
+
+        ImGui::Separator();
+
+        // static bool draw = pOcean->getDraw();
+        // if (ImGui::Checkbox("Draw", &draw)) {
+        //    pOcean->toggleDraw();
+        //}
     }
-
-    if (ImGui::MenuItem("Default", nullptr, &ocean_.deferred)) {
-        pBuffer->drawMode = GRAPHICS::OCEAN_SURFACE_DEFERRED;
-    }
-    if (ImGui::MenuItem("Wireframe", nullptr, &ocean_.wireframe)) {
-        pBuffer->drawMode = GRAPHICS::OCEAN_WF_DEFERRED;
-    }
-
-    ImGui::Separator();
-
-    if (ImGui::MenuItem("Default Tessellated", nullptr, &ocean_.deferredTess)) {
-        pBuffer->drawMode = GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED;
-    }
-    if (ImGui::MenuItem("Wireframe Tessellated", nullptr, &ocean_.wireframeTess)) {
-        pBuffer->drawMode = GRAPHICS::OCEAN_WF_TESS_DEFERRED;
-    }
-
-    ImGui::Separator();
-
-    // static bool draw = pOcean->getDraw();
-    // if (ImGui::Checkbox("Draw", &draw)) {
-    //    pOcean->toggleDraw();
-    //}
-
-    auto pWork = static_cast<ComputeWork::Ocean*>(passHandler().compWorkMgr().getWork(COMPUTE_WORK::OCEAN).get());
-
-    static bool pause = pWork->getPaused();
-    if (ImGui::Checkbox("Pause", &pause)) {
-        pWork->onTogglePause();
+    // COMPUTE
+    auto pComputeWork = static_cast<ComputeWork::Ocean*>(passHandler().compWorkMgr().getWork(COMPUTE_WORK::OCEAN).get());
+    if (pComputeWork) {
+        static bool pause = pComputeWork->getPaused();
+        if (ImGui::Checkbox("Pause", &pause)) {
+            pComputeWork->onTogglePause();
+        }
     }
 }
 

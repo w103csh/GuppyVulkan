@@ -104,7 +104,8 @@ class Ocean : public Base {
                          const Descriptor::Set::BindData& descSetBindData, const vk::CommandBuffer& cmd,
                          const uint8_t frameIndex);
 
-    void updateDrawSubmitResources(RenderPass::SubmitResource& resource, const uint8_t frameIndex) const;
+    // RENDER PASS
+    void updateRenderPassSubmitResource(RenderPass::SubmitResource& resource, const uint8_t frameIndex) const override;
 
    private:
     void copyImage(const vk::CommandBuffer cmd, const uint8_t frameIndex);
@@ -120,7 +121,7 @@ class Ocean : public Base {
     uint64_t pauseFrameCount_;
 
     // Convenience pointers
-    Particle::Buffer::Base* pOcnBuffer_;
+    GraphicsWork::OceanSurface* pGraphicsWork_;
     UniformDynamic::Ocean::SimulationDispatch::Base* pOcnSimDpch_;
     const Texture::Base* pVertInputTex_;
     std::array<const Texture::Base*, 3> pVertInputTexCopies_;

@@ -648,12 +648,12 @@ void Descriptor::Handler::getBindData(const PIPELINE& pipelineType, Descriptor::
 
             auto itBindDataMap = bindDataMap.find(helper.passTypes1);
             if (itBindDataMap == bindDataMap.end()) {
-                auto it = bindDataMap.insert({
+                auto insertPair = bindDataMap.insert({
                     helper.passTypes1,
                     {0, std::vector<std::vector<vk::DescriptorSet>>(sets.size())},
                 });
-                assert(it.second);
-                itBindDataMap = it.first;
+                assert(insertPair.second);
+                itBindDataMap = insertPair.first;
             }
 
             if (sets.size() > itBindDataMap->second.descriptorSets.size()) {

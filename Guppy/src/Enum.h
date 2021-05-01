@@ -103,7 +103,7 @@ typedef enum STATUS {
     PENDING_PIPELINE =      0x00000010,
     PENDING_SWAPCHAIN =     0x00000020,
     PENDING_MESH =          0x00000040,
-    PENDING_POINTER =       0x00000080,
+    PENDING_BIND_DATA =     0x00000080,
     REDRAW =                0x00000100,
     UPDATE_BUFFERS =        0x00001000,
     DESTROYED =             0x00010000,

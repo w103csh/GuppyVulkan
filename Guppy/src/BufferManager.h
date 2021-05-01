@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2020 Colin Hughes <colin.s.hughes@gmail.com>
+ * Copyright (C) 2021 Colin Hughes <colin.s.hughes@gmail.com>
  * All Rights Reserved
  */
 
@@ -128,13 +128,14 @@ class Base {
         if (pCreateInfo == nullptr || pCreateInfo->update) updateData(dev, pItems.back()->BUFFER_INFO);
     }
 
-    void insert(const vk::Device &dev, bool update = true,
-                const std::vector<typename TDerived::DATA> &data = std::vector<typename TDerived::DATA>(1)) {
+    TDerived *insert(const vk::Device &dev, bool update = true,
+                     const std::vector<typename TDerived::DATA> &data = std::vector<typename TDerived::DATA>(1)) {
         assert(pItems.size() < MAX_SIZE);
         auto info = fill(dev, data, false);
         diagnose(info);
         pItems.emplace_back(new TDerived(std::move(info), get(info)));
         if (update) updateData(dev, pItems.back()->BUFFER_INFO);
+        return static_cast<TDerived *>(pItems.back().get());
     }
 
     void updateData(const vk::Device &dev, const Buffer::Info &info, const int index = -1) {
@@ -144,7 +145,7 @@ class Base {
         }
     }
 
-    TDerived &getTypedItem(const uint32_t &index) { return std::ref(*(TDerived *)(pItems.at(index).get())); }
+    TDerived &getTypedItem(const uint32_t &index) { return std::ref(*static_cast<TDerived *>(pItems.at(index).get())); }
 
     void destroy(const Context &ctx) {
         reset(ctx);

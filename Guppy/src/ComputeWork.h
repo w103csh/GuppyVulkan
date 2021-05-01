@@ -62,6 +62,9 @@ class Base : public Handlee<Pass::Handler> {
         for (const auto& keyValue : pipelineBindDataList_.getKeyOffsetMap()) pipelineTypes.insert(keyValue.first);
     }
 
+    // RENDER PASS
+    virtual void updateRenderPassSubmitResource(RenderPass::SubmitResource& resource, const uint8_t frameIndex) const {}
+
     // RESOURCES
     struct Resources {
         bool hasData;

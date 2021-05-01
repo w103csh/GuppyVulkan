@@ -1,5 +1,5 @@
 ////////////////////////////////////////////////////////////////////////
-//// Modifications copyright(C) 2020 Colin Hughes<colin.s.hughes @gmail.com>
+//// Modifications copyright(C) 2021 Colin Hughes<colin.s.hughes @gmail.com>
 ////      This concept came from DxGridMesh
 //// -------------------------------
 //// Copyright (C) 2009 - Filip Strugar.
@@ -9,6 +9,7 @@
 #ifndef _VK_GRID_MESH_H_
 #define _VK_GRID_MESH_H_
 
+#include <glm/glm.hpp>
 #include <memory>
 #include <vulkan/vulkan.hpp>
 
@@ -26,6 +27,8 @@ class VkGridMesh {
     int m_indexEndBR;
 
    public:
+    using VertexBufferType = glm::vec2;
+
     VkGridMesh(const Context& context);
     ~VkGridMesh(void);
     //

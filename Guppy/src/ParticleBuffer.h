@@ -138,7 +138,7 @@ class Base : public NonCopyable, public Handlee<Handler> {
         if (paused_) doPausedUpdate_ = true;
     }
     inline bool shouldDraw() const { return status_ == STATUS::READY && draw_; }
-    virtual inline bool shouldDispatch() const { return status_ == STATUS::READY && !paused_; }
+    inline bool shouldDispatch() const { return status_ == STATUS::READY && !paused_; }
 
     virtual void update(const float time, const float elapsed, const uint32_t frameIndex);
 

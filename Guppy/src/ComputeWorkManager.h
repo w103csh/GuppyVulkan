@@ -40,6 +40,10 @@ class Manager : public Pass::Manager {
     // PIPELINE
     void addPipelinePassPairs(pipelinePassSet& set);
 
+    // RENDER PASS
+    void updateRenderPassSubmitResource(const RENDER_PASS passType, RenderPass::SubmitResource& resource,
+                                        const uint8_t frameIndex);
+
    private:
     void submit(const SubmitResource& resource);
 

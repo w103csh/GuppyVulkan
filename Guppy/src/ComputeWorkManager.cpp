@@ -8,7 +8,6 @@
 #include <variant>
 
 #include "ConstantsAll.h"
-#include "Ocean.h"  // Included for macro OCEAN_USE_COMPUTE_QUEUE_DISPATCH
 #include "OceanComputeWork.h"
 #include "RenderPassManager.h"
 #include "Shell.h"
@@ -19,14 +18,10 @@
 namespace ComputeWork {
 
 const std::set<COMPUTE_WORK> ALL = {
-#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
     COMPUTE_WORK::OCEAN,
-#endif
 };
 const std::vector<COMPUTE_WORK> ACTIVE = {
-#if OCEAN_USE_COMPUTE_QUEUE_DISPATCH
     COMPUTE_WORK::OCEAN,
-#endif
 };
 
 Manager::Manager(Pass::Handler& handler) : Pass::Manager(handler) {
@@ -111,6 +106,14 @@ void Manager::addPipelinePassPairs(pipelinePassSet& set) {
             set.insert({pipelineType, pWorkloads_[offset]->TYPE});
         }
     }
+}
+
+void Manager::updateRenderPassSubmitResource(const RENDER_PASS passType, RenderPass::SubmitResource& resource,
+                                             const uint8_t frameIndex) {
+    // TODO: This probably needs a way to verify the contents of the pass. Such as, a list of the active pipelines, and
+    // potentially passing the render pass type along to the compute work.
+    assert(passType == RENDER_PASS::DEFERRED);
+    getWork(COMPUTE_WORK::OCEAN)->updateRenderPassSubmitResource(resource, frameIndex);
 }
 
 void Manager::submit(const SubmitResource& resource) {

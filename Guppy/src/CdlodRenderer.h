@@ -13,6 +13,7 @@
 #include <CDLOD/CDLODRenderer.h>
 
 #include "BufferItem.h"
+#include "Cdlod.h"
 #include "DescriptorConstants.h"
 #include "Enum.h"
 #include "Handlee.h"
@@ -20,12 +21,109 @@
 #include "PipelineConstants.h"
 
 // clang-format off
-namespace Scene { class Handler; }
 namespace Descriptor { class Base; }
+namespace Scene      { class Handler; }
 // clang-format on
 
 namespace Cdlod {
 namespace Renderer {
+
+// These settings come from .ini files in CDLOD proper.
+struct Settings {
+    // This determines the granularity of the quadtree: Reduce this to reduce
+    // the size of the smallest LOD level quad and increase the number of possible
+    // LOD levels. Increase this value to reduce memory usage.
+    // Restrictions:
+    // - it must be power of two (2^n)
+    // - it must be bigger or equal to 2
+    int LeafQuadTreeNodeSize;
+    // RenderGridResolution (resolution of mesh grid used to render terrain quads)
+    // will be  LeafQuadTreeNodeSize * RenderGridResolutionMult. Use value of 1
+    // for 1:1 grid:heightmap_texel ratio, or use bigger value to enable virtual
+    // resolution when using additional noise or DetailHeightmap.
+    // Restrictions:
+    //  - it must be power of two (2^n)
+    //  - LeafQuadTreeNodeSize * RenderGridResolutionMult must be <= 128
+    int RenderGridResolutionMult;
+    // How many LOD levels to have - big heightmaps will require more LOD levels,
+    // and also the smaller the LeafQuadTreeNodeSize is, the more LOD levels will
+    // be needed.
+    int LODLevelCount;
+    // Minimum view range setting that can be set.
+    // View range defines range at which terrain will be visible.Setting ViewRange it
+    // to too low values will result in incorrect transition between LODs layers
+    // (warning message will be displayed on screen in that case) so that 's why there' s
+    // this minimum range specified here.
+    // If lower ranges than that are required, LODLevelCount must be reduced too.
+    float MinViewRange;
+    // Maximum view range setting that can be set.
+    // Although there's no theoretical maximum, demo does not support too high values
+    float MaxViewRange;
+    // Determines rendering LOD level distribution based on distance from the viewer.
+    // Value of 2.0 should result in equal number of triangles displayed on screen
+    // (in average) for all distances.
+    // Values above 2.0 will result in more triangles on more distant areas, and vice versa.
+    float LODLevelDistanceRatio;
+};
+
+// BASE - This class is based off of DemoRender in CDLOD proper.
+class Base : public Handlee<Scene::Handler>, public CDLODRenderer {
+   public:
+    void onInit();
+    void destroy() override {
+        CDLODRenderer::destroy();
+        onReset();
+    }
+    virtual void tick() {}
+    virtual void frame() {}
+
+    virtual bool shouldDraw(const PIPELINE type) const { return true; }
+    virtual void record(const PASS passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+                        const vk::CommandBuffer& cmd);
+
+   protected:
+    Base(Scene::Handler& handler);
+
+    virtual void init() {}
+    virtual void reset() {}
+
+    virtual const Settings* getSettings() const = 0;
+    virtual const IHeightmapSource* getHeightmap() const = 0;
+    virtual const MapDimensions* getMapDimensions() const = 0;
+    virtual void bindDescSetData(const vk::CommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+                                 const int lodLevel) const = 0;
+    virtual void setGlobalShaderSettings() = 0;
+    virtual PerQuadTreeData& getPerQuadTreeData() = 0;
+
+    // TODO: Maybe this should be non-virtual and just defined here.
+    virtual void renderDebug(const CDLODQuadTree::LODSelection& cdlodSelection) {}
+    constexpr auto getRasterWidth() const { return rasterWidth_; }
+    constexpr auto getRasterHeight() const { return rasterHeight_; }
+
+    bool useDebugCamera_;
+
+   private:
+    void onReset();
+
+    void renderTerrain(const CDLODQuadTree::LODSelection& cdlodSelection,
+                       const std::shared_ptr<Pipeline::BindData>& pPipelineBindData, const vk::CommandBuffer& cmd);
+
+    const Settings* pSettings_;
+    const IHeightmapSource* pHeightmap_;
+    const MapDimensions* pMapDims_;
+
+    int maxRenderGridResolutionMult_;
+    int terrainGridMeshDims_;
+    int rasterWidth_;
+    int rasterHeight_;
+
+    CDLODQuadTree cdlodQuadTree_;
+};
+
+// DEBUG
+struct DebugSettings : public Settings {
+    float dbgTexScale;  // Scale of texture (1,1) to world space
+};
 
 struct DebugHeightmap : public IHeightmapSource {
     DebugHeightmap() : mapDims() {
@@ -58,97 +156,44 @@ struct DebugHeightmap : public IHeightmapSource {
     }
 };
 
-// This class is based off of DemoRender in CDLOD proper.
-class Base : public Handlee<Scene::Handler>, public CDLODRenderer {
+class Debug : public Base {
    public:
-    // These settings come from .ini files in CDLOD proper.
-    struct Settings {
-        // This determines the granularity of the quadtree: Reduce this to reduce
-        // the size of the smallest LOD level quad and increase the number of possible
-        // LOD levels. Increase this value to reduce memory usage.
-        // Restrictions:
-        // - it must be power of two (2^n)
-        // - it must be bigger or equal to 2
-        int LeafQuadTreeNodeSize;
-        // RenderGridResolution (resolution of mesh grid used to render terrain quads)
-        // will be  LeafQuadTreeNodeSize * RenderGridResolutionMult. Use value of 1
-        // for 1:1 grid:heightmap_texel ratio, or use bigger value to enable virtual
-        // resolution when using additional noise or DetailHeightmap.
-        // Restrictions:
-        //  - it must be power of two (2^n)
-        //  - LeafQuadTreeNodeSize * RenderGridResolutionMult must be <= 128
-        int RenderGridResolutionMult;
-        // How many LOD levels to have - big heightmaps will require more LOD levels,
-        // and also the smaller the LeafQuadTreeNodeSize is, the more LOD levels will
-        // be needed.
-        int LODLevelCount = 8;
-        // Minimum view range setting that can be set.
-        // View range defines range at which terrain will be visible.Setting ViewRange it
-        // to too low values will result in incorrect transition between LODs layers
-        // (warning message will be displayed on screen in that case) so that 's why there' s
-        // this minimum range specified here.
-        // If lower ranges than that are required, LODLevelCount must be reduced too.
-        float MinViewRange;
-        // Maximum view range setting that can be set.
-        // Although there's no theoretical maximum, demo does not support too high values
-        float MaxViewRange;
-        // Determines rendering LOD level distribution based on distance from the viewer.
-        // Value of 2.0 should result in equal number of triangles displayed on screen
-        // (in average) for all distances.
-        // Values above 2.0 will result in more triangles on more distant areas, and vice versa.
-        float LODLevelDistanceRatio;
+    Debug(Scene::Handler& handler);
 
-        // DEBUG
-        float dbgTexScale;  // Scale of texture (1,1) to world space
-    };
-
-    Base(Scene::Handler& handler);
-
-    void init(const IHeightmapSource* pHeightmap, const MapDimensions* pMapDimensions);
-    void update(const std::shared_ptr<Pipeline::BindData>& pPipelineBindData, const vk::CommandBuffer& cmd);
-    void destroy() override {
-        CDLODRenderer::destroy();
-        reset();
-    }
+    bool shouldDraw(const PIPELINE type) const override;
 
    private:
-    void reset();
+    void init() override;
+    void reset() override;
 
-    void renderTerrain(const CDLODQuadTree::LODSelection& cdlodSelection,
-                       const std::shared_ptr<Pipeline::BindData>& pPipelineBindData, const vk::CommandBuffer& cmd);
+    const Settings* getSettings() const { return &settings_; }
+    const IHeightmapSource* getHeightmap() const override { return &dbgHeightmap_; }
+    const MapDimensions* getMapDimensions() const override { return &dbgHeightmap_.mapDims; }
+    void bindDescSetData(const vk::CommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+                         const int lodLevel) const override;
+    void setGlobalShaderSettings() override;
+    PerQuadTreeData& getPerQuadTreeData() override;
 
-    Settings settings_;
-    int maxRenderGridResolutionMult_;
-    int terrainGridMeshDims_;
+    DebugSettings settings_;
+    DebugHeightmap dbgHeightmap_;
+    Uniform::Cdlod::QuadTree::Base* pPerQuadTreeItem_;
 
-    const IHeightmapSource* pHeightmap_;
-    int rasterWidth_;
-    int rasterHeight_;
-    MapDimensions mapDims_;
-
-    CDLODQuadTree cdlodQuadTree_;
-
-    // DEBUG
+    void renderDebug(const CDLODQuadTree::LODSelection& cdlodSelection) override;
     void debugResetBoxes();
     void debugUpdateBoxes();
     void debugAddBox(const int lodLevel, const AABB& aabb);
-    bool enableDebug_;
-    bool useDebugCamera_;
+
     bool useDebugBoxes_;
     bool useDebugWireframe_;
     bool useDebugTexture_;
-    // [0]: white
-    // [1]: red
-    // [2]: green
-    // [3]: blue
-    // [4]: texture
+
+    const uint8_t white_ = 0;
+    const uint8_t red_ = 1;
+    const uint8_t green_ = 2;
+    const uint8_t blue_ = 3;
+    const uint8_t texture_ = 4;
+    std::array<Mesh::index, 4> boxMeshIndices_;
     std::array<Descriptor::Base*, 5> pMaterials_;
-    Descriptor::Set::bindDataMap wfDescSetBindDataMap_;
-    DebugHeightmap dbgHeighmap_;
-    Mesh::index whiteBoxOffset_;
-    Mesh::index redBoxOffset_;
-    Mesh::index greenBoxOffset_;
-    Mesh::index blueBoxOffset_;
 };
 
 }  // namespace Renderer
