@@ -170,18 +170,31 @@ void UI::ImGuiHandler::menuOcean() {
         ocean_.deferred = false;
         ocean_.deferredTess = false;
 
+        // switch (pGraphicsWork->drawMode) {
+        //    case GRAPHICS::OCEAN_WF_DEFERRED:
+        //        ocean_.wireframe = true;
+        //        break;
+        //    case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
+        //        ocean_.wireframeTess = true;
+        //        break;
+        //    case GRAPHICS::OCEAN_SURFACE_DEFERRED:
+        //        ocean_.deferred = true;
+        //        break;
+        //    case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED:
+        //        ocean_.deferredTess = true;
+        //        break;
+        //    default:
+        //        assert(false && "Unhandled or invalid case");
+        //        exit(EXIT_FAILURE);
+        //        break;
+        //}
+
         switch (pGraphicsWork->drawMode) {
-            case GRAPHICS::OCEAN_WF_DEFERRED:
-                ocean_.wireframe = true;
-                break;
-            case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
-                ocean_.wireframeTess = true;
-                break;
-            case GRAPHICS::OCEAN_SURFACE_DEFERRED:
+            case GRAPHICS::OCEAN_SURFACE_CDLOD_DEFERRED:
                 ocean_.deferred = true;
                 break;
-            case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED:
-                ocean_.deferredTess = true;
+            case GRAPHICS::OCEAN_WF_CDLOD_DEFERRED:
+                ocean_.wireframe = true;
                 break;
             default:
                 assert(false && "Unhandled or invalid case");
@@ -189,21 +202,28 @@ void UI::ImGuiHandler::menuOcean() {
                 break;
         }
 
+        // if (ImGui::MenuItem("Default", nullptr, &ocean_.deferred)) {
+        //    pGraphicsWork->drawMode = GRAPHICS::OCEAN_SURFACE_DEFERRED;
+        //}
+        // if (ImGui::MenuItem("Wireframe", nullptr, &ocean_.wireframe)) {
+        //    pGraphicsWork->drawMode = GRAPHICS::OCEAN_WF_DEFERRED;
+        //}
+
         if (ImGui::MenuItem("Default", nullptr, &ocean_.deferred)) {
-            pGraphicsWork->drawMode = GRAPHICS::OCEAN_SURFACE_DEFERRED;
+            pGraphicsWork->drawMode = GRAPHICS::OCEAN_SURFACE_CDLOD_DEFERRED;
         }
         if (ImGui::MenuItem("Wireframe", nullptr, &ocean_.wireframe)) {
-            pGraphicsWork->drawMode = GRAPHICS::OCEAN_WF_DEFERRED;
+            pGraphicsWork->drawMode = GRAPHICS::OCEAN_WF_CDLOD_DEFERRED;
         }
 
         ImGui::Separator();
 
-        if (ImGui::MenuItem("Default Tessellated", nullptr, &ocean_.deferredTess)) {
-            pGraphicsWork->drawMode = GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED;
-        }
-        if (ImGui::MenuItem("Wireframe Tessellated", nullptr, &ocean_.wireframeTess)) {
-            pGraphicsWork->drawMode = GRAPHICS::OCEAN_WF_TESS_DEFERRED;
-        }
+        // if (ImGui::MenuItem("Default Tessellated", nullptr, &ocean_.deferredTess)) {
+        //    pGraphicsWork->drawMode = GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED;
+        //}
+        // if (ImGui::MenuItem("Wireframe Tessellated", nullptr, &ocean_.wireframeTess)) {
+        //    pGraphicsWork->drawMode = GRAPHICS::OCEAN_WF_TESS_DEFERRED;
+        //}
 
         ImGui::Separator();
 

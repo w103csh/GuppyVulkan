@@ -71,9 +71,8 @@ vk::Result VkGridMesh::OnCreateDevice(LoadingResource& ldgRes) {
 
     int vertDim = gridDim + 1;
 
-    {
+    {  // VERTICES
         // Make a grid of (gridDim+1) * (gridDim+1) vertices
-
         for (int y = 0; y < vertDim; y++)
             for (int x = 0; x < vertDim; x++) vertices[x + vertDim * y] = {x / (float)(gridDim), y / (float)(gridDim)};
 
@@ -84,14 +83,14 @@ vk::Result VkGridMesh::OnCreateDevice(LoadingResource& ldgRes) {
         ldgRes.stgResources.push_back(std::move(stgRes));
     }
 
-    {
+    {  // INDICES
         // Make indices for the gridDim * gridDim triangle grid, but make it as a combination of 4 subquads so that they
         // can be rendered separately when needed!
-
         int index = 0;
-
         int halfd = (vertDim / 2);
         int fulld = gridDim;
+
+        m_indicesPerQuadrant = halfd * halfd * 2 * 3;
 
         // Top left part
         for (int y = 0; y < halfd; y++) {
@@ -105,6 +104,7 @@ vk::Result VkGridMesh::OnCreateDevice(LoadingResource& ldgRes) {
             }
         }
         m_indexEndTL = index;
+        assert((m_indexEndTL % m_indicesPerQuadrant) == 0);
 
         // Top right part
         for (int y = 0; y < halfd; y++) {
@@ -118,6 +118,7 @@ vk::Result VkGridMesh::OnCreateDevice(LoadingResource& ldgRes) {
             }
         }
         m_indexEndTR = index;
+        assert((m_indexEndTR % m_indicesPerQuadrant) == 0);
 
         // Bottom left part
         for (int y = halfd; y < fulld; y++) {
@@ -131,6 +132,7 @@ vk::Result VkGridMesh::OnCreateDevice(LoadingResource& ldgRes) {
             }
         }
         m_indexEndBL = index;
+        assert((m_indexEndBL % m_indicesPerQuadrant) == 0);
 
         // Bottom right part
         for (int y = halfd; y < fulld; y++) {
@@ -144,6 +146,7 @@ vk::Result VkGridMesh::OnCreateDevice(LoadingResource& ldgRes) {
             }
         }
         m_indexEndBR = index;
+        assert((m_indexEndBR % m_indicesPerQuadrant) == 0);
 
         BufferResource stgRes = {};
         m_pContext->createBuffer(

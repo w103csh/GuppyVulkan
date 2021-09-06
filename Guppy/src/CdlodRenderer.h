@@ -64,6 +64,10 @@ struct Settings {
     // (in average) for all distances.
     // Values above 2.0 will result in more triangles on more distant areas, and vice versa.
     float LODLevelDistanceRatio;
+
+    // Texture sizes.
+    glm::vec2 TextureWorldSize;
+    glm::vec2 TextureSize;
 };
 
 // BASE - This class is based off of DemoRender in CDLOD proper.
@@ -92,8 +96,6 @@ class Base : public Handlee<Scene::Handler>, public CDLODRenderer {
     virtual const MapDimensions* getMapDimensions() const = 0;
     virtual void bindDescSetData(const vk::CommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                                  const int lodLevel) const = 0;
-    virtual void setGlobalShaderSettings() = 0;
-    virtual PerQuadTreeData& getPerQuadTreeData() = 0;
 
     // TODO: Maybe this should be non-virtual and just defined here.
     virtual void renderDebug(const CDLODQuadTree::LODSelection& cdlodSelection) {}
@@ -101,6 +103,7 @@ class Base : public Handlee<Scene::Handler>, public CDLODRenderer {
     constexpr auto getRasterHeight() const { return rasterHeight_; }
 
     bool useDebugCamera_;
+    UniformDynamic::Cdlod::QuadTree::Base* pPerQuadTreeItem_;
 
    private:
     void onReset();
@@ -121,10 +124,6 @@ class Base : public Handlee<Scene::Handler>, public CDLODRenderer {
 };
 
 // DEBUG
-struct DebugSettings : public Settings {
-    float dbgTexScale;  // Scale of texture (1,1) to world space
-};
-
 struct DebugHeightmap : public IHeightmapSource {
     DebugHeightmap() : mapDims() {
         mapDims.SizeX = 40960.0f;
@@ -171,12 +170,9 @@ class Debug : public Base {
     const MapDimensions* getMapDimensions() const override { return &dbgHeightmap_.mapDims; }
     void bindDescSetData(const vk::CommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                          const int lodLevel) const override;
-    void setGlobalShaderSettings() override;
-    PerQuadTreeData& getPerQuadTreeData() override;
 
-    DebugSettings settings_;
+    Cdlod::Renderer::Settings settings_;
     DebugHeightmap dbgHeightmap_;
-    Uniform::Cdlod::QuadTree::Base* pPerQuadTreeItem_;
 
     void renderDebug(const CDLODQuadTree::LODSelection& cdlodSelection) override;
     void debugResetBoxes();

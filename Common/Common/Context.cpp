@@ -223,17 +223,17 @@ void Context::createBuffer(const vk::CommandBuffer &cmd, const vk::BufferUsageFl
     void *pData;
     pData = dev.mapMemory(stgRes.memory, 0, buffRes.memoryRequirements.size);
     /*
-        You can now simply memcpy the vertex data to the mapped memory and unmap it again using unmapMemory.
-        Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
-        of caching. It is also possible that writes to the buffer are not visible in the mapped memory yet. There
-        are two ways to deal with that problem:
-            - Use a memory heap that is host coherent, indicated with vk::MemoryPropertyFlagBits::eHostCoherent
-            - Call flushMappedMemoryRanges to after writing to the mapped memory, and call
-              invalidateMappedMemoryRanges before reading from the mapped memory
-        We went for the first approach, which ensures that the mapped memory always matches the contents of the
-        allocated memory. Do keep in mind that this may lead to slightly worse performance than explicit flushing,
-        but we'll see why that doesn't matter in the next chapter.
-    */
+     *  You can now simply memcpy the vertex data to the mapped memory and unmap it again using unmapMemory.
+     *  Unfortunately the driver may not immediately copy the data into the buffer memory, for example because
+     *  of caching. It is also possible that writes to the buffer are not visible in the mapped memory yet. There
+     *  are two ways to deal with that problem:
+     *      - Use a memory heap that is host coherent, indicated with vk::MemoryPropertyFlagBits::eHostCoherent
+     *      - Call flushMappedMemoryRanges to after writing to the mapped memory, and call
+     *        invalidateMappedMemoryRanges before reading from the mapped memory
+     *  We went for the first approach, which ensures that the mapped memory always matches the contents of the
+     *  allocated memory. Do keep in mind that this may lead to slightly worse performance than explicit flushing,
+     *  but we'll see why that doesn't matter in the next chapter.
+     */
     memcpy(pData, data, static_cast<size_t>(size));
     dev.unmapMemory(stgRes.memory);
 

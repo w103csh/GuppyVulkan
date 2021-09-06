@@ -30,3 +30,7 @@
   o It just dawned on me that the onX() x() pattern for lifecycle function inheritance I am trying to
     start has the names backwards. For example, onFrame() should be the virtual function and frame()
     should be the non-virtual function. I don't know what I was thinking.
+
+  o Ideas for how to fix the colors on the ocean surface:
+    o Re-calculate the normals so that they account for the displacement.
+    o ...

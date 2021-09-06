@@ -1103,12 +1103,14 @@ void Scene::Handler::recordRenderer(const PASS passType, const std::shared_ptr<P
     if (std::visit(Pipeline::IsGraphics{}, pPipelineBindData->type)) {
         auto graphicsType = std::visit(Pipeline::GetGraphics{}, pPipelineBindData->type);
         switch (graphicsType) {
+            case GRAPHICS::OCEAN_WF_DEFERRED:
+            case GRAPHICS::OCEAN_SURFACE_DEFERRED:
 #if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
             case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
             case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED:
 #endif
-            case GRAPHICS::OCEAN_WF_DEFERRED:
-            case GRAPHICS::OCEAN_SURFACE_DEFERRED:
+            case GRAPHICS::OCEAN_WF_CDLOD_DEFERRED:
+            case GRAPHICS::OCEAN_SURFACE_CDLOD_DEFERRED:
                 if (ocnRenderer.shouldDraw(pPipelineBindData->type)) {
                     ocnRenderer.record(passType, pPipelineBindData, cmd);
                 }

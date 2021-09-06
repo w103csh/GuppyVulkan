@@ -11,6 +11,7 @@
 
 #include "BufferItem.h"
 #include "Descriptor.h"
+#include "DescriptorManager.h"
 #include "Deferred.h"
 #include "Pipeline.h"
 
@@ -28,7 +29,7 @@ extern const CreateInfo VERT_TEX_CREATE_INFO;
 }  // namespace Shader
 
 // UNIFORM
-namespace Uniform {
+namespace UniformDynamic {
 namespace Cdlod {
 namespace QuadTree {
 using DATA = CDLODRenderer::PerQuadTreeData;
@@ -37,9 +38,10 @@ class Base : public Descriptor::Base, public Buffer::DataItem<DATA> {
     Base(const Buffer::Info&& info, DATA* pData);
     auto& getData() { return *pData_; }
 };
+using Manager = Descriptor::Manager<Descriptor::Base, Base, std::shared_ptr>;
 }  // namespace QuadTree
 }  // namespace Cdlod
-}  // namespace Uniform
+}  // namespace UniformDynamic
 
 // PUSH CONSTANT
 namespace Cdlod {
@@ -75,7 +77,6 @@ class Texture : public Deferred::MRTTexture {
 
    private:
     void getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) override;
-    void getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) override;
 };
 
 }  // namespace Cdlod

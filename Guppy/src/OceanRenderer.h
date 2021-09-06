@@ -80,12 +80,9 @@ class Renderer : public Cdlod::Renderer::Base {
     const MapDimensions* getMapDimensions() const override { return &dbgHeightmap_.mapDims; }
     void bindDescSetData(const vk::CommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                          const int lodLevel) const override;
-    void setGlobalShaderSettings() override;
-    PerQuadTreeData& getPerQuadTreeData() override;
 
     Cdlod::Renderer::Settings settings_;
     Heightmap dbgHeightmap_;
-    Uniform::Cdlod::QuadTree::Base* pPerQuadTreeItem_;
 
     Instance::Manager<Instance::Cdlod::Ocean::Base, Instance::Cdlod::Ocean::Base> instMgr_;
 };

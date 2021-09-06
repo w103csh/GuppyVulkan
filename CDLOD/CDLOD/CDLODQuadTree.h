@@ -47,6 +47,9 @@ class CDLODQuadTree {
 
         // Heightmap world dimensions
         MapDimensions MapDims;
+
+        glm::vec2 textureWorldSize;
+        glm::vec2 textureSize;
     };
 
     struct SelectedNode {
@@ -247,6 +250,9 @@ class CDLODQuadTree {
 
     int GetRasterSizeX() const { return m_rasterSizeX; }
     int GetRasterSizeY() const { return m_rasterSizeY; }
+
+    auto GetTextureWorldSize() const { return m_desc.textureWorldSize; }
+    auto GetTextureSize() const { return m_desc.textureSize; }
 
     float GetLODLevelNodeDiagonalSize(int LODLevel) const {
         assert(LODLevel >= 0 && LODLevel < m_desc.LODLevelCount);

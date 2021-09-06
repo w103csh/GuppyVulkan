@@ -39,18 +39,18 @@ const CreateInfo VERT_TEX_CREATE_INFO = {
 }  // namespace Shader
 
 // UNIFORM
-namespace Uniform {
+namespace UniformDynamic {
 namespace Cdlod {
 namespace QuadTree {
 Base::Base(const Buffer::Info&& info, DATA* pData)
     : Buffer::Item(std::forward<const Buffer::Info>(info)),  //
-      Descriptor::Base(UNIFORM::CDLOD_QUAD_TREE),
+      Descriptor::Base(UNIFORM_DYNAMIC::CDLOD_QUAD_TREE),
       Buffer::DataItem<DATA>(pData) {
     dirty = true;
 }
 }  // namespace QuadTree
 }  // namespace Cdlod
-}  // namespace Uniform
+}  // namespace UniformDynamic
 
 // DESCRIPTOR SET
 namespace Descriptor {
@@ -58,7 +58,7 @@ namespace Set {
 const CreateInfo CDLOD_DEFAULT_CREATE_INFO = {
     DESCRIPTOR_SET::CDLOD_DEFAULT,
     "_DS_CDLOD",
-    {{{0, 0}, {UNIFORM::CDLOD_QUAD_TREE}}},
+    {{{0, 0}, {UNIFORM_DYNAMIC::CDLOD_QUAD_TREE}}},
 };
 }  // namespace Set
 }  // namespace Descriptor
@@ -72,7 +72,7 @@ void GetCdlodInputAssemblyInfoResource(Pipeline::CreateInfoResources& createInfo
         const auto BINDING = static_cast<uint32_t>(createInfoRes.bindDescs.size());
         createInfoRes.bindDescs.push_back({});
         createInfoRes.bindDescs.back().binding = BINDING;
-        createInfoRes.bindDescs.back().stride = sizeof(glm::vec3);
+        createInfoRes.bindDescs.back().stride = sizeof(glm::vec2);
         createInfoRes.bindDescs.back().inputRate = vk::VertexInputRate::eVertex;
 
         // position
@@ -138,10 +138,6 @@ const Pipeline::CreateInfo TEX_CREATE_INFO = {
 Texture::Texture(Handler& handler) : MRTTexture(handler, &TEX_CREATE_INFO) {}
 void Texture::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     GetCdlodInputAssemblyInfoResource(createInfoRes);
-}
-void Texture::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
-    MRTTexture::getRasterizationStateInfoResources(createInfoRes);
-    createInfoRes.rasterizationStateInfo.frontFace = vk::FrontFace::eClockwise;
 }
 
 }  // namespace Cdlod

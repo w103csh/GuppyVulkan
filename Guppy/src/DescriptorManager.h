@@ -12,6 +12,7 @@
 #include <vulkan/vulkan.hpp>
 
 #include <Common/Context.h>
+#include <Common/Helpers.h>
 
 #include "ConstantsAll.h"
 #include "BufferManager.h"
@@ -45,9 +46,7 @@ class Manager : public Buffer::Manager::Base<TBase, TDerived, TSmartPointer> {
         // TODO: dump the alignment padding here so you can see how bad it is...
         const auto &minAlignment =
             ctx.physicalDevProps[ctx.physicalDevIndex].properties.limits.minUniformBufferOffsetAlignment;
-        if (sizeof(typename TDerived::DATA) % minAlignment != 0) {
-            TManager::alignment_ = (sizeof(typename TDerived::DATA) + minAlignment - 1) & ~(minAlignment - 1);
-        }
+        TManager::alignment_ = helpers::minAlign(sizeof(typename TDerived::DATA), minAlignment);
         TManager::init(ctx, std::forward<std::vector<uint32_t>>(queueFamilyIndices));
     }
 

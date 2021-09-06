@@ -62,6 +62,15 @@ typename std::enable_if<!std::numeric_limits<T>::is_integer, bool>::type almost_
 }
 
 template <typename T>
+T minAlign(T value, T align) {
+    T alignedValue = value;
+    if ((value % align)) {
+        alignedValue = (value + align - 1) & ~(align - 1);
+    }
+    return alignedValue;
+}
+
+template <typename T>
 constexpr bool checkInterval(const T t, const T interval, T &lastTick) {
     if (t - interval > lastTick) {
         lastTick = t;

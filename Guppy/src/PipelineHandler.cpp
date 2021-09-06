@@ -112,6 +112,8 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(), maxPus
                 case GRAPHICS::OCEAN_WF_TESS_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Ocean::WireframeTess>(std::ref(*this))}); break;
                 case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED:     insertPair = pPipelines_.insert({type, std::make_unique<Ocean::SurfaceTess>(std::ref(*this))}); break;
 #endif
+                case GRAPHICS::OCEAN_WF_CDLOD_DEFERRED:         insertPair = pPipelines_.insert({type, std::make_unique<Ocean::WireframeCdlod>(std::ref(*this))}); break;
+                case GRAPHICS::OCEAN_SURFACE_CDLOD_DEFERRED:    insertPair = pPipelines_.insert({type, std::make_unique<Ocean::SurfaceCdlod>(std::ref(*this))}); break;
                 case GRAPHICS::CDLOD_WF_DEFERRED:               insertPair = pPipelines_.insert({type, std::make_unique<Cdlod::Wireframe>(std::ref(*this))}); break;
                 case GRAPHICS::CDLOD_TEX_DEFERRED:              insertPair = pPipelines_.insert({type, std::make_unique<Cdlod::Texture>(std::ref(*this))}); break;
                 default: assert(false);  // add new pipelines here

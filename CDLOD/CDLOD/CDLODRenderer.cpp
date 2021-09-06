@@ -41,8 +41,8 @@ const VkGridMesh* CDLODRenderer::PickGridMesh(int dimensions) const {
 }
 //
 void CDLODRenderer::SetIndependentGlobalVertexShaderConsts(const CDLODQuadTree& cdlodQuadTree, PerQuadTreeData& data) const {
-    const int textureWidth = cdlodQuadTree.GetRasterSizeX();
-    const int textureHeight = cdlodQuadTree.GetRasterSizeY();
+    const auto textureWorldSize = cdlodQuadTree.GetTextureWorldSize();
+    const auto textureSize = cdlodQuadTree.GetTextureSize();
     const MapDimensions& mapDims = cdlodQuadTree.GetWorldMapDims();
 
     data = {};
@@ -53,10 +53,9 @@ void CDLODRenderer::SetIndependentGlobalVertexShaderConsts(const CDLODQuadTree& 
 
     data.terrainScale = {mapDims.SizeX, mapDims.SizeY, mapDims.SizeZ, 0.0f};
     data.terrainOffset = {mapDims.MinX, mapDims.MinY, mapDims.MinZ, 0.0f};
-    data.data0.z = (textureWidth - 1.0f) / (float)textureWidth;    // samplerWorldToTextureScale
-    data.data0.w = (textureHeight - 1.0f) / (float)textureHeight;  // samplerWorldToTextureScale
-    data.heightmapTextureInfo = {(float)textureWidth, (float)textureHeight, 1.0f / (float)textureWidth,
-                                 1.0f / (float)textureHeight};
+    // data.data0.z = (textureWidth - 1.0f) / (float)textureWidth;    // samplerWorldToTextureScale
+    // data.data0.w = (textureHeight - 1.0f) / (float)textureHeight;  // samplerWorldToTextureScale
+    data.heightmapTextureInfo = {textureSize.x, textureSize.y, 1.0f / textureWorldSize.x, 1.0f / textureWorldSize.y};
 }
 //
 vk::Result CDLODRenderer::Render(const CDLODRendererBatchInfo& batchInfo, CDLODRenderStats* renderStats) const {
@@ -138,45 +137,89 @@ vk::Result CDLODRenderer::Render(const CDLODRendererBatchInfo& batchInfo, CDLODR
         batchInfo.renderData.cmd.pushConstants(batchInfo.renderData.pipelineLayout, batchInfo.renderData.pushConstantStages,
                                                0, sizeof(CDLODRendererBatchInfo::PerDrawData), &perDrawData);
 
-        int gridDim = gridMesh->GetDimensions();
+        const uint32_t numIdxPerQuad = gridMesh->GetNumIndiciesPerQuadrant();
+        uint32_t indexCount = 0;
+        uint32_t firstIndex = 0;
+        bool haveDraw = false;
+
+        if (nodeSel.TL) {
+            haveDraw = true;
+            indexCount = numIdxPerQuad;
+        }
+
+        if (nodeSel.TR) {
+            indexCount = numIdxPerQuad + (haveDraw ? indexCount : 0);
+            firstIndex = haveDraw ? firstIndex : gridMesh->GetIndexEndTL();
+            haveDraw = true;
+        } else if (haveDraw) {
+            batchInfo.renderData.cmd.drawIndexed(indexCount, 1, firstIndex, 0, 0);
+            haveDraw = false;
+        }
+
+        if (nodeSel.BL) {
+            indexCount = numIdxPerQuad + (haveDraw ? indexCount : 0);
+            firstIndex = haveDraw ? firstIndex : gridMesh->GetIndexEndTR();
+            haveDraw = true;
+        } else if (haveDraw) {
+            batchInfo.renderData.cmd.drawIndexed(indexCount, 1, firstIndex, 0, 0);
+            haveDraw = false;
+        }
+
+        if (nodeSel.BR) {
+            indexCount = numIdxPerQuad + (haveDraw ? indexCount : 0);
+            firstIndex = haveDraw ? firstIndex : gridMesh->GetIndexEndBL();
+            haveDraw = true;
+        }
+
+        if (haveDraw) {
+            batchInfo.renderData.cmd.drawIndexed(indexCount, 1, firstIndex, 0, 0);
+        }
+
+        // if (nodeSel.TL) {
+        //    batchInfo.renderData.cmd.drawIndexed(gridMesh->GetNumIndiciesPerQuadrant(), 1, 0, 0, 0);
+        //}
+        // if (nodeSel.TR) {
+        //    batchInfo.renderData.cmd.drawIndexed(gridMesh->GetNumIndiciesPerQuadrant(), 1, gridMesh->GetIndexEndTL(), 0,
+        //    0);
+        //}
+        // if (nodeSel.BL) {
+        //    batchInfo.renderData.cmd.drawIndexed(gridMesh->GetNumIndiciesPerQuadrant(), 1, gridMesh->GetIndexEndTR(), 0,
+        //    0);
+        //}
+        // if (nodeSel.BR) {
+        //    batchInfo.renderData.cmd.drawIndexed(gridMesh->GetNumIndiciesPerQuadrant(), 1, gridMesh->GetIndexEndBL(), 0,
+        //    0);
+        //}
+
+        // int gridDim = gridMesh->GetDimensions();
 
         // int renderedTriangles = 0;
 
         // int totalVertices = (gridDim + 1) * (gridDim + 1);
-        int totalIndices = gridDim * gridDim * 2 * 3;
-        if (drawFull) {
-            // V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, 0, totalIndices / 3));
-            batchInfo.renderData.cmd.drawIndexed(totalIndices, 1, 0, 0, 0);
-            // renderedTriangles += totalIndices / 3;
-        } else {
-            // int halfd = ((gridDim + 1) / 2) * ((gridDim + 1) / 2) * 2;
-            int halfd = (gridDim / 2) * (gridDim / 2) * 2 * 3;
+        // int totalIndices = gridDim * gridDim * 2 * 3;
+        // if (drawFull) {
+        //    V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, 0, totalIndices / 3));
+        //    renderedTriangles += totalIndices / 3;
+        //} else {
+        //    int halfd = ((gridDim + 1) / 2) * ((gridDim + 1) / 2) * 2;
 
-            // can be optimized by combining calls
-            if (nodeSel.TL) {
-                // V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, 0, halfd));
-                batchInfo.renderData.cmd.drawIndexed(halfd, 1, 0, 0, 0);
-                // renderedTriangles += halfd;
-            }
-            if (nodeSel.TR) {
-                // V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, gridMesh->GetIndexEndTL(),
-                // halfd));
-                batchInfo.renderData.cmd.drawIndexed(halfd, 1, gridMesh->GetIndexEndTL(), 0, 0);
-                // renderedTriangles += halfd;
-            }
-            if (nodeSel.BL) {
-                // V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, gridMesh->GetIndexEndTR(),
-                // halfd));
-                batchInfo.renderData.cmd.drawIndexed(halfd, 1, gridMesh->GetIndexEndTR(), 0, 0);
-                // renderedTriangles += halfd;
-            }
-            if (nodeSel.BR) {
-                // V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, gridMesh->GetIndexEndBL(),
-                // halfd));
-                batchInfo.renderData.cmd.drawIndexed(halfd, 1, gridMesh->GetIndexEndBL(), 0, 0);
-                // renderedTriangles += halfd;
-            }
-        }
+        //    can be optimized by combining calls if (nodeSel.TL) {
+        //        V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, 0, halfd));
+        //        renderedTriangles += halfd;
+        //    }
+        //    if (nodeSel.TR) {
+        //        V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, gridMesh->GetIndexEndTL(), halfd));
+        //        renderedTriangles += halfd;
+        //    }
+        //    if (nodeSel.BL) {
+        //        V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, gridMesh->GetIndexEndTR(), halfd));
+        //        renderedTriangles += halfd;
+        //    }
+        //    if (nodeSel.BR) {
+        //        V(device->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, totalVertices, gridMesh->GetIndexEndBL(), halfd));
+        //        renderedTriangles += halfd;
+        //    }
+        //}
 
         // if (renderStats != NULL) {
         //    renderStats->RenderedQuads[nodeSel.LODLevel]++;

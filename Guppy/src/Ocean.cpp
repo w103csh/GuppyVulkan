@@ -62,6 +62,7 @@ Texture::CreateInfo makeDefaultVertInputSampCreateInfo(const std::string&& name,
         {::Sampler::USAGE::NORMAL},    // normal
     };
     auto sampInfo = getDefaultOceanSampCreateInfo(name + " Sampler", N, M, usageFlags, layerInfos);
+    sampInfo.type = SAMPLER::DEFAULT;
     return {name, {sampInfo}, false, false, descriptorType};
 }
 
@@ -277,16 +278,22 @@ CreateInfo MakeCopyTexInfo(const uint32_t N, const uint32_t M) {
 namespace Shader {
 namespace Ocean {
 const CreateInfo VERT_CREATE_INFO = {
-    SHADER::OCEAN_VERT,  //
+    SHADER::OCEAN_VERT,
     "Ocean Surface Vertex Shader",
     "vert.ocean.glsl",
     vk::ShaderStageFlagBits::eVertex,
 };
+const CreateInfo VERT_CDLOD_CREATE_INFO = {
+    SHADER::OCEAN_CDLOD_VERT,
+    "Ocean Surface Cdlod Vertex Shader",
+    "vert.cdlod.ocean.glsl",
+    vk::ShaderStageFlagBits::eVertex,
+};
 const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO = {
-    SHADER::OCEAN_DEFERRED_MRT_FRAG,                                  //
-    "Ocean Surface Deferred Multiple Render Target Fragment Shader",  //
-    "frag.ocean.deferred.mrt.glsl",                                   //
-    vk::ShaderStageFlagBits::eFragment,                               //
+    SHADER::OCEAN_DEFERRED_MRT_FRAG,
+    "Ocean Surface Deferred Multiple Render Target Fragment Shader",
+    "frag.ocean.deferred.mrt.glsl",
+    vk::ShaderStageFlagBits::eFragment,
     {SHADER_LINK::COLOR_FRAG, SHADER_LINK::DEFAULT_MATERIAL},
 };
 }  // namespace Ocean
@@ -323,7 +330,6 @@ const CreateInfo OCEAN_DRAW_CREATE_INFO = {
 
 // PIPELINE
 namespace Pipeline {
-
 namespace Ocean {
 
 void getDefaultInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
@@ -444,7 +450,7 @@ void Surface::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) 
 
 // SURFACE (TESSELLATION)
 #if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
-const CreateInfo OCEAN_TESS_SURFACE_CREATE_INFO = {
+const CreateInfo OCEAN_SURFACE_TESS_CREATE_INFO = {
     GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED,
     "Ocean Surface Tessellation (Deferred) Pipeline",
     {
@@ -461,7 +467,7 @@ const CreateInfo OCEAN_TESS_SURFACE_CREATE_INFO = {
          (vk::ShaderStageFlagBits::eTessellationControl | vk::ShaderStageFlagBits::eTessellationEvaluation)},
     },
 };
-SurfaceTess::SurfaceTess(Handler& handler) : Surface(handler, &OCEAN_TESS_SURFACE_CREATE_INFO) {}
+SurfaceTess::SurfaceTess(Handler& handler) : Surface(handler, &OCEAN_SURFACE_TESS_CREATE_INFO) {}
 void SurfaceTess::getInputAssemblyInfoResources(CreateInfoResources& createInfoRes) {
     Surface::getInputAssemblyInfoResources(createInfoRes);
     createInfoRes.inputAssemblyStateInfo.primitiveRestartEnable = VK_FALSE;
@@ -479,8 +485,35 @@ void SurfaceTess::getTessellationInfoResources(CreateInfoResources& createInfoRe
 }
 #endif
 
-}  // namespace Ocean
+// WIREFRAME (CDLOD)
+const CreateInfo OCEAN_WF_CDLOD_CREATE_INFO = {
+    GRAPHICS::OCEAN_WF_CDLOD_DEFERRED,
+    "Ocean Wireframe Cdlod (Deferred) Pipeline",
+    {SHADER::OCEAN_CDLOD_VERT, SHADER::OCEAN_DEFERRED_MRT_FRAG},
+    {
+        {DESCRIPTOR_SET::OCEAN_DRAW, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::CDLOD_DEFAULT, (vk::ShaderStageFlagBits::eVertex)},
+    },
+    {},
+    {PUSH_CONSTANT::CDLOD},
+};
+WireframeCdlod::WireframeCdlod(Handler& handler) : Wireframe(handler, &OCEAN_WF_CDLOD_CREATE_INFO) {}
 
+// SURFACE (CDLOD)
+const CreateInfo OCEAN_SURFACE_CDLOD_CREATE_INFO = {
+    GRAPHICS::OCEAN_SURFACE_CDLOD_DEFERRED,
+    "Ocean Surface Cdlod (Deferred) Pipeline",
+    {SHADER::OCEAN_CDLOD_VERT, SHADER::OCEAN_DEFERRED_MRT_FRAG},
+    {
+        {DESCRIPTOR_SET::OCEAN_DRAW, (vk::ShaderStageFlagBits::eVertex | vk::ShaderStageFlagBits::eFragment)},
+        {DESCRIPTOR_SET::CDLOD_DEFAULT, (vk::ShaderStageFlagBits::eVertex)},
+    },
+    {},
+    {PUSH_CONSTANT::CDLOD},
+};
+SurfaceCdlod::SurfaceCdlod(Handler& handler) : Surface(handler, &OCEAN_SURFACE_CDLOD_CREATE_INFO) {}
+
+}  // namespace Ocean
 }  // namespace Pipeline
 
 // INSTANCE
@@ -534,7 +567,7 @@ OceanSurface::OceanSurface(Pass::Handler& handler, const OceanCreateInfo* pCreat
     assert(surfaceInfo_.N == ::Ocean::DISP_LOCAL_SIZE * ::Ocean::DISP_WORKGROUP_SIZE);
     assert(helpers::isPowerOfTwo(surfaceInfo_.N) && helpers::isPowerOfTwo(surfaceInfo_.M));
 
-    drawMode = GRAPHICS::OCEAN_SURFACE_DEFERRED;
+    drawMode = GRAPHICS::OCEAN_SURFACE_CDLOD_DEFERRED;
     status_ |= STATUS::PENDING_BUFFERS;
 }
 
@@ -597,12 +630,14 @@ void OceanSurface::record(const PASS passType, const std::shared_ptr<Pipeline::B
                            descSetBindData.descriptorSets[setIndex], descSetBindData.dynamicOffsets);
 
     switch (drawMode) {
+        case GRAPHICS::OCEAN_WF_DEFERRED:
+        case GRAPHICS::OCEAN_SURFACE_DEFERRED:
 #if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
         case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
         case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED:
 #endif
-        case GRAPHICS::OCEAN_WF_DEFERRED:
-        case GRAPHICS::OCEAN_SURFACE_DEFERRED: {
+        case GRAPHICS::OCEAN_WF_CDLOD_DEFERRED:
+        case GRAPHICS::OCEAN_SURFACE_CDLOD_DEFERRED: {
             const std::vector<vk::Buffer> buffers = {gridMesh_.GetVertexBuffer().buffer,
                                                      pInstanceData_->BUFFER_INFO.bufferInfo.buffer};
             const std::vector<vk::DeviceSize> offsets = {0, pInstanceData_->BUFFER_INFO.memoryOffset};

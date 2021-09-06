@@ -16,16 +16,6 @@
 #include <Common/Context.h>
 
 class VkGridMesh {
-   private:
-    const Context* m_pContext;
-    BufferResource m_indexBuffer;
-    BufferResource m_vertexBuffer;
-    int m_dimension;
-    int m_indexEndTL;
-    int m_indexEndTR;
-    int m_indexEndBL;
-    int m_indexEndBR;
-
    public:
     using VertexBufferType = glm::vec2;
 
@@ -39,6 +29,7 @@ class VkGridMesh {
     //
     const auto& GetIndexBuffer() const { return m_indexBuffer; }
     const auto& GetVertexBuffer() const { return m_vertexBuffer; }
+    int GetNumIndiciesPerQuadrant() const { return m_indicesPerQuadrant; }
     int GetIndexEndTL() const { return m_indexEndTL; }
     int GetIndexEndTR() const { return m_indexEndTR; }
     int GetIndexEndBL() const { return m_indexEndBL; }
@@ -50,6 +41,16 @@ class VkGridMesh {
     //
     virtual vk::Result OnCreateDevice(LoadingResource& ldgRes);
     virtual void OnDestroyDevice();
+
+    const Context* m_pContext;
+    BufferResource m_indexBuffer;
+    BufferResource m_vertexBuffer;
+    int m_dimension;
+    int m_indicesPerQuadrant;
+    int m_indexEndTL;
+    int m_indexEndTR;
+    int m_indexEndBL;
+    int m_indexEndBR;
 };
 
 #endif  // !_VK_GRID_MESH_H_

@@ -22,7 +22,6 @@ layout(set=_DS_CDLOD, binding=0) uniform CdlodQuadTree {
     vec4 heightmapTextureInfo;
     vec2 quadWorldMax;  // .xy max used to clamp triangles outside of world range
     vec2 samplerWorldToTextureScale;
-    vec4 data1; // .x (dbgTexScale)
 } qTree;
 
 // PUSH CONSTANTS
@@ -38,10 +37,6 @@ layout(push_constant) uniform PushBlock {
 
 // IN
 layout(location=0) in vec2 inPosition;
-layout(location=1) in vec4 data0;      // quadOffset: .x.y
-                                       // quadScale:  .z.w
-layout(location=2) in vec4 data1;      // uvOffset:   .x.y
-                                       // uvScale:    .z.w
 
 // OUT
 layout(location=0) out vec3 outPosition; // (world space)
@@ -51,11 +46,47 @@ layout(location=2) out vec4 outColor;
 const int LAYER_POSITION  = 0;
 const int LAYER_NORMAL    = 1;
 
-#define QUAD_OFFSET_V2 data0.xy
-#define QUAD_SCALE_V2  data0.zw
-#define UV_OFFSET_V2   data1.xy
-#define UV_SCALE_V2    data1.zw
+// morphs vertex xy from from high to low detailed mesh position
+vec2 morphVertex(vec2 inPos, vec2 vertex, float morphLerpK) {
+    vec2 fracPart = (fract(inPos * vec2(pc.data0.y, pc.data0.y)) *
+                     vec2(pc.data0.z, pc.data0.z)) *
+                    pc.data2.zw;
+    return vertex.xy - fracPart * morphLerpK;
+}
 
 void main() {
-    // Nothing here yet.
+    // getBaseVertexPos
+    vec4 vertex = vec4(((inPosition * pc.data2.zw) + pc.data2.xy), 0.0, 1.0);
+    vertex.xy = min(vertex.xy, qTree.quadWorldMax); // !!!
+
+    // calcGlobalUV
+    vec2 uv = vertex.xy * qTree.heightmapTextureInfo.zw;
+
+    // sampleHeightmap
+    vec4 posData = texture(sampVertInput, vec3(uv, LAYER_POSITION));  // .xy: displacement
+                                                                      // .z:  height
+    vertex.z = posData.z;
+    // vertex.xy += posData.xy; // This causes seems.
+
+    // swizzle to convert to z-up left-handed coordinate system
+    vec3 camPos = (pc.data3.w == 1.0) ? pc.data3.xzy : camera.worldPosition.xzy;
+    float eyeDist = distance(vertex, vec4(camPos, 1.0));
+
+    float morphLerpK = 1.0f - clamp(pc.data1.z - eyeDist * pc.data1.y, 0.0, 1.0 );
+    vertex.xy = morphVertex(inPosition, vertex.xy, morphLerpK);
+
+    // calcGlobalUV
+    uv = vertex.xy * qTree.heightmapTextureInfo.zw;
+
+    // sampleHeightmap
+    posData = texture(sampVertInput, vec3(uv, LAYER_POSITION));  // .xy: displacement
+                                                                 // .z:  height
+    vertex.z = posData.z;
+    vertex.xy += posData.xy;
+
+    // Position
+    outPosition = vertex.xzy; // Swizzle z/y up.
+    gl_Position = camera.viewProjection * vec4(outPosition, 1.0);
+    // Normal
+    outNormal = texture(sampVertInput, vec3(uv, LAYER_NORMAL)).xyz;
 }

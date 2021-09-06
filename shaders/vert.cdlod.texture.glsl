@@ -27,7 +27,7 @@ layout(set=_DS_UNI_DEF, binding=0) uniform CameraDefaultPerspective {
 } camera;
 
 // IN
-layout(location=0) in vec3 inPosition;
+layout(location=0) in vec2 inPosition;
 // OUT
 layout(location=0) out vec3 outPosition;    // (world space)
 layout(location=1) out vec3 outNormal;      // (world space)
@@ -36,9 +36,8 @@ layout(location=3) out vec3 outTangent;     // (world space)
 layout(location=4) out vec3 outBinormal;    // (world space)
 layout(location=5) out flat uint outFlags;
 
-void main()
-{
-    vec4 inPos = vec4(inPosition, 1.0);
+void main() {
+    vec4 inPos = vec4(inPosition, 0.0, 1.0);
     vec4 unmorphedWorldPos;
     vec4 worldPos;
     vec2 globalUV;

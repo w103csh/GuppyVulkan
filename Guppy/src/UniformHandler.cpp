@@ -77,9 +77,6 @@ Uniform::Handler::Handler(Game* pGame)
           // STORAGE
           Uniform::Manager<Storage::PostProcess::Base>  //
           {"Post Process Data", STORAGE_BUFFER::POST_PROCESS, 5, "_S_DEF_PSTPRC"},
-          // CDLOD
-          Uniform::Manager<Uniform::Cdlod::QuadTree::Base>  //
-          {"CDLOD Quad Tree Data", UNIFORM::CDLOD_QUAD_TREE, 2, "_U_CDLOD_QDTR"},
           //
       },
       managersDynamic_{
@@ -91,6 +88,9 @@ Uniform::Handler::Handler(Game* pGame)
           {"Ocean Simulation Dispatch Data", UNIFORM_DYNAMIC::OCEAN_DISPATCH, 2, true, "_UD_OCN_DISPATCH"},
           UniformDynamic::Ocean::SimulationDraw::Manager  //
           {"Ocean Simulation Draw Data", UNIFORM_DYNAMIC::OCEAN_DRAW, 6, true, "_UD_OCN_DRAW"},
+          // CDLOD
+          UniformDynamic::Cdlod::QuadTree::Manager  //
+          {"CDLOD Quad Tree Data", UNIFORM_DYNAMIC::CDLOD_QUAD_TREE, 2, true, "_UD_CDLOD_QDTR"},
       },
       activeCameraOffset_(BAD_OFFSET),
       mainCameraOffset_(BAD_OFFSET),
@@ -117,7 +117,6 @@ std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const
             case UNIFORM::GEOMETRY_DEFAULT:             return uniGeomDefMgr().pItems;
             case UNIFORM::PRTCL_WAVE:                   return uniWaveMgr().pItems;
             case UNIFORM::SHADOW_DATA:                  return uniShdwDataMgr().pItems;
-            case UNIFORM::CDLOD_QUAD_TREE:              return cdlodQdTrMgr().pItems;
             default:                                    assert(false); exit(EXIT_FAILURE);
         }
     } else if (std::visit(Descriptor::IsStorageBuffer{}, type)) {
@@ -162,11 +161,11 @@ void Uniform::Handler::init() {
     uniGeomDefMgr().init(shell().context());    ++count;
     uniWaveMgr().init(shell().context());       ++count;
     strPstPrcMgr().init(shell().context());     ++count;
-    cdlodQdTrMgr().init(shell().context());     ++count;
     // DYNAMIC
     tessPhongMgr().init(shell().context());     ++count;
     ocnSimDpchMgr().init(shell().context());    ++count;
     ocnSimDrawMgr().init(shell().context());    ++count;
+    cdlodQdTrMgr().init(shell().context());     ++count;
     assert(count == managers_.size() + managersDynamic_.size());
     // clang-format on
 
@@ -196,11 +195,11 @@ void Uniform::Handler::reset() {
     uniGeomDefMgr().destroy(shell().context());   ++count;
     uniWaveMgr().destroy(shell().context());      ++count;
     strPstPrcMgr().destroy(shell().context());    ++count;
-    cdlodQdTrMgr().destroy(shell().context());    ++count;
     // DYNAMIC
     tessPhongMgr().destroy(shell().context());    ++count;
     ocnSimDpchMgr().destroy(shell().context());   ++count;
     ocnSimDrawMgr().destroy(shell().context());   ++count;
+    cdlodQdTrMgr().destroy(shell().context());    ++count;
     assert(count == managers_.size() + managersDynamic_.size());
     // clang-format on
 }

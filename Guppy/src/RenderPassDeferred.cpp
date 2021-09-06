@@ -44,6 +44,8 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         GRAPHICS::OCEAN_WF_TESS_DEFERRED,
         GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED,
 #endif
+        GRAPHICS::OCEAN_WF_CDLOD_DEFERRED,
+        GRAPHICS::OCEAN_SURFACE_CDLOD_DEFERRED,
         GRAPHICS::CDLOD_TEX_DEFERRED,
         GRAPHICS::CDLOD_WF_DEFERRED,
 #ifndef VK_USE_PLATFORM_MACOS_MVK
@@ -200,12 +202,14 @@ void Base::record(const uint8_t frameIndex) {
                         handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
                         priCmd.nextSubpass(vk::SubpassContents::eInline);
                     } break;
+                    case GRAPHICS::OCEAN_WF_DEFERRED:
+                    case GRAPHICS::OCEAN_SURFACE_DEFERRED:
 #if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
                     case GRAPHICS::OCEAN_WF_TESS_DEFERRED:
                     case GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED:
 #endif
-                    case GRAPHICS::OCEAN_WF_DEFERRED:
-                    case GRAPHICS::OCEAN_SURFACE_DEFERRED:
+                    case GRAPHICS::OCEAN_WF_CDLOD_DEFERRED:
+                    case GRAPHICS::OCEAN_SURFACE_CDLOD_DEFERRED:
                     case GRAPHICS::CDLOD_WF_DEFERRED:
                     case GRAPHICS::CDLOD_TEX_DEFERRED: {
                         // SCENE RENDERERS

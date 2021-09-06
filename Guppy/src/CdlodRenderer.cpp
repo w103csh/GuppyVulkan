@@ -66,6 +66,7 @@ Base::Base(Scene::Handler& handler)
     : Handlee<Scene::Handler>(handler),  //
       CDLODRenderer(),
       useDebugCamera_(false),
+      pPerQuadTreeItem_(nullptr),
       pSettings_(nullptr),
       pHeightmap_(nullptr),
       pMapDims_(nullptr),
@@ -148,11 +149,20 @@ void Base::onInit() {
     createDesc.LeafRenderNodeSize = pSettings_->LeafQuadTreeNodeSize;
     createDesc.LODLevelCount = pSettings_->LODLevelCount;
     createDesc.MapDims = *pMapDims_;
+    createDesc.textureWorldSize = pSettings_->TextureWorldSize;
+    createDesc.textureSize = pSettings_->TextureSize;
     assert(createDesc.pHeightmap);
     cdlodQuadTree_.Create(createDesc);
+
+    {  // This should all be known after quad tree creation...
+        assert(pPerQuadTreeItem_ != nullptr);
+        SetIndependentGlobalVertexShaderConsts(cdlodQuadTree_, pPerQuadTreeItem_->getData());
+        handler().uniformHandler().cdlodQdTrMgr().updateData(handler().shell().context().dev,
+                                                             pPerQuadTreeItem_->BUFFER_INFO);
+    }
 }
 
-void Cdlod::Renderer::Base::onReset() {
+void Base::onReset() {
     reset();
 
     pSettings_ = nullptr;
@@ -163,11 +173,12 @@ void Cdlod::Renderer::Base::onReset() {
     rasterWidth_ = 0;
     rasterHeight_ = 0;
     cdlodQuadTree_ = {};
+    pPerQuadTreeItem_ = nullptr;
     useDebugCamera_ = false;
 }
 
-void Cdlod::Renderer::Base::record(const PASS passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
-                                   const vk::CommandBuffer& cmd) {
+void Base::record(const PASS passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
+                  const vk::CommandBuffer& cmd) {
     Camera::FrustumInfo frustumInfo;
     if (useDebugCamera_) {
         assert(handler().uniformHandler().hasDebugCamera());
@@ -252,7 +263,6 @@ void Base::renderTerrain(const CDLODQuadTree::LODSelection& cdlodSelection,
     //
     // m_dlodRenderer.SetIndependentGlobalVertexShaderConsts(m_vsTerrainSimple, m_terrainQuadTree, viewProj,
     //                                                      camera->GetPosition());
-    SetIndependentGlobalVertexShaderConsts(cdlodQuadTree_, getPerQuadTreeData());
     //
     // setup detail heightmap globals if any
     // if (m_settings.DetailHeightmapEnabled) {
@@ -306,7 +316,6 @@ void Base::renderTerrain(const CDLODQuadTree::LODSelection& cdlodSelection,
     // V(m_psTerrainFlat.SetTexture("g_terrainNMTexture", m_terrainNMTexture, D3DTADDRESS_CLAMP, D3DTADDRESS_CLAMP,
     //                             D3DTEXF_LINEAR, D3DTEXF_LINEAR, D3DTEXF_LINEAR));
     //
-    setGlobalShaderSettings();
     // end of global shader settings
     //////////////////////////////////////////////////////////////////////////
 
@@ -427,7 +436,6 @@ Debug::Debug(Scene::Handler& handler)
     : Base(handler),
       settings_(),
       dbgHeightmap_(),
-      pPerQuadTreeItem_(nullptr),
       useDebugBoxes_(false),
       useDebugWireframe_(false),
       useDebugTexture_(false),
@@ -438,9 +446,9 @@ Debug::Debug(Scene::Handler& handler)
 
 void Debug::init() {
     useDebugCamera_ = true;
-    // useDebugBoxes_ = true;
-    // useDebugWireframe_ = true;
-    // useDebugTexture_ = true;
+    useDebugBoxes_ = false;
+    useDebugWireframe_ = false;
+    useDebugTexture_ = !useDebugWireframe_ && false;
 
     {  // Settings
         settings_.LeafQuadTreeNodeSize = 8;
@@ -449,11 +457,10 @@ void Debug::init() {
         settings_.MinViewRange = 35000.0f;
         settings_.MaxViewRange = 100000.0f;
         settings_.LODLevelDistanceRatio = 2.0f;
-        settings_.dbgTexScale = 20.0f;
     }
 
-    // Initialize the quad tree uniform data.
-    pPerQuadTreeItem_ = handler().uniformHandler().cdlodQdTrMgr().insert(handler().shell().context().dev, true);
+    // QUAD TREE
+    pPerQuadTreeItem_ = handler().uniformHandler().cdlodQdTrMgr().insert(handler().shell().context().dev, false);
 
     {  // Create four materials for debugging grid mesh lod levels.
         Material::Default::CreateInfo matInfo = {};
@@ -516,13 +523,17 @@ void Debug::init() {
         matInfo = {};
         matInfo.pTexture = handler().textureHandler().getTexture(Texture::CIRCLES_ID);
         pMaterials_[4] = handler().materialHandler().makeMaterial(&matInfo).get();
+
+        // Settings
+        const auto& sampler = matInfo.pTexture->samplers.at(0);
+        settings_.TextureWorldSize = {40.0f, 40.0f};
+        settings_.TextureSize = {sampler.imgCreateInfo.extent.width, sampler.imgCreateInfo.extent.height};
     }
 }
 
 void Debug::reset() {
     settings_ = {};
     dbgHeightmap_ = {};
-    pPerQuadTreeItem_ = nullptr;
 
     useDebugBoxes_ = false;
     useDebugWireframe_ = false;
@@ -550,9 +561,11 @@ void Debug::bindDescSetData(const vk::CommandBuffer& cmd, const std::shared_ptr<
     Descriptor::Set::bindDataMap descSetBindDataMap;
     if (pPipelineBindData->type == PIPELINE{GRAPHICS::CDLOD_WF_DEFERRED}) {
         auto debugLodLevel = lodLevel % 4;
-        handler().descriptorHandler().getBindData(pPipelineBindData->type, descSetBindDataMap, {pMaterials_[debugLodLevel]});
+        handler().descriptorHandler().getBindData(pPipelineBindData->type, descSetBindDataMap,
+                                                  {pMaterials_[debugLodLevel], pPerQuadTreeItem_});
     } else if (pPipelineBindData->type == PIPELINE{GRAPHICS::CDLOD_TEX_DEFERRED}) {
-        handler().descriptorHandler().getBindData(pPipelineBindData->type, descSetBindDataMap, {pMaterials_[4]});
+        handler().descriptorHandler().getBindData(pPipelineBindData->type, descSetBindDataMap,
+                                                  {pMaterials_[4], pPerQuadTreeItem_});
     } else {
         assert(false);
     }
@@ -562,20 +575,6 @@ void Debug::bindDescSetData(const vk::CommandBuffer& cmd, const std::shared_ptr<
                                      handler().passHandler().renderPassMgr().getFrameIndex());
     cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
                            descSetBindData.descriptorSets[setIndex], descSetBindData.dynamicOffsets);
-}
-
-void Debug::setGlobalShaderSettings() {
-    if (useDebugTexture_) {
-        // The aspect of the texture is dealt with by the material. Material::SetDefaultTextureData() has an example of a
-        // way to deal with non-square textures if this renderer needs to implement something similar.
-        pPerQuadTreeItem_->getData().data1.x = settings_.dbgTexScale;
-    }
-    pPerQuadTreeItem_->dirty = true;
-    handler().uniformHandler().update(pPerQuadTreeItem_);
-}
-
-CDLODRenderer::PerQuadTreeData& Debug::getPerQuadTreeData() {
-    return handler().uniformHandler().cdlodQdTrMgr().getTypedItem(0).getData();
 }
 
 void Debug::renderDebug(const CDLODQuadTree::LODSelection& cdlodSelection) {

@@ -26,7 +26,6 @@ Renderer::Renderer(Scene::Handler& handler)
       surfaceInfo(),
       settings_(),
       dbgHeightmap_(),
-      pPerQuadTreeItem_(nullptr),
       instMgr_("Instance Cdlod Ocean Manager Data", 128) {}
 
 void Renderer::init() {
@@ -59,6 +58,9 @@ void Renderer::init() {
     handler().uniformHandler().ocnSimDpchMgr().insert(ctx.dev, &simDpchInfo);
     auto& pSimDpch = handler().uniformHandler().ocnSimDpchMgr().pItems.back();
 
+    // QUAD TREE
+    pPerQuadTreeItem_ = handler().uniformHandler().cdlodQdTrMgr().insert(handler().shell().context().dev, false);
+
     // MATERIAL
     Material::Default::CreateInfo matInfo = {};
     matInfo.flags |= Material::FLAG::MODE_FLAT_SHADE;
@@ -86,8 +88,11 @@ void Renderer::init() {
             GRAPHICS::OCEAN_WF_TESS_DEFERRED,
             GRAPHICS::OCEAN_SURFACE_TESS_DEFERRED,
 #endif
+            GRAPHICS::OCEAN_WF_CDLOD_DEFERRED,
+            GRAPHICS::OCEAN_SURFACE_CDLOD_DEFERRED,
         };
         ocnInfo.pDynDescs.push_back(pMaterial.get());
+        ocnInfo.pDynDescs.push_back(pPerQuadTreeItem_);
         ocnInfo.pDynDescs.push_back(pTess.get());
 
         pGraphicsWork = std::make_unique<GraphicsWork::OceanSurface>(handler().passHandler(), &ocnInfo, this);
@@ -101,9 +106,8 @@ void Renderer::init() {
         settings_.MinViewRange = 35000.0f;
         settings_.MaxViewRange = 100000.0f;
         settings_.LODLevelDistanceRatio = 2.0f;
-
-        // Initialize the quad tree uniform data.
-        pPerQuadTreeItem_ = handler().uniformHandler().cdlodQdTrMgr().insert(ctx.dev, true);
+        settings_.TextureWorldSize = {surfaceInfo.Lx, surfaceInfo.Lz};
+        settings_.TextureSize = {surfaceInfo.N, surfaceInfo.M};
     }
 }
 
@@ -114,24 +118,20 @@ void Renderer::reset() {
 
     settings_ = {};
     dbgHeightmap_ = {};
-    pPerQuadTreeItem_ = nullptr;
     instMgr_.destroy(handler().shell().context());
 }
 
-void Renderer::tick() {
-    // assert(false);
-    pGraphicsWork->onTick();
-}
+void Renderer::tick() { pGraphicsWork->onTick(); }
 
 bool Renderer::shouldDraw(const PIPELINE type) const {
-    // assert(false);
+    // return false;
     return pGraphicsWork->shouldDraw(type);
 }
 
 void Renderer::record(const PASS passType, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                       const vk::CommandBuffer& cmd) {
-    // assert(false);
-    pGraphicsWork->record(passType, pPipelineBindData, cmd);
+    // pGraphicsWork->record(passType, pPipelineBindData, cmd);
+    Base::record(passType, pPipelineBindData, cmd);
 }
 
 std::shared_ptr<Instance::Cdlod::Ocean::Base>& Renderer::makeInstance(Instance::Cdlod::Ocean::CreateInfo* pInfo) {
@@ -149,27 +149,11 @@ std::shared_ptr<Instance::Cdlod::Ocean::Base>& Renderer::makeInstance(Instance::
 
 void Renderer::bindDescSetData(const vk::CommandBuffer& cmd, const std::shared_ptr<Pipeline::BindData>& pPipelineBindData,
                                const int lodLevel) const {
-    assert(false);
-    // const auto frameIndex = handler().passHandler().renderPassMgr().getFrameIndex();
-    // const auto it = std::find(pBuffer_->GRAPHICS_TYPES.begin(), pBuffer_->GRAPHICS_TYPES.end(),
-    //                          std::visit(Pipeline::GetGraphics{}, pPipelineBindData->type));
-    // const auto i = std::distance(pBuffer_->GRAPHICS_TYPES.begin(), it);
-    // pBuffer_->draw(RENDER_PASS::DEFERRED, pPipelineBindData,
-    //               pBuffer_->getDescriptorSetBindData(RENDER_PASS::DEFERRED,
-    //               pBuffer_->getGraphicsDescSetBindDataMaps()[i]), cmd, frameIndex);
-}
-
-void Renderer::setGlobalShaderSettings() {
-    // The aspect of the texture is dealt with by the material. Material::SetDefaultTextureData() has an example of a
-    // way to deal with non-square textures if this renderer needs to implement something similar.
-    assert(false);
-    pPerQuadTreeItem_->getData().data1.x = 0.5;
-    pPerQuadTreeItem_->dirty = true;
-    handler().uniformHandler().update(pPerQuadTreeItem_);
-}
-
-CDLODRenderer::PerQuadTreeData& Renderer::getPerQuadTreeData() {
-    return handler().uniformHandler().cdlodQdTrMgr().getTypedItem(0).getData();
+    const auto& descSetBindData = pGraphicsWork->getDescriptorSetBindData(pPipelineBindData->type);
+    const auto setIndex = (std::min)(static_cast<uint8_t>(descSetBindData.descriptorSets.size() - 1),
+                                     handler().passHandler().renderPassMgr().getFrameIndex());
+    cmd.bindDescriptorSets(pPipelineBindData->bindPoint, pPipelineBindData->layout, descSetBindData.firstSet,
+                           descSetBindData.descriptorSets[setIndex], descSetBindData.dynamicOffsets);
 }
 
 }  // namespace Ocean

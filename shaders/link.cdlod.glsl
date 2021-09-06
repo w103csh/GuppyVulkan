@@ -22,7 +22,6 @@ layout(set=_DS_CDLOD, binding=0) uniform CdlodQuadTree {
     vec4 heightmapTextureInfo;
     vec2 quadWorldMax;  // .xy max used to clamp triangles outside of world range
     vec2 samplerWorldToTextureScale;
-    vec4 data1; // .x (dbgTexScale)
 } qTree;
 
 // layout(set=_DS_CDLOD, binding=3, rgba32f) uniform readonly image2DArray heightMap;
@@ -40,9 +39,6 @@ layout(push_constant) uniform PushBlock {
 #define QUAD_OFFSET_V4 vec4(pc.data2.x, pc.data2.y, pc.data1.w, 0.0)
 // I believe the zw components are always multiplied by 0 but I'll just make it the same as it was. CH
 #define QUAD_SCALE_V4  vec4(pc.data2.z, pc.data2.w, pc.data0.w, 0.0)
-
-// IN
-layout(location=0) in vec3 inPosition;
 
 // struct FixedVertexOutput
 // {
@@ -92,7 +88,9 @@ vec4 getBaseVertexPos( vec4 inPos )
 vec2 morphVertex( vec4 inPos, vec2 vertex, float morphLerpK )
 {
     // vec2 fracPart = (frac( inPos.xy * vec2(g_gridDim.y, g_gridDim.y) ) * vec2(g_gridDim.z, g_gridDim.z) ) * g_quadScale.xy;
-    vec2 fracPart = (fract( inPos.xy * vec2(pc.data0.y, pc.data0.y) ) * vec2(pc.data0.z, pc.data0.z) ) * pc.data2.zw;
+    vec2 fracPart = (fract( inPos.xy * vec2(pc.data0.y, pc.data0.y) ) *
+                     vec2(pc.data0.z, pc.data0.z) ) *
+                    pc.data2.zw;
     return vertex.xy - fracPart * morphLerpK;
 }
 
@@ -108,38 +106,7 @@ vec2 calcGlobalUV( vec2 vertex )
     return globalUV;
 }
 
-// float sampleHeightmap( uniform sampler heightmapSampler, float2 uv, float mipLevel, bool useFilter )
-float sampleHeightmap(vec2 uv, float mipLevel, bool useFilter )
-{
-// #if BILINEAR_VERTEX_FILTER_SUPPORTED
 
-//     return tex2Dlod( heightmapSampler, vec4( uv.x, uv.y, 0, mipLevel ) ).x;
-
-// #else
-
-//     const vec2 textureSize = g_heightmapTextureInfo.xy;
-//     const vec2 texelSize   = g_heightmapTextureInfo.zw;
-
-//     uv = uv.xy * textureSize - vec2(0.5, 0.5);
-//     vec2 uvf = floor( uv.xy );
-//     vec2 f = uv - uvf;
-//     uv = (uvf + vec2(0.5, 0.5)) * texelSize;
-
-//     float t00 = tex2Dlod( heightmapSampler, vec4( uv.x, uv.y, 0, mipLevel ) ).x;
-//     float t10 = tex2Dlod( heightmapSampler, vec4( uv.x + texelSize.x, uv.y, 0, mipLevel ) ).x;
-
-//     float tA = lerp( t00, t10, f.x );
-
-//     float t01 = tex2Dlod( heightmapSampler, vec4( uv.x, uv.y + texelSize.y, 0, mipLevel ) ).x;
-//     float t11 = tex2Dlod( heightmapSampler, vec4( uv.x + texelSize.x, uv.y + texelSize.y, 0, mipLevel ) ).x;
-
-//     float tB = lerp( t01, t11, f.x );
-
-//     return lerp( tA, tB, f.y );
-
-// #endif
-    return 0.5;
-}
 
 void ProcessCDLODVertex(
     vec4 inPos /*: POSITION*/,
@@ -170,7 +137,8 @@ void ProcessCDLODVertex(
     //    only an optimisation, and this version is more robust, we'll leave it in for now.
     vec2 preGlobalUV = calcGlobalUV( vertex.xy );
     // vertex.z = sampleHeightmap( g_terrainHMVertexTexture, preGlobalUV.xy, mipLevel, false ) * g_terrainScale.z + g_terrainOffset.z;
-    vertex.z = sampleHeightmap(preGlobalUV.xy, mipLevel, false ) * qTree.terrainScale.z + qTree.terrainOffset.z;
+    // vertex.z = sampleHeightmap(preGlobalUV.xy, mipLevel, false ) * qTree.terrainScale.z + qTree.terrainOffset.z;
+    vertex.z = -0.5;
     //vertex.z = tex2Dlod( g_terrainHMVertexTexture, vec4( preGlobalUV.x, preGlobalUV.y, 0, mipLevel ) ).x * g_terrainScale.z + g_terrainOffset.z;
 
     outUnmorphedWorldPos = vertex;
@@ -193,7 +161,8 @@ void ProcessCDLODVertex(
     ////////////////////////////////////////////////////////////////////////////
     // sample height and calculate it
     // vertex.z = sampleHeightmap( g_terrainHMVertexTexture, vertexSamplerUV, mipLevel, morphLerpK > 0 ) * g_terrainScale.z + g_terrainOffset.z;
-    vertex.z = sampleHeightmap(vertexSamplerUV.xy, mipLevel, morphLerpK > 0 ) * qTree.terrainScale.z + qTree.terrainOffset.z;
+    // vertex.z = sampleHeightmap(vertexSamplerUV.xy, mipLevel, morphLerpK > 0 ) * qTree.terrainScale.z + qTree.terrainOffset.z;
+    vertex.z = -0.5;
     //vertex.z = tex2Dlod( g_terrainHMVertexTexture, vertexSamplerUV ).x * g_terrainScale.z + g_terrainOffset.z;
     vertex.w = 1.0;   // this could also be set simply by having g_quadOffset.w = 1 and g_quadScale.w = 0....
 
@@ -210,7 +179,7 @@ void ProcessCDLODVertex(
     //     //vertex.z += detailMorphLerpK * (tex2Dlod( g_detailHMVertexTexture, float4( detailUV.x, detailUV.y, 0, 0 ) ) - 0.5) * g_detailConsts.z;
     // }
 #elif defined(USE_DEBUG_TEXTURE)
-    vec2 detailUV = vec2( vertex.x / qTree.data1.x, vertex.y / qTree.data1.x );
+    vec2 detailUV = vertex.xy * qTree.heightmapTextureInfo.zw;
     // vec2 detailUV = vec2(1.5,1.5);
 #else
     vec2 detailUV   = vec2( 0, 0 );

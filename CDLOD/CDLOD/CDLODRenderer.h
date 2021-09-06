@@ -99,7 +99,6 @@ class CDLODRenderer {
         // glm::vec2 quadWorldMax;  // .xy max used to clamp triangles outside of world range
         // glm::vec2 samplerWorldToTextureScale;
         glm::vec4 data0;
-        glm::vec4 data1;  // .x (dbgTexScale)
     };
 
    public:

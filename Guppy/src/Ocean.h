@@ -102,6 +102,7 @@ CreateInfo MakeCopyTexInfo(const uint32_t N, const uint32_t M);
 namespace Shader {
 namespace Ocean {
 extern const CreateInfo VERT_CREATE_INFO;
+extern const CreateInfo VERT_CDLOD_CREATE_INFO;
 extern const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO;
 }  // namespace Ocean
 }  // namespace Shader
@@ -193,6 +194,18 @@ class SurfaceTess : public Surface {
     void getTessellationInfoResources(CreateInfoResources& createInfoRes) override;
 };
 #endif
+
+// WIREFRAME (CDLOD)
+class WireframeCdlod : public Wireframe {
+   public:
+    WireframeCdlod(Handler& handler);
+};
+
+// SURFACE (CDLOD)
+class SurfaceCdlod : public Surface {
+   public:
+    SurfaceCdlod(Handler& handler);
+};
 
 }  // namespace Ocean
 }  // namespace Pipeline
