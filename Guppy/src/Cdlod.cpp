@@ -16,7 +16,7 @@ namespace Link {
 namespace Cdlod {
 const CreateInfo CREATE_INFO = {
     SHADER_LINK::CDLOD,
-    "link.cdlod.glsl",
+    "cdlod/link.cdlod.glsl",
 };
 }  // namespace Cdlod
 }  // namespace Link
@@ -24,14 +24,14 @@ namespace Cdlod {
 const CreateInfo VERT_CREATE_INFO = {
     SHADER::CDLOD_VERT,
     "Cdlod Vertex Shader",
-    "vert.cdlod.glsl",
+    "cdlod/vert.cdlod.glsl",
     vk::ShaderStageFlagBits::eVertex,  //
     {SHADER_LINK::CDLOD},
 };
 const CreateInfo VERT_TEX_CREATE_INFO = {
     SHADER::CDLOD_TEX_VERT,
     "Cdlod Texture Vertex Shader",
-    "vert.cdlod.texture.glsl",
+    "cdlod/vert.cdlod.texture.glsl",
     vk::ShaderStageFlagBits::eVertex,  //
     {SHADER_LINK::CDLOD},
 };

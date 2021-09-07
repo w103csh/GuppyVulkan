@@ -22,19 +22,19 @@ namespace Ocean {
 const CreateInfo DISP_COMP_CREATE_INFO = {
     SHADER::OCEAN_DISP_COMP,
     "Ocean Sufrace Dispersion Compute Shader",
-    "comp.ocean.dispersion.glsl",
+    "ocean/comp.ocean.dispersion.glsl",
     vk::ShaderStageFlagBits::eCompute,
 };
 const CreateInfo FFT_COMP_CREATE_INFO = {
     SHADER::OCEAN_FFT_COMP,
     "Ocean Surface Fast Fourier Transform Compute Shader",
-    "comp.ocean.fft.glsl",
+    "ocean/comp.ocean.fft.glsl",
     vk::ShaderStageFlagBits::eCompute,
 };
 const CreateInfo VERT_INPUT_COMP_CREATE_INFO = {
     SHADER::OCEAN_VERT_INPUT_COMP,
     "Ocean Surface Vertex Input Compute Shader",
-    "comp.ocean.vertInput.glsl",
+    "ocean/comp.ocean.vertInput.glsl",
     vk::ShaderStageFlagBits::eCompute,
 };
 }  // namespace Ocean

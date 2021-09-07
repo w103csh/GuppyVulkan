@@ -280,19 +280,19 @@ namespace Ocean {
 const CreateInfo VERT_CREATE_INFO = {
     SHADER::OCEAN_VERT,
     "Ocean Surface Vertex Shader",
-    "vert.ocean.glsl",
+    "ocean/vert.ocean.glsl",
     vk::ShaderStageFlagBits::eVertex,
 };
 const CreateInfo VERT_CDLOD_CREATE_INFO = {
     SHADER::OCEAN_CDLOD_VERT,
     "Ocean Surface Cdlod Vertex Shader",
-    "vert.cdlod.ocean.glsl",
+    "ocean/vert.cdlod.ocean.glsl",
     vk::ShaderStageFlagBits::eVertex,
 };
 const CreateInfo DEFERRED_MRT_FRAG_CREATE_INFO = {
     SHADER::OCEAN_DEFERRED_MRT_FRAG,
     "Ocean Surface Deferred Multiple Render Target Fragment Shader",
-    "frag.ocean.deferred.mrt.glsl",
+    "ocean/frag.ocean.deferred.mrt.glsl",
     vk::ShaderStageFlagBits::eFragment,
     {SHADER_LINK::COLOR_FRAG, SHADER_LINK::DEFAULT_MATERIAL},
 };
