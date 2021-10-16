@@ -33,7 +33,7 @@ void Renderer::init() {
 
     instMgr_.init(ctx);
 
-    useDebugCamera_ = true;
+    useDebugCamera_ = handler().uniformHandler().hasDebugCamera();
 
     // Surface info
     surfaceInfo = {};

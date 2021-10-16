@@ -80,15 +80,15 @@ struct Data {
 
 struct Resources {
     // storage
-    std::vector<vk::AttachmentReference> inputAttachments;
-    std::vector<vk::AttachmentReference> colorAttachments;
-    std::vector<vk::AttachmentReference> resolveAttachments;
-    vk::AttachmentReference depthStencilAttachment = {};
+    std::vector<vk::AttachmentReference2> inputAttachments;
+    std::vector<vk::AttachmentReference2> colorAttachments;
+    std::vector<vk::AttachmentReference2> resolveAttachments;
+    vk::AttachmentReference2 depthStencilAttachment = {};
     std::vector<uint32_t> preserveAttachments;
     // render pass create info
-    std::vector<vk::SubpassDescription> subpasses;
-    std::vector<vk::AttachmentDescription> attachments;
-    std::vector<vk::SubpassDependency> dependencies;
+    std::vector<vk::SubpassDescription2> subpasses;
+    std::vector<vk::AttachmentDescription2> attachments;
+    std::vector<vk::SubpassDependency2> dependencies;
 };
 
 struct CreateInfo {

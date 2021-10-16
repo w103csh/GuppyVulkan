@@ -367,7 +367,7 @@ void Uniform::Handler::createCameras() {
     }
 
     // (DEBUG)
-    {
+    if (false) {
         defInfo.aspect = static_cast<float>(settings().initialWidth) / static_cast<float>(settings().initialHeight);
         defInfo.eye = {50.0f, 50.0f, 50.0f};
         defInfo.center = {};
@@ -621,8 +621,9 @@ void Uniform::Handler::cycleCamera() {
 }
 
 void Uniform::Handler::moveToDebugCamera() {
-    assert(hasDebugCamera());
-    getMainCamera().takeCameraData(getDebugCamera());
+    if (hasDebugCamera()) {
+        getMainCamera().takeCameraData(getDebugCamera());
+    }
 }
 
 uint32_t Uniform::Handler::getDescriptorCount(const DESCRIPTOR& descType, const Uniform::offsets& offsets) {

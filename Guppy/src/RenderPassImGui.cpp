@@ -96,7 +96,7 @@ void RenderPass::ImGui::createAttachments() {
 
     bool isClear = handler().renderPassMgr().isClearTargetPass(getTargetId(), TYPE);
 
-    vk::AttachmentDescription attachment = {};
+    vk::AttachmentDescription2 attachment = {};
     attachment.format = getFormat();
     attachment.samples = vk::SampleCountFlagBits::e1;
     attachment.loadOp = isClear ? vk::AttachmentLoadOp::eClear : vk::AttachmentLoadOp::eLoad;
@@ -114,7 +114,7 @@ void RenderPass::ImGui::createAttachments() {
 }
 
 void RenderPass::ImGui::createSubpassDescriptions() {
-    vk::SubpassDescription subpass = {};
+    vk::SubpassDescription2 subpass = {};
     subpass.colorAttachmentCount = static_cast<uint32_t>(resources_.colorAttachments.size());
     subpass.pColorAttachments = resources_.colorAttachments.data();
     subpass.pResolveAttachments = resources_.resolveAttachments.data();
@@ -126,7 +126,7 @@ void RenderPass::ImGui::createDependencies() {
     /*
         SEE COMMENT IN createSubpassesAndAttachments !!!!!
     */
-    vk::SubpassDependency dependency = {};
+    vk::SubpassDependency2 dependency = {};
     dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
     dependency.dstSubpass = 0;
     dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;

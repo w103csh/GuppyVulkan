@@ -290,7 +290,7 @@ void RenderPass::Base::endPass(const vk::CommandBuffer& cmd) const {
 }
 
 void RenderPass::Base::createPass() {
-    vk::RenderPassCreateInfo createInfo = {};
+    vk::RenderPassCreateInfo2 createInfo = {};
     // ATTACHMENTS
     createInfo.attachmentCount = static_cast<uint32_t>(resources_.attachments.size());
     createInfo.pAttachments = resources_.attachments.data();
@@ -302,7 +302,7 @@ void RenderPass::Base::createPass() {
     createInfo.pDependencies = resources_.dependencies.data();
 
     // handler().shell().log(Shell::LogPriority::LOG_INFO, ("Creating render pass: " + NAME).c_str());
-    pass = handler().shell().context().dev.createRenderPass(createInfo, handler().shell().context().pAllocator);
+    pass = handler().shell().context().dev.createRenderPass2(createInfo, handler().shell().context().pAllocator);
     assert(pass);
     // handler().shell().context().dbg.setMarkerName(pass, NAME.c_str());
 }
@@ -408,7 +408,7 @@ void RenderPass::Base::createSubpassDescriptions() {
     // TODO: below comes from pipeline ???
 
     // SUBPASS DESCRIPTION
-    vk::SubpassDescription subpass = {};
+    vk::SubpassDescription2 subpass = {};
     subpass.colorAttachmentCount = static_cast<uint32_t>(resources_.colorAttachments.size());
     subpass.pColorAttachments = resources_.colorAttachments.data();
     subpass.pResolveAttachments = resources_.resolveAttachments.data();
@@ -419,9 +419,9 @@ void RenderPass::Base::createSubpassDescriptions() {
 
 void RenderPass::Base::createDependencies() {
     // 7.1. Render Pass Creation has examples of what this should be.
-    vk::SubpassDependency dependency;
+    vk::SubpassDependency2 dependency;
     for (uint32_t i = 0; i < pipelineBindDataList_.size() - 1; i++) {
-        dependency = vk::SubpassDependency{};
+        dependency = vk::SubpassDependency2{};
         dependency.srcSubpass = i;
         dependency.dstSubpass = i + 1;
         dependency.dependencyFlags = {};
@@ -437,7 +437,7 @@ void RenderPass::Base::createDependencies() {
     }
 
     //// Desparate attempt to understand the pipline ordering issue below...
-    // vk::SubpassDependency dependency = {};
+    // vk::SubpassDependency2 dependency = {};
 
     // dependency = {};
     // dependency.srcSubpass = 0;

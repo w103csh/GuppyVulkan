@@ -445,7 +445,7 @@ Debug::Debug(Scene::Handler& handler)
 }
 
 void Debug::init() {
-    useDebugCamera_ = true;
+    useDebugCamera_ = handler().uniformHandler().hasDebugCamera();
     useDebugBoxes_ = false;
     useDebugWireframe_ = false;
     useDebugTexture_ = !useDebugWireframe_ && false;

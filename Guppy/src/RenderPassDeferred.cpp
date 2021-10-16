@@ -254,7 +254,7 @@ void Base::createAttachments() {
     // DEPTH/RESOLVE/SWAPCHAIN
     ::RenderPass::Base::createAttachments();
 
-    vk::AttachmentDescription attachment = {
+    vk::AttachmentDescription2 attachment = {
         {},                                // flags vk::AttachmentDescriptionFlags
         vk::Format::eUndefined,            // format vk::Format
         getSamples(),                      // samples vk::SampleCountFlagBits
@@ -357,7 +357,7 @@ void Base::createAttachments() {
 }
 
 void Base::createSubpassDescriptions() {
-    vk::SubpassDescription subpassDesc;
+    vk::SubpassDescription2 subpassDesc;
 
     assert(inputAttachmentOffset_ == 1);  // Swapchain should be in 0
 
@@ -375,7 +375,7 @@ void Base::createSubpassDescriptions() {
     }
 
     // MRT
-    subpassDesc = vk::SubpassDescription{};
+    subpassDesc = vk::SubpassDescription2{};
     subpassDesc.colorAttachmentCount = inputAttachmentCount_;
     subpassDesc.pColorAttachments = &resources_.colorAttachments[inputAttachmentOffset_];
     subpassDesc.pResolveAttachments = nullptr;
@@ -385,7 +385,7 @@ void Base::createSubpassDescriptions() {
     // SSAO
     if (doSSAO_) {
         assert(resources_.colorAttachments.size() > (size_t)inputAttachmentCount_ + (size_t)inputAttachmentOffset_);
-        subpassDesc = vk::SubpassDescription{};
+        subpassDesc = vk::SubpassDescription2{};
         subpassDesc.colorAttachmentCount = 1;
         subpassDesc.pColorAttachments =
             &resources_.colorAttachments[(size_t)inputAttachmentOffset_ + (size_t)inputAttachmentCount_];
@@ -397,7 +397,7 @@ void Base::createSubpassDescriptions() {
     if (usesMultiSample()) assert(resources_.resolveAttachments.size() == 1);
 
     // COMBINE
-    subpassDesc = vk::SubpassDescription{};
+    subpassDesc = vk::SubpassDescription2{};
     subpassDesc.inputAttachmentCount = static_cast<uint32_t>(resources_.inputAttachments.size());
     subpassDesc.pInputAttachments = resources_.inputAttachments.data();
     subpassDesc.colorAttachmentCount = 1;
@@ -413,7 +413,7 @@ void Base::createSubpassDescriptions() {
 void Base::createDependencies() {
     // TODO: There might need to be an external pass dependency for the shadow passes.
 
-    vk::SubpassDependency depthDependency = {
+    vk::SubpassDependency2 depthDependency = {
         0,  // srcSubpass
         0,  // dstSubpass
         // Both stages might have to access the depth-buffer
@@ -423,7 +423,7 @@ void Base::createDependencies() {
         vk::AccessFlagBits::eDepthStencilAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentRead,  // dstAccessMask
         vk::DependencyFlagBits::eByRegion,  // dependencyFlags
     };
-    // vk::SubpassDependency colorDependency = {
+    // vk::SubpassDependency2 colorDependency = {
     //    0,                                              // srcSubpass
     //    0,                                              // dstSubpass
     //    vk::PipelineStageFlagBits::eColorAttachmentOutput,  // srcStageMask
@@ -490,7 +490,7 @@ void Base::createDependencies() {
         assert(false);
     } else {
         // Color input attachment dependency
-        vk::SubpassDependency combineDependency = {
+        vk::SubpassDependency2 combineDependency = {
             0,                                                  // srcSubpass
             0,                                                  // dstSubpass
             vk::PipelineStageFlagBits::eColorAttachmentOutput,  // srcStageMask
