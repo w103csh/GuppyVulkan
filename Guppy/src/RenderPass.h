@@ -80,7 +80,7 @@ class Base : public Handlee<Pass::Handler> {
     inline bool hasTargetSwapchain() const { return getTargetId() == SWAPCHAIN_TARGET_ID; }
 
     // SUBPASS
-    uint32_t getSubpassId(const PIPELINE &type) const;
+    virtual uint32_t getSubpassId(const PIPELINE &type) const;
     void setSubpassOffsets(const std::vector<std::unique_ptr<Base>> &pPasses);
 
     constexpr const auto &getDependentTypeOffsetPairs() const { return dependentTypeOffsetPairs_; }

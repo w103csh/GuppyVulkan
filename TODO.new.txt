@@ -6,6 +6,9 @@
         o Re-read the paper and see if there is something in there about this.
         o Try a smoothing compute convolution pass?
   o Fix subpass dependencies. I think this is also covered by best practices.
+    o I fixed some of this code for the deferred render pass but I didn't fix it everywhere. I
+      should also resolve the mrt attachments in the first pass, and only store the mrt attachments
+      I want to utilize the multisample information for in the combine step...
   o Turn on validation layers (best practices, etc.)
   o Move static CreatInfo out of struct and just set in constructors of handlee's (NAME, TYPE, etc.)
     and have all handlee's take the CreateInfo in an Init function. This way the reset/init pattern

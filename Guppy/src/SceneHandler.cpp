@@ -84,7 +84,7 @@ void Scene::Handler::init() {
         }
 
         // GROUND PLANE (COLOR)
-        if (!suppress || false) {
+        if (!suppress && false) {
             planeInfo = {};
             planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
             planeInfo.selectable = false;
@@ -105,7 +105,7 @@ void Scene::Handler::init() {
         }
 
         // GROUND PLANE (TEXTURE)
-        if (!suppress && false) {
+        if (!suppress || false) {
             planeInfo = {};
             planeInfo.pipelineType = GRAPHICS::DEFERRED_MRT_TEX;
             planeInfo.selectable = false;
@@ -124,7 +124,7 @@ void Scene::Handler::init() {
         }
 
         // DEBUG CAMERA
-        if (!suppress || uniformHandler().hasDebugCamera()) {
+        if (!suppress && uniformHandler().hasDebugCamera()) {
             const auto& debugCamera = uniformHandler().getDebugCamera();
             // Set the frustum mesh info.
             Mesh::Frustum::CreateInfo frustumMeshInfo = {};

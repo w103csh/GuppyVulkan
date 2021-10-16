@@ -101,7 +101,6 @@ Base::Base(Pass::Handler& handler, const index&& offset)
     : RenderPass::Base{handler, std::forward<const index>(offset), &DEFERRED_CREATE_INFO},
       inputAttachmentOffset_(0),
       inputAttachmentCount_(0),
-      combinePassIndex_(0),
       doSSAO_(false) {
     status_ = (STATUS::PENDING_MESH | STATUS::PENDING_PIPELINE);
 }
@@ -119,6 +118,11 @@ void Base::init() {
             if (!pPass->isIntialized()) const_cast<RenderPass::Base*>(pPass.get())->init();
         }
     }
+}
+
+uint32_t Base::getSubpassId(const PIPELINE& type) const {
+    if (type == PIPELINE{GRAPHICS::DEFERRED_COMBINE}) return cmbSubpass_;
+    return mrtSubpass_;
 }
 
 void Base::record(const uint8_t frameIndex) {
@@ -200,7 +204,6 @@ void Base::record(const uint8_t frameIndex) {
                     case GRAPHICS::PRTCL_FOUNTAIN_DEFERRED: {
                         // PARTICLE GRAPHICS
                         handler().particleHandler().recordDraw(TYPE, pPipelineBindData, priCmd, frameIndex);
-                        priCmd.nextSubpass(vk::SubpassContents::eInline);
                     } break;
                     case GRAPHICS::OCEAN_WF_DEFERRED:
                     case GRAPHICS::OCEAN_SURFACE_DEFERRED:
@@ -214,15 +217,14 @@ void Base::record(const uint8_t frameIndex) {
                     case GRAPHICS::CDLOD_TEX_DEFERRED: {
                         // SCENE RENDERERS
                         handler().sceneHandler().recordRenderer(TYPE, pPipelineBindData, priCmd);
-                        priCmd.nextSubpass(vk::SubpassContents::eInline);
                     } break;
                     default: {
                         // MRT PASSES
                         auto& secCmd = data.secCmds[frameIndex];
                         pScene->record(TYPE, pPipelineBindData->type, pPipelineBindData, priCmd, secCmd, frameIndex);
-                        priCmd.nextSubpass(vk::SubpassContents::eInline);
                     } break;
                     case GRAPHICS::DEFERRED_COMBINE: {
+                        priCmd.nextSubpass(vk::SubpassContents::eInline);
                         // TODO: this definitely only needs to be recorded once per swapchain creation!!!
                         handler().renderPassMgr().getScreenQuad()->draw(
                             TYPE, pipelineBindDataList_.getValue(pPipelineBindData->type),
@@ -282,8 +284,11 @@ void Base::createAttachments() {
     assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
-    resources_.inputAttachments.push_back(
-        {resources_.colorAttachments.back().attachment, vk::ImageLayout::eShaderReadOnlyOptimal});
+    resources_.inputAttachments.push_back({
+        resources_.colorAttachments.back().attachment,
+        vk::ImageLayout::eShaderReadOnlyOptimal,
+        vk::ImageAspectFlagBits::eColor,
+    });
 
     // NORMAL
     resources_.colorAttachments.push_back(
@@ -293,8 +298,11 @@ void Base::createAttachments() {
     assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
-    resources_.inputAttachments.push_back(
-        {resources_.colorAttachments.back().attachment, vk::ImageLayout::eShaderReadOnlyOptimal});
+    resources_.inputAttachments.push_back({
+        resources_.colorAttachments.back().attachment,
+        vk::ImageLayout::eShaderReadOnlyOptimal,
+        vk::ImageAspectFlagBits::eColor,
+    });
 
     // DIFFUSE
     resources_.colorAttachments.push_back(
@@ -304,8 +312,11 @@ void Base::createAttachments() {
     assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
-    resources_.inputAttachments.push_back(
-        {resources_.colorAttachments.back().attachment, vk::ImageLayout::eShaderReadOnlyOptimal});
+    resources_.inputAttachments.push_back({
+        resources_.colorAttachments.back().attachment,
+        vk::ImageLayout::eShaderReadOnlyOptimal,
+        vk::ImageAspectFlagBits::eColor,
+    });
 
     // AMBIENT
     resources_.colorAttachments.push_back(
@@ -315,8 +326,11 @@ void Base::createAttachments() {
     assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
-    resources_.inputAttachments.push_back(
-        {resources_.colorAttachments.back().attachment, vk::ImageLayout::eShaderReadOnlyOptimal});
+    resources_.inputAttachments.push_back({
+        resources_.colorAttachments.back().attachment,
+        vk::ImageLayout::eShaderReadOnlyOptimal,
+        vk::ImageAspectFlagBits::eColor,
+    });
 
     // SPECULAR
     resources_.colorAttachments.push_back(
@@ -326,8 +340,11 @@ void Base::createAttachments() {
     assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
-    resources_.inputAttachments.push_back(
-        {resources_.colorAttachments.back().attachment, vk::ImageLayout::eShaderReadOnlyOptimal});
+    resources_.inputAttachments.push_back({
+        resources_.colorAttachments.back().attachment,
+        vk::ImageLayout::eShaderReadOnlyOptimal,
+        vk::ImageAspectFlagBits::eColor,
+    });
 
     // FLAGS
     resources_.colorAttachments.push_back(
@@ -337,8 +354,11 @@ void Base::createAttachments() {
     assert(pTexture != nullptr);
     resources_.attachments.back().format = pTexture->samplers[0].imgCreateInfo.format;
     assert(resources_.attachments.back().samples == getSamples());
-    resources_.inputAttachments.push_back(
-        {resources_.colorAttachments.back().attachment, vk::ImageLayout::eShaderReadOnlyOptimal});
+    resources_.inputAttachments.push_back({
+        resources_.colorAttachments.back().attachment,
+        vk::ImageLayout::eShaderReadOnlyOptimal,
+        vk::ImageAspectFlagBits::eColor,
+    });
 
     inputAttachmentCount_ = static_cast<uint32_t>(resources_.colorAttachments.size()) - inputAttachmentOffset_;
 
@@ -361,37 +381,26 @@ void Base::createSubpassDescriptions() {
 
     assert(inputAttachmentOffset_ == 1);  // Swapchain should be in 0
 
-    uint32_t mrtPipelineCount = 0;
-    uint32_t compPipelineCount = 0;
-    for (const auto& pipelineType : pipelineBindDataList_.getKeys()) {
-        if (std::visit(Pipeline::IsCompute{}, pipelineType))
-            compPipelineCount++;
-        else if (pipelineType == PIPELINE{GRAPHICS::DEFERRED_SSAO} && !doSSAO_)
-            continue;
-        else if (pipelineType == PIPELINE{GRAPHICS::DEFERRED_COMBINE})
-            continue;
-        else
-            mrtPipelineCount++;
-    }
-
     // MRT
     subpassDesc = vk::SubpassDescription2{};
     subpassDesc.colorAttachmentCount = inputAttachmentCount_;
     subpassDesc.pColorAttachments = &resources_.colorAttachments[inputAttachmentOffset_];
     subpassDesc.pResolveAttachments = nullptr;
     subpassDesc.pDepthStencilAttachment = pipelineData_.usesDepth ? &resources_.depthStencilAttachment : nullptr;
-    resources_.subpasses.assign(mrtPipelineCount, subpassDesc);
+    resources_.subpasses.push_back(subpassDesc);
+    assert(mrtSubpass_ == (resources_.subpasses.size() - 1));
 
     // SSAO
     if (doSSAO_) {
-        assert(resources_.colorAttachments.size() > (size_t)inputAttachmentCount_ + (size_t)inputAttachmentOffset_);
-        subpassDesc = vk::SubpassDescription2{};
-        subpassDesc.colorAttachmentCount = 1;
-        subpassDesc.pColorAttachments =
-            &resources_.colorAttachments[(size_t)inputAttachmentOffset_ + (size_t)inputAttachmentCount_];
-        subpassDesc.pResolveAttachments = nullptr;
-        subpassDesc.pDepthStencilAttachment = nullptr;
-        resources_.subpasses.push_back(subpassDesc);
+        assert(false);  // I didn't update this logic when I fixed the number of subpasses/dependencies.
+        // assert(resources_.colorAttachments.size() > (size_t)inputAttachmentCount_ + (size_t)inputAttachmentOffset_);
+        // subpassDesc = vk::SubpassDescription2{};
+        // subpassDesc.colorAttachmentCount = 1;
+        // subpassDesc.pColorAttachments =
+        //    &resources_.colorAttachments[(size_t)inputAttachmentOffset_ + (size_t)inputAttachmentCount_];
+        // subpassDesc.pResolveAttachments = nullptr;
+        // subpassDesc.pDepthStencilAttachment = nullptr;
+        // resources_.subpasses.push_back(subpassDesc);
     }
 
     if (usesMultiSample()) assert(resources_.resolveAttachments.size() == 1);
@@ -405,109 +414,20 @@ void Base::createSubpassDescriptions() {
     subpassDesc.pResolveAttachments = resources_.resolveAttachments.data();
     subpassDesc.pDepthStencilAttachment = nullptr;
     resources_.subpasses.push_back(subpassDesc);
-
-    assert(resources_.subpasses.size() == pipelineBindDataList_.size() - compPipelineCount);
-    combinePassIndex_ = static_cast<uint32_t>(pipelineBindDataList_.size() - 1);
+    assert(cmbSubpass_ == (resources_.subpasses.size() - 1));
 }
 
 void Base::createDependencies() {
-    // TODO: There might need to be an external pass dependency for the shadow passes.
-
-    vk::SubpassDependency2 depthDependency = {
-        0,  // srcSubpass
-        0,  // dstSubpass
-        // Both stages might have to access the depth-buffer
-        vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests,      // srcStageMask
-        vk::PipelineStageFlagBits::eEarlyFragmentTests | vk::PipelineStageFlagBits::eLateFragmentTests,      // dstStageMask
-        vk::AccessFlagBits::eDepthStencilAttachmentWrite,                                                    // srcAccessMask
-        vk::AccessFlagBits::eDepthStencilAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentRead,  // dstAccessMask
-        vk::DependencyFlagBits::eByRegion,  // dependencyFlags
-    };
-    // vk::SubpassDependency2 colorDependency = {
-    //    0,                                              // srcSubpass
-    //    0,                                              // dstSubpass
-    //    vk::PipelineStageFlagBits::eColorAttachmentOutput,  // srcStageMask
-    //    vk::PipelineStageFlagBits::eColorAttachmentOutput,  // dstStageMask
-    //    vk::AccessFlagBits::eColorAttachmentWrite,           // srcAccessMask
-    //    vk::AccessFlagBits::eColorAttachmentWrite,           // dstAccessMask
-    //    vk::DependencyFlagBits::eByRegion,
-    //};
-
-    uint32_t subpass = 1;
-    for (uint32_t offset = subpass; offset < pipelineBindDataList_.size(); offset++) {
-        if (offset == 0) continue;
-        const auto& pipelineType = pipelineBindDataList_.getKey(subpass);
-        if (std::visit(Pipeline::IsCompute{}, pipelineType)) continue;
-        if (pipelineType == PIPELINE{GRAPHICS::DEFERRED_SSAO} && !doSSAO_) continue;
-        // TODO: How could this know which external subpass to wait on?
-        if (pipelineType == PIPELINE{GRAPHICS::PRTCL_FOUNTAIN_EULER_DEFERRED} ||
-            pipelineType == PIPELINE{GRAPHICS::PRTCL_ATTR_PT_DEFERRED} ||
-            pipelineType == PIPELINE{GRAPHICS::PRTCL_CLOTH_DEFERRED} ||
-            pipelineType == PIPELINE{GRAPHICS::HFF_OCEAN_DEFERRED}) {
-            // Dispatch writes into a storage buffer. Draw consumes that buffer as a vertex buffer.
-            resources_.dependencies.push_back({
-                VK_SUBPASS_EXTERNAL,
-                subpass,
-                vk::PipelineStageFlagBits::eComputeShader,
-                vk::PipelineStageFlagBits::eVertexInput,
-                vk::AccessFlagBits::eShaderWrite,
-                vk::AccessFlagBits::eVertexAttributeRead,
-                vk::DependencyFlagBits::eByRegion,
-            });
-        }
-        if (pipelineType == PIPELINE{GRAPHICS::HFF_CLMN_DEFERRED} ||  //
-            pipelineType == PIPELINE{GRAPHICS::HFF_WF_DEFERRED}) {
-            // Dispatch writes into a storage buffer. Draw consumes that buffer as a shader object.
-            resources_.dependencies.push_back({
-                VK_SUBPASS_EXTERNAL,
-                subpass,
-                vk::PipelineStageFlagBits::eComputeShader,
-                vk::PipelineStageFlagBits::eVertexShader,
-                vk::AccessFlagBits::eShaderWrite,
-                vk::AccessFlagBits::eShaderRead,
-                vk::DependencyFlagBits::eByRegion,
-            });
-        }
-        if (pipelineType == PIPELINE{GRAPHICS::DEFERRED_MRT_COLOR_RFL_RFR} ||
-            pipelineType == PIPELINE{GRAPHICS::DEFERRED_MRT_SKYBOX}) {
-            resources_.dependencies.push_back({
-                VK_SUBPASS_EXTERNAL,
-                subpass,
-                vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                vk::PipelineStageFlagBits::eFragmentShader,
-                vk::AccessFlagBits::eColorAttachmentWrite,
-                vk::AccessFlagBits::eShaderRead,
-                vk::DependencyFlagBits::eByRegion,
-            });
-        }
-        depthDependency.srcSubpass = subpass - 1;
-        depthDependency.dstSubpass = subpass;
-        resources_.dependencies.push_back(depthDependency);
-        subpass++;
-    }
-
-    if (doSSAO_) {
-        assert(false);
-    } else {
-        // Color input attachment dependency
-        vk::SubpassDependency2 combineDependency = {
-            0,                                                  // srcSubpass
-            0,                                                  // dstSubpass
-            vk::PipelineStageFlagBits::eColorAttachmentOutput,  // srcStageMask
-            vk::PipelineStageFlagBits::eFragmentShader,         // dstStageMask
-            vk::AccessFlagBits::eColorAttachmentWrite,          // srcAccessMask
-            vk::AccessFlagBits::eInputAttachmentRead,           // dstAccessMask
-            vk::DependencyFlagBits::eByRegion,                  // dependencyFlags
-        };
-
-        combineDependency.dstSubpass = pipelineBindDataList_.getOffset(PIPELINE{GRAPHICS::DEFERRED_COMBINE});
-        for (subpass = 0; subpass < pipelineBindDataList_.size(); subpass++) {
-            const auto& pipelineType = pipelineBindDataList_.getKey(subpass);
-            if (std::visit(Pipeline::IsCompute{}, pipelineType)) continue;
-            combineDependency.srcSubpass = subpass;
-            resources_.dependencies.push_back(combineDependency);
-        }
-    }
+    // MRT -> COMBINE
+    vk::SubpassDependency2 dependency = {};
+    dependency.srcSubpass = mrtSubpass_;
+    dependency.dstSubpass = cmbSubpass_;
+    dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+    dependency.dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
+    dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+    dependency.dstAccessMask = vk::AccessFlagBits::eInputAttachmentRead;
+    dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
+    resources_.dependencies.push_back(dependency);
 }
 
 void Base::updateClearValues() {
