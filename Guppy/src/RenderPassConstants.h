@@ -84,9 +84,11 @@ struct Resources {
     std::vector<vk::AttachmentReference2> colorAttachments;
     std::vector<vk::AttachmentReference2> resolveAttachments;
     vk::AttachmentReference2 depthStencilAttachment = {};
+    vk::AttachmentReference2 depthStencilResolveAttachment = {};
     std::vector<uint32_t> preserveAttachments;
     // render pass create info
     std::vector<vk::SubpassDescription2> subpasses;
+    vk::SubpassDescriptionDepthStencilResolve subpassDepthStencilResolve = {};
     std::vector<vk::AttachmentDescription2> attachments;
     std::vector<vk::SubpassDependency2> dependencies;
 };

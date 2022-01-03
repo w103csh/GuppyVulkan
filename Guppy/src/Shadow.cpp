@@ -25,7 +25,8 @@ namespace Shadow {
 const CreateInfo MAP_2D_ARRAY_CREATE_INFO = {
     "Shadow 2D Array Map Sampler",
     {
-        {{::Sampler::USAGE::DEPTH, "", true, true}},
+        //{{::Sampler::USAGE::DEPTH, "", true, true}},
+        {{::Sampler::USAGE::DEPTH}},
         true,
         true,
     },
@@ -34,8 +35,12 @@ const CreateInfo MAP_2D_ARRAY_CREATE_INFO = {
     {},
     {},
     // SAMPLER::CLAMP_TO_BORDER_DEPTH,
-    SAMPLER::CLAMP_TO_BORDER_DEPTH_PCF,
+    // SAMPLER::CLAMP_TO_BORDER_DEPTH_PCF,
+    // SAMPLER::CLAMP_TO_BORDER,
+    SAMPLER::CLAMP_TO_EDGE,
     (vk::ImageUsageFlagBits::eDepthStencilAttachment | vk::ImageUsageFlagBits::eSampled),
+    {},
+    vk::Format::eD32Sfloat,
 };
 
 }  // namespace Shadow
@@ -203,6 +208,12 @@ namespace Descriptor {
 namespace Set {
 namespace Shadow {
 
+const CreateInfo CAMERA_BASIC_ONLY_CREATE_INFO = {
+    DESCRIPTOR_SET::CAMERA_BASIC_ONLY,
+    "_DS_CAM_BSC_ONLY",
+    {{{0, 0}, {UNIFORM_DYNAMIC::CAMERA_PERSPECTIVE_BASIC}}},
+};
+
 const CreateInfo CUBE_UNIFORM_ONLY_CREATE_INFO = {
     DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY,
     "_DS_SHDW_CUBE_UNI_ONLY",
@@ -213,7 +224,7 @@ const CreateInfo CUBE_ALL_CREATE_INFO = {
     DESCRIPTOR_SET::SHADOW_CUBE_ALL,
     "_DS_SHDW_CUBE_ALL",
     {
-        {{0, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Shadow::MAP_CUBE_ARRAY_ID}},
+        {{0, 0}, {COMBINED_SAMPLER::PIPELINE_DEPTH, Texture::Shadow::MAP_CUBE_ARRAY_ID}},
         {{1, 0}, {COMBINED_SAMPLER::PIPELINE, Texture::Shadow::OFFSET_2D_ID}},
         {{2, 0}, {UNIFORM::LIGHT_CUBE_SHADOW}},
     },
@@ -279,13 +290,10 @@ const Pipeline::CreateInfo COLOR_CREATE_INFO = {
     "Shadow Color Pipeline",
     {
         SHADER::SHADOW_COLOR_VERT,
-        SHADER::SHADOW_CUBE_GEOM,
-        SHADER::SHADOW_FRAG,
     },
-    {{DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY, vk::ShaderStageFlagBits::eGeometry}},
+    {{DESCRIPTOR_SET::CAMERA_BASIC_ONLY, vk::ShaderStageFlagBits::eVertex}},
 };
 Color::Color(Pipeline::Handler& handler) : Graphics(handler, &COLOR_CREATE_INFO) {}
-
 void Color::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     GetShadowRasterizationStateInfoResources(createInfoRes);
 }
@@ -296,14 +304,43 @@ const Pipeline::CreateInfo TEX_CREATE_INFO = {
     "Shadow Texture Pipeline",
     {
         SHADER::SHADOW_TEX_VERT,
+    },
+    {{DESCRIPTOR_SET::CAMERA_BASIC_ONLY, vk::ShaderStageFlagBits::eVertex}},
+};
+Texture::Texture(Pipeline::Handler& handler) : Graphics(handler, &TEX_CREATE_INFO) {}
+void Texture::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+    GetShadowRasterizationStateInfoResources(createInfoRes);
+}
+
+// COLOR CUBEMAP
+const Pipeline::CreateInfo COLOR_CUBE_CREATE_INFO = {
+    GRAPHICS::SHADOW_COLOR_CUBE,
+    "Shadow Color Cubemap Pipeline",
+    {
+        SHADER::SHADOW_COLOR_CUBE_VERT,
         SHADER::SHADOW_CUBE_GEOM,
         SHADER::SHADOW_FRAG,
     },
     {{DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY, vk::ShaderStageFlagBits::eGeometry}},
 };
-Texture::Texture(Pipeline::Handler& handler) : Graphics(handler, &TEX_CREATE_INFO) {}
+ColorCube::ColorCube(Pipeline::Handler& handler) : Graphics(handler, &COLOR_CUBE_CREATE_INFO) {}
+void ColorCube::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+    GetShadowRasterizationStateInfoResources(createInfoRes);
+}
 
-void Texture::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
+// TEXTURE CUBEMAP
+const Pipeline::CreateInfo TEX_CUBE_CREATE_INFO = {
+    GRAPHICS::SHADOW_TEX_CUBE,
+    "Shadow Texture Cubemap Pipeline",
+    {
+        SHADER::SHADOW_TEX_CUBE_VERT,
+        SHADER::SHADOW_CUBE_GEOM,
+        SHADER::SHADOW_FRAG,
+    },
+    {{DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY, vk::ShaderStageFlagBits::eGeometry}},
+};
+TextureCube::TextureCube(Pipeline::Handler& handler) : Graphics(handler, &TEX_CUBE_CREATE_INFO) {}
+void TextureCube::getRasterizationStateInfoResources(CreateInfoResources& createInfoRes) {
     GetShadowRasterizationStateInfoResources(createInfoRes);
 }
 

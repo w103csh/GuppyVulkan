@@ -68,6 +68,8 @@ enum class SHADER {
     // SHADOW
     SHADOW_COLOR_VERT,
     SHADOW_TEX_VERT,
+    SHADOW_COLOR_CUBE_VERT,
+    SHADOW_TEX_CUBE_VERT,
     SHADOW_CUBE_GEOM,
     SHADOW_FRAG,
     // TESSELLATION
@@ -108,6 +110,9 @@ enum class SHADER {
     // CDLOD
     CDLOD_VERT,
     CDLOD_TEX_VERT,
+#ifdef USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
     // Add new to SHADER_ALL and SHADER_LINK_MAP.
 };
 

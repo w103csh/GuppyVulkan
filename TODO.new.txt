@@ -26,6 +26,8 @@
     in ComputeWork::Ocean). I shouldn't have to enumerate all of the problems with this here, but I
     want a record of the fact that I did this somewhere, so I don't forget. It will probably never
     matter.
+  o Update all of the textures that don't have copy buffers to use SamplerCreateInfo::initialLayout.
+    Really I should just change all the image creation code now that I know what I'm doing...
 
 
   o If I pause and unpause the ocean simulation super quick then the validation layers bark about
@@ -37,3 +39,15 @@
   o Ideas for how to fix the colors on the ocean surface:
     o Re-calculate the normals so that they account for the displacement.
     o ...
+
+  o Volumetric Lighting:
+    o NOTE: The apply step of the volumetric lighting pass uses a dual source blend operation where
+      the coefficient used for the data already in the frame buffer
+      (e.g., exp(-sigma_ext*scene_distance)) requires the data in the framebuffer to have depth.
+      So, if something in the scene doesn't have depth then the blend doesn't look correct... I
+      should try to come up with some clever way around this.
+    o Add light to the deferred shading model, currently it doesn't contributes light to surfaces,
+      or casts a shadow.
+    o Get the directional type to work. During initial implementation I didn't test any of it. I
+      think this is probably what I need for sunlight/moonlight.
+    o Get multiple lights to work... probably not necessary.

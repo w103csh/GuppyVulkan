@@ -9,6 +9,7 @@
 
 #include "BufferItem.h"
 #include "ConstantsAll.h"
+#include "Deferred.h"
 
 namespace Descriptor {
 
@@ -60,6 +61,7 @@ const std::set<DESCRIPTOR_SET> ALL = {
     DESCRIPTOR_SET::SAMPLER_DEFERRED,
     DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO_RANDOM,
     // SHADOW
+    DESCRIPTOR_SET::CAMERA_BASIC_ONLY,
     DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY,
     DESCRIPTOR_SET::SHADOW_CUBE_ALL,
     DESCRIPTOR_SET::SAMPLER_SHADOW,
@@ -86,9 +88,12 @@ const std::set<DESCRIPTOR_SET> ALL = {
     DESCRIPTOR_SET::OCEAN_DRAW,
     // CDLOD
     DESCRIPTOR_SET::CDLOD_DEFAULT,
+#ifdef USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
 };
 
-void ResourceInfo::setWriteInfo(const uint32_t index, vk::WriteDescriptorSet& write) const {
+void ResourceInfo::setWriteInfo(const uint32_t index, const DESCRIPTOR& descType, vk::WriteDescriptorSet& write) {
     auto offset = (std::min)(index, uniqueDataSets - 1);
 
     if (imageInfos.size()) {
@@ -97,8 +102,14 @@ void ResourceInfo::setWriteInfo(const uint32_t index, vk::WriteDescriptorSet& wr
 
         assert(descCount == 1);  // I haven't thought about this yet.
 
+        // Just do this here. This is terrible but oh well.
+        auto& imageInfo = imageInfos.at(offset).descInfoMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL);
+        if (imageInfo.imageLayout != vk::ImageLayout::eGeneral) {
+            imageInfo.imageLayout = std::visit(GetTextureImageLayout{}, descType);
+        }
+
         write.descriptorCount = descCount;
-        write.pImageInfo = &imageInfos.at(offset).descInfoMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL);
+        write.pImageInfo = &imageInfo;
 
     } else if (bufferInfos.size()) {
         // BUFFER

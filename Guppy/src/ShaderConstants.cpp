@@ -19,6 +19,9 @@
 #include "ScreenSpace.h"
 #include "Shadow.h"
 #include "Tessellation.h"
+#ifdef USE_VOLUMETRIC_LIGHTING
+// ...
+#endif
 
 //#define MULTILINE(...) #__VA_ARGS__
 
@@ -330,6 +333,8 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     // SHADOW
     {SHADER::SHADOW_COLOR_VERT, Shader::Shadow::COLOR_VERT_CREATE_INFO},
     {SHADER::SHADOW_TEX_VERT, Shader::Shadow::TEX_VERT_CREATE_INFO},
+    {SHADER::SHADOW_COLOR_CUBE_VERT, Shader::Shadow::COLOR_CUBE_VERT_CREATE_INFO},
+    {SHADER::SHADOW_TEX_CUBE_VERT, Shader::Shadow::TEX_CUBE_VERT_CREATE_INFO},
     {SHADER::SHADOW_CUBE_GEOM, Shader::Shadow::CUBE_GEOM_CREATE_INFO},
     {SHADER::SHADOW_FRAG, Shader::Shadow::FRAG_CREATE_INFO},
     // TESSELLATION
@@ -370,6 +375,9 @@ const std::map<SHADER, Shader::CreateInfo> ALL = {
     // CDLOD
     {SHADER::CDLOD_VERT, Shader::Cdlod::VERT_CREATE_INFO},
     {SHADER::CDLOD_TEX_VERT, Shader::Cdlod::VERT_TEX_CREATE_INFO},
+#ifdef USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
 };
 
 const std::map<SHADER_LINK, Shader::Link::CreateInfo> LINK_ALL = {

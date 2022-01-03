@@ -11,6 +11,9 @@
 #include "RenderPassCubeMap.h"
 #include "RenderPassManager.h"
 #include "RenderPassShadow.h"
+#if USE_VOLUMETRIC_LIGHTING
+// ...
+#endif
 // HANDLERS
 #include "ParticleHandler.h"
 #include "PipelineHandler.h"
@@ -78,8 +81,9 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         COMPUTE::HFF_HGHT,
         COMPUTE::HFF_NORM,
     },
-    (FLAG::SWAPCHAIN | FLAG::DEPTH | /*FLAG::DEPTH_INPUT_ATTACHMENT |*/
-     (::Deferred::DO_MSAA ? FLAG::MULTISAMPLE : FLAG::NONE)),
+    (
+        FLAG::SWAPCHAIN | FLAG::DEPTH | /*FLAG::DEPTH_INPUT_ATTACHMENT |*/
+        (::Deferred::DO_MSAA ? FLAG::MULTISAMPLE : FLAG::NONE)),
     {
         std::string(RenderPass::SWAPCHAIN_TARGET_ID),
         // TODO: Make below work with above in the base class.
@@ -91,8 +95,14 @@ const CreateInfo DEFERRED_CREATE_INFO = {
         // std::string(Texture::Deferred::SPECULAR_2D_ID),
     },
     {
-        RENDER_PASS::SHADOW,
+        RENDER_PASS::SHADOW_DEFAULT,
+        RENDER_PASS::SHADOW_CUBE,
         RENDER_PASS::SKYBOX_NIGHT,
+    },
+    {
+#if USE_VOLUMETRIC_LIGHTING
+        // ...
+#endif
     },
 };
 // clang-format on
@@ -113,6 +123,8 @@ void Base::init() {
         // Boy is this going to be confusing if it ever doesn't work right.
         if (passType == TYPE) {
             RenderPass::Base::init();
+            // Override the depth format here (I'm too lazy to do anything else atm) !!!
+            depthFormat_ = vk::Format::eD32SfloatS8Uint;
         } else {
             const auto& pPass = handler().renderPassMgr().getPass(offset);
             if (!pPass->isIntialized()) const_cast<RenderPass::Base*>(pPass.get())->init();
@@ -145,20 +157,31 @@ void Base::record(const uint8_t frameIndex) {
 
         // SKYBOX
         if (true) {
-            const auto& pPass = handler().renderPassMgr().getPass(dependentTypeOffsetPairs_[1].second);
+            const auto& pPass = handler().renderPassMgr().getPass(dependentTypeOffsetPairs_[2].second);
             assert(pPass->TYPE == RENDER_PASS::SKYBOX_NIGHT);
             static_cast<RenderPass::CubeMap::SkyboxNight*>(pPass.get())->record(frameIndex, priCmd);
         }
 
-        // SHADOW
+        // SHADOW (DEFAULT)
         if (true) {
             const auto& pPass = handler().renderPassMgr().getPass(dependentTypeOffsetPairs_[0].second);
-            assert(pPass->TYPE == RENDER_PASS::SHADOW);
+            assert(pPass->TYPE == RENDER_PASS::SHADOW_DEFAULT);
             std::vector<PIPELINE> pipelineTypes;
             pipelineTypes.reserve(pipelineBindDataList_.size());
             for (const auto& [pipelineType, value] : pipelineBindDataList_.getKeyOffsetMap())
                 pipelineTypes.push_back(pipelineType);
-            static_cast<Shadow::Default*>(pPass.get())->record(frameIndex, TYPE, pipelineTypes, priCmd);
+            static_cast<Shadow::Cube*>(pPass.get())->record(frameIndex, TYPE, pipelineTypes, priCmd);
+        }
+
+        // SHADOW (CUBEMAP)
+        if (true) {
+            const auto& pPass = handler().renderPassMgr().getPass(dependentTypeOffsetPairs_[1].second);
+            assert(pPass->TYPE == RENDER_PASS::SHADOW_CUBE);
+            std::vector<PIPELINE> pipelineTypes;
+            pipelineTypes.reserve(pipelineBindDataList_.size());
+            for (const auto& [pipelineType, value] : pipelineBindDataList_.getKeyOffsetMap())
+                pipelineTypes.push_back(pipelineType);
+            static_cast<Shadow::Cube*>(pPass.get())->record(frameIndex, TYPE, pipelineTypes, priCmd);
         }
 
         beginPass(priCmd, frameIndex, vk::SubpassContents::eInline);
@@ -235,6 +258,10 @@ void Base::record(const uint8_t frameIndex) {
         }
 
         endPass(priCmd);
+
+#if USE_VOLUMETRIC_LIGHTING  // Uses the depth target from the main deferred pass.
+        // ...
+#endif
     }
     // data.priCmds[frameIndex].end();
 }
@@ -256,18 +283,15 @@ void Base::createAttachments() {
     // DEPTH/RESOLVE/SWAPCHAIN
     ::RenderPass::Base::createAttachments();
 
-    vk::AttachmentDescription2 attachment = {
-        {},                                // flags vk::AttachmentDescriptionFlags
-        vk::Format::eUndefined,            // format vk::Format
-        getSamples(),                      // samples vk::SampleCountFlagBits
-        vk::AttachmentLoadOp::eClear,      // loadOp vk::AttachmentLoadOp
-        vk::AttachmentStoreOp::eStore,     // storeOp vk::AttachmentStoreOp
-        vk::AttachmentLoadOp::eDontCare,   // stencilLoadOp vk::AttachmentLoadOp
-        vk::AttachmentStoreOp::eDontCare,  // stencilStoreOp vk::AttachmentStoreOp
-        // vk::ImageLayout::eColorAttachmentOptimal,  // TRY THIS!!!
-        vk::ImageLayout::eUndefined,             // initialLayout vk::ImageLayout
-        vk::ImageLayout::eShaderReadOnlyOptimal  // finalLayout vk::ImageLayout
-    };
+    vk::AttachmentDescription2 attachment = {};
+    attachment.format = vk::Format::eUndefined;
+    attachment.samples = getSamples();
+    attachment.loadOp = vk::AttachmentLoadOp::eClear;
+    attachment.storeOp = vk::AttachmentStoreOp::eStore;
+    attachment.stencilLoadOp = vk::AttachmentLoadOp::eDontCare;
+    attachment.stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
+    attachment.initialLayout = vk::ImageLayout::eUndefined;
+    attachment.finalLayout = vk::ImageLayout::eShaderReadOnlyOptimal;
 
     // assert(textureIds_.size() == 3 && pTextures_.size() >= textureIds_.size() &&
     //       pTextures_.size() % textureIds_.size() == 0);
@@ -374,6 +398,10 @@ void Base::createAttachments() {
     } else {
         assert(resources_.colorAttachments.size() == 7);
     }
+
+#if USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
 }
 
 void Base::createSubpassDescriptions() {
@@ -387,6 +415,9 @@ void Base::createSubpassDescriptions() {
     subpassDesc.pColorAttachments = &resources_.colorAttachments[inputAttachmentOffset_];
     subpassDesc.pResolveAttachments = nullptr;
     subpassDesc.pDepthStencilAttachment = pipelineData_.usesDepth ? &resources_.depthStencilAttachment : nullptr;
+#if USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
     resources_.subpasses.push_back(subpassDesc);
     assert(mrtSubpass_ == (resources_.subpasses.size() - 1));
 
@@ -423,8 +454,8 @@ void Base::createDependencies() {
     dependency.srcSubpass = mrtSubpass_;
     dependency.dstSubpass = cmbSubpass_;
     dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-    dependency.dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
     dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
+    dependency.dstStageMask = vk::PipelineStageFlagBits::eFragmentShader;
     dependency.dstAccessMask = vk::AccessFlagBits::eInputAttachmentRead;
     dependency.dependencyFlags = vk::DependencyFlagBits::eByRegion;
     resources_.dependencies.push_back(dependency);
@@ -456,6 +487,9 @@ void Base::updateClearValues() {
         clearValues_.push_back({});
         clearValues_.back().color = DEFAULT_CLEAR_COLOR_VALUE;
     }
+#if USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
 }
 
 void Base::createFramebuffers() {
@@ -535,6 +569,10 @@ void Base::createFramebuffers() {
             attachmentViews.push_back(pTexture->samplers[0].layerResourceMap.at(Sampler::IMAGE_ARRAY_LAYERS_ALL).view);
             assert(attachmentViews.back());
         }
+
+#if USE_VOLUMETRIC_LIGHTING
+        // ...
+#endif
 
         createInfo.attachmentCount = static_cast<uint32_t>(attachmentViews.size());
         createInfo.pAttachments = attachmentViews.data();

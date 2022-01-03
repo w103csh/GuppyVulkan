@@ -134,12 +134,11 @@ class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA
 namespace Descriptor {
 namespace Set {
 namespace Shadow {
-
+extern const CreateInfo CAMERA_BASIC_ONLY_CREATE_INFO;
 extern const CreateInfo CUBE_UNIFORM_ONLY_CREATE_INFO;
 extern const CreateInfo CUBE_ALL_CREATE_INFO;
 extern const CreateInfo SAMPLER_CREATE_INFO;
 extern const CreateInfo SAMPLER_OFFSET_CREATE_INFO;
-
 }  // namespace Shadow
 }  // namespace Set
 }  // namespace Descriptor
@@ -147,32 +146,42 @@ extern const CreateInfo SAMPLER_OFFSET_CREATE_INFO;
 namespace Shader {
 // struct CreateInfo;
 namespace Shadow {
-
 const CreateInfo COLOR_VERT_CREATE_INFO = {
     SHADER::SHADOW_COLOR_VERT,
     "Shadow Color Vertex Shader",
-    "vert.color.shadow.glsl",
+    "shadow/vert.color.shadow.glsl",
     vk::ShaderStageFlagBits::eVertex,
 };
 const CreateInfo TEX_VERT_CREATE_INFO = {
     SHADER::SHADOW_TEX_VERT,
     "Shadow Texture Vertex Shader",
-    "vert.texture.shadow.glsl",
+    "shadow/vert.texture.shadow.glsl",
+    vk::ShaderStageFlagBits::eVertex,
+};
+const CreateInfo COLOR_CUBE_VERT_CREATE_INFO = {
+    SHADER::SHADOW_COLOR_CUBE_VERT,
+    "Shadow Color Vertex Shader",
+    "shadow/vert.color.shadow.cube.glsl",
+    vk::ShaderStageFlagBits::eVertex,
+};
+const CreateInfo TEX_CUBE_VERT_CREATE_INFO = {
+    SHADER::SHADOW_TEX_CUBE_VERT,
+    "Shadow Texture Vertex Shader",
+    "shadow/vert.texture.shadow.cube.glsl",
     vk::ShaderStageFlagBits::eVertex,
 };
 const CreateInfo CUBE_GEOM_CREATE_INFO = {
     SHADER::SHADOW_CUBE_GEOM,
     "Shadow Cube Geometry Shader",
-    "geom.shadow.cube.glsl",
+    "shadow/geom.shadow.cube.glsl",
     vk::ShaderStageFlagBits::eGeometry,
 };
 const CreateInfo FRAG_CREATE_INFO = {
     SHADER::SHADOW_FRAG,
     "Shadow Fragment Shader",
-    "frag.shadow.glsl",
+    "shadow/frag.shadow.glsl",
     vk::ShaderStageFlagBits::eFragment,
 };
-
 }  // namespace Shadow
 }  // namespace Shader
 
@@ -185,6 +194,7 @@ void GetShadowRasterizationStateInfoResources(Pipeline::CreateInfoResources &cre
 
 namespace Shadow {
 
+// COLOR
 class Color : public Pipeline::Graphics {
    public:
     Color(Handler &handler);
@@ -193,9 +203,28 @@ class Color : public Pipeline::Graphics {
     void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes) override;
 };
 
+// TEXTURE
 class Texture : public Pipeline::Graphics {
    public:
     Texture(Handler &handler);
+
+   private:
+    void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes) override;
+};
+
+// COLOR CUBEMAP
+class ColorCube : public Pipeline::Graphics {
+   public:
+    ColorCube(Handler &handler);
+
+   private:
+    void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes) override;
+};
+
+// TEXTURE CUBEMAP
+class TextureCube : public Pipeline::Graphics {
+   public:
+    TextureCube(Handler &handler);
 
    private:
     void getRasterizationStateInfoResources(CreateInfoResources &createInfoRes) override;

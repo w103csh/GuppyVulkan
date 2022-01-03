@@ -91,11 +91,18 @@ Uniform::Handler::Handler(Game* pGame)
           // CDLOD
           UniformDynamic::Cdlod::QuadTree::Manager  //
           {"CDLOD Quad Tree Data", UNIFORM_DYNAMIC::CDLOD_QUAD_TREE, 2, true, "_UD_CDLOD_QDTR"},
+          // CAMERA
+          Uniform::Manager<Camera::Perspective::Basic::Base>  //
+          {"Basic Perspective Camera", UNIFORM_DYNAMIC::CAMERA_PERSPECTIVE_BASIC, 1 * 3, "_U_CAM_BSC_PERS"},
+#ifdef USE_VOLUMETRIC_LIGHTING
+          // ...
+#endif
       },
       activeCameraOffset_(BAD_OFFSET),
       mainCameraOffset_(BAD_OFFSET),
       debugCameraOffset_(BAD_OFFSET),
-      hasVisualHelpers_(false) {}
+      hasVisualHelpers_(false) {
+}
 
 std::vector<std::unique_ptr<Descriptor::Base>>& Uniform::Handler::getItems(const DESCRIPTOR& type) {
     // clang-format off
@@ -166,6 +173,10 @@ void Uniform::Handler::init() {
     ocnSimDpchMgr().init(shell().context());    ++count;
     ocnSimDrawMgr().init(shell().context());    ++count;
     cdlodQdTrMgr().init(shell().context());     ++count;
+    camPersBscMgr().init(shell().context());    ++count;
+#ifdef USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
     assert(count == managers_.size() + managersDynamic_.size());
     // clang-format on
 
@@ -200,6 +211,10 @@ void Uniform::Handler::reset() {
     ocnSimDpchMgr().destroy(shell().context());   ++count;
     ocnSimDrawMgr().destroy(shell().context());   ++count;
     cdlodQdTrMgr().destroy(shell().context());    ++count;
+    camPersBscMgr().destroy(shell().context());   ++count;
+#ifdef USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
     assert(count == managers_.size() + managersDynamic_.size());
     // clang-format on
 }
@@ -312,26 +327,35 @@ void Uniform::Handler::frame() {
 }
 
 void Uniform::Handler::createCameras() {
-    const auto& dev = shell().context().dev;
+    const auto& ctx = shell().context();
 
     Camera::Perspective::Default::CreateInfo defInfo = {};
 
-    assert(shell().context().imageCount == 3);  // Potential imageCount problem
-    defInfo.dataCount = shell().context().imageCount;
+    assert(ctx.imageCount == 3);  // Potential imageCount problem
+    defInfo.dataCount = ctx.imageCount;
 
     // 0 (MAIN)
     {
         defInfo.aspect = static_cast<float>(settings().initialWidth) / static_cast<float>(settings().initialHeight);
         // createInfo.center = glm::vec3{-0.5f, 2.0f, 1.0f};
         // defInfo.eye = {4.0f, 6.0f, 4.0f};
-        defInfo.eye = {100.0f, 100.0f, 100.0f};
-        defInfo.f = 55000.0f;
+
+        //// Ocean defaults
+        // defInfo.eye = {100.0f, 100.0f, 100.0f};
+        // defInfo.f = 55000.0f;
 
         //// Cdlod defautls
         // defInfo.eye = {12823.0f, 1865.0f, -8423.0f};
         // defInfo.f = 45000.0f;
 
-        camPersDefMgr().insert(dev, &defInfo);
+        // Volumetric Lighting defaults
+        defInfo.fovy = glm::half_pi<float>();
+        // defInfo.eye = glm::vec3(-2, 5, -17.5f);
+        defInfo.eye = {0, 0, -17.5f};
+        defInfo.n = 0.50f;
+        defInfo.f = 55000.0f;
+
+        camPersDefMgr().insert(ctx.dev, &defInfo);
         mainCameraOffset_ = camPersDefMgr().pItems.size() - 1;
         activeCameraOffset_ = mainCameraOffset_;
     }
@@ -339,7 +363,7 @@ void Uniform::Handler::createCameras() {
     // 1 (PROJECTOR)
     {
         defInfo.eye = {2.0f, -2.0f, 4.0f};
-        camPersDefMgr().insert(dev, &defInfo);
+        camPersDefMgr().insert(ctx.dev, &defInfo);
         // mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
     }
 
@@ -352,7 +376,7 @@ void Uniform::Handler::createCameras() {
         defInfo.n = 1.0f;
         defInfo.f = 21.0f;
         // createInfo.fov = 180.0f;
-        camPersDefMgr().insert(dev, &defInfo);
+        camPersDefMgr().insert(ctx.dev, &defInfo);
         // mainCameraOffset_ = camDefPersMgr().pItems.size() - 1;
     }
 
@@ -363,7 +387,7 @@ void Uniform::Handler::createCameras() {
         cubeInfo.dataCount = shell().context().imageCount;
 
         // 0
-        camPersCubeMgr().insert(dev, &cubeInfo);
+        camPersCubeMgr().insert(ctx.dev, &cubeInfo);
     }
 
     // (DEBUG)
@@ -377,8 +401,17 @@ void Uniform::Handler::createCameras() {
         // defInfo.center = {};
         // defInfo.n = 0.000001f;
         // defInfo.f = 2.0f;
-        camPersDefMgr().insert(dev, &defInfo);
+        camPersDefMgr().insert(ctx.dev, &defInfo);
         debugCameraOffset_ = camPersDefMgr().pItems.size() - 1;
+    }
+
+    {  // Create light data.
+        Camera::Perspective::Basic::CreateInfo lgtInfo = {};
+        assert(ctx.imageCount == 3);  // Potential imageCount problem
+        lgtInfo.dataCount = ctx.imageCount;
+        // We don't need to initialize the camera create info here because its updated on frame() in the volumetric lighting
+        // GraphicsWork class.
+        camPersBscMgr().insert(ctx.dev, &lgtInfo);
     }
 
     assert(mainCameraOffset_ != BAD_OFFSET);

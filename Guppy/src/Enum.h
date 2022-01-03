@@ -161,9 +161,13 @@ enum class RENDER_PASS : uint32_t {  // TODO: make this a bitmask
     // DEFERRED
     DEFERRED,
     // SHADOW
-    SHADOW,
+    SHADOW_DEFAULT,
+    SHADOW_CUBE,
     //
     SKYBOX_NIGHT,
+#ifdef USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
     // Used to indicate "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
 };
@@ -249,10 +253,14 @@ enum class UNIFORM_DYNAMIC {
     TESS_PHONG,
     CDLOD_GRID,
     CDLOD_QUAD_TREE,
+    CAMERA_PERSPECTIVE_BASIC,
     // WATER
     HFF,
     OCEAN_DISPATCH,
     OCEAN_DRAW,
+#ifdef USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
     //
     DONT_CARE,
 };
@@ -269,6 +277,8 @@ enum class INPUT_ATTACHMENT {
     COLOR,
     FLAGS,
     SSAO,
+    DEPTH,
+    DEPTH_GENERAL,
     //
     DONT_CARE,
 };
@@ -323,6 +333,8 @@ enum class GRAPHICS : uint32_t {
     // SHADOW
     SHADOW_COLOR,
     SHADOW_TEX,
+    SHADOW_COLOR_CUBE,
+    SHADOW_TEX_CUBE,
     // TESSELLATION
     TESS_BEZIER_4_DEFERRED,
     TESS_PHONG_TRI_COLOR_WF_DEFERRED,
@@ -352,6 +364,9 @@ enum class GRAPHICS : uint32_t {
     // CDLOD
     CDLOD_WF_DEFERRED,
     CDLOD_TEX_DEFERRED,
+#ifdef USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in PipelineConstants.cpp
@@ -374,6 +389,9 @@ enum class COMPUTE : uint32_t {
     OCEAN_DISP,
     OCEAN_FFT,
     OCEAN_VERT_INPUT,
+#ifdef USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
     // Used to indicate bad data, and "all" in uniform offsets
     ALL_ENUM = UINT32_MAX,
     // Add new to PIPELINE_ALL and VERTEX_PIPELINE_MAP in PipelineConstants.cpp

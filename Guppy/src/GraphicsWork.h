@@ -38,6 +38,7 @@ class Base : public Handlee<Pass::Handler> {
     void onInit() { init(); }
     void onDestroy();
     void onTick();
+    void onFrame() { frame(); }
 
     constexpr auto getDraw() const { return draw_; }
     constexpr void toggleDraw() { draw_ = !draw_; }

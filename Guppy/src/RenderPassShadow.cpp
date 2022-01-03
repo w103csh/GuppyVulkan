@@ -29,7 +29,7 @@ Base::Base(Pass::Handler& handler, const index&& offset, const CreateInfo* pCrea
 
 void Base::createAttachments() {
     resources_.depthStencilAttachment = {static_cast<uint32_t>(resources_.attachments.size()),
-                                         vk::ImageLayout::eDepthStencilAttachmentOptimal};
+                                         helpers::getDepthStencilAttachmentLayout(depthFormat_)};
 
     resources_.attachments.push_back({});
     resources_.attachments.back().format = pTextures_[0]->samplers[0].imgCreateInfo.format;
@@ -105,7 +105,113 @@ std::array<PIPELINE, 2> TEX_LIST = {
 };
 }  // namespace
 
-void Base::record(const uint8_t frameIndex, const RENDER_PASS& surrogatePassType,
+// DEFAULT
+const CreateInfo DEFAULT_CREATE_INFO = {
+    RENDER_PASS::SHADOW_DEFAULT,
+    "Shadow Render Pass",
+    {
+        GRAPHICS::SHADOW_COLOR,
+        GRAPHICS::SHADOW_TEX,
+    },
+    FLAG::DEPTH,  // This actually enables the depth test from overridePipelineCreateInfo. Not sure if I like this.
+    {std::string(Texture::Shadow::MAP_2D_ARRAY_ID)},
+};
+Default::Default(Pass::Handler& handler, const index&& offset)
+    : RenderPass::Shadow::Base{handler, std::forward<const index>(offset), &DEFAULT_CREATE_INFO} {}
+
+void Default::record(const uint8_t frameIndex, const RENDER_PASS& surrogatePassType,
+                     std::vector<PIPELINE>& surrogatePipelineTypes, const vk::CommandBuffer& priCmd) {
+    if (getStatus() != STATUS::READY) update();
+    if (getStatus() == STATUS::READY) {
+        beginPass(priCmd, frameIndex, vk::SubpassContents::eInline);
+
+        auto& secCmd = data.secCmds[frameIndex];
+        auto& pScene = handler().sceneHandler().getActiveScene();
+
+        std::vector<PIPELINE>::iterator itSurrogate;
+
+        // PIPELINE TYPE
+        const auto COLOR_TYPE = GRAPHICS::SHADOW_COLOR;
+        const auto TEX_TYPE = GRAPHICS::SHADOW_TEX;
+
+        // COLOR
+        for (const auto& pipelineType : COLOR_LIST) {
+            itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), pipelineType);
+            if (itSurrogate != surrogatePipelineTypes.end()) {
+                pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(COLOR_TYPE), priCmd, secCmd,
+                               frameIndex, &getDescSetBindDataMap(COLOR_TYPE).begin()->second);
+                surrogatePipelineTypes.erase(itSurrogate);
+            }
+        }
+
+        priCmd.nextSubpass(vk::SubpassContents::eInline);
+
+        // TEXTURE
+        for (const auto& pipelineType : TEX_LIST) {
+            itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), pipelineType);
+            if (itSurrogate != surrogatePipelineTypes.end()) {
+                pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(TEX_TYPE), priCmd, secCmd,
+                               frameIndex, &getDescSetBindDataMap(TEX_TYPE).begin()->second);
+                surrogatePipelineTypes.erase(itSurrogate);
+            }
+        }
+
+        endPass(priCmd);
+    }
+}
+
+void Default::update(const std::vector<Descriptor::Base*> pDynamicItems) {
+    assert(status_ & STATUS::PENDING_PIPELINE);
+    assert(pDynamicItems.empty());  // Not accounting for pDynamicItems below atm.
+
+    bool isReady = true;
+
+    {  // These pipeline both have the same bind data so do them in a loop
+        std::array<GRAPHICS, 2> pipelineTypes = {GRAPHICS::SHADOW_COLOR, GRAPHICS::SHADOW_TEX};
+
+        // As of now there should be a single basic camera for a single volumetric spot light.
+        assert(handler().uniformHandler().camPersBscMgr().pItems.size() == 1);
+        auto& pCamera = handler().uniformHandler().camPersBscMgr().pItems.at(0);
+
+        for (const auto pipelineType : pipelineTypes) {
+            auto& pPipeline = handler().pipelineHandler().getPipeline(pipelineType);
+            if (pPipeline->getStatus() != STATUS::READY) pPipeline->updateStatus();
+            if (pPipeline->getStatus() == STATUS::READY) {
+                if (pipelineDescSetBindDataMap_.count(pipelineType) == 0) {
+                    auto it = pipelineDescSetBindDataMap_.insert({pipelineType, {}});
+                    assert(it.second);
+                    // Get or make descriptor bind data.
+                    handler().descriptorHandler().getBindData(pipelineType, it.first->second, {pCamera.get()});
+                    assert(it.first->second.size());
+                }
+            }
+
+            isReady &= pPipeline->getStatus() == STATUS::READY;
+        }
+    }
+
+    if (isReady) {
+        status_ ^= STATUS::PENDING_PIPELINE;
+        assert(status_ == STATUS::READY);
+    }
+}
+
+// CUBEMAP
+const CreateInfo CUBE_CREATE_INFO = {
+    RENDER_PASS::SHADOW_CUBE,
+    "Shadow Cubemap Render Pass",
+    {
+        GRAPHICS::SHADOW_COLOR_CUBE,
+        GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER,
+        GRAPHICS::SHADOW_TEX_CUBE,
+    },
+    FLAG::DEPTH,  // This actually enables the depth test from overridePipelineCreateInfo. Not sure if I like this.
+    {std::string(Texture::Shadow::MAP_CUBE_ARRAY_ID)},
+};
+Cube::Cube(Pass::Handler& handler, const index&& offset)
+    : RenderPass::Shadow::Base{handler, std::forward<const index>(offset), &CUBE_CREATE_INFO} {}
+
+void Cube::record(const uint8_t frameIndex, const RENDER_PASS& surrogatePassType,
                   std::vector<PIPELINE>& surrogatePipelineTypes, const vk::CommandBuffer& priCmd) {
     if (getStatus() != STATUS::READY) update();
     if (getStatus() == STATUS::READY) {
@@ -116,12 +222,16 @@ void Base::record(const uint8_t frameIndex, const RENDER_PASS& surrogatePassType
 
         std::vector<PIPELINE>::iterator itSurrogate;
 
+        // PIPELINE TYPE
+        constexpr auto COLOR_TYPE = GRAPHICS::SHADOW_COLOR_CUBE;
+        constexpr auto TEX_TYPE = GRAPHICS::SHADOW_TEX_CUBE;
+
         // COLOR
         for (const auto& pipelineType : COLOR_LIST) {
             itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), pipelineType);
             if (itSurrogate != surrogatePipelineTypes.end()) {
-                pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(GRAPHICS::SHADOW_COLOR),
-                               priCmd, secCmd, frameIndex, &getDescSetBindDataMap(GRAPHICS::SHADOW_COLOR).begin()->second);
+                pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(COLOR_TYPE), priCmd, secCmd,
+                               frameIndex, &getDescSetBindDataMap(COLOR_TYPE).begin()->second);
                 surrogatePipelineTypes.erase(itSurrogate);
             }
         }
@@ -144,8 +254,8 @@ void Base::record(const uint8_t frameIndex, const RENDER_PASS& surrogatePassType
         for (const auto& pipelineType : TEX_LIST) {
             itSurrogate = std::find(surrogatePipelineTypes.begin(), surrogatePipelineTypes.end(), pipelineType);
             if (itSurrogate != surrogatePipelineTypes.end()) {
-                pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(GRAPHICS::SHADOW_TEX), priCmd,
-                               secCmd, frameIndex, &getDescSetBindDataMap(GRAPHICS::SHADOW_TEX).begin()->second);
+                pScene->record(surrogatePassType, *itSurrogate, pipelineBindDataList_.getValue(TEX_TYPE), priCmd, secCmd,
+                               frameIndex, &getDescSetBindDataMap(TEX_TYPE).begin()->second);
                 surrogatePipelineTypes.erase(itSurrogate);
             }
         }
@@ -153,23 +263,6 @@ void Base::record(const uint8_t frameIndex, const RENDER_PASS& surrogatePassType
         endPass(priCmd);
     }
 }
-
-// DEFAULT
-const CreateInfo DEFAULT_CREATE_INFO = {
-    RENDER_PASS::SHADOW,
-    "Shadow Render Pass",
-    {
-        GRAPHICS::SHADOW_COLOR,
-        GRAPHICS::PRTCL_SHDW_FOUNTAIN_EULER,
-        GRAPHICS::SHADOW_TEX,
-    },
-    FLAG::DEPTH,  // This actually enables the depth test from overridePipelineCreateInfo. Not sure if I like this.
-    {
-        std::string(Texture::Shadow::MAP_CUBE_ARRAY_ID),
-    },
-};
-Default::Default(Pass::Handler& handler, const index&& offset)
-    : RenderPass::Shadow::Base{handler, std::forward<const index>(offset), &DEFAULT_CREATE_INFO} {}
 
 }  // namespace Shadow
 }  // namespace RenderPass

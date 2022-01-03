@@ -27,6 +27,7 @@ Context::Context()
       debugMarkersEnabled(false),
       independentBlendEnabled(false),
       imageCubeArrayEnabled(false),
+      dualSrcBlendEnabled(false),
       instance{},
       physicalDev{},
       physicalDevIndex(0),
@@ -114,6 +115,7 @@ void Context::initDevice() {
     deviceFeatures.fillModeNonSolid = wireframeShadingEnabled;
     deviceFeatures.independentBlend = independentBlendEnabled;
     deviceFeatures.imageCubeArray = imageCubeArrayEnabled;
+    deviceFeatures.dualSrcBlend = dualSrcBlendEnabled;
 
     // Phyiscal device extensions names
     auto &phyDevProps = physicalDevProps[physicalDevIndex];

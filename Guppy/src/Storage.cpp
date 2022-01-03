@@ -64,10 +64,10 @@ Base::Base(const Buffer::Info&& info, DATA* pData, const CreateInfo* pCreateInfo
                     }
                 }
             }
+            dirty = true;
         } break;
         default:;
     }
-    dirty = true;
 }
 
 }  // namespace Vector4

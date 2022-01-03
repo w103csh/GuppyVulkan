@@ -124,7 +124,7 @@ void Renderer::reset() {
 void Renderer::tick() { pGraphicsWork->onTick(); }
 
 bool Renderer::shouldDraw(const PIPELINE type) const {
-    // return false;
+    return false;
     return pGraphicsWork->shouldDraw(type);
 }
 

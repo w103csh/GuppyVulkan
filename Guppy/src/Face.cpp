@@ -4,7 +4,6 @@
  */
 
 #include <glm/glm.hpp>
-#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/projection.hpp>
 
 #include "Face.h"

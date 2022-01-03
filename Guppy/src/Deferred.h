@@ -34,6 +34,9 @@ namespace Deferred {
 const std::string_view POS_NORM_2D_ARRAY_ID = "Deferred 2D Array Position/Normal Texture";
 extern const CreateInfo POS_NORM_2D_ARRAY_CREATE_INFO;
 
+const std::string_view COMB_2D_ID = "Deferred 2D Combine Texture";
+extern const CreateInfo COMB_2D_CREATE_INFO;
+
 const std::string_view POS_2D_ID = "Deferred 2D Position Texture";
 extern const CreateInfo POS_2D_CREATE_INFO;
 

@@ -55,6 +55,11 @@ Game::Settings::Settings()
       tryDebugMarkers(false),
       tryIndependentBlend(true),
       tryImageCubeArray(true),
+#if USE_VOLUMETRIC_LIGHTING
+      tryDualSrcBlend(true),
+#else
+      tryDualSrcBlend(false),
+#endif
       enableSampleShading(true),
       enableDoubleClicks(false),
       enableDirectoryListener(true),

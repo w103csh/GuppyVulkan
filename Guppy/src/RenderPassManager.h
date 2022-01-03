@@ -40,8 +40,8 @@ class Manager : public Pass::Manager {
     void acquireBackBuffer();
     void updateFrameIndex();
 
-    inline const auto& getPass(const index& offset) { return pPasses_.at(offset); }
-    inline const auto& getPass(const RENDER_PASS& type) {
+    inline auto& getPass(const index& offset) { return pPasses_.at(offset); }
+    inline auto& getPass(const RENDER_PASS& type) {
         for (const auto& pPass : pPasses_)
             if (pPass->TYPE == type) return pPass;
         assert(false);

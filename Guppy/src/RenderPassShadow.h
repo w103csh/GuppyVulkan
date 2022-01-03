@@ -34,14 +34,28 @@ class Base : public RenderPass::Base {
     void record(const uint8_t) override { assert(false); }
 
    public:
-    void record(const uint8_t frameIndex, const RENDER_PASS& surrogatePassType,
-                std::vector<PIPELINE>& surrogatePipelineTypes, const vk::CommandBuffer& priCmd);
+    virtual void record(const uint8_t frameIndex, const RENDER_PASS& surrogatePassType,
+                        std::vector<PIPELINE>& surrogatePipelineTypes, const vk::CommandBuffer& priCmd) = 0;
 };
 
 // DEFAULT
 class Default : public RenderPass::Shadow::Base {
    public:
     Default(Pass::Handler& handler, const index&& offset);
+
+    void record(const uint8_t frameIndex, const RENDER_PASS& surrogatePassType,
+                std::vector<PIPELINE>& surrogatePipelineTypes, const vk::CommandBuffer& priCmd) override;
+
+    void update(const std::vector<Descriptor::Base*> pDynamicItems = {}) override;
+};
+
+// CUBEMAP
+class Cube : public RenderPass::Shadow::Base {
+   public:
+    Cube(Pass::Handler& handler, const index&& offset);
+
+    void record(const uint8_t frameIndex, const RENDER_PASS& surrogatePassType,
+                std::vector<PIPELINE>& surrogatePipelineTypes, const vk::CommandBuffer& priCmd) override;
 };
 
 }  // namespace Shadow

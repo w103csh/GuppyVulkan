@@ -387,6 +387,7 @@ vk::SamplerCreateInfo Sampler::GetVulkanSamplerCreateInfo(const Sampler::Base& s
             info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
             info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
             info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+            info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
             break;
         case SAMPLER::CLAMP_TO_BORDER_DEPTH:
             info.magFilter = vk::Filter::eNearest;
@@ -400,6 +401,15 @@ vk::SamplerCreateInfo Sampler::GetVulkanSamplerCreateInfo(const Sampler::Base& s
             info.compareEnable = VK_TRUE;
             info.compareOp = vk::CompareOp::eLess;
             info.borderColor = vk::BorderColor::eFloatOpaqueWhite;
+            break;
+        case SAMPLER::LINEAR_CLAMP_TO_EDGE_NO_ANI:
+            info.magFilter = vk::Filter::eLinear;
+            info.minFilter = vk::Filter::eLinear;
+            info.mipmapMode = vk::SamplerMipmapMode::eLinear;
+            info.addressModeU = vk::SamplerAddressMode::eClampToEdge;
+            info.addressModeV = vk::SamplerAddressMode::eClampToEdge;
+            info.addressModeW = vk::SamplerAddressMode::eClampToEdge;
+            info.anisotropyEnable = VK_FALSE;
             break;
         case SAMPLER::DEFAULT:
             break;

@@ -13,10 +13,14 @@
 
 #include "CdlodRenderer.h"
 #include "ConstantsAll.h"
+#include "Game.h"
 #include "Mesh.h"
 #include "OceanRenderer.h"
 #include "Scene.h"
-#include "Game.h"
+
+// clang-format off
+namespace GraphicsWork { class Base; }
+// clang-format on
 
 namespace Scene {
 
@@ -51,9 +55,12 @@ class Handler : public Game::Handler {
     // RENDERERS
     Cdlod::Renderer::Debug cdlodDbgRenderer;
     Ocean::Renderer ocnRenderer;
+    // Just put this directly on the handler. I probably will never actually use a scene at this point.
+    std::vector<std::unique_ptr<GraphicsWork::Base>> pGraphicsWork;
 
    private:
     void reset() override;
+    void createGraphicsWork();
 
     index activeSceneIndex_;
     std::vector<std::unique_ptr<Scene::Base>> pScenes_;

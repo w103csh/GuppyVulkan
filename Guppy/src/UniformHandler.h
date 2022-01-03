@@ -38,6 +38,9 @@
 #include "Tessellation.h"
 #include "Uniform.h"
 #include "UniformOffsetsManager.h"
+#ifdef USE_VOLUMETRIC_LIGHTING
+// ...
+#endif
 
 namespace Uniform {
 
@@ -93,6 +96,10 @@ class Handler : public Game::Handler {
     virtual_inline auto& ocnSimDpchMgr() { return std::get<UniformDynamic::Ocean::SimulationDispatch::Manager>(managersDynamic_[1]);};
     virtual_inline auto& ocnSimDrawMgr() { return std::get<UniformDynamic::Ocean::SimulationDraw::Manager>(managersDynamic_[2]);};
     virtual_inline auto& cdlodQdTrMgr() { return std::get<UniformDynamic::Cdlod::QuadTree::Manager>(managersDynamic_[3]);};
+    virtual_inline auto& camPersBscMgr() { return std::get<Uniform::Manager<Camera::Perspective::Basic::Base>>(managersDynamic_[4]);};
+#ifdef USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
 
    private:
     template <class T> virtual_inline Manager<T>& getManager() { assert(false); }
@@ -141,9 +148,18 @@ class Handler : public Game::Handler {
         UniformDynamic::Tessellation::Phong::Manager,        //
         UniformDynamic::Ocean::SimulationDispatch::Manager,  //
         UniformDynamic::Ocean::SimulationDraw::Manager,      //
-        UniformDynamic::Cdlod::QuadTree::Manager             //
+        UniformDynamic::Cdlod::QuadTree::Manager,            //
+        Uniform::Manager<Camera::Perspective::Basic::Base>   //
+#ifdef USE_VOLUMETRIC_LIGHTING
+        // ...
+#endif
         >;
-    std::array<ManagerDynamic, 4> managersDynamic_;
+#ifdef USE_VOLUMETRIC_LIGHTING
+        // ...
+#else
+    static constexpr uint32_t numDynamicManagers_ = 5;
+#endif
+    std::array<ManagerDynamic, numDynamicManagers_> managersDynamic_;
 
     std::vector<std::unique_ptr<Descriptor::Base>>& getItems(const DESCRIPTOR& type);
 

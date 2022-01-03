@@ -219,6 +219,10 @@ set(SOURCE
     UniformHandler.h
     )
 
+if(USE_VOLUMETRIC_LIGHTING)
+    # ...
+endif()
+
 # utils folder
 file(GLOB UTILS
     utils/*.cpp
@@ -262,6 +266,11 @@ endif()
 
 # message(STATUS "LINKS: ${LINKS}")
 # message(STATUS "INCLUDES: ${INCLUDES}")
+
+ADD_DEFINITIONS(
+    -DGLM_FORCE_DEPTH_ZERO_TO_ONE
+    -DGLM_ENABLE_EXPERIMENTAL
+)
 
 if(WIN32)
     list(APPEND definitions PRIVATE -DVK_USE_PLATFORM_WIN32_KHR)
@@ -339,6 +348,9 @@ if(UNIX)
         # We do this so vulkaninfo is linked to an individual library and NOT a framework.
         target_link_libraries(${TARGET_NAME} ${LINKS})
 
+        if(USE_VOLUMETRIC_LIGHTING)
+            message(WARNING "Volumetric lighting code is private because of licensing.")
+        endif()
     else()
         # unix specific links
         list(APPEND ${LINKS}
@@ -354,6 +366,10 @@ if(UNIX)
             )
 
         target_link_libraries(${TARGET_NAME} ${LINKS})
+
+        if(USE_VOLUMETRIC_LIGHTING)
+            message(WARNING "Volumetric lighting code is private because of licensing.")
+        endif()
     endif()
 else()
 
@@ -383,6 +399,10 @@ else()
     include_directories(${TARGET_NAME} ${INCLUDES})
 
     target_link_libraries(${TARGET_NAME} ${LINKS})
+
+    if(USE_VOLUMETRIC_LIGHTING)
+        message(WARNING "Volumetric lighting code is private because of licensing.")
+    endif()
 
     if(FMOD_FOUND)
         add_custom_command(TARGET ${TARGET_NAME} POST_BUILD

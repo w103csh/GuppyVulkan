@@ -17,6 +17,9 @@
 #include "RenderPassShadow.h"
 #include "ScreenSpace.h"
 #include "Shell.h"
+#if USE_VOLUMETRIC_LIGHTING
+// ...
+#endif
 // HANDLERS
 #include "CommandHandler.h"
 #include "DescriptorHandler.h"
@@ -59,17 +62,21 @@ Manager::Manager(Pass::Handler& handler)
     for (const auto& type : ALL) {
         // clang-format off
         switch (type) {
-            case RENDER_PASS::DEFAULT:              pPasses_.emplace_back(std::make_unique<Base>                (handler, static_cast<index>(pPasses_.size()), &DEFAULT_CREATE_INFO)); break;
-            case RENDER_PASS::SAMPLER_PROJECT:      pPasses_.emplace_back(std::make_unique<Base>                (handler, static_cast<index>(pPasses_.size()), &PROJECT_CREATE_INFO)); break;
-            case RENDER_PASS::SAMPLER_DEFAULT:      pPasses_.emplace_back(std::make_unique<Base>                (handler, static_cast<index>(pPasses_.size()), &SAMPLER_DEFAULT_CREATE_INFO)); break;
-            case RENDER_PASS::SCREEN_SPACE:         pPasses_.emplace_back(std::make_unique<ScreenSpace::Base>   (handler, static_cast<index>(pPasses_.size()), &ScreenSpace::CREATE_INFO)); break;
-            case RENDER_PASS::SCREEN_SPACE_HDR_LOG: pPasses_.emplace_back(std::make_unique<ScreenSpace::HdrLog> (handler, static_cast<index>(pPasses_.size()))); break;
-            case RENDER_PASS::SCREEN_SPACE_BRIGHT:  pPasses_.emplace_back(std::make_unique<ScreenSpace::Bright> (handler, static_cast<index>(pPasses_.size()))); break;
-            case RENDER_PASS::SCREEN_SPACE_BLUR_A:  pPasses_.emplace_back(std::make_unique<ScreenSpace::BlurA>  (handler, static_cast<index>(pPasses_.size()))); break;
-            case RENDER_PASS::SCREEN_SPACE_BLUR_B:  pPasses_.emplace_back(std::make_unique<ScreenSpace::BlurB>  (handler, static_cast<index>(pPasses_.size()))); break;
-            case RENDER_PASS::DEFERRED:             pPasses_.emplace_back(std::make_unique<Deferred::Base>      (handler, static_cast<index>(pPasses_.size()))); break;
-            case RENDER_PASS::SHADOW:               pPasses_.emplace_back(std::make_unique<Shadow::Default>     (handler, static_cast<index>(pPasses_.size()))); break;
-            case RENDER_PASS::SKYBOX_NIGHT:         pPasses_.emplace_back(std::make_unique<CubeMap::SkyboxNight>(handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::DEFAULT:                  pPasses_.emplace_back(std::make_unique<Base>                       (handler, static_cast<index>(pPasses_.size()), &DEFAULT_CREATE_INFO)); break;
+            case RENDER_PASS::SAMPLER_PROJECT:          pPasses_.emplace_back(std::make_unique<Base>                       (handler, static_cast<index>(pPasses_.size()), &PROJECT_CREATE_INFO)); break;
+            case RENDER_PASS::SAMPLER_DEFAULT:          pPasses_.emplace_back(std::make_unique<Base>                       (handler, static_cast<index>(pPasses_.size()), &SAMPLER_DEFAULT_CREATE_INFO)); break;
+            case RENDER_PASS::SCREEN_SPACE:             pPasses_.emplace_back(std::make_unique<ScreenSpace::Base>          (handler, static_cast<index>(pPasses_.size()), &ScreenSpace::CREATE_INFO)); break;
+            case RENDER_PASS::SCREEN_SPACE_HDR_LOG:     pPasses_.emplace_back(std::make_unique<ScreenSpace::HdrLog>        (handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::SCREEN_SPACE_BRIGHT:      pPasses_.emplace_back(std::make_unique<ScreenSpace::Bright>        (handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::SCREEN_SPACE_BLUR_A:      pPasses_.emplace_back(std::make_unique<ScreenSpace::BlurA>         (handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::SCREEN_SPACE_BLUR_B:      pPasses_.emplace_back(std::make_unique<ScreenSpace::BlurB>         (handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::DEFERRED:                 pPasses_.emplace_back(std::make_unique<Deferred::Base>             (handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::SHADOW_DEFAULT:           pPasses_.emplace_back(std::make_unique<Shadow::Default>            (handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::SHADOW_CUBE:              pPasses_.emplace_back(std::make_unique<Shadow::Cube>               (handler, static_cast<index>(pPasses_.size()))); break;
+            case RENDER_PASS::SKYBOX_NIGHT:             pPasses_.emplace_back(std::make_unique<CubeMap::SkyboxNight>       (handler, static_cast<index>(pPasses_.size()))); break;
+#ifdef USE_VOLUMETRIC_LIGHTING
+            // ...
+#endif
             case RENDER_PASS::IMGUI:
 #ifdef USE_DEBUG_UI
                                                     pPasses_.emplace_back(std::make_unique<ImGui>               (handler, static_cast<index>(pPasses_.size())));

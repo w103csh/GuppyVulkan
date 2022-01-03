@@ -120,12 +120,13 @@ class Base {
 #endif
 
     template <typename TCreateInfo>
-    void insert(const vk::Device &dev, TCreateInfo *pCreateInfo) {
+    TDerived *insert(const vk::Device &dev, TCreateInfo *pCreateInfo) {
         assert(pItems.size() < MAX_SIZE);
         auto info = fill(dev, std::vector<typename TDerived::DATA>(pCreateInfo->dataCount), pCreateInfo->countInRange);
         diagnose(info);
         pItems.emplace_back(new TDerived(std::move(info), get(info), pCreateInfo));
         if (pCreateInfo == nullptr || pCreateInfo->update) updateData(dev, pItems.back()->BUFFER_INFO);
+        return static_cast<TDerived *>(pItems.back().get());
     }
 
     TDerived *insert(const vk::Device &dev, bool update = true,

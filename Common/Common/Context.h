@@ -69,6 +69,7 @@ class Context {
     bool debugMarkersEnabled;
     bool independentBlendEnabled;
     bool imageCubeArrayEnabled;
+    bool dualSrcBlendEnabled;
 
     std::vector<const char *> instanceEnabledLayerNames;
     std::vector<const char *> instanceEnabledExtensionNames;

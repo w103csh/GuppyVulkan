@@ -28,6 +28,7 @@ samples utility functions
 
 #include <memory>
 #include "util.hpp"
+#include "Includer.h"
 
 #ifdef __ANDROID__
 // Android specific include files.
@@ -274,8 +275,8 @@ shaderc_shader_kind MapShadercType(VkShaderStageFlagBits vkShader) {
 // Compile a given string containing GLSL into SPV for use by VK
 // Return value of false means an error was encountered.
 //
-bool GLSLtoSPV(const VkShaderStageFlagBits shaderType, std::vector<const char *> pShaderStrings,
-               std::vector<unsigned int> &spirv) {
+bool GLSLtoSPV(const VkShaderStageFlagBits shaderType, std::vector<const char*> pShaderStrings,
+               std::vector<unsigned int>& spirv) {
 #ifndef __ANDROID__
     EShLanguage stage = FindLanguage(shaderType);
 
@@ -286,11 +287,14 @@ bool GLSLtoSPV(const VkShaderStageFlagBits shaderType, std::vector<const char *>
     std::vector<std::unique_ptr<glslang::TShader> > shaders;
     glslang::TProgram program;
 
+    // This includer is dumb and only work for single compiles.
+    Includer includer;
+
     for (auto s : pShaderStrings) {
         shaders.emplace_back(std::make_unique<glslang::TShader>(stage));
         shaders.back()->setStrings(&s, 1);
 
-        if (!shaders.back()->parse(&DefaultTBuiltInResource, 100, false, messages)) {
+        if (!shaders.back()->parse(&DefaultTBuiltInResource, 100, false, messages, includer)) {
             puts(shaders.back()->getInfoLog());
             puts(shaders.back()->getInfoDebugLog());
             return false;  // something didn't work

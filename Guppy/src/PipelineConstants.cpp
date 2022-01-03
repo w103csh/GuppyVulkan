@@ -42,6 +42,8 @@ const std::vector<PIPELINE> ALL = {
     GRAPHICS::DEFERRED_SSAO,
     GRAPHICS::SHADOW_COLOR,
     GRAPHICS::SHADOW_TEX,
+    GRAPHICS::SHADOW_COLOR_CUBE,
+    GRAPHICS::SHADOW_TEX_CUBE,
 // TODO: make tess/geom pipeline/mesh optional based on the context flags.
 #ifndef VK_USE_PLATFORM_MACOS_MVK
     GRAPHICS::TESS_BEZIER_4_DEFERRED,
@@ -78,6 +80,9 @@ const std::vector<PIPELINE> ALL = {
     GRAPHICS::OCEAN_SURFACE_CDLOD_DEFERRED,
     GRAPHICS::CDLOD_WF_DEFERRED,
     GRAPHICS::CDLOD_TEX_DEFERRED,
+#ifdef USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
 };
 
 const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
@@ -99,6 +104,7 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
             GRAPHICS::DEFERRED_MRT_COLOR_RFL_RFR,
             GRAPHICS::DEFERRED_MRT_SKYBOX,
             GRAPHICS::SHADOW_COLOR,
+            GRAPHICS::SHADOW_COLOR_CUBE,
             GRAPHICS::TESS_BEZIER_4_DEFERRED,
             GRAPHICS::TESS_PHONG_TRI_COLOR_DEFERRED,
             GRAPHICS::TESS_PHONG_TRI_COLOR_WF_DEFERRED,
@@ -120,6 +126,7 @@ const std::map<VERTEX, std::set<PIPELINE>> VERTEX_MAP = {
             GRAPHICS::PARALLAX_STEEP,
             GRAPHICS::DEFERRED_MRT_TEX,
             GRAPHICS::SHADOW_TEX,
+            GRAPHICS::SHADOW_TEX_CUBE,
         },
     },
     {
@@ -168,6 +175,8 @@ const std::set<PIPELINE> MESHLESS = {
     GRAPHICS::DEFERRED_COMBINE,      //
     GRAPHICS::SHADOW_COLOR,          //
     GRAPHICS::SHADOW_TEX,            //
+    GRAPHICS::SHADOW_COLOR_CUBE,     //
+    GRAPHICS::SHADOW_TEX_CUBE,
 };
 
 // DEFAULT

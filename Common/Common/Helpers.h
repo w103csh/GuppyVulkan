@@ -234,7 +234,40 @@ static std::string toString(TVec v) {
     return s;
 }
 
-bool hasStencilComponent(vk::Format format);
+#define SEPARATE_DEPTH_STENCIL_LAYOUTS_FEATURE_ENABLED false
+
+constexpr bool hasStencilComponent(const vk::Format format) {
+    return format == vk::Format::eD16UnormS8Uint || format == vk::Format::eD24UnormS8Uint ||
+           format == vk::Format::eD32SfloatS8Uint;
+}
+
+constexpr vk::ImageLayout getDepthStencilAttachmentLayout(const vk::Format format) {
+#if SEPARATE_DEPTH_STENCIL_LAYOUTS_FEATURE_ENABLED
+    return hasStencilComponent(format) ? vk::ImageLayout::eDepthStencilAttachmentOptimal
+                                       : vk::ImageLayout::eDepthAttachmentOptimal;
+#else
+    return vk::ImageLayout::eDepthStencilAttachmentOptimal;
+#endif
+}
+
+constexpr vk::ImageLayout getDepthStencilReadOnlyLayout(const vk::Format format) {
+#if SEPARATE_DEPTH_STENCIL_LAYOUTS_FEATURE_ENABLED
+    return hasStencilComponent(format) ? vk::ImageLayout::eDepthStencilReadOnlyOptimal
+                                       : vk::ImageLayout::eDepthReadOnlyOptimal;
+#else
+    return vk::ImageLayout::eDepthStencilReadOnlyOptimal;
+#endif
+}
+
+constexpr vk::ImageAspectFlags getDepthStencilAspectMask(const vk::Format format) {
+    vk::ImageAspectFlags aspecMask = vk::ImageAspectFlagBits::eDepth;
+    if (hasStencilComponent(format)) {
+        aspecMask |= vk::ImageAspectFlagBits::eStencil;
+    }
+    return aspecMask;
+}
+
+vk::ImageTiling getDepthStencilImageTiling(const vk::PhysicalDevice &physicalDevice, const vk::Format format);
 
 vk::Format findSupportedFormat(const vk::PhysicalDevice &phyDev, const std::vector<vk::Format> &candidates,
                                const vk::ImageTiling tiling, const vk::FormatFeatureFlags features);

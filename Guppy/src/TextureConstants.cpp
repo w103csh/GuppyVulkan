@@ -160,6 +160,7 @@ CreateInfo MakeCubeMapTex(const std::string_view id, const SAMPLER type, const u
             sampInfo.imageViewType = vk::ImageViewType::eCubeArray;  // force this always?
             sampInfo.usage |= vk::ImageUsageFlagBits::eDepthStencilAttachment;
             layerInfo.type = Sampler::USAGE::DEPTH;
+            sampInfo.format = vk::Format::eD32Sfloat;
             descType = COMBINED_SAMPLER::PIPELINE_DEPTH;
         } break;
         case SAMPLER::DEFAULT:

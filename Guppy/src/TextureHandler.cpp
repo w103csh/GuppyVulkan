@@ -17,6 +17,9 @@
 #include "ScreenSpace.h"
 #include "Shadow.h"
 #include "Shell.h"
+#ifdef USE_VOLUMETRIC_LIGHTING
+// ...
+#endif
 // HANDLERS
 #include "CommandHandler.h"
 #include "DescriptorHandler.h"
@@ -75,12 +78,18 @@ void Texture::Handler::init() {
         &Texture::Deferred::SPECULAR_2D_CREATE_INFO,
         &Texture::Deferred::FLAGS_2D_CREATE_INFO,
         &Texture::Deferred::SSAO_2D_CREATE_INFO,
+#ifdef USE_VOLUMETRIC_LIGHTING
+        &Texture::Deferred::COMB_2D_CREATE_INFO,
+#endif
         &ssaoRandTexCreateInfo,
         &Texture::Shadow::MAP_2D_ARRAY_CREATE_INFO,
         &shadowOffsetTexCreateInfo,
         &skyboxNightTexCreateInfo,
         &fftTestTexCreateInfo,
         &oceanBltTexInfo,
+#ifdef USE_VOLUMETRIC_LIGHTING
+        // ...
+#endif
     };
 
     // I think this does not get set properly, so I am not sure where the texture generation
@@ -234,7 +243,9 @@ bool Texture::Handler::update(std::shared_ptr<Texture::Base> pTexture) {
     if (pTexture != nullptr) {
         assert(pTexture->status != STATUS::READY);
         assert(pTexture->usesSwapchain);
+
         for (auto& sampler : pTexture->samplers) {
+            // Extent
             if (sampler.swpchnInfo.usesExtent) {
                 const auto& extent = shell().context().extent;
                 sampler.imgCreateInfo.extent.width =
@@ -244,10 +255,16 @@ bool Texture::Handler::update(std::shared_ptr<Texture::Base> pTexture) {
                 if (sampler.mipmapInfo.usesExtent)
                     sampler.imgCreateInfo.mipLevels = Sampler::GetMipLevels(sampler.imgCreateInfo.extent);
             }
+            // Format
             if (sampler.swpchnInfo.usesFormat) {
                 sampler.imgCreateInfo.format = shell().context().surfaceFormat.format;
             }
+            // Samples
+            if (sampler.swpchnInfo.usesSamples) {
+                sampler.imgCreateInfo.samples = shell().context().samples;
+            }
         }
+
         bool wasDestroyed = pTexture->status == STATUS::DESTROYED;
         createTexture(pTexture, false);
         return wasDestroyed;
@@ -348,7 +365,7 @@ void Texture::Handler::makeTexture(std::shared_ptr<Texture::Base>& pTexture, Sam
             barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;  // ignored for now
             barrier.image = sampler.image;
             barrier.subresourceRange.aspectMask = (pTexture->DESCRIPTOR_TYPE == DESCRIPTOR{COMBINED_SAMPLER::PIPELINE_DEPTH})
-                                                      ? vk::ImageAspectFlagBits::eDepth
+                                                      ? helpers::getDepthStencilAspectMask(sampler.imgCreateInfo.format)
                                                       : vk::ImageAspectFlagBits::eColor;
             barrier.subresourceRange.levelCount = sampler.imgCreateInfo.mipLevels;
             barrier.subresourceRange.layerCount = sampler.imgCreateInfo.arrayLayers;
@@ -396,11 +413,6 @@ void Texture::Handler::createImage(Sampler::Base& sampler, std::unique_ptr<Loadi
     auto queueFamilyIndices = commandHandler().getUniqueQueueFamilies(true, false, true, false);
     sampler.imgCreateInfo.queueFamilyIndexCount = static_cast<uint32_t>(queueFamilyIndices.size());
     sampler.imgCreateInfo.pQueueFamilyIndices = queueFamilyIndices.data();
-
-    // Samples
-    if (sampler.swpchnInfo.usesSamples) {
-        sampler.imgCreateInfo.samples = shell().context().samples;
-    }
 
     // Create image
     sampler.image = shell().context().dev.createImage(sampler.imgCreateInfo, shell().context().pAllocator);
@@ -463,24 +475,11 @@ void Texture::Handler::createDepthImage(Sampler::Base& sampler, std::unique_ptr<
     assert(pLdgRes == nullptr);
     assert(sampler.pPixels.empty());
 
-    sampler.imgCreateInfo.format = shell().context().depthFormat;
-
     auto queueFamilyIndices = commandHandler().getUniqueQueueFamilies(true, false, false, false);
     sampler.imgCreateInfo.queueFamilyIndexCount = commandHandler().graphicsIndex();
     sampler.imgCreateInfo.pQueueFamilyIndices = queueFamilyIndices.data();
-
-    vk::FormatProperties props = shell().context().physicalDev.getFormatProperties(sampler.imgCreateInfo.format);
-    if (props.linearTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment) {
-        // bool b = vk::FormatFeatureFlagBits::eColorAttachmentBlend & props.linearTilingFeatures;
-        sampler.imgCreateInfo.tiling = vk::ImageTiling::eLinear;
-    } else if (props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment) {
-        // bool b = vk::FormatFeatureFlagBits::eColorAttachmentBlend & props.optimalTilingFeatures;
-        sampler.imgCreateInfo.tiling = vk::ImageTiling::eOptimal;
-    } else {
-        // TODO: Try other depth formats.
-        assert(false && "depth format unsupported");
-        exit(EXIT_FAILURE);
-    }
+    sampler.imgCreateInfo.tiling =
+        helpers::getDepthStencilImageTiling(shell().context().physicalDev, sampler.imgCreateInfo.format);
 
     // Create image
     sampler.image = shell().context().dev.createImage(sampler.imgCreateInfo, shell().context().pAllocator);
@@ -579,9 +578,9 @@ void Texture::Handler::generateMipmaps(Sampler::Base& sampler, std::unique_ptr<L
 void Texture::Handler::createImageView(const Context& ctx, const Sampler::Base& sampler, const uint32_t baseArrayLayer,
                                        const uint32_t layerCount, Sampler::LayerResource& layerResource) {
     vk::ImageAspectFlags aspectFlags;
+    // TODO: there is no way to have a stencil view atm.
     if (sampler.imgCreateInfo.usage & vk::ImageUsageFlagBits::eDepthStencilAttachment) {
         aspectFlags = vk::ImageAspectFlagBits::eDepth;
-        if (helpers::hasStencilComponent(sampler.imgCreateInfo.format)) aspectFlags |= vk::ImageAspectFlagBits::eStencil;
     } else {
         aspectFlags = vk::ImageAspectFlagBits::eColor;
     }

@@ -20,10 +20,12 @@
 namespace Camera {
 
 // Vulkan clip space has inverted Y and half Z.
-constexpr glm::mat4 VULKAN_CLIP_MAT4 = glm::mat4{1.0f, 0.0f,  0.0f, 0.0f,   //
-                                                 0.0f, -1.0f, 0.0f, 0.0f,   //
-                                                 0.0f, 0.0f,  0.5f, 0.0f,   //
-                                                 0.0f, 0.0f,  0.5f, 1.0f};  //
+constexpr glm::mat4 VULKAN_CLIP_MAT4 = glm::mat4{
+    1.0f, 0.0f,  0.0f, 0.0f,  //
+    0.0f, -1.0f, 0.0f, 0.0f,  //
+    0.0f, 0.0f,  0.5f, 0.0f,  //
+    0.0f, 0.0f,  0.5f, 1.0f,
+};
 
 struct FrustumInfo {
     float fieldOfViewY = 0.0f;
@@ -91,11 +93,17 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
 
     void setAspect(float aspect);
     void update(const glm::vec3 &moveDir, const glm::vec2 &lookDir, const uint32_t frameIndex);
+    // Everything needed to manually update a camera data for debugging.
+    void update(const glm::mat4 &view, const glm::mat4 &proj, const glm::vec3 eye, const glm::vec3 center,
+                const uint32_t frameIndex);
 
     frustumPlanes getFrustumPlanes() const;
     frustumPlanes getFrustumPlanesZupLH() const;
     virtual_inline auto getPosition() const { return eye_; }
+    virtual_inline auto getCenter() const { return center_; }
+    virtual_inline auto getNearDistance() const { return near_; }
     virtual_inline auto getFarDistance() const { return far_; }
+    virtual_inline auto getProj() const { return proj_; }
     FrustumInfo getFrustumInfo() const;
     FrustumInfo getFrustumInfoZupLH() const;
 
@@ -170,6 +178,38 @@ class Base : public Obj3d::AbstractBase, public Descriptor::Base, public Buffer:
 };
 
 }  // namespace CubeMap
+
+namespace Basic {
+
+struct CreateInfo : public Buffer::CreateInfo {
+    float aspect = (16.0f / 9.0f);
+    glm::vec3 eye{2.0f, 2.0f, 4.0f};
+    glm::vec3 center{0.0f, 0.0f, 0.0f};
+    float fovy = glm::radians(45.0f);
+    float n = 0.1f;
+    float f = 1000.0f;
+};
+
+struct DATA {
+    glm::mat4 viewProj;
+};
+
+class Base : public Descriptor::Base, public Buffer::PerFramebufferDataItem<DATA> {
+   public:
+    Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo);
+
+    // WARNING: If you use this function view_, and proj_ will fall out of sync.
+    void setViewProj(const glm::mat4 &viewProj, const uint32_t index = UINT32_MAX) {
+        data_.viewProj = viewProj;
+        setData(index);
+    }
+
+   private:
+    glm::mat4 view_;
+    glm::mat4 proj_;
+};
+
+}  // namespace Basic
 
 }  // namespace Perspective
 }  // namespace Camera

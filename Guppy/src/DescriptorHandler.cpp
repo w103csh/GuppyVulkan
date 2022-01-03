@@ -27,6 +27,9 @@
 #include "ScreenSpace.h"
 #include "Shadow.h"
 #include "Tessellation.h"
+#ifdef USE_VOLUMETRIC_LIGHTING
+// ...
+#endif
 // HANDLERS
 #include "ParticleHandler.h"
 #include "PipelineHandler.h"
@@ -64,6 +67,7 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_() {
             case DESCRIPTOR_SET::UNIFORM_DEFERRED_COMBINE:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::COMBINE_UNIFORM_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_DEFERRED:                          pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SAMPLER_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_DEFERRED_SSAO_RANDOM:              pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Deferred::SSAO_RANDOM_SAMPLER_CREATE_INFO)); break;
+            case DESCRIPTOR_SET::CAMERA_BASIC_ONLY:                         pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::CAMERA_BASIC_ONLY_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SHADOW_CUBE_UNIFORM_ONLY:                  pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::CUBE_UNIFORM_ONLY_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SHADOW_CUBE_ALL:                           pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::CUBE_ALL_CREATE_INFO)); break;
             case DESCRIPTOR_SET::SAMPLER_SHADOW:                            pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::Shadow::SAMPLER_CREATE_INFO)); break;
@@ -83,6 +87,9 @@ Descriptor::Handler::Handler(Game* pGame) : Game::Handler(pGame), pool_() {
             case DESCRIPTOR_SET::OCEAN_DISPATCH:                            pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::OCEAN_DISPATCH_CREATE_INFO)); break;
             case DESCRIPTOR_SET::OCEAN_DRAW:                                pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::OCEAN_DRAW_CREATE_INFO)); break;
             case DESCRIPTOR_SET::CDLOD_DEFAULT:                             pDescriptorSets_.emplace_back(new Set::Base(std::ref(*this), &Set::CDLOD_DEFAULT_CREATE_INFO)); break;
+#ifdef USE_VOLUMETRIC_LIGHTING
+            // ...
+#endif
             default: assert(false);  // add new pipelines here
         }
         // clang-format on
@@ -816,7 +823,6 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
                 // TODO: Maybe treat this scenario like above.
                 assert(pPipelineTexture->samplers.size() == 1);
                 itInfoMap->second.imageInfos.push_back(pPipelineTexture->samplers[0].imgInfo);
-
             } else {
                 assert(itInfoMap->second.uniqueDataSets > 1);
                 for (uint32_t i = 0; i < itInfoMap->second.uniqueDataSets; i++) {
@@ -843,7 +849,7 @@ void Descriptor::Handler::updateDescriptorSets(const Descriptor::bindingMap& bin
 
         for (uint32_t i = 0; i < writesList.size(); i++) {
             auto& writes = writesList[i];
-            itInfoMap->second.setWriteInfo(i, writes.back());
+            itInfoMap->second.setWriteInfo(i, bindingInfo.descType, writes.back());
         }
     }
 

@@ -47,7 +47,7 @@ class Base : public Handlee<Pass::Handler> {
     virtual void postCreate() {}
     virtual void setSwapchainInfo();
     void createTarget();
-    void overridePipelineCreateInfo(const PIPELINE &type, Pipeline::CreateInfoResources &createInfoRes);
+    virtual void overridePipelineCreateInfo(const PIPELINE &type, Pipeline::CreateInfoResources &createInfoRes);
     virtual void record(const uint8_t frameIndex);
     virtual void update(const std::vector<Descriptor::Base *> pDynamicItems = {});
     constexpr auto getStatus() const { return status_; }
@@ -171,6 +171,9 @@ class Base : public Handlee<Pass::Handler> {
 
     vk::Extent2D extent_;
 
+    // SETTINGS
+    vk::Format depthFormat_;
+
    private:
     /* It is important that this remains private and is set in Base::init. That way
      *  Base::create can validate that Base::init was called because Base::init
@@ -180,7 +183,6 @@ class Base : public Handlee<Pass::Handler> {
 
     // SETTINGS
     vk::Format format_;
-    vk::Format depthFormat_;
     vk::ImageLayout initialLayout_;
     vk::ImageLayout finalLayout_;
     uint32_t commandCount_;

@@ -214,6 +214,16 @@ void Base::update(const glm::vec3 &moveDir, const glm::vec2 &lookDir, const uint
     update(frameIndex);
 }
 
+void Base::update(const glm::mat4 &view, const glm::mat4 &proj, const glm::vec3 eye, const glm::vec3 center,
+                  const uint32_t frameIndex) {
+    data_.view = view;
+    proj_ = proj;
+    setProjectionData();
+    eye_ = eye;
+    center_ = center;
+    update(frameIndex);
+}
+
 void Base::update(const uint32_t frameIndex) {
     data_.viewProjection = data_.projection * data_.view;
     data_.worldPosition = eye_;
@@ -279,6 +289,20 @@ void Base::setViews() {
 }
 
 }  // namespace CubeMap
+
+namespace Basic {
+
+Base::Base(const Buffer::Info &&info, DATA *pData, const CreateInfo *pCreateInfo)
+    : Buffer::Item(std::forward<const Buffer::Info>(info)),
+      Descriptor::Base(UNIFORM_DYNAMIC::CAMERA_PERSPECTIVE_BASIC),
+      Buffer::PerFramebufferDataItem<DATA>(pData) {
+    view_ = glm::lookAt(pCreateInfo->eye, pCreateInfo->center, UP_VECTOR);
+    proj_ = glm::perspective(pCreateInfo->fovy, pCreateInfo->aspect, pCreateInfo->n, pCreateInfo->f);
+    data_.viewProj = (VULKAN_CLIP_MAT4 * proj_) * view_;
+    setData();
+}
+
+}  // namespace Basic
 
 }  // namespace Perspective
 }  // namespace Camera

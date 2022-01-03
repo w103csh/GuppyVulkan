@@ -16,15 +16,27 @@
 #include "Shell.h"
 #include "Stars.h"
 #include "Torus.h"
+#ifdef USE_VOLUMETRIC_LIGHTING
+// ...
+#endif
 // HANDLERS
 #include "InputHandler.h"
 #include "MeshHandler.h"
 #include "ModelHandler.h"
+#include "PassHandler.h"
 #include "ParticleHandler.h"
 // Remove me after pass dependent things are no longer in the scene.
 #include "PassHandler.h"
 #include "TextureHandler.h"
 #include "UniformHandler.h"
+
+namespace {
+#ifdef VOL_LGT_DEBUG_LH_ZO
+static const glm::vec3 VOL_LGT_BOX_ORIGIN(2.0f, 10.0f, 5.0f);
+#else
+static const glm::vec3 VOL_LGT_BOX_ORIGIN(-2.0f, 10.0f, 5.0f);
+#endif
+}  // namespace
 
 Scene::Handler::Handler(Game* pGame)
     : Game::Handler(pGame),  //
@@ -35,8 +47,15 @@ Scene::Handler::Handler(Game* pGame)
 // Required in this file for inner-class forward declaration of SelectionManager
 Scene::Handler::~Handler() = default;
 
+void Scene::Handler::createGraphicsWork() {
+#ifdef USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
+}
+
 void Scene::Handler::init() {
     reset();
+    createGraphicsWork();
 
     const auto& ctx = shell().context();
 
@@ -57,6 +76,8 @@ void Scene::Handler::init() {
     // RENDERERS
     cdlodDbgRenderer.onInit();
     ocnRenderer.onInit();
+    // GRAPHICS WORK
+    for (const auto& pWork : pGraphicsWork) pWork->onInit();
 
     if (deferred) {
         Mesh::Arc::CreateInfo arcInfo;
@@ -145,6 +166,38 @@ void Scene::Handler::init() {
             auto& pFrustum = meshHandler().makeColorMesh<Mesh::Frustum::Base>(&frustumMeshInfo, &defMatInfo, &instObj3dInfo);
             pScene->debugFrustumOffset = pFrustum->getOffset();
             pScene->addMeshIndex(MESH::COLOR, pScene->debugFrustumOffset);
+        }
+
+        // VOLUMETRIC LIGHTING BOXES
+        if (!suppress || true) {
+            meshInfo = {};
+            meshInfo.pipelineType = GRAPHICS::DEFERRED_MRT_COLOR;
+            meshInfo.selectable = false;
+            meshInfo.settings.geometryInfo.doubleSided = true;
+            meshInfo.settings.geometryInfo.reverseFaceWinding = true;
+            instObj3dInfo = {};
+            instObj3dInfo.data.push_back(
+                {helpers::affine(glm::vec3(2.0f), VOL_LGT_BOX_ORIGIN + glm::vec3(2.0f, 2.0f, 2.0f))});
+            instObj3dInfo.data.push_back(
+                {helpers::affine(glm::vec3(2.0f), VOL_LGT_BOX_ORIGIN + glm::vec3(-2.0f, 2.0f, 2.0f))});
+            instObj3dInfo.data.push_back(
+                {helpers::affine(glm::vec3(2.0f), VOL_LGT_BOX_ORIGIN + glm::vec3(2.0f, -2.0f, 2.0f))});
+            instObj3dInfo.data.push_back(
+                {helpers::affine(glm::vec3(2.0f), VOL_LGT_BOX_ORIGIN + glm::vec3(2.0f, 2.0f, -2.0f))});
+            instObj3dInfo.data.push_back(
+                {helpers::affine(glm::vec3(2.0f), VOL_LGT_BOX_ORIGIN + glm::vec3(-2.0f, -2.0f, 2.0f))});
+            instObj3dInfo.data.push_back(
+                {helpers::affine(glm::vec3(2.0f), VOL_LGT_BOX_ORIGIN + glm::vec3(2.0f, -2.0f, -2.0f))});
+            instObj3dInfo.data.push_back(
+                {helpers::affine(glm::vec3(2.0f), VOL_LGT_BOX_ORIGIN + glm::vec3(-2.0f, 2.0f, -2.0f))});
+            instObj3dInfo.data.push_back(
+                {helpers::affine(glm::vec3(2.0f), VOL_LGT_BOX_ORIGIN + glm::vec3(-2.0f, -2.0f, -2.0f))});
+            defMatInfo = {};
+            defMatInfo.shininess = Material::SHININESS_EGGSHELL;
+            defMatInfo.color = {0.8f, 0.8f, 0.85f};
+            auto& pBoxes = meshHandler().makeColorMesh<Mesh::Box::Color>(&meshInfo, &defMatInfo, &instObj3dInfo);
+            pScene->volLgtBoxesOffset = pBoxes->getOffset();
+            pScene->addMeshIndex(MESH::COLOR, pScene->volLgtBoxesOffset);
         }
 
         // SHADOW BOX
@@ -568,7 +621,6 @@ void Scene::Handler::init() {
             auto offset = modelHandler().makeTextureModel(&modelInfo, &defMatInfo, &instObj3dInfo)->getOffset();
             pScene->addModelIndex(offset);
         }
-
     } else {
         // Create info structs
         Mesh::AxesCreateInfo axesInfo;
@@ -1022,6 +1074,7 @@ void Scene::Handler::init() {
 void Scene::Handler::destroy() {
     cdlodDbgRenderer.destroy();
     ocnRenderer.destroy();
+    for (auto& pWork : pGraphicsWork) pWork->onDestroy();
     reset();
     cleanup();
 }
@@ -1029,11 +1082,13 @@ void Scene::Handler::destroy() {
 void Scene::Handler::tick() {
     cdlodDbgRenderer.tick();
     ocnRenderer.tick();
+    for (auto& pWork : pGraphicsWork) pWork->onTick();
 }
 
 void Scene::Handler::frame() {
     auto& pScene = pScenes_.at(activeSceneIndex_);
     const auto elapsed = shell().getElapsedTime<float>();
+    const auto normElapsed = shell().getNormalizedElaspedTime<float>();
 
     if (false) {
         const float timeInterval = 4800.0f;
@@ -1053,6 +1108,17 @@ void Scene::Handler::frame() {
         meshHandler().updateMesh(moon);
     }
 
+    // VOLUMETRIC LIGHTING
+    if (true) {
+        auto& boxes = meshHandler().getColorMesh(pScene->volLgtBoxesOffset);
+        auto tr1 = glm::translate(glm::mat4(1.0f), -VOL_LGT_BOX_ORIGIN);
+        auto rot = glm::rotate(glm::mat4(1.0f), glm::pi<float>() * 2 * normElapsed / 400, CARDINAL_Y);
+        auto tr2 = glm::translate(glm::mat4(1.0f), VOL_LGT_BOX_ORIGIN);
+        auto t = tr2 * rot * tr1;
+        for (uint32_t i = 0; i < boxes->getModelCount(); i++) boxes->transform(t, i);
+        meshHandler().updateMesh(boxes);
+    }
+
     // DEBUG CAMERA
     if (uniformHandler().hasDebugCamera() && pScene->debugFrustumOffset != Mesh::BAD_OFFSET) {
         auto& debugCamera = uniformHandler().getDebugCamera();
@@ -1063,11 +1129,13 @@ void Scene::Handler::frame() {
 
     cdlodDbgRenderer.frame();
     ocnRenderer.frame();
+    for (auto& pWork : pGraphicsWork) pWork->onFrame();
 }
 
 void Scene::Handler::reset() {
     for (auto& scene : pScenes_) scene->destroy();
     pScenes_.clear();
+    pGraphicsWork.clear();
 }
 
 std::unique_ptr<Scene::Base>& Scene::Handler::makeScene(bool setActive, bool makeFaceSelection) {

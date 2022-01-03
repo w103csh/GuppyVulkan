@@ -762,6 +762,10 @@ void Shell::determineDeviceFeatureSupport(const Context::PhysicalDevicePropertie
     ctx_.imageCubeArrayEnabled = props.features.imageCubeArray && settings_.tryImageCubeArray;
     if (settings_.tryImageCubeArray && !ctx_.imageCubeArrayEnabled)  //
         log(LogPriority::LOG_WARN, "cannot enable image cube arrays");
+    // dual source blending
+    ctx_.dualSrcBlendEnabled = props.features.dualSrcBlend && settings_.tryDualSrcBlend;
+    if (settings_.tryDualSrcBlend && !ctx_.dualSrcBlendEnabled)  //
+        log(LogPriority::LOG_WARN, "cannot enable dual source blending");
 }
 
 void Shell::determineSampleCount(const Context::PhysicalDeviceProperties &props) {

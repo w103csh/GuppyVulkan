@@ -53,6 +53,7 @@ enum class DESCRIPTOR_SET {
     SAMPLER_DEFERRED,
     SAMPLER_DEFERRED_SSAO_RANDOM,
     // SHADOW
+    CAMERA_BASIC_ONLY,
     SHADOW_CUBE_UNIFORM_ONLY,
     SHADOW_CUBE_ALL,
     SAMPLER_SHADOW,
@@ -79,6 +80,9 @@ enum class DESCRIPTOR_SET {
     OCEAN_DRAW,
     // CDLOD
     CDLOD_DEFAULT,
+#ifdef USE_VOLUMETRIC_LIGHTING
+    // ...
+#endif
     // Add new to DESCRIPTOR_SET_ALL in code file.
 };
 
@@ -161,13 +165,13 @@ struct GetVulkanMemoryProperty {
     }
     vk::MemoryPropertyFlags operator()(const STORAGE_BUFFER_DYNAMIC& type) const {
         switch (type) {
-            case STORAGE_BUFFER_DYNAMIC::VERTEX: return 
+            case STORAGE_BUFFER_DYNAMIC::VERTEX: return
                 (vk::MemoryPropertyFlagBits::eHostVisible
 #if !(defined(VK_USE_PLATFORM_IOS_MVK) || defined(VK_USE_PLATFORM_MACOS_MVK))
                 | vk::MemoryPropertyFlagBits::eDeviceLocal
 #endif
                 | vk::MemoryPropertyFlagBits::eHostCoherent);
-            default: return 
+            default: return
                 (vk::MemoryPropertyFlagBits::eHostVisible
                 | vk::MemoryPropertyFlagBits::eHostCoherent);
         }
@@ -186,7 +190,8 @@ struct IsImage {
 };
 struct IsPipelineImage {
     template <typename T> bool operator()(const T&)   const { return false; }
-    bool operator()(const COMBINED_SAMPLER& type)     const { return type == COMBINED_SAMPLER::PIPELINE; }
+    bool operator()(const COMBINED_SAMPLER& type)     const { return type == COMBINED_SAMPLER::PIPELINE ||
+                                                                     type == COMBINED_SAMPLER::PIPELINE_DEPTH; }
     bool operator()(const STORAGE_IMAGE& type)        const { return type == STORAGE_IMAGE::PIPELINE; }
     bool operator()(const UNIFORM_TEXEL_BUFFER& type) const { return type == UNIFORM_TEXEL_BUFFER::PIPELINE; }
     bool operator()(const INPUT_ATTACHMENT&)          const { return true; }
@@ -224,11 +229,15 @@ struct HasPerFramebufferData {
     }
     bool operator()(const UNIFORM_DYNAMIC& type) const {
         switch (type) {
+            case UNIFORM_DYNAMIC::CAMERA_PERSPECTIVE_BASIC:
             case UNIFORM_DYNAMIC::PRTCL_FOUNTAIN:
             case UNIFORM_DYNAMIC::PRTCL_ATTRACTOR:
             case UNIFORM_DYNAMIC::PRTCL_CLOTH:
             case UNIFORM_DYNAMIC::MATRIX_4:
             case UNIFORM_DYNAMIC::HFF:
+#ifdef USE_VOLUMETRIC_LIGHTING
+            // ...
+#endif
                 return true;
             default:
                 return false;
@@ -248,8 +257,14 @@ struct GetTextureImageLayout {
             default:                                return vk::ImageLayout::eShaderReadOnlyOptimal;
         }
     }
-    vk::ImageLayout operator()(const STORAGE_IMAGE&)    const { return vk::ImageLayout::eGeneral; }
-    vk::ImageLayout operator()(const INPUT_ATTACHMENT&) const { return vk::ImageLayout::eShaderReadOnlyOptimal; }
+    vk::ImageLayout operator()(const STORAGE_IMAGE&)         const { return vk::ImageLayout::eGeneral; }
+    vk::ImageLayout operator()(const INPUT_ATTACHMENT& type) const {
+        switch (type) {
+            case INPUT_ATTACHMENT::DEPTH:          return vk::ImageLayout::eDepthStencilReadOnlyOptimal;
+            case INPUT_ATTACHMENT::DEPTH_GENERAL:  return vk::ImageLayout::eGeneral;
+            default:                               return vk::ImageLayout::eShaderReadOnlyOptimal;
+        }
+    }
 };
 struct IsDynamic {
     template <typename T> bool operator()(const T&) const { return false; }
@@ -370,7 +385,7 @@ struct ResourceInfo {
     std::vector<ImageInfo> imageInfos;
     std::vector<vk::DescriptorBufferInfo> bufferInfos;
     vk::BufferView texelBufferView;
-    void setWriteInfo(const uint32_t index, vk::WriteDescriptorSet& write) const;
+    void setWriteInfo(const uint32_t index, const DESCRIPTOR& descType, vk::WriteDescriptorSet& write);
     void reset();
 };
 

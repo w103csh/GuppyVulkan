@@ -48,6 +48,7 @@ class Base : public Handlee<Scene::Handler> {
     uint32_t starsOffset;
     uint32_t posLgtCubeShdwOffset;
     uint32_t debugFrustumOffset;
+    uint32_t volLgtBoxesOffset;
 
    private:
     std::set<Mesh::index> colorOffsets_;

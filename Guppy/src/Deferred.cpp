@@ -32,6 +32,19 @@ const CreateInfo POS_NORM_2D_ARRAY_CREATE_INFO = {
     vk::Format::eR16G16B16A16Sfloat,
 };
 
+const CreateInfo COMB_2D_CREATE_INFO = {
+    "Deferred 2D Combine Sampler",
+    {{{::Sampler::USAGE::COLOR}}},
+    vk::ImageViewType::e2D,
+    BAD_EXTENT_3D,
+    {true, true, 1.0f, false},
+    {},
+    SAMPLER::DEFAULT,
+    (vk::ImageUsageFlagBits::eColorAttachment | vk::ImageUsageFlagBits::eTransientAttachment |
+     vk::ImageUsageFlagBits::eInputAttachment),
+    {{false, false}, 1},
+};
+
 const CreateInfo POS_2D_CREATE_INFO = {
     "Deferred 2D Position Sampler",
     {{{::Sampler::USAGE::POSITION}}},
@@ -143,6 +156,14 @@ const CreateInfo POS_NORM_2D_ARRAY_CREATE_INFO = {
     {Sampler::Deferred::POS_NORM_2D_ARRAY_CREATE_INFO},
     false,
     false,
+};
+
+const CreateInfo COMB_2D_CREATE_INFO = {
+    std::string(COMB_2D_ID),  //
+    {Sampler::Deferred::COMB_2D_CREATE_INFO},
+    false,
+    false,
+    INPUT_ATTACHMENT::DONT_CARE,
 };
 
 const CreateInfo POS_2D_CREATE_INFO = {

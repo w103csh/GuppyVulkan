@@ -27,6 +27,9 @@
 #include "Shadow.h"
 #include "Shell.h"
 #include "Tessellation.h"
+#ifdef USE_VOLUMETRIC_LIGHTING
+// ...
+#endif
 // HANDLERS
 #include "DescriptorHandler.h"
 #include "TextureHandler.h"
@@ -93,6 +96,8 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(), maxPus
                 case GRAPHICS::DEFERRED_SSAO:                   insertPair = pPipelines_.insert({type, std::make_unique<Deferred::SSAO>(std::ref(*this))}); break;
                 case GRAPHICS::SHADOW_COLOR:                    insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Color>(std::ref(*this))}); break;
                 case GRAPHICS::SHADOW_TEX:                      insertPair = pPipelines_.insert({type, std::make_unique<Shadow::Texture>(std::ref(*this))}); break;
+                case GRAPHICS::SHADOW_COLOR_CUBE:               insertPair = pPipelines_.insert({type, std::make_unique<Shadow::ColorCube>(std::ref(*this))}); break;
+                case GRAPHICS::SHADOW_TEX_CUBE:                 insertPair = pPipelines_.insert({type, std::make_unique<Shadow::TextureCube>(std::ref(*this))}); break;
                 case GRAPHICS::TESS_BEZIER_4_DEFERRED:          insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::Bezier4Deferred>(std::ref(*this))}); break;
                 case GRAPHICS::TESS_PHONG_TRI_COLOR_DEFERRED:   insertPair = pPipelines_.insert({type, std::make_unique<Tessellation::PhongTriColorDeferred>(std::ref(*this))}); break;
                 case GRAPHICS::TESS_PHONG_TRI_COLOR_WF_DEFERRED:insertPair = pPipelines_.insert({type, Tessellation::MakePhongTriColorWireframeDeferred(std::ref(*this))}); break;
@@ -116,6 +121,9 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(), maxPus
                 case GRAPHICS::OCEAN_SURFACE_CDLOD_DEFERRED:    insertPair = pPipelines_.insert({type, std::make_unique<Ocean::SurfaceCdlod>(std::ref(*this))}); break;
                 case GRAPHICS::CDLOD_WF_DEFERRED:               insertPair = pPipelines_.insert({type, std::make_unique<Cdlod::Wireframe>(std::ref(*this))}); break;
                 case GRAPHICS::CDLOD_TEX_DEFERRED:              insertPair = pPipelines_.insert({type, std::make_unique<Cdlod::Texture>(std::ref(*this))}); break;
+#ifdef USE_VOLUMETRIC_LIGHTING
+                // ...
+#endif
                 default: assert(false);  // add new pipelines here
             }
             // clang-format on
@@ -133,6 +141,9 @@ Pipeline::Handler::Handler(Game* pGame) : Game::Handler(pGame), cache_(), maxPus
                 case COMPUTE::OCEAN_DISP:               insertPair = pPipelines_.insert({type, std::make_unique<Ocean::Dispersion>(std::ref(*this))}); break;
                 case COMPUTE::OCEAN_FFT:                insertPair = pPipelines_.insert({type, std::make_unique<Ocean::FFT>(std::ref(*this))}); break;
                 case COMPUTE::OCEAN_VERT_INPUT:         insertPair = pPipelines_.insert({type, std::make_unique<Ocean::VertexInput>(std::ref(*this))}); break;
+#ifdef USE_VOLUMETRIC_LIGHTING
+                // ...
+#endif
                 default: assert(false);  // add new pipelines here
             }
             // clang-format on

@@ -62,6 +62,7 @@ struct CreateInfoResources {
     vk::PipelineTessellationStateCreateInfo tessellationStateInfo;
     vk::PipelineViewportStateCreateInfo viewportStateInfo;
     vk::PipelineRasterizationStateCreateInfo rasterizationStateInfo;
+    vk::PipelineRasterizationDepthClipStateCreateInfoEXT rasterizationDepthClipStateInfo;
     vk::PipelineMultisampleStateCreateInfo multisampleStateInfo;
     vk::PipelineDepthStencilStateCreateInfo depthStencilStateInfo;
     // SHADER

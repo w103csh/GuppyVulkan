@@ -5,7 +5,6 @@
 
 #include "Helpers.h"
 
-#define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/matrix_decompose.hpp>
 #include <glm/gtx/quaternion.hpp>
 #include <regex>
@@ -93,9 +92,19 @@ glm::mat3 makeArbitraryBasis(const glm::vec3 &dir) {
     return basis;
 }
 
-bool hasStencilComponent(vk::Format format) {
-    return format == vk::Format::eD16UnormS8Uint || format == vk::Format::eD24UnormS8Uint ||
-           format == vk::Format::eD32SfloatS8Uint;
+vk::ImageTiling getDepthStencilImageTiling(const vk::PhysicalDevice &physicalDevice, const vk::Format format) {
+    const vk::FormatProperties props = physicalDevice.getFormatProperties(format);
+
+    vk::ImageTiling tiling;
+    if (props.linearTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment) {
+        tiling = vk::ImageTiling::eLinear;
+    } else if (props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment) {
+        tiling = vk::ImageTiling::eOptimal;
+    } else {
+        assert(false && "depth format unsupported");
+        exit(EXIT_FAILURE);
+    }
+    return tiling;
 }
 
 vk::Format findSupportedFormat(const vk::PhysicalDevice &phyDev, const std::vector<vk::Format> &candidates,
@@ -342,6 +351,7 @@ void transitionImageLayout(const vk::CommandBuffer &cmd, const vk::Image &image,
             barrier.dstAccessMask =
                 vk::AccessFlagBits::eColorAttachmentWrite;  // | vk::AccessFlagBits::eColorAttachmentRead;
             break;
+        case vk::ImageLayout::eDepthAttachmentOptimal:
         case vk::ImageLayout::eDepthStencilAttachmentOptimal:
             barrier.dstAccessMask =
                 vk::AccessFlagBits::eDepthStencilAttachmentWrite;  // | vk::AccessFlagBits::eDepthStencilAttachmentRead;
@@ -385,10 +395,9 @@ void transitionImageLayout(const vk::CommandBuffer &cmd, const vk::Image &image,
     // ASPECT MASK
 
     if (newLayout == vk::ImageLayout::eDepthStencilAttachmentOptimal) {
+        barrier.subresourceRange.aspectMask = (vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil);
+    } else if (newLayout == vk::ImageLayout::eDepthAttachmentOptimal) {
         barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eDepth;
-        if (hasStencilComponent(format)) {
-            barrier.subresourceRange.aspectMask |= vk::ImageAspectFlagBits::eStencil;
-        }
     } else {
         barrier.subresourceRange.aspectMask = vk::ImageAspectFlagBits::eColor;
     }

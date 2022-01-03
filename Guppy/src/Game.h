@@ -75,6 +75,7 @@ class Game {
         bool tryDebugMarkers;
         bool tryIndependentBlend;
         bool tryImageCubeArray;
+        bool tryDualSrcBlend;
         bool enableSampleShading;
         bool enableDoubleClicks;
         bool enableDirectoryListener;

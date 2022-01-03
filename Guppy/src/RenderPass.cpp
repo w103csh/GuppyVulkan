@@ -337,21 +337,23 @@ void RenderPass::Base::createAttachments() {
         resources_.attachments.back().samples = getSamples();
         resources_.attachments.back().loadOp = vk::AttachmentLoadOp::eClear;
         resources_.attachments.back().storeOp = vk::AttachmentStoreOp::eDontCare;
-        resources_.attachments.back().stencilLoadOp = vk::AttachmentLoadOp::eLoad;
-        resources_.attachments.back().stencilStoreOp = vk::AttachmentStoreOp::eStore;
+        resources_.attachments.back().stencilLoadOp = vk::AttachmentLoadOp::eClear;
+        resources_.attachments.back().stencilStoreOp = vk::AttachmentStoreOp::eDontCare;
         resources_.attachments.back().initialLayout = vk::ImageLayout::eUndefined;
-        resources_.attachments.back().finalLayout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
+        resources_.attachments.back().finalLayout = helpers::getDepthStencilAttachmentLayout(depthFormat_);
         resources_.attachments.back().flags = {};
         // REFERENCE
         resources_.depthStencilAttachment = {
             static_cast<uint32_t>(resources_.attachments.size() - 1),
-            vk::ImageLayout::eDepthStencilAttachmentOptimal,
+            helpers::getDepthStencilAttachmentLayout(depthFormat_),
+            helpers::getDepthStencilAspectMask(depthFormat_),
         };
         // INPUT ATTACHMENT
         if (usesDepthInputAttachment()) {
             resources_.inputAttachments.push_back({
                 resources_.depthStencilAttachment.attachment,
-                vk::ImageLayout::eDepthStencilReadOnlyOptimal,
+                helpers::getDepthStencilReadOnlyLayout(depthFormat_),
+                helpers::getDepthStencilAspectMask(depthFormat_),
             });
         }
     }
@@ -373,6 +375,7 @@ void RenderPass::Base::createAttachments() {
         resources_.colorAttachments.push_back({
             static_cast<uint32_t>(resources_.attachments.size() - 1),
             vk::ImageLayout::eColorAttachmentOptimal,
+            vk::ImageAspectFlagBits::eColor,
         });
     }
 
@@ -395,11 +398,13 @@ void RenderPass::Base::createAttachments() {
         resources_.resolveAttachments.push_back({
             static_cast<uint32_t>(resources_.attachments.size() - 1),
             vk::ImageLayout::eColorAttachmentOptimal,
+            vk::ImageAspectFlagBits::eColor,
         });
     } else {
         resources_.colorAttachments.push_back({
             static_cast<uint32_t>(resources_.attachments.size() - 1),
             vk::ImageLayout::eColorAttachmentOptimal,
+            vk::ImageAspectFlagBits::eColor,
         });
     }
 }
@@ -518,31 +523,14 @@ void RenderPass::Base::createImageResources() {
 void RenderPass::Base::createDepthResource() {
     auto& ctx = handler().shell().context();
     if (pipelineData_.usesDepth) {
-        vk::ImageTiling tiling;
-        vk::FormatProperties props;
-        props = ctx.physicalDev.getFormatProperties(depthFormat_);
-
-        if (props.linearTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment) {
-            tiling = vk::ImageTiling::eLinear;
-        } else if (props.optimalTilingFeatures & vk::FormatFeatureFlagBits::eDepthStencilAttachment) {
-            tiling = vk::ImageTiling::eOptimal;
-        } else {
-            // Try other depth formats
-            throw std::runtime_error(("depth format unsupported"));
-        }
-
+        vk::ImageTiling tiling = helpers::getDepthStencilImageTiling(ctx.physicalDev, depthFormat_);
         helpers::createImage(ctx.dev, ctx.memProps,
                              handler().commandHandler().getUniqueQueueFamilies(true, false, true, false),
                              pipelineData_.samples, depthFormat_, tiling, vk::ImageUsageFlagBits::eDepthStencilAttachment,
                              vk::MemoryPropertyFlagBits::eDeviceLocal, extent_.width, extent_.height, 1, 1, depth_.image,
                              depth_.memory, ctx.pAllocator);
 
-        vk::ImageAspectFlags aspectFlags = vk::ImageAspectFlagBits::eDepth;
-        if (helpers::hasStencilComponent(depthFormat_)) {
-            aspectFlags |= vk::ImageAspectFlagBits::eStencil;
-        }
-
-        vk::ImageSubresourceRange range = {aspectFlags, 0, 1, 0, 1};
+        vk::ImageSubresourceRange range = {helpers::getDepthStencilAspectMask(depthFormat_), 0, 1, 0, 1};
         helpers::createImageView(ctx.dev, depth_.image, depthFormat_, vk::ImageViewType::e2D, range, depth_.view,
                                  ctx.pAllocator);
     }
